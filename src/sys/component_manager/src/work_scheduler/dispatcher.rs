@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        model::{binding::Binder, error::ModelError, realm::BindReason},
+        model::{binding::Binder, component::BindReason, error::ModelError},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_NAME},
     },
     cm_rust::CapabilityPath,
@@ -45,7 +45,7 @@ pub enum Error {
 /// A facade for dispatcher data needed by different parts of `WorkSchedulerDelegate`. This is
 /// abstracted into a trait to facilitate unit testing when a real data is not needed.
 pub(super) trait Dispatcher: Send + Sync {
-    /// Realms are identified by their `AbsoluteMoniker`. Note that dispatchers with equal
+    /// Components are identified by their `AbsoluteMoniker`. Note that dispatchers with equal
     /// `absolute_moniker()` values must behave identically.
     fn abs_moniker(&self) -> &AbsoluteMoniker;
 
@@ -66,8 +66,8 @@ impl Hash for dyn Dispatcher {
     }
 }
 
-// TODO(markdittmer): `Realm` can be replaced by an `AbsoluteMoniker` when `Model` (and
-// `Binder`) interface methods accept `AbsoluteMoniker` instead of `Realm`.
+// TODO(markdittmer): `ComponentInstance` can be replaced by an `AbsoluteMoniker` when `Model` (and
+// `Binder`) interface methods accept `AbsoluteMoniker` instead of `ComponentInstance`.
 pub(super) struct RealDispatcher {
     /// `AbsoluteMoniker` of component instance receiving dispatch.
     target_moniker: AbsoluteMoniker,

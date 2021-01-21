@@ -5,76 +5,82 @@
 use {
     crate::model::{
         actions::{ActionSet, DiscoverAction},
+        component::{
+            Component, ComponentInstance, InstanceState, ResolvedInstanceState,
+            WeakComponentInstance,
+        },
         error::ModelError,
         hooks::{Event, EventError, EventErrorPayload, EventPayload},
-        realm::{Component, Realm, RealmState, ResolvedRealmState, WeakRealm},
         resolver::Resolver,
     },
     std::convert::TryFrom,
     std::sync::Arc,
 };
 
-pub(super) async fn do_resolve(realm: &Arc<Realm>) -> Result<Component, ModelError> {
+pub(super) async fn do_resolve(
+    component: &Arc<ComponentInstance>,
+) -> Result<Component, ModelError> {
     // Ensure `Resolved` is dispatched after `Discovered`.
-    ActionSet::register(realm.clone(), DiscoverAction::new()).await?;
+    ActionSet::register(component.clone(), DiscoverAction::new()).await?;
     let result = async move {
         let first_resolve = {
-            let state = realm.lock_state().await;
+            let state = component.lock_state().await;
             match *state {
-                RealmState::New => {
-                    panic!("Realm should be at least discovered")
+                InstanceState::New => {
+                    panic!("Component should be at least discovered")
                 }
-                RealmState::Discovered => true,
-                RealmState::Resolved(_) => false,
-                RealmState::Destroyed => {
-                    return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
+                InstanceState::Discovered => true,
+                InstanceState::Resolved(_) => false,
+                InstanceState::Destroyed => {
+                    return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
                 }
             }
         };
-        let component = realm
+        let component_info = component
             .environment
-            .resolve(&realm.component_url)
+            .resolve(&component.component_url)
             .await
             .map_err(|err| ModelError::from(err))?;
-        let component = Component::try_from(component)?;
+        let component_info = Component::try_from(component_info)?;
         if first_resolve {
             {
-                let mut state = realm.lock_state().await;
+                let mut state = component.lock_state().await;
                 match *state {
-                    RealmState::Resolved(_) => {
-                        panic!("Realm was marked Resolved during Resolve action?");
+                    InstanceState::Resolved(_) => {
+                        panic!("Component was marked Resolved during Resolve action?");
                     }
-                    RealmState::Destroyed => {
-                        return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
+                    InstanceState::Destroyed => {
+                        return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
                     }
-                    RealmState::New | RealmState::Discovered => {}
+                    InstanceState::New | InstanceState::Discovered => {}
                 }
-                state.set(RealmState::Resolved(
-                    ResolvedRealmState::new(realm, component.decl.clone()).await,
+                state.set(InstanceState::Resolved(
+                    ResolvedInstanceState::new(component, component_info.decl.clone()).await,
                 ));
             }
         }
-        Ok((component, first_resolve))
+        Ok((component_info, first_resolve))
     }
     .await;
 
     match result {
-        Ok((component, false)) => Ok(component),
-        Ok((component, true)) => {
+        Ok((component_info, false)) => Ok(component_info),
+        Ok((component_info, true)) => {
             let event = Event::new(
-                realm,
+                component,
                 Ok(EventPayload::Resolved {
-                    realm: WeakRealm::from(realm),
-                    resolved_url: component.resolved_url.clone(),
-                    decl: component.decl.clone(),
+                    component: WeakComponentInstance::from(component),
+                    resolved_url: component_info.resolved_url.clone(),
+                    decl: component_info.decl.clone(),
                 }),
             );
-            realm.hooks.dispatch(&event).await?;
-            Ok(component)
+            component.hooks.dispatch(&event).await?;
+            Ok(component_info)
         }
         Err(e) => {
-            let event = Event::new(realm, Err(EventError::new(&e, EventErrorPayload::Resolved)));
-            realm.hooks.dispatch(&event).await?;
+            let event =
+                Event::new(component, Err(EventError::new(&e, EventErrorPayload::Resolved)));
+            component.hooks.dispatch(&event).await?;
             Err(e)
         }
     }

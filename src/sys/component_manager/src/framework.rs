@@ -8,10 +8,10 @@ use {
         channel,
         config::RuntimeConfig,
         model::{
+            component::{BindReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
-            realm::{BindReason, WeakRealm},
             routing::error::RoutingError,
         },
     },
@@ -65,14 +65,14 @@ impl CapabilityProvider for RealmCapabilityProvider {
             .expect("could not convert channel into stream");
         let scope_moniker = self.scope_moniker.clone();
         let host = self.host.clone();
-        // We only need to look up the realm matching this scope.
-        // These realm operations should all work, even if the scope realm is not running.
+        // We only need to look up the component matching this scope.
+        // These operations should all work, even if the component is not running.
         let model = host.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-        let realm = WeakRealm::from(&model.look_up_realm(&scope_moniker).await?);
+        let component = WeakComponentInstance::from(&model.look_up(&scope_moniker).await?);
         fasync::Task::spawn(async move {
-            if let Err(e) = host.serve(realm, stream).await {
+            if let Err(e) = host.serve(component, stream).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
-                warn!("serve_realm failed: {:?}", e);
+                warn!("serve failed: {:?}", e);
             }
         })
         .detach();
@@ -102,13 +102,13 @@ impl RealmCapabilityHost {
 
     pub async fn serve(
         &self,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         stream: fsys::RealmRequestStream,
     ) -> Result<(), fidl::Error> {
         stream
             .try_for_each_concurrent(None, |request| async {
                 let method_name = request.method_name();
-                let res = self.handle_request(request, &realm).await;
+                let res = self.handle_request(request, &component).await;
                 if let Err(e) = &res {
                     error!("Error occurred sending Realm response for {}: {:?}", method_name, e);
                 }
@@ -120,24 +120,24 @@ impl RealmCapabilityHost {
     async fn handle_request(
         &self,
         request: fsys::RealmRequest,
-        realm: &WeakRealm,
+        component: &WeakComponentInstance,
     ) -> Result<(), fidl::Error> {
         match request {
             fsys::RealmRequest::CreateChild { responder, collection, decl } => {
-                let mut res = Self::create_child(realm, collection, decl).await;
+                let mut res = Self::create_child(component, collection, decl).await;
                 responder.send(&mut res)?;
             }
             fsys::RealmRequest::BindChild { responder, child, exposed_dir } => {
-                let mut res = Self::bind_child(realm, child, exposed_dir).await;
+                let mut res = Self::bind_child(component, child, exposed_dir).await;
                 responder.send(&mut res)?;
             }
             fsys::RealmRequest::DestroyChild { responder, child } => {
-                let mut res = Self::destroy_child(realm, child).await;
+                let mut res = Self::destroy_child(component, child).await;
                 responder.send(&mut res)?;
             }
             fsys::RealmRequest::ListChildren { responder, collection, iter } => {
                 let mut res = Self::list_children(
-                    realm,
+                    component,
                     self.config.list_children_batch_size,
                     collection,
                     iter,
@@ -150,11 +150,11 @@ impl RealmCapabilityHost {
     }
 
     async fn create_child(
-        realm: &WeakRealm,
+        component: &WeakComponentInstance,
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
     ) -> Result<(), fcomponent::Error> {
-        let realm = realm.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
+        let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         cm_fidl_validator::validate_child(&child_decl).map_err(|e| {
             error!("validate_child() failed: {}", e);
             fcomponent::Error::InvalidArguments
@@ -163,7 +163,7 @@ impl RealmCapabilityHost {
             return Err(fcomponent::Error::InvalidArguments);
         }
         let child_decl = child_decl.fidl_into_native();
-        realm.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| match e {
+        component.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| match e {
             ModelError::InstanceAlreadyExists { .. } => fcomponent::Error::InstanceAlreadyExists,
             ModelError::CollectionNotFound { .. } => fcomponent::Error::CollectionNotFound,
             ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
@@ -175,29 +175,29 @@ impl RealmCapabilityHost {
     }
 
     async fn bind_child(
-        realm: &WeakRealm,
+        component: &WeakComponentInstance,
         child: fsys::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fcomponent::Error> {
-        let realm = realm.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
+        let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        let child_realm = {
-            let realm_state = realm.lock_resolved_state().await.map_err(|e| match e {
+        let child = {
+            let state = component.lock_resolved_state().await.map_err(|e| match e {
                 ModelError::ResolverError { err } => {
                     debug!("failed to resolve: {:?}", err);
                     fcomponent::Error::InstanceCannotResolve
                 }
                 e => {
-                    error!("failed to resolve RealmState: {}", e);
+                    error!("failed to resolve InstanceState: {}", e);
                     fcomponent::Error::Internal
                 }
             })?;
-            realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
+            state.get_live_child(&partial_moniker).map(|r| r.clone())
         };
         let mut exposed_dir = exposed_dir.into_channel();
-        if let Some(child_realm) = child_realm {
-            let res = child_realm
-                .bind(&BindReason::BindChild { parent: realm.abs_moniker.clone() })
+        if let Some(child) = child {
+            let res = child
+                .bind(&BindReason::BindChild { parent: component.abs_moniker.clone() })
                 .await
                 .map_err(|e| match e {
                     ModelError::ResolverError { err } => {
@@ -242,14 +242,14 @@ impl RealmCapabilityHost {
     }
 
     async fn destroy_child(
-        realm: &WeakRealm,
+        component: &WeakComponentInstance,
         child: fsys::ChildRef,
     ) -> Result<(), fcomponent::Error> {
-        let realm = realm.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
+        let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
         let destroy_fut =
-            realm.remove_dynamic_child(&partial_moniker).await.map_err(|e| match e {
+            component.remove_dynamic_child(&partial_moniker).await.map_err(|e| match e {
                 ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
                 ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
                 e => {
@@ -267,14 +267,14 @@ impl RealmCapabilityHost {
     }
 
     async fn list_children(
-        realm: &WeakRealm,
+        component: &WeakComponentInstance,
         batch_size: usize,
         collection: fsys::CollectionRef,
         iter: ServerEnd<fsys::ChildIteratorMarker>,
     ) -> Result<(), fcomponent::Error> {
-        let realm = realm.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        let state = realm.lock_resolved_state().await.map_err(|e| {
-            error!("failed to resolve RealmState: {:?}", e);
+        let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
+        let state = component.lock_resolved_state().await.map_err(|e| {
+            error!("failed to resolve InstanceState: {:?}", e);
             fcomponent::Error::Internal
         })?;
         let decl = state.decl();
@@ -282,7 +282,7 @@ impl RealmCapabilityHost {
             .find_collection(&collection.name)
             .ok_or_else(|| fcomponent::Error::CollectionNotFound)?;
         let mut children: Vec<_> = state
-            .live_child_realms()
+            .live_children()
             .filter_map(|(m, _)| match m.collection() {
                 Some(c) => {
                     if c == collection.name {
@@ -382,11 +382,11 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
+                component::{BindReason, ComponentInstance},
                 events::{
                     event::EventMode, registry::EventSubscription, source::EventSource,
                     stream::EventStream,
                 },
-                realm::{BindReason, Realm},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
         },
@@ -408,7 +408,7 @@ mod tests {
     struct RealmCapabilityTest {
         builtin_environment: Option<Arc<BuiltinEnvironment>>,
         mock_runner: Arc<MockRunner>,
-        realm: Option<Arc<Realm>>,
+        component: Option<Arc<ComponentInstance>>,
         realm_proxy: fsys::RealmProxy,
         hook: Arc<TestHook>,
         events_data: Option<EventsData>,
@@ -422,7 +422,7 @@ mod tests {
     impl RealmCapabilityTest {
         async fn new(
             components: Vec<(&'static str, ComponentDecl)>,
-            realm_moniker: AbsoluteMoniker,
+            component_moniker: AbsoluteMoniker,
             events: Vec<CapabilityName>,
         ) -> Self {
             // Init model.
@@ -433,7 +433,7 @@ mod tests {
 
             let hook = Arc::new(TestHook::new());
             let hooks = hook.hooks();
-            model.root_realm.hooks.install(hooks).await;
+            model.root.hooks.install(hooks).await;
 
             let events_data = if events.is_empty() {
                 None
@@ -456,21 +456,21 @@ mod tests {
                 Some(EventsData { _event_source: event_source, event_stream })
             };
 
-            // Look up and bind to realm.
-            let realm = model
-                .bind(&realm_moniker, &BindReason::Eager)
+            // Look up and bind to component.
+            let component = model
+                .bind(&component_moniker, &BindReason::Eager)
                 .await
-                .expect("failed to bind to realm");
+                .expect("failed to bind to component");
 
             // Host framework service.
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
             {
-                let realm = WeakRealm::from(&realm);
+                let component = WeakComponentInstance::from(&component);
                 let realm_capability_host = builtin_environment.realm_capability_host.clone();
                 fasync::Task::spawn(async move {
                     realm_capability_host
-                        .serve(realm, stream)
+                        .serve(component, stream)
                         .await
                         .expect("failed serving realm service");
                 })
@@ -479,19 +479,19 @@ mod tests {
             RealmCapabilityTest {
                 builtin_environment: Some(builtin_environment),
                 mock_runner,
-                realm: Some(realm),
+                component: Some(component),
                 realm_proxy,
                 hook,
                 events_data,
             }
         }
 
-        fn realm(&self) -> &Arc<Realm> {
-            self.realm.as_ref().unwrap()
+        fn component(&self) -> &Arc<ComponentInstance> {
+            self.component.as_ref().unwrap()
         }
 
-        fn drop_realm(&mut self) {
-            self.realm = None;
+        fn drop_component(&mut self) {
+            self.component = None;
             self.builtin_environment = None;
         }
 
@@ -523,7 +523,7 @@ mod tests {
         let _ = res.expect("failed to create child b").expect("failed to create child b");
 
         // Verify that the component topology matches expectations.
-        let actual_children = get_live_children(test.realm()).await;
+        let actual_children = get_live_children(test.component()).await;
         let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
         expected_children.insert("coll:a".into());
         expected_children.insert("coll:b".into());
@@ -648,7 +648,7 @@ mod tests {
 
         // Instance died.
         {
-            test.drop_realm();
+            test.drop_component();
             let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
             let child_decl = fsys::ChildDecl {
                 name: Some("b".to_string()),
@@ -699,10 +699,10 @@ mod tests {
                 .unwrap_or_else(|_| panic!("failed to bind to child {}", name));
         }
 
-        let child_realm = get_live_child(test.realm(), "coll:a").await;
-        let instance_id = get_instance_id(test.realm(), "coll:a").await;
+        let child = get_live_child(test.component(), "coll:a").await;
+        let instance_id = get_instance_id(test.component(), "coll:a").await;
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
-        assert_eq!(child_realm.component_url, "test:///a".to_string());
+        assert_eq!(child.component_url, "test:///a".to_string());
         assert_eq!(instance_id, 1);
 
         // Destroy "a". "a" is no longer live from the client's perspective, although it's still
@@ -721,7 +721,7 @@ mod tests {
 
         // Child is not marked deleted yet.
         {
-            let actual_children = get_live_children(test.realm()).await;
+            let actual_children = get_live_children(test.component()).await;
             let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
             expected_children.insert("coll:a".into());
             expected_children.insert("coll:b".into());
@@ -730,7 +730,7 @@ mod tests {
 
         // The destruction of "a" was arrested during `PreDestroy`. The old "a" should still exist,
         // although it's not live.
-        assert!(has_child(test.realm(), "coll:a:1").await);
+        assert!(has_child(test.component(), "coll:a:1").await);
 
         // Move past the 'PreDestroy' event for "a", and wait for destroy_child to return.
         event.resume();
@@ -739,7 +739,7 @@ mod tests {
 
         // Child is marked deleted now.
         {
-            let actual_children = get_live_children(test.realm()).await;
+            let actual_children = get_live_children(test.component()).await;
             let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
             expected_children.insert("coll:b".into());
             assert_eq!(actual_children, expected_children);
@@ -755,7 +755,7 @@ mod tests {
             .unwrap();
         event.resume();
 
-        assert!(!has_child(test.realm(), "coll:a:1").await);
+        assert!(!has_child(test.component(), "coll:a:1").await);
 
         // Recreate "a" and verify "a" is back (but it's a different "a"). The old "a" is gone
         // from the client's point of view, but it hasn't been cleaned up yet.
@@ -771,9 +771,9 @@ mod tests {
         let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
 
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
-        let child_realm = get_live_child(test.realm(), "coll:a").await;
-        let instance_id = get_instance_id(test.realm(), "coll:a").await;
-        assert_eq!(child_realm.component_url, "test:///a_alt".to_string());
+        let child = get_live_child(test.component(), "coll:a").await;
+        let instance_id = get_instance_id(test.component(), "coll:a").await;
+        assert_eq!(child.component_url, "test:///a_alt".to_string());
         assert_eq!(instance_id, 3);
     }
 
@@ -821,7 +821,7 @@ mod tests {
 
         // Instance died.
         {
-            test.drop_realm();
+            test.drop_component();
             let mut child_ref =
                 fsys::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
             let err = test
@@ -993,7 +993,7 @@ mod tests {
 
         // Instance died.
         {
-            test.drop_realm();
+            test.drop_component();
             let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
             let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
             let err = test
@@ -1130,7 +1130,7 @@ mod tests {
 
         // Instance died.
         {
-            test.drop_realm();
+            test.drop_component();
             let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
             let (_, server_end) = endpoints::create_proxy().unwrap();
             let err = test

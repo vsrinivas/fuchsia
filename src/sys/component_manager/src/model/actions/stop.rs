@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{error::ModelError, realm::Realm},
+    crate::model::{component::ComponentInstance, error::ModelError},
     std::sync::Arc,
 };
 
-pub(super) async fn do_stop(realm: &Arc<Realm>) -> Result<(), ModelError> {
-    realm.stop_instance(false).await
+pub(super) async fn do_stop(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
+    component.stop_instance(false).await
 }

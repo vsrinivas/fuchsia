@@ -4,8 +4,8 @@
 
 use {
     crate::model::{
+        component::{ComponentInstance, WeakComponentInstance},
         error::ModelError,
-        realm::{Realm, WeakRealm},
         resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
     },
     fidl_fuchsia_sys2 as fsys,
@@ -19,7 +19,7 @@ use {
 /// [`EnvironmentDecl`]: fidl_fuchsia_sys2::EnvironmentDecl
 pub struct Environment {
     /// The parent that created or inherited the environment.
-    parent: Option<WeakRealm>,
+    parent: Option<WeakComponentInstance>,
     /// The extension mode of this environment.
     extends: EnvironmentExtends,
     /// The runners available in this environment.
@@ -76,8 +76,11 @@ impl Environment {
         }
     }
 
-    /// Creates an environment from `env_decl`, using `parent` as the parent realm.
-    pub fn from_decl(parent: &Arc<Realm>, env_decl: &cm_rust::EnvironmentDecl) -> Environment {
+    /// Creates an environment from `env_decl`, using `parent` as the parent component.
+    pub fn from_decl(
+        parent: &Arc<ComponentInstance>,
+        env_decl: &cm_rust::EnvironmentDecl,
+    ) -> Environment {
         Environment {
             parent: Some(parent.into()),
             extends: env_decl.extends.into(),
@@ -96,7 +99,7 @@ impl Environment {
     }
 
     /// Creates a new environment with `parent` as the parent.
-    pub fn new_inheriting(parent: &Arc<Realm>) -> Environment {
+    pub fn new_inheriting(parent: &Arc<ComponentInstance>) -> Environment {
         Environment {
             parent: Some(parent.into()),
             extends: EnvironmentExtends::Realm,
@@ -110,13 +113,13 @@ impl Environment {
         self.stop_timeout
     }
 
-    /// Returns the runner registered to `name` and the realm that created the environment the
-    /// runner was registered to (`None` for component manager's realm). Returns `None` if there
+    /// Returns the runner registered to `name` and the component that created the environment the
+    /// runner was registered to (`None` for component manager). Returns `None` if there
     /// was no match.
     pub fn get_registered_runner(
         &self,
         name: &cm_rust::CapabilityName,
-    ) -> Result<Option<(Option<Arc<Realm>>, RunnerRegistration)>, ModelError> {
+    ) -> Result<Option<(Option<Arc<ComponentInstance>>, RunnerRegistration)>, ModelError> {
         let parent = self.parent.as_ref().map(|p| p.upgrade()).transpose()?;
         match self.runner_registry.get_runner(name) {
             Some(reg) => Ok(Some((parent, reg.clone()))),
@@ -205,9 +208,9 @@ mod tests {
         crate::config::RuntimeConfig,
         crate::model::{
             binding::Binder,
+            component::BindReason,
             error::ModelError,
             model::{Model, ModelParams},
-            realm::BindReason,
             testing::{
                 mocks::MockResolver,
                 test_helpers::{
@@ -225,14 +228,14 @@ mod tests {
 
     #[test]
     fn test_from_decl() {
-        let realm = Realm::new_root_realm(
+        let component = ComponentInstance::new_root(
             Environment::empty(),
             Weak::new(),
             Weak::new(),
             "test:///root".to_string(),
         );
         let environment = Environment::from_decl(
-            &realm,
+            &component,
             &EnvironmentDeclBuilder::new()
                 .name("env")
                 .extends(fsys::EnvironmentExtends::None)
@@ -242,7 +245,7 @@ mod tests {
         assert_matches!(environment.parent, Some(_));
 
         let environment = Environment::from_decl(
-            &realm,
+            &component,
             &EnvironmentDeclBuilder::new()
                 .name("env")
                 .extends(fsys::EnvironmentExtends::Realm)
@@ -251,8 +254,8 @@ mod tests {
         assert_matches!(environment.parent, Some(_));
     }
 
-    // Each component declares an environment for their child that inherits from the realm's
-    // environment. The leaf component should be able to access the resolvers of the root realm.
+    // Each component declares an environment for their child that inherits from the component's
+    // environment. The leaf component should be able to access the resolvers of the root.
     #[fasync::run_singlethreaded(test)]
     async fn test_inherit_root() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
@@ -301,12 +304,13 @@ mod tests {
         })
         .await
         .unwrap();
-        let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
-        assert_eq!(realm.component_url, "test:///b");
+        let component = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
+        assert_eq!(component.component_url, "test:///b");
 
-        let registered_runner = realm.environment.get_registered_runner(&"test".into()).unwrap();
+        let registered_runner =
+            component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner.as_ref(), Some((None, r)) if r == &runner_reg);
-        assert_matches!(realm.environment.get_registered_runner(&"foo".into()), Ok(None));
+        assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         Ok(())
     }
@@ -365,14 +369,15 @@ mod tests {
             namespace_capabilities: vec![],
         })
         .await?;
-        let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
-        assert_eq!(realm.component_url, "test:///b");
+        let component = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
+        assert_eq!(component.component_url, "test:///b");
 
-        let registered_runner = realm.environment.get_registered_runner(&"test".into()).unwrap();
+        let registered_runner =
+            component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner.as_ref(), Some((Some(_), r)) if r == &runner_reg);
         let parent_moniker = &registered_runner.unwrap().0.unwrap().abs_moniker;
         assert_eq!(parent_moniker, &AbsoluteMoniker::root());
-        assert_matches!(realm.environment.get_registered_runner(&"foo".into()), Ok(None));
+        assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         Ok(())
     }
@@ -435,27 +440,28 @@ mod tests {
         .await?;
         // Add instance to collection.
         {
-            let parent_realm = model.bind(&vec!["a:0"].into(), &BindReason::Eager).await?;
+            let parent = model.bind(&vec!["a:0"].into(), &BindReason::Eager).await?;
             let child_decl = ChildDeclBuilder::new_lazy_child("b").build();
-            parent_realm
+            parent
                 .add_dynamic_child("coll".into(), &child_decl)
                 .await
                 .expect("failed to add child");
         }
-        let realm = model.bind(&vec!["a:0", "coll:b:1"].into(), &BindReason::Eager).await?;
-        assert_eq!(realm.component_url, "test:///b");
+        let component = model.bind(&vec!["a:0", "coll:b:1"].into(), &BindReason::Eager).await?;
+        assert_eq!(component.component_url, "test:///b");
 
-        let registered_runner = realm.environment.get_registered_runner(&"test".into()).unwrap();
+        let registered_runner =
+            component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner.as_ref(), Some((Some(_), r)) if r == &runner_reg);
         let parent_moniker = &registered_runner.unwrap().0.unwrap().abs_moniker;
         assert_eq!(parent_moniker, &AbsoluteMoniker::root());
-        assert_matches!(realm.environment.get_registered_runner(&"foo".into()), Ok(None));
+        assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         Ok(())
     }
 
     // One of the components does not declare or specify an environment for the leaf child. The
-    // leaf child component should still be able to access the resolvers of the root realm, as an
+    // leaf child component should still be able to access the resolvers of the root, as an
     // implicit inheriting environment is assumed.
     #[fasync::run_singlethreaded(test)]
     async fn test_auto_inheritance() -> Result<(), ModelError> {
@@ -501,12 +507,13 @@ mod tests {
         .await
         .unwrap();
 
-        let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
-        assert_eq!(realm.component_url, "test:///b");
+        let component = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
+        assert_eq!(component.component_url, "test:///b");
 
-        let registered_runner = realm.environment.get_registered_runner(&"test".into()).unwrap();
+        let registered_runner =
+            component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner.as_ref(), Some((None, r)) if r == &runner_reg);
-        assert_matches!(realm.environment.get_registered_runner(&"foo".into()), Ok(None));
+        assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         Ok(())
     }

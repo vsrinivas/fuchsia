@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{error::ModelError, realm::WeakRealm},
+    crate::model::{component::WeakComponentInstance, error::ModelError},
     async_trait::async_trait,
     cm_rust::*,
     fuchsia_zircon as zx,
@@ -28,18 +28,18 @@ pub type NamespaceCapabilities = Vec<cm_rust::CapabilityDecl>;
 pub enum CapabilitySource {
     /// This capability originates from the component instance for the given Realm.
     /// point.
-    Component { capability: ComponentCapability, realm: WeakRealm },
+    Component { capability: ComponentCapability, component: WeakComponentInstance },
     /// This capability originates from "framework". It's implemented by component manager and is
     /// scoped to the realm of the source.
     Framework { capability: InternalCapability, scope_moniker: AbsoluteMoniker },
-    /// This capability originates from the containing realm of the root component, and is
+    /// This capability originates from the parent of the root component, and is
     /// built in to component manager.
     Builtin { capability: InternalCapability },
-    /// This capability originates from the containing realm of the root component, and is
+    /// This capability originates from the parent of the root component, and is
     /// offered from component manager's namespace.
     Namespace { capability: ComponentCapability },
     /// This capability is provided by the framework based on some other capability.
-    Capability { source_capability: ComponentCapability, realm: WeakRealm },
+    Capability { source_capability: ComponentCapability, component: WeakComponentInstance },
 }
 
 impl CapabilitySource {
@@ -81,8 +81,8 @@ impl fmt::Display for CapabilitySource {
             f,
             "{}",
             match self {
-                CapabilitySource::Component { capability, realm } => {
-                    format!("{} '{}'", capability, realm.moniker)
+                CapabilitySource::Component { capability, component } => {
+                    format!("{} '{}'", capability, component.moniker)
                 }
                 CapabilitySource::Framework { capability, .. } => capability.to_string(),
                 CapabilitySource::Builtin { capability } => capability.to_string(),
@@ -110,9 +110,12 @@ pub enum InternalCapability {
 impl InternalCapability {
     /// Returns whether the given InternalCapability can be available in a component's namespace.
     pub fn can_be_in_namespace(&self) -> bool {
-        matches!(self, InternalCapability::Service(_) |
-                       InternalCapability::Protocol(_) |
-                       InternalCapability::Directory(_))
+        matches!(
+            self,
+            InternalCapability::Service(_)
+                | InternalCapability::Protocol(_)
+                | InternalCapability::Directory(_)
+        )
     }
 
     /// Returns a name for the capability type.
@@ -296,17 +299,19 @@ impl ComponentCapability {
     /// Returns whether the given ComponentCapability can be available in a component's namespace.
     pub fn can_be_in_namespace(&self) -> bool {
         match self {
-            ComponentCapability::Use(use_) => matches!(use_, UseDecl::Protocol(_) |
-                               UseDecl::Directory(_) |
-                               UseDecl::Service(_)),
-            ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
-                matches!(expose, ExposeDecl::Protocol(_) |
-                                 ExposeDecl::Directory(_) |
-                                 ExposeDecl::Service(_))
+            ComponentCapability::Use(use_) => {
+                matches!(use_, UseDecl::Protocol(_) | UseDecl::Directory(_) | UseDecl::Service(_))
             }
-            ComponentCapability::Offer(offer) => matches!(offer, OfferDecl::Protocol(_) |
-                                OfferDecl::Directory(_) |
-                                OfferDecl::Service(_)),
+            ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
+                matches!(
+                    expose,
+                    ExposeDecl::Protocol(_) | ExposeDecl::Directory(_) | ExposeDecl::Service(_)
+                )
+            }
+            ComponentCapability::Offer(offer) => matches!(
+                offer,
+                OfferDecl::Protocol(_) | OfferDecl::Directory(_) | OfferDecl::Service(_)
+            ),
             ComponentCapability::Protocol(_) | ComponentCapability::Directory(_) => true,
             _ => false,
         }
@@ -1088,7 +1093,7 @@ mod tests {
         // A child named "child" exposes a runner "elf" to its parent.
         let child_decl = ComponentDecl {
             exposes: vec![
-                // Expose as "elf" to Realm.
+                // Expose as "elf" to parent.
                 ExposeDecl::Runner(cm_rust::ExposeRunnerDecl {
                     source: cm_rust::ExposeSource::Self_,
                     source_name: "source".into(),

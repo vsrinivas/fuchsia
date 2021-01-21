@@ -4,7 +4,8 @@
 
 use {
     crate::model::{
-        dir_tree::DirTree, error::ModelError, realm::WeakRealm, routing_fns::route_expose_fn,
+        component::WeakComponentInstance, dir_tree::DirTree, error::ModelError,
+        routing_fns::route_expose_fn,
     },
     cm_rust::ComponentDecl,
     fidl::endpoints::ServerEnd,
@@ -30,12 +31,12 @@ impl ExposedDir {
     /// Creates a new ExposedDir with an explicit execution scope.
     pub fn new(
         scope: ExecutionScope,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
         let mut dir = pfs::simple();
-        let tree = DirTree::build_from_exposes(route_expose_fn, realm.clone(), decl);
-        tree.install(&realm.moniker, &mut dir)?;
+        let tree = DirTree::build_from_exposes(route_expose_fn, component.clone(), decl);
+        tree.install(&component.moniker, &mut dir)?;
         Ok(ExposedDir { root_dir: dir, execution_scope: scope })
     }
 

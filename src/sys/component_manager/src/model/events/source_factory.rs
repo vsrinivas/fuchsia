@@ -101,7 +101,7 @@ impl EventSourceFactory {
     }
 
     /// Returns an EventSource. An EventSource holds an AbsoluteMoniker that
-    /// corresponds to the realm in which it will receive events.
+    /// corresponds to the component in which it will receive events.
     async fn on_capability_routed_async(
         self: Arc<Self>,
         capability_decl: &InternalCapability,
@@ -199,10 +199,10 @@ mod tests {
         super::*,
         crate::config::RuntimeConfig,
         crate::model::{
+            component::WeakComponentInstance,
             environment::{Environment, RunnerRegistry},
             hooks::Hooks,
             model::ModelParams,
-            realm::WeakRealm,
             resolver::ResolverRegistry,
             testing::{mocks::MockResolver, test_helpers::ComponentDeclBuilder},
         },
@@ -232,7 +232,7 @@ mod tests {
             target_moniker.clone(),
             "fuchsia-pkg://test",
             Ok(EventPayload::Resolved {
-                realm: WeakRealm::default(),
+                component: WeakComponentInstance::default(),
                 resolved_url: "fuchsia-pkg://test".to_string(),
                 decl: decl.clone(),
             }),

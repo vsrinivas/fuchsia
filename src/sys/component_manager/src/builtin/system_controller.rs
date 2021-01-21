@@ -111,8 +111,7 @@ impl SystemControllerCapabilityProvider {
             // from this API.
             match request {
                 // Shutting down the root component causes component_manager to
-                // exit. main.rs waits on the model to observe the root realm
-                // disappear.
+                // exit. main.rs waits on the model to observe the root disappear.
                 SystemControllerRequest::Shutdown { responder } => {
                     let timeout = zx::Duration::from(self.request_timeout);
                     fasync::Task::spawn(async move {
@@ -120,13 +119,9 @@ impl SystemControllerCapabilityProvider {
                         panic!("Component manager did not complete shutdown in allowed time.");
                     })
                     .detach();
-                    let root_realm = self
-                        .model
-                        .upgrade()
-                        .ok_or(format_err!("model is dropped"))?
-                        .root_realm
-                        .clone();
-                    ActionSet::register(root_realm, ShutdownAction::new())
+                    let root =
+                        self.model.upgrade().ok_or(format_err!("model is dropped"))?.root.clone();
+                    ActionSet::register(root, ShutdownAction::new())
                         .await
                         .context("got error waiting for shutdown action to complete")?;
                     match responder.send() {
@@ -177,8 +172,8 @@ mod tests {
         super::*,
         crate::model::{
             binding::Binder,
+            component::BindReason,
             hooks::{EventType, Hook, HooksRegistration},
-            realm::BindReason,
             testing::test_helpers::{
                 component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder, ComponentInfo,
             },
@@ -199,7 +194,7 @@ mod tests {
     ///  c   d
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_system_controller() {
-        // Configure and start realm
+        // Configure and start component
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
@@ -208,12 +203,15 @@ mod tests {
             ("d", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::BindChild { parent: AbsoluteMoniker::root() })
+            .bind(
+                &component_a.abs_moniker,
+                &BindReason::BindChild { parent: AbsoluteMoniker::root() },
+            )
             .await
             .expect("could not bind to a");
 
@@ -234,31 +232,31 @@ mod tests {
         let controller_proxy =
             client_channel.into_proxy().expect("failed converting endpoint into proxy");
 
-        let root_realm_info = ComponentInfo::new(test.model.root_realm.clone()).await;
-        let realm_a_info = ComponentInfo::new(realm_a.clone()).await;
-        let realm_b_info = ComponentInfo::new(realm_b.clone()).await;
-        let realm_c_info = ComponentInfo::new(realm_c.clone()).await;
-        let realm_d_info = ComponentInfo::new(realm_d.clone()).await;
+        let root_component_info = ComponentInfo::new(test.model.root.clone()).await;
+        let component_a_info = ComponentInfo::new(component_a.clone()).await;
+        let component_b_info = ComponentInfo::new(component_b.clone()).await;
+        let component_c_info = ComponentInfo::new(component_c.clone()).await;
+        let component_d_info = ComponentInfo::new(component_d.clone()).await;
 
-        // Check that the root realm is still here
-        root_realm_info.check_not_shut_down(&test.runner).await;
-        realm_a_info.check_not_shut_down(&test.runner).await;
-        realm_b_info.check_not_shut_down(&test.runner).await;
-        realm_c_info.check_not_shut_down(&test.runner).await;
-        realm_d_info.check_not_shut_down(&test.runner).await;
+        // Check that the root component is still here
+        root_component_info.check_not_shut_down(&test.runner).await;
+        component_a_info.check_not_shut_down(&test.runner).await;
+        component_b_info.check_not_shut_down(&test.runner).await;
+        component_c_info.check_not_shut_down(&test.runner).await;
+        component_d_info.check_not_shut_down(&test.runner).await;
 
         // Ask the SystemController to shut down the system and wait to be
-        // notified that the room realm stopped.
-        let completion = test.builtin_environment.wait_for_root_realm_stop();
+        // notified that the root component stopped.
+        let completion = test.builtin_environment.wait_for_root_stop();
         controller_proxy.shutdown().await.expect("shutdown request failed");
         completion.await;
 
-        // Check state bits to confirm root realm looks shut down
-        root_realm_info.check_is_shut_down(&test.runner).await;
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
+        // Check state bits to confirm root component looks shut down
+        root_component_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
     }
 
     #[test]
@@ -280,7 +278,7 @@ mod tests {
 
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
         let mut test_logic = Box::pin(async {
-            // Configure and start realm
+            // Configure and start component
             let components = vec![
                 ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),
                 ("a", ComponentDeclBuilder::new().build()),
@@ -295,10 +293,10 @@ mod tests {
             );
 
             let test = ActionsTest::new_with_hooks("root", components, None, vec![hooks_reg]).await;
-            let realm_a = test.look_up(vec!["a:0"].into()).await;
+            let component_a = test.look_up(vec!["a:0"].into()).await;
             test.model
                 .bind(
-                    &realm_a.abs_moniker,
+                    &component_a.abs_moniker,
                     &BindReason::BindChild { parent: AbsoluteMoniker::root() },
                 )
                 .await
@@ -321,16 +319,16 @@ mod tests {
             let controller_proxy =
                 client_channel.into_proxy().expect("failed converting endpoint into proxy");
 
-            let root_realm_info = ComponentInfo::new(test.model.root_realm.clone()).await;
-            let realm_a_info = ComponentInfo::new(realm_a.clone()).await;
+            let root_component_info = ComponentInfo::new(test.model.root.clone()).await;
+            let component_a_info = ComponentInfo::new(component_a.clone()).await;
 
-            // Check that the root realm is still here
-            root_realm_info.check_not_shut_down(&test.runner).await;
-            realm_a_info.check_not_shut_down(&test.runner).await;
+            // Check that the root component is still here
+            root_component_info.check_not_shut_down(&test.runner).await;
+            component_a_info.check_not_shut_down(&test.runner).await;
 
             // Ask the SystemController to shut down the system and wait to be
-            // notified that the room realm stopped.
-            let _completion = test.builtin_environment.wait_for_root_realm_stop();
+            // notified that the room component stopped.
+            let _completion = test.builtin_environment.wait_for_root_stop();
             controller_proxy.shutdown().await.expect("shutdown request failed");
         });
 

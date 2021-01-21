@@ -21,7 +21,7 @@ pub(crate) mod channel;
 pub(crate) mod framework;
 pub(crate) mod fuchsia_boot_resolver;
 pub(crate) mod fuchsia_pkg_resolver;
-pub(crate) mod root_realm_stop_notifier;
+pub(crate) mod root_stop_notifier;
 pub(crate) mod work_scheduler;
 
 mod builtin;

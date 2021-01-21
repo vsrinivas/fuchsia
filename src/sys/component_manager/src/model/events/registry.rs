@@ -6,6 +6,7 @@ use {
     crate::{
         capability::{CapabilitySource, InternalCapability},
         model::{
+            component::{ComponentInstance, InstanceState},
             error::ModelError,
             events::{
                 dispatcher::{EventDispatcher, EventDispatcherScope},
@@ -21,7 +22,6 @@ use {
                 HooksRegistration,
             },
             model::Model,
-            realm::{Realm, RealmState},
             routing,
         },
     },
@@ -202,9 +202,9 @@ impl EventRegistry {
         options: &SubscriptionOptions,
         requests: Vec<EventSubscription>,
     ) -> Result<EventStream, ModelError> {
-        // Register event capabilities if any. It identifies the sources of these events (might be the
-        // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
-        // realms.
+        // Register event capabilities if any. It identifies the sources of these events (might be
+        // the parent or this component itself). It consturcts an "allow-list tree" of events and
+        // component instances.
         let mut event_names = HashMap::new();
         for request in requests {
             if event_names.insert(request.event_name.clone(), request.mode.clone()).is_some() {
@@ -343,15 +343,15 @@ impl EventRegistry {
         events: &HashMap<CapabilityName, EventMode>,
     ) -> Result<RouteEventsResult, ModelError> {
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-        let realm = model.look_up_realm(&target_moniker).await?;
+        let component = model.look_up(&target_moniker).await?;
         let decl = {
-            let state = realm.lock_state().await;
+            let state = component.lock_state().await;
             match *state {
-                RealmState::New | RealmState::Discovered => {
+                InstanceState::New | InstanceState::Discovered => {
                     panic!("route_events: not resolved");
                 }
-                RealmState::Resolved(ref s) => s.decl().clone(),
-                RealmState::Destroyed => {
+                InstanceState::Resolved(ref s) => s.decl().clone(),
+                InstanceState::Destroyed => {
                     return Err(ModelError::instance_not_found(target_moniker.clone()));
                 }
             }
@@ -363,7 +363,7 @@ impl EventRegistry {
                 UseDecl::Event(event_decl) => {
                     if let Some(mode) = events.get(&event_decl.target_name) {
                         let (source_name, scope_moniker) =
-                            Self::route_event(event_decl, &realm).await?;
+                            Self::route_event(event_decl, &component).await?;
                         let scope = EventDispatcherScope::new(scope_moniker)
                             .with_filter(EventFilter::new(event_decl.filter.clone()))
                             .with_mode_set(EventModeSet::new(event_decl.mode.clone()));
@@ -382,17 +382,17 @@ impl EventRegistry {
     /// Routes an event and returns its source name and scope on success.
     async fn route_event(
         event_decl: &UseEventDecl,
-        realm: &Arc<Realm>,
+        component: &Arc<ComponentInstance>,
     ) -> Result<(CapabilityName, AbsoluteMoniker), ModelError> {
-        routing::route_use_event_capability(&UseDecl::Event(event_decl.clone()), &realm).await.map(
-            |source| match source {
+        routing::route_use_event_capability(&UseDecl::Event(event_decl.clone()), &component)
+            .await
+            .map(|source| match source {
                 CapabilitySource::Framework {
                     capability: InternalCapability::Event(source_name),
                     scope_moniker,
                 } => (source_name, scope_moniker),
                 _ => unreachable!(),
-            },
-        )
+            })
     }
 
     #[cfg(test)]
@@ -433,10 +433,10 @@ mod tests {
             capability::ComponentCapability,
             config::RuntimeConfig,
             model::{
+                component::ComponentInstance,
                 environment::Environment,
                 events::event::Event,
                 hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
-                realm::Realm,
                 testing::test_helpers::{TestModelResult, *},
             },
         },
@@ -499,7 +499,7 @@ mod tests {
             .expect("subscribe succeeds");
         assert_eq!(1, registry.dispatchers_per_event_type(EventType::CapabilityRouted).await);
 
-        let realm = Realm::new_root_realm(
+        let component = ComponentInstance::new_root(
             Environment::empty(),
             Weak::new(),
             Weak::new(),
@@ -509,8 +509,10 @@ mod tests {
             name: "foo".into(),
             source_path: "/svc/foo".parse().unwrap(),
         });
-        let source =
-            CapabilitySource::Component { capability: capability.clone(), realm: realm.as_weak() };
+        let source = CapabilitySource::Component {
+            capability: capability.clone(),
+            component: component.as_weak(),
+        };
         let capability_provider = Arc::new(Mutex::new(None));
         let event = ComponentEvent::new_for_test(
             AbsoluteMoniker::root(),

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The "Action" concept represents an asynchronous activity on a realm that should eventually
+//! The "Action" concept represents an asynchronous activity on a component that should eventually
 //! complete.
 //!
 //! Actions decouple the "what" of what needs to happen to a component from the "how". Several
-//! client APIs may induce operations on a realm's state that complete asynchronously. These
+//! client APIs may induce operations on a component's state that complete asynchronously. These
 //! operations could depend on each other in various ways.
 //!
-//! A key property of actions is idempotency. If two equal actions are registered on a realm, the
-//! work for that action is performed only once. This means that two distinct call sites can
+//! A key property of actions is idempotency. If two equal actions are registered on a component,
+//! the work for that action is performed only once. This means that two distinct call sites can
 //! register the same action, and be guaranteed the work is not repeated.
 //!
 //! Here are a couple examples:
@@ -19,7 +19,7 @@
 //!   downstream dependencies have shut down.
 //! - A `Realm.DestroyChild` FIDL call returns right after a child component is marked deleted.
 //!   However, in order to actually delete the child, a sequence of events must happen:
-//!     * All instances in the realm must be shut down (see above)
+//!     * All instances in the component must be shut down (see above)
 //!     * The component instance's persistent storage must be erased, if any.
 //!     * The component's parent must remove it as a child.
 //!
@@ -29,14 +29,14 @@
 //! call. However, this doesn't scale well, because it requires distributed state handling and is
 //! prone to races. Actions solve this problem by allowing client code to just specify the actions
 //! that need to eventually be fulfilled. The actual business logic to perform the actions can be
-//! implemented by the realm itself in a coordinated manner.
+//! implemented by the component itself in a coordinated manner.
 //!
 //! `DestroyChild()` is an example of how this can work. For simplicity, suppose it's called on a
 //! component with no children of its own. This might cause a chain of events like the following:
 //!
 //! - Before it returns, the `DestroyChild` FIDL handler registers the `DeleteChild` action on the
-//!   containing realm for child being destroyed.
-//! - This results in a call to `Action::handle` for the realm. In response to
+//!   parent component for child being destroyed.
+//! - This results in a call to `Action::handle` for the component. In response to
 //!   `DestroyChild`, `Action::handle()` spawns a future that sets a `Destroy` action on the child.
 //!   Note that `Action::handle()` is not async, it always spawns any work that might block
 //!   in a future.
@@ -58,9 +58,9 @@ mod stop;
 
 use {
     crate::model::{
+        component::{BindReason, Component, ComponentInstance, InstanceState},
         error::ModelError,
         hooks::{Event, EventPayload},
-        realm::{BindReason, Component, Realm, RealmState},
     },
     async_trait::async_trait,
     fuchsia_async as fasync,
@@ -82,11 +82,11 @@ use {
     },
 };
 
-/// A action on a realm that must eventually be fulfilled.
+/// A action on a component that must eventually be fulfilled.
 #[async_trait]
 pub trait Action: Send + Sync + 'static {
     type Output: Send + Sync + Clone + Debug;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output;
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output;
     fn key(&self) -> ActionKey;
 }
 
@@ -103,8 +103,8 @@ impl DiscoverAction {
 #[async_trait]
 impl Action for DiscoverAction {
     type Output = Result<(), ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        do_discover(realm).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        do_discover(component).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::Discover
@@ -123,8 +123,8 @@ impl ResolveAction {
 #[async_trait]
 impl Action for ResolveAction {
     type Output = Result<Component, ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        resolve::do_resolve(realm).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        resolve::do_resolve(component).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::Resolve
@@ -145,8 +145,8 @@ impl StartAction {
 #[async_trait]
 impl Action for StartAction {
     type Output = Result<(), ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        start::do_start(realm, &self.bind_reason).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        start::do_start(component, &self.bind_reason).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::Start
@@ -165,15 +165,15 @@ impl StopAction {
 #[async_trait]
 impl Action for StopAction {
     type Output = Result<(), ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        stop::do_stop(realm).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        stop::do_stop(component).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::Stop
     }
 }
 
-/// Marks a child of a realm as deleting.
+/// Marks a child of a component as deleting.
 pub struct MarkDeletingAction {
     moniker: ChildMoniker,
 }
@@ -187,15 +187,15 @@ impl MarkDeletingAction {
 #[async_trait]
 impl Action for MarkDeletingAction {
     type Output = Result<(), ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        do_mark_deleting(realm, self.moniker.clone()).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        do_mark_deleting(component, self.moniker.clone()).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::MarkDeleting(self.moniker.clone())
     }
 }
 
-/// Completely deletes the given child of a realm.
+/// Completely deletes the given child of a component.
 pub struct DeleteChildAction {
     moniker: ChildMoniker,
 }
@@ -209,15 +209,15 @@ impl DeleteChildAction {
 #[async_trait]
 impl Action for DeleteChildAction {
     type Output = Result<(), ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        do_delete_child(realm, self.moniker.clone()).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        do_delete_child(component, self.moniker.clone()).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::DeleteChild(self.moniker.clone())
     }
 }
 
-/// Destroy this component instance, including all instances nested in its realm.
+/// Destroy this component instance, including all instances nested in its component.
 pub struct DestroyAction {}
 
 impl DestroyAction {
@@ -229,15 +229,15 @@ impl DestroyAction {
 #[async_trait]
 impl Action for DestroyAction {
     type Output = Result<(), ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        do_destroy(realm).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        do_destroy(component).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::Destroy
     }
 }
 
-/// Shuts down all component instances in this realm (stops them and guarantees they will never
+/// Shuts down all component instances in this component (stops them and guarantees they will never
 /// be started again).
 pub struct ShutdownAction {}
 
@@ -250,8 +250,8 @@ impl ShutdownAction {
 #[async_trait]
 impl Action for ShutdownAction {
     type Output = Result<(), ModelError>;
-    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
-        shutdown::do_shutdown(realm).await
+    async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
+        shutdown::do_shutdown(component).await
     }
     fn key(&self) -> ActionKey {
         ActionKey::Shutdown
@@ -271,7 +271,7 @@ pub enum ActionKey {
     Destroy,
 }
 
-/// A set of actions on a realm that must be completed.
+/// A set of actions on a component that must be completed.
 ///
 /// Each action is mapped to a future that returns when the action is complete.
 pub struct ActionSet {
@@ -355,13 +355,13 @@ impl ActionSet {
 
     /// Registers an action in the set, returning when the action is finished (which may represent
     /// a task that's already running for this action).
-    pub async fn register<A>(realm: Arc<Realm>, action: A) -> A::Output
+    pub async fn register<A>(component: Arc<ComponentInstance>, action: A) -> A::Output
     where
         A: Action,
     {
         let rx = {
-            let mut actions = realm.lock_actions().await;
-            actions.register_no_wait(&realm, action)
+            let mut actions = component.lock_actions().await;
+            actions.register_no_wait(&component, action)
         };
         rx.await
     }
@@ -370,16 +370,16 @@ impl ActionSet {
     /// future that can be used to wait on the task. This function is a no-op if the task is
     /// already registered.
     ///
-    /// REQUIRES: `self` is the `ActionSet` contained in `realm`.
+    /// REQUIRES: `self` is the `ActionSet` contained in `component`.
     pub fn register_no_wait<A>(
         &mut self,
-        realm: &Arc<Realm>,
+        component: &Arc<ComponentInstance>,
         action: A,
     ) -> impl Future<Output = A::Output>
     where
         A: Action,
     {
-        let (task, rx) = self.register_inner(realm, action);
+        let (task, rx) = self.register_inner(component, action);
         if let Some(task) = task {
             task.spawn();
         }
@@ -404,8 +404,8 @@ impl ActionSet {
     }
 
     /// Removes an action from the set, completing it.
-    async fn finish<'a>(realm: &Arc<Realm>, key: &'a ActionKey) {
-        let mut action_set = realm.lock_actions().await;
+    async fn finish<'a>(component: &Arc<ComponentInstance>, key: &'a ActionKey) {
+        let mut action_set = component.lock_actions().await;
         action_set.rep.remove(key);
     }
 
@@ -418,7 +418,7 @@ impl ActionSet {
     #[must_use]
     pub(crate) fn register_inner<'a, A>(
         &'a mut self,
-        realm: &Arc<Realm>,
+        component: &Arc<ComponentInstance>,
         action: A,
     ) -> (Option<ActionTask<A>>, ActionNotifier<A::Output>)
     where
@@ -437,10 +437,10 @@ impl ActionSet {
                 ActionKey::Stop => self.rep.get(&ActionKey::Shutdown),
                 _ => None,
             };
-            let realm = realm.clone();
+            let component = component.clone();
             let handle_action = async move {
-                let res = action.handle(&realm).await;
-                Self::finish(&realm, &action.key()).await;
+                let res = action.handle(&component).await;
+                Self::finish(&component, &action.key()).await;
                 res
             };
             let fut = if let Some(blocking_action) = blocking_action {
@@ -479,71 +479,72 @@ impl ActionSet {
     }
 }
 
-async fn do_discover(realm: &Arc<Realm>) -> Result<(), ModelError> {
+async fn do_discover(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
     let is_discovered = {
-        let state = realm.lock_state().await;
+        let state = component.lock_state().await;
         match *state {
-            RealmState::New => false,
-            RealmState::Discovered => true,
-            RealmState::Resolved(_) => true,
-            RealmState::Destroyed => {
-                return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
+            InstanceState::New => false,
+            InstanceState::Discovered => true,
+            InstanceState::Resolved(_) => true,
+            InstanceState::Destroyed => {
+                return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
             }
         }
     };
     if is_discovered {
         return Ok(());
     }
-    let event = Event::new(&realm, Ok(EventPayload::Discovered));
-    realm.hooks.dispatch(&event).await?;
+    let event = Event::new(&component, Ok(EventPayload::Discovered));
+    component.hooks.dispatch(&event).await?;
     {
-        let mut state = realm.lock_state().await;
+        let mut state = component.lock_state().await;
         assert!(
-            matches!(*state, RealmState::New | RealmState::Destroyed),
-            "Realm in unexpected state after discover"
+            matches!(*state, InstanceState::New | InstanceState::Destroyed),
+            "Component in unexpected state after discover"
         );
         match *state {
-            RealmState::Destroyed => {
+            InstanceState::Destroyed => {
                 // Nothing to do.
             }
-            RealmState::Discovered | RealmState::Resolved(_) => {
+            InstanceState::Discovered | InstanceState::Resolved(_) => {
                 panic!(
-                    "Realm was marked {:?} during Discover action, which shouldn't be possible",
+                    "Component was marked {:?} during Discover action, which shouldn't be possible",
                     *state
                 );
             }
-            RealmState::New => {
-                state.set(RealmState::Discovered);
+            InstanceState::New => {
+                state.set(InstanceState::Discovered);
             }
         }
     }
     Ok(())
 }
 
-async fn do_mark_deleting(realm: &Arc<Realm>, moniker: ChildMoniker) -> Result<(), ModelError> {
+async fn do_mark_deleting(
+    component: &Arc<ComponentInstance>,
+    moniker: ChildMoniker,
+) -> Result<(), ModelError> {
     let partial_moniker = moniker.to_partial();
-    let child_realm = {
-        let state = realm.lock_state().await;
+    let child = {
+        let state = component.lock_state().await;
         match *state {
-            RealmState::Resolved(ref s) => {
-                s.get_live_child_realm(&partial_moniker).map(|r| r.clone())
-            }
-            RealmState::Destroyed => None,
-            RealmState::New | RealmState::Discovered => {
+            InstanceState::Resolved(ref s) => s.get_live_child(&partial_moniker).map(|r| r.clone()),
+            InstanceState::Destroyed => None,
+            InstanceState::New | InstanceState::Discovered => {
                 panic!("do_mark_deleting: not resolved");
             }
         }
     };
-    if let Some(child_realm) = child_realm {
-        let event = Event::new(&child_realm, Ok(EventPayload::MarkedForDestruction));
-        child_realm.hooks.dispatch(&event).await?;
-        let mut state = realm.lock_state().await;
+    if let Some(child) = child {
+        let event = Event::new(&child, Ok(EventPayload::MarkedForDestruction));
+        child.hooks.dispatch(&event).await?;
+        let mut state = component.lock_state().await;
         match *state {
-            RealmState::Resolved(ref mut s) => {
-                s.mark_child_realm_deleting(&partial_moniker);
+            InstanceState::Resolved(ref mut s) => {
+                s.mark_child_deleting(&partial_moniker);
             }
-            RealmState::Destroyed => {}
-            RealmState::New | RealmState::Discovered => {
+            InstanceState::Destroyed => {}
+            InstanceState::New | InstanceState::Discovered => {
                 panic!("do_mark_deleting: not resolved");
             }
         }
@@ -553,59 +554,62 @@ async fn do_mark_deleting(realm: &Arc<Realm>, moniker: ChildMoniker) -> Result<(
     Ok(())
 }
 
-async fn do_delete_child(realm: &Arc<Realm>, moniker: ChildMoniker) -> Result<(), ModelError> {
+async fn do_delete_child(
+    component: &Arc<ComponentInstance>,
+    moniker: ChildMoniker,
+) -> Result<(), ModelError> {
     // Some paths may have already marked the child deleting before scheduling the DeleteChild
     // action, in which case this is a no-op.
-    ActionSet::register(realm.clone(), MarkDeletingAction::new(moniker.clone())).await?;
+    ActionSet::register(component.clone(), MarkDeletingAction::new(moniker.clone())).await?;
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
-    let child_realm = {
-        let state = realm.lock_state().await;
+    let child = {
+        let state = component.lock_state().await;
         match *state {
-            RealmState::Resolved(ref s) => s.all_child_realms().get(&moniker).map(|r| r.clone()),
-            RealmState::Destroyed => None,
-            RealmState::New | RealmState::Discovered => {
+            InstanceState::Resolved(ref s) => s.all_children().get(&moniker).map(|r| r.clone()),
+            InstanceState::Destroyed => None,
+            InstanceState::New | InstanceState::Discovered => {
                 panic!("do_delete_child: not resolved");
             }
         }
     };
-    if let Some(child_realm) = child_realm {
-        ActionSet::register(child_realm.clone(), DestroyAction::new()).await?;
+    if let Some(child) = child {
+        ActionSet::register(child.clone(), DestroyAction::new()).await?;
         {
-            let mut state = realm.lock_state().await;
+            let mut state = component.lock_state().await;
             match *state {
-                RealmState::Resolved(ref mut s) => {
-                    s.remove_child_realm(&moniker);
+                InstanceState::Resolved(ref mut s) => {
+                    s.remove_child(&moniker);
                 }
-                RealmState::Destroyed => {}
-                RealmState::New | RealmState::Discovered => {
+                InstanceState::Destroyed => {}
+                InstanceState::New | InstanceState::Discovered => {
                     panic!("do_delete_child: not resolved");
                 }
             }
         }
-        let event = Event::new(&child_realm, Ok(EventPayload::Destroyed));
-        child_realm.hooks.dispatch(&event).await?;
+        let event = Event::new(&child, Ok(EventPayload::Destroyed));
+        child.hooks.dispatch(&event).await?;
     }
 
     Ok(())
 }
 
-async fn do_destroy(realm: &Arc<Realm>) -> Result<(), ModelError> {
+async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
-    ActionSet::register(realm.clone(), ShutdownAction::new()).await?;
+    ActionSet::register(component.clone(), ShutdownAction::new()).await?;
 
     let nfs = {
-        match *realm.lock_state().await {
-            RealmState::Resolved(ref s) => {
+        match *component.lock_state().await {
+            InstanceState::Resolved(ref s) => {
                 let mut nfs = vec![];
-                for (m, _) in s.all_child_realms().iter() {
-                    let realm = realm.clone();
-                    let nf = ActionSet::register(realm, DeleteChildAction::new(m.clone()));
+                for (m, _) in s.all_children().iter() {
+                    let component = component.clone();
+                    let nf = ActionSet::register(component, DeleteChildAction::new(m.clone()));
                     nfs.push(nf);
                 }
                 nfs
             }
-            RealmState::New | RealmState::Discovered | RealmState::Destroyed => {
+            InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {
                 // Component was never resolved. No explicit cleanup is required for children.
                 vec![]
             }
@@ -615,13 +619,13 @@ async fn do_destroy(realm: &Arc<Realm>) -> Result<(), ModelError> {
     ok_or_first_error(results)?;
 
     // Now that all children have been destroyed, destroy the parent.
-    realm.destroy_instance().await?;
+    component.destroy_instance().await?;
 
     // Only consider the component fully destroyed once it's no longer executing any lifecycle
     // transitions.
     {
-        let mut state = realm.lock_state().await;
-        state.set(RealmState::Destroyed);
+        let mut state = component.lock_state().await;
+        state.set(InstanceState::Destroyed);
     }
     fn wait(nf: Option<impl Future + Send + 'static>) -> BoxFuture<'static, ()> {
         Box::pin(async {
@@ -631,7 +635,7 @@ async fn do_destroy(realm: &Arc<Realm>) -> Result<(), ModelError> {
         })
     }
     let nfs = {
-        let actions = realm.lock_actions().await;
+        let actions = component.lock_actions().await;
         vec![
             wait(actions.wait(DiscoverAction::new())),
             wait(actions.wait(ResolveAction::new())),
@@ -654,9 +658,9 @@ pub mod tests {
     use {
         crate::model::{
             binding::Binder,
+            component::BindReason,
             events::{event::EventMode, registry::EventSubscription, stream::EventStream},
             hooks::{self, EventType, Hook, HooksRegistration},
-            realm::BindReason,
             testing::{
                 test_helpers::{
                     component_decl_with_test_runner, execution_is_shut_down, has_child,
@@ -680,7 +684,7 @@ pub mod tests {
 
     async fn register_action_in_new_task<A>(
         action: A,
-        realm: Arc<Realm>,
+        component: Arc<ComponentInstance>,
         responder: oneshot::Sender<A::Output>,
         res: A::Output,
     ) where
@@ -688,11 +692,11 @@ pub mod tests {
     {
         let (starter_tx, starter_rx) = oneshot::channel();
         fasync::Task::spawn(async move {
-            let mut action_set = realm.lock_actions().await;
+            let mut action_set = component.lock_actions().await;
 
             // Register action, and get the future. Use `register_inner` so that we can control
             // when to notify the listener.
-            let (task, rx) = action_set.register_inner(&realm, action);
+            let (task, rx) = action_set.register_inner(&component, action);
 
             // Signal to test that action is registered.
             starter_tx.send(()).unwrap();
@@ -717,27 +721,27 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn action_set() {
         let test = ActionsTest::new("root", vec![], None).await;
-        let realm = test.model.root_realm.clone();
+        let component = test.model.root.clone();
 
         let (tx1, rx1) = oneshot::channel();
-        register_action_in_new_task(DestroyAction::new(), realm.clone(), tx1, Ok(())).await;
+        register_action_in_new_task(DestroyAction::new(), component.clone(), tx1, Ok(())).await;
         let (tx2, rx2) = oneshot::channel();
         register_action_in_new_task(
             ShutdownAction::new(),
-            realm.clone(),
+            component.clone(),
             tx2,
             Err(ModelError::ComponentInvalid),
         )
         .await;
         let (tx3, rx3) = oneshot::channel();
-        register_action_in_new_task(DestroyAction::new(), realm.clone(), tx3, Ok(())).await;
+        register_action_in_new_task(DestroyAction::new(), component.clone(), tx3, Ok(())).await;
 
         // Complete actions, while checking notifications.
-        ActionSet::finish(&realm, &ActionKey::Destroy).await;
+        ActionSet::finish(&component, &ActionKey::Destroy).await;
         assert_matches!(rx1.await.expect("Unable to receive result of Notification"), Ok(()));
         assert_matches!(rx3.await.expect("Unable to receive result of Notification"), Ok(()));
 
-        ActionSet::finish(&realm, &ActionKey::Shutdown).await;
+        ActionSet::finish(&component, &ActionKey::Shutdown).await;
         assert_matches!(
             rx2.await.expect("Unable to receive result of Notification"),
             Err(ModelError::ComponentInvalid)
@@ -747,18 +751,18 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn action_shutdown_blocks_stop() {
         let test = ActionsTest::new("root", vec![], None).await;
-        let realm = test.model.root_realm.clone();
-        let mut action_set = realm.lock_actions().await;
+        let component = test.model.root.clone();
+        let mut action_set = component.lock_actions().await;
 
         // Register some actions, and get notifications. Use `register_inner` so we can register
         // the action without immediately running it.
-        let (task1, nf1) = action_set.register_inner(&realm, ShutdownAction::new());
-        let (task2, nf2) = action_set.register_inner(&realm, StopAction::new());
+        let (task1, nf1) = action_set.register_inner(&component, ShutdownAction::new());
+        let (task2, nf2) = action_set.register_inner(&component, StopAction::new());
 
         drop(action_set);
 
         // Complete actions, while checking futures.
-        ActionSet::finish(&realm, &ActionKey::Shutdown).await;
+        ActionSet::finish(&component, &ActionKey::Shutdown).await;
 
         // nf2 should be blocked on task1 completing.
         assert!(nf1.fut.peek().is_none());
@@ -772,19 +776,19 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn action_shutdown_stop_stop() {
         let test = ActionsTest::new("root", vec![], None).await;
-        let realm = test.model.root_realm.clone();
-        let mut action_set = realm.lock_actions().await;
+        let component = test.model.root.clone();
+        let mut action_set = component.lock_actions().await;
 
         // Register some actions, and get notifications. Use `register_inner` so we can register
         // the action without immediately running it.
-        let (task1, nf1) = action_set.register_inner(&realm, ShutdownAction::new());
-        let (task2, nf2) = action_set.register_inner(&realm, StopAction::new());
-        let (task3, nf3) = action_set.register_inner(&realm, StopAction::new());
+        let (task1, nf1) = action_set.register_inner(&component, ShutdownAction::new());
+        let (task2, nf2) = action_set.register_inner(&component, StopAction::new());
+        let (task3, nf3) = action_set.register_inner(&component, StopAction::new());
 
         drop(action_set);
 
         // Complete actions, while checking notifications.
-        ActionSet::finish(&realm, &ActionKey::Shutdown).await;
+        ActionSet::finish(&component, &ActionKey::Shutdown).await;
 
         // nf2 and nf3 should be blocked on task1 completing.
         assert!(nf1.fut.peek().is_none());
@@ -804,28 +808,31 @@ pub mod tests {
             ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        // Bind to the component, causing it to start. This should cause the realm to have an
+        // Bind to the component, causing it to start. This should cause the component to have an
         // `Execution`.
-        let realm = test.look_up(vec!["a:0"].into()).await;
-        test.model.bind(&realm.abs_moniker, &BindReason::Eager).await.expect("could not bind to a");
-        assert!(is_executing(&realm).await);
-        let a_info = ComponentInfo::new(realm.clone()).await;
+        let component = test.look_up(vec!["a:0"].into()).await;
+        test.model
+            .bind(&component.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        assert!(is_executing(&component).await);
+        let a_info = ComponentInfo::new(component.clone()).await;
 
         // Register shutdown action, and wait for it. Component should shut down (no more
         // `Execution`).
-        ActionSet::register(a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
         a_info.check_is_shut_down(&test.runner).await;
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind(&a_info.realm.abs_moniker, &BindReason::Eager)
+            .bind(&a_info.component.abs_moniker, &BindReason::Eager)
             .await
             .expect_err("successfully bound to a after shutdown");
 
         // Shut down the component again. This succeeds, but has no additional effect.
-        ActionSet::register(a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
         &a_info.check_is_shut_down(&test.runner).await;
@@ -854,49 +861,49 @@ pub mod tests {
 
         // Bind to the components, causing them to start. This should cause them to have an
         // `Execution`.
-        let realm_container = test.look_up(vec!["container:0"].into()).await;
-        let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
-        let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
-        let realm_c = test.look_up(vec!["container:0", "c:0"].into()).await;
+        let component_container = test.look_up(vec!["container:0"].into()).await;
+        let component_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
+        let component_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
+        let component_c = test.look_up(vec!["container:0", "c:0"].into()).await;
         test.model
-            .bind(&realm_container.abs_moniker, &BindReason::Eager)
+            .bind(&component_container.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to container");
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to coll:a");
         test.model
-            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .bind(&component_b.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to coll:b");
         test.model
-            .bind(&realm_c.abs_moniker, &BindReason::Eager)
+            .bind(&component_c.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to coll:b");
-        assert!(is_executing(&realm_container).await);
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(has_child(&realm_container, "coll:a:1").await);
-        assert!(has_child(&realm_container, "coll:b:2").await);
+        assert!(is_executing(&component_container).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(has_child(&component_container, "coll:a:1").await);
+        assert!(has_child(&component_container, "coll:b:2").await);
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_container_info = ComponentInfo::new(realm_container).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_container_info = ComponentInfo::new(component_container).await;
 
         // Register shutdown action, and wait for it. Components should shut down (no more
         // `Execution`). Also, the instances in the collection should have been destroyed because
         // they were transient.
-        ActionSet::register(realm_container_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_container_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_container_info.check_is_shut_down(&test.runner).await;
-        assert!(!has_child(&realm_container_info.realm, "coll:a:1").await);
-        assert!(!has_child(&realm_container_info.realm, "coll:b:2").await);
-        assert!(has_child(&realm_container_info.realm, "c:0").await);
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
+        component_container_info.check_is_shut_down(&test.runner).await;
+        assert!(!has_child(&component_container_info.component, "coll:a:1").await);
+        assert!(!has_child(&component_container_info.component, "coll:b:2").await);
+        assert!(has_child(&component_container_info.component, "c:0").await);
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
 
         // Verify events.
         {
@@ -938,21 +945,25 @@ pub mod tests {
             ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        assert!(!is_executing(&realm_a).await);
-        assert!(!is_executing(&realm_b).await);
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        assert!(!is_executing(&component_a).await);
+        assert!(!is_executing(&component_b).await);
 
         // Register shutdown action on "a", and wait for it.
-        ActionSet::register(realm_a.clone(), ShutdownAction::new()).await.expect("shutdown failed");
-        assert!(execution_is_shut_down(&realm_a).await);
-        assert!(execution_is_shut_down(&realm_b).await);
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        assert!(execution_is_shut_down(&component_a).await);
+        assert!(execution_is_shut_down(&component_b).await);
 
         // Now "a" is shut down. There should be no events though because the component was
         // never started.
-        ActionSet::register(realm_a.clone(), ShutdownAction::new()).await.expect("shutdown failed");
-        assert!(execution_is_shut_down(&realm_a).await);
-        assert!(execution_is_shut_down(&realm_b).await);
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        assert!(execution_is_shut_down(&component_a).await);
+        assert!(execution_is_shut_down(&component_b).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -976,28 +987,30 @@ pub mod tests {
             ("c", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&component_a).await);
 
         // Register shutdown action on "a", and wait for it.
-        ActionSet::register(realm_a.clone(), ShutdownAction::new()).await.expect("shutdown failed");
-        assert!(execution_is_shut_down(&realm_a).await);
-        // Get realm_b without resolving it.
-        let realm_b = {
-            let state = realm_a.lock_state().await;
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        assert!(execution_is_shut_down(&component_a).await);
+        // Get component without resolving it.
+        let component_b = {
+            let state = component_a.lock_state().await;
             match *state {
-                RealmState::Resolved(ref s) => {
-                    s.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+                InstanceState::Resolved(ref s) => {
+                    s.get_live_child(&PartialMoniker::from("b")).expect("child b not found")
                 }
                 _ => panic!("not resolved"),
             }
         };
-        assert!(execution_is_shut_down(&realm_b).await);
-        assert!(is_unresolved(&realm_b).await);
+        assert!(execution_is_shut_down(&component_b).await);
+        assert!(is_unresolved(&component_b).await);
 
         // Now "a" is shut down. There should be no event for "b" because it was never started
         // (or resolved).
@@ -1031,35 +1044,35 @@ pub mod tests {
             ("d", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_c_info = ComponentInfo::new(realm_c).await;
-        let realm_d_info = ComponentInfo::new(realm_d).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -1158,39 +1171,39 @@ pub mod tests {
             ),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
-        let realm_e = test.look_up(vec!["a:0", "b:0", "e:0"].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_e = test.look_up(vec!["a:0", "b:0", "e:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
-        assert!(is_executing(&realm_e).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+        assert!(is_executing(&component_e).await);
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_c_info = ComponentInfo::new(realm_c).await;
-        let realm_d_info = ComponentInfo::new(realm_d).await;
-        let realm_e_info = ComponentInfo::new(realm_e).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+        let component_e_info = ComponentInfo::new(component_e).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
-        realm_e_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        component_e_info.check_is_shut_down(&test.runner).await;
 
         {
             let mut events: Vec<_> = test
@@ -1333,43 +1346,43 @@ pub mod tests {
         let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
         let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(moniker_a.clone()).await;
-        let realm_b = test.look_up(moniker_b.clone()).await;
-        let realm_c = test.look_up(moniker_c.clone()).await;
-        let realm_d = test.look_up(moniker_d.clone()).await;
-        let realm_e = test.look_up(moniker_e.clone()).await;
-        let realm_f = test.look_up(moniker_f.clone()).await;
+        let component_a = test.look_up(moniker_a.clone()).await;
+        let component_b = test.look_up(moniker_b.clone()).await;
+        let component_c = test.look_up(moniker_c.clone()).await;
+        let component_d = test.look_up(moniker_d.clone()).await;
+        let component_e = test.look_up(moniker_e.clone()).await;
+        let component_f = test.look_up(moniker_f.clone()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
-        assert!(is_executing(&realm_e).await);
-        assert!(is_executing(&realm_f).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+        assert!(is_executing(&component_e).await);
+        assert!(is_executing(&component_f).await);
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_c_info = ComponentInfo::new(realm_c).await;
-        let realm_d_info = ComponentInfo::new(realm_d).await;
-        let realm_e_info = ComponentInfo::new(realm_e).await;
-        let realm_f_info = ComponentInfo::new(realm_f).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+        let component_e_info = ComponentInfo::new(component_e).await;
+        let component_f_info = ComponentInfo::new(component_f).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
-        realm_e_info.check_is_shut_down(&test.runner).await;
-        realm_f_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        component_e_info.check_is_shut_down(&test.runner).await;
+        component_f_info.check_is_shut_down(&test.runner).await;
 
         let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
@@ -1543,43 +1556,43 @@ pub mod tests {
         let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
         let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(moniker_a.clone()).await;
-        let realm_b = test.look_up(moniker_b.clone()).await;
-        let realm_c = test.look_up(moniker_c.clone()).await;
-        let realm_d = test.look_up(moniker_d.clone()).await;
-        let realm_e = test.look_up(moniker_e.clone()).await;
-        let realm_f = test.look_up(moniker_f.clone()).await;
+        let component_a = test.look_up(moniker_a.clone()).await;
+        let component_b = test.look_up(moniker_b.clone()).await;
+        let component_c = test.look_up(moniker_c.clone()).await;
+        let component_d = test.look_up(moniker_d.clone()).await;
+        let component_e = test.look_up(moniker_e.clone()).await;
+        let component_f = test.look_up(moniker_f.clone()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
-        assert!(is_executing(&realm_e).await);
-        assert!(is_executing(&realm_f).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+        assert!(is_executing(&component_e).await);
+        assert!(is_executing(&component_f).await);
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_c_info = ComponentInfo::new(realm_c).await;
-        let realm_d_info = ComponentInfo::new(realm_d).await;
-        let realm_e_info = ComponentInfo::new(realm_e).await;
-        let realm_f_info = ComponentInfo::new(realm_f).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
+        let component_e_info = ComponentInfo::new(component_e).await;
+        let component_f_info = ComponentInfo::new(component_f).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
-        realm_e_info.check_is_shut_down(&test.runner).await;
-        realm_f_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
+        component_e_info.check_is_shut_down(&test.runner).await;
+        component_f_info.check_is_shut_down(&test.runner).await;
 
         let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
@@ -1682,31 +1695,31 @@ pub mod tests {
             ),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_c_info = ComponentInfo::new(realm_c).await;
-        let realm_d_info = ComponentInfo::new(realm_d).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up and dependency order.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
 
         {
             let events: Vec<_> = test
@@ -1746,39 +1759,39 @@ pub mod tests {
             ("b", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
 
         // Bind to second `b`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .bind(&component_b.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&realm_b2.abs_moniker, &BindReason::Eager)
+            .bind(&component_b2.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to b2");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_b2).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_b2).await);
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_b2_info = ComponentInfo::new(realm_b2).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_b2_info = ComponentInfo::new(component_b2).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up and dependency order.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_b2_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_b2_info.check_is_shut_down(&test.runner).await;
         {
             let events: Vec<_> = test
                 .test_hook
@@ -1857,35 +1870,35 @@ pub mod tests {
         ];
         let error_hook = Arc::new(StopErrorHook::new(vec!["a:0", "b:0"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
 
-        let realm_a_info = ComponentInfo::new(realm_a).await;
-        let realm_b_info = ComponentInfo::new(realm_b).await;
-        let realm_c_info = ComponentInfo::new(realm_c).await;
-        let realm_d_info = ComponentInfo::new(realm_d).await;
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+        let component_d_info = ComponentInfo::new(component_d).await;
 
-        // Register shutdown action on "a", and wait for it. "b"'s realm shuts down, but "b"
+        // Register shutdown action on "a", and wait for it. "b"'s component shuts down, but "b"
         // returns an error so "a" does not.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect_err("shutdown succeeded unexpectedly");
-        realm_a_info.check_not_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_not_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -1909,13 +1922,13 @@ pub mod tests {
 
         // Register shutdown action on "a" again. "b"'s shutdown succeeds (it's a no-op), and
         // "a" is allowed to shut down this time.
-        ActionSet::register(realm_a_info.realm.clone(), ShutdownAction::new())
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        realm_a_info.check_is_shut_down(&test.runner).await;
-        realm_b_info.check_is_shut_down(&test.runner).await;
-        realm_c_info.check_is_shut_down(&test.runner).await;
-        realm_d_info.check_is_shut_down(&test.runner).await;
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+        component_d_info.check_is_shut_down(&test.runner).await;
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -1953,11 +1966,11 @@ pub mod tests {
         let test = ActionsTest::new("root", components, None).await;
 
         // Register `mark_deleting` action, and wait for it. Component should be marked deleted.
-        let realm_root = test.look_up(vec![].into()).await;
-        ActionSet::register(realm_root.clone(), MarkDeletingAction::new("a:0".into()))
+        let component_root = test.look_up(vec![].into()).await;
+        ActionSet::register(component_root.clone(), MarkDeletingAction::new("a:0".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&realm_root, "a:0".into()).await);
+        assert!(is_deleting(&component_root, "a:0".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -1972,10 +1985,10 @@ pub mod tests {
         }
 
         // Execute action again, same state and no new events.
-        ActionSet::register(realm_root.clone(), MarkDeletingAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), MarkDeletingAction::new("a:0".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&realm_root, "a:0".into()).await);
+        assert!(is_deleting(&component_root, "a:0".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -2004,19 +2017,19 @@ pub mod tests {
         test.create_dynamic_child("coll", "b").await;
 
         // Register `mark_deleting` action for "a" only.
-        let realm_root = test.look_up(vec![].into()).await;
-        ActionSet::register(realm_root.clone(), MarkDeletingAction::new("coll:a:1".into()))
+        let component_root = test.look_up(vec![].into()).await;
+        ActionSet::register(component_root.clone(), MarkDeletingAction::new("coll:a:1".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&realm_root, "coll:a:1".into()).await);
-        assert!(!is_deleting(&realm_root, "coll:b:2".into()).await);
+        assert!(is_deleting(&component_root, "coll:a:1".into()).await);
+        assert!(!is_deleting(&component_root, "coll:b:2".into()).await);
 
         // Register `mark_deleting` action for "b".
-        ActionSet::register(realm_root.clone(), MarkDeletingAction::new("coll:b:1".into()))
+        ActionSet::register(component_root.clone(), MarkDeletingAction::new("coll:b:1".into()))
             .await
             .expect("mark delete failed");
-        assert!(is_deleting(&realm_root, "coll:a:1".into()).await);
-        assert!(is_deleting(&realm_root, "coll:b:2".into()).await);
+        assert!(is_deleting(&component_root, "coll:a:1".into()).await);
+        assert!(is_deleting(&component_root, "coll:b:2".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -2044,21 +2057,21 @@ pub mod tests {
             ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        // Bind to the component, causing it to start. This should cause the realm to have an
+        // Bind to the component, causing it to start. This should cause the component to have an
         // `Execution`.
-        let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&component_a).await);
 
         // Register delete child action, and wait for it. Component should be destroyed.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_child_deleted(&realm_root, &realm_a).await);
+        assert!(is_child_deleted(&component_root, &component_a).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -2077,15 +2090,15 @@ pub mod tests {
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect_err("successfully bound to a after shutdown");
 
         // Destroy the component again. This succeeds, but has no additional effect.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_child_deleted(&realm_root, &realm_a).await);
+        assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2104,35 +2117,35 @@ pub mod tests {
 
         // Bind to the components, causing them to start. This should cause them to have an
         // `Execution`.
-        let realm_root = test.look_up(vec![].into()).await;
-        let realm_container = test.look_up(vec!["container:0"].into()).await;
-        let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
-        let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_container = test.look_up(vec!["container:0"].into()).await;
+        let component_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
+        let component_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
         test.model
-            .bind(&realm_container.abs_moniker, &BindReason::Eager)
+            .bind(&component_container.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to container");
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to coll:a");
         test.model
-            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .bind(&component_b.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to coll:b");
-        assert!(is_executing(&realm_container).await);
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&component_container).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
 
         // Register delete child action, and wait for it. Components should be destroyed.
-        let realm_container = test.look_up(vec!["container:0"].into()).await;
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("container:0".into()))
+        let component_container = test.look_up(vec!["container:0"].into()).await;
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("container:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_child_deleted(&realm_root, &realm_container).await);
-        assert!(is_destroyed(&realm_container).await);
-        assert!(is_destroyed(&realm_a).await);
-        assert!(is_destroyed(&realm_b).await);
+        assert!(is_child_deleted(&component_root, &component_container).await);
+        assert!(is_destroyed(&component_container).await);
+        assert!(is_destroyed(&component_a).await);
+        assert!(is_destroyed(&component_b).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2143,22 +2156,24 @@ pub mod tests {
             ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        ActionSet::register(realm_a.clone(), ShutdownAction::new()).await.expect("shutdown failed");
-        assert!(execution_is_shut_down(&realm_a.clone()).await);
-        assert!(execution_is_shut_down(&realm_b.clone()).await);
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        assert!(execution_is_shut_down(&component_a.clone()).await);
+        assert!(execution_is_shut_down(&component_b.clone()).await);
 
         // Now delete child "a". This should cause all components to be destroyed.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_child_deleted(&realm_root, &realm_a).await);
-        assert!(is_destroyed(&realm_a).await);
+        assert!(is_child_deleted(&component_root, &component_a).await);
+        assert!(is_destroyed(&component_a).await);
 
         // Check order of events.
         {
@@ -2221,11 +2236,11 @@ pub mod tests {
         let event = event_stream.wait_until(event_type, vec!["a:0"].into()).await.unwrap();
 
         // Register delete child action, while `action` is stalled.
-        let realm_root = test.look_up(vec![].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
         let (f, delete_handle) = {
-            let realm_root = realm_root.clone();
+            let component_root = component_root.clone();
             async move {
-                ActionSet::register(realm_root, DeleteChildAction::new("a:0".into()))
+                ActionSet::register(component_root, DeleteChildAction::new("a:0".into()))
                     .await
                     .expect("destroy failed");
             }
@@ -2234,15 +2249,15 @@ pub mod tests {
         fasync::Task::spawn(f).detach();
 
         // Check that `action` is being waited on.
-        let realm_a = match *realm_root.lock_state().await {
-            RealmState::Resolved(ref s) => {
-                s.get_live_child_realm(&PartialMoniker::from("a")).expect("child a not found")
+        let component_a = match *component_root.lock_state().await {
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&PartialMoniker::from("a")).expect("child a not found")
             }
             _ => panic!("not resolved"),
         };
         let action_key = action.key();
         loop {
-            let actions = realm_a.lock_actions().await;
+            let actions = component_a.lock_actions().await;
             assert!(actions.contains(&action_key));
             let rx = &actions.rep[&action_key];
             let rx = rx
@@ -2260,7 +2275,7 @@ pub mod tests {
         // Resuming the action should allow deletion to proceed.
         event.resume();
         delete_handle.await;
-        assert!(is_child_deleted(&realm_root, &realm_a).await);
+        assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2288,7 +2303,7 @@ pub mod tests {
         // Cause `a` to resolve.
         let look_up_a = async {
             // This could fail if it races with deletion.
-            let _ = test.model.look_up_realm(&vec!["a:0"].into()).await;
+            let _ = test.model.look_up(&vec!["a:0"].into()).await;
         };
         join!(
             look_up_a,
@@ -2341,27 +2356,27 @@ pub mod tests {
             ("c", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        // Get realm_b without resolving it.
-        let realm_b = match *realm_a.lock_state().await {
-            RealmState::Resolved(ref s) => {
-                s.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
+        assert!(is_executing(&component_a).await);
+        // Get component_b without resolving it.
+        let component_b = match *component_a.lock_state().await {
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&PartialMoniker::from("b")).expect("child b not found")
             }
             _ => panic!("not resolved"),
         };
 
         // Register delete action on "a", and wait for it.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_child_deleted(&realm_root, &realm_a).await);
-        assert!(is_destroyed(&realm_b).await);
+        assert!(is_child_deleted(&component_root, &component_a).await);
+        assert!(is_destroyed(&component_b).await);
 
         // Now "a" is destroyed. Expect destroy events for "a" and "b".
         {
@@ -2404,46 +2419,46 @@ pub mod tests {
             ("x", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
-        let realm_x = test.look_up(vec!["x:0"].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_x = test.look_up(vec!["x:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
         test.model
-            .bind(&realm_x.abs_moniker, &BindReason::Eager)
+            .bind(&component_x.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to x");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
-        assert!(is_executing(&realm_x).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
+        assert!(is_executing(&component_x).await);
 
         // Register destroy action on "a", and wait for it. This should cause all components
-        // in "a"'s realm to be shut down and destroyed, in bottom-up order, but "x" is still
+        // in "a"'s component to be shut down and destroyed, in bottom-up order, but "x" is still
         // running.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
-        assert!(is_child_deleted(&realm_root, &realm_a).await);
-        assert!(is_destroyed(&realm_a).await);
-        assert!(is_destroyed(&realm_b).await);
-        assert!(is_destroyed(&realm_c).await);
-        assert!(is_destroyed(&realm_d).await);
-        assert!(is_executing(&realm_x).await);
+        assert!(is_child_deleted(&component_root, &component_a).await);
+        assert!(is_destroyed(&component_a).await);
+        assert!(is_destroyed(&component_b).await);
+        assert!(is_destroyed(&component_c).await);
+        assert!(is_destroyed(&component_d).await);
+        assert!(is_executing(&component_x).await);
         {
             // Expect only "x" as child of root.
-            let state = realm_root.lock_state().await;
+            let state = component_root.lock_state().await;
             let children: Vec<_> = match *state {
-                RealmState::Resolved(ref s) => {
-                    s.all_child_realms().keys().map(|m| m.clone()).collect()
+                InstanceState::Resolved(ref s) => {
+                    s.all_children().keys().map(|m| m.clone()).collect()
                 }
                 _ => {
                     panic!("not resolved");
@@ -2519,42 +2534,42 @@ pub mod tests {
             ("b", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
 
         // Bind to second `b`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .bind(&component_b.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&realm_b2.abs_moniker, &BindReason::Eager)
+            .bind(&component_b2.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to b2");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_b2).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_b2).await);
 
         // Register destroy action on "a", and wait for it. This should cause all components
         // that were started to be destroyed, in bottom-up order.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
-        assert!(is_child_deleted(&realm_root, &realm_a).await);
-        assert!(is_destroyed(&realm_a).await);
-        assert!(is_destroyed(&realm_b).await);
-        assert!(is_destroyed(&realm_b2).await);
+        assert!(is_child_deleted(&component_root, &component_a).await);
+        assert!(is_destroyed(&component_a).await);
+        assert!(is_destroyed(&component_b).await);
+        assert!(is_destroyed(&component_b2).await);
         {
-            let state = realm_root.lock_state().await;
+            let state = component_root.lock_state().await;
             let children: Vec<_> = match *state {
-                RealmState::Resolved(ref s) => {
-                    s.all_child_realms().keys().map(|m| m.clone()).collect()
+                InstanceState::Resolved(ref s) => {
+                    s.all_children().keys().map(|m| m.clone()).collect()
                 }
                 _ => panic!("not resolved"),
             };
@@ -2648,33 +2663,33 @@ pub mod tests {
         // `/a/b`.
         let error_hook = Arc::new(DestroyErrorHook::new(vec!["a:0", "b:0"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
-        let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a:0"].into()).await;
-        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
             .await
             .expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(is_executing(&component_d).await);
 
-        // Register delete action on "a", and wait for it. "b"'s realm is deleted, but "b"
+        // Register delete action on "a", and wait for it. "b"'s component is deleted, but "b"
         // returns an error so the delete action on "a" does not succeed.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect_err("destroy succeeded unexpectedly");
-        assert!(has_child(&realm_root, "a:0").await);
-        assert!(!has_child(&realm_a, "b:0").await);
-        assert!(!is_destroyed(&realm_a).await);
-        assert!(is_destroyed(&realm_b).await);
-        assert!(is_destroyed(&realm_c).await);
-        assert!(is_destroyed(&realm_d).await);
+        assert!(has_child(&component_root, "a:0").await);
+        assert!(!has_child(&component_a, "b:0").await);
+        assert!(!is_destroyed(&component_a).await);
+        assert!(is_destroyed(&component_b).await);
+        assert!(is_destroyed(&component_c).await);
+        assert!(is_destroyed(&component_d).await);
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -2698,14 +2713,14 @@ pub mod tests {
 
         // Register destroy action on "a:0" again. "b:0"'s delete succeeds, and "a:0" is deleted this
         // time.
-        ActionSet::register(realm_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(!has_child(&realm_root, "a:0").await);
-        assert!(is_destroyed(&realm_a).await);
-        assert!(is_destroyed(&realm_b).await);
-        assert!(is_destroyed(&realm_c).await);
-        assert!(is_destroyed(&realm_d).await);
+        assert!(!has_child(&component_root, "a:0").await);
+        assert!(is_destroyed(&component_a).await);
+        assert!(is_destroyed(&component_b).await);
+        assert!(is_destroyed(&component_c).await);
+        assert!(is_destroyed(&component_d).await);
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -2734,65 +2749,65 @@ pub mod tests {
         }
     }
 
-    async fn is_executing(realm: &Realm) -> bool {
-        realm.lock_execution().await.runtime.is_some()
+    async fn is_executing(component: &ComponentInstance) -> bool {
+        component.lock_execution().await.runtime.is_some()
     }
 
-    async fn is_deleting(realm: &Realm, moniker: ChildMoniker) -> bool {
+    async fn is_deleting(component: &ComponentInstance, moniker: ChildMoniker) -> bool {
         let partial = moniker.to_partial();
-        match *realm.lock_state().await {
-            RealmState::Resolved(ref s) => {
-                s.get_live_child_realm(&partial).is_none()
-                    && s.get_child_instance(&moniker).is_some()
+        match *component.lock_state().await {
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&partial).is_none() && s.get_child(&moniker).is_some()
             }
-            RealmState::Destroyed => false,
-            RealmState::New | RealmState::Discovered => {
+            InstanceState::Destroyed => false,
+            InstanceState::New | InstanceState::Discovered => {
                 panic!("not resolved")
             }
         }
     }
 
-    /// Verifies that a child realm is deleted by checking its RealmState and verifying that it
-    /// does not exist in the RealmState of its parent. Assumes the parent is not destroyed yet.
-    async fn is_child_deleted(parent_realm: &Realm, child_realm: &Realm) -> bool {
-        let child_moniker = child_realm.abs_moniker.leaf().expect("Root realm cannot be destroyed");
+    /// Verifies that a child component is deleted by checking its InstanceState and verifying that it
+    /// does not exist in the InstanceState of its parent. Assumes the parent is not destroyed yet.
+    async fn is_child_deleted(parent: &ComponentInstance, child: &ComponentInstance) -> bool {
+        let child_moniker = child.abs_moniker.leaf().expect("Root component cannot be destroyed");
         let partial_moniker = child_moniker.to_partial();
 
         // Verify the parent-child relationship
-        assert_eq!(parent_realm.abs_moniker.child(child_moniker.clone()), child_realm.abs_moniker);
+        assert_eq!(parent.abs_moniker.child(child_moniker.clone()), child.abs_moniker);
 
-        let parent_state = parent_realm.lock_state().await;
+        let parent_state = parent.lock_state().await;
         let parent_resolved_state = match *parent_state {
-            RealmState::Resolved(ref s) => s,
+            InstanceState::Resolved(ref s) => s,
             _ => panic!("not resolved"),
         };
 
-        let child_state = child_realm.lock_state().await;
-        let child_execution = child_realm.lock_execution().await;
+        let child_state = child.lock_state().await;
+        let child_execution = child.lock_execution().await;
 
         let found_partial_moniker = parent_resolved_state
-            .live_child_realms()
+            .live_children()
             .find(|(curr_partial_moniker, _)| **curr_partial_moniker == partial_moniker);
-        let found_child_moniker = parent_resolved_state.all_child_realms().get(child_moniker);
+        let found_child_moniker = parent_resolved_state.all_children().get(child_moniker);
 
         found_partial_moniker.is_none()
             && found_child_moniker.is_none()
-            && matches!(*child_state, RealmState::Destroyed)
+            && matches!(*child_state, InstanceState::Destroyed)
             && child_execution.runtime.is_none()
             && child_execution.is_shut_down()
     }
 
-    async fn is_destroyed(realm: &Realm) -> bool {
-        let state = realm.lock_state().await;
-        let execution = realm.lock_execution().await;
-        matches!(*state, RealmState::Destroyed)
+    async fn is_destroyed(component: &ComponentInstance) -> bool {
+        let state = component.lock_state().await;
+        let execution = component.lock_execution().await;
+        matches!(*state, InstanceState::Destroyed)
             && execution.runtime.is_none()
             && execution.is_shut_down()
     }
 
-    async fn is_unresolved(realm: &Realm) -> bool {
-        let state = realm.lock_state().await;
-        let execution = realm.lock_execution().await;
-        execution.runtime.is_none() && matches!(*state, RealmState::New | RealmState::Discovered)
+    async fn is_unresolved(component: &ComponentInstance) -> bool {
+        let state = component.lock_state().await;
+        let execution = component.lock_execution().await;
+        execution.runtime.is_none()
+            && matches!(*state, InstanceState::New | InstanceState::Discovered)
     }
 }

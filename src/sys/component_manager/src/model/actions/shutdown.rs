@@ -5,8 +5,8 @@
 use {
     crate::model::{
         actions::{ActionSet, ShutdownAction},
+        component::{ComponentInstance, InstanceState, ResolvedInstanceState},
         error::ModelError,
-        realm::{Realm, RealmState, ResolvedRealmState},
     },
     cm_rust::{
         CapabilityDecl, CapabilityName, ComponentDecl, DependencyType, OfferDecl,
@@ -54,7 +54,7 @@ fn find_storage_provider(
 }
 
 async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelError> {
-    ActionSet::register(child.realm, ShutdownAction::new()).await?;
+    ActionSet::register(child.component, ShutdownAction::new()).await?;
     Ok(child.moniker.clone())
 }
 
@@ -69,16 +69,16 @@ struct ShutdownJob {
     source_to_targets: HashMap<ChildMoniker, ShutdownInfo>,
 }
 
-/// ShutdownJob encapsulates the logic and state require to shutdown a realm.
+/// ShutdownJob encapsulates the logic and state require to shutdown a component.
 impl ShutdownJob {
-    /// Creates a new ShutdownJob by examining the Realm's declaration and
+    /// Creates a new ShutdownJob by examining the Component's declaration and
     /// runtime state to build up the necessary data structures to stop
-    /// components in the realm in dependency order.
-    pub async fn new(state: &ResolvedRealmState) -> ShutdownJob {
+    /// components in the component in dependency order.
+    pub async fn new(state: &ResolvedInstanceState) -> ShutdownJob {
         // `children` represents the dependency relationships between the
-        // children as expressed in the realm's component declaration.
+        // children as expressed in the component's declaration.
         // This representation must be reconciled with the runtime state of the
-        // realm. This means mapping children in the declaration with the one
+        // component. This means mapping children in the declaration with the one
         // or more children that may exist in collections and one or more
         // instances with a matching PartialMoniker that may exist.
         let children = process_component_dependencies(state.decl());
@@ -94,14 +94,12 @@ impl ShutdownJob {
             let matching_children: Vec<_> =
                 get_child_monikers(&singleton_child_set, state).into_iter().collect();
             for child in matching_children {
-                let realm = state
-                    .get_child_instance(&child)
-                    .expect("component not found in children")
-                    .clone();
+                let component =
+                    state.get_child(&child).expect("component not found in children").clone();
 
                 source_to_targets.insert(
                     child.clone(),
-                    ShutdownInfo { moniker: child, dependents: deps.clone(), realm: realm },
+                    ShutdownInfo { moniker: child, dependents: deps.clone(), component },
                 );
             }
         }
@@ -124,27 +122,26 @@ impl ShutdownJob {
         return new_job;
     }
 
-    /// Perform shutdown of the Realm that was used to create this ShutdownJob
-    /// A Realm must wait to shut down until all its children are shut down.
-    /// The shutdown procedure looks at the children of Realm, if any, and
-    /// determines the dependency relationships of the children.
+    /// Perform shutdown of the Component that was used to create this ShutdownJob A Component must
+    /// wait to shut down until all its children are shut down.  The shutdown procedure looks at
+    /// the children, if any, and determines the dependency relationships of the children.
     pub async fn execute(&mut self) -> Result<(), ModelError> {
         // Relationship maps are maintained to track dependencies. A map is
-        // maintained both from a Realm to its dependents and from a Realm to
-        // that Realm's dependencies. With this dependency tracking, the
-        // children of the Realm can be shut down progressively in dependency
+        // maintained both from a Component to its dependents and from a Component to
+        // that Component's dependencies. With this dependency tracking, the
+        // children of the Component can be shut down progressively in dependency
         // order.
         //
-        // The progressive shutdown of Realms is performed in this order:
+        // The progressive shutdown of Component is performed in this order:
         // Note: These steps continue until the shutdown process is no longer
         // asynchronously waiting for any shut downs to complete.
-        //   * Identify the one or more Realms that have no dependents
-        //   * A shutdown action is set to the identified realms. During the
+        //   * Identify the one or more Component that have no dependents
+        //   * A shutdown action is set to the identified components. During the
         //     shut down process, the result of the process is received
         //     asynchronously.
-        //   * After a Realm is shut down, the Realms are removed from the list
-        //     of dependents of the Realms on which they had a dependency.
-        //   * The list of Realms is checked again to see which Realms have no
+        //   * After a Component is shut down, the Component are removed from the list
+        //     of dependents of the Component on which they had a dependency.
+        //   * The list of Component is checked again to see which Component have no
         //     remaining dependents.
 
         // Look for any children that have no dependents
@@ -223,28 +220,28 @@ impl ShutdownJob {
     }
 }
 
-pub async fn do_shutdown(realm: &Arc<Realm>) -> Result<(), ModelError> {
+pub async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
     {
-        let state = realm.lock_state().await;
+        let state = component.lock_state().await;
         {
-            let exec_state = realm.lock_execution().await;
+            let exec_state = component.lock_execution().await;
             if exec_state.is_shut_down() {
                 return Ok(());
             }
         }
         match *state {
-            RealmState::Resolved(ref s) => {
+            InstanceState::Resolved(ref s) => {
                 let mut shutdown_job = ShutdownJob::new(s).await;
                 drop(state);
                 Box::pin(shutdown_job.execute()).await?;
             }
-            RealmState::New | RealmState::Discovered | RealmState::Destroyed => {}
+            InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {}
         }
     }
     // Now that all children have shut down, shut down the parent.
     // TODO: Put the parent in a "shutting down" state so that if it creates new instances
     // after this point, they are created in a shut down state.
-    realm.stop_instance(true).await?;
+    component.stop_instance(true).await?;
 
     Ok(())
 }
@@ -258,7 +255,7 @@ struct ShutdownInfo {
     pub moniker: ChildMoniker,
     /// The components that this component offers capabilities to
     pub dependents: HashSet<ChildMoniker>,
-    pub realm: Arc<Realm>,
+    pub component: Arc<ComponentInstance>,
 }
 
 impl fmt::Debug for ShutdownInfo {
@@ -268,25 +265,25 @@ impl fmt::Debug for ShutdownInfo {
 }
 
 /// Given a set of DependencyNodes, find all the ChildMonikers in the supplied
-/// Realm that match.
+/// Component that match.
 fn get_child_monikers(
     child_names: &HashSet<DependencyNode>,
-    realm_state: &ResolvedRealmState,
+    component_state: &ResolvedInstanceState,
 ) -> HashSet<ChildMoniker> {
     let mut deps: HashSet<ChildMoniker> = HashSet::new();
-    let realms = realm_state.all_child_realms();
+    let components = component_state.all_children();
 
     for child in child_names {
         match child {
             DependencyNode::Child(name) => {
                 let dep_moniker = PartialMoniker::new(name.to_string(), None);
-                let matching_children = realm_state.get_all_child_monikers(&dep_moniker);
+                let matching_children = component_state.get_all_child_monikers(&dep_moniker);
                 for m in matching_children {
                     deps.insert(m);
                 }
             }
             DependencyNode::Collection(name) => {
-                for moniker in realms.keys() {
+                for moniker in components.keys() {
                     match moniker.collection() {
                         Some(m) => {
                             if m == name {
@@ -360,7 +357,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                     OfferServiceSource::Self_
                     | OfferServiceSource::Parent
                     | OfferServiceSource::Capability(_) => {
-                        // Capabilities offered by the parent, routed in from the realm, or
+                        // Capabilities offered by the parent, routed in from the component, or
                         // provided by the framework (based on some other capability) are not
                         // relevant.
                         continue;
@@ -384,7 +381,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                         OfferServiceSource::Self_
                         | OfferServiceSource::Parent
                         | OfferServiceSource::Capability(_) => {
-                            // Capabilities offered by the parent, routed in from the realm, or
+                            // Capabilities offered by the parent, routed in from the component, or
                             // provided by the framework (based on some other capability) are not
                             // relevant.
                             continue;
@@ -414,7 +411,7 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                     | OfferDirectorySource::Parent
                     | OfferDirectorySource::Framework => {
                         // Capabilities offered by the parent or routed in from
-                        // the realm are not relevant.
+                        // the component are not relevant.
                         continue;
                     }
                 }
@@ -492,14 +489,14 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
             if !dependency_map.contains_key(&capability_target) {
                 panic!(
                     "This capability routing seems invalid, the target \
-                     does not exist in this realm. Source: {:?} Target: {:?}",
+                     does not exist in this component. Source: {:?} Target: {:?}",
                     capability_provider, capability_target,
                 );
             }
 
             let sibling_deps = dependency_map.get_mut(&capability_provider).expect(&format!(
                 "This capability routing seems invalid, the source \
-                 does not exist in this realm. Source: {:?} Target: {:?}",
+                 does not exist in this component. Source: {:?} Target: {:?}",
                 capability_provider, capability_target,
             ));
             sibling_deps.insert(capability_target);

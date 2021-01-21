@@ -241,17 +241,17 @@ fn maybe_create_capability_routed_payload(
 
     let name = source.source_name().map(|n| n.to_string());
     let source = Some(match source {
-        CapabilitySource::Component { realm, .. } => {
-            let realm = realm.upgrade().ok()?;
-            let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
+        CapabilitySource::Component { component, .. } => {
+            let component = component.upgrade().ok()?;
+            let source_moniker = RelativeMoniker::from_absolute(scope, &component.abs_moniker);
             fsys::CapabilitySource::Component(fsys::ComponentCapability {
                 source_moniker: Some(source_moniker.to_string()),
                 ..fsys::ComponentCapability::EMPTY
             })
         }
-        CapabilitySource::Capability { realm, .. } => {
-            let realm = realm.upgrade().ok()?;
-            let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
+        CapabilitySource::Capability { component, .. } => {
+            let component = component.upgrade().ok()?;
+            let source_moniker = RelativeMoniker::from_absolute(scope, &component.abs_moniker);
             fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
                 scope_moniker: Some(source_moniker.to_string()),
                 ..fsys::FrameworkCapability::EMPTY
@@ -321,7 +321,7 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
     }))
 }
 
-/// Creates the basic FIDL Event object containing the event type, target_realm
+/// Creates the basic FIDL Event object containing the event type, target
 /// and basic handler for resumption.
 async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
     let target_relative_moniker =

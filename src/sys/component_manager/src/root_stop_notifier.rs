@@ -14,12 +14,12 @@ use {
 
 /// Notifies when the root instance has been destroyed by ComponentManager.
 /// This is used to terminate ComponentManager when the root component has been destroyed.
-pub struct RootRealmStopNotifier {
+pub struct RootStopNotifier {
     rx: Mutex<Option<oneshot::Receiver<()>>>,
     tx: Mutex<Option<oneshot::Sender<()>>>,
 }
 
-impl RootRealmStopNotifier {
+impl RootStopNotifier {
     pub fn new() -> Self {
         let (tx, rx) = oneshot::channel();
         Self { rx: Mutex::new(Some(rx)), tx: Mutex::new(Some(tx)) }
@@ -27,13 +27,13 @@ impl RootRealmStopNotifier {
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
-            "RootRealmStopNotifier",
+            "RootStopNotifier",
             vec![EventType::Stopped],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
-    pub async fn wait_for_root_realm_stop(&self) {
+    pub async fn wait_for_root_stop(&self) {
         let rx = self.rx.lock().await.take();
         if let Some(rx) = rx {
             rx.await.expect("Failed to wait for root instance to be stopped");
@@ -42,7 +42,7 @@ impl RootRealmStopNotifier {
 }
 
 #[async_trait]
-impl Hook for RootRealmStopNotifier {
+impl Hook for RootStopNotifier {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if event.target_moniker.is_root() {
             let tx = self.tx.lock().await.take();

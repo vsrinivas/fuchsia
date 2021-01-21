@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{addable_directory::AddableDirectory, error::ModelError, realm::WeakRealm},
+    crate::model::{
+        addable_directory::AddableDirectory, component::WeakComponentInstance, error::ModelError,
+    },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
     moniker::AbsoluteMoniker,
@@ -23,13 +25,13 @@ impl DirTree {
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
     pub fn build_from_uses(
-        routing_factory: impl Fn(WeakRealm, UseDecl) -> RoutingFn,
-        realm: WeakRealm,
+        routing_factory: impl Fn(WeakComponentInstance, UseDecl) -> RoutingFn,
+        component: WeakComponentInstance,
         decl: ComponentDecl,
     ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
         for use_ in decl.uses {
-            tree.add_use_capability(&routing_factory, realm.clone(), &use_);
+            tree.add_use_capability(&routing_factory, component.clone(), &use_);
         }
         tree
     }
@@ -38,13 +40,13 @@ impl DirTree {
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
     pub fn build_from_exposes(
-        routing_factory: impl Fn(WeakRealm, ExposeDecl) -> RoutingFn,
-        realm: WeakRealm,
+        routing_factory: impl Fn(WeakComponentInstance, ExposeDecl) -> RoutingFn,
+        component: WeakComponentInstance,
         decl: ComponentDecl,
     ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
         for expose in decl.exposes {
-            tree.add_expose_capability(&routing_factory, realm.clone(), &expose);
+            tree.add_expose_capability(&routing_factory, component.clone(), &expose);
         }
         tree
     }
@@ -69,8 +71,8 @@ impl DirTree {
 
     fn add_use_capability(
         &mut self,
-        routing_factory: &impl Fn(WeakRealm, UseDecl) -> RoutingFn,
-        realm: WeakRealm,
+        routing_factory: &impl Fn(WeakComponentInstance, UseDecl) -> RoutingFn,
+        component: WeakComponentInstance,
         use_: &UseDecl,
     ) {
         // Event, EventStream and Runner capabilities are used by the framework
@@ -87,14 +89,14 @@ impl DirTree {
             None => return,
         };
         let tree = self.to_directory_node(path);
-        let routing_fn = routing_factory(realm, use_.clone());
+        let routing_fn = routing_factory(component, use_.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 
     fn add_expose_capability(
         &mut self,
-        routing_factory: &impl Fn(WeakRealm, ExposeDecl) -> RoutingFn,
-        realm: WeakRealm,
+        routing_factory: &impl Fn(WeakComponentInstance, ExposeDecl) -> RoutingFn,
+        component: WeakComponentInstance,
         expose: &ExposeDecl,
     ) {
         let path = match expose {
@@ -113,7 +115,7 @@ impl DirTree {
             }
         };
         let tree = self.to_directory_node(&path);
-        let routing_fn = routing_factory(realm, expose.clone());
+        let routing_fn = routing_factory(component, expose.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 
@@ -136,8 +138,8 @@ mod tests {
     use {
         super::*,
         crate::model::{
+            component::ComponentInstance,
             environment::Environment,
-            realm::Realm,
             testing::{mocks, test_helpers, test_helpers::*},
         },
         cm_rust::{
@@ -187,18 +189,17 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let root_realm = Realm::new_root_realm(
+        let root = ComponentInstance::new_root(
             Environment::empty(),
             Weak::new(),
             Weak::new(),
             "test://root".to_string(),
         );
-        let tree = DirTree::build_from_uses(routing_factory, root_realm.as_weak(), decl.clone());
+        let tree = DirTree::build_from_uses(routing_factory, root.as_weak(), decl.clone());
 
         // Convert the tree to a directory.
         let mut in_dir = pfs::simple();
-        tree.install(&root_realm.abs_moniker, &mut in_dir)
-            .expect("Unable to build pseudodirectory");
+        tree.install(&root.abs_moniker, &mut in_dir).expect("Unable to build pseudodirectory");
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
             ExecutionScope::new(),
@@ -266,18 +267,17 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let root_realm = Realm::new_root_realm(
+        let root = ComponentInstance::new_root(
             Environment::empty(),
             Weak::new(),
             Weak::new(),
             "test://root".to_string(),
         );
-        let tree = DirTree::build_from_exposes(routing_factory, root_realm.as_weak(), decl.clone());
+        let tree = DirTree::build_from_exposes(routing_factory, root.as_weak(), decl.clone());
 
         // Convert the tree to a directory.
         let mut expose_dir = pfs::simple();
-        tree.install(&root_realm.abs_moniker, &mut expose_dir)
-            .expect("Unable to build pseudodirectory");
+        tree.install(&root.abs_moniker, &mut expose_dir).expect("Unable to build pseudodirectory");
         let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
         expose_dir.open(
             ExecutionScope::new(),

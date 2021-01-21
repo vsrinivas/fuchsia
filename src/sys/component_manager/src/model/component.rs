@@ -52,7 +52,7 @@ use {
     vfs::path::Path,
 };
 
-/// Describes the reason a realm is being requested to start.
+/// Describes the reason a component instance is being requested to start.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum BindReason {
     /// Indicates that the target is starting the component because it wishes to access
@@ -155,111 +155,109 @@ impl TryFrom<fsys::Package> for Package {
 
 pub const DEFAULT_KILL_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// A wrapper for a weak reference to `Realm`. Provides the absolute moniker of the
-/// realm, which is useful for error reporting if the original `Realm` has been destroyed.
+/// A wrapper for a weak reference to `ComponentInstance`. Provides the absolute moniker of the
+/// component instance, which is useful for error reporting if the original `ComponentInstance` has
+/// been destroyed.
 #[derive(Default, Clone)]
-pub struct WeakRealm {
-    inner: Weak<Realm>,
-    /// The absolute moniker of the original realm.
+pub struct WeakComponentInstance {
+    inner: Weak<ComponentInstance>,
+    /// The absolute moniker of the original component instance.
     pub moniker: AbsoluteMoniker,
 }
 
-impl From<&Arc<Realm>> for WeakRealm {
-    fn from(realm: &Arc<Realm>) -> Self {
-        Self { inner: Arc::downgrade(realm), moniker: realm.abs_moniker.clone() }
+impl From<&Arc<ComponentInstance>> for WeakComponentInstance {
+    fn from(component: &Arc<ComponentInstance>) -> Self {
+        Self { inner: Arc::downgrade(component), moniker: component.abs_moniker.clone() }
     }
 }
 
-impl WeakRealm {
-    /// Attempts to upgrade this `WeakRealm` into an `Arc<Realm>`, if the original realm has not
-    /// been destroyed.
-    pub fn upgrade(&self) -> Result<Arc<Realm>, ModelError> {
+impl WeakComponentInstance {
+    /// Attempts to upgrade this `WeakComponentInstance` into an `Arc<ComponentInstance>`, if the
+    /// original component instance has not been destroyed.
+    pub fn upgrade(&self) -> Result<Arc<ComponentInstance>, ModelError> {
         self.inner.upgrade().ok_or_else(|| ModelError::instance_not_found(self.moniker.clone()))
     }
 }
 
-impl fmt::Debug for WeakRealm {
+impl fmt::Debug for WeakComponentInstance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("WeakRealm").field("moniker", &self.moniker).finish()
+        f.debug_struct("WeakComponentInstance").field("moniker", &self.moniker).finish()
     }
 }
 
-/// A realm is a container for an individual component instance and its children.  It is provided
-/// by the parent of the instance or by the component manager itself in the case of the root realm.
-///
-/// The realm's properties influence the runtime behavior of the subtree of component instances
-/// that it contains, including component resolution, execution, and service discovery.
-pub struct Realm {
-    /// The registry for resolving component URLs within the realm.
+/// Models a component instance, possibly with links to children.
+pub struct ComponentInstance {
+    /// The registry for resolving component URLs within the component instance.
     pub environment: Arc<Environment>,
     /// The component's URL.
     pub component_url: String,
     /// The mode of startup (lazy or eager).
     pub startup: fsys::StartupMode,
-    /// The parent's realm. Either a (component's) realm or component manager's realm.
-    pub parent: WeakExtendedRealm,
-    /// The absolute moniker of this realm.
+    /// The parent instance. Either a component instance or component manager's instance.
+    pub parent: WeakExtendedInstance,
+    /// The absolute moniker of this instance.
     pub abs_moniker: AbsoluteMoniker,
-    /// The hooks scoped to this realm.
+    /// The hooks scoped to this instance.
     pub hooks: Arc<Hooks>,
-    /// The context this realm is under.
+    /// The context this instance is under.
     context: WeakModelContext,
 
     // These locks must be taken in the order declared if held simultaneously.
     /// The component's mutable state.
-    state: Mutex<RealmState>,
-    /// The component's execution state.
+    state: Mutex<InstanceState>,
+    /// The componet's execution state.
     execution: Mutex<ExecutionState>,
-    /// Actions on the realm that must eventually be completed.
+    /// Actions on the instance that must eventually be completed.
     actions: Mutex<ActionSet>,
 }
 
-/// A `Realm` or `ComponentManagerRealm`.
+/// A `ComponentInstance` or `ComponentManagerInstance`.
 #[derive(Debug)]
-pub enum ExtendedRealm {
-    Component(Arc<Realm>),
-    AboveRoot(Arc<ComponentManagerRealm>),
+pub enum ExtendedInstance {
+    Component(Arc<ComponentInstance>),
+    AboveRoot(Arc<ComponentManagerInstance>),
 }
 
-/// A `Realm` or `ComponentManagerRealm`, as a weak pointer.
+/// A `ComponentInstance` or `ComponentManagerInstance`, as a weak pointer.
 #[derive(Debug)]
-pub enum WeakExtendedRealm {
-    Component(WeakRealm),
-    AboveRoot(Weak<ComponentManagerRealm>),
+pub enum WeakExtendedInstance {
+    Component(WeakComponentInstance),
+    AboveRoot(Weak<ComponentManagerInstance>),
 }
 
-impl WeakExtendedRealm {
-    /// Attempts to upgrade this `WeakRealm` into an `Arc<Realm>`, if the original realm has not
-    /// been destroyed.
-    pub fn upgrade(&self) -> Result<ExtendedRealm, ModelError> {
+impl WeakExtendedInstance {
+    /// Attempts to upgrade this `WeakComponentInstance` into an `Arc<ComponentInstance>`, if the
+    /// original component instance has not been destroyed.
+    pub fn upgrade(&self) -> Result<ExtendedInstance, ModelError> {
         match self {
-            WeakExtendedRealm::Component(p) => Ok(ExtendedRealm::Component(p.upgrade()?)),
-            WeakExtendedRealm::AboveRoot(p) => {
-                Ok(ExtendedRealm::AboveRoot(p.upgrade().ok_or(ModelError::model_not_available())?))
-            }
+            WeakExtendedInstance::Component(p) => Ok(ExtendedInstance::Component(p.upgrade()?)),
+            WeakExtendedInstance::AboveRoot(p) => Ok(ExtendedInstance::AboveRoot(
+                p.upgrade().ok_or(ModelError::model_not_available())?,
+            )),
         }
     }
 }
 
-/// The realm above the root, i.e. component manager's realm. This is stored with the root realm.
+/// A special instance identified with component manager. This is stored with the root component
+/// instance.
 #[derive(Debug)]
-pub struct ComponentManagerRealm {
+pub struct ComponentManagerInstance {
     /// The list of capabilities offered from component manager's namespace.
     pub namespace_capabilities: NamespaceCapabilities,
 }
 
-impl ComponentManagerRealm {
+impl ComponentManagerInstance {
     pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
         Self { namespace_capabilities }
     }
 }
 
-impl Realm {
-    /// Instantiates a new root realm.
-    pub fn new_root_realm(
+impl ComponentInstance {
+    /// Instantiates a new root component instance.
+    pub fn new_root(
         environment: Environment,
         context: Weak<ModelContext>,
-        component_manager_realm: Weak<ComponentManagerRealm>,
+        component_manager_instance: Weak<ComponentManagerInstance>,
         component_url: String,
     ) -> Arc<Self> {
         Self::new(
@@ -268,19 +266,19 @@ impl Realm {
             component_url,
             fsys::StartupMode::Lazy,
             WeakModelContext::new(context),
-            WeakExtendedRealm::AboveRoot(component_manager_realm),
+            WeakExtendedInstance::AboveRoot(component_manager_instance),
             Arc::new(Hooks::new(None)),
         )
     }
 
-    /// Instantiates a new realm with the given contents.
+    /// Instantiates a new component instance with the given contents.
     pub fn new(
         environment: Arc<Environment>,
         abs_moniker: AbsoluteMoniker,
         component_url: String,
         startup: fsys::StartupMode,
         context: WeakModelContext,
-        parent: WeakExtendedRealm,
+        parent: WeakExtendedInstance,
         hooks: Arc<Hooks>,
     ) -> Arc<Self> {
         Arc::new(Self {
@@ -290,35 +288,35 @@ impl Realm {
             startup,
             context,
             parent,
-            state: Mutex::new(RealmState::New),
+            state: Mutex::new(InstanceState::New),
             execution: Mutex::new(ExecutionState::new()),
             actions: Mutex::new(ActionSet::new()),
             hooks,
         })
     }
 
-    /// Returns a new `WeakRealm` pointing to this realm.
-    pub fn as_weak(self: &Arc<Self>) -> WeakRealm {
-        WeakRealm { inner: Arc::downgrade(self), moniker: self.abs_moniker.clone() }
+    /// Returns a new `WeakComponentInstance` pointing to this component instance.
+    pub fn as_weak(self: &Arc<Self>) -> WeakComponentInstance {
+        WeakComponentInstance { inner: Arc::downgrade(self), moniker: self.abs_moniker.clone() }
     }
 
-    /// Locks and returns the realm's mutable state.
-    pub async fn lock_state(&self) -> MutexGuard<'_, RealmState> {
+    /// Locks and returns the instance's mutable state.
+    pub async fn lock_state(&self) -> MutexGuard<'_, InstanceState> {
         self.state.lock().await
     }
 
-    /// Locks and returns the realm's execution state.
+    /// Locks and returns the instance's execution state.
     pub async fn lock_execution(&self) -> MutexGuard<'_, ExecutionState> {
         self.execution.lock().await
     }
 
-    /// Locks and returns the realm's action set.
+    /// Locks and returns the instance's action set.
     pub async fn lock_actions(&self) -> MutexGuard<'_, ActionSet> {
         self.actions.lock().await
     }
 
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
-    pub fn try_get_parent(&self) -> Result<ExtendedRealm, ModelError> {
+    pub fn try_get_parent(&self) -> Result<ExtendedInstance, ModelError> {
         self.parent.upgrade()
     }
 
@@ -327,42 +325,43 @@ impl Realm {
         self.context.upgrade()
     }
 
-    /// Locks and returns a lazily resolved and populated `ResolvedRealmState`. Does not register a
-    /// `Resolve` action unless the resolved state is not already populated, so this function can
-    /// be called re-entrantly from a Resolved hook. Returns an `InstanceNotFound` error if the
-    /// realm is destroyed.
+    /// Locks and returns a lazily resolved and populated `ResolvedInstanceState`. Does not
+    /// register a `Resolve` action unless the resolved state is not already populated, so this
+    /// function can be called re-entrantly from a Resolved hook. Returns an `InstanceNotFound`
+    /// error if the instance is destroyed.
     pub async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
-    ) -> Result<MappedMutexGuard<'a, RealmState, ResolvedRealmState>, ModelError> {
-        fn get_resolved(s: &mut RealmState) -> &mut ResolvedRealmState {
+    ) -> Result<MappedMutexGuard<'a, InstanceState, ResolvedInstanceState>, ModelError> {
+        fn get_resolved(s: &mut InstanceState) -> &mut ResolvedInstanceState {
             match s {
-                RealmState::Resolved(s) => s,
+                InstanceState::Resolved(s) => s,
                 _ => panic!("not resolved"),
             }
         }
         {
             let state = self.state.lock().await;
             match *state {
-                RealmState::Resolved(_) => {
+                InstanceState::Resolved(_) => {
                     return Ok(MutexGuard::map(state, get_resolved));
                 }
-                RealmState::Destroyed => {
+                InstanceState::Destroyed => {
                     return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
                 }
-                RealmState::New | RealmState::Discovered => {}
+                InstanceState::New | InstanceState::Discovered => {}
             }
             // Drop the lock before doing the work to resolve the state.
         }
         self.resolve().await?;
         let state = self.state.lock().await;
-        if let RealmState::Destroyed = *state {
+        if let InstanceState::Destroyed = *state {
             return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
         }
         Ok(MutexGuard::map(state, get_resolved))
     }
 
-    /// Resolves the component declaration, populating `ResolvedRealmState` as necessary. A
-    /// `Resolved` event is dispatched if the realm was not previously resolved or an error occurs.
+    /// Resolves the component declaration, populating `ResolvedInstanceState` as necessary. A
+    /// `Resolved` event is dispatched if the instance was not previously resolved or an error
+    /// occurs.
     pub async fn resolve(self: &Arc<Self>) -> Result<Component, ModelError> {
         ActionSet::register(self.clone(), ResolveAction::new()).await
     }
@@ -384,8 +383,8 @@ impl Realm {
             let decl = {
                 let state = self.lock_state().await;
                 match *state {
-                    RealmState::Resolved(ref s) => s.decl.clone(),
-                    RealmState::Destroyed => {
+                    InstanceState::Resolved(ref s) => s.decl.clone(),
+                    InstanceState::Destroyed => {
                         return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
                     }
                     _ => {
@@ -447,7 +446,7 @@ impl Realm {
                 return Err(ModelError::unsupported("Persistent durability"));
             }
         }
-        if let None = state.add_child_realm(self, child_decl, Some(&collection_decl)).await {
+        if let None = state.add_child(self, child_decl, Some(&collection_decl)).await {
             let partial_moniker =
                 PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
             return Err(ModelError::instance_already_exists(
@@ -466,7 +465,7 @@ impl Realm {
     ) -> Result<impl Future<Output = Result<(), ModelError>>, ModelError> {
         let tup = {
             let state = self.lock_resolved_state().await?;
-            state.live_child_realms.get(&partial_moniker).map(|t| t.clone())
+            state.live_children.get(&partial_moniker).map(|t| t.clone())
         };
         if let Some(tup) = tup {
             let (instance, _) = tup;
@@ -525,7 +524,7 @@ impl Realm {
             execution.shut_down |= shut_down;
             (was_running, component_stop_result)
         };
-        // When the realm is stopped, any child instances in transient collections must be
+        // When the component is stopped, any child instances in transient collections must be
         // destroyed.
         self.destroy_transient_children().await?;
         if was_running {
@@ -544,7 +543,7 @@ impl Realm {
         let decl = {
             let state = self.lock_state().await;
             match *state {
-                RealmState::Resolved(ref s) => s.decl.clone(),
+                InstanceState::Resolved(ref s) => s.decl.clone(),
                 _ => {
                     // The instance was never resolved and therefore never ran, it can't possibly
                     // have storage to clean up.
@@ -560,12 +559,13 @@ impl Realm {
         Ok(())
     }
 
-    /// Registers actions to destroy all children of `realm` that live in transient collections.
+    /// Registers actions to destroy all children of this instance that live in transient
+    /// collections.
     async fn destroy_transient_children(self: &Arc<Self>) -> Result<(), ModelError> {
         let (transient_colls, child_monikers) = {
             let state = self.lock_state().await;
             let state = match *state {
-                RealmState::Resolved(ref s) => s,
+                InstanceState::Resolved(ref s) => s,
                 _ => {
                     // Component instance was not resolved, so no dynamic children.
                     return Ok(());
@@ -580,8 +580,7 @@ impl Realm {
                     fsys::Durability::Persistent => None,
                 })
                 .collect();
-            let child_monikers: Vec<_> =
-                state.all_child_realms().keys().map(|m| m.clone()).collect();
+            let child_monikers: Vec<_> = state.all_children().keys().map(|m| m.clone()).collect();
             (transient_colls, child_monikers)
         };
         let mut futures = vec![];
@@ -645,29 +644,29 @@ impl Realm {
         Ok(())
     }
 
-    /// Binds to the component instance in this realm, starting it if it's not already running.
-    /// Binds to the parent realm's component instance if it is not already bound.
+    /// Binds to the component instance in this instance, starting it if it's not already running.
+    /// Binds to the parent's component instance if it is not already bound.
     pub async fn bind(self: &Arc<Self>, reason: &BindReason) -> Result<Arc<Self>, ModelError> {
-        // Push all Realms on the way to the root onto a stack.
-        let mut realms = Vec::new();
+        // Push all component instances on the way to the root onto a stack.
+        let mut components = Vec::new();
         let mut current = Arc::clone(self);
-        realms.push(Arc::clone(&current));
-        while let ExtendedRealm::Component(parent) = current.try_get_parent()? {
-            realms.push(parent.clone());
+        components.push(Arc::clone(&current));
+        while let ExtendedInstance::Component(parent) = current.try_get_parent()? {
+            components.push(parent.clone());
             current = parent;
         }
 
-        // Now bind to each realm starting at the root (last element).
-        for realm in realms.into_iter().rev() {
-            binding::bind_at(realm, reason).await?;
+        // Now bind to each instance starting at the root (last element).
+        for component in components.into_iter().rev() {
+            binding::bind_at(component, reason).await?;
         }
         Ok(Arc::clone(self))
     }
 }
 
-impl std::fmt::Debug for Realm {
+impl std::fmt::Debug for ComponentInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Realm")
+        f.debug_struct("ComponentInstance")
             .field("component_url", &self.component_url)
             .field("startup", &self.startup)
             .field("abs_moniker", &self.abs_moniker)
@@ -692,26 +691,26 @@ impl ExecutionState {
         Self { shut_down: false, runtime: None }
     }
 
-    /// Returns whether the realm has shut down.
+    /// Returns whether the instance has shut down.
     pub fn is_shut_down(&self) -> bool {
         self.shut_down
     }
 }
 
-/// The mutable state of a component.
-pub enum RealmState {
-    /// The realm was just created.
+/// The mutable state of a component instance.
+pub enum InstanceState {
+    /// The instance was just created.
     New,
-    /// A Discovered event has been dispatched for the realm, but it has not been resolved yet.
+    /// A Discovered event has been dispatched for the instance, but it has not been resolved yet.
     Discovered,
-    /// The realm has been resolved.
-    Resolved(ResolvedRealmState),
-    /// The realm has been destroyed. It has no content and no further actions may be registered
+    /// The instance has been resolved.
+    Resolved(ResolvedInstanceState),
+    /// The instance has been destroyed. It has no content and no further actions may be registered
     /// on it.
     Destroyed,
 }
 
-impl RealmState {
+impl InstanceState {
     /// Changes the state, checking invariants.
     pub fn set(&mut self, next: Self) {
         let invalid = match (&self, &next) {
@@ -725,13 +724,13 @@ impl RealmState {
             _ => false,
         };
         if invalid {
-            panic!("Invalid realm state transition from {:?} to {:?}", self, next);
+            panic!("Invalid instance state transition from {:?} to {:?}", self, next);
         }
         *self = next;
     }
 }
 
-impl fmt::Debug for RealmState {
+impl fmt::Debug for InstanceState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Self::New => "New",
@@ -743,31 +742,31 @@ impl fmt::Debug for RealmState {
     }
 }
 
-/// The mutable state of a resolved realm.
-pub struct ResolvedRealmState {
+/// The mutable state of a resolved component instance.
+pub struct ResolvedInstanceState {
     /// The component's declaration.
     decl: ComponentDecl,
-    /// Realms of all child instances, indexed by instanced moniker.
-    child_realms: HashMap<ChildMoniker, Arc<Realm>>,
-    /// Realms of child instances that have not been deleted, indexed by child moniker.
-    live_child_realms: HashMap<PartialMoniker, (InstanceId, Arc<Realm>)>,
-    /// The next unique identifier for a dynamic component instance created in the realm.
+    /// All child instances, indexed by instanced moniker.
+    children: HashMap<ChildMoniker, Arc<ComponentInstance>>,
+    /// Child instances that have not been deleted, indexed by child moniker.
+    live_children: HashMap<PartialMoniker, (InstanceId, Arc<ComponentInstance>)>,
+    /// The next unique identifier for a dynamic children created in this realm.
     /// (Static instances receive identifier 0.)
     next_dynamic_instance_id: InstanceId,
-    /// The set of named Environments defined by this realm.
+    /// The set of named Environments defined by this instance.
     environments: HashMap<String, Arc<Environment>>,
 }
 
-impl ResolvedRealmState {
-    pub async fn new(realm: &Arc<Realm>, decl: ComponentDecl) -> Self {
+impl ResolvedInstanceState {
+    pub async fn new(component: &Arc<ComponentInstance>, decl: ComponentDecl) -> Self {
         let mut state = Self {
             decl: decl.clone(),
-            child_realms: HashMap::new(),
-            live_child_realms: HashMap::new(),
+            children: HashMap::new(),
+            live_children: HashMap::new(),
             next_dynamic_instance_id: 1,
-            environments: Self::instantiate_environments(realm, &decl),
+            environments: Self::instantiate_environments(component, &decl),
         };
-        state.add_static_child_realms(realm, &decl).await;
+        state.add_static_children(component, &decl).await;
         state
     }
 
@@ -776,52 +775,54 @@ impl ResolvedRealmState {
         &self.decl
     }
 
-    /// Returns an iterator over live child realms.
-    pub fn live_child_realms(&self) -> impl Iterator<Item = (&PartialMoniker, &Arc<Realm>)> {
-        self.live_child_realms.iter().map(|(k, v)| (k, &v.1))
+    /// Returns an iterator over live children.
+    pub fn live_children(
+        &self,
+    ) -> impl Iterator<Item = (&PartialMoniker, &Arc<ComponentInstance>)> {
+        self.live_children.iter().map(|(k, v)| (k, &v.1))
     }
 
     /// Returns a reference to a live child.
-    pub fn get_live_child_realm(&self, m: &PartialMoniker) -> Option<Arc<Realm>> {
-        self.live_child_realms.get(m).map(|(_, v)| v.clone())
+    pub fn get_live_child(&self, m: &PartialMoniker) -> Option<Arc<ComponentInstance>> {
+        self.live_children.get(m).map(|(_, v)| v.clone())
     }
 
-    /// Return all child realms that match the `PartialMoniker` regardless of
+    /// Return all children that match the `PartialMoniker` regardless of
     /// whether that child is live.
-    pub fn get_all_child_realms_by_name(&self, m: &PartialMoniker) -> Vec<Arc<Realm>> {
-        self.child_realms
+    pub fn get_all_children_by_name(&self, m: &PartialMoniker) -> Vec<Arc<ComponentInstance>> {
+        self.children
             .iter()
             .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
-            .map(|(_, realm)| realm.clone())
+            .map(|(_, component)| component.clone())
             .collect()
     }
 
     /// Returns a live child's instance id.
     pub fn get_live_child_instance_id(&self, m: &PartialMoniker) -> Option<InstanceId> {
-        self.live_child_realms.get(m).map(|(i, _)| *i)
+        self.live_children.get(m).map(|(i, _)| *i)
     }
 
     /// Given a `PartialMoniker` returns the `ChildMoniker`
     pub fn get_live_child_moniker(&self, m: &PartialMoniker) -> Option<ChildMoniker> {
-        self.live_child_realms.get(m).map(|(i, _)| ChildMoniker::from_partial(m, *i))
+        self.live_children.get(m).map(|(i, _)| ChildMoniker::from_partial(m, *i))
     }
 
     pub fn get_all_child_monikers(&self, m: &PartialMoniker) -> Vec<ChildMoniker> {
-        self.child_realms
+        self.children
             .iter()
             .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
             .map(|(child, _)| child.clone())
             .collect()
     }
 
-    /// Returns a reference to the list of all child realms.
-    pub fn all_child_realms(&self) -> &HashMap<ChildMoniker, Arc<Realm>> {
-        &self.child_realms
+    /// Returns a reference to the list of all children.
+    pub fn all_children(&self) -> &HashMap<ChildMoniker, Arc<ComponentInstance>> {
+        &self.children
     }
 
-    /// Returns a child `Realm`. The child may or may not be live.
-    pub fn get_child_instance(&self, cm: &ChildMoniker) -> Option<Arc<Realm>> {
-        self.child_realms.get(cm).map(|i| i.clone())
+    /// Returns a child `ComponentInstance`. The child may or may not be live.
+    pub fn get_child(&self, cm: &ChildMoniker) -> Option<Arc<ComponentInstance>> {
+        self.children.get(cm).map(|i| i.clone())
     }
 
     /// Extends an absolute moniker with the live child with partial moniker `p`. Returns `None`
@@ -839,45 +840,47 @@ impl ResolvedRealmState {
         }
     }
 
-    /// Returns all deleting child realms.
-    pub fn get_deleting_child_realms(&self) -> HashMap<ChildMoniker, Arc<Realm>> {
-        let mut deleting_realms = HashMap::new();
-        for (m, r) in self.all_child_realms().iter() {
-            if self.get_live_child_realm(&m.to_partial()).is_none() {
-                deleting_realms.insert(m.clone(), r.clone());
+    /// Returns all deleting children.
+    pub fn get_deleting_children(&self) -> HashMap<ChildMoniker, Arc<ComponentInstance>> {
+        let mut deleting_children = HashMap::new();
+        for (m, r) in self.all_children().iter() {
+            if self.get_live_child(&m.to_partial()).is_none() {
+                deleting_children.insert(m.clone(), r.clone());
             }
         }
-        deleting_realms
+        deleting_children
     }
 
-    /// Marks a live child realm deleting. No-op if the child is already deleting.
-    pub fn mark_child_realm_deleting(&mut self, partial_moniker: &PartialMoniker) {
-        self.live_child_realms.remove(&partial_moniker);
+    /// Marks a live child deleting. No-op if the child is already deleting.
+    pub fn mark_child_deleting(&mut self, partial_moniker: &PartialMoniker) {
+        self.live_children.remove(&partial_moniker);
     }
 
-    /// Removes a child realm.
-    pub fn remove_child_realm(&mut self, moniker: &ChildMoniker) {
-        self.child_realms.remove(moniker);
+    /// Removes a child.
+    pub fn remove_child(&mut self, moniker: &ChildMoniker) {
+        self.children.remove(moniker);
     }
 
     /// Creates a set of Environments instantiated from their EnvironmentDecls.
     fn instantiate_environments(
-        realm: &Arc<Realm>,
+        component: &Arc<ComponentInstance>,
         decl: &ComponentDecl,
     ) -> HashMap<String, Arc<Environment>> {
         let mut environments = HashMap::new();
         for env_decl in &decl.environments {
-            environments
-                .insert(env_decl.name.clone(), Arc::new(Environment::from_decl(realm, env_decl)));
+            environments.insert(
+                env_decl.name.clone(),
+                Arc::new(Environment::from_decl(component, env_decl)),
+            );
         }
         environments
     }
 
-    /// Retrieve an environment for `child`, inheriting from `realm`'s environment if
+    /// Retrieve an environment for `child`, inheriting from `component`'s environment if
     /// necessary.
     fn environment_for_child(
         &mut self,
-        realm: &Arc<Realm>,
+        component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
     ) -> Arc<Environment> {
@@ -894,19 +897,19 @@ impl ResolvedRealmState {
                     .expect(&format!("Environment not found: {}", environment_name)),
             )
         } else {
-            // Auto-inherit the environment from this realm.
-            Arc::new(Environment::new_inheriting(realm))
+            // Auto-inherit the environment from this component instance.
+            Arc::new(Environment::new_inheriting(component))
         }
     }
 
-    /// Adds a new child of this realm for the given `ChildDecl`. Returns the child realm,
-    /// or None if it already existed.
-    async fn add_child_realm(
+    /// Adds a new child of this instance for the given `ChildDecl`. Returns the child, or None if
+    /// it already existed.
+    async fn add_child(
         &mut self,
-        realm: &Arc<Realm>,
+        component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-    ) -> Option<Arc<Realm>> {
+    ) -> Option<Arc<ComponentInstance>> {
         let instance_id = match collection {
             Some(_) => {
                 let id = self.next_dynamic_instance_id;
@@ -918,33 +921,37 @@ impl ResolvedRealmState {
         let child_moniker =
             ChildMoniker::new(child.name.clone(), collection.map(|c| c.name.clone()), instance_id);
         let partial_moniker = child_moniker.to_partial();
-        if self.get_live_child_realm(&partial_moniker).is_none() {
-            let child_realm = Realm::new(
-                self.environment_for_child(realm, child, collection.clone()),
-                realm.abs_moniker.child(child_moniker.clone()),
+        if self.get_live_child(&partial_moniker).is_none() {
+            let child = ComponentInstance::new(
+                self.environment_for_child(component, child, collection.clone()),
+                component.abs_moniker.child(child_moniker.clone()),
                 child.url.clone(),
                 child.startup,
-                realm.context.clone(),
-                WeakExtendedRealm::Component(WeakRealm::from(realm)),
-                Arc::new(Hooks::new(Some(realm.hooks.clone()))),
+                component.context.clone(),
+                WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
+                Arc::new(Hooks::new(Some(component.hooks.clone()))),
             );
-            self.child_realms.insert(child_moniker, child_realm.clone());
-            self.live_child_realms.insert(partial_moniker, (instance_id, child_realm.clone()));
-            // We can dispatch a Discovered event for the realm now that it's installed in the
+            self.children.insert(child_moniker, child.clone());
+            self.live_children.insert(partial_moniker, (instance_id, child.clone()));
+            // We can dispatch a Discovered event for the component now that it's installed in the
             // tree, which means any Discovered hooks will capture it.
             {
-                let mut actions = child_realm.lock_actions().await;
-                let _ = actions.register_no_wait(&child_realm, DiscoverAction::new());
+                let mut actions = child.lock_actions().await;
+                let _ = actions.register_no_wait(&child, DiscoverAction::new());
             }
-            Some(child_realm)
+            Some(child)
         } else {
             None
         }
     }
 
-    async fn add_static_child_realms(&mut self, realm: &Arc<Realm>, decl: &ComponentDecl) {
+    async fn add_static_children(
+        &mut self,
+        component: &Arc<ComponentInstance>,
+        decl: &ComponentDecl,
+    ) {
         for child in decl.children.iter() {
-            self.add_child_realm(realm, child, None).await;
+            self.add_child(component, child, None).await;
         }
     }
 }
@@ -1061,17 +1068,17 @@ impl Runtime {
 
     /// If the Runtime has a controller this creates a background context which
     /// watches for the controller's channel to close. If the channel closes,
-    /// the background context attempts to use the WeakRealm to stop the
+    /// the background context attempts to use the WeakComponentInstance to stop the
     /// component.
-    pub fn watch_for_exit(&mut self, realm: WeakRealm) {
+    pub fn watch_for_exit(&mut self, component: WeakComponentInstance) {
         if let Some(controller) = &self.controller {
             let controller_clone = controller.clone();
             let (abort_client, abort_server) = AbortHandle::new_pair();
             let watcher = Abortable::new(
                 async move {
                     if let Ok(_) = controller_clone.on_closed().await {
-                        if let Ok(realm) = realm.upgrade() {
-                            let _ = ActionSet::register(realm, StopAction::new()).await;
+                        if let Ok(component) = component.upgrade() {
+                            let _ = ActionSet::register(component, StopAction::new()).await;
                         }
                     }
                 },
@@ -1711,18 +1718,18 @@ pub mod tests {
             )],
         )
         .await;
-        let realm =
+        let component =
             test.model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind");
         let (node_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::NodeMarker>().expect("failed to create endpoints");
         let mut server_end = server_end.into_channel();
-        realm.open_exposed(&mut server_end).await.expect("failed to open exposed dir");
+        component.open_exposed(&mut server_end).await.expect("failed to open exposed dir");
 
         // Ensure that the directory is open to begin with.
         let proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
         assert!(test_helpers::dir_contains(&proxy, ".", "foo").await);
 
-        realm.stop_instance(false).await.expect("failed to stop instance");
+        component.stop_instance(false).await.expect("failed to stop instance");
 
         // The directory should have received a PEER_CLOSED signal.
         proxy.on_closed().await.expect("failed waiting for channel to close");
@@ -1768,7 +1775,7 @@ pub mod tests {
             .expect("subscribe to event stream");
         event_source.start_component_tree().await;
 
-        let _realm =
+        let _component =
             test.model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind");
         let event =
             event_stream.wait_until(EventType::CapabilityReady, vec![].into()).await.unwrap().event;
@@ -1781,7 +1788,7 @@ pub mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn started_and_running_event_timestamp_matches_realm() {
+    async fn started_and_running_event_timestamp_matches_component() {
         let test =
             RoutingTest::new("root", vec![("root", ComponentDeclBuilder::new().build())]).await;
 
@@ -1822,9 +1829,10 @@ pub mod tests {
         assert!(discovered_timestamp < resolved_timestamp);
         assert!(resolved_timestamp < started_timestamp);
 
-        let realm = bind_handle.await;
-        let realm_timestamp = realm.lock_execution().await.runtime.as_ref().unwrap().timestamp;
-        assert_eq!(realm_timestamp, started_timestamp);
+        let component = bind_handle.await;
+        let component_timestamp =
+            component.lock_execution().await.runtime.as_ref().unwrap().timestamp;
+        assert_eq!(component_timestamp, started_timestamp);
 
         let mut event_stream = event_source
             .subscribe(vec![EventSubscription::new(EventType::Running.into(), EventMode::Sync)])
@@ -1864,23 +1872,23 @@ pub mod tests {
         let a_moniker: AbsoluteMoniker = vec!["a:0"].into();
         let b_moniker: AbsoluteMoniker = vec!["a:0", "b:0"].into();
 
-        let realm_b = test.look_up(b_moniker.clone()).await;
+        let component_b = test.look_up(b_moniker.clone()).await;
 
         // Bind to the root so it and its eager children start
         let _root = test
             .model
             .bind(&vec![].into(), &BindReason::Root)
             .await
-            .expect("failed to bind to root realm");
+            .expect("failed to bind to root");
         test.runner
             .wait_for_urls(&["test:///root_resolved", "test:///a_resolved", "test:///b_resolved"])
             .await;
 
         // Check that the eagerly-started 'b' has a runtime, which indicates
         // it is running.
-        assert!(realm_b.lock_execution().await.runtime.is_some());
+        assert!(component_b.lock_execution().await.runtime.is_some());
 
-        let b_info = ComponentInfo::new(realm_b.clone()).await;
+        let b_info = ComponentInfo::new(component_b.clone()).await;
         b_info.check_not_shut_down(&test.runner).await;
 
         // Tell the runner to close the controller channel

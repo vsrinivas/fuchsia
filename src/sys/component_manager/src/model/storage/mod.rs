@@ -7,8 +7,8 @@ use {
     crate::{
         channel,
         model::{
+            component::{BindReason, ComponentInstance},
             error::ModelError,
-            realm::{BindReason, Realm},
         },
     },
     anyhow::Error,
@@ -96,7 +96,7 @@ impl StorageError {
 pub struct StorageCapabilitySource {
     /// The component that's providing the backing directory capability for this storage
     /// capability. If None, then the backing directory comes from component_manager's namespace.
-    pub storage_provider: Option<Arc<Realm>>,
+    pub storage_provider: Option<Arc<ComponentInstance>>,
 
     /// The path to the backing directory in the providing component's outgoing directory (or
     /// component_manager's namespace).
@@ -113,8 +113,8 @@ pub struct StorageCapabilitySource {
 }
 
 /// Open the isolated storage sub-directory for the given component, creating it if necessary.
-/// `dir_source_realm` and `dir_source_path` are the realm hosting the directory and its capability
-/// path.
+/// `dir_source_component` and `dir_source_path` are the component hosting the directory and its
+/// capability path.
 pub async fn open_isolated_storage(
     storage_source_info: StorageCapabilitySource,
     relative_moniker: RelativeMoniker,
@@ -132,8 +132,8 @@ pub async fn open_isolated_storage(
         Some(subdir) => storage_source_info.backing_directory_path.to_path_buf().join(subdir),
         None => storage_source_info.backing_directory_path.to_path_buf(),
     };
-    if let Some(dir_source_realm) = storage_source_info.storage_provider.as_ref() {
-        dir_source_realm
+    if let Some(dir_source_component) = storage_source_info.storage_provider.as_ref() {
+        dir_source_component
             .bind(bind_reason)
             .await?
             .open_outgoing(FLAGS, open_mode, full_backing_directory_path, &mut local_server_end)
@@ -176,8 +176,8 @@ pub async fn open_isolated_storage(
     Ok(storage_proxy)
 }
 
-/// Delete the isolated storage sub-directory for the given component.  `dir_source_realm` and
-/// `dir_source_path` are the realm hosting the directory and its capability path.
+/// Delete the isolated storage sub-directory for the given component.  `dir_source_component` and
+/// `dir_source_path` are the component hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
     storage_source_info: StorageCapabilitySource,
     relative_moniker: RelativeMoniker,
@@ -189,10 +189,10 @@ pub async fn delete_isolated_storage(
         Some(subdir) => storage_source_info.backing_directory_path.to_path_buf().join(subdir),
         None => storage_source_info.backing_directory_path.to_path_buf(),
     };
-    if let Some(dir_source_realm) = storage_source_info.storage_provider.as_ref() {
+    if let Some(dir_source_component) = storage_source_info.storage_provider.as_ref() {
         // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
         // capability to plumb through the correct BindReason.
-        dir_source_realm
+        dir_source_component
             .bind(&BindReason::Unsupported)
             .await?
             .open_outgoing(
@@ -313,7 +313,7 @@ mod tests {
     use super::*;
     use {
         crate::model::{
-            realm::BindReason,
+            component::BindReason,
             rights,
             routing::RoutingError,
             testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
@@ -349,18 +349,18 @@ mod tests {
             ),
         ];
         let test = RoutingTest::new("a", components).await;
-        let b_realm = test
+        let b_component = test
             .model
-            .look_up_realm(&vec!["b:0"].into())
+            .look_up(&vec!["b:0"].into())
             .await
-            .expect("failed to find realm for b:0");
+            .expect("failed to find component for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
 
         // Open.
         let dir = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -378,7 +378,7 @@ mod tests {
         // Open again.
         let dir = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -396,7 +396,7 @@ mod tests {
             RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into(), "e:0".into()]);
         let dir = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -430,7 +430,7 @@ mod tests {
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let res = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&test.model.root_realm)),
+                storage_provider: Some(Arc::clone(&test.model.root)),
                 backing_directory_path: CapabilityPath::try_from("/data").unwrap().clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -470,11 +470,11 @@ mod tests {
             ),
         ];
         let test = RoutingTest::new("a", components).await;
-        let b_realm = test
+        let b_component = test
             .model
-            .look_up_realm(&vec!["b:0"].into())
+            .look_up(&vec!["b:0"].into())
             .await
-            .expect("failed to find realm for b:0");
+            .expect("failed to find component for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
         let parent_moniker = RelativeMoniker::new(vec![], vec!["c:0".into()]);
         let child_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
@@ -482,7 +482,7 @@ mod tests {
         // Open and write to the storage for child.
         let dir = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -500,7 +500,7 @@ mod tests {
         // Open parent's storage.
         let dir = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -518,7 +518,7 @@ mod tests {
         // Delete the child's storage.
         delete_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -531,7 +531,7 @@ mod tests {
         // Open parent's storage again. Should work.
         let dir = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
@@ -553,7 +553,7 @@ mod tests {
         // Error -- tried to delete nonexistent storage.
         let err = delete_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&b_realm)),
+                storage_provider: Some(Arc::clone(&b_component)),
                 backing_directory_path: dir_source_path,
                 backing_directory_subdir: None,
                 storage_subdir: None,

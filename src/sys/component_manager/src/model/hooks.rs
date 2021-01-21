@@ -6,9 +6,9 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
+            component::{BindReason, ComponentInstance, Runtime, WeakComponentInstance},
             error::ModelError,
             events::error::EventsError,
-            realm::{BindReason, Realm, Runtime, WeakRealm},
         },
     },
     anyhow::format_err,
@@ -291,12 +291,12 @@ pub enum EventPayload {
     Discovered,
     MarkedForDestruction,
     Resolved {
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         resolved_url: String,
         decl: ComponentDecl,
     },
     Started {
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         runtime: RuntimeInfo,
         component_decl: ComponentDecl,
         bind_reason: BindReason,
@@ -355,7 +355,7 @@ impl fmt::Debug for EventPayload {
             EventPayload::Started { component_decl, .. } => {
                 formatter.field("component_decl", &component_decl).finish()
             }
-            EventPayload::Resolved { realm: _, resolved_url, decl } => {
+            EventPayload::Resolved { component: _, resolved_url, decl } => {
                 formatter.field("resolved_url", resolved_url);
                 formatter.field("decl", decl).finish()
             }
@@ -375,10 +375,10 @@ pub struct Event {
     /// Each event has a unique 64-bit integer assigned to it
     pub id: u64,
 
-    /// Moniker of realm that this event applies to
+    /// Moniker of component that this event applies to
     pub target_moniker: AbsoluteMoniker,
 
-    /// Component url of the realm that this event applies to
+    /// Component url of the component that this event applies to
     pub component_url: String,
 
     /// Result of the event
@@ -389,20 +389,20 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn new(realm: &Arc<Realm>, result: EventResult) -> Self {
+    pub fn new(component: &Arc<ComponentInstance>, result: EventResult) -> Self {
         let timestamp = zx::Time::get_monotonic();
-        Self::new_with_timestamp(realm, result, timestamp)
+        Self::new_with_timestamp(component, result, timestamp)
     }
 
     pub fn new_with_timestamp(
-        realm: &Arc<Realm>,
+        component: &Arc<ComponentInstance>,
         result: EventResult,
         timestamp: zx::Time,
     ) -> Self {
         // Generate a random 64-bit integer to identify this event
         Self::new_internal(
-            realm.abs_moniker.clone(),
-            realm.component_url.clone(),
+            component.abs_moniker.clone(),
+            component.component_url.clone(),
             timestamp,
             result,
         )

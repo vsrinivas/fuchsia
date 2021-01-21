@@ -10,11 +10,11 @@ use {
         klog,
         model::{
             binding::Binder,
+            component::BindReason,
             error::ModelError,
             events::{event::EventMode, registry::EventSubscription},
             hooks::HooksRegistration,
             model::Model,
-            realm::BindReason,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
         startup::Arguments,
@@ -167,7 +167,7 @@ impl RoutingTestBuilder {
         self
     }
 
-    /// Add the given runner as a "builtin runner", registered in the root realm's environment
+    /// Add the given runner as a "builtin runner", registered in the root's environment
     /// under the given name.
     pub fn add_builtin_runner(mut self, name: &str, runner: Arc<dyn BuiltinRunnerFactory>) -> Self {
         self.builtin_runners.insert(name.into(), runner);
@@ -289,8 +289,8 @@ impl RoutingTest {
             env_builder.build().await.expect("builtin environment setup failed");
 
         let model = builtin_environment.model.clone();
-        model.root_realm.hooks.install(builder.additional_hooks).await;
-        model.root_realm.hooks.install(echo_service.hooks()).await;
+        model.root.hooks.install(builder.additional_hooks).await;
+        model.root.hooks.install(echo_service.hooks()).await;
 
         Self {
             components: builder.components,
@@ -351,14 +351,14 @@ impl RoutingTest {
         collection: &'a str,
         name: &'a str,
     ) {
-        let realm = self.model.look_up_realm(&moniker).await.expect("failed to look up realm");
+        let component = self.model.look_up(&moniker).await.expect("failed to look up component");
         self.model
-            .bind(&realm.abs_moniker, &BindReason::Eager)
+            .bind(&component.abs_moniker, &BindReason::Eager)
             .await
             .expect("bind instance failed");
         let partial_moniker = PartialMoniker::new(name.to_string(), Some(collection.to_string()));
         let nf =
-            realm.remove_dynamic_child(&partial_moniker).await.expect("failed to remove child");
+            component.remove_dynamic_child(&partial_moniker).await.expect("failed to remove child");
         // Wait for destruction to fully complete.
         nf.await.expect("failed to destroy child");
     }
@@ -748,15 +748,15 @@ impl RoutingTest {
     /// We define "running" as "the components outgoing directory has responded to a simple
     /// request", which the MockRunner supports.
     pub async fn wait_for_component_start(&self, component: &AbsoluteMoniker) {
-        // Lookup, bind, and open a connection to the realm's outgoing directory.
+        // Lookup, bind, and open a connection to the component's outgoing directory.
         let (dir_proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-        let realm = self.model.look_up_realm(component).await.expect("lookup root realm failed");
+        let component = self.model.look_up(component).await.expect("lookup component failed");
         let mut server_end = server_end.into_channel();
         self.model
-            .bind(&realm.abs_moniker, &BindReason::Eager)
+            .bind(&component.abs_moniker, &BindReason::Eager)
             .await
-            .expect("failed to bind to realm")
+            .expect("failed to bind to component")
             .open_outgoing(
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
                 fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -764,7 +764,7 @@ impl RoutingTest {
                 &mut server_end,
             )
             .await
-            .expect("failed to open realm's outgoing directory");
+            .expect("failed to open component's outgoing directory");
 
         // Ensure we can successfully talk to the directory.
         dir_proxy.sync().await.expect("could not communicate with directory");
@@ -1272,12 +1272,12 @@ pub mod capability_util {
         open_mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let realm = model
-            .look_up_realm(abs_moniker)
+        let component = model
+            .look_up(abs_moniker)
             .await
-            .expect(&format!("realm not found {}", abs_moniker));
+            .expect(&format!("component not found {}", abs_moniker));
         model.bind(abs_moniker, &BindReason::Eager).await.expect("failed to bind instance");
-        let execution = realm.lock_execution().await;
+        let execution = component.lock_execution().await;
         let runtime = execution.runtime.as_ref().expect("not resolved");
         let flags = OPEN_RIGHT_READABLE;
 

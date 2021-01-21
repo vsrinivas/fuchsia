@@ -6,8 +6,8 @@ use {
     crate::{
         capability::EnvironmentCapability,
         model::{
+            component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
-            realm::{Realm, WeakRealm},
             routing,
         },
     },
@@ -56,7 +56,7 @@ impl ResolverRegistry {
 
     /// Creates and populates a `ResolverRegistry` with `RemoteResolvers` that
     /// have been registered with an environment.
-    pub fn from_decl(decl: &[ResolverRegistration], parent: &Arc<Realm>) -> Self {
+    pub fn from_decl(decl: &[ResolverRegistration], parent: &Arc<ComponentInstance>) -> Self {
         let mut registry = ResolverRegistry::new();
         for resolver in decl {
             registry.register(
@@ -92,12 +92,16 @@ impl Resolver for ResolverRegistry {
 pub struct RemoteResolver {
     capability_name: CapabilityName,
     source: RegistrationSource,
-    realm: WeakRealm,
+    component: WeakComponentInstance,
 }
 
 impl RemoteResolver {
-    pub fn new(name: CapabilityName, source: RegistrationSource, realm: WeakRealm) -> Self {
-        RemoteResolver { capability_name: name, source, realm }
+    pub fn new(
+        name: CapabilityName,
+        source: RegistrationSource,
+        component: WeakComponentInstance,
+    ) -> Self {
+        RemoteResolver { capability_name: name, source, component }
     }
 }
 
@@ -115,13 +119,13 @@ impl Resolver for RemoteResolver {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
                     .map_err(ResolverError::unknown_resolver_error)?;
-            let realm = self.realm.upgrade().map_err(ResolverError::routing_error)?;
+            let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
             routing::route_capability_from_environment(
                 flags,
                 open_mode,
                 String::new(),
                 decl,
-                &realm,
+                &component,
                 &mut server_end.into_channel(),
             )
             .await

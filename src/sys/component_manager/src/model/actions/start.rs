@@ -4,11 +4,14 @@
 
 use {
     crate::model::{
+        component::{
+            BindReason, ComponentInstance, ExecutionState, InstanceState, Package, Runtime,
+            WeakComponentInstance,
+        },
         error::ModelError,
         exposed_dir::ExposedDir,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
         namespace::IncomingNamespace,
-        realm::{BindReason, ExecutionState, Package, Realm, RealmState, Runtime, WeakRealm},
         runner::Runner,
     },
     cm_rust::data,
@@ -23,16 +26,16 @@ use {
 };
 
 pub(super) async fn do_start(
-    realm: &Arc<Realm>,
+    component: &Arc<ComponentInstance>,
     bind_reason: &BindReason,
 ) -> Result<(), ModelError> {
     // Pre-flight check: if the component is already started, or was shutd down, return now. Note
     // that `bind_at` also performs this check before scheduling the action; here, we do it again
     // while the action is registered so we avoid the risk of invoking the BeforeStart hook twice.
     {
-        let state = realm.lock_state().await;
-        let execution = realm.lock_execution().await;
-        if let Some(res) = should_return_early(&state, &execution, &realm.abs_moniker) {
+        let state = component.lock_state().await;
+        let execution = component.lock_execution().await;
+        if let Some(res) = should_return_early(&state, &execution, &component.abs_moniker) {
             return res;
         }
     }
@@ -48,26 +51,26 @@ pub(super) async fn do_start(
 
     let result = async move {
         // Resolve the component.
-        let component = realm.resolve().await?;
+        let component_info = component.resolve().await?;
 
         // Find the runner to use.
-        let runner = realm.resolve_runner().await.map_err(|e| {
-            error!("Failed to resolve runner for `{}`: {}", realm.abs_moniker, e);
+        let runner = component.resolve_runner().await.map_err(|e| {
+            error!("Failed to resolve runner for `{}`: {}", component.abs_moniker, e);
             e
         })?;
 
         // Generate the Runtime which will be set in the Execution.
         let (pending_runtime, start_info, controller_server_end) = make_execution_runtime(
-            realm.as_weak(),
-            component.resolved_url.clone(),
-            component.package,
-            &component.decl,
+            component.as_weak(),
+            component_info.resolved_url.clone(),
+            component_info.package,
+            &component_info.decl,
         )
         .await?;
 
         Ok(StartContext {
-            component_decl: component.decl,
-            resolved_url: component.resolved_url.clone(),
+            component_decl: component_info.decl,
+            resolved_url: component_info.resolved_url.clone(),
             runner,
             pending_runtime,
             start_info,
@@ -79,9 +82,9 @@ pub(super) async fn do_start(
     let mut start_context = match result {
         Ok(start_context) => {
             let event = Event::new_with_timestamp(
-                realm,
+                component,
                 Ok(EventPayload::Started {
-                    realm: realm.into(),
+                    component: component.into(),
                     runtime: RuntimeInfo::from_runtime(
                         &start_context.pending_runtime,
                         start_context.resolved_url.clone(),
@@ -92,12 +95,12 @@ pub(super) async fn do_start(
                 start_context.pending_runtime.timestamp,
             );
 
-            realm.hooks.dispatch(&event).await?;
+            component.hooks.dispatch(&event).await?;
             start_context
         }
         Err(e) => {
-            let event = Event::new(realm, Err(EventError::new(&e, EventErrorPayload::Started)));
-            realm.hooks.dispatch(&event).await?;
+            let event = Event::new(component, Err(EventError::new(&e, EventErrorPayload::Started)));
+            component.hooks.dispatch(&event).await?;
             return Err(e);
         }
     };
@@ -105,12 +108,12 @@ pub(super) async fn do_start(
     // Set the Runtime in the Execution. From component manager's perspective, this indicates
     // that the component has started. This may return early if the component is shut down.
     {
-        let state = realm.lock_state().await;
-        let mut execution = realm.lock_execution().await;
-        if let Some(res) = should_return_early(&state, &execution, &realm.abs_moniker) {
+        let state = component.lock_state().await;
+        let mut execution = component.lock_execution().await;
+        if let Some(res) = should_return_early(&state, &execution, &component.abs_moniker) {
             return res;
         }
-        start_context.pending_runtime.watch_for_exit(realm.as_weak());
+        start_context.pending_runtime.watch_for_exit(component.as_weak());
         execution.runtime = Some(start_context.pending_runtime);
     }
 
@@ -127,13 +130,13 @@ pub(super) async fn do_start(
 /// - The component instance is shut down.
 /// - The component instance is already started.
 pub fn should_return_early(
-    realm: &RealmState,
+    component: &InstanceState,
     execution: &ExecutionState,
     abs_moniker: &AbsoluteMoniker,
 ) -> Option<Result<(), ModelError>> {
-    match realm {
-        RealmState::New | RealmState::Discovered | RealmState::Resolved(_) => {}
-        RealmState::Destroyed => {
+    match component {
+        InstanceState::New | InstanceState::Discovered | InstanceState::Resolved(_) => {}
+        InstanceState::Destroyed => {
             return Some(Err(ModelError::instance_not_found(abs_moniker.clone())));
         }
     }
@@ -149,7 +152,7 @@ pub fn should_return_early(
 /// Returns a configured Runtime for a component and the start info (without actually starting
 /// the component).
 async fn make_execution_runtime(
-    realm: WeakRealm,
+    component: WeakComponentInstance,
     url: String,
     package: Option<Package>,
     decl: &cm_rust::ComponentDecl,
@@ -158,13 +161,13 @@ async fn make_execution_runtime(
     ModelError,
 > {
     // Create incoming/outgoing directories, and populate them.
-    let exposed_dir = ExposedDir::new(ExecutionScope::new(), realm.clone(), decl.clone())?;
+    let exposed_dir = ExposedDir::new(ExecutionScope::new(), component.clone(), decl.clone())?;
     let (outgoing_dir_client, outgoing_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let (runtime_dir_client, runtime_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let mut namespace = IncomingNamespace::new(package)?;
-    let ns = namespace.populate(realm, decl).await?;
+    let ns = namespace.populate(component, decl).await?;
 
     let (controller_client, controller_server) =
         endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()

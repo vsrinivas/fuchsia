@@ -15,9 +15,9 @@ use {
         capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
         channel,
         model::{
+            component::{BindReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            realm::{BindReason, WeakRealm},
             routing::{self, CapabilityState},
             storage,
         },
@@ -47,17 +47,17 @@ lazy_static! {
 
 struct StorageAdminProtocolProvider {
     storage_decl: StorageDecl,
-    realm: WeakRealm,
+    component: WeakComponentInstance,
     storage_admin: Arc<StorageAdmin>,
 }
 
 impl StorageAdminProtocolProvider {
     pub fn new(
         storage_decl: StorageDecl,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         storage_admin: Arc<StorageAdmin>,
     ) -> Self {
-        Self { storage_decl, realm, storage_admin }
+        Self { storage_decl, component, storage_admin }
     }
 }
 
@@ -86,10 +86,10 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
             return Ok(());
         }
         let storage_decl = self.storage_decl.clone();
-        let realm = self.realm.clone();
+        let component = self.component.clone();
         let storage_admin = self.storage_admin.clone();
         fasync::Task::spawn(async move {
-            if let Err(e) = storage_admin.serve(storage_decl, realm, server_end).await {
+            if let Err(e) = storage_admin.serve(storage_decl, component, server_end).await {
                 warn!("failed to serve storage admin protocol: {:?}", e);
             }
         })
@@ -116,7 +116,7 @@ impl StorageAdmin {
 
     async fn extract_storage_decl(
         source_capability: &ComponentCapability,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
     ) -> Result<Option<StorageDecl>, ModelError> {
         match source_capability {
             ComponentCapability::Offer(OfferDecl::Protocol(_))
@@ -131,16 +131,16 @@ impl StorageAdmin {
         if source_capability_name.is_none() {
             return Ok(None);
         }
-        let source_realm = realm.upgrade()?;
-        let source_realm_state = source_realm.lock_resolved_state().await?;
-        let decl = source_realm_state.decl();
+        let source_component = component.upgrade()?;
+        let source_component_state = source_component.lock_resolved_state().await?;
+        let decl = source_component_state.decl();
         Ok(decl.find_storage_source(source_capability_name.unwrap()).cloned())
     }
 
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         source_capability: &'a ComponentCapability,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
@@ -149,11 +149,11 @@ impl StorageAdmin {
             return Ok(capability_provider);
         }
         // Find the storage decl, if it exists we're good to go
-        let storage_decl = Self::extract_storage_decl(source_capability, realm.clone()).await?;
+        let storage_decl = Self::extract_storage_decl(source_capability, component.clone()).await?;
         if let Some(storage_decl) = storage_decl {
             return Ok(Some(Box::new(StorageAdminProtocolProvider::new(
                 storage_decl,
-                realm,
+                component,
                 self.clone(),
             )) as Box<dyn CapabilityProvider>));
         }
@@ -165,21 +165,21 @@ impl StorageAdmin {
     async fn serve(
         self: Arc<Self>,
         storage_decl: StorageDecl,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         server_end: zx::Channel,
     ) -> Result<(), Error> {
-        let realm = realm.upgrade().map_err(|e| {
+        let component = component.upgrade().map_err(|e| {
             format_err!(
                 "unable to serve storage admin protocol, model reference is no longer valid: {:?}",
                 e,
             )
         })?;
-        let storage_moniker = realm.abs_moniker.clone();
+        let storage_moniker = component.abs_moniker.clone();
 
         let capability = ComponentCapability::Storage(storage_decl.clone());
         let cap_state = CapabilityState::new(&capability);
         let storage_capability_source_info =
-            routing::route_storage_backing_directory(storage_decl, realm, cap_state).await?;
+            routing::route_storage_backing_directory(storage_decl, component, cap_state).await?;
 
         let mut stream = ServerEnd::<fsys::StorageAdminMarker>::new(server_end)
             .into_stream()
@@ -249,14 +249,14 @@ impl Hook for StorageAdmin {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::Capability { source_capability, realm },
+                source: CapabilitySource::Capability { source_capability, component },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(
                         source_capability,
-                        realm.clone(),
+                        component.clone(),
                         capability_provider.take(),
                     )
                     .await?;

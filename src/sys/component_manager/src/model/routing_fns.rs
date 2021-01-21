@@ -6,7 +6,7 @@ use {
     crate::{
         capability::ComponentCapability,
         model::{
-            realm::{Runtime, WeakRealm},
+            component::{Runtime, WeakComponentInstance},
             routing::{self, route_expose_capability, route_use_capability},
         },
     },
@@ -18,19 +18,20 @@ use {
     log::*,
 };
 
-pub fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
+pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
-            let realm = realm.clone();
+            let component = component.clone();
             let use_ = use_.clone();
             fasync::Task::spawn(async move {
-                let realm = match realm.upgrade() {
-                    Ok(realm) => realm,
+                let component = match component.upgrade() {
+                    Ok(component) => component,
                     Err(e) => {
                         // This can happen if the component instance tree topology changes such
-                        // that the captured `realm` no longer exists.
+                        // that the captured `component` no longer exists.
                         error!(
-                            "failed to upgrade WeakRealm while routing use decl `{:?}`: {:?}",
+                            "failed to upgrade WeakComponentInstance while routing use \
+                            decl `{:?}`: {:?}",
                             &use_, e
                         );
                         return;
@@ -42,19 +43,19 @@ pub fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
                     mode,
                     relative_path,
                     &use_,
-                    &realm,
+                    &component,
                     &mut server_end,
                 )
                 .await;
                 if let Err(e) = res {
                     let cap = ComponentCapability::Use(use_);
-                    let execution = realm.lock_execution().await;
+                    let execution = component.lock_execution().await;
                     let logger = match &execution.runtime {
                         Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
                         _ => None,
                     };
                     routing::report_routing_failure(
-                        &realm.abs_moniker,
+                        &component.abs_moniker,
                         &cap,
                         &e,
                         server_end,
@@ -67,19 +68,20 @@ pub fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
     )
 }
 
-pub fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
+pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
-            let realm = realm.clone();
+            let component = component.clone();
             let expose = expose.clone();
             fasync::Task::spawn(async move {
-                let realm = match realm.upgrade() {
-                    Ok(realm) => realm,
+                let component = match component.upgrade() {
+                    Ok(component) => component,
                     Err(e) => {
                         // This can happen if the component instance tree topology changes such
-                        // that the captured `realm` no longer exists.
+                        // that the captured `component` no longer exists.
                         error!(
-                            "failed to upgrade WeakRealm while routing expose decl `{:?}`: {:?}",
+                            "failed to upgrade WeakComponentInstance while routing expose \
+                            decl `{:?}`: {:?}",
                             &expose, e
                         );
                         return;
@@ -91,19 +93,19 @@ pub fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
                     mode,
                     relative_path,
                     &expose,
-                    &realm,
+                    &component,
                     &mut server_end,
                 )
                 .await;
                 if let Err(e) = res {
                     let cap = ComponentCapability::UsedExpose(expose);
-                    let execution = realm.lock_execution().await;
+                    let execution = component.lock_execution().await;
                     let logger = match &execution.runtime {
                         Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
                         _ => None,
                     };
                     routing::report_routing_failure(
-                        &realm.abs_moniker,
+                        &component.abs_moniker,
                         &cap,
                         &e,
                         server_end,

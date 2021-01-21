@@ -4,11 +4,11 @@
 
 use {
     crate::model::{
+        component::{ComponentInstance, InstanceState},
         error::ModelError,
         events::{dispatcher::EventDispatcherScope, event::Event, filter::EventFilter},
         hooks::{Event as HookEvent, EventType},
         model::Model,
-        realm::{Realm, RealmState},
     },
     async_trait::async_trait,
     cm_rust::CapabilityName,
@@ -25,8 +25,12 @@ use {
 /// Implementors of this trait know how to synthesize an event.
 #[async_trait]
 pub trait EventSynthesisProvider: Send + Sync {
-    /// Provides a synthesized event applying the given `filter` under the given `realm`.
-    async fn provide(&self, realm: Arc<Realm>, filter: EventFilter) -> Vec<HookEvent>;
+    /// Provides a synthesized event applying the given `filter` under the given `component`.
+    async fn provide(
+        &self,
+        component: Arc<ComponentInstance>,
+        filter: EventFilter,
+    ) -> Vec<HookEvent>;
 }
 
 /// Synthesis manager.
@@ -111,8 +115,8 @@ impl SynthesisTask {
             return;
         }
         fasync::Task::spawn(async move {
-            // If we can't find the realm then we can't synthesize events.
-            // This isn't necessarily an error as the model or realm might've been
+            // If we can't find the component then we can't synthesize events.
+            // This isn't necessarily an error as the model or component might've been
             // destroyed in the intervening time, so we just exit early.
             if let Some(model) = self.model.upgrade() {
                 let sender = self.sender;
@@ -130,23 +134,23 @@ impl SynthesisTask {
         .detach();
     }
 
-    /// Performs a depth-first traversal of the realm tree. It adds to the stream a `Running` event
-    /// for all realms that are running. In the case of overlapping scopes, events are deduped.
-    /// It also synthesizes events that were requested which are synthesizable (there's a provider
-    /// for them). Those events will only be synthesized if their scope is within the scope of
-    /// a Running scope.
+    /// Performs a depth-first traversal of the component instance tree. It adds to the stream a
+    /// `Running` event for all components that are running. In the case of overlapping scopes,
+    /// events are deduped.  It also synthesizes events that were requested which are synthesizable
+    /// (there's a provider for them). Those events will only be synthesized if their scope is
+    /// within the scope of a Running scope.
     async fn run(
         model: &Arc<Model>,
         mut sender: mpsc::UnboundedSender<Event>,
         info: EventSynthesisInfo,
     ) -> Result<(), ModelError> {
-        let mut visited_realms = HashSet::new();
+        let mut visited_components = HashSet::new();
         for scope in info.scopes {
-            let root_realm = model.look_up_realm(&scope.moniker).await?;
-            let mut realm_stream = get_subrealms(root_realm, visited_realms.clone());
-            while let Some(realm) = realm_stream.next().await {
-                visited_realms.insert(realm.abs_moniker.clone());
-                let events = info.provider.provide(realm, scope.filter.clone()).await;
+            let root = model.look_up(&scope.moniker).await?;
+            let mut component_stream = get_subcomponents(root, visited_components.clone());
+            while let Some(component) = component_stream.next().await {
+                visited_components.insert(component.abs_moniker.clone());
+                let events = info.provider.provide(component, scope.filter.clone()).await;
                 for event in events {
                     let event =
                         Event { event, scope_moniker: scope.moniker.clone(), responder: None };
@@ -162,34 +166,36 @@ impl SynthesisTask {
     }
 }
 
-/// Returns all realms that are under the given `root` realm. Skips the ones whose moniker is
-/// contained in the `visited` set.
-/// The visited set is included for early pruning of a tree branch.
-fn get_subrealms(
-    root: Arc<Realm>,
+/// Returns all components that are under the given `root` component. Skips the ones whose moniker
+/// is contained in the `visited` set.  The visited set is included for early pruning of a tree
+/// branch.
+fn get_subcomponents(
+    root: Arc<ComponentInstance>,
     visited: HashSet<AbsoluteMoniker>,
-) -> stream::BoxStream<'static, Arc<Realm>> {
+) -> stream::BoxStream<'static, Arc<ComponentInstance>> {
     let pending = vec![root];
     stream::unfold((pending, visited), move |(mut pending, mut visited)| async move {
         loop {
             match pending.pop() {
                 None => return None,
-                Some(curr_realm) => {
-                    if visited.contains(&curr_realm.abs_moniker) {
+                Some(curr_component) => {
+                    if visited.contains(&curr_component.abs_moniker) {
                         continue;
                     }
-                    let state_guard = curr_realm.lock_state().await;
+                    let state_guard = curr_component.lock_state().await;
                     match *state_guard {
-                        RealmState::New | RealmState::Discovered | RealmState::Destroyed => {}
-                        RealmState::Resolved(ref s) => {
-                            for (_, child_realm) in s.live_child_realms() {
-                                pending.push(child_realm.clone());
+                        InstanceState::New
+                        | InstanceState::Discovered
+                        | InstanceState::Destroyed => {}
+                        InstanceState::Resolved(ref s) => {
+                            for (_, child) in s.live_children() {
+                                pending.push(child.clone());
                             }
                         }
                     }
                     drop(state_guard);
-                    visited.insert(curr_realm.abs_moniker.clone());
-                    return Some((curr_realm, (pending, visited)));
+                    visited.insert(curr_component.abs_moniker.clone());
+                    return Some((curr_component, (pending, visited)));
                 }
             }
         }
@@ -218,7 +224,7 @@ mod tests {
         std::{collections::HashSet, iter::FromIterator},
     };
 
-    // Shows that we see Running only for realms that are bound at the moment of subscription.
+    // Shows that we see Running only for components that are bound at the moment of subscription.
     #[fasync::run_singlethreaded(test)]
     async fn synthesize_only_running() {
         let test = setup_synthesis_test().await;

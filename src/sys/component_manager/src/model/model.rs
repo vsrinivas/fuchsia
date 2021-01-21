@@ -8,10 +8,10 @@ use {
     crate::model::{
         actions::{ActionKey, DiscoverAction},
         binding::Binder,
+        component::{BindReason, ComponentInstance, ComponentManagerInstance},
         context::ModelContext,
         environment::Environment,
         error::ModelError,
-        realm::{BindReason, ComponentManagerRealm, Realm},
     },
     moniker::AbsoluteMoniker,
     std::sync::Arc,
@@ -23,7 +23,7 @@ pub struct ModelParams {
     // TODO(viktard): Merge into RuntimeConfig
     /// The URL of the root component.
     pub root_component_url: String,
-    /// The environment provided to the root realm.
+    /// The environment provided to the root.
     pub root_environment: Environment,
     /// Global runtime configuration for the component_manager.
     pub runtime_config: Arc<RuntimeConfig>,
@@ -36,69 +36,62 @@ pub struct ModelParams {
 /// provides operations for instantiating, destroying, querying, and controlling component
 /// instances at runtime.
 pub struct Model {
-    pub root_realm: Arc<Realm>,
+    pub root: Arc<ComponentInstance>,
     _context: Arc<ModelContext>,
-    _component_manager_realm: Arc<ComponentManagerRealm>,
+    _component_manager: Arc<ComponentManagerInstance>,
 }
 
 impl Model {
     /// Creates a new component model and initializes its topology.
     pub async fn new(params: ModelParams) -> Result<Arc<Model>, ModelError> {
-        let component_manager_realm =
-            Arc::new(ComponentManagerRealm::new(params.namespace_capabilities));
+        let component_manager =
+            Arc::new(ComponentManagerInstance::new(params.namespace_capabilities));
         let context = Arc::new(ModelContext::new(params.runtime_config).await?);
-        let root_realm = Realm::new_root_realm(
+        let root = ComponentInstance::new_root(
             params.root_environment,
             Arc::downgrade(&context),
-            Arc::downgrade(&component_manager_realm),
+            Arc::downgrade(&component_manager),
             params.root_component_url,
         );
-        Ok(Arc::new(Model {
-            root_realm,
-            _context: context,
-            _component_manager_realm: component_manager_realm,
-        }))
+        Ok(Arc::new(Model { root, _context: context, _component_manager: component_manager }))
     }
 
-    /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved
-    /// if that has not already happened.
-    pub async fn look_up_realm(
+    /// Looks up a component by absolute moniker. The component instance in the component will be
+    /// resolved if that has not already happened.
+    pub async fn look_up(
         &self,
         look_up_abs_moniker: &AbsoluteMoniker,
-    ) -> Result<Arc<Realm>, ModelError> {
-        let mut cur_realm = self.root_realm.clone();
+    ) -> Result<Arc<ComponentInstance>, ModelError> {
+        let mut cur = self.root.clone();
         for moniker in look_up_abs_moniker.path().iter() {
-            cur_realm = {
-                let cur_state = cur_realm.lock_resolved_state().await?;
-                if let Some(r) = cur_state.all_child_realms().get(moniker) {
+            cur = {
+                let cur_state = cur.lock_resolved_state().await?;
+                if let Some(r) = cur_state.all_children().get(moniker) {
                     r.clone()
                 } else {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
                 }
             };
         }
-        let _ = cur_realm.lock_resolved_state().await?;
-        Ok(cur_realm)
+        let _ = cur.lock_resolved_state().await?;
+        Ok(cur)
     }
 
-    /// Binds to the root realm, starting the component tree.
+    /// Binds to the root, starting the component tree.
     pub async fn start(self: &Arc<Model>) {
-        // Normally the Discovered event is dispatched when a realm is added as a child, but
-        // since the root realm isn't anyone's child we need to dispatch it here.
+        // Normally the Discovered event is dispatched when an instance is added as a child, but
+        // since the root isn't anyone's child we need to dispatch it here.
         {
-            let mut actions = self.root_realm.lock_actions().await;
-            let _ = actions.register_no_wait(&self.root_realm, DiscoverAction::new());
+            let mut actions = self.root.lock_actions().await;
+            let _ = actions.register_no_wait(&self.root, DiscoverAction::new());
         }
         if let Err(e) = self.bind(&AbsoluteMoniker::root(), &BindReason::Root).await {
-            // If we fail binding to the root realm, but the root realm is being shutdown, that's
-            // ok. The system is tearing down, so it doesn't matter any more if we never got
-            // everything started that we wanted to.
-            let action_set = self.root_realm.lock_actions().await;
+            // If we fail binding to the root, but the root is being shutdown, that's ok. The
+            // system is tearing down, so it doesn't matter any more if we never got everything
+            // started that we wanted to.
+            let action_set = self.root.lock_actions().await;
             if !action_set.contains(&ActionKey::Shutdown) {
-                panic!(
-                    "failed to bind to root component {}: {:?}",
-                    self.root_realm.component_url, e
-                );
+                panic!("failed to bind to root component {}: {:?}", self.root.component_url, e);
             }
         }
     }
@@ -132,11 +125,7 @@ pub mod tests {
         let TestModelResult { model, .. } =
             new_test_model("root", components, RuntimeConfig::default()).await;
 
-        let _ = model
-            .root_realm
-            .lock_actions()
-            .await
-            .register_inner(&model.root_realm, ShutdownAction::new());
+        let _ = model.root.lock_actions().await.register_inner(&model.root, ShutdownAction::new());
 
         model.start().await;
     }

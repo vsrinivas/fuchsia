@@ -7,10 +7,10 @@ use {
         builtin::runner::BuiltinRunnerFactory,
         model::{
             binding::Binder,
+            component::{BindReason, ComponentInstance, WeakComponentInstance},
             environment::{Environment, RunnerRegistry},
             error::ModelError,
             policy::ScopedPolicyChecker,
-            realm::{BindReason, Realm, WeakRealm},
             resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
             runner::{Runner, RunnerError},
         },
@@ -48,15 +48,19 @@ use {
 /// Creates a routing function factory for `UseDecl` that does the following:
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
-pub fn proxy_use_routing_factory() -> impl Fn(WeakRealm, UseDecl) -> RoutingFn {
-    move |_realm: WeakRealm, use_decl: UseDecl| new_proxy_routing_fn(use_decl.into())
+pub fn proxy_use_routing_factory() -> impl Fn(WeakComponentInstance, UseDecl) -> RoutingFn {
+    move |_component: WeakComponentInstance, use_decl: UseDecl| {
+        new_proxy_routing_fn(use_decl.into())
+    }
 }
 
 /// Creates a routing function factory for `ExposeDecl` that does the following:
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
-pub fn proxy_expose_routing_factory() -> impl Fn(WeakRealm, ExposeDecl) -> RoutingFn {
-    move |_realm: WeakRealm, expose_decl: ExposeDecl| new_proxy_routing_fn(expose_decl.into())
+pub fn proxy_expose_routing_factory() -> impl Fn(WeakComponentInstance, ExposeDecl) -> RoutingFn {
+    move |_component: WeakComponentInstance, expose_decl: ExposeDecl| {
+        new_proxy_routing_fn(expose_decl.into())
+    }
 }
 
 enum CapabilityType {
@@ -385,10 +389,10 @@ impl Binder for FakeBinder {
         &'a self,
         _abs_moniker: &'a AbsoluteMoniker,
         _reason: &'a BindReason,
-    ) -> Result<Arc<Realm>, ModelError> {
+    ) -> Result<Arc<ComponentInstance>, ModelError> {
         let resolver = ResolverRegistry::new();
         let root_component_url = "test:///root".to_string();
-        Ok(Realm::new_root_realm(
+        Ok(ComponentInstance::new_root(
             Environment::new_root(RunnerRegistry::default(), resolver),
             Weak::new(),
             Weak::new(),

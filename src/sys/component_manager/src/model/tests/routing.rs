@@ -185,7 +185,7 @@ async fn use_framework_service() {
     // MockRealmCapabilityHost here overrides the previously installed one.
     let realm_service_host = Arc::new(MockRealmCapabilityHost::new());
     test.model
-        .root_realm
+        .root
         .hooks
         .install(vec![HooksRegistration::new(
             "MockRealmCapabilityHost",
@@ -2330,10 +2330,6 @@ async fn use_runner_from_environment_not_found() {
         .await;
 
     // Bind "b:0". We expect it to fail because routing failed.
-    //
-    // The error we get is UseFromRealmNotFound we fall back to searching for an `offer`
-    // declaration in the parent. Once we remove the fallback, this could be a UseFromEnvironment
-    // error.
     assert_matches!(
         universe.bind_instance(&vec!["b:0"].into()).await,
         Err(ModelError::RoutingError {
@@ -2577,7 +2573,7 @@ async fn use_with_destroyed_parent() {
 
     // Destroy "b", but preserve a reference to "c" so we can route from it below.
     let moniker = vec!["coll:b:1", "c:0"].into();
-    let realm_c = test.model.look_up_realm(&moniker).await.expect("failed to look up realm b");
+    let realm_c = test.model.look_up(&moniker).await.expect("failed to look up realm b");
     test.destroy_dynamic_child(vec![].into(), "coll", "b").await;
 
     // Now attempt to route the service from "c". Should fail because "b" does not exist so we
@@ -2649,9 +2645,9 @@ async fn use_from_destroyed_but_not_removed() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    let realm_b =
-        test.model.look_up_realm(&vec!["b:0"].into()).await.expect("failed to look up realm b");
-    ActionSet::register(realm_b, DestroyAction::new()).await.expect("destroy failed");
+    let component_b =
+        test.model.look_up(&vec!["b:0"].into()).await.expect("failed to look up realm b");
+    ActionSet::register(component_b, DestroyAction::new()).await.expect("destroy failed");
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol {

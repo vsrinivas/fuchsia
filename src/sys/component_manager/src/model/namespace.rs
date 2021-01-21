@@ -7,9 +7,9 @@ use {
         capability::ComponentCapability,
         constants::PKG_PATH,
         model::{
+            component::{Package, Runtime, WeakComponentInstance},
             error::ModelError,
             logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
-            realm::{Package, Runtime, WeakRealm},
             rights::Rights,
             routing,
         },
@@ -105,7 +105,7 @@ impl IncomingNamespace {
     /// serving and install handles to pseudo directories.
     pub async fn populate<'a>(
         &'a mut self,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
         decl: &'a ComponentDecl,
     ) -> Result<Vec<fcrunner::ComponentNamespaceEntry>, ModelError> {
         let mut ns: Vec<fcrunner::ComponentNamespaceEntry> = vec![];
@@ -128,10 +128,15 @@ impl IncomingNamespace {
         for use_ in &decl.uses {
             match use_ {
                 cm_rust::UseDecl::Directory(_) => {
-                    Self::add_directory_use(&mut ns, &mut directory_waiters, use_, realm.clone())?;
+                    Self::add_directory_use(
+                        &mut ns,
+                        &mut directory_waiters,
+                        use_,
+                        component.clone(),
+                    )?;
                 }
                 cm_rust::UseDecl::Protocol(s) => {
-                    Self::add_service_use(&mut svc_dirs, s, realm.clone())?;
+                    Self::add_service_use(&mut svc_dirs, s, component.clone())?;
                     if s.source_name.0 == LogSinkMarker::NAME {
                         log_sink_decl = Some(s.clone());
                     }
@@ -140,7 +145,12 @@ impl IncomingNamespace {
                     return Err(ModelError::unsupported("Service capability"));
                 }
                 cm_rust::UseDecl::Storage(_) => {
-                    Self::add_storage_use(&mut ns, &mut directory_waiters, use_, realm.clone())?;
+                    Self::add_storage_use(
+                        &mut ns,
+                        &mut directory_waiters,
+                        use_,
+                        component.clone(),
+                    )?;
                 }
                 cm_rust::UseDecl::Runner(_)
                 | cm_rust::UseDecl::Event(_)
@@ -298,9 +308,9 @@ impl IncomingNamespace {
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
-        Self::add_directory_helper(ns, waiters, use_, realm)
+        Self::add_directory_helper(ns, waiters, use_, component)
     }
 
     /// Adds a directory waiter to `waiters` and updates `ns` to contain a handle for the
@@ -311,16 +321,16 @@ impl IncomingNamespace {
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
-        Self::add_directory_helper(ns, waiters, use_, realm)
+        Self::add_directory_helper(ns, waiters, use_, component)
     }
 
     fn add_directory_helper(
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let target_path =
             use_.path().expect("use decl without path used in add_directory_helper").to_string();
@@ -338,10 +348,14 @@ impl IncomingNamespace {
                 .expect("failed to convert server_end into async channel");
             let on_signal_fut = fasync::OnSignals::new(&server_end, zx::Signals::CHANNEL_READABLE);
             on_signal_fut.await.unwrap();
-            let target_realm = match realm.upgrade() {
-                Ok(realm) => realm,
+            let target = match component.upgrade() {
+                Ok(component) => component,
                 Err(e) => {
-                    error!("failed to upgrade WeakRealm routing use decl `{:?}`: {:?}", &use_, e);
+                    error!(
+                        "failed to upgrade WeakComponentInstance routing use \
+                        decl `{:?}`: {:?}",
+                        &use_, e
+                    );
                     return;
                 }
             };
@@ -351,24 +365,18 @@ impl IncomingNamespace {
                 fio::MODE_TYPE_DIRECTORY,
                 String::new(),
                 &use_,
-                &target_realm,
+                &target,
                 &mut server_end,
             )
             .await;
             if let Err(e) = res {
                 let cap = ComponentCapability::Use(use_);
-                let execution = target_realm.lock_execution().await;
+                let execution = target.lock_execution().await;
                 let logger = match &execution.runtime {
                     Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
                     _ => None,
                 };
-                routing::report_routing_failure(
-                    &target_realm.abs_moniker,
-                    &cap,
-                    &e,
-                    server_end,
-                    logger,
-                );
+                routing::report_routing_failure(&target.abs_moniker, &cap, &e, server_end, logger);
             }
         };
 
@@ -408,24 +416,25 @@ impl IncomingNamespace {
     fn add_service_use(
         svc_dirs: &mut HashMap<String, Directory>,
         use_: &cm_rust::UseProtocolDecl,
-        realm: WeakRealm,
+        component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let use_clone = use_.clone();
         // Used later to attach a not found handler to namespace directories.
-        let not_found_realm_copy = realm.clone();
+        let not_found_component_copy = component.clone();
         let route_open_fn = Box::new(
             move |flags: u32,
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
                 let use_ = UseDecl::Protocol(use_clone.clone());
-                let realm = realm.clone();
+                let component = component.clone();
                 fasync::Task::spawn(async move {
-                    let target_realm = match realm.upgrade() {
-                        Ok(realm) => realm,
+                    let target = match component.upgrade() {
+                        Ok(component) => component,
                         Err(e) => {
                             error!(
-                                "failed to upgrade WeakRealm routing use decl `{:?}`: {:?}",
+                                "failed to upgrade WeakComponentInstance routing use \
+                                decl `{:?}`: {:?}",
                                 &use_, e
                             );
                             return;
@@ -437,20 +446,20 @@ impl IncomingNamespace {
                         mode,
                         relative_path,
                         &use_,
-                        &target_realm,
+                        &target,
                         &mut server_end,
                     )
                     .await;
                     if let Err(e) = res {
                         let cap = ComponentCapability::Use(use_);
-                        let execution = target_realm.lock_execution().await;
+                        let execution = target.lock_execution().await;
                         let logger = match &execution.runtime {
                             Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),
                             _ => None,
                         };
 
                         routing::report_routing_failure(
-                            &target_realm.abs_moniker,
+                            &target.abs_moniker,
                             &cap,
                             &e,
                             server_end,
@@ -468,17 +477,17 @@ impl IncomingNamespace {
             // failed open request.
             let dir_path = use_.target_path.dirname.clone();
             new_dir.clone().set_not_found_handler(Box::new(move |path| {
-                // Clone the realm pointer and pass the copy into the logger.
-                let realm_for_logger = not_found_realm_copy.clone();
+                // Clone the component pointer and pass the copy into the logger.
+                let component_for_logger = not_found_component_copy.clone();
                 let requested_path = format!("{}/{}", dir_path, path);
 
                 // Spawn a task which logs the error. It would be nicer to not
-                // spawn a task, but locking the realm is async and this
+                // spawn a task, but locking the component is async and this
                 // closure is not.
                 fasync::Task::spawn(async move {
-                    match realm_for_logger.upgrade() {
-                        Ok(target_realm) => {
-                            let execution = target_realm.lock_execution().await;
+                    match component_for_logger.upgrade() {
+                        Ok(target) => {
+                            let execution = target.lock_execution().await;
                             let logger = match &execution.runtime {
                                 Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
                                 _ => &MODEL_LOGGER,
@@ -488,7 +497,7 @@ impl IncomingNamespace {
                                 format_args!(
                                     "No capability available at path {} for component {}, \
                                      verify the component has the proper `use` declaration.",
-                                    requested_path, target_realm.abs_moniker
+                                    requested_path, target.abs_moniker
                                 ),
                             );
                         }

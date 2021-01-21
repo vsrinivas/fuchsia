@@ -5,9 +5,9 @@
 use {
     crate::model::{
         actions::{start, ActionSet, StartAction},
+        component::{BindReason, ComponentInstance, InstanceState},
         error::ModelError,
         model::Model,
-        realm::{BindReason, Realm, RealmState},
     },
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
@@ -25,7 +25,7 @@ pub trait Binder: Send + Sync {
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
         reason: &'a BindReason,
-    ) -> Result<Arc<Realm>, ModelError>;
+    ) -> Result<Arc<ComponentInstance>, ModelError>;
 }
 
 #[async_trait]
@@ -41,7 +41,7 @@ impl Binder for Arc<Model> {
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
         reason: &'a BindReason,
-    ) -> Result<Arc<Realm>, ModelError> {
+    ) -> Result<Arc<ComponentInstance>, ModelError> {
         bind_at_moniker(self, abs_moniker, reason).await
     }
 }
@@ -52,7 +52,7 @@ impl Binder for Weak<Model> {
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
         reason: &'a BindReason,
-    ) -> Result<Arc<Realm>, ModelError> {
+    ) -> Result<Arc<ComponentInstance>, ModelError> {
         if let Some(model) = self.upgrade() {
             model.bind(abs_moniker, reason).await
         } else {
@@ -61,53 +61,56 @@ impl Binder for Weak<Model> {
     }
 }
 
-/// Binds to the component instance in the given realm, starting it if it's not already running.
-/// Returns the realm that was bound to.
+/// Binds to the component instance in the given component, starting it if it's not already running.
+/// Returns the component that was bound to.
 pub async fn bind_at_moniker<'a>(
     model: &'a Arc<Model>,
     abs_moniker: &'a AbsoluteMoniker,
     reason: &BindReason,
-) -> Result<Arc<Realm>, ModelError> {
+) -> Result<Arc<ComponentInstance>, ModelError> {
     let mut cur_moniker = AbsoluteMoniker::root();
-    let mut realm = model.root_realm.clone();
-    bind_at(realm.clone(), reason).await?;
+    let mut component = model.root.clone();
+    bind_at(component.clone(), reason).await?;
     for m in abs_moniker.path().iter() {
         cur_moniker = cur_moniker.child(m.clone());
-        realm = model.look_up_realm(&cur_moniker).await?;
-        bind_at(realm.clone(), reason).await?;
+        component = model.look_up(&cur_moniker).await?;
+        bind_at(component.clone(), reason).await?;
     }
-    Ok(realm)
+    Ok(component)
 }
 
-/// Binds to the component instance in the given realm, starting it if it's not already
+/// Binds to the component instance in the given component, starting it if it's not already
 /// running.
-pub async fn bind_at(realm: Arc<Realm>, reason: &BindReason) -> Result<(), ModelError> {
+pub async fn bind_at(
+    component: Arc<ComponentInstance>,
+    reason: &BindReason,
+) -> Result<(), ModelError> {
     // Skip starting a component instance that was already started.
     // Eager binding can cause `bind_at` to be re-entrant. It's important to bail out here so
     // we don't end up in an infinite loop of binding to the same eager child.
     {
-        let state = realm.lock_state().await;
-        let execution = realm.lock_execution().await;
-        if let Some(res) = start::should_return_early(&state, &execution, &realm.abs_moniker) {
+        let state = component.lock_state().await;
+        let execution = component.lock_execution().await;
+        if let Some(res) = start::should_return_early(&state, &execution, &component.abs_moniker) {
             return res;
         }
     }
-    ActionSet::register(realm.clone(), StartAction::new(reason.clone())).await?;
+    ActionSet::register(component.clone(), StartAction::new(reason.clone())).await?;
 
     let eager_children: Vec<_> = {
-        let state = realm.lock_state().await;
+        let state = component.lock_state().await;
         match *state {
-            RealmState::Resolved(ref s) => s
-                .live_child_realms()
+            InstanceState::Resolved(ref s) => s
+                .live_children()
                 .filter_map(|(_, r)| match r.startup {
                     fsys::StartupMode::Eager => Some(r.clone()),
                     fsys::StartupMode::Lazy => None,
                 })
                 .collect(),
-            RealmState::Destroyed => {
-                return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
+            InstanceState::Destroyed => {
+                return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
             }
-            RealmState::New | RealmState::Discovered => {
+            InstanceState::New | InstanceState::Discovered => {
                 panic!("bind_at: not resoled")
             }
         }
@@ -122,12 +125,12 @@ pub async fn bind_at(realm: Arc<Realm>, reason: &BindReason) -> Result<(), Model
 /// Binds to a list of instances, and any eager children they may return.
 // This function recursive calls `bind_at`, so it returns a BoxFutuer,
 fn bind_eager_children_recursive<'a>(
-    instances_to_bind: Vec<Arc<Realm>>,
+    instances_to_bind: Vec<Arc<ComponentInstance>>,
 ) -> BoxFuture<'a, Result<(), ModelError>> {
     let f = async move {
         let futures: Vec<_> = instances_to_bind
             .iter()
-            .map(|realm| async move { bind_at(realm.clone(), &BindReason::Eager).await })
+            .map(|component| async move { bind_at(component.clone(), &BindReason::Eager).await })
             .collect();
         join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
         Ok(())
@@ -172,7 +175,7 @@ mod tests {
     ) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
             new_test_model("root", components, RuntimeConfig::default()).await;
-        model.root_realm.hooks.install(additional_hooks).await;
+        model.root.hooks.install(additional_hooks).await;
         (model, builtin_environment, mock_runner)
     }
 
@@ -184,7 +187,7 @@ mod tests {
         let res = model.bind(&m, &BindReason::Root).await;
         assert!(res.is_ok());
         mock_runner.wait_for_url("test:///root_resolved").await;
-        let actual_children = get_live_children(&model.root_realm).await;
+        let actual_children = get_live_children(&model.root).await;
         assert!(actual_children.is_empty());
     }
 
@@ -194,7 +197,7 @@ mod tests {
             new_model(vec![("root", component_decl_with_test_runner())]).await;
         let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
         let res = model.bind(&m, &BindReason::Root).await;
-        let expected_res: Result<Arc<Realm>, ModelError> =
+        let expected_res: Result<Arc<ComponentInstance>, ModelError> =
             Err(ModelError::instance_not_found(vec!["no-such-instance:0"].into()));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         mock_runner.wait_for_url("test:///root_resolved").await;
@@ -244,8 +247,8 @@ mod tests {
         // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
         // action. Allow the original bind to proceed, then check the result of both bindings.
         let m: AbsoluteMoniker = vec!["system:0"].into();
-        let realm = model.look_up_realm(&m).await.expect("failed realm lookup");
-        let f = ActionSet::register(realm, StartAction::new(BindReason::Eager));
+        let component = model.look_up(&m).await.expect("failed component lookup");
+        let f = ActionSet::register(component, StartAction::new(BindReason::Eager));
         let (f, action_handle) = f.remote_handle();
         fasync::Task::spawn(f).detach();
         event.resume();
@@ -280,17 +283,20 @@ mod tests {
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
 
         // Validate children. system is resolved, but not echo.
-        let actual_children = get_live_children(&*model.root_realm).await;
+        let actual_children = get_live_children(&*model.root).await;
         let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
         expected_children.insert("system".into());
         expected_children.insert("echo".into());
         assert_eq!(actual_children, expected_children);
 
-        let system_realm = get_live_child(&*model.root_realm, "system").await;
-        let echo_realm = get_live_child(&*model.root_realm, "echo").await;
-        let actual_children = get_live_children(&*system_realm).await;
+        let system_component = get_live_child(&*model.root, "system").await;
+        let echo_component = get_live_child(&*model.root, "echo").await;
+        let actual_children = get_live_children(&*system_component).await;
         assert!(actual_children.is_empty());
-        assert_matches!(*echo_realm.lock_state().await, RealmState::New | RealmState::Discovered);
+        assert_matches!(
+            *echo_component.lock_state().await,
+            InstanceState::New | InstanceState::Discovered
+        );
         // bind to echo
         let m: AbsoluteMoniker = vec!["echo:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
@@ -303,8 +309,8 @@ mod tests {
             .await;
 
         // Validate children. Now echo is resolved.
-        let echo_realm = get_live_child(&*model.root_realm, "echo").await;
-        let actual_children = get_live_children(&*echo_realm).await;
+        let echo_component = get_live_child(&*model.root, "echo").await;
+        let actual_children = get_live_children(&*echo_component).await;
         assert!(actual_children.is_empty());
 
         // Verify that the component topology matches expectations.
@@ -566,12 +572,12 @@ mod tests {
         let check_events = async {
             let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
             {
-                let root_state = model.root_realm.lock_state().await;
+                let root_state = model.root.lock_state().await;
                 let root_state = match *root_state {
-                    RealmState::Resolved(ref s) => s,
+                    InstanceState::Resolved(ref s) => s,
                     _ => panic!("not resolved"),
                 };
-                let realm = root_state.get_child_instance(&"system:0".into()).unwrap();
+                let realm = root_state.get_child(&"system:0".into()).unwrap();
                 let actions = realm.lock_actions().await;
                 assert!(actions.contains(&ActionKey::Discover));
                 assert!(!actions.contains(&ActionKey::Resolve));
@@ -588,11 +594,11 @@ mod tests {
         };
         let check_events = async {
             let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
-            // While the Resolved hook is handled, it should be possible to look up the realm
+            // While the Resolved hook is handled, it should be possible to look up the component
             // without deadlocking.
-            let realm = model.look_up_realm(&m).await.unwrap();
+            let component = model.look_up(&m).await.unwrap();
             {
-                let actions = realm.lock_actions().await;
+                let actions = component.lock_actions().await;
                 assert!(actions.contains(&ActionKey::Resolve));
                 assert!(!actions.contains(&ActionKey::Discover));
             }
@@ -601,7 +607,7 @@ mod tests {
             // Check that the child is started, with a Start event and action.
             let event = event_stream.wait_until(EventType::Started, m.clone()).await.unwrap();
             {
-                let actions = realm.lock_actions().await;
+                let actions = component.lock_actions().await;
                 assert!(actions.contains(&ActionKey::Start));
                 assert!(!actions.contains(&ActionKey::Discover));
                 assert!(!actions.contains(&ActionKey::Resolve));

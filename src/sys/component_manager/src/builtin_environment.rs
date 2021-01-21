@@ -47,7 +47,7 @@ use {
             resolver::{Resolver, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
         },
-        root_realm_stop_notifier::RootRealmStopNotifier,
+        root_stop_notifier::RootStopNotifier,
         startup::Arguments,
         work_scheduler::WorkScheduler,
     },
@@ -353,7 +353,7 @@ pub struct BuiltinEnvironment {
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
-    pub stop_notifier: Arc<RootRealmStopNotifier>,
+    pub stop_notifier: Arc<RootStopNotifier>,
     pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
@@ -380,7 +380,7 @@ impl BuiltinEnvironment {
 
         let event_logger = if runtime_config.debug {
             let event_logger = Arc::new(EventLogger::new());
-            model.root_realm.hooks.install(event_logger.hooks()).await;
+            model.root.hooks.install(event_logger.hooks()).await;
             Some(event_logger)
         } else {
             None
@@ -389,7 +389,7 @@ impl BuiltinEnvironment {
         // Set up ProcessLauncher if available.
         let process_launcher = if runtime_config.use_builtin_process_launcher {
             let process_launcher = Arc::new(ProcessLauncher::new());
-            model.root_realm.hooks.install(process_launcher.hooks()).await;
+            model.root.hooks.install(process_launcher.hooks()).await;
             Some(process_launcher)
         } else {
             None
@@ -397,7 +397,7 @@ impl BuiltinEnvironment {
 
         // Set up RootJob service.
         let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::SAME_RIGHTS);
-        model.root_realm.hooks.install(root_job.hooks()).await;
+        model.root.hooks.install(root_job.hooks()).await;
 
         // Set up RootJobForInspect service.
         let root_job_for_inspect = RootJob::new(
@@ -408,7 +408,7 @@ impl BuiltinEnvironment {
                 | zx::Rights::TRANSFER
                 | zx::Rights::GET_PROPERTY,
         );
-        model.root_realm.hooks.install(root_job_for_inspect.hooks()).await;
+        model.root.hooks.install(root_job_for_inspect.hooks()).await;
 
         let mmio_resource_handle =
             take_startup_handle(HandleType::MmioResource.into()).map(zx::Resource::from);
@@ -424,7 +424,7 @@ impl BuiltinEnvironment {
 
         // Set up BootArguments service.
         let boot_args = BootArguments::new();
-        model.root_realm.hooks.install(boot_args.hooks()).await;
+        model.root.hooks.install(boot_args.hooks()).await;
 
         // Set up KernelStats service.
         let info_resource_handle = system_resource_handle
@@ -444,7 +444,7 @@ impl BuiltinEnvironment {
             .flatten();
         let kernel_stats = info_resource_handle.map(KernelStats::new);
         if let Some(kernel_stats) = kernel_stats.as_ref() {
-            model.root_realm.hooks.install(kernel_stats.hooks()).await;
+            model.root.hooks.install(kernel_stats.hooks()).await;
         }
 
         // Set up ReadOnlyLog service.
@@ -456,7 +456,7 @@ impl BuiltinEnvironment {
             )
         });
         if let Some(read_only_log) = read_only_log.as_ref() {
-            model.root_realm.hooks.install(read_only_log.hooks()).await;
+            model.root.hooks.install(read_only_log.hooks()).await;
         }
 
         // Set up WriteOnlyLog service.
@@ -464,13 +464,13 @@ impl BuiltinEnvironment {
             WriteOnlyLog::new(zx::DebugLog::create(handle, zx::DebugLogOpts::empty()).unwrap())
         });
         if let Some(write_only_log) = write_only_log.as_ref() {
-            model.root_realm.hooks.install(write_only_log.hooks()).await;
+            model.root.hooks.install(write_only_log.hooks()).await;
         }
 
         // Register the UTC time maintainer.
         let utc_time_maintainer = if let Some(clock) = utc_clock {
             let utc_time_maintainer = Arc::new(UtcTimeMaintainer::new(clock));
-            model.root_realm.hooks.install(utc_time_maintainer.hooks()).await;
+            model.root.hooks.install(utc_time_maintainer.hooks()).await;
             Some(utc_time_maintainer)
         } else {
             None
@@ -479,7 +479,7 @@ impl BuiltinEnvironment {
         // Set up the MmioResource service.
         let mmio_resource = mmio_resource_handle.map(MmioResource::new);
         if let Some(mmio_resource) = mmio_resource.as_ref() {
-            model.root_realm.hooks.install(mmio_resource.hooks()).await;
+            model.root.hooks.install(mmio_resource.hooks()).await;
         }
 
         let _ioport_resource: Option<Arc<IoportResource>>;
@@ -489,20 +489,20 @@ impl BuiltinEnvironment {
                 take_startup_handle(HandleType::IoportResource.into()).map(zx::Resource::from);
             _ioport_resource = ioport_resource_handle.map(IoportResource::new);
             if let Some(_ioport_resource) = _ioport_resource.as_ref() {
-                model.root_realm.hooks.install(_ioport_resource.hooks()).await;
+                model.root.hooks.install(_ioport_resource.hooks()).await;
             }
         }
 
         // Set up the IrqResource service.
         let irq_resource = irq_resource_handle.map(IrqResource::new);
         if let Some(irq_resource) = irq_resource.as_ref() {
-            model.root_realm.hooks.install(irq_resource.hooks()).await;
+            model.root.hooks.install(irq_resource.hooks()).await;
         }
 
         // Set up RootResource service.
         let root_resource = root_resource_handle.map(RootResource::new);
         if let Some(root_resource) = root_resource.as_ref() {
-            model.root_realm.hooks.install(root_resource.hooks()).await;
+            model.root.hooks.install(root_resource.hooks()).await;
         }
 
         // Set up the SMC resource.
@@ -513,7 +513,7 @@ impl BuiltinEnvironment {
                 take_startup_handle(HandleType::SmcResource.into()).map(zx::Resource::from);
             _smc_resource = smc_resource_handle.map(SmcResource::new);
             if let Some(_smc_resource) = _smc_resource.as_ref() {
-                model.root_realm.hooks.install(_smc_resource.hooks()).await;
+                model.root.hooks.install(_smc_resource.hooks()).await;
             }
         }
 
@@ -535,7 +535,7 @@ impl BuiltinEnvironment {
             .flatten();
         let debug_resource = debug_resource_handle.map(DebugResource::new);
         if let Some(debug_resource) = debug_resource.as_ref() {
-            model.root_realm.hooks.install(debug_resource.hooks()).await;
+            model.root.hooks.install(debug_resource.hooks()).await;
         }
 
         // Set up the HypervisorResource service.
@@ -556,7 +556,7 @@ impl BuiltinEnvironment {
             .flatten();
         let hypervisor_resource = hypervisor_resource_handle.map(HypervisorResource::new);
         if let Some(hypervisor_resource) = hypervisor_resource.as_ref() {
-            model.root_realm.hooks.install(hypervisor_resource.hooks()).await;
+            model.root.hooks.install(hypervisor_resource.hooks()).await;
         }
 
         // Set up the InfoResource service.
@@ -577,7 +577,7 @@ impl BuiltinEnvironment {
             .flatten();
         let info_resource = info_resource_handle.map(InfoResource::new);
         if let Some(info_resource) = info_resource.as_ref() {
-            model.root_realm.hooks.install(info_resource.hooks()).await;
+            model.root.hooks.install(info_resource.hooks()).await;
         }
 
         // Set up the VmexResource service.
@@ -598,44 +598,44 @@ impl BuiltinEnvironment {
             .flatten();
         let vmex_resource = vmex_resource_handle.map(VmexResource::new);
         if let Some(vmex_resource) = vmex_resource.as_ref() {
-            model.root_realm.hooks.install(vmex_resource.hooks()).await;
+            model.root.hooks.install(vmex_resource.hooks()).await;
         }
 
         // Set up System Controller service.
         let system_controller =
             Arc::new(SystemController::new(Arc::downgrade(&model), SHUTDOWN_TIMEOUT));
-        model.root_realm.hooks.install(system_controller.hooks()).await;
+        model.root.hooks.install(system_controller.hooks()).await;
 
         // Set up work scheduler.
         let work_scheduler =
             WorkScheduler::new(Arc::new(Arc::downgrade(&model)) as Arc<dyn Binder>).await;
-        model.root_realm.hooks.install(work_scheduler.hooks()).await;
+        model.root.hooks.install(work_scheduler.hooks()).await;
 
         // Set up the realm service.
         let realm_capability_host =
             Arc::new(RealmCapabilityHost::new(Arc::downgrade(&model), runtime_config));
-        model.root_realm.hooks.install(realm_capability_host.hooks()).await;
+        model.root.hooks.install(realm_capability_host.hooks()).await;
 
         // Set up the storage admin protocol
         let storage_admin_capability_host = Arc::new(StorageAdmin::new());
-        model.root_realm.hooks.install(storage_admin_capability_host.hooks()).await;
+        model.root.hooks.install(storage_admin_capability_host.hooks()).await;
 
         // Set up the builtin runners.
         for runner in &builtin_runners {
-            model.root_realm.hooks.install(runner.hooks()).await;
+            model.root.hooks.install(runner.hooks()).await;
         }
 
         // Set up the root realm stop notifier.
-        let stop_notifier = Arc::new(RootRealmStopNotifier::new());
-        model.root_realm.hooks.install(stop_notifier.hooks()).await;
+        let stop_notifier = Arc::new(RootStopNotifier::new());
+        model.root.hooks.install(stop_notifier.hooks()).await;
 
         let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
-        model.root_realm.hooks.install(hub.hooks()).await;
+        model.root.hooks.install(hub.hooks()).await;
 
         // Set up the capability ready notifier.
         let capability_ready_notifier =
             Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(&model)));
-        model.root_realm.hooks.install(capability_ready_notifier.hooks()).await;
+        model.root.hooks.install(capability_ready_notifier.hooks()).await;
 
         // Set up the event registry.
         let event_registry = {
@@ -648,7 +648,7 @@ impl BuiltinEnvironment {
                 .register_synthesis_provider(EventType::Running, Arc::new(RunningProvider::new()));
             Arc::new(event_registry)
         };
-        model.root_realm.hooks.install(event_registry.hooks()).await;
+        model.root.hooks.install(event_registry.hooks()).await;
 
         // Set up the event source factory.
         let event_source_factory = Arc::new(EventSourceFactory::new(
@@ -656,13 +656,13 @@ impl BuiltinEnvironment {
             Arc::downgrade(&event_registry),
             execution_mode.clone(),
         ));
-        model.root_realm.hooks.install(event_source_factory.hooks()).await;
+        model.root.hooks.install(event_source_factory.hooks()).await;
 
         let event_stream_provider = Arc::new(EventStreamProvider::new(
             Arc::downgrade(&event_registry),
             execution_mode.clone(),
         ));
-        model.root_realm.hooks.install(event_stream_provider.hooks()).await;
+        model.root.hooks.install(event_stream_provider.hooks()).await;
 
         Ok(BuiltinEnvironment {
             model,
@@ -778,8 +778,8 @@ impl BuiltinEnvironment {
         Ok(hub_proxy)
     }
 
-    pub async fn wait_for_root_realm_stop(&self) {
-        self.stop_notifier.wait_for_root_realm_stop().await;
+    pub async fn wait_for_root_stop(&self) {
+        self.stop_notifier.wait_for_root_stop().await;
     }
 
     pub async fn run_root(&self) -> Result<(), Error> {
@@ -792,7 +792,7 @@ impl BuiltinEnvironment {
                 info!("Field `out_dir_contents` is set to Hub.");
                 self.bind_service_fs_to_out().await?;
                 self.model.start().await;
-                Ok(self.wait_for_root_realm_stop().await)
+                Ok(self.wait_for_root_stop().await)
             }
             OutDirContents::Svc => {
                 info!("Field `out_dir_contents` is set to Svc.");

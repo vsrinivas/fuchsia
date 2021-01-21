@@ -8,10 +8,10 @@ use {
         channel,
         model::{
             addable_directory::AddableDirectoryWithResult,
+            component::WeakComponentInstance,
             dir_tree::DirTree,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
-            realm::WeakRealm,
             routing_fns::{route_expose_fn, route_use_fn},
         },
     },
@@ -260,9 +260,9 @@ impl Hub {
         component_decl: ComponentDecl,
         package_dir: Option<DirectoryProxy>,
         target_moniker: &AbsoluteMoniker,
-        target_realm: WeakRealm,
+        target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
-        let tree = DirTree::build_from_uses(route_use_fn, target_realm, component_decl);
+        let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
         let mut in_dir = pfs::simple();
         tree.install(target_moniker, &mut in_dir)?;
         if let Some(pkg_dir) = package_dir {
@@ -280,10 +280,10 @@ impl Hub {
         directory: Directory,
         component_decl: ComponentDecl,
         target_moniker: &AbsoluteMoniker,
-        target_realm: WeakRealm,
+        target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_expose_directory");
-        let tree = DirTree::build_from_exposes(route_expose_fn, target_realm, component_decl);
+        let tree = DirTree::build_from_exposes(route_expose_fn, target, component_decl);
         let mut expose_dir = pfs::simple();
         tree.install(target_moniker, &mut expose_dir)?;
         directory.add_node("expose", expose_dir, target_moniker)?;
@@ -325,7 +325,7 @@ impl Hub {
     async fn on_resolved_async<'a>(
         &self,
         target_moniker: &AbsoluteMoniker,
-        target_realm: &WeakRealm,
+        target: &WeakComponentInstance,
         resolved_url: String,
         component_decl: &'a ComponentDecl,
     ) -> Result<(), ModelError> {
@@ -350,7 +350,7 @@ impl Hub {
             resolved_directory.clone(),
             component_decl.clone(),
             target_moniker,
-            target_realm.clone(),
+            target.clone(),
         )?;
 
         instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
@@ -361,7 +361,7 @@ impl Hub {
     async fn on_started_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
-        target_realm: &WeakRealm,
+        target: &WeakComponentInstance,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
     ) -> Result<(), ModelError> {
@@ -396,14 +396,14 @@ impl Hub {
                 component_decl.clone(),
                 Self::clone_dir(runtime.package_dir.as_ref()),
                 target_moniker,
-                target_realm.clone(),
+                target.clone(),
             )?;
 
             Self::add_expose_directory(
                 execution_directory.clone(),
                 component_decl.clone(),
                 target_moniker,
-                target_realm.clone(),
+                target.clone(),
             )?;
 
             Self::add_out_directory(
@@ -556,13 +556,18 @@ impl Hook for Hub {
             Ok(EventPayload::MarkedForDestruction) => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            Ok(EventPayload::Started { realm, runtime, component_decl, .. }) => {
-                self.on_started_async(&event.target_moniker, realm, &runtime, &component_decl)
+            Ok(EventPayload::Started { component, runtime, component_decl, .. }) => {
+                self.on_started_async(&event.target_moniker, component, &runtime, &component_decl)
                     .await?;
             }
-            Ok(EventPayload::Resolved { realm, resolved_url, decl, .. }) => {
-                self.on_resolved_async(&event.target_moniker, realm, resolved_url.clone(), &decl)
-                    .await?;
+            Ok(EventPayload::Resolved { component, resolved_url, decl, .. }) => {
+                self.on_resolved_async(
+                    &event.target_moniker,
+                    component,
+                    resolved_url.clone(),
+                    &decl,
+                )
+                .await?;
             }
             Ok(EventPayload::Stopped { .. }) => {
                 self.on_stopped_async(&event.target_moniker).await?;
@@ -582,8 +587,8 @@ mod tests {
             config::RuntimeConfig,
             model::{
                 binding::Binder,
+                component::BindReason,
                 model::Model,
-                realm::BindReason,
                 rights,
                 testing::{
                     test_helpers::*,
@@ -687,7 +692,7 @@ mod tests {
         let hub_proxy =
             builtin_environment.bind_service_fs_for_hub().await.expect("unable to bind service_fs");
 
-        model.root_realm.hooks.install(additional_hooks).await;
+        model.root.hooks.install(additional_hooks).await;
 
         let root_moniker = AbsoluteMoniker::root();
         let res = model.bind(&root_moniker, &BindReason::Root).await;

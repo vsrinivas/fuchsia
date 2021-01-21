@@ -8,9 +8,9 @@ use {
         config::RuntimeConfig,
         klog,
         model::{
+            component::{ComponentInstance, InstanceState, WeakComponentInstance},
             hooks::HooksRegistration,
             model::Model,
-            realm::{Realm, RealmState, WeakRealm},
             rights,
             testing::{
                 mocks::{ControlMessage, MockResolver, MockRunner},
@@ -41,22 +41,22 @@ use {
 };
 
 pub struct ComponentInfo {
-    pub realm: Arc<Realm>,
+    pub component: Arc<ComponentInstance>,
     pub channel_id: Koid,
 }
 
 impl ComponentInfo {
-    /// Given a `Realm` which has been bound, look up the resolved URL
+    /// Given a `ComponentInstance` which has been bound, look up the resolved URL
     /// and package into a `ComponentInfo` struct.
-    pub async fn new(realm: Arc<Realm>) -> ComponentInfo {
+    pub async fn new(component: Arc<ComponentInstance>) -> ComponentInfo {
         // The koid is the only unique piece of information we have about
         // a component start request. Two start requests for the same
         // component URL look identical to the Runner, the only difference
         // being the Channel passed to the Runner to use for the
         // ComponentController protocol.
         let koid = {
-            let realm = realm.lock_execution().await;
-            let runtime = realm.runtime.as_ref().expect("runtime is unexpectedly missing");
+            let component = component.lock_execution().await;
+            let runtime = component.runtime.as_ref().expect("runtime is unexpectedly missing");
             let controller =
                 runtime.controller.as_ref().expect("controller is unexpectedly missing");
             let basic_info = controller
@@ -67,7 +67,7 @@ impl ComponentInfo {
             basic_info.related_koid
         };
 
-        ComponentInfo { realm, channel_id: koid }
+        ComponentInfo { component, channel_id: koid }
     }
 
     /// Checks that the component is shut down, panics if this is not true.
@@ -80,7 +80,7 @@ impl ComponentInfo {
             .expect("request map didn't have channel id, perhaps the controller wasn't started?");
         assert_eq!(*request_vec, vec![ControlMessage::Stop]);
 
-        let execution = self.realm.lock_execution().await;
+        let execution = self.component.lock_execution().await;
         assert!(execution.runtime.is_none());
         assert!(execution.is_shut_down());
     }
@@ -95,22 +95,22 @@ impl ComponentInfo {
             assert_eq!(*request_vec, vec![]);
         }
 
-        let execution = self.realm.lock_execution().await;
+        let execution = self.component.lock_execution().await;
         assert!(execution.runtime.is_some());
         assert!(!execution.is_shut_down());
     }
 }
 
-pub async fn execution_is_shut_down(realm: &Realm) -> bool {
-    let execution = realm.lock_execution().await;
+pub async fn execution_is_shut_down(component: &ComponentInstance) -> bool {
+    let execution = component.lock_execution().await;
     execution.runtime.is_none() && execution.is_shut_down()
 }
 
-/// Returns true if the given child realm (live or deleting) exists.
-pub async fn has_child<'a>(realm: &'a Realm, moniker: &'a str) -> bool {
-    match *realm.lock_state().await {
-        RealmState::Resolved(ref s) => s.all_child_realms().contains_key(&moniker.into()),
-        RealmState::Destroyed => false,
+/// Returns true if the given child (live or deleting) exists.
+pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -> bool {
+    match *component.lock_state().await {
+        InstanceState::Resolved(ref s) => s.all_children().contains_key(&moniker.into()),
+        InstanceState::Destroyed => false,
         _ => {
             panic!("not resolved")
         }
@@ -118,30 +118,33 @@ pub async fn has_child<'a>(realm: &'a Realm, moniker: &'a str) -> bool {
 }
 
 /// Return the instance id of the given live child.
-pub async fn get_instance_id<'a>(realm: &'a Realm, moniker: &'a str) -> u32 {
-    match *realm.lock_state().await {
-        RealmState::Resolved(ref s) => s.get_live_child_instance_id(&moniker.into()).unwrap(),
+pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a str) -> u32 {
+    match *component.lock_state().await {
+        InstanceState::Resolved(ref s) => s.get_live_child_instance_id(&moniker.into()).unwrap(),
         _ => {
             panic!("not resolved")
         }
     }
 }
 
-/// Return all monikers of the live children of the given `realm`.
-pub async fn get_live_children(realm: &Realm) -> HashSet<PartialMoniker> {
-    match *realm.lock_state().await {
-        RealmState::Resolved(ref s) => s.live_child_realms().map(|(m, _)| m.clone()).collect(),
-        RealmState::Destroyed => HashSet::new(),
+/// Return all monikers of the live children of the given `component`.
+pub async fn get_live_children(component: &ComponentInstance) -> HashSet<PartialMoniker> {
+    match *component.lock_state().await {
+        InstanceState::Resolved(ref s) => s.live_children().map(|(m, _)| m.clone()).collect(),
+        InstanceState::Destroyed => HashSet::new(),
         _ => {
             panic!("not resolved")
         }
     }
 }
 
-/// Return the child realm of the given `realm` with moniker `child`.
-pub async fn get_live_child<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    match *realm.lock_state().await {
-        RealmState::Resolved(ref s) => s.get_live_child_realm(&child.into()).unwrap().clone(),
+/// Return the child of the given `component` with moniker `child`.
+pub async fn get_live_child<'a>(
+    component: &'a ComponentInstance,
+    child: &'a str,
+) -> Arc<ComponentInstance> {
+    match *component.lock_state().await {
+        InstanceState::Resolved(ref s) => s.get_live_child(&child.into()).unwrap().clone(),
         _ => {
             panic!("not resolved")
         }
@@ -700,15 +703,15 @@ impl ActionsTest {
     pub async fn new(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        realm_moniker: Option<AbsoluteMoniker>,
+        moniker: Option<AbsoluteMoniker>,
     ) -> Self {
-        Self::new_with_hooks(root_component, components, realm_moniker, vec![]).await
+        Self::new_with_hooks(root_component, components, moniker, vec![]).await
     }
 
     pub async fn new_with_hooks(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        realm_moniker: Option<AbsoluteMoniker>,
+        moniker: Option<AbsoluteMoniker>,
         extra_hooks: Vec<HooksRegistration>,
     ) -> Self {
         // Ensure that kernel logging has been set up
@@ -721,24 +724,21 @@ impl ActionsTest {
         // to start and stop in a certain lifecycle ordering. In particular, some unit
         // tests will destroy component instances before binding to their parents.
         let test_hook = Arc::new(TestHook::new());
-        model.root_realm.hooks.install(test_hook.hooks()).await;
-        model.root_realm.hooks.install(extra_hooks).await;
+        model.root.hooks.install(test_hook.hooks()).await;
+        model.root.hooks.install(extra_hooks).await;
 
-        // Host framework service for root realm, if requested.
+        // Host framework service for root, if requested.
         let builtin_environment_inner = builtin_environment.clone();
-        let realm_proxy = if let Some(realm_moniker) = realm_moniker {
+        let realm_proxy = if let Some(moniker) = moniker {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
-            let realm = WeakRealm::from(
-                &model
-                    .look_up_realm(&realm_moniker)
-                    .await
-                    .expect(&format!("could not look up {}", realm_moniker)),
+            let component = WeakComponentInstance::from(
+                &model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker)),
             );
             fasync::Task::spawn(async move {
                 builtin_environment_inner
                     .realm_capability_host
-                    .serve(realm, stream)
+                    .serve(component, stream)
                     .await
                     .expect("failed serving realm service");
             })
@@ -751,12 +751,12 @@ impl ActionsTest {
         Self { model, builtin_environment, test_hook, realm_proxy, runner: mock_runner }
     }
 
-    pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<Realm> {
-        self.model.look_up_realm(&moniker).await.expect(&format!("could not look up {}", moniker))
+    pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
+        self.model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker))
     }
 
     /// Add a dynamic child to the given collection, with the given name to the
-    /// realm that our proxy member variable corresponds to.
+    /// component that our proxy member variable corresponds to.
     pub async fn create_dynamic_child(&self, coll: &str, name: &str) {
         let mut collection_ref = fsys::CollectionRef { name: coll.to_string() };
         let child_decl = ChildDecl {

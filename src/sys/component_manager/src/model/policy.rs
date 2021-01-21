@@ -57,9 +57,9 @@ impl PolicyError {
     }
 }
 
-/// Evaluates security policy globally across the entire Model and all realms.
+/// Evaluates security policy globally across the entire Model and all components.
 /// This is used to enforce runtime capability routing restrictions across all
-/// realms to prevent high privilleged capabilities from being routed to
+/// components to prevent high privilleged capabilities from being routed to
 /// components outside of the list defined in the runtime configs security
 /// policy.
 pub struct GlobalPolicyChecker {
@@ -102,9 +102,9 @@ impl GlobalPolicyChecker {
                 source: CapabilityAllowlistSource::Self_,
                 capability: capability.type_name(),
             },
-            CapabilitySource::Component { capability, realm } => CapabilityAllowlistKey {
+            CapabilitySource::Component { capability, component } => CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentInstance(
-                    realm.upgrade()?.abs_moniker.clone(),
+                    component.upgrade()?.abs_moniker.clone(),
                 ),
                 source_name: capability
                     .source_name()
@@ -125,17 +125,19 @@ impl GlobalPolicyChecker {
                 source: CapabilityAllowlistSource::Framework,
                 capability: capability.type_name(),
             },
-            CapabilitySource::Capability { source_capability, realm } => CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(
-                    realm.upgrade()?.abs_moniker.clone(),
-                ),
-                source_name: source_capability
-                    .source_name()
-                    .ok_or(PolicyError::InvalidCapabilitySource)?
-                    .clone(),
-                source: CapabilityAllowlistSource::Capability,
-                capability: source_capability.type_name(),
-            },
+            CapabilitySource::Capability { source_capability, component } => {
+                CapabilityAllowlistKey {
+                    source_moniker: ExtendedMoniker::ComponentInstance(
+                        component.upgrade()?.abs_moniker.clone(),
+                    ),
+                    source_name: source_capability
+                        .source_name()
+                        .ok_or(PolicyError::InvalidCapabilitySource)?
+                        .clone(),
+                    source: CapabilityAllowlistSource::Capability,
+                    capability: source_capability.type_name(),
+                }
+            }
         })
     }
 
@@ -174,12 +176,13 @@ impl GlobalPolicyChecker {
     }
 }
 
-/// Evaluates security policy relative to a specific Realm (based on that Realm's AbsoluteMoniker).
+/// Evaluates security policy relative to a specific Component (based on that Component's
+/// AbsoluteMoniker).
 pub struct ScopedPolicyChecker {
     /// The runtime configuration containing the security policy to apply.
     config: Weak<RuntimeConfig>,
 
-    /// The absolute moniker of the realm that policy will be evaluated for.
+    /// The absolute moniker of the component that policy will be evaluated for.
     moniker: AbsoluteMoniker,
 }
 
@@ -218,10 +221,10 @@ mod tests {
             capability::{ComponentCapability, InternalCapability},
             config::{JobPolicyAllowlists, SecurityPolicy},
             model::{
+                component::{ComponentInstance, WeakComponentInstance, WeakExtendedInstance},
                 context::WeakModelContext,
                 environment::{Environment, RunnerRegistry},
                 hooks::Hooks,
-                realm::{Realm, WeakExtendedRealm, WeakRealm},
                 resolver::ResolverRegistry,
             },
         },
@@ -482,25 +485,25 @@ mod tests {
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
 
-        // Create a fake realm.
+        // Create a fake component instance.
         let resolver = ResolverRegistry::new();
-        let realm = Realm::new(
+        let component = ComponentInstance::new(
             Arc::new(Environment::new_root(RunnerRegistry::default(), resolver)),
             vec!["foo:0"].into(),
             "test:///foo".into(),
             fsys::StartupMode::Lazy,
             WeakModelContext::default(),
-            WeakExtendedRealm::Component(WeakRealm::default()),
+            WeakExtendedInstance::Component(WeakComponentInstance::default()),
             Arc::new(Hooks::new(None)),
         );
-        let weak_realm = realm.as_weak();
+        let weak_component = component.as_weak();
 
         let protocol_capability = CapabilitySource::Component {
             capability: ComponentCapability::Protocol(ProtocolDecl {
                 name: "fuchsia.foo.FooBar".into(),
                 source_path: "/svc/fuchsia.foo.FooBar".parse().unwrap(),
             }),
-            realm: weak_realm,
+            component: weak_component,
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
         let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "core:0"]);
@@ -545,18 +548,18 @@ mod tests {
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
 
-        // Create a fake realm.
+        // Create a fake component instance.
         let resolver = ResolverRegistry::new();
-        let realm = Realm::new(
+        let component = ComponentInstance::new(
             Arc::new(Environment::new_root(RunnerRegistry::default(), resolver)),
             vec!["foo:0"].into(),
             "test:///foo".into(),
             fsys::StartupMode::Lazy,
             WeakModelContext::default(),
-            WeakExtendedRealm::Component(WeakRealm::default()),
+            WeakExtendedInstance::Component(WeakComponentInstance::default()),
             Arc::new(Hooks::new(None)),
         );
-        let weak_realm = realm.as_weak();
+        let weak_component = component.as_weak();
 
         let protocol_capability = CapabilitySource::Capability {
             source_capability: ComponentCapability::Storage(StorageDecl {
@@ -565,7 +568,7 @@ mod tests {
                 source: StorageDirectorySource::Parent,
                 subdir: None,
             }),
-            realm: weak_realm,
+            component: weak_component,
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
         let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "core:0"]);
