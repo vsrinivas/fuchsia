@@ -1,0 +1,154 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointer;
+
+using fuchsia.input.report;
+using fuchsia.ui.pointer.augment;
+
+const uint32 MAX_EVENT = 128;
+
+/// A method for a client to receive mouse pointer events.
+///
+/// The position of a pointer event is defined in the context of a viewport,
+/// situated in the view. The dimensions of the view and viewport, and their
+/// spatial relationship (defined with a transform matrix), are supplied
+/// synchronously in a |ViewParameter| table. A view may retrieve a pointer's
+/// position in its local coordinate system by applying the viewport-to-view
+/// transform matrix.
+///
+/// The viewport is embedded in an independent and stable coordinate system,
+/// suitable for interpreting pointer events in a scale-independent manner;
+/// mouse movement will be observed at a constant scale, even under effects such
+/// as magnification or panning. However, other effects, such as enlargening the
+/// view's clip bounds, may trigger a change in the viewport extents.
+protocol MouseEventSource {
+    /// A method for a client to receive mouse pointer events.
+    ///
+    /// This call is formulated as a "hanging get" pattern: the client asks for
+    /// a set of recent events, and receives them via the callback. This
+    /// pull-based approach ensures that clients consume events at their own
+    /// pace; events don't clog up the channel in an unbounded manner.
+    ///
+    /// Flow control. The caller is allowed at most one in-flight |Watch| call
+    /// at a time; it is a logical error to have concurrent calls to |Watch|.
+    /// Non-compliance results in channel closure.
+    ///
+    /// Client pacing. The server will dispatch events to the caller on a FIFO,
+    /// lossless, best-effort basis, but the caller must allocate enough time to
+    /// keep up with new events.
+    ///
+    /// Event times. The timestamps on each event in the event vector are *not*
+    /// guaranteed monotonic; events from different devices may be injected into
+    /// Scenic at different times. Generally, events from a single device are
+    /// expected to have monotonically increasing timestamps.
+    ///
+    /// View parameters. Occasionally, changes in view or viewport require
+    /// notifying the client. If a |MouseEvent| carries |ViewParameters|, these
+    /// parameters apply to successive |MousePointerSample|s until the next
+    /// |ViewParameters|.
+    Watch() -> (vector<MouseEvent>:MAX_EVENT events);
+};
+
+/// The self-sufficient, self-consistent collection of pointer-related data,
+/// sent from server to client.
+table MouseEvent {
+    /// The time this event was observed.
+    /// Required.
+    1: zx.time timestamp;
+
+    /// The parameters of the associated view and viewport, sufficient to
+    /// correctly interpret the position, orientation, magnitude, and
+    /// inter-event distance of pointer events dispatched to a view.
+    /// - It is issued on connection and on change.
+    2: ViewParameters view_parameters;
+
+    /// A description of the mouse device, sufficient to correctly interpret
+    /// the capabilities and usage intent of the device.
+    /// - It is issued once per device.
+    3: MouseDeviceInfo device_info;
+
+    /// A description of each sampled data point in a mouse event stream.
+    ///
+    /// Issuance policy. The stream can be "latched" to at most one client,
+    /// where the stream is dispatched fully and solely to that client,
+    /// regardless of view boundary, until unlatched. When "unlatched", the
+    /// stream is dispatched in fragments to the visible client that each mouse
+    /// event "hovers" over.
+    4: MousePointerSample pointer_sample;
+
+    /// The signal for view entry/exit on unlatched mouse events ("hover").
+    /// - It is issued on unlatched entry into a view, and unlatched exit from a view.
+    5: MouseEventStreamInfo stream_info;
+
+    /// An identifier to correlate this event's send/receive occurrence across
+    /// component boundaries or abstraction layers.
+    6: uint64 trace_flow_id;
+
+    /// Certain clients may receive augmented data.
+    7: fuchsia.ui.pointer.augment.ViewGlobalMouseEvent global_mouse_event;
+};
+
+/// Information about a device that issues a mouse event stream.
+table MouseDeviceInfo {
+    /// An identifier for the mouse device that issues a mouse event stream.
+    /// Required.
+    1: uint32 id;
+
+    /// Range of vertical scroll values issued by the device.
+    2: fuchsia.input.report.Axis scroll_v_range;
+
+    /// Range of horizontal scroll values issued by the device.
+    3: fuchsia.input.report.Axis scroll_h_range;
+
+    /// Button identifiers issued by the device.
+    4: vector<uint8>:MOUSE_MAX_NUM_BUTTONS buttons;
+};
+
+/// A description of each sampled data point in a mouse event stream.
+table MousePointerSample {
+    /// An identifier for the mouse device that issues a mouse event stream.
+    /// Required.
+    1: uint32 device_id;
+
+    /// The state of this event in the mouse event stream's state machine.
+    /// Required.
+    2: EventPhase phase;
+
+    /// The position of this event, in the viewport's coordinate system.
+    /// Required.
+    3: Point2 position_in_viewport;
+
+    /// Relative vertical scrolling displacement.
+    4: int64 scroll_v;
+
+    /// Relative horizontal scrolling displacement.
+    5: int64 scroll_h;
+
+    /// Identifiers of currently pressed buttons.
+    6: vector<uint8>:MOUSE_MAX_NUM_BUTTONS pressed_buttons;
+};
+
+/// The status of a mouse event stream, sent from server to client.
+///
+/// Invariant: a client's mouse events are bracketed by ENTERED / EXITED.
+/// (This information is provided separately from the EventPhase state machine,
+/// because it's a property of the event stream interacting with the scene,
+/// instead of a property of the mouse device.)
+struct MouseEventStreamInfo {
+    /// An identifier for the mouse device that issues a mouse event stream.
+    uint32 device_id;
+
+    /// The mouse event stream's enter/exit status, sent from server to client.
+    MouseViewStatus status;
+};
+
+/// A description of mouse event stream's relationship to this view.
+enum MouseViewStatus {
+    /// The mouse event stream is directed towards this view.
+    ENTERED = 1;
+
+    /// The mouse event stream is directed away from this view.
+    EXITED = 2;
+};

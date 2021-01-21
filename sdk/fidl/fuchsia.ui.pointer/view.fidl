@@ -8,20 +8,22 @@ library fuchsia.ui.pointer;
 /// - The values are placed in column-major order.
 alias Mat3 = array<float32>:9;
 
+/// A floating-point two-dimensional point.
+/// - The values are placed in (x, y) order.
+using Point2 = array<float32>:2;
+
 /// An axis-aligned rectangle. It is defined by its minimal and maximal extents
 /// in a coordinate system.
-///
-/// All fields are required.
-table Rectangle {
+struct Rectangle {
     /// The minimal extent of this rectangle, inclusive.
     /// - Its coordinates are pairwise less than the maximal extent's
     ///   coordinates.
-    1: Point2 min;
+    Point2 min;
 
     /// The maximal extent of this rectangle, inclusive.
     /// - Its coordinates are pairwise greater than the minimal extent's
     ///   coordinates.
-    2: Point2 max;
+    Point2 max;
 };
 
 /// The parameters of the associated view and viewport, sufficient to correctly
@@ -34,14 +36,12 @@ table Rectangle {
 /// Inter-protocol redundancy. Some of these parameters may also be sent over an
 /// independent channel dedicated to view control; the client is responsible for
 /// correct use of asynchronously received parameters.
-///
-/// All fields are required.
-table ViewParameters {
+struct ViewParameters {
     /// The view's area of content, placed in the coordinate system of the view.
     ///
     /// The rectangle is defined by the parent view's setup of clipping on this
     /// view.
-    1: Rectangle view;
+    Rectangle view;
 
     /// The viewport's area of interaction, placed in an independent coordinate
     /// system.
@@ -51,9 +51,9 @@ table ViewParameters {
     ///
     /// A change in viewport extents means the region for pointer interaction
     /// has itself moved, or changed in size, or both.
-    2: Rectangle viewport;
+    Rectangle viewport;
 
     /// The transform matrix that relates a point's position in the viewport's
     /// coordinate system to its position in the view's coordinate system.
-    3: Mat3 viewport_to_view_transform;
+    Mat3 viewport_to_view_transform;
 };

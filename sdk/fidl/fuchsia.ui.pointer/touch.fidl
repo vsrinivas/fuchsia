@@ -1,0 +1,246 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointer;
+
+const uint32 MAX_EVENT = 128;
+
+/// A method for a client to receive touch pointer events and respond in a
+/// global gesture disambiguation protocol.
+///
+/// The position of a pointer event is defined in the context of a viewport,
+/// situated in the view. The dimensions of the view and viewport, and their
+/// spatial relationship (defined with a transform matrix), are supplied
+/// synchronously in a |ViewParameter| table. A view may retrieve a pointer's
+/// position in its local coordinate system by applying the viewport-to-view
+/// transform matrix.
+///
+/// The viewport is embedded in an independent and stable coordinate system,
+/// suitable for interpreting pointer events in a scale-independent manner; a
+/// swipe will be observed at a constant scale, even under effects such as
+/// magnification or panning. However, other effects, such as enlargening the
+/// view's clip bounds, may trigger a change in the viewport extents.
+protocol TouchEventSource {
+    /// A method for a client to receive touch pointer events.
+    ///
+    /// This call is formulated as a "hanging get" pattern: the client asks for
+    /// a set of recent events, and receives them via the callback. This
+    /// pull-based approach ensures that clients consume events at their own
+    /// pace; events don't clog up the channel in an unbounded manner.
+    ///
+    /// Flow control. The caller is allowed at most one in-flight |Watch| call
+    /// at a time; it is a logical error to have concurrent calls to |Watch|.
+    /// Non-compliance results in channel closure.
+    ///
+    /// Client pacing. The server will dispatch events to the caller on a FIFO,
+    /// lossless, best-effort basis, but the caller must allocate enough time to
+    /// keep up with new events. An unresponsive client may be categorized as
+    /// "App Not Responding" and targeted for channel closure.
+    ///
+    /// Responses. The gesture disambiguation scheme relies on the server
+    /// receiving a |TouchResponse| for each |TouchEvent|.|TouchPointerSample|;
+    /// non-sample events should return an empty |TouchResponse| table to the
+    /// server. Responses for *previous* events are fed to the server on the
+    /// *next* call of |Watch| [1]. Each element in the |responses| vector is
+    /// interpreted as the pairwise response to the event in the previous
+    /// |events| vector; the vector lengths must match.
+    ///
+    /// Initial response. The first call to |Watch| must be an empty vector.
+    ///
+    /// Event times. The timestamps on each event in the event vector are *not*
+    /// guaranteed monotonic; pointer events from different devices may be
+    /// injected into Scenic at different times. Generally, events from a single
+    /// device are expected to have monotonically increasing timestamps.
+    ///
+    /// View parameters. Occasionally, changes in view or viewport require
+    /// notifying the client. If a |TouchEvent| carries |ViewParameters|, these
+    /// parameters apply to successive |TouchPointerSample|s until the next
+    /// |ViewParameters|.
+    ///
+    /// [1] The hanging get pattern enables straightforward API evolution, but
+    /// unfortunately does not admit an idiomatic matching of response to event.
+    Watch(vector<TouchResponse>:MAX_EVENT responses) -> (vector<TouchEvent>:MAX_EVENT events);
+
+    /// The gesture protocol allows a client to enact a "hold" on an event
+    /// stream, to prevent resolution of event stream ownership, even after the
+    /// stream has finished. This method updates the client's "hold" by
+    /// replacing it with a response that allows ownership resolution to
+    /// proceed.
+    ///
+    /// Flow control. The caller is allowed at most one |UpdateResponse| call
+    /// per event stream, after the event stream has finished. It is a logical
+    /// error to call |UpdateResponse| when a normal response is possible with
+    /// the |Watch| call.
+    ///
+    /// Validity. This TouchResponse must not be another "hold" response, and
+    /// the prior response is expected to be a "hold" response.
+    UpdateResponse(TouchEventStreamId stream, TouchResponse response) -> ();
+};
+
+/// The self-sufficient, self-consistent collection of pointer-related data,
+/// sent from server to client.
+table TouchEvent {
+    /// The time this event was observed.
+    /// Required.
+    1: zx.time timestamp;
+
+    /// The parameters of the associated view and viewport, sufficient to
+    /// correctly interpret the position, orientation, magnitude, and
+    /// inter-event distance of pointer events dispatched to a view.
+    /// - It is issued on connection and on change.
+    2: ViewParameters view_parameters;
+
+    /// A description of the pointer device, sufficient to correctly interpret
+    /// the capabilities and usage intent of the device.
+    /// - It is issued once per device.
+    3: TouchDeviceInfo device_info;
+
+    /// A description of each sampled data point in a pointer event stream.
+    /// - It is issued on every sample in the pointer event stream.
+    4: TouchPointerSample pointer_sample;
+
+    /// The result of gesture disambiguation for a pointer event stream.
+    /// - It is issued once per pointer event stream.
+    5: TouchEventStreamInfo stream_info;
+
+    /// An identifier to correlate this event's send/receive occurrence across
+    /// component boundaries or abstraction layers.
+    6: uint64 trace_flow_id;
+
+    /// Certain clients may receive augmented data.
+    7: fuchsia.ui.pointer.augment.LocalHitData local_hit_data;
+};
+
+/// Information about a device that issues touch event streams.
+table TouchDeviceInfo {
+    /// An identifier for the touch device that issues touch event streams.
+    /// A device may own multiple pointers, each with its own pointer id.
+    /// Required.
+    1: uint32 id;
+};
+
+/// A unique identifier for a pointer event stream.
+struct TouchEventStreamId {
+    /// An identifier for the pointer device that issues pointer event streams.
+    /// A device may own multiple pointers, each with its own |pointer_id|.
+    uint32 device_id;
+
+    /// An identifier of the pointer that issued this event. It is unique only
+    /// to a specific |device_id|. Each (device_id, pointer_id) pair issues at
+    /// most one pointer event stream at a time.
+    uint32 pointer_id;
+
+    /// An identifier of the pointer event stream. It is unique only to a
+    /// specific (device_id, pointer_id) pair.
+    uint32 stream_id;
+};
+
+/// A description of each sampled data point in a pointer event stream.
+/// All fields are required.
+table TouchPointerSample {
+    /// The unique stream identifier that this pointer sample belongs to.
+    1: TouchEventStreamId stream;
+
+    /// The state of this event in the pointer event stream's state machine.
+    2: EventPhase phase;
+
+    /// The position of this event, in the viewport's coordinate system.
+    3: Point2 position_in_viewport;
+};
+
+/// The status of a pointer event stream, sent from server to client.
+struct TouchEventStreamInfo {
+    /// The unique stream identifier that this pointer sample belongs to.
+    TouchEventStreamId stream;
+
+    /// The pointer event stream's disposition, sent from server to client.
+    TouchEventStreamStatus status;
+};
+
+/// A description of the touch event stream's relationship to this client.
+enum TouchEventStreamStatus {
+    /// The client has been denied ownership of the event stream.
+    DENIED = 1;
+
+    /// The client has been granted ownership of the event stream.
+    GRANTED = 2;
+};
+
+/// A feedback event per |Event|, sent from client to server.
+///
+/// Only |TouchPointerSample| requires a |TouchResponseType|; for other events, an empty
+/// |Response| table is sent to the server.
+table TouchResponse {
+    /// The event stream disposition that a client responds with for a given
+    /// |TouchPointerSample|.
+    1: TouchResponseType response_type;
+
+    /// An identifier to correlate this response's send/receive occurrence across
+    /// component boundaries or abstraction layers.
+    2: uint64 trace_flow_id;
+};
+
+/// The possible event stream dispositions that a client can respond with to a
+/// given |TouchPointerSample|. Used as part of a gesture disambiguation scheme.
+///
+/// The responses revolve around the idea of an ownership claim on a pointer event
+/// stream (i.e., current and future events of that event stream). Clients may
+/// assert a claim of ownership on the current event stream, but only one
+/// client's claim is granted by the server; other clients' claims are denied.
+enum TouchResponseType {
+    /// The client has no further interest in this event stream; it declines
+    /// ownership of the event stream. The client will stop receiving events
+    /// from the pointer event stream.
+    NO = 1;
+
+    /// The client is interested in this event stream, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of the event
+    /// stream.
+    MAYBE = 2;
+
+    /// The client is interested in this event stream, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of the event
+    /// stream. During ownership resolution, it exerts its priority over
+    /// lower-priority "maybe" claims, but always loses to a "yes" claim.
+    MAYBE_PRIORITY = 3;
+
+    /// The client is interested in this event stream, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of the event
+    /// stream. Moreover, it suppresses lower-priority claims that try to
+    /// resolve stream ownership.
+    MAYBE_SUPPRESS = 4;
+
+    /// The client is interested in this event stream, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of the event
+    /// stream. Moreover, it suppresses lower-priority claims that try to
+    /// resolve stream ownership. During ownership resolution, it exerts its
+    /// priority over lower-priority "maybe" claims, but always loses to a "yes"
+    /// claim.
+    MAYBE_PRIORITY_SUPPRESS = 5;
+
+    /// The client is interested in this event stream, but needs to see a
+    /// subsequent event stream to decide; the client has not yet claimed
+    /// ownership of the event stream. It prevents ownership resolution when the
+    /// stream ends.
+    HOLD = 6;
+
+    /// The client is interested in this event stream, but needs to see a
+    /// subsequent event stream to decide; the client has not yet claimed
+    /// ownership of the event stream. It prevents ownership resolution when the
+    /// stream ends. Moreover, it suppresses lower-priority claims that try to
+    /// resolve stream ownership.
+    HOLD_SUPPRESS = 7;
+
+    /// The client wishes exclusive access to the remaining events in this event
+    /// stream; it claims ownership of the event stream (but that claim may or
+    /// may not be granted). During ownership resolution, it yields its priority
+    /// to lower-priority "yes" claims.
+    YES = 8;
+
+    /// The client wishes exclusive access to the remaining events in this event
+    /// stream; it claims ownership of the event stream (but that claim may or
+    /// may not be granted). During ownership resolution, it exerts its priority
+    /// over lower-priority "yes" claims.
+    YES_PRIORITY = 9;
+};

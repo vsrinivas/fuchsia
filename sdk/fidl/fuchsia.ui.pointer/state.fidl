@@ -1,0 +1,23 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointer;
+
+/// The possible states of a pointer event stream's state machine.
+/// A pointer event stream follows these state machines:
+/// ADD - CHANGE* - REMOVE
+/// ADD - CHANGE* - CANCEL
+enum EventPhase {
+    /// The device has started tracking the pointer.
+    ADD = 1;
+
+    /// The device has reported an update to the pointer state.
+    CHANGE = 2;
+
+    /// The device has stopped tracking the pointer.
+    REMOVE = 3;
+
+    /// The event stream is no longer available.
+    CANCEL = 4;
+};

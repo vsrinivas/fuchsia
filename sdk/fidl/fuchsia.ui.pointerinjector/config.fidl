@@ -4,6 +4,7 @@
 
 library fuchsia.ui.pointerinjector;
 
+using fuchsia.input.report;
 using fuchsia.ui.views;
 
 /// A floating-point two-dimensional point.
@@ -51,12 +52,24 @@ resource table Config {
     /// have injected events dispatched to it, regardless of other factors, such
     /// as surface occlusion by clients inside and outside of |target|.
     6: DispatchPolicy dispatch_policy;
+
+    /// Range of vertical scroll values issued by the device.
+    7: fuchsia.input.report.Axis scroll_v_range;
+
+    /// Range of horizontal scroll values issued by the device.
+    8: fuchsia.input.report.Axis scroll_h_range;
+
+    /// Mouse button identifiers issued by the device.
+    9: vector<uint8>:fuchsia.input.report.MOUSE_MAX_NUM_BUTTONS buttons;
 };
 
 /// A characterization of a device that issues pointer event streams.
 enum DeviceType {
     /// A device intended for manipulation by direct contact over its surface.
     TOUCH = 1;
+
+    /// A device intended for manipulation by precise movement over a surface.
+    MOUSE = 2;
 };
 
 /// The region from which injection is attempted for injected events. As the
@@ -95,7 +108,7 @@ resource union Target {
 /// in the context coordinate system.
 ///
 /// The viewport coordinate system is used to convey a pointer's coordinates in
-/// a scale-invariant way to dispatch clients, so that gestures can be
+/// a scale-invariant way to dispatch clients, so that pointer movement can be
 /// interpreted correctly under effects like magnification. The context defines
 /// the viewport's minimal and maximal extents in the viewport coordinate
 /// system.
@@ -177,4 +190,15 @@ enum DispatchPolicy {
     /// Note: Each client will have its own copy of the viewport, placed
     ///       accordingly in its own coordinate system.
     TOP_HIT_AND_ANCESTORS_IN_TARGET = 2;
+
+    /// Clients in the |Target|'s view tree receive hover events when a cursor
+    /// is positioned over it, unless the mouse is latched to a specific client.
+    /// A mouse initiates a latch via button down, and until the release of that
+    /// latch, mouse events are delivered to that latched client; other clients
+    /// do not receive hover events in the latch duration.
+    ///
+    /// Note: It's possible for no client to latch, if the hit test fails to
+    ///       hit any surface in any sub-view of |Target|.
+    /// Note: Each client will have its own copy of the viewport, placed
+    MOUSE_HOVER_AND_LATCH_IN_TARGET = 3;
 };

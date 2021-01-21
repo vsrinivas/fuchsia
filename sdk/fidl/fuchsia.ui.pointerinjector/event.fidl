@@ -4,6 +4,7 @@
 
 library fuchsia.ui.pointerinjector;
 
+using fuchsia.input.report;
 using zx;
 
 /// The possible states of a pointer event stream's state machine.
@@ -25,7 +26,6 @@ enum EventPhase {
 };
 
 /// A description of each sampled data point for a pointer device.
-/// All fields are required.
 table PointerSample {
     /// An identifier of the pointer that issued this event.
     /// It is unique only to a specific pointer device.
@@ -36,6 +36,15 @@ table PointerSample {
 
     /// The position of this event, in the viewport's coordinate system.
     3: Point2 position_in_viewport;
+
+    /// Relative vertical scrolling displacement.
+    4: int64 scroll_v;
+
+    /// Relative horizontal scrolling displacement.
+    5: int64 scroll_h;
+
+    /// Identifiers of currently pressed buttons.
+    6: vector<uint8>:fuchsia.input.report.MOUSE_MAX_NUM_BUTTONS pressed_buttons;
 };
 
 /// A selection of FIFO data sent over the channel.
