@@ -276,12 +276,42 @@ config("linker_gc") {
 group("linker_gc_deps") {
 }
 
-config("assert_level") {
-  assert(zx_assert_level >= 0)
-  defines = [ "ZX_ASSERT_LEVEL=$zx_assert_level" ]
-  if (zx_assert_level == 0) {
-    defines += [ "NDEBUG" ]
-  }
+# The 'default_assert_level' will point to one of the assert_level_XXX values
+# below. This allows targets or toolchains to opt out from the default and
+# select a specific value.
+config("assert_level_0") {
+  defines = [
+    "ZX_ASSERT_LEVEL=0",
+    "NDEBUG",
+  ]
+}
+
+group("assert_level_0_deps") {
+}
+
+config("assert_level_1") {
+  defines = [ "ZX_ASSERT_LEVEL=1" ]
+}
+
+group("assert_level_1_deps") {
+}
+
+config("assert_level_2") {
+  defines = [ "ZX_ASSERT_LEVEL=2" ]
+}
+
+group("assert_level_2_deps") {
+}
+
+config("default_assert_level") {
+  assert(
+      zx_assert_level >= 0 && zx_assert_level <= 2,
+      "Invalid zx_assert_level value '$zx_assert_level', valid values are 0, 1 or 2")
+  configs = [ ":assert_level_$zx_assert_level" ]
+}
+
+group("default_assert_level_deps") {
+  # Implicit dependencies for 'default_assert_level' config.
 }
 
 config("linker_string_merging") {

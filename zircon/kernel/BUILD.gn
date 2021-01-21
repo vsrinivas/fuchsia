@@ -103,6 +103,12 @@ if (current_toolchain == default_toolchain) {
         remove_common_configs += [ "//build/config/zircon:default_linker_gc" ]
         configs += [ "//build/config/zircon:linker_gc" ]
       }
+
+      # As a special case, kernel assertions are controlled by the kernel_debug_level
+      # variable, and not zx_assert_level (though it defaults to the same value, but
+      # some product configurations may decide to change it).
+      remove_common_configs += [ "//build/config/zircon:default_assert_level" ]
+      configs += [ "//build/config/zircon:assert_level_$kernel_debug_level" ]
     }
   }
 }

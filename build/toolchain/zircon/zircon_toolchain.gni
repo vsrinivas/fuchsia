@@ -610,19 +610,6 @@ template("zircon_toolchain") {
       _zircon_optimize = zircon_optimize
     }
 
-    # The assert level used by Zircon artifacts is controlled by the zx_assert_level
-    # build argument, except that, as a special case, zircon_kernel_disable_asserts
-    # can be set to true to disable them in the kernel itself.
-    _assert_level = zx_assert_level
-
-    if (defined(invoker.toolchain_tags) &&
-        invoker.toolchain_tags + [ "kernel" ] - [ "kernel" ] !=
-        invoker.toolchain_tags) {
-      if (zircon_kernel_disable_asserts) {
-        _assert_level = 0
-      }
-    }
-
     toolchain_args = {
       current_cpu = invoker.cpu
       current_os = invoker.os
@@ -642,8 +629,6 @@ template("zircon_toolchain") {
       # Otherwise the default is used. Try to replicate this here.
       #
       optimize = _zircon_optimize
-
-      zx_assert_level = _assert_level
 
       if (defined(invoker.toolchain_args)) {
         forward_variables_from(invoker.toolchain_args,

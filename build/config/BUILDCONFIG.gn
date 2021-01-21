@@ -342,7 +342,7 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:language",
     "//build/config/zircon:machine",
     "//build/config/zircon:relative_paths",
-    "//build/config/zircon:assert_level",
+    "//build/config/zircon:default_assert_level",
     "//build/config/zircon:default_optimize",
     "//build/config/zircon:default_debuginfo",
     "//build/config/zircon:default_warnings",
