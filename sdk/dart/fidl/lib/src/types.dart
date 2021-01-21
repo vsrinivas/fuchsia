@@ -490,6 +490,7 @@ void _encodeHandle(Encoder encoder, Handle? value, int offset, bool nullable) {
     // need to null check it in a way that won't cause a build failure once the
     // feature is implemented.  We can do that using an explicit "if" test.
     // TODO(paulberry): remove this check once the feature is implemented.
+    // ignore: unnecessary_null_comparison
     if (value == null) {
       // ignore: dead_code
       throw FidlError('Unreachable');
