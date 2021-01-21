@@ -300,6 +300,13 @@ mod test {
             }));
             sink.push(sae::SaeUpdate::Success(sae::Key { pmk: vec![0xaa], pmkid: vec![0xbb] }))
         }
+        fn handle_anti_clogging_token(
+            &mut self,
+            _sink: &mut sae::SaeUpdateSink,
+            _msg: &sae::AntiCloggingTokenMsg,
+        ) {
+            panic!("The SAE initiator should never receive an anti-clogging token.");
+        }
         fn handle_timeout(&mut self, _sink: &mut sae::SaeUpdateSink, _timeout: sae::Timeout) {
             self.0.lock().unwrap().handled_timeouts += 1;
         }

@@ -13,7 +13,7 @@ mod frame;
 mod state;
 
 pub use crypto_utils::kdf_sha256;
-pub use frame::{CommitMsg, ConfirmMsg};
+pub use frame::{AntiCloggingTokenMsg, CommitMsg, ConfirmMsg};
 use {
     anyhow::{bail, Error},
     boringssl::{Bignum, EcGroupId},
@@ -121,6 +121,11 @@ pub trait SaeHandshake: Send {
 
     fn handle_commit(&mut self, sink: &mut SaeUpdateSink, commit_msg: &CommitMsg);
     fn handle_confirm(&mut self, sink: &mut SaeUpdateSink, confirm_msg: &ConfirmMsg);
+    fn handle_anti_clogging_token(
+        &mut self,
+        sink: &mut SaeUpdateSink,
+        token: &AntiCloggingTokenMsg,
+    );
     fn handle_timeout(&mut self, sink: &mut SaeUpdateSink, timeout: Timeout);
 
     fn handle_frame(&mut self, sink: &mut SaeUpdateSink, frame: &AuthFrameRx) {
@@ -524,6 +529,28 @@ mod tests {
 
         // We retransmit the same commit in response to a faulty confirm.
         assert_eq!(commit1, commit1_retry);
+    }
+
+    #[test]
+    fn retry_commit_on_anti_clogging_token() {
+        let mut handshake = TestHandshake::new();
+
+        let commit1 = handshake.sta1_init();
+
+        // Simulate an anti-clogging token sent to sta1.
+        let mut sink = vec![];
+        let token = "anticloggingtokentext";
+        let token_msg = AntiCloggingTokenMsg { group_id: 19, token: token.as_bytes() };
+        handshake.sta1.handle_anti_clogging_token(&mut sink, &token_msg);
+        let commit1_retry = expect_commit(&mut sink);
+        assert_eq!(commit1_retry.clone().to_rx().msg().token, Some(token.as_bytes()));
+
+        // Finish the handshake.
+        let (commit2, confirm2) = handshake.sta2_handle_commit(commit1_retry.to_rx());
+        let confirm1 = handshake.sta1_handle_commit(commit2.to_rx());
+        let key1 = handshake.sta1_handle_confirm(confirm2.to_rx());
+        let key2 = handshake.sta2_handle_confirm(confirm1.to_rx());
+        assert_eq!(key1, key2);
     }
 
     #[test]

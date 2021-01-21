@@ -8,7 +8,8 @@ use {
         frame::{write_commit, write_confirm},
         internal::FiniteCyclicGroup,
         internal::SaeParameters,
-        CommitMsg, ConfirmMsg, Key, RejectReason, SaeHandshake, SaeUpdate, SaeUpdateSink, Timeout,
+        AntiCloggingTokenMsg, CommitMsg, ConfirmMsg, Key, RejectReason, SaeHandshake, SaeUpdate,
+        SaeUpdateSink, Timeout,
     },
     crate::crypto_utils::kdf_sha256,
     anyhow::{bail, format_err, Error},
@@ -17,7 +18,6 @@ use {
 };
 
 // TODO(fxbug.dev/42140): Handle received timeouts.
-// TODO(fxbug.dev/42141): Process/send anti-clogging tokens.
 // TODO(fxbug.dev/42562): Handle BadGrp/DiffGrp.
 // TODO(fxbug.dev/42563): Handle frame status.
 
@@ -78,6 +78,7 @@ struct SaeCommitted<E> {
     rand: Vec<u8>,
     commit: SerializedCommit,
     sync: u16,
+    anti_clogging_token: Vec<u8>,
 }
 
 struct SaeConfirmed<E> {
@@ -307,7 +308,7 @@ impl<E> SaeCommitted<E> {
             group_id,
             &self.commit.scalar[..],
             &self.commit.element[..],
-            &[],
+            &self.anti_clogging_token[..],
         )));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok(())
@@ -318,6 +319,15 @@ impl<E> SaeCommitted<E> {
         sink: &mut SaeUpdateSink,
         _confirm_msg: &ConfirmMsg,
     ) -> Result<(), RejectReason> {
+        self.resend_last_frame(sink)
+    }
+
+    fn handle_anti_clogging_token(
+        &mut self,
+        sink: &mut SaeUpdateSink,
+        token: &AntiCloggingTokenMsg,
+    ) -> Result<(), RejectReason> {
+        self.anti_clogging_token = token.token.to_vec();
         self.resend_last_frame(sink)
     }
 
@@ -479,7 +489,13 @@ impl<E> SaeHandshakeState<E> {
                 Ok((rand, commit)) => {
                     let (transition, state) = state.release_data();
                     transition
-                        .to(SaeCommitted { config: state.config, rand, commit, sync: 0 })
+                        .to(SaeCommitted {
+                            config: state.config,
+                            rand,
+                            commit,
+                            sync: 0,
+                            anti_clogging_token: vec![],
+                        })
                         .into()
                 }
                 Err(reject) => {
@@ -597,6 +613,28 @@ impl<E> SaeHandshakeState<E> {
         }
     }
 
+    fn handle_anti_clogging_token(
+        self,
+        sink: &mut SaeUpdateSink,
+        token: &AntiCloggingTokenMsg,
+    ) -> Self {
+        match self {
+            SaeHandshakeState::SaeCommitted(mut state) => {
+                match state.handle_anti_clogging_token(sink, token) {
+                    Ok(()) => state.into(),
+                    Err(reject) => {
+                        sink.push(SaeUpdate::Reject(reject));
+                        state.transition_to(SaeFailed).into()
+                    }
+                }
+            }
+            _ => {
+                error!("Unexpected anti clogging token received");
+                self
+            }
+        }
+    }
+
     fn handle_timeout(self, sink: &mut SaeUpdateSink, timeout: Timeout) -> Self {
         match self {
             SaeHandshakeState::SaeCommitted(mut state) => {
@@ -657,6 +695,14 @@ impl<E> SaeHandshake for SaeHandshakeImpl<E> {
 
     fn handle_confirm(&mut self, sink: &mut SaeUpdateSink, confirm_msg: &ConfirmMsg) {
         self.0.replace_state(|state| state.handle_confirm(sink, confirm_msg));
+    }
+
+    fn handle_anti_clogging_token(
+        &mut self,
+        sink: &mut SaeUpdateSink,
+        token: &AntiCloggingTokenMsg,
+    ) {
+        self.0.replace_state(|state| state.handle_anti_clogging_token(sink, token));
     }
 
     fn handle_timeout(&mut self, sink: &mut SaeUpdateSink, timeout: Timeout) {
