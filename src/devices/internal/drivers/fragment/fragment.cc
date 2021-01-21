@@ -664,6 +664,14 @@ zx_status_t Fragment::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       *out_resp_size += static_cast<uint32_t>(req->length);
       return spi_client_.proto_client().Exchange(txbuf, req->length, rxbuf, req->length, &actual);
     }
+    case SpiOp::CONNECT_SERVER: {
+      if (req_handle_count != 1) {
+        zxlogf(ERROR, "%s: expectd 1 VMO, got %u", __func__, req_handle_count);
+        return ZX_ERR_INTERNAL;
+      }
+      spi_client_.proto_client().ConnectServer(zx::channel(std::move(req_handles[0])));
+      return ZX_OK;
+    }
     default:
       zxlogf(ERROR, "%s: unknown SPI op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;

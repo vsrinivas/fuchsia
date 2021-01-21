@@ -14,6 +14,7 @@
 #include <fuchsia/hardware/pwm/c/banjo.h>
 #include <fuchsia/hardware/rpmb/c/banjo.h>
 #include <fuchsia/hardware/spi/c/banjo.h>
+#include <fuchsia/hardware/spi/c/fidl.h>
 #include <fuchsia/hardware/vreg/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <stdlib.h>
@@ -381,7 +382,44 @@ static zx_status_t test_spi(spi_protocol_t* spi) {
     }
   }
 
-  return ZX_OK;
+  // verify that a FIDL communication works
+
+  zx_handle_t client, server;
+  status = zx_channel_create(0, &client, &server);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to create channel: %d", status);
+    return status;
+  }
+
+  spi_connect_server(spi, server);
+
+  memset(rxbuf, 0, sizeof(rxbuf));
+  status = ZX_ERR_INTERNAL;
+
+  zx_status_t fidl_status = fuchsia_hardware_spi_DeviceExchange(
+      client, txbuf, sizeof(txbuf), &status, rxbuf, sizeof(rxbuf), &actual);
+  if (fidl_status != ZX_OK) {
+    zxlogf(ERROR, "FIDL call failed: %d", fidl_status);
+    return status;
+  }
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "spi_exchange failed: %d", status);
+    return status;
+  }
+  if (actual != sizeof(rxbuf)) {
+    zxlogf(ERROR, "spi_exhange returned incomplete %zu/%zu", actual, sizeof(rxbuf));
+    return ZX_ERR_INTERNAL;
+  }
+
+  for (size_t i = 0; i < actual; i++) {
+    if (rxbuf[i] != txbuf[i]) {
+      zxlogf(ERROR, "spi_exchange returned bad result rxbuf[%zu] = 0x%02x, should be 0x%02x", i,
+             rxbuf[i], txbuf[i]);
+      return ZX_ERR_INTERNAL;
+    }
+  }
+
+  return zx_handle_close(client);
 }
 
 static zx_status_t test_power(power_protocol_t* power) {

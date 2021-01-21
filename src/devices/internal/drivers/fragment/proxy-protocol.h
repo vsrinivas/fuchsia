@@ -318,6 +318,7 @@ enum class SpiOp {
   TRANSMIT,
   RECEIVE,
   EXCHANGE,
+  CONNECT_SERVER,
 };
 
 struct SpiProxyRequest {
