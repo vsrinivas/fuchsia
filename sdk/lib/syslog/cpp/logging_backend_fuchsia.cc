@@ -142,7 +142,7 @@ static_assert(std::alignment_of<RecordState>() == sizeof(uint64_t));
 class ExternalDataBuffer {
  public:
   explicit ExternalDataBuffer(LogBuffer* buffer)
-      : buffer_(&buffer->data[sizeof(buffer->record_state) / sizeof(log_word_t)]),
+      : buffer_(&buffer->data[0]),
         capacity_((sizeof(buffer->data) - sizeof(buffer->record_state))),
         cursor_(RecordState::CreatePtr(buffer)->cursor) {}
 

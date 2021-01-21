@@ -31,6 +31,14 @@ TEST(StructuredLogging, BackendDirect) {
   // TODO(fxbug.dev/57482): Figure out how to verify this appropriately.
 }
 
+TEST(StructuredLogging, StartsAtPosition0) {
+  syslog_backend::LogBuffer buffer;
+  memset(&buffer, 0, sizeof(buffer));
+  syslog_backend::BeginRecord(&buffer, syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition");
+  syslog_backend::EndRecord(&buffer);
+  ASSERT_NE(buffer.data[0], static_cast<uint64_t>(0));
+}
+
 TEST(StructuredLogging, PaddedWritePadsWithZeroes) {
   uint64_t fives;
   memset(&fives, 5, sizeof(fives));
