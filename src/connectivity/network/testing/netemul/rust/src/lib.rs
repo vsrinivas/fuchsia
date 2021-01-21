@@ -788,13 +788,24 @@ pub trait EnvironmentTcpListener: Sized {
     fn listen_in_env<'a>(
         env: &'a TestEnvironment<'a>,
         addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
+        Self::listen_in_env_with(env, addr, |_: &socket2::Socket| Ok(()))
+    }
+
+    /// Creates a TCP listener by creating a Socket2 socket in `env`. Closure `setup` is called with
+    /// the reference of the socket before the socket is bound to `addr`.
+    fn listen_in_env_with<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+        setup: impl FnOnce(&socket2::Socket) -> Result<()> + 'a,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
 }
 
 impl EnvironmentTcpListener for std::net::TcpListener {
-    fn listen_in_env<'a>(
+    fn listen_in_env_with<'a>(
         env: &'a TestEnvironment<'a>,
         addr: std::net::SocketAddr,
+        setup: impl FnOnce(&socket2::Socket) -> Result<()> + 'a,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
             let sock = env
@@ -804,7 +815,7 @@ impl EnvironmentTcpListener for std::net::TcpListener {
                 )
                 .await
                 .context("failed to create server socket")?;
-
+            let () = setup(&sock)?;
             let () = sock.bind(&addr.into()).context("failed to bind server socket")?;
             // Use 128 for the listen() backlog, same as the original implementation of TcpListener
             // in Rust std (see https://doc.rust-lang.org/src/std/sys_common/net.rs.html#386).
@@ -817,11 +828,12 @@ impl EnvironmentTcpListener for std::net::TcpListener {
 }
 
 impl EnvironmentTcpListener for fuchsia_async::net::TcpListener {
-    fn listen_in_env<'a>(
+    fn listen_in_env_with<'a>(
         env: &'a TestEnvironment<'a>,
         addr: std::net::SocketAddr,
+        setup: impl FnOnce(&socket2::Socket) -> Result<()> + 'a,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
-        std::net::TcpListener::listen_in_env(env, addr)
+        std::net::TcpListener::listen_in_env_with(env, addr, setup)
             .and_then(|listener| {
                 futures::future::ready(
                     fuchsia_async::net::TcpListener::from_std(listener)
