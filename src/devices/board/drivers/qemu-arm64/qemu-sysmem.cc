@@ -25,8 +25,10 @@ zx_status_t QemuArm64::SysmemInit() {
   constexpr sysmem_metadata_t kSysmemMetadata = {
       .vid = PDEV_VID_QEMU,
       .pid = PDEV_PID_QEMU,
+      // no protected pool
       .protected_memory_size = 0,
-      .contiguous_memory_size = 0,
+      // -5 means 5% of physical RAM
+      .contiguous_memory_size = -5,
   };
 
   const pbus_metadata_t kSysmemMetadataList[] = {{

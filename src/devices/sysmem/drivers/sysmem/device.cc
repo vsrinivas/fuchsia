@@ -19,6 +19,7 @@
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
 #include <zircon/device/sysmem.h>
+#include <zircon/errors.h>
 
 #include <memory>
 #include <thread>
@@ -36,6 +37,29 @@ using sysmem_driver::MemoryAllocator;
 
 namespace sysmem_driver {
 namespace {
+
+// These defaults only take effect if there is no SYSMEM_METADATA, and also
+// neither of these kernel cmdline parameters set:
+// driver.sysmem.contiguous_memory_size
+// driver.sysmem.protected_memory_size
+//
+// Typically these defaults are overriden.
+//
+// By default there is no protected memory pool.
+constexpr int64_t kDefaultProtectedMemorySize = 0;
+// By default we pre-reserve 5% of physical memory for contiguous memory
+// allocation via sysmem.
+//
+// This is enough to allow tests in sysmem_tests.cc to pass, and avoids relying
+// on zx::vmo::create_contiguous() after early boot (by default), since it can
+// fail if physical memory has gotten too fragmented.
+constexpr int64_t kDefaultContiguousMemorySize = -5;
+
+// fbl::round_up() doesn't work on signed types.
+template <typename T>
+T AlignUp(T value, T divisor) {
+  return (value + divisor - 1) / divisor * divisor;
+}
 
 // Helper function to build owned HeapProperties table with coherency doman support.
 llcpp::fuchsia::sysmem2::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
@@ -258,22 +282,24 @@ Device::Device(zx_device_t* parent_device, Driver* parent_driver)
 }
 
 // static
-void Device::OverrideSizeFromCommandLine(const char* name, uint64_t* memory_size) {
+zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memory_size) {
   const char* pool_arg = getenv(name);
   if (!pool_arg || strlen(pool_arg) == 0)
-    return;
+    return ZX_OK;
   char* end = nullptr;
-  uint64_t override_size = strtoull(pool_arg, &end, 10);
+  int64_t override_size = strtoll(pool_arg, &end, 10);
   // Check that entire string was used and there isn't garbage at the end.
   if (*end != '\0') {
     DRIVER_ERROR("Ignoring flag %s with invalid size \"%s\"", name, pool_arg);
-    return;
+    return ZX_ERR_INVALID_ARGS;
   }
-  // Apply this alignment to contiguous pool as well, since it's small enough.
-  constexpr uint64_t kMinProtectedAlignment = 64 * 1024;
-  override_size = fbl::round_up(override_size, kMinProtectedAlignment);
   DRIVER_INFO("Flag %s overriding size to %ld", name, override_size);
+  if (override_size < -99) {
+    DRIVER_ERROR("Flag %s specified too-large percentage: %" PRId64, name, -override_size);
+    return ZX_ERR_INVALID_ARGS;
+  }
   *memory_size = override_size;
+  return ZX_OK;
 }
 
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
@@ -331,8 +357,8 @@ zx_status_t Device::Bind() {
     return status;
   }
 
-  uint64_t protected_memory_size = 0;
-  uint64_t contiguous_memory_size = 0;
+  int64_t protected_memory_size = kDefaultProtectedMemorySize;
+  int64_t contiguous_memory_size = kDefaultContiguousMemorySize;
 
   sysmem_metadata_t metadata;
 
@@ -345,8 +371,35 @@ zx_status_t Device::Bind() {
     contiguous_memory_size = metadata.contiguous_memory_size;
   }
 
-  OverrideSizeFromCommandLine("driver.sysmem.protected_memory_size", &protected_memory_size);
-  OverrideSizeFromCommandLine("driver.sysmem.contiguous_memory_size", &contiguous_memory_size);
+  status =
+      OverrideSizeFromCommandLine("driver.sysmem.protected_memory_size", &protected_memory_size);
+  if (status != ZX_OK) {
+    // OverrideSizeFromCommandLine() already printed an error.
+    return status;
+  }
+  status =
+      OverrideSizeFromCommandLine("driver.sysmem.contiguous_memory_size", &contiguous_memory_size);
+  if (status != ZX_OK) {
+    // OverrideSizeFromCommandLine() already printed an error.
+    return status;
+  }
+
+  // Negative values are interpreted as a percentage of physical RAM.
+  if (protected_memory_size < 0) {
+    protected_memory_size = -protected_memory_size;
+    ZX_DEBUG_ASSERT(protected_memory_size >= 1 && protected_memory_size <= 99);
+    protected_memory_size = zx_system_get_physmem() * protected_memory_size / 100;
+  }
+  if (contiguous_memory_size < 0) {
+    contiguous_memory_size = -contiguous_memory_size;
+    ZX_DEBUG_ASSERT(contiguous_memory_size >= 1 && contiguous_memory_size <= 99);
+    contiguous_memory_size = zx_system_get_physmem() * contiguous_memory_size / 100;
+  }
+
+  constexpr int64_t kMinProtectedAlignment = 64 * 1024;
+  static_assert(kMinProtectedAlignment % ZX_PAGE_SIZE == 0);
+  protected_memory_size = AlignUp(protected_memory_size, kMinProtectedAlignment);
+  contiguous_memory_size = AlignUp(contiguous_memory_size, static_cast<int64_t>(ZX_PAGE_SIZE));
 
   allocators_[llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM] =
       std::make_unique<SystemRamMemoryAllocator>();

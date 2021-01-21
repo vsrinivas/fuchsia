@@ -26,8 +26,10 @@ static const pbus_bti_t sysmem_btis[] = {
 static const sysmem_metadata_t sysmem_metadata = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
+    // no protected pool
     .protected_memory_size = 0,
-    .contiguous_memory_size = 0,
+    // -5 means 5% of physical RAM
+    .contiguous_memory_size = -5,
 };
 
 static const pbus_metadata_t sysmem_metadata_list[] = {{

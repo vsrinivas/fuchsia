@@ -54,35 +54,37 @@ class Device final : public DdkDeviceType,
  public:
   Device(zx_device_t* parent_device, Driver* parent_driver);
 
-  static void OverrideSizeFromCommandLine(const char* name, uint64_t* memory_size);
+  [[nodiscard]] static zx_status_t OverrideSizeFromCommandLine(const char* name,
+                                                               int64_t* memory_size);
 
-  zx_status_t Bind();
+  [[nodiscard]] zx_status_t Bind();
 
   //
   // The rest of the methods are only valid to call after Bind().
   //
 
   // SysmemProtocol implementation.
-  zx_status_t SysmemConnect(zx::channel allocator_request);
-  zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
-  zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
-  zx_status_t SysmemUnregisterSecureMem();
+  [[nodiscard]] zx_status_t SysmemConnect(zx::channel allocator_request);
+  [[nodiscard]] zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
+  [[nodiscard]] zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
+  [[nodiscard]] zx_status_t SysmemUnregisterSecureMem();
 
   // Ddk mixin implementations.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  [[nodiscard]] zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
   // MemoryAllocator::Owner implementation.
-  const zx::bti& bti() override;
-  zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
+  [[nodiscard]] const zx::bti& bti() override;
+  [[nodiscard]] zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size,
+                                              zx::vmo* vmo_out) override;
   void CheckForUnbind() override;
 
-  zx_status_t Connect(zx_handle_t allocator_request);
+  [[nodiscard]] zx_status_t Connect(zx_handle_t allocator_request);
 
-  uint32_t pdev_device_info_vid();
+  [[nodiscard]] uint32_t pdev_device_info_vid();
 
-  uint32_t pdev_device_info_pid();
+  [[nodiscard]] uint32_t pdev_device_info_pid();
 
   // Track/untrack the token by the koid of the server end of its FIDL
   // channel.  TrackToken() is only allowed after token->SerServerKoid().
@@ -94,30 +96,30 @@ class Device final : public DdkDeviceType,
   void UntrackToken(BufferCollectionToken* token);
 
   // Finds and removes token_server_koid from unfound_token_koids_.
-  bool TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid);
+  [[nodiscard]] bool TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid);
 
   // Find the BufferCollectionToken (if any) by the koid of the server end of
   // its FIDL channel.
-  BufferCollectionToken* FindTokenByServerChannelKoid(zx_koid_t token_server_koid);
+  [[nodiscard]] BufferCollectionToken* FindTokenByServerChannelKoid(zx_koid_t token_server_koid);
 
   // Get allocator for |settings|. Returns NULL if allocator is not
   // registered for settings.
-  MemoryAllocator* GetAllocator(
+  [[nodiscard]] MemoryAllocator* GetAllocator(
       const llcpp::fuchsia::sysmem2::BufferMemorySettings::Builder& settings);
 
   // Get heap properties of a specific memory heap allocator.
   //
   // Clients should guarantee that the heap is valid and already registered
   // to sysmem driver.
-  const llcpp::fuchsia::sysmem2::HeapProperties& GetHeapProperties(
+  [[nodiscard]] const llcpp::fuchsia::sysmem2::HeapProperties& GetHeapProperties(
       llcpp::fuchsia::sysmem2::HeapType heap) const;
 
-  const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
-  const zx_device_t* device() const { return zxdev_; }
-  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
+  [[nodiscard]] const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
+  [[nodiscard]] const zx_device_t* device() const { return zxdev_; }
+  [[nodiscard]] async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
   // Test hook
-  std::unordered_set<LogicalBufferCollection*>& logical_buffer_collections() {
+  [[nodiscard]] std::unordered_set<LogicalBufferCollection*>& logical_buffer_collections() {
     return logical_buffer_collections_;
   }
 
@@ -132,11 +134,11 @@ class Device final : public DdkDeviceType,
     CheckForUnbind();
   }
 
-  inspect::Node& collections_node() { return collections_node_; }
+  [[nodiscard]] inspect::Node& collections_node() { return collections_node_; }
 
   void set_settings(const Settings& settings) { settings_ = settings; }
 
-  const Settings& settings() const { return settings_; }
+  [[nodiscard]] const Settings& settings() const { return settings_; }
 
  private:
   class SecureMemConnection {

@@ -15,6 +15,7 @@
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 #include <zircon/device/sysmem.h>
+#include <zircon/errors.h>
 
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
@@ -88,25 +89,49 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
 
 TEST(Device, OverrideCommandLine) {
   const char* kCommandLine = "test.device.commandline";
+
+  int64_t value;
+  zx_status_t status;
+
+  value = 10;
   setenv(kCommandLine, "5", 1);
+  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  EXPECT_OK(status);
+  EXPECT_EQ(5, value);
 
-  uint64_t value = 4096;
-
-  Device::OverrideSizeFromCommandLine(kCommandLine, &value);
-  EXPECT_EQ(65536, value);
+  value = 11;
   setenv(kCommandLine, "65537", 1);
-  Device::OverrideSizeFromCommandLine(kCommandLine, &value);
-  EXPECT_EQ(65536 * 2, value);
+  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  EXPECT_OK(status);
+  EXPECT_EQ(65537, value);
 
   // Trailing characters should cause the entire value to be ignored.
+  value = 12;
   setenv(kCommandLine, "65536a", 1);
-  Device::OverrideSizeFromCommandLine(kCommandLine, &value);
-  EXPECT_EQ(65536 * 2, value);
+  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  EXPECT_EQ(12, value);
 
   // Empty values should be ignored.
+  value = 13;
   setenv(kCommandLine, "", 1);
-  Device::OverrideSizeFromCommandLine(kCommandLine, &value);
-  EXPECT_EQ(65536 * 2, value);
+  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  EXPECT_OK(status);
+  EXPECT_EQ(13, value);
+
+  // Negative values are allowed (these get interpreted as a percentage of physical RAM), but only
+  // up to 99% is allowed.
+  value = 14;
+  setenv(kCommandLine, "-100", 1);
+  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  EXPECT_EQ(14, value);
+
+  value = 15;
+  setenv(kCommandLine, "-99", 1);
+  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  EXPECT_OK(status);
+  EXPECT_EQ(-99, value);
 }
 
 class FakeDdkSysmem : public zxtest::Test {

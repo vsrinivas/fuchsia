@@ -15,9 +15,37 @@
 typedef struct {
   uint32_t vid;
   uint32_t pid;
-  uint64_t protected_memory_size;
-  // Size of the pool used to allocate contiguous memory.
-  uint64_t contiguous_memory_size;
+
+  // protected_memory_size
+  // contiguous_memory_size
+  //
+  // Positive values are interpreted as bytes, and are aligned up to next
+  // ZX_PAGE_SIZE.
+  //
+  // Negative values are interpreted as a percentage of physical memory (after
+  // negation), and resulting size in bytes is aligned up to next ZX_PAGE_SIZE.
+
+  // protected_memory_size
+  //
+  // Size of the protected memory pool.  See above for how this value is
+  // interpreted.
+  //
+  // 0 means there is no protected memory pool.
+  int64_t protected_memory_size;
+
+  // contiguous_memory_size
+  //
+  // Size of the pool used to allocate contiguous memory.  See above for how
+  // this value is interpreted.
+  //
+  // Zero means no space is reserved up front, which will end up using
+  // zx::vmo::create_contiguous() for each allocation instead of allocating up
+  // front, which can be prone to failure when physical memory becomes
+  // fragmented.
+  //
+  // There is no fallback from pre-reserved to zx::vmo::create_contiguous().
+  // If we're pre-reserving memory, we should reserve enough.
+  int64_t contiguous_memory_size;
 } sysmem_metadata_t;
 
 // TODO(fxbug.dev/32526): Deleting this file is blocked by banjo being able to consume
