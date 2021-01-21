@@ -4,16 +4,13 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_daemon_plugin") {
+ffx_plugin("ffx_daemon_log") {
   version = "0.1.0"
   edition = "2018"
-  plugin_deps = [
-    "crash:ffx_crash",
-    "echo:ffx_echo",
-    "log:ffx_daemon_log",
-    "start:ffx_daemon_start",
-    "stop:ffx_daemon_stop",
-  ]
+  deps = []
 
-  sources = [ "src/args.rs" ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }
