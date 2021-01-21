@@ -65,7 +65,7 @@ TEST(Extractor, CreateFailureWithInvalidFd) {
   fbl::unique_fd out;
   auto extractor = Extractor::Create(std::move(in), options, std::move(out));
   ASSERT_TRUE(extractor.is_error());
-  ASSERT_EQ(extractor.error_value(), ZX_ERR_IO);
+  ASSERT_EQ(extractor.error_value(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Extractor, Create) {

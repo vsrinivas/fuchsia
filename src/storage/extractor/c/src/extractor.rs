@@ -63,7 +63,7 @@ pub extern "C" fn extractor_new(
     out_fd: c_int,
     out_extractor: *mut *mut Extractor,
 ) -> CResult {
-    if out_extractor.is_null() || options.alignment == 0 {
+    if out_extractor.is_null() || options.alignment == 0 || in_fd == -1 || out_fd == -1 {
         return CResult::from(Error::InvalidArgument);
     }
 
