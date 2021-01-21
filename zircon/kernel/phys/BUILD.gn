@@ -169,5 +169,8 @@ if (toolchain.environment == "kernel.phys" ||
 
 group("tests") {
   testonly = true
-  deps = [ "test" ]
+  deps = [
+    "lib:tests",
+    "test",
+  ]
 }
