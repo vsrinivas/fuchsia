@@ -27,13 +27,13 @@ using GetHardwareDerivedKeyCallback =
 zx_status_t GetHardwareDerivedKey(GetHardwareDerivedKeyCallback callback,
                                   uint8_t key_info[kExpectedKeyInfoSize]);
 
-// Get a hardware derived key using the service fuchsia.tee.Device .
+// Get a hardware derived key using the service fuchsia.tee.Application .
 // This should be used from components.
 zx_status_t GetHardwareDerivedKeyFromService(GetHardwareDerivedKeyCallback callback,
                                              uint8_t key_info[kExpectedKeyInfoSize]);
 
 // Rotate an existing hardware derived key identified by `key_info` using the service
-// fuchsia.tee.Device.
+// fuchsia.tee.Application.
 //
 // This should be used from components.
 zx_status_t RotateHardwareDerivedKeyFromService(uint8_t key_info[kExpectedKeyInfoSize]);

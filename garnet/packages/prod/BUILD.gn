@@ -474,10 +474,7 @@ group("sysmem_connector") {
 }
 
 group("tee_manager") {
-  public_deps = [
-    "//src/security/tee_manager",
-    "//src/security/tee_manager:config",
-  ]
+  public_deps = [ "//src/security/tee_manager" ]
 }
 
 group("telephony") {
