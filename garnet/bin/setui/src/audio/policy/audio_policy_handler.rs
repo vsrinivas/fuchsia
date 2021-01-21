@@ -169,9 +169,17 @@ impl PolicyHandler for AudioPolicyHandler {
         }
     }
 
-    async fn handle_setting_event(&mut self, _event: SettingEvent) -> Option<EventTransform> {
-        // TODO(fxbug.dev/60367): implement policy transforms
-        None
+    async fn handle_setting_event(&mut self, event: SettingEvent) -> Option<EventTransform> {
+        match event {
+            SettingEvent::Changed(SettingInfo::Audio(audio_info)) => {
+                // The setting changed in response to a Set. Note that this is event is not sent if
+                // there are no active listeners.
+                Some(EventTransform::Event(SettingEvent::Changed(SettingInfo::Audio(
+                    self.transform_internal_audio_info(audio_info),
+                ))))
+            }
+            _ => None,
+        }
     }
 }
 

@@ -22,7 +22,9 @@ use crate::internal::core::message::Receptor;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::base::{response::Payload, Request};
-use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, RequestTransform};
+use crate::policy::policy_handler::{
+    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
+};
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use crate::tests::message_utils::verify_payload;
 use fuchsia_async::Task;
@@ -909,4 +911,45 @@ async fn test_handler_min_and_max_volume_policy_scales_gets() {
         // Get requests have the expected volume level after passing through the policy handler.
         get_and_verify_media_volume(&mut env, internal_volume_level, expected_volume_level).await;
     }
+}
+
+/// Verifies that the handler scales setting events based on volume limits.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_transforms_setting_events() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    let max_volume = 0.6;
+
+    let starting_audio_stream = AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: max_volume,
+        user_volume_muted: false,
+    };
+
+    // Starting audio info has user volume at 60% volume.
+    starting_audio_info.replace_stream(starting_audio_stream.clone());
+
+    // Set the max volume limit to 60%.
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
+
+    let transform_result = env
+        .handler
+        .handle_setting_event(SettingEvent::Changed(SettingInfo::Audio(
+            starting_audio_info.clone(),
+        )))
+        .await;
+
+    // Since the max matches the starting volume, the transformed external volume should be 100%.
+    let mut expected_audio_info = starting_audio_info.clone();
+    let mut expected_audio_stream = starting_audio_stream.clone();
+    expected_audio_stream.user_volume_level = 1.0;
+    expected_audio_info.replace_stream(expected_audio_stream);
+
+    assert_eq!(
+        transform_result,
+        Some(EventTransform::Event(SettingEvent::Changed(SettingInfo::Audio(expected_audio_info))))
+    );
 }

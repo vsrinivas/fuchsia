@@ -76,8 +76,6 @@ pub enum RequestTransform {
 /// [`PolicyHandler`]: trait.PolicyHandler.html
 /// [`PolicyProxy`]: ../policy_proxy/struct.PolicyProxy.html
 ///
-// TODO(fxbug.dev/60367): remove when used
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum EventTransform {
     /// A new, modified event that should be forwarded to the switchboard for processing.
