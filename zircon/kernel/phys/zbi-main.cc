@@ -15,6 +15,7 @@
 #include <ktl/span.h>
 
 #include "main.h"
+#include "memory.h"
 
 FILE FILE::stdout_;
 

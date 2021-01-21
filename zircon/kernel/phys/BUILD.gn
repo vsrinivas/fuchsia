@@ -125,6 +125,7 @@ if (toolchain.environment == "kernel.phys" ||
   # This is used implicitly by zbi_executable() targets.
   source_set("zbi_executable.deps") {
     sources = [
+      "memory.cc",
       "zbi-header.S",
       "zbi-main.cc",
     ]
@@ -132,6 +133,7 @@ if (toolchain.environment == "kernel.phys" ||
       ":main",
       "$zx/kernel/lib/arch",
       "$zx/kernel/lib/boot-options",
+      "$zx/kernel/phys/lib/memalloc",
       "$zx/system/ulib/uart",
       "$zx/system/ulib/zbitl",
     ]

@@ -14,6 +14,7 @@
 #include <ktl/byte.h>
 #include <ktl/span.h>
 
+#include "../memory.h"
 #include "test-main.h"
 
 const char Symbolize::kProgramName_[] = "decompress-test";
