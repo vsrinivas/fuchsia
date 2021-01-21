@@ -11,7 +11,7 @@ import os
 import shlex
 import subprocess
 import sys
-from typing import AbstractSet, Collection, FrozenSet, Iterable, Sequence, Tuple
+from typing import AbstractSet, Collection, FrozenSet, Iterable, Optional, Sequence, Tuple
 
 
 class FileAccessType(enum.Enum):
@@ -140,37 +140,82 @@ def parse_fsatrace_output(fsatrace_lines: Iterable[str]) -> Iterable[FSAccess]:
         _parse_fsatrace_line(line) for line in fsatrace_lines)
 
 
-@dataclasses.dataclass
-class AccessTraceChecker(object):
-    """Validates a sequence of file system accesses against constraints.
-    """
+def _abspaths(container: Iterable[str]) -> AbstractSet[str]:
+    return {os.path.abspath(f) for f in container}
 
-    # These are explicitly allowed accesses that are checked once the
-    # above criteria are met.
+
+@dataclasses.dataclass
+class AccessConstraints(object):
+    """Set of file system accesses constraints."""
     allowed_reads: FrozenSet[str] = dataclasses.field(default_factory=set)
     allowed_writes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    required_writes: FrozenSet[str] = dataclasses.field(default_factory=set)
 
-    def check_accesses(self,
-                       accesses: Iterable[FSAccess]) -> Sequence[FSAccess]:
-        """Checks a sequence of access against constraints.
 
-        Accesses outside of required_path_prefix are ignored.
-        Accesses to paths that match any of the ignored_* properties will be ignored.
-        All other accesses are checked against allowed_reads and allowed_writes.
+@dataclasses.dataclass
+class Action(object):
+    """Represents a set of parameters of a single build action."""
+    script: str
+    inputs: Sequence[str] = dataclasses.field(default_factory=list)
+    outputs: Collection[str] = dataclasses.field(default_factory=list)
+    sources: Sequence[str] = dataclasses.field(default_factory=list)
+    depfile: Optional[str] = None
+    response_file_name: Optional[str] = None
 
-        Args:
-          accesses: stream of file-system accesses
+    def access_constraints(self) -> AccessConstraints:
+        """Build AccessConstraints from action attributes."""
+        # Action is required to write outputs and depfile, if provided.
+        required_writes = {path for path in self.outputs}
 
-        Returns:
-          access violations (in the order they were encountered)
-        """
-        unexpected_accesses = [
-            access for access in accesses
-            if not access.allowed(self.allowed_reads, self.allowed_writes)
-        ]
+        # Paths that the action is allowed to write.
+        # Actions may touch files other than their listed outputs.
+        allowed_writes = required_writes.copy()
 
-        # TODO(fangism): track state of files across moves
-        return unexpected_accesses
+        depfile_ins = set()
+        if self.depfile and os.path.exists(self.depfile):
+            # Writing the depfile is not required (yet), but allowed.
+            allowed_writes.add(self.depfile)
+            with open(self.depfile, "r") as f:
+                depfile = parse_depfile(f)
+
+            depfile_ins = depfile.all_ins
+            # TODO(fangism): disallow writes to (depfile) inputs
+            allowed_writes.update(depfile.all_ins)
+            allowed_writes.update(depfile.all_outs)
+
+        # Everything writeable is readable.
+        allowed_reads = {
+            path for path in [self.script] + self.inputs + self.sources
+        } | depfile_ins | allowed_writes
+
+        if self.response_file_name:
+            allowed_reads.add(self.response_file_name)
+
+        return AccessConstraints(
+            allowed_reads=_abspaths(allowed_reads),
+            allowed_writes=_abspaths(allowed_writes),
+            required_writes=_abspaths(required_writes))
+
+
+def check_access_permissions(
+        accesses: Iterable[FSAccess],
+        allowed_reads: FrozenSet[str] = {},
+        allowed_writes: FrozenSet[str] = {}) -> Sequence[FSAccess]:
+    """Checks a sequence of accesses against permission constraints.
+
+    Args:
+      accesses: stream of file-system accesses
+
+    Returns:
+      access violations (in the order they were encountered)
+    """
+    unexpected_accesses = [
+        access for access in accesses
+        if not access.allowed(allowed_reads, allowed_writes)
+    ]
+
+    # TODO(fangism): track state of files across moves
+    return unexpected_accesses
 
 
 def check_missing_writes(
@@ -201,9 +246,7 @@ class DepEdges(object):
     outs: FrozenSet[str] = dataclasses.field(default_factory=set)
 
     def abspaths(self) -> "DepEdges":
-        return DepEdges(
-            ins={os.path.abspath(p) for p in self.ins},
-            outs={os.path.abspath(p) for p in self.outs})
+        return DepEdges(ins=_abspaths(self.ins), outs=_abspaths(self.outs))
 
 
 def parse_dep_edges(depfile_line: str) -> DepEdges:
@@ -321,35 +364,15 @@ def main():
         if os.path.basename(args.args[1]) in ignored_compiled_actions:
             return 0
 
-    # TODO(fangism): factor out logic for allowed/required calculation for
-    # testability (before the ignored_* section).
-
-    # Action is required to write outputs and depfile, if provided.
-    required_writes = {os.path.abspath(path) for path in args.outputs}
-
-    # Paths that the action is allowed to write.
-    # Actions may touch files other than their listed outputs.
-    allowed_writes = required_writes.copy()
-
-    depfile_ins = []
-    if args.depfile and os.path.exists(args.depfile):
-        # Writing the depfile is not required (yet), but allowed.
-        allowed_writes.add(os.path.abspath(args.depfile))
-        with open(args.depfile, "r") as f:
-            depfile = parse_depfile(f)
-
-        depfile_ins = depfile.all_ins
-        allowed_writes.update(depfile.all_ins)  # TODO(fangism): allowed_reads?
-        allowed_writes.update(depfile.all_outs)
-
-    # Everything writeable is readable.
-    allowed_reads = {
-        os.path.abspath(path)
-        for path in [args.script] + args.inputs + args.sources + depfile_ins
-    } | allowed_writes
-
-    if args.response_file_name:
-        allowed_reads.add(os.path.abspath(response_file_name))
+    # Compute constraints from action properties (from args).
+    action = Action(
+        script=args.script,
+        inputs=args.inputs,
+        outputs=args.outputs,
+        sources=args.sources,
+        depfile=args.depfile,
+        response_file_name=args.response_file_name)
+    access_constraints = action.access_constraints()
 
     # Limit most access checks to files under src_root.
     src_root = os.path.dirname(os.path.dirname(os.getcwd()))
@@ -391,14 +414,14 @@ def main():
     ]
 
     # Verify the filesystem access trace.
-    checker = AccessTraceChecker(
-        allowed_reads=allowed_reads,
-        allowed_writes=allowed_writes,
-    )
-    unexpected_accesses = checker.check_accesses(filtered_accesses)
+    unexpected_accesses = check_access_permissions(
+        filtered_accesses,
+        allowed_reads=access_constraints.allowed_reads,
+        allowed_writes=access_constraints.allowed_writes)
 
     # Verify that outputs are written as promised.
-    missing_writes = check_missing_writes(filtered_accesses, required_writes)
+    missing_writes = check_missing_writes(
+        filtered_accesses, access_constraints.required_writes)
 
     # Check for overall correctness, print diagnostics,
     # and exit with the right code.
@@ -422,7 +445,8 @@ See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
         exit_code = 1
 
     if missing_writes:
-        required_writes_formatted = "\n".join(required_writes)
+        required_writes_formatted = "\n".join(
+            access_constraints.required_writes)
         missing_writes_formatted = "\n".join(missing_writes)
         print(
             f"""
@@ -435,6 +459,9 @@ Required writes:
 
 Missing writes:
 {missing_writes_formatted}
+
+Full access trace:
+{raw_trace}
 
 See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op
 

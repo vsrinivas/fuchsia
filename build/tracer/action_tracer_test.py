@@ -3,8 +3,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import unittest
 from unittest import mock
+
+from typing import AbstractSet, Iterable
 
 import action_tracer
 
@@ -258,39 +261,34 @@ class CheckAccessAllowedTests(unittest.TestCase):
                 allowed_reads={}, allowed_writes={}))
 
 
-# No required prefix, no ignore affixes, no allowed accesses.
-_default_checker = action_tracer.AccessTraceChecker(
-    allowed_reads={}, allowed_writes={})
-
-
-class AccessTraceCheckerTests(unittest.TestCase):
+class CheckAccessPermissionsTests(unittest.TestCase):
 
     def test_no_accesses(self):
         self.assertEqual(
-            _default_checker.check_accesses([]),
+            action_tracer.check_access_permissions([]),
             [],
         )
 
     def test_ok_read(self):
-        checker = action_tracer.AccessTraceChecker(
-            allowed_reads={"readable.txt"})
         self.assertEqual(
-            checker.check_accesses([action_tracer.Read("readable.txt")]),
+            action_tracer.check_access_permissions(
+                [action_tracer.Read("readable.txt")],
+                allowed_reads={"readable.txt"}),
             [],
         )
 
     def test_forbidden_read(self):
         read = action_tracer.Read("unreadable.txt")
         self.assertEqual(
-            _default_checker.check_accesses([read]),
+            action_tracer.check_access_permissions([read]),
             [read],
         )
 
     def test_ok_write(self):
-        checker = action_tracer.AccessTraceChecker(
-            allowed_writes={"writeable.txt"})
         self.assertEqual(
-            checker.check_accesses([action_tracer.Write("writeable.txt")]),
+            action_tracer.check_access_permissions(
+                [action_tracer.Write("writeable.txt")],
+                allowed_writes={"writeable.txt"}),
             [],
         )
 
@@ -301,7 +299,7 @@ class AccessTraceCheckerTests(unittest.TestCase):
             action_tracer.Write("you-shall-not-pass.txt"),
         ]
         self.assertEqual(
-            _default_checker.check_accesses(bad_writes),
+            action_tracer.check_access_permissions(bad_writes),
             bad_writes,
         )
 
@@ -385,6 +383,68 @@ class CheckMissingWritesTests(unittest.TestCase):
             ),
             set(),
         )
+
+
+def abspaths(container: Iterable[str]) -> AbstractSet[str]:
+    return {os.path.abspath(f) for f in container}
+
+
+class AccessConstraintsTests(unittest.TestCase):
+
+    def test_empty_action(self):
+        action = action_tracer.Action(script="script.sh")
+        self.assertEqual(
+            action.access_constraints(),
+            action_tracer.AccessConstraints(
+                allowed_reads=abspaths({"script.sh"})))
+
+    def test_have_inputs(self):
+        action = action_tracer.Action(
+            script="script.sh", inputs=["input.txt", "main.cc"])
+        self.assertEqual(
+            action.access_constraints(),
+            action_tracer.AccessConstraints(
+                allowed_reads=abspaths({"script.sh", "input.txt", "main.cc"})))
+
+    def test_have_outputs(self):
+        action = action_tracer.Action(script="script.sh", outputs=["main.o"])
+        self.assertEqual(
+            action.access_constraints(),
+            action_tracer.AccessConstraints(
+                allowed_reads=abspaths({"script.sh", "main.o"}),
+                allowed_writes=abspaths({"main.o"}),
+                required_writes=abspaths({"main.o"})))
+
+    def test_have_sources(self):
+        action = action_tracer.Action(
+            script="script.sh", sources=["input.src", "main.h"])
+        self.assertEqual(
+            action.access_constraints(),
+            action_tracer.AccessConstraints(
+                allowed_reads=abspaths({"script.sh", "input.src", "main.h"})))
+
+    def test_have_response_file(self):
+        action = action_tracer.Action(
+            script="script.sh", response_file_name="response.out")
+        self.assertEqual(
+            action.access_constraints(),
+            action_tracer.AccessConstraints(
+                allowed_reads=abspaths({"script.sh", "response.out"})))
+
+    def test_have_depfile(self):
+        action = action_tracer.Action(script="script.sh", depfile="foo.d")
+        with mock.patch.object(os.path, 'exists',
+                               return_value=True) as mock_exists:
+            with mock.patch("builtins.open", mock.mock_open(
+                    read_data="foo.o: foo.cc foo.h\n")) as mock_file:
+                constraints = action.access_constraints()
+
+        self.assertEqual(
+            constraints,
+            action_tracer.AccessConstraints(
+                allowed_reads=abspaths(
+                    {"script.sh", "foo.d", "foo.o", "foo.cc", "foo.h"}),
+                allowed_writes=abspaths({"foo.d", "foo.o", "foo.cc", "foo.h"})))
 
 
 if __name__ == '__main__':
