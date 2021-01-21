@@ -18,10 +18,7 @@ rustc_library("mock-reboot") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  test_deps = [
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:parking_lot",
-  ]
+  test_deps = [ "//src/lib/zircon/rust:fuchsia-zircon" ]
 
   sources = [ "src/lib.rs" ]
 }
