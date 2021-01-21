@@ -273,7 +273,9 @@ int main(int argc, char** argv) {
       type = ICMP6_ECHO_REQUEST;
       char buf[INET6_ADDRSTRLEN];
       auto addr = reinterpret_cast<struct sockaddr_in6*>(info->ai_addr);
-      addr->sin6_scope_id = options.scope_id;
+      if (options.scope_id > 0) {
+        addr->sin6_scope_id = options.scope_id;
+      }
       printf("PING6 %s (%s)\n", options.host,
              inet_ntop(info->ai_family, &addr->sin6_addr, buf, sizeof(buf)));
       break;
