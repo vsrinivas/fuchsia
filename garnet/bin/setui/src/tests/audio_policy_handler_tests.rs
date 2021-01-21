@@ -9,24 +9,40 @@ use crate::audio::policy::{
     TransformFlags,
 };
 use crate::audio::types::AudioStreamType;
-use crate::base::SettingType;
+use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream};
+use crate::base::{SettingInfo, SettingType};
+use crate::handler::base::Request as SettingRequest;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::{
     DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
 };
 use crate::internal::core;
+use crate::internal::core::message::Receptor;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::base::{response::Payload, Request};
 use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler};
+use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
+use crate::tests::message_utils::verify_payload;
+use fuchsia_async::Task;
 use futures::lock::Mutex;
 use matches::assert_matches;
+use std::borrow::BorrowMut;
 use std::sync::Arc;
 
 const CONTEXT_ID: u64 = 0;
 
 struct TestEnvironment {
+    /// Device storage handle.
     store: Arc<Mutex<DeviceStorage<State>>>,
+
+    /// Receptor representing the setting proxy.
+    setting_proxy_receptor: Arc<Mutex<Receptor>>,
+
+    /// Receptor representing the switchboard.
+    switchboard_receptor: Arc<Mutex<Receptor>>,
+
+    /// A newly created AudioPolicyHandler.
     handler: AudioPolicyHandler,
 }
 
@@ -71,6 +87,10 @@ async fn create_handler_test_environment() -> TestEnvironment {
         .create(MessengerType::Unbound)
         .await
         .expect("setting proxy messenger created");
+    let (_, switchboard_receptor) = core_messenger_factory
+        .create(MessengerType::Addressable(core::Address::Switchboard))
+        .await
+        .expect("switchboard messenger created");
     let storage_factory = InMemoryStorageFactory::create();
     let store = storage_factory.lock().await.get_store::<State>(CONTEXT_ID);
     let client_proxy = ClientProxy::new(
@@ -83,7 +103,96 @@ async fn create_handler_test_environment() -> TestEnvironment {
     let handler =
         AudioPolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
 
-    TestEnvironment { store, handler }
+    TestEnvironment {
+        store,
+        setting_proxy_receptor: Arc::new(Mutex::new(setting_proxy_receptor)),
+        switchboard_receptor: Arc::new(Mutex::new(switchboard_receptor)),
+        handler,
+    }
+}
+
+/// Starts a task that continuously watches for get requests on the given receptor and replies with
+/// the given audio info.
+fn serve_audio_info(setting_proxy_receptor: Arc<Mutex<Receptor>>, audio_info: AudioInfo) {
+    Task::spawn(async move {
+        match setting_proxy_receptor.lock().await.next_payload().await {
+            Ok((
+                core::Payload::Action(SettingAction {
+                    id: request_id,
+                    setting_type: SettingType::Audio,
+                    data: SettingActionData::Request(SettingRequest::Get),
+                }),
+                message_client,
+            )) => {
+                message_client
+                    .reply(core::Payload::Event(SettingEvent::Response(
+                        request_id,
+                        Ok(Some(SettingInfo::Audio(audio_info))),
+                    )))
+                    .send();
+            }
+            _ => {}
+        }
+    })
+    .detach();
+}
+
+/// Adds a media volume limit to the handler in the test environment. Automatically handles a Get
+/// request for the current audio info, which happens whenever policies are modified.
+async fn set_media_volume_limit(
+    env: &mut TestEnvironment,
+    transform: Transform,
+    audio_info: AudioInfo,
+) -> PolicyId {
+    // Start task to provide audio info to the handler, which it requests when policies are
+    // modified.
+    serve_audio_info(env.setting_proxy_receptor.clone(), audio_info);
+
+    // Add the policy to the handler.
+    let policy_response = env
+        .handler
+        .handle_policy_request(Request::Audio(audio::Request::AddPolicy(
+            AudioStreamType::Media,
+            transform,
+        )))
+        .await
+        .expect("add policy succeeds");
+
+    if let Payload::Audio(Response::Policy(policy_id)) = policy_response {
+        policy_id
+    } else {
+        panic!("Policy ID not returned from set");
+    }
+}
+
+/// Verifies that the setting proxy in the test environment received a set request for media volume.
+async fn verify_media_volume_set(env: &mut TestEnvironment, volume_level: f32) {
+    verify_payload(
+        core::Payload::Action(SettingAction {
+            id: 0,
+            setting_type: SettingType::Audio,
+            data: SettingActionData::Request(SettingRequest::SetVolume(vec![AudioStream {
+                stream_type: AudioStreamType::Media,
+                source: AudioSettingSource::User,
+                user_volume_level: volume_level,
+                user_volume_muted: false,
+            }])),
+        }),
+        env.setting_proxy_receptor.lock().await.borrow_mut(),
+        None,
+    )
+    .await;
+}
+
+/// Verifies that the switchboard in the test environment received a changed notification with the
+/// given audio info.
+async fn verify_media_volume_changed(env: &mut TestEnvironment, audio_info: AudioInfo) {
+    verify_payload(
+        core::Payload::Event(SettingEvent::Changed(SettingInfo::Audio(audio_info))),
+        env.switchboard_receptor.lock().await.borrow_mut(),
+        None,
+    )
+    .await;
 }
 
 /// Verifies that the audio policy handler restores to a default state with all stream types when no
@@ -144,6 +253,9 @@ async fn test_handler_restore_persisted_state() {
     // Write the "persisted" value to storage for the handler to read on start.
     store.lock().await.write(&persisted_state, false).await.expect("write failed");
 
+    // Start task to provide audio info to the handler, which it requests at startup.
+    serve_audio_info(Arc::new(Mutex::new(setting_proxy_receptor)), default_audio_info());
+
     let mut handler =
         AudioPolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
 
@@ -173,6 +285,10 @@ async fn test_handler_add_policy() {
     let modified_property = AudioStreamType::Media;
 
     let mut env = create_handler_test_environment().await;
+
+    // Start task to provide audio info to the handler, which it requests when policies are
+    // modified.
+    serve_audio_info(env.setting_proxy_receptor.clone(), default_audio_info());
 
     // Add a policy transform.
     let payload = env
@@ -230,6 +346,10 @@ async fn test_handler_remove_policy() {
 
     let mut env = create_handler_test_environment().await;
 
+    // Start task to provide audio info to the handler, which it requests when policies are
+    // modified.
+    serve_audio_info(env.setting_proxy_receptor.clone(), default_audio_info());
+
     // Add a policy transform.
     let payload = env
         .handler
@@ -243,6 +363,10 @@ async fn test_handler_remove_policy() {
         Payload::Audio(Response::Policy(policy_id)) => policy_id,
         _ => panic!("unexpected response"),
     };
+
+    // Start task to provide audio info to the handler, which it requests when policies are
+    // modified.
+    serve_audio_info(env.setting_proxy_receptor.clone(), default_audio_info());
 
     // Remove the added transform
     let payload = env
@@ -266,4 +390,220 @@ async fn test_handler_remove_policy() {
 
     // Verify that the expected value is persisted to storage.
     assert_eq!(env.store.lock().await.get().await, expected_value);
+}
+
+/// Verifies that adding a max volume policy adjusts the internal volume level if it's above the
+/// new max.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_add_policy_modifies_internal_volume_above_max() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has user volume at max volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 1.0,
+        user_volume_muted: false,
+    });
+
+    // Set the max volume limit to 60%.
+    let max_volume = 0.6;
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+
+    // Handler requests that the setting handler set the volume to 60% (the max set by policy).
+    verify_media_volume_set(&mut env, max_volume).await;
+}
+
+/// Verifies that adding a min volume policy adjusts the internal volume level if it's below the
+/// new min.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_add_policy_modifies_internal_volume_below_min() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has user volume at 0%.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.0,
+        user_volume_muted: false,
+    });
+
+    // Set the min volume limit to 40%.
+    let min_volume = 0.4;
+    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
+
+    // Handler requests that the setting handler set the volume to 40% (the min set by policy).
+    verify_media_volume_set(&mut env, min_volume).await;
+}
+
+/// Verifies that the internal volume will not be adjusted when it's already within policy limits.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has user volume at 50%.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.5,
+        user_volume_muted: false,
+    });
+
+    // Set the min volume limit to 40%.
+    set_media_volume_limit(&mut env, Transform::Min(0.4), starting_audio_info.clone()).await;
+
+    // Set the max volume limit to 60%.
+    set_media_volume_limit(&mut env, Transform::Max(0.6), starting_audio_info.clone()).await;
+
+    // So far, no set requests should have been sent to the setting proxy, set the min volume limit
+    // to 55% to ensure that the first set request the setting proxy receives is this one.
+    set_media_volume_limit(&mut env, Transform::Min(0.55), starting_audio_info).await;
+
+    // Handler requests that the setting handler set the volume to 55% (the min set by policy).
+    verify_media_volume_set(&mut env, 0.55).await;
+}
+
+/// Verifies that when a max volume policy is removed, the switchboard will receive a changed event
+/// with the new external volume.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_remove_policy_notifies_switchboard() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    let max_volume = 0.6;
+
+    // Starting audio info has user volume at 60% volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: max_volume,
+        user_volume_muted: false,
+    });
+
+    // Set the max volume limit to 60%.
+    let policy_id =
+        set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone())
+            .await;
+
+    // Since the max matches the starting volume, the new external volume should be 100%.
+    let mut changed_audio_info = starting_audio_info.clone();
+    changed_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 1.0,
+        user_volume_muted: false,
+    });
+
+    // The internal volume didn't change but the external volume did, so the handler manually sends
+    // a changed even to the switchboard.
+    verify_media_volume_changed(&mut env, changed_audio_info.clone()).await;
+
+    // Start task to provide audio info to the handler, which it requests when policies are
+    // modified.
+    serve_audio_info(env.setting_proxy_receptor.clone(), starting_audio_info.clone());
+
+    // Remove the policy from the handler.
+    env.handler
+        .handle_policy_request(Request::Audio(audio::Request::RemovePolicy(policy_id)))
+        .await
+        .expect("remove policy succeeds");
+
+    // The internal volume didn't change but the external volume should be back at the original
+    // values.
+    verify_media_volume_changed(&mut env, starting_audio_info).await;
+}
+
+/// Verifies that when multiple max volume policies are in place, that the most strict one applies.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_lowest_max_limit_applies_internally() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has user volume at max volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 1.0,
+        user_volume_muted: false,
+    });
+
+    // Add a policy transform to limit the max media volume to 60%.
+    let max_volume = 0.6;
+    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
+
+    // Handler requests that the setting handler set the volume to 60% (the max set by policy).
+    verify_media_volume_set(&mut env, max_volume).await;
+
+    // Internal audio level should now be at 60%.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: max_volume,
+        user_volume_muted: false,
+    });
+
+    // Add a higher limit, which won't result in a new set request.
+    set_media_volume_limit(&mut env, Transform::Max(0.7), starting_audio_info.clone()).await;
+
+    // Add a lower limit, which will cause a new set request.
+    let lower_max_volume = 0.5;
+    set_media_volume_limit(&mut env, Transform::Max(lower_max_volume), starting_audio_info.clone())
+        .await;
+
+    // Handler requests that the setting handler set the volume to 50% (the lowest max).
+    verify_media_volume_set(&mut env, lower_max_volume).await;
+}
+
+/// Verifies that when multiple min volume policies are in place, that the most strict one applies.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_highest_min_limit_applies_internally() {
+    let mut env = create_handler_test_environment().await;
+
+    let mut starting_audio_info = default_audio_info();
+
+    // Starting audio info has user volume at 0% volume.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: 0.0,
+        user_volume_muted: false,
+    });
+
+    // Add a policy transform to limit the min media volume to 30%.
+    let min_volume = 0.3;
+    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info.clone()).await;
+
+    // Handler requests that the setting handler set the volume to 30% (the max set by policy).
+    verify_media_volume_set(&mut env, min_volume).await;
+
+    // Internal audio level should now be at 30%.
+    starting_audio_info.replace_stream(AudioStream {
+        stream_type: AudioStreamType::Media,
+        source: AudioSettingSource::User,
+        user_volume_level: min_volume,
+        user_volume_muted: false,
+    });
+
+    // Add a lower limit, which won't result in a new set request.
+    set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info.clone()).await;
+
+    // Add a higher limit, which will cause a new set request.
+    let higher_min_volume = 0.4;
+    set_media_volume_limit(
+        &mut env,
+        Transform::Min(higher_min_volume),
+        starting_audio_info.clone(),
+    )
+    .await;
+
+    // Handler requests that the setting handler set the volume to 40% (the highest min).
+    verify_media_volume_set(&mut env, higher_min_volume).await;
 }

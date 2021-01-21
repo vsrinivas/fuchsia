@@ -38,7 +38,6 @@ pub mod response {
     /// The possible errors that can be returned from a request. Note that
     /// unlike the request and response space, errors are not type specific.
     #[derive(Error, Debug, Clone, PartialEq)]
-    #[allow(dead_code)]
     pub enum Error {
         #[error("Unexpected error")]
         Unexpected,
@@ -89,6 +88,6 @@ pub enum PolicyHandlerFactoryError {
     #[error("Cannot find setting handler generator for {0:?}")]
     GeneratorNotFound(SettingType),
 
-    #[error("Setting handler for {0:?} failed to startup")]
+    #[error("Policy handler for {0:?} failed to startup")]
     HandlerStartupError(SettingType),
 }

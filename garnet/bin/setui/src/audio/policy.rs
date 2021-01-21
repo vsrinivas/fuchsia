@@ -38,8 +38,6 @@ pub struct StateBuilder {
     properties: HashMap<PropertyTarget, Property>,
 }
 
-// TODO(fxbug.dev/60963): remove once used
-#[allow(dead_code)]
 impl StateBuilder {
     pub fn new() -> Self {
         Self { properties: HashMap::new() }
@@ -79,18 +77,20 @@ impl State {
         &mut self.properties
     }
 
-    /// Attempts to remove the policy with the given ID from the state. Returns the policy if it
-    /// was found and removed, else returns None.
-    pub fn remove_policy(&mut self, policy_id: PolicyId) -> Option<Policy> {
-        for property in self.properties.values_mut() {
-            match property.remove_policy(policy_id) {
-                Some(policy) => {
-                    return Some(policy);
-                }
-                None => {}
-            }
-        }
-        None
+    /// Attempts to find the policy with the given ID from the state. Returns the policy target if
+    /// it was found and removed, else returns None.
+    pub fn find_policy_target(&self, policy_id: PolicyId) -> Option<PropertyTarget> {
+        self.properties
+            .values()
+            .find_map(|property| property.find_policy(policy_id).map(|_| property.target))
+    }
+
+    /// Attempts to remove the policy with the given ID from the state. Returns the policy target if
+    /// it was found and removed, else returns None.
+    pub fn remove_policy(&mut self, policy_id: PolicyId) -> Option<PropertyTarget> {
+        self.properties
+            .values_mut()
+            .find_map(|property| property.remove_policy(policy_id).map(|_| property.target))
     }
 }
 
@@ -109,8 +109,6 @@ pub struct Property {
     /// Identifier used to reference this type over other requests, such as
     /// setting a policy.
     pub target: PropertyTarget,
-    /// The stream type uniquely identifies the type of stream.
-    pub stream_type: AudioStreamType,
     /// The available transforms provided as a bitmask.
     pub available_transforms: TransformFlags,
     /// The active transform definitions on this stream type.
@@ -119,7 +117,7 @@ pub struct Property {
 
 impl Property {
     pub fn new(stream_type: AudioStreamType, available_transforms: TransformFlags) -> Self {
-        Self { target: stream_type, stream_type, available_transforms, active_policies: vec![] }
+        Self { target: stream_type, available_transforms, active_policies: vec![] }
     }
 
     /// Adds the given transform to this property and returns its PolicyId.
@@ -135,6 +133,12 @@ impl Property {
         policy_id
     }
 
+    /// Attempts to find the policy with the given ID in this property. Returns the policy if it
+    /// was found, else returns None.
+    pub fn find_policy(&self, policy_id: PolicyId) -> Option<Policy> {
+        self.active_policies.iter().find(|policy| policy.id == policy_id).copied()
+    }
+
     /// Attempts to remove the policy with the given ID from this property. Returns the policy if it
     /// was found and removed, else returns None.
     pub fn remove_policy(&mut self, policy_id: PolicyId) -> Option<Policy> {
@@ -148,7 +152,7 @@ impl Property {
 impl From<Property> for fidl_fuchsia_settings_policy::Property {
     fn from(src: Property) -> Self {
         fidl_fuchsia_settings_policy::Property {
-            target: Some(src.stream_type.into()),
+            target: Some(src.target.into()),
             available_transforms: Some(src.available_transforms.into()),
             active_policies: Some(
                 src.active_policies.into_iter().map(Policy::into).collect::<Vec<_>>(),
@@ -233,7 +237,7 @@ impl From<TransformFlags> for Vec<fidl_fuchsia_settings_policy::Transform> {
 }
 
 /// `Policy` captures a fully specified transform.
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Policy {
     pub id: PolicyId,
     pub transform: Transform,
@@ -380,7 +384,7 @@ mod tests {
         .collect();
         let mut builder = StateBuilder::new();
 
-        for (property, value) in &properties {
+        for (property, value) in properties.iter() {
             builder = builder.add_property(property.clone(), value.clone());
         }
 
@@ -397,7 +401,7 @@ mod tests {
             // Ensure the specified transforms are present.
             assert_eq!(
                 property.available_transforms,
-                *properties.get(&property.stream_type).expect("unexpected property")
+                *properties.get(&target).expect("unexpected property")
             );
         }
     }

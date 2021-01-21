@@ -133,8 +133,6 @@ pub struct ClientProxy<S: Storage + 'static> {
 
 impl<S: Storage + 'static> ClientProxy<S> {
     /// Sends a setting request to the underlying setting proxy this policy handler controls.
-    // TODO(fxbug.dev/67148): remove when used
-    #[allow(dead_code)]
     pub fn send_setting_request(&self, request: Request) -> Receptor {
         self.messenger
             .message(
@@ -149,8 +147,6 @@ impl<S: Storage + 'static> ClientProxy<S> {
     }
 
     /// Sends a changed event to the switchboard.
-    // TODO(fxbug.dev/67148): remove when used
-    #[allow(dead_code)]
     pub fn send_changed_event(&self, info: SettingInfo) -> Receptor {
         self.messenger
             .message(

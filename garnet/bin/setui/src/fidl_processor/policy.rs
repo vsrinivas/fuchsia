@@ -43,8 +43,6 @@ where
 }
 
 impl RequestContext<Payload, Address> {
-    // TODO(fxb/59705): remove annotation once used.
-    #[allow(dead_code)]
     pub async fn request(
         &self,
         setting_type: SettingType,
