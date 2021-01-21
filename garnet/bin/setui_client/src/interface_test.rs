@@ -1136,7 +1136,13 @@ async fn validate_night_mode(expected_night_mode_enabled: Option<bool>) -> Resul
         .connect_to_service::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
-    night_mode::command(night_mode_service, expected_night_mode_enabled).await?;
+    // We only need an extra check on the watch so we can exercise it at least once.
+    // The sets already return a result.
+    if let utils::Either::Watch(mut stream) =
+        night_mode::command(night_mode_service, expected_night_mode_enabled).await?
+    {
+        stream.try_next().await?;
+    }
 
     Ok(())
 }
@@ -1158,14 +1164,18 @@ async fn validate_night_mode_set_output(expected_night_mode_enabled: bool) -> Re
         .connect_to_service::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
-    let output = night_mode::command(night_mode_service, Some(expected_night_mode_enabled)).await?;
+    if let utils::Either::Set(output) =
+        night_mode::command(night_mode_service, Some(expected_night_mode_enabled)).await?
+    {
+        assert_eq!(
+            output,
+            format!("Successfully set night_mode_enabled to {}", expected_night_mode_enabled)
+        );
 
-    assert_eq!(
-        output,
-        format!("Successfully set night_mode_enabled to {}", expected_night_mode_enabled)
-    );
-
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect watch result for a set command.");
+    }
 }
 
 async fn validate_night_mode_watch_output(
@@ -1188,20 +1198,24 @@ async fn validate_night_mode_watch_output(
         .context("Failed to connect to night_mode service")?;
 
     // Pass in None to call Watch() on the service.
-    let output = night_mode::command(night_mode_service, None).await?;
+    if let utils::Either::Watch(mut stream) = night_mode::command(night_mode_service, None).await? {
+        let output = stream.try_next().await?.expect("Watch should have a result");
 
-    assert_eq!(
-        output,
-        format!(
-            "{:#?}",
-            NightModeSettings {
-                night_mode_enabled: expected_night_mode_enabled,
-                ..NightModeSettings::EMPTY
-            }
-        )
-    );
+        assert_eq!(
+            output,
+            format!(
+                "{:#?}",
+                NightModeSettings {
+                    night_mode_enabled: expected_night_mode_enabled,
+                    ..NightModeSettings::EMPTY
+                }
+            )
+        );
 
-    Ok(())
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command.");
+    }
 }
 
 async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> Result<(), Error> {

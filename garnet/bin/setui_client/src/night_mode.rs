@@ -3,27 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    crate::utils::{self, Either, WatchOrSetResult},
     fidl_fuchsia_settings::{NightModeProxy, NightModeSettings},
 };
 
-pub async fn command(
-    proxy: NightModeProxy,
-    night_mode_enabled: Option<bool>,
-) -> Result<String, Error> {
-    if let Some(night_mode_enabled_value) = night_mode_enabled {
+pub async fn command(proxy: NightModeProxy, night_mode_enabled: Option<bool>) -> WatchOrSetResult {
+    Ok(if let Some(night_mode_enabled_value) = night_mode_enabled {
         let mut settings = NightModeSettings::EMPTY;
         settings.night_mode_enabled = Some(night_mode_enabled_value);
 
         let mutate_result = proxy.set(settings).await?;
-        match mutate_result {
+        Either::Set(match mutate_result {
             Ok(_) => {
-                Ok(format!("Successfully set night_mode_enabled to {}", night_mode_enabled_value))
+                format!("Successfully set night_mode_enabled to {}", night_mode_enabled_value)
             }
-            Err(err) => Ok(format!("{:#?}", err)),
-        }
+            Err(err) => format!("{:#?}", err),
+        })
     } else {
-        let setting = proxy.watch().await?;
-        Ok(format!("{:#?}", setting))
-    }
+        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
+    })
 }

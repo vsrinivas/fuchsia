@@ -454,8 +454,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         SettingClient::NightMode { night_mode_enabled } => {
             let night_mode_service = connect_to_service::<fidl_fuchsia_settings::NightModeMarker>()
                 .context("Failed to connect to night mode service")?;
-            let output = night_mode::command(night_mode_service, night_mode_enabled).await?;
-            println!("NightMode: {}", output);
+            utils::handle_mixed_result(
+                "NightMode",
+                night_mode::command(night_mode_service, night_mode_enabled).await,
+            )
+            .await?;
         }
         SettingClient::Accessibility(accessibility_options) => {
             let accessibility_service =
