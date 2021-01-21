@@ -13,9 +13,9 @@ go_library("pm_lib") {
 
   deps = [
     "//garnet/go/src/merkle",
-    "//garnet/go/src/sse",
     "//src/sys/pkg/lib/far/go:far",
     "//src/sys/pkg/lib/repo",
+    "//src/sys/pkg/lib/sse",
     "//third_party/golibs:github.com/flynn/go-tuf",
     "//third_party/golibs:github.com/fsnotify/fsnotify",
     "//third_party/golibs:golang.org/x/crypto",

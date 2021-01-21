@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/sse"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pmhttp"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/sse"
 )
 
 // poor mans reset, for flags used in the below tests

@@ -17,6 +17,11 @@ go_library("sse") {
 }
 
 go_test("sse_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/sse" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/sse" ]
   deps = [ ":sse" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":sse_test($host_toolchain)" ]
 }

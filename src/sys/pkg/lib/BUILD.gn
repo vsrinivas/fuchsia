@@ -50,6 +50,7 @@ group("tests") {
     "omaha-client:tests",
     "pkgfs:tests",
     "repo:tests",
+    "sse:tests",
     "system-image:tests",
     "tuf:tests",
     "update-package:tests",
