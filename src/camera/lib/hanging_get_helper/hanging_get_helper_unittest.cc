@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
-
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
+
+#include <gtest/gtest.h>
 
 TEST(HangingGetHelperTest, SetReturnValues) {
   camera::HangingGetHelper<int> helper;

@@ -106,10 +106,11 @@ void FactoryServer::IsIspBypassModeEnabled(bool enabled) {}
 void FactoryServer::CaptureFrames(std::string dir_path, CaptureFramesCallback callback) {
   streamer_->RequestCapture(
       0, "", true,
-      [this, dir_path = std::move(dir_path), cb = std::move(callback)](zx_status_t status,
-                                              std::unique_ptr<camera::Capture> frame) mutable {
+      [this, dir_path = std::move(dir_path), cb = std::move(callback)](
+          zx_status_t status, std::unique_ptr<camera::Capture> frame) mutable {
         async::PostTask(loop_.dispatcher(),
-                        [this, dir_path = std::move(dir_path), cb = std::move(cb), status, frame = std::move(frame)]() {
+                        [this, dir_path = std::move(dir_path), cb = std::move(cb), status,
+                         frame = std::move(frame)]() {
                           if (status != ZX_OK) {
                             FX_PLOGS(ERROR, status) << "capture failed";
                             cb(ZX_OK, fuchsia::images::ImageInfo{});

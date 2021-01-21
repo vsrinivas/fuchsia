@@ -39,7 +39,6 @@ class WebUI {
   void Listen(int port);
 
  private:
-
   void ListenWaiter();
   void OnListenReady(zx_status_t success, uint32_t events);
   void HandleClient(FILE* fp);
@@ -54,7 +53,7 @@ class WebUI {
   int listen_sock_;
   fsl::FDWaiter listen_waiter_;
   bool is_bayer_ = false;
-  Crop crop_ = { 0, 0, 0, 0 };
+  Crop crop_ = {0, 0, 0, 0};
   bool is_center_ = false;
 };
 

@@ -1,20 +1,19 @@
 [
-  {
-    "name": "Protocol",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_DID.MALI_IV010",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_PID.GDC",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_VID.ARM",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Arm Mali"
     }
-  },
-
-  {
-    "name": "Arm Mali",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_VID.ARM",
-      "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_PID.GDC",
-      "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_DID.MALI_IV010"
-    }
-  }
 ]
