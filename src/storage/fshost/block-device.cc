@@ -219,9 +219,11 @@ const fuchsia_hardware_block_partition_GUID& BlockDevice::GetInstanceGuid() cons
   io_status = fuchsia_hardware_block_partition_PartitionGetInstanceGuid(channel.get(), &call_status,
                                                                         &instance_guid_.value());
   if (io_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error)";
+    FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error: "
+                   << zx_status_get_string(io_status) << ")";
   } else if (call_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition instance GUID";
+    FX_LOGS(ERROR) << "Unable to get partition instance GUID: "
+                   << zx_status_get_string(call_status);
   }
   return *instance_guid_;
 }
@@ -239,9 +241,10 @@ const fuchsia_hardware_block_partition_GUID& BlockDevice::GetTypeGuid() const {
   io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel.get(), &call_status,
                                                                     &type_guid_.value());
   if (io_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error)";
+    FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error: "
+                   << zx_status_get_string(io_status) << ")";
   } else if (call_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition type GUID";
+    FX_LOGS(ERROR) << "Unable to get partition type GUID: " << zx_status_get_string(call_status);
   }
   return *type_guid_;
 }
@@ -352,7 +355,7 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
           caller.channel()->get(), &instance_guid, max_size, &set_status);
       fidl_status != ZX_OK || set_status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to set partition limit for " << topological_path() << " to "
-                   << max_size << " bytes";
+                   << max_size << " bytes: " << zx_status_get_string(fidl_status);
     return fidl_status != ZX_OK ? fidl_status : set_status;
   }
 
