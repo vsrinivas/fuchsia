@@ -18,6 +18,7 @@ group("tests") {
 stdcompat_test_sources = [
   "constructors_internal_test.cc",
   "optional_test.cc",
+  "source_location_test.cc",
   "string_view_test.cc",
   "traits_test.cc",
   "utility_internal_test.cc",
