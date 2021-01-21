@@ -15,6 +15,7 @@ group("fidl") {
     "fidlgen_llcpp:host",
     "fidlgen_rust:host",
     "fidlgen_syzkaller:host",
+    "fidlmerge:host",
     "gidl:host",
     "measure-tape/src:host",
   ]

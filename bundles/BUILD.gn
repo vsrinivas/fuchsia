@@ -55,7 +55,6 @@ group("tools") {
     "//third_party/openssh-portable:openssh-tools",
     "//tools",
     "//tools/check-licenses:host($host_toolchain)",
-    "//tools/fidl/fidlmerge:host",
     "//tools/whereiscl:host($host_toolchain)",
   ]
   deps = [ "//build/validate:non_production_tag" ]
