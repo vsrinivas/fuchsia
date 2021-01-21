@@ -16,7 +16,7 @@ import (
 
 	"benchmark_suite"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/benchmarking"
+	"go.fuchsia.dev/fuchsia/src/lib/go-benchmarking"
 )
 
 // Structure is:

@@ -46,7 +46,7 @@ go_library("go_fidl_microbenchmarks_lib") {
   name = "go_fidl_microbenchmarks"
   deps = [
     ":benchmark_suite_go_lib",
-    "//garnet/go/src/benchmarking",
+    "//src/lib/go-benchmarking",
   ]
   sources = [ "main.go" ]
 }

@@ -20,7 +20,7 @@ Note: If your benchmark is in a different language, please provide a reusable
 library or file a bug against IN to request one.
 
 [C/C++]: /zircon/system/ulib/perftest
-[Go]: /garnet/go/src/benchmarking
+[Go]: /src/lib/go-benchmarking
 [Dart]: /sdk/testing/sl4f/client/lib/src/trace_processing/metrics_results.dart
 [Rust]: /src/developer/fuchsia-criterion
 

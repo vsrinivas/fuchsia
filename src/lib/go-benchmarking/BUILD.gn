@@ -4,10 +4,9 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-go_library("benchmarking") {
+go_library("go-benchmarking") {
   sources = [
     "results.go",
     "results_test.go",
@@ -15,17 +14,16 @@ go_library("benchmarking") {
 }
 
 go_test("go_benchmarking_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/benchmarking" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/go-benchmarking" ]
 
-  deps = [ ":benchmarking" ]
+  deps = [ ":go-benchmarking" ]
 }
 
-unittest_package("go_benchmarking_tests") {
+fuchsia_unittest_package("go_benchmarking_tests") {
   deps = [ ":go_benchmarking_test" ]
+}
 
-  tests = [
-    {
-      name = "go_benchmarking_test"
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":go_benchmarking_tests" ]
 }
