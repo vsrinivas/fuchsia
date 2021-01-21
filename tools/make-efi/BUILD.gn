@@ -7,7 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("make-efi_lib") {
-  deps = [ "//garnet/go/src/thinfs:thinfs_lib" ]
+  deps = [ "//src/lib/thinfs:thinfs_lib" ]
   sources = [ "make-efi.go" ]
 }
 

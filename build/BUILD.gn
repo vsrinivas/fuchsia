@@ -184,7 +184,6 @@ group("deprecated_package") {
     "//garnet/go/src/benchmarking/*",
     "//garnet/go/src/go-tuf/*",
     "//garnet/go/src/merkle/*",
-    "//garnet/go/src/thinfs/*",
     "//garnet/lib/perfmon/*",
     "//garnet/lib/process/*",
     "//garnet/lib/profiler/tests/*",

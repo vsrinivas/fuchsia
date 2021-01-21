@@ -1548,7 +1548,7 @@ async fn verify_executable_package_rights_on_pkg_dir(
         }
 
         Executability::BlockExecute => {
-            // See //garnet/go/src/thinfs/zircon/rpc/rpc.go's errorToZx for why fs.ErrPermission maps
+            // See //src/lib/thinfs/zircon/rpc/rpc.go's errorToZx for why fs.ErrPermission maps
             // to Status::BAD_HANDLE instead of Status::ACCESS_DENIED.
             assert_matches!(
                 pkgdir.open_file("subdir/bin2", OpenRights::ReadExecute).await,

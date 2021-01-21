@@ -58,7 +58,6 @@ group("all") {
     "//garnet/go/src/go-tuf:go_tuf_tests",
     "//garnet/go/src/merkle:go_merkle_tests",
     "//garnet/go/src/sse:sse_test($host_toolchain)",
-    "//garnet/go/src/thinfs:go_thinfs_tests",
     "//garnet/lib/perfmon:tests",
     "//garnet/lib/process:process_unittests",
     "//garnet/lib/profiler/tests:profiler_tests",

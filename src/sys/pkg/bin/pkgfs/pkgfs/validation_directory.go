@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs"
 )
 
 // validationDir has two entries, present and missing which represent the blobs

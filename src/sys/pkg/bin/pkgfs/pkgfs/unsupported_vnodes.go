@@ -10,7 +10,7 @@ import (
 	"log"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs"
 )
 
 const (

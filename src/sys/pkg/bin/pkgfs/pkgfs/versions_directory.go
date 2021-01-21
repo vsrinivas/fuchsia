@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs"
 )
 
 // versionsDirectory lists packages by merkleroot and enables opening packages

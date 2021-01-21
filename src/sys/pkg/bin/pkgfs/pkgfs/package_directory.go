@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )

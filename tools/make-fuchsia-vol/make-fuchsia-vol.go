@@ -21,11 +21,11 @@ import (
 	"strconv"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/block/file"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs/msdosfs"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/gpt"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/mbr"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/block/file"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs/msdosfs"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/gpt"
+	"go.fuchsia.dev/fuchsia/src/lib/thinfs/mbr"
 )
 
 var (

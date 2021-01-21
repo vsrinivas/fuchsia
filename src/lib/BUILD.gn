@@ -114,6 +114,7 @@ group("tests") {
     "test_executor:tests",
     "test_util:tests",
     "testing:tests",
+    "thinfs:tests",
     "timekeeper:tests",
     "trace:tests",
     "ui:rust-ui-crates-tests",

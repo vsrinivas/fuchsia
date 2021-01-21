@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/thinfs_zircon_rpc_test"
-    }
-}
