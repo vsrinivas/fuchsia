@@ -419,9 +419,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let factory_reset_service =
                 connect_to_service::<fidl_fuchsia_settings::FactoryResetMarker>()
                     .context("Failed to connect to factory_reset service")?;
-            let output =
-                factory_reset::command(factory_reset_service, is_local_reset_allowed).await?;
-            println!("FactoryReset: {}", output);
+            utils::handle_mixed_result(
+                "FactoryReset",
+                factory_reset::command(factory_reset_service, is_local_reset_allowed).await,
+            )
+            .await?;
         }
         SettingClient::Intl { time_zone, temperature_unit, locales, hour_cycle, clear_locales } => {
             let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()

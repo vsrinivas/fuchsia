@@ -524,7 +524,15 @@ async fn validate_factory_reset(expected_local_reset_allowed: bool) -> Result<()
     let factory_reset_service = env
         .connect_to_service::<FactoryResetMarker>()
         .context("Failed to connect to factory reset service")?;
-    factory_reset::command(factory_reset_service, Some(expected_local_reset_allowed)).await?;
+
+    // We only need an extra check on the watch so we can exercise it at least once.
+    // The sets already return a result.
+    if let utils::Either::Watch(mut stream) =
+        factory_reset::command(factory_reset_service, Some(expected_local_reset_allowed)).await?
+    {
+        stream.try_next().await?;
+    }
+
     Ok(())
 }
 
