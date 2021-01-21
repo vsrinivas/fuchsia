@@ -454,11 +454,11 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     {
       int32_t raw_source_offset = frac_source_offset.raw_value();
       // TODO(fxbug.dev/67996): remove after debugging
-      // We are seeing crashes with the PointSampler and raw_source_offset == 0xffffb000, but we
-      // think we might get crashes for any offset <= Fixed(-1).
+      // Check if PointSampler's src_iter will overflow the source buffer.
       if (mixer.pos_filter_width().raw_value() == Mixer::FRAC_HALF &&
-          ((static_cast<uint32_t>(raw_source_offset) == 0xffffb000) ||
-           frac_source_offset <= Fixed(-1) || frac_source_offset > Fixed(50000))) {
+          (((raw_source_offset + Mixer::FRAC_HALF /* kPositiveFilterWidth */) >>
+            kPtsFractionalBits) *
+           2 /* SrcChanCount */) >= source_buffer.length().Ceiling()) {
         FX_LOGS_FIRST_N(WARNING, 10)
             << "Unexpectedly large source_offset:"
             << " format.channels = " << format().channels()
