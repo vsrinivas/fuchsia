@@ -7,7 +7,11 @@ use {
     serde::Deserialize,
     serde::Serialize,
     serde_json,
-    std::{collections::HashMap, process::Command},
+    std::{
+        collections::HashMap,
+        io::{self, Write},
+        process::Command,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -16,14 +20,14 @@ pub struct BuildTarget {
     pub arch: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Eq, PartialOrd, PartialEq, Ord)]
 struct ComponentManifest {
     pub url: String,
     pub manifest: String,
     pub features: ManifestContent,
 }
 
-#[derive(Debug, Deserialize, Clone, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize, Eq, PartialEq, PartialOrd, Ord)]
 struct ManifestContent {
     features: Option<Vec<String>>,
 }
@@ -115,49 +119,75 @@ fn main() -> Result<(), u8> {
         let scrutiny_result = scrutiny_cmd.output().expect("getting command output failed");
         let out_str = String::from_utf8_lossy(&scrutiny_result.stdout);
         let component_list = serde_json::from_str::<'_, Vec<ComponentManifest>>(&out_str).unwrap();
-
-        let mut index = HashMap::<Option<String>, Vec<&ComponentManifest>>::new();
-        for component in &component_list {
-            match &component.features.features {
-                Some(features) => {
-                    if features.len() == 0 {
-                        index.entry(None).or_insert_with(|| vec![]).push(component);
-                    } else {
-                        for feature in features {
-                            index
-                                .entry(Some(feature.clone()))
-                                .or_insert_with(|| vec![])
-                                .push(component);
-                        }
-                    }
-                }
-                None => {
-                    index.entry(None).or_insert_with(|| vec![]).push(component);
-                }
-            }
-        }
-
-        let mut keys: Vec<Option<String>> = index.keys().map(|k| k.clone()).collect();
-        keys.sort();
-
-        for k in keys {
-            match k {
-                None => println!("{} components use no features", index.get(&k).unwrap().len()),
-                Some(key) => println!(
-                    "feature {} is used by {} components",
-                    key,
-                    index.get(&Some(key.clone())).unwrap().len(),
-                ),
-            }
-        }
+        let mut index = group_by_feature(&component_list);
+        output_result(&mut index, io::stdout());
     }
 
     Ok(())
 }
 
+fn group_by_feature<'a>(
+    component_list: &'a Vec<ComponentManifest>,
+) -> HashMap<Option<String>, Vec<&'a ComponentManifest>> {
+    let mut index = HashMap::<Option<String>, Vec<&ComponentManifest>>::new();
+
+    for component in component_list {
+        match &component.features.features {
+            Some(features) => {
+                if features.len() == 0 {
+                    index.entry(None).or_insert_with(|| vec![]).push(component);
+                } else {
+                    for feature in features {
+                        index
+                            .entry(Some(feature.clone()))
+                            .or_insert_with(|| vec![])
+                            .push(component);
+                    }
+                }
+            }
+            None => {
+                index.entry(None).or_insert_with(|| vec![]).push(component);
+            }
+        }
+    }
+
+    index
+}
+
+fn output_result<T: Write>(
+    index: &mut HashMap<Option<String>, Vec<&ComponentManifest>>,
+    mut stdout: T,
+) {
+    let mut keys: Vec<Option<String>> = index.keys().map(|k| k.clone()).collect();
+    keys.sort();
+
+    for k in keys {
+        let matches = index.get_mut(&k).unwrap();
+        match k {
+            None => {
+                stdout
+                    .write(format!("{} components use no features\n", matches.len()).as_bytes())
+                    .unwrap();
+            }
+            Some(key) => {
+                stdout
+                    .write(
+                        format!("feature {} is used by {} components\n", key, matches.len())
+                            .as_bytes(),
+                    )
+                    .unwrap();
+            }
+        }
+        matches.sort();
+        for component in matches {
+            stdout.write(format!("  {}\n", component.url).as_bytes()).unwrap();
+        }
+    }
+}
+
 /// Given comma-delimited strings for processor architectures and boards,
 /// return a vector with the cross product of these lists.
-pub fn get_target_sets(arch_str: Option<&String>, board_str: Option<&String>) -> Vec<BuildTarget> {
+fn get_target_sets(arch_str: Option<&String>, board_str: Option<&String>) -> Vec<BuildTarget> {
     let arches = match arch_str {
         Some(arch_str) => arch_str.split(",").map(|a| a.trim().clone()).collect(),
         None => vec![],
@@ -178,7 +208,7 @@ pub fn get_target_sets(arch_str: Option<&String>, board_str: Option<&String>) ->
 }
 
 /// Get a default set of build targets.
-pub fn get_default_build_targets() -> Vec<BuildTarget> {
+fn get_default_build_targets() -> Vec<BuildTarget> {
     let boards = vec!["workstation", "bringup", "core"];
     let arches = vec!["x64", "arm64"];
 
@@ -194,7 +224,7 @@ pub fn get_default_build_targets() -> Vec<BuildTarget> {
 
 /// Given a comma-delimited set of product targets, return a list of
 /// `BuildTarget`s.
-pub fn get_target_products(products_str: Option<&String>) -> Vec<BuildTarget> {
+fn get_target_products(products_str: Option<&String>) -> Vec<BuildTarget> {
     let product_strs = match products_str {
         Some(products_str) => products_str.split(",").map(|b| b.trim().clone()).collect(),
         None => vec![],
@@ -214,7 +244,67 @@ pub fn get_target_products(products_str: Option<&String>) -> Vec<BuildTarget> {
 #[cfg(test)]
 mod test {
 
-    use super::{get_target_products, get_target_sets, BuildTarget};
+    use {
+        super::{
+            get_target_products, get_target_sets, group_by_feature, BuildTarget, ComponentManifest,
+            ManifestContent,
+        },
+        std::collections::HashMap,
+    };
+
+    #[test]
+    fn test_feature_grouping() {
+        let component_list = vec![
+            ComponentManifest {
+                url: String::from("foo"),
+                manifest: String::from("empty"),
+                features: ManifestContent { features: None },
+            },
+            ComponentManifest {
+                url: String::from("bar"),
+                manifest: String::from("empty"),
+                features: ManifestContent { features: Some(vec![String::from("config-data")]) },
+            },
+        ];
+
+        let mut expected: HashMap<Option<String>, Vec<&ComponentManifest>> = HashMap::new();
+        expected.insert(None, vec![&component_list.get(0).unwrap()]);
+        expected.insert(Some(String::from("config-data")), vec![&component_list.get(1).unwrap()]);
+        assert_eq!(expected, group_by_feature(&component_list));
+
+        let component_list = vec![
+            ComponentManifest {
+                url: String::from("foo"),
+                manifest: String::from("empty"),
+                features: ManifestContent { features: None },
+            },
+            ComponentManifest {
+                url: String::from("bar"),
+                manifest: String::from("empty"),
+                features: ManifestContent { features: Some(vec![String::from("config-data")]) },
+            },
+            ComponentManifest {
+                url: String::from("buzz"),
+                manifest: String::from("empty"),
+                features: ManifestContent {
+                    features: Some(vec![
+                        String::from("config-data"),
+                        String::from("isolated-storage"),
+                    ]),
+                },
+            },
+        ];
+
+        let mut expected: HashMap<Option<String>, Vec<&ComponentManifest>> = HashMap::new();
+        expected.insert(None, vec![&component_list.get(0).unwrap()]);
+        expected.insert(
+            Some(String::from("config-data")),
+            vec![&component_list.get(1).unwrap(), &component_list.get(2).unwrap()],
+        );
+        expected
+            .insert(Some(String::from("isolated-storage")), vec![&component_list.get(2).unwrap()]);
+        assert_eq!(expected, group_by_feature(&component_list));
+    }
 
     #[test]
     fn test_product_targets() {
