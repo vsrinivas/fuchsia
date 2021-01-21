@@ -900,8 +900,14 @@ async fn validate_dnd(
         .connect_to_service::<DoNotDisturbMarker>()
         .context("Failed to connect to do not disturb service")?;
 
-    do_not_disturb::command(do_not_disturb_service, expected_user_dnd, expected_night_mode_dnd)
-        .await?;
+    // We only need an extra check on the watch so we can exercise it at least once.
+    // The sets already return a result.
+    if let utils::Either::Watch(mut stream) =
+        do_not_disturb::command(do_not_disturb_service, expected_user_dnd, expected_night_mode_dnd)
+            .await?
+    {
+        stream.try_next().await?;
+    }
 
     Ok(())
 }

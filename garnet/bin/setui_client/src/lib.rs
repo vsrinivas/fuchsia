@@ -409,8 +409,11 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         SettingClient::DoNotDisturb { user_dnd, night_mode_dnd } => {
             let dnd_service = connect_to_service::<fidl_fuchsia_settings::DoNotDisturbMarker>()
                 .context("Failed to connect to do_not_disturb service")?;
-            let output = do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await?;
-            println!("DoNotDisturb: {}", output);
+            utils::handle_mixed_result(
+                "DoNoDisturb",
+                do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await,
+            )
+            .await?;
         }
         SettingClient::FactoryReset { is_local_reset_allowed } => {
             let factory_reset_service =
