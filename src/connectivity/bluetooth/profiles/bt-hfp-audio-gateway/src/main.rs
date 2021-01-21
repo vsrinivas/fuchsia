@@ -6,14 +6,15 @@ use {
     anyhow::{Context, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    futures::StreamExt,
+    futures::{future, pin_mut, StreamExt},
     log::warn,
 };
 
-use crate::{config::AudioGatewayFeatureSupport, profile::Profile};
+use crate::{config::AudioGatewayFeatureSupport, hfp::Hfp, profile::Profile};
 
 mod config;
 mod error;
+mod hfp;
 mod profile;
 mod service_definitions;
 
@@ -22,8 +23,9 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init().context("Could not initialize logger")?;
 
     let feature_support = AudioGatewayFeatureSupport::load()?;
-
-    let _profile = Profile::register_audio_gateway(feature_support)?;
+    let profile = Profile::register_audio_gateway(feature_support)?;
+    let hfp = Hfp::new(profile).run();
+    pin_mut!(hfp);
 
     let mut fs = ServiceFs::new();
 
@@ -33,7 +35,9 @@ async fn main() -> Result<(), Error> {
     }
 
     fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
-    fs.collect::<()>().await;
+    let fs = fs.collect::<()>();
+
+    future::select(fs, hfp).await;
 
     Ok(())
 }

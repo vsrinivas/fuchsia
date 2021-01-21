@@ -37,6 +37,7 @@ rustc_binary("bin") {
   sources = [
     "src/config.rs",
     "src/error.rs",
+    "src/hfp.rs",
     "src/main.rs",
     "src/profile.rs",
     "src/service_definitions.rs",
