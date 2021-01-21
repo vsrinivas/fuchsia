@@ -364,8 +364,10 @@ fn convert_to_fidl_constant(
 }
 
 fn write_fidl_template(syntax_tree: bind_library::Ast) -> Result<String, Error> {
-    // Get library path.
-    let path = &syntax_tree.name.to_string();
+    // Use the bind library name as the FIDL library name and give it "bind" as a top level
+    // namespace.
+    let bind_name = &syntax_tree.name.to_string();
+    let library_name = format!("bind.{}", bind_name);
 
     check_names(&syntax_tree.declarations)?;
 
@@ -373,7 +375,7 @@ fn write_fidl_template(syntax_tree: bind_library::Ast) -> Result<String, Error> 
     let definition = syntax_tree
         .declarations
         .into_iter()
-        .map(|declaration| convert_to_fidl_constant(declaration, path))
+        .map(|declaration| convert_to_fidl_constant(declaration, bind_name))
         .collect::<Result<Vec<String>, _>>()?
         .join("\n");
 
@@ -382,7 +384,7 @@ fn write_fidl_template(syntax_tree: bind_library::Ast) -> Result<String, Error> 
     output
         .write_fmt(format_args!(
             include_str!("templates/fidl.template"),
-            path = path,
+            library_name = library_name,
             definition = definition,
         ))
         .context("Failed to format output")?;
@@ -558,7 +560,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(empty_ast);
 
         let expected = vec![
-            "library fuchsia.platform.bind;".to_string(),
+            "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
         ];
 
@@ -574,7 +576,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
-            "library fuchsia.platform.bind;".to_string(),
+            "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
             "const fdf.NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),
             "const fdf.NodePropertyValueString A_KEY_A_VALUE = \"a string value\";".to_string(),
@@ -592,7 +594,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
-            "library fuchsia.platform.bind;".to_string(),
+            "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
             "const fdf.NodePropertyValueUint BIND_PROTOCOL_BUS = 84;".to_string(),
         ];
@@ -609,7 +611,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
-            "library fuchsia.platform.bind;".to_string(),
+            "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
             "const fdf.NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),
             "const fdf.NodePropertyValueString A_KEY_A_VALUE = \"a string value\";".to_string(),

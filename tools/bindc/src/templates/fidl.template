@@ -1,4 +1,4 @@
-library {path}.bind;
+library {library_name};
 
 using fuchsia.driver.framework as fdf;
 
