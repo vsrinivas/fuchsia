@@ -5,6 +5,7 @@
 #include "server.h"
 
 #include <fuchsia/hardware/block/c/banjo.h>
+#include <inttypes.h>
 #include <lib/zx/fifo.h>
 #include <string.h>
 #include <unistd.h>
@@ -141,6 +142,7 @@ zx_status_t Server::FindVmoIdLocked(vmoid_t* out) {
       return ZX_OK;
     }
   }
+  zxlogf(WARNING, "FindVmoId: No vmoids available");
   return ZX_ERR_NO_RESOURCES;
 }
 
@@ -220,6 +222,9 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   }
 
   if (!request->length) {
+    zxlogf(WARNING,
+           "ProcessReadWriteRequest: Invalid request range [%" PRIu64 ",%" PRIu64 "), failing",
+           request->dev_offset, request->dev_offset + request->length);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -351,6 +356,8 @@ zx_status_t Server::ProcessFlushRequest(block_fifo_request_t* request) {
 
 zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
   if (!request->length) {
+    zxlogf(WARNING, "ProcessTrimRequest: Invalid request range [%" PRIu64 ",%" PRIu64 "), failing",
+           request->dev_offset, request->dev_offset + request->length);
     return ZX_ERR_INVALID_ARGS;
   }
 
