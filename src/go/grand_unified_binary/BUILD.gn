@@ -16,7 +16,7 @@ go_library("lib") {
 }
 
 go_binary("grand_unified_binary") {
-  gopackage = "go.fuchsia.dev/fuchsia/garnet/go/src/grand_unified_binary"
+  gopackage = "go.fuchsia.dev/fuchsia/src/go/grand_unified_binary"
 
   deps = [ ":lib" ]
 }

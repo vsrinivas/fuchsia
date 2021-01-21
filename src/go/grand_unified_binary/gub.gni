@@ -33,7 +33,7 @@ template("grand_unified_binary") {
                              "testonly",
                              "visibility",
                            ])
-    data_deps = [ "//garnet/go/src/grand_unified_binary" ]
+    data_deps = [ "//src/go/grand_unified_binary" ]
     sources = [ "$root_out_dir/grand_unified_binary" ]
     outputs = [ "bin/$output_name" ]
   }

@@ -36,7 +36,7 @@ test_package("example-test-package") {
   extra = [ blobfs_manifest ]
   deps = [
     ":blobfs.manifest",
-    "//garnet/go/src/grand_unified_binary",
+    "//src/go/grand_unified_binary",
     "//src/storage/blobfs-corrupt",
     ...
   ]

@@ -1478,7 +1478,7 @@ go_library("my_tool") {
 
 package("tools") {
   deps = [
-    "//garnet/go/src/grand_unified_binary",
+    "//src/go/grand_unified_binary",
   ]
   binaries = [
     {
@@ -1492,8 +1492,8 @@ package("tools") {
 The new templates support this feature as follows:
 
 ```gn
-import("//garnet/go/src/grand_unified_binary/gub.gni")
 import("//build/go/go_library.gni")
+import("//src/go/grand_unified_binary/gub.gni")
 import("//src/sys/build/components.gni")
 
 go_library("my_tool") {

@@ -14,7 +14,7 @@ exceptions = {
     '//src/cobalt': ['//src/connectivity/wlan/lib/mlme/cpp:mlme',],
     '//src/connectivity/network':
         [
-            '//garnet/go/src/grand_unified_binary:grand_unified_binary',
+            '//src/go/grand_unified_binary:grand_unified_binary',
             '//src/connectivity/network/testing/netemul/lib/',
         ],
     '//src/connectivity/network/netstack3':
