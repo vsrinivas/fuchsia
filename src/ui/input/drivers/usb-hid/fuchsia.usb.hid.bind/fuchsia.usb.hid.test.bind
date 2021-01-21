@@ -1,0 +1,6 @@
+library fuchsia.usb.hid.test;
+
+extend uint fuchsia.BIND_USB_PROTOCOL {
+    ONE_ENDPOINT = 0x02,
+    TWO_ENDPOINT = 0x03,
+};

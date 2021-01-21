@@ -15,13 +15,14 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <usb/usb-request.h>
+
+#include "src/ui/input/drivers/usb-hid/function/one_endpoint_hid-bind.h"
 
 constexpr int BULK_MAX_PACKET = 512;
 
@@ -197,10 +198,5 @@ static constexpr zx_driver_ops_t one_endpoint_hid_driver_ops = []() {
 
 }  // namespace one_endpoint_hid_function
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(one_endpoint_hid_function, one_endpoint_hid_function::one_endpoint_hid_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_HID),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_TEST_HID_ONE_ENDPOINT),
-ZIRCON_DRIVER_END(one_endpoint_hid_function)
-    // clang-format on
+ZIRCON_DRIVER(one_endpoint_hid_function, one_endpoint_hid_function::one_endpoint_hid_driver_ops,
+              "zircon", "0.1");

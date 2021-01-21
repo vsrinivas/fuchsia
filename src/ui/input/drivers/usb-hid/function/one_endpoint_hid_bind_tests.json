@@ -1,0 +1,18 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Invalid Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.HID",
+            "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.hid.test.BIND_USB_PROTOCOL.ONE_ENDPOINT"
+        },
+        "expected": "match",
+        "name": "one-endpoint-hid"
+    }
+]
