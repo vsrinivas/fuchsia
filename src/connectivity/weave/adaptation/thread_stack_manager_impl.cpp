@@ -85,6 +85,10 @@ const std::string& ThreadStackManagerImpl::GetInterfaceName() const {
   return delegate_->GetInterfaceName();
 }
 
+bool ThreadStackManagerImpl::IsThreadSupported() const {
+  return delegate_->IsThreadSupported();
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

@@ -16,6 +16,7 @@
 // clang-format on
 
 #include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
 namespace nl {
@@ -250,6 +251,19 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   fidl::Binding<Lookup> binding_{this};
 };
 
+class OverridableThreadConfigurationManagerDelegate : public ConfigurationManagerDelegateImpl {
+ private:
+  bool is_thread_enabled_ = true;
+  bool IsThreadEnabled() override {
+    return is_thread_enabled_;
+  }
+
+ public:
+  void SetThreadEnabled(bool value) {
+    is_thread_enabled_ = value;
+  }
+};
+
 class ThreadStackManagerTest : public WeaveTestFixture {
  public:
   ThreadStackManagerTest() {
@@ -261,6 +275,9 @@ class ThreadStackManagerTest : public WeaveTestFixture {
     WeaveTestFixture::SetUp();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     RunFixtureLoop();
+    auto config_delegate = std::make_unique<OverridableThreadConfigurationManagerDelegate>();
+    config_delegate_ = config_delegate.get();
+    ConfigurationMgrImpl().SetDelegate(std::move(config_delegate));
     ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
     ASSERT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
   }
@@ -269,10 +286,12 @@ class ThreadStackManagerTest : public WeaveTestFixture {
     StopFixtureLoop();
     WeaveTestFixture::TearDown();
     ThreadStackMgrImpl().SetDelegate(nullptr);
+    ConfigurationMgrImpl().SetDelegate(nullptr);
   }
 
  protected:
   FakeLowpanLookup fake_lookup_;
+  OverridableThreadConfigurationManagerDelegate* config_delegate_;
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
@@ -480,6 +499,46 @@ TEST_F(ThreadStackManagerTest, ClearProvisionWithDeviceNotBound) {
   ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
   // ClearThreadProvision should not crash when called with an unbound device.
   ThreadStackMgrImpl()._ClearThreadProvision();
+}
+
+TEST_F(ThreadStackManagerTest, ThreadSupportDisabled) {
+  // Reset TSM to uninitialized state.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+
+  // Initialize TSM with Thread disabled in the config mgr.
+  config_delegate_->SetThreadEnabled(false);
+  ASSERT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
+
+  EXPECT_FALSE(ThreadStackMgrImpl().IsThreadSupported());
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadEnabled());
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadAttached());
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadEnabled(false), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadEnabled(true), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+
+  // Set up provisioning info, confirm Get/SetThreadProvision unsupported.
+  constexpr uint32_t kFakePANId = 12345;
+  constexpr uint8_t kFakeChannel = 12;
+  const std::string kFakeNetworkName = "fake-net-name";
+  const std::vector<uint8_t> kFakeExtendedId{0, 1, 2, 3, 4, 5, 6, 7};
+  const std::vector<uint8_t> kFakeMasterKey{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+  DeviceNetworkInfo net_info;
+  net_info.ThreadPANId = kFakePANId;
+  net_info.ThreadChannel = kFakeChannel;
+  std::memcpy(net_info.ThreadNetworkName, kFakeNetworkName.data(),
+              std::min<size_t>(kFakeNetworkName.size() + 1,
+                               DeviceNetworkInfo::kMaxThreadNetworkNameLength));
+  std::memcpy(
+      net_info.ThreadExtendedPANId, kFakeExtendedId.data(),
+      std::min<size_t>(kFakeExtendedId.size(), DeviceNetworkInfo::kThreadExtendedPANIdLength));
+  net_info.FieldPresent.ThreadExtendedPANId = true;
+  std::memcpy(net_info.ThreadNetworkKey, kFakeMasterKey.data(),
+              std::min<size_t>(kFakeMasterKey.size(), DeviceNetworkInfo::kThreadNetworkKeyLength));
+  net_info.FieldPresent.ThreadNetworkKey = true;
+  EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+  EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
 }
 
 }  // namespace testing

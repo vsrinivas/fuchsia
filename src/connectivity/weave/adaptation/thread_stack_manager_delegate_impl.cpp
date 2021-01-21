@@ -51,6 +51,13 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
   std::vector<std::string> interface_names;
   zx_status_t status;
 
+  // Check whether Thread support is enabled in the ConfigurationManager
+  if (!ConfigurationMgrImpl().IsThreadEnabled()) {
+    FX_LOGS(INFO) << "Thread support is disabled for this device.";
+    is_thread_supported_ = false;
+    return WEAVE_NO_ERROR;
+  }
+
   // Access the LoWPAN service.
   status = PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(lookup.NewRequest());
   if (status != ZX_OK) {
@@ -112,6 +119,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
     return ZX_ERR_NOT_FOUND;
   }
 
+  is_thread_supported_ = true;
   return WEAVE_NO_ERROR;
 }
 
@@ -123,6 +131,10 @@ void ThreadStackManagerDelegateImpl::OnPlatformEvent(const WeaveDeviceEvent* eve
 
 bool ThreadStackManagerDelegateImpl::IsThreadEnabled() {
   DeviceState device_state;
+
+  if (!is_thread_supported_) {
+    return false;
+  }
 
   // Get the device state.
   if (GetDeviceState(&device_state) != ZX_OK) {
@@ -143,6 +155,10 @@ bool ThreadStackManagerDelegateImpl::IsThreadEnabled() {
 }
 
 WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadEnabled(bool val) {
+  if (!is_thread_supported_) {
+    return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
+  }
+
   // Enable or disable the device.
   zx_status_t status = device_->SetActive(val);
   if (status != ZX_OK) {
@@ -156,6 +172,10 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadEnabled(bool val) {
 
 bool ThreadStackManagerDelegateImpl::IsThreadProvisioned() {
   DeviceState device_state;
+
+  if (!is_thread_supported_) {
+    return false;
+  }
 
   // Get the device state.
   if (GetDeviceState(&device_state) != ZX_OK) {
@@ -175,6 +195,10 @@ bool ThreadStackManagerDelegateImpl::IsThreadProvisioned() {
 bool ThreadStackManagerDelegateImpl::IsThreadAttached() {
   DeviceState device_state;
 
+  if (!is_thread_supported_) {
+    return false;
+  }
+
   // Get the device state.
   if (GetDeviceState(&device_state) != ZX_OK) {
     return false;
@@ -188,6 +212,10 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetThreadProvision(DeviceNetworkInfo
   DeviceExtraSyncPtr device_extra;
   Identity identity;
   zx_status_t status;
+
+  if (!is_thread_supported_) {
+    return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
+  }
 
   // Get the Device pointer.
   status = GetProtocols(std::move(Protocols().set_device_extra(device_extra.NewRequest())));
@@ -283,6 +311,10 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
   std::unique_ptr<Credential> credential;
   Identity identity;
 
+  if (!is_thread_supported_) {
+    return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
+  }
+
   // Set up identity.
   std::vector<uint8_t> network_name{
       netInfo.ThreadNetworkName,
@@ -326,6 +358,11 @@ void ThreadStackManagerDelegateImpl::ClearThreadProvision() {
     FX_LOGS(INFO) << "Skipping ClearThreadProvision as device is not bound";
     return;
   }
+
+  if (!is_thread_supported_) {
+    return;
+  }
+
   zx_status_t status = device_->LeaveNetwork();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not clear LoWPAN provision: " << zx_status_get_string(status);
@@ -336,7 +373,7 @@ ThreadDeviceType ThreadStackManagerDelegateImpl::GetThreadDeviceType() {
   DeviceState device_state;
 
   // Get the device state.
-  if (GetDeviceState(&device_state) != ZX_OK) {
+  if (GetDeviceState(&device_state) != ZX_OK || !is_thread_supported_) {
     return ThreadDeviceType::kThreadDeviceType_NotSupported;
   }
 
@@ -420,6 +457,10 @@ zx_status_t ThreadStackManagerDelegateImpl::GetProtocols(Protocols protocols) {
 
 const std::string& ThreadStackManagerDelegateImpl::GetInterfaceName() const {
   return interface_name_;
+}
+
+bool ThreadStackManagerDelegateImpl::IsThreadSupported() const {
+  return is_thread_supported_;
 }
 
 }  // namespace DeviceLayer

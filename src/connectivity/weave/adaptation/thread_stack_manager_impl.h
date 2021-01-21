@@ -68,6 +68,9 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
     virtual WEAVE_ERROR GetAndLogThreadTopologyFull() = 0;
     // Get the name of the thread interface.
     virtual const std::string& GetInterfaceName() const = 0;
+    // Determine if Thread is supported. If `false` all calls other than
+    // InitThreadStack should return unsuccessfully with no side effects.
+    virtual bool IsThreadSupported() const = 0;
   };
 
   // Sets the delegate containing the platform-specific implementation. It is
@@ -135,6 +138,7 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
 
   // ThreadStackManagerImpl-specific functionality.
   const std::string& GetInterfaceName() const;
+  bool IsThreadSupported() const;
 
  private:
   static ThreadStackManagerImpl sInstance;

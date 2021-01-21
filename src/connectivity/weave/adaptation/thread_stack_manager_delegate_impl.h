@@ -40,10 +40,12 @@ class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerIm
   WEAVE_ERROR GetAndLogThreadTopologyMinimal() override;
   WEAVE_ERROR GetAndLogThreadTopologyFull() override;
   const std::string& GetInterfaceName() const override;
+  bool IsThreadSupported() const override;
 
  private:
   std::string interface_name_;
   fuchsia::lowpan::device::DeviceSyncPtr device_;
+  bool is_thread_supported_ = false;
 
   zx_status_t GetProtocols(fuchsia::lowpan::device::Protocols protocols);
   zx_status_t GetDeviceState(fuchsia::lowpan::device::DeviceState* state);
