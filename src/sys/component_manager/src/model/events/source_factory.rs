@@ -184,7 +184,7 @@ impl Hook for EventSourceFactory {
             Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(&event.target_moniker).await;
             }
-            Ok(EventPayload::Resolved { decl }) => {
+            Ok(EventPayload::Resolved { decl, .. }) => {
                 self.on_resolved_async(&event.target_moniker, decl).await?;
             }
             _ => {}
@@ -202,6 +202,7 @@ mod tests {
             environment::{Environment, RunnerRegistry},
             hooks::Hooks,
             model::ModelParams,
+            realm::WeakRealm,
             resolver::ResolverRegistry,
             testing::{mocks::MockResolver, test_helpers::ComponentDeclBuilder},
         },
@@ -230,7 +231,11 @@ mod tests {
         let event = Event::new_for_test(
             target_moniker.clone(),
             "fuchsia-pkg://test",
-            Ok(EventPayload::Resolved { decl: decl.clone() }),
+            Ok(EventPayload::Resolved {
+                realm: WeakRealm::default(),
+                resolved_url: "fuchsia-pkg://test".to_string(),
+                decl: decl.clone(),
+            }),
         );
         hooks.dispatch(&event).await
     }

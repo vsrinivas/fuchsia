@@ -112,7 +112,7 @@ impl Hook for WorkScheduler {
                     )
                     .await?;
             }
-            Ok(EventPayload::Resolved { decl }) => {
+            Ok(EventPayload::Resolved { decl, .. }) => {
                 self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
             }
             _ => {}

@@ -165,7 +165,7 @@ impl Hook for EventStreamProvider {
             Ok(EventPayload::Destroyed) => {
                 self.on_component_destroyed(&event.target_moniker).await?;
             }
-            Ok(EventPayload::Resolved { decl }) => {
+            Ok(EventPayload::Resolved { decl, .. }) => {
                 self.on_component_resolved(&event.target_moniker, decl).await?;
             }
             Ok(EventPayload::Started { runtime, .. }) => {

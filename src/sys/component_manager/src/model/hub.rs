@@ -77,6 +77,7 @@ struct Instance {
     pub abs_moniker: AbsoluteMoniker,
     pub component_url: String,
     pub execution: Option<Execution>,
+    pub has_resolved_directory: bool, // the existence of the resolved directory.
     pub directory: Directory,
     pub children_directory: Directory,
     pub deleting_directory: Directory,
@@ -128,6 +129,7 @@ impl Hub {
                 EventType::Destroyed,
                 EventType::MarkedForDestruction,
                 EventType::Started,
+                EventType::Resolved,
                 EventType::Stopped,
             ],
             Arc::downgrade(self) as Weak<dyn Hook>,
@@ -208,6 +210,7 @@ impl Hub {
                 abs_moniker: abs_moniker.clone(),
                 component_url,
                 execution: None,
+                has_resolved_directory: false,
                 directory: instance.clone(),
                 children_directory: children.clone(),
                 deleting_directory: deleting.clone(),
@@ -240,11 +243,11 @@ impl Hub {
     }
 
     fn add_resolved_url_file(
-        execution_directory: Directory,
+        directory: Directory,
         resolved_url: String,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        execution_directory.add_node(
+        directory.add_node(
             "resolved_url",
             read_only_static(resolved_url.into_bytes()),
             &abs_moniker,
@@ -274,7 +277,7 @@ impl Hub {
     }
 
     fn add_expose_directory(
-        execution_directory: Directory,
+        directory: Directory,
         component_decl: ComponentDecl,
         target_moniker: &AbsoluteMoniker,
         target_realm: WeakRealm,
@@ -283,7 +286,7 @@ impl Hub {
         let tree = DirTree::build_from_exposes(route_expose_fn, target_realm, component_decl);
         let mut expose_dir = pfs::simple();
         tree.install(target_moniker, &mut expose_dir)?;
-        execution_directory.add_node("expose", expose_dir, target_moniker)?;
+        directory.add_node("expose", expose_dir, target_moniker)?;
         Ok(())
     }
 
@@ -319,24 +322,52 @@ impl Hub {
         Ok(())
     }
 
+    async fn on_resolved_async<'a>(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+        target_realm: &WeakRealm,
+        resolved_url: String,
+        component_decl: &'a ComponentDecl,
+    ) -> Result<(), ModelError> {
+        let mut instances_map = self.instances.lock().await;
+
+        let instance = instances_map
+            .get_mut(target_moniker)
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
+
+        // If the resolved directory already exists, report error.
+        assert!(!instance.has_resolved_directory);
+        let resolved_directory = pfs::simple();
+        instance.has_resolved_directory = true;
+
+        Self::add_resolved_url_file(
+            resolved_directory.clone(),
+            resolved_url.clone(),
+            target_moniker,
+        )?;
+
+        Self::add_expose_directory(
+            resolved_directory.clone(),
+            component_decl.clone(),
+            target_moniker,
+            target_realm.clone(),
+        )?;
+
+        instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
+
+        Ok(())
+    }
+
     async fn on_started_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
         target_realm: &WeakRealm,
-        component_url: String,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
 
         let mut instances_map = self.instances.lock().await;
-
-        Self::add_instance_to_parent_if_necessary(
-            target_moniker,
-            component_url,
-            &mut instances_map,
-        )
-        .await?;
 
         let instance = instances_map
             .get_mut(target_moniker)
@@ -526,14 +557,12 @@ impl Hook for Hub {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
             Ok(EventPayload::Started { realm, runtime, component_decl, .. }) => {
-                self.on_started_async(
-                    &event.target_moniker,
-                    realm,
-                    event.component_url.clone(),
-                    &runtime,
-                    &component_decl,
-                )
-                .await?;
+                self.on_started_async(&event.target_moniker, realm, &runtime, &component_decl)
+                    .await?;
+            }
+            Ok(EventPayload::Resolved { realm, resolved_url, decl, .. }) => {
+                self.on_resolved_async(&event.target_moniker, realm, resolved_url.clone(), &decl)
+                    .await?;
             }
             Ok(EventPayload::Stopped { .. }) => {
                 self.on_stopped_async(&event.target_moniker).await?;
@@ -796,6 +825,92 @@ mod tests {
             vec!["expose", "in", "out", "resolved_url", "runtime"],
             list_directory(&old_hub_dir_proxy).await
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn hub_resolved_directory() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Framework,
+                        source_name: "hub".into(),
+                        target_path: CapabilityPath::try_from("/hub").unwrap(),
+                        rights: *rights::READ_RIGHTS,
+                        subdir: Some("resolved".into()),
+                    }))
+                    .build(),
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+
+        let resolved_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("resolved"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(vec!["expose", "resolved_url"], list_directory(&resolved_dir).await);
+        assert_eq!(
+            format!("{}_resolved", root_component_url),
+            read_file(&hub_proxy, "resolved/resolved_url").await
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    // TODO(b/65870): change function name to hub_expose_directory after the expose directory
+    // is removed from exec and the original hub_expose_directory test is deleted.
+    async fn hub_expose_directory_in_resolved() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .protocol(ProtocolDecl {
+                        name: "foo".into(),
+                        source_path: "/svc/foo".parse().unwrap(),
+                    })
+                    .directory(DirectoryDecl {
+                        name: "baz".into(),
+                        source_path: "/data".parse().unwrap(),
+                        rights: *rights::READ_RIGHTS,
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "bar".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "baz".into(),
+                        target_name: "hippo".into(),
+                        target: ExposeTarget::Parent,
+                        rights: None,
+                        subdir: None,
+                    }))
+                    .build(),
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+
+        let expose_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("resolved/expose"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

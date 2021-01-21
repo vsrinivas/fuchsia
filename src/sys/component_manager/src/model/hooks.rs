@@ -291,6 +291,8 @@ pub enum EventPayload {
     Discovered,
     MarkedForDestruction,
     Resolved {
+        realm: WeakRealm,
+        resolved_url: String,
         decl: ComponentDecl,
     },
     Started {
@@ -353,7 +355,10 @@ impl fmt::Debug for EventPayload {
             EventPayload::Started { component_decl, .. } => {
                 formatter.field("component_decl", &component_decl).finish()
             }
-            EventPayload::Resolved { decl } => formatter.field("decl", decl).finish(),
+            EventPayload::Resolved { realm: _, resolved_url, decl } => {
+                formatter.field("resolved_url", resolved_url);
+                formatter.field("decl", decl).finish()
+            }
             EventPayload::Stopped { status } => formatter.field("status", status).finish(),
             EventPayload::Destroyed
             | EventPayload::Discovered

@@ -331,7 +331,7 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "children/coll:simple_instance",
-            vec!["children", "component_type", "deleting", "exec", "id", "url"],
+            vec!["children", "component_type", "deleting", "exec", "id", "resolved", "url"],
         )
         .await;
 
@@ -359,7 +359,7 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1",
-            vec!["children", "component_type", "deleting", "exec", "id", "url"],
+            vec!["children", "component_type", "deleting", "exec", "id", "resolved", "url"],
         )
         .await;
 
@@ -376,7 +376,7 @@ async fn dynamic_child_test() {
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1",
-            vec!["children", "component_type", "deleting", "id", "url"],
+            vec!["children", "component_type", "deleting", "id", "resolved", "url"],
         )
         .await;
 

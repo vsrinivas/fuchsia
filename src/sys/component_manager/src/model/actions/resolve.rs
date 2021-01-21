@@ -7,7 +7,7 @@ use {
         actions::{ActionSet, DiscoverAction},
         error::ModelError,
         hooks::{Event, EventError, EventErrorPayload, EventPayload},
-        realm::{Component, Realm, RealmState, ResolvedRealmState},
+        realm::{Component, Realm, RealmState, ResolvedRealmState, WeakRealm},
         resolver::Resolver,
     },
     std::convert::TryFrom,
@@ -38,19 +38,21 @@ pub(super) async fn do_resolve(realm: &Arc<Realm>) -> Result<Component, ModelErr
             .map_err(|err| ModelError::from(err))?;
         let component = Component::try_from(component)?;
         if first_resolve {
-            let mut state = realm.lock_state().await;
-            match *state {
-                RealmState::Resolved(_) => {
-                    panic!("Realm was marked Resolved during Resolve action?");
+            {
+                let mut state = realm.lock_state().await;
+                match *state {
+                    RealmState::Resolved(_) => {
+                        panic!("Realm was marked Resolved during Resolve action?");
+                    }
+                    RealmState::Destroyed => {
+                        return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
+                    }
+                    RealmState::New | RealmState::Discovered => {}
                 }
-                RealmState::Destroyed => {
-                    return Err(ModelError::instance_not_found(realm.abs_moniker.clone()));
-                }
-                RealmState::New | RealmState::Discovered => {}
+                state.set(RealmState::Resolved(
+                    ResolvedRealmState::new(realm, component.decl.clone()).await,
+                ));
             }
-            state.set(
-                RealmState::Resolved(ResolvedRealmState::new(realm, component.decl.clone()).await),
-            );
         }
         Ok((component, first_resolve))
     }
@@ -59,8 +61,14 @@ pub(super) async fn do_resolve(realm: &Arc<Realm>) -> Result<Component, ModelErr
     match result {
         Ok((component, false)) => Ok(component),
         Ok((component, true)) => {
-            let event =
-                Event::new(realm, Ok(EventPayload::Resolved { decl: component.decl.clone() }));
+            let event = Event::new(
+                realm,
+                Ok(EventPayload::Resolved {
+                    realm: WeakRealm::from(realm),
+                    resolved_url: component.resolved_url.clone(),
+                    decl: component.decl.clone(),
+                }),
+            );
             realm.hooks.dispatch(&event).await?;
             Ok(component)
         }
