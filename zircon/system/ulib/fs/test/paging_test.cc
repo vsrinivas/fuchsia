@@ -168,7 +168,8 @@ T RoundUp(T value, T multiple) {
 
 }  // namespace
 
-TEST_F(PagingTest, Read) {
+// TODO(fxbug.dev/68038) re-enable when not flaky.
+TEST_F(PagingTest, DISABLED_Read) {
   fbl::unique_fd root_dir_fd(CreateVfs(1));
   ASSERT_TRUE(root_dir_fd);
 
