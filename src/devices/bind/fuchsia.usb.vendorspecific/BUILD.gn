@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("fuchsia.usb.vendor_specific") {
-  source = "fuchsia.usb.vendor_specific.bind"
+bind_library("fuchsia.usb.vendorspecific") {
+  source = "fuchsia.usb.vendorspecific.bind"
 }

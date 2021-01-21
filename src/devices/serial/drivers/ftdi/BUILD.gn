@@ -50,7 +50,7 @@ bind_rules("ftdi_function_bind") {
   tests = "ftdi_function_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",
-    "//src/devices/bind/fuchsia.usb.vendor_specific",
+    "//src/devices/bind/fuchsia.usb.vendorspecific",
   ]
 }
 
