@@ -63,6 +63,7 @@ rustc_library("lib") {
     "src/night_mode.rs",
     "src/privacy.rs",
     "src/setup.rs",
+    "src/utils.rs",
     "src/volume_policy.rs",
   ]
 }

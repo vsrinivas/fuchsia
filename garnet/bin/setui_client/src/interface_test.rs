@@ -27,6 +27,7 @@ use {
     setui_client_lib::night_mode,
     setui_client_lib::privacy,
     setui_client_lib::setup,
+    setui_client_lib::utils,
     setui_client_lib::volume_policy,
     setui_client_lib::{
         AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions,
@@ -689,7 +690,9 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
     let audio_service =
         env.connect_to_service::<AudioMarker>().context("Failed to connect to audio service")?;
 
-    audio::command(
+    // We only need an extra check on the watch so we can exercise it at least once.
+    // The sets already return a result.
+    if let utils::Either::Watch(mut stream) = audio::command(
         audio_service,
         expected.stream,
         expected.source,
@@ -697,7 +700,10 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
         expected.volume_muted,
         expected.input_muted,
     )
-    .await?;
+    .await?
+    {
+        stream.try_next().await?;
+    }
     Ok(())
 }
 

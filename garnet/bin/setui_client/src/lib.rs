@@ -6,7 +6,6 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme},
     fuchsia_component::client::connect_to_service,
-    futures::TryStreamExt,
     structopt::StructOpt,
 };
 
@@ -22,6 +21,7 @@ pub mod light;
 pub mod night_mode;
 pub mod privacy;
 pub mod setup;
+pub mod utils;
 pub mod volume_policy;
 
 /// SettingClient exercises the functionality found in SetUI service. Currently,
@@ -379,11 +379,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             }
             let device_service = connect_to_service::<fidl_fuchsia_settings::DeviceMarker>()
                 .context("Failed to connect to device service")?;
-            let mut device_watch_stream = device::command(device_service);
-            println!("This command is watching devices in a loop. Press Ctrl+C to stop.");
-            while let Some(output) = device_watch_stream.try_next().await? {
-                println!("Device: {}", output);
-            }
+            utils::print_results("Device", device::command(device_service)).await?;
         }
         SettingClient::Display {
             brightness,
@@ -470,10 +466,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let level = streams.user_volume.level;
             let volume_muted = streams.user_volume.volume_muted;
             let input_muted = input.input_muted;
-            let output =
+            utils::handle_mixed_result(
+                "Audio",
                 audio::command(audio_service, stream, source, level, volume_muted, input_muted)
-                    .await?;
-            println!("Audio: {}", output);
+                    .await,
+            )
+            .await?;
         }
         SettingClient::Input { mic_muted } => {
             let input_service = connect_to_service::<fidl_fuchsia_settings::InputMarker>()

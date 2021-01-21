@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    crate::utils::{watch_to_stream, Either, WatchOrSetResult},
     fidl_fuchsia_settings::{AudioInput, AudioProxy, AudioSettings, AudioStreamSettings, Volume},
 };
 
@@ -14,8 +14,7 @@ pub async fn command(
     level: Option<f32>,
     volume_muted: Option<bool>,
     input_muted: Option<bool>,
-) -> Result<String, Error> {
-    let mut output = String::new();
+) -> WatchOrSetResult {
     let mut audio_settings = AudioSettings::EMPTY;
     let mut stream_settings = AudioStreamSettings::EMPTY;
     let mut volume = Volume::EMPTY;
@@ -43,11 +42,10 @@ pub async fn command(
         && volume_muted.is_none()
         && input_muted.is_none();
 
-    if none_set {
-        let setting_value = proxy.watch().await?;
-        let setting_string = format!("{:#?}", setting_value);
-        output.push_str(&setting_string);
+    Ok(if none_set {
+        Either::Watch(watch_to_stream(proxy, |p| p.watch()))
     } else {
+        let mut output = String::new();
         let mutate_result = proxy.set(audio_settings).await?;
         match mutate_result {
             Ok(_) => {
@@ -73,8 +71,10 @@ pub async fn command(
                     ));
                 }
             }
+            // TODO(fxbug.dev/67748) This should return an error rather than silently formatting
+            // into the result.
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
-    }
-    Ok(output)
+        Either::Set(output)
+    })
 }

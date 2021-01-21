@@ -3,18 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    crate::utils::{formatted_watch_to_stream, StringTryStream},
     fidl_fuchsia_settings::{DeviceProxy, DeviceSettings},
-    futures::{TryFutureExt, TryStream},
 };
 
-pub fn command(proxy: DeviceProxy) -> impl TryStream<Ok = String, Error = Error> {
-    futures::stream::try_unfold(proxy, |proxy| {
-        proxy
-            .watch()
-            .map_ok(move |settings| Some((describe_device(&settings), proxy)))
-            .map_err(Into::into)
-    })
+pub fn command(proxy: DeviceProxy) -> StringTryStream {
+    formatted_watch_to_stream(proxy, |p| p.watch(), |d| describe_device(&d))
 }
 
 fn describe_device(device_settings: &DeviceSettings) -> String {
