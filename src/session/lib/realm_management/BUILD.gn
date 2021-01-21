@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("realm_management") {
   name = "realm_management"
@@ -30,11 +30,7 @@ rustc_library("realm_management") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("realm_management_tests") {
+fuchsia_unittest_package("realm_management_tests") {
+  manifest = "meta/realm_management_lib_test.cmx"
   deps = [ ":realm_management_test" ]
-  tests = [
-    {
-      name = "realm_management_lib_test"
-    },
-  ]
 }

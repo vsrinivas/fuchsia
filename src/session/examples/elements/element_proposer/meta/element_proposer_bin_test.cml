@@ -4,7 +4,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/element_proposer_bin_test",
+        binary: "bin/element_proposer_bin_test",
     },
     use: [
         { protocol: "fuchsia.session.ElementManager" },

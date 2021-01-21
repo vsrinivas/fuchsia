@@ -2,15 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":element_session",
-    ":element_session_tests",
-  ]
+  deps = [ ":element_session_tests" ]
 }
 
 rustc_binary("element_session_bin") {
@@ -37,46 +34,12 @@ rustc_binary("element_session_bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("element_session") {
+fuchsia_package_with_single_component("element_session") {
+  manifest = "meta/element_session.cml"
   deps = [ ":element_session_bin" ]
-
-  meta = [
-    {
-      path = rebase_path("meta/element_session.cml")
-      dest = "element_session.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "element_session"
-    },
-  ]
 }
 
-package("element_session_tests") {
-  testonly = true
-  deps = [
-    ":element_session_bin",
-    ":element_session_bin_test",
-  ]
-
-  meta = [
-    {
-      path = "meta/element_session_bin_test.cml"
-      dest = "element_session_bin_test.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "element_session"
-    },
-  ]
-
-  tests = [
-    {
-      name = "element_session_bin_test"
-    },
-  ]
+fuchsia_unittest_package("element_session_tests") {
+  manifest = "meta/element_session_bin_test.cml"
+  deps = [ ":element_session_bin_test" ]
 }

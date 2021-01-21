@@ -4,7 +4,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/session_manager_integration_tests",
+        binary: "bin/session_manager_integration_tests",
     },
     collections: [
         {

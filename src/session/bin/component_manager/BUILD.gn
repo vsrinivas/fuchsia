@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/component/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 component_config("component_manager_config") {
   sources = [
@@ -13,29 +13,16 @@ component_config("component_manager_config") {
   ]
 }
 
-package("component_manager_sfw") {
+resource("config") {
+  sources = [ "$target_gen_dir/component_manager_config" ]
+  outputs = [ "data/component_manager_config" ]
+}
+
+fuchsia_package_with_single_component("component_manager_sfw") {
+  manifest = "meta/component_manager_sfw.cmx"
   deps = [
     ":component_manager_config",
+    ":config",
     "//src/sys/component_manager:bin",
-  ]
-
-  resources = [
-    {
-      path = "$target_gen_dir/component_manager_config"
-      dest = "component_manager_config"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "component_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/component_manager_sfw.cmx")
-      dest = "component_manager_sfw.cmx"
-    },
   ]
 }

@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/scene_management_lib_test"
+        "binary": "bin/scene_management_lib_test"
     }
 }

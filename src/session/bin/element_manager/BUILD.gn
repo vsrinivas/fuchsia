@@ -32,22 +32,12 @@ rustc_binary("element_manager_bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("element_manager_component") {
-  component_name = "element_manager"
-  deps = [ ":element_manager_bin" ]
+fuchsia_package_with_single_component("element_manager") {
   manifest = "meta/element_manager.cml"
+  deps = [ ":element_manager_bin" ]
 }
 
-fuchsia_package("element_manager") {
-  deps = [ ":element_manager_component" ]
-}
-
-fuchsia_component("element_manager_bin_test_component") {
-  testonly = true
-  deps = [ ":element_manager_bin_test" ]
+fuchsia_unittest_package("element_manager_tests") {
   manifest = "meta/element_manager_bin_test.cml"
-}
-
-fuchsia_test_package("element_manager_tests") {
-  test_components = [ ":element_manager_bin_test_component" ]
+  deps = [ ":element_manager_bin_test" ]
 }

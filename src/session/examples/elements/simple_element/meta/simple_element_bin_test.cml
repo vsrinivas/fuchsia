@@ -4,7 +4,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/simple_element_bin_test",
+        binary: "bin/simple_element_bin_test",
     },
     use: [
         { protocol: "fuchsia.session.examples.ElementPing" },

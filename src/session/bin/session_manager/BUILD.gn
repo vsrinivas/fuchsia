@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 metrics_registry("session_framework_metrics_registry") {
@@ -84,39 +83,22 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("session_manager") {
+fuchsia_package_with_single_component("session_manager") {
+  manifest = "meta/session_manager.cml"
   deps = [
     ":bin",
     ":lib",
   ]
-
-  meta = [
-    {
-      path = rebase_path("meta/session_manager.cml")
-      dest = "session_manager.cm"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "session_manager"
-    },
-  ]
 }
 
-unittest_package("session_manager_tests") {
+fuchsia_unittest_package("session_manager_tests") {
   deps = [ ":lib_test" ]
 
-  tests = [
-    {
-      name = "session_manager_lib_lib_test"
-      dest = "session_manager_tests"
-      environments = basic_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 config_data("session_manager.config") {
