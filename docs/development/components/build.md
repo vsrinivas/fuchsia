@@ -378,11 +378,26 @@ fuchsia_test("my-test-component-test") {
   package = "//path/to:fuchsia_package"
   component = ":my-test-component"
 }
+
+group("tests") {
+  testonly = true
+  deps = [ ":my-test-component-test" ]
+}
 ```
 
 Then elsewhere, you can add the `fuchsia_component()` target to the `deps` of a
-`fuchsia_package()` target, and add the `fuchsia_test()` target to a standard
-`"tests"` group.
+`fuchsia_package()` target.
+
+```gn
+import("//src/sys/build/components.gni")
+
+fuchsia_package("my-test-package") {
+  testonly = true
+  deps = [ "//other/path/to:my-test-component" ]
+}
+```
+
+This is slightly more verbose but achieves the same outcome.
 
 Dart and Flutter tests differ slightly in that they need to be built with a
 `flutter_test_component()` which collects all of the test mains into a single
