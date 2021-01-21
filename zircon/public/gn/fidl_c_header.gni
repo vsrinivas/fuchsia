@@ -114,6 +114,7 @@ template("fidl_c_header") {
         ":$rsp_target",
         fidlc_target,
       ]
+      inputs = [ fidlc_path ]
       sources = [ rsp_file ]
       depfile = dep_file
       args = [
