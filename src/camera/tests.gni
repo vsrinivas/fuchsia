@@ -17,7 +17,6 @@ camera_tests = {
     "//src/camera/drivers/sensors/imx227/test",
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
-    "//src/camera/lib/fake_camera/test",
   ]
 
   tests = [
@@ -74,11 +73,6 @@ camera_tests = {
     {
       name = "camera_device_unittests"
       manifest = "//src/camera/bin/device/camera_device_unittests.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "fake_camera_test"
-      manifest = "//src/camera/lib/fake_camera/test/fake_camera_test.cmx"
       environments = basic_envs
     },
     {

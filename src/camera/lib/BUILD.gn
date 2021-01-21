@@ -19,6 +19,7 @@ group("lib") {
 group("tests") {
   testonly = true
   deps = [
+    "fake_camera:tests",
     "fake_legacy_stream:tests",
     "fake_stream:tests",
     "hanging_get_helper:tests",

@@ -2,20 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
 group("fake_camera") {
   public_deps = [ ":lib" ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [ ":fake_camera_unittest" ]
+}
+
 source_set("lib") {
   visibility = [ ":*" ]
-
   sources = [
     "fake_camera_impl.cc",
     "fake_camera_impl.h",
   ]
-
   public = [ "fake_camera.h" ]
-
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/camera/lib/fake_stream:impl_header",
@@ -24,11 +28,27 @@ source_set("lib") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
   ]
-
   public_deps = [
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/lib/fidl/cpp",
     "//src/camera/lib/fake_stream",
     "//zircon/public/lib/fit",
   ]
+}
+
+executable("fake_camera_unittest_bin") {
+  testonly = true
+  sources = [ "fake_camera_unittest.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+fuchsia_unittest_package("fake_camera_unittest") {
+  manifest = "meta/fake_camera_unittest.cmx"
+  deps = [ ":fake_camera_unittest_bin" ]
 }
