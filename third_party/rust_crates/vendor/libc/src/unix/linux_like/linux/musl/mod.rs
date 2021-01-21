@@ -1,5 +1,11 @@
 pub type pthread_t = *mut ::c_void;
 pub type clock_t = c_long;
+#[deprecated(
+    since = "0.2.80",
+    note = "This type is changed to 64-bit in musl 1.2.0, \
+            we'll follow that change in the future release. \
+            See #1848 for more info."
+)]
 pub type time_t = c_long;
 pub type suseconds_t = c_long;
 pub type ino_t = u64;
@@ -24,7 +30,6 @@ impl siginfo_t {
             _si_code: ::c_int,
             si_addr: *mut ::c_void,
         }
-
         (*(self as *const siginfo_t as *const siginfo_sigfault)).si_addr
     }
 
@@ -38,8 +43,69 @@ impl siginfo_t {
             _si_overrun: ::c_int,
             si_value: ::sigval,
         }
-
         (*(self as *const siginfo_t as *const siginfo_si_value)).si_value
+    }
+}
+
+cfg_if! {
+    if #[cfg(libc_union)] {
+        // Internal, for casts to access union fields
+        #[repr(C)]
+        struct sifields_sigchld {
+            si_pid: ::pid_t,
+            si_uid: ::uid_t,
+            si_status: ::c_int,
+            si_utime: ::c_long,
+            si_stime: ::c_long,
+        }
+        impl ::Copy for sifields_sigchld {}
+        impl ::Clone for sifields_sigchld {
+            fn clone(&self) -> sifields_sigchld {
+                *self
+            }
+        }
+
+        // Internal, for casts to access union fields
+        #[repr(C)]
+        union sifields {
+            _align_pointer: *mut ::c_void,
+            sigchld: sifields_sigchld,
+        }
+
+        // Internal, for casts to access union fields. Note that some variants
+        // of sifields start with a pointer, which makes the alignment of
+        // sifields vary on 32-bit and 64-bit architectures.
+        #[repr(C)]
+        struct siginfo_f {
+            _siginfo_base: [::c_int; 3],
+            sifields: sifields,
+        }
+
+        impl siginfo_t {
+            unsafe fn sifields(&self) -> &sifields {
+                &(*(self as *const siginfo_t as *const siginfo_f)).sifields
+            }
+
+            pub unsafe fn si_pid(&self) -> ::pid_t {
+                self.sifields().sigchld.si_pid
+            }
+
+            pub unsafe fn si_uid(&self) -> ::uid_t {
+                self.sifields().sigchld.si_uid
+            }
+
+            pub unsafe fn si_status(&self) -> ::c_int {
+                self.sifields().sigchld.si_status
+            }
+
+            pub unsafe fn si_utime(&self) -> ::c_long {
+                self.sifields().sigchld.si_utime
+            }
+
+            pub unsafe fn si_stime(&self) -> ::c_long {
+                self.sifields().sigchld.si_stime
+            }
+        }
     }
 }
 
@@ -62,6 +128,24 @@ s! {
         __dummy4: [::c_char; 24],
         #[cfg(target_pointer_width = "64")]
         __dummy4: [::c_char; 16],
+    }
+
+    pub struct nlmsghdr {
+        pub nlmsg_len: u32,
+        pub nlmsg_type: u16,
+        pub nlmsg_flags: u16,
+        pub nlmsg_seq: u32,
+        pub nlmsg_pid: u32,
+    }
+
+    pub struct nlmsgerr {
+        pub error: ::c_int,
+        pub msg: nlmsghdr,
+    }
+
+    pub struct nlattr {
+        pub nla_len: u16,
+        pub nla_type: u16,
     }
 
     pub struct sigaction {

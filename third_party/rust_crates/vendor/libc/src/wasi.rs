@@ -202,6 +202,7 @@ pub const O_SEARCH: c_int = 0x08000000;
 pub const O_WRONLY: c_int = 0x10000000;
 pub const O_RDWR: c_int = O_WRONLY | O_RDONLY;
 pub const O_ACCMODE: c_int = O_EXEC | O_RDWR | O_SEARCH;
+pub const O_NOCTTY: c_int = 0x0;
 pub const POSIX_FADV_DONTNEED: c_int = 4;
 pub const POSIX_FADV_NOREUSE: c_int = 5;
 pub const POSIX_FADV_NORMAL: c_int = 0;
@@ -230,6 +231,17 @@ pub const DT_REG: u8 = 4;
 pub const DT_LNK: u8 = 7;
 pub const FIONREAD: c_int = 1;
 pub const FIONBIO: c_int = 2;
+pub const F_OK: ::c_int = 0;
+pub const R_OK: ::c_int = 4;
+pub const W_OK: ::c_int = 2;
+pub const X_OK: ::c_int = 1;
+pub const POLLIN: ::c_short = 0x1;
+pub const POLLOUT: ::c_short = 0x2;
+pub const POLLERR: ::c_short = 0x1000;
+pub const POLLHUP: ::c_short = 0x2000;
+pub const POLLNVAL: ::c_short = 0x4000;
+pub const POLLRDNORM: ::c_short = 0x1;
+pub const POLLWRNORM: ::c_short = 0x2;
 
 pub const E2BIG: c_int = 1;
 pub const EACCES: c_int = 2;
@@ -309,6 +321,11 @@ pub const EXDEV: c_int = 75;
 pub const ENOTCAPABLE: c_int = 76;
 pub const EOPNOTSUPP: c_int = ENOTSUP;
 pub const EWOULDBLOCK: c_int = EAGAIN;
+
+pub const _SC_PAGESIZE: c_int = 30;
+pub const _SC_PAGE_SIZE: ::c_int = _SC_PAGESIZE;
+pub const _SC_IOV_MAX: c_int = 60;
+pub const _SC_SYMLOOP_MAX: c_int = 173;
 
 #[cfg_attr(
     feature = "rustc-dep-of-std",
