@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+source_set("code-patching") {
+  sources = []
+
+  public_deps = [
+    # <lib/code-patching/code-patching.h> includes <lib/arch/nop.h>.
+    "//zircon/kernel/lib/arch",
+
+    # <lib/code-patching/code-patching.h> includes <lib/fbl/span.h>.
+    "//zircon/system/ulib/fbl",
+  ]
+
+  public_configs = [ ":include" ]
+}
+
+config("include") {
+  include_dirs = [ "include" ]
+}

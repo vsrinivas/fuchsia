@@ -1,0 +1,72 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/testing/zbi_test.gni")
+import("//build/unification/global_variables.gni")
+import("//build/zbi/zbi_input.gni")
+import("//zircon/kernel/lib/code-patching/code-patching.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
+
+hwreg_asm_header("gen-case-id-asm") {
+  testonly = true
+  visibility = [ ":*" ]
+  output_name = "case-id-asm.h"
+  sources = [ "gen-case-id-asm.cc" ]
+  deps = [ "//zircon/kernel/lib/code-patching" ]
+}
+
+if (toolchain.environment == "kernel.phys") {
+  zbi_executable("zbi-code-patching-test.executable") {
+    testonly = true
+    sources = [
+      "add-one.S",
+      "test.cc",
+    ]
+
+    deps = [
+      ":gen-case-id-asm",
+      "..:zbi-test-main",
+      "//zircon/kernel/lib/code-patching",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zbitl",
+    ]
+  }
+
+  code_patches("zbi-code-patching-test.patches") {
+    testonly = true
+    deps = [ ":zbi-code-patching-test.executable" ]
+  }
+
+  zbi_input("zbi-code-patching-test.data") {
+    testonly = true
+    type = "ramdisk"
+    args = [ "--uncompressed" ]
+    sources = get_target_outputs(":zbi-code-patching-test.patches")
+    deps = [ ":zbi-code-patching-test.patches" ]
+  }
+
+  zbi_test("zbi-code-patching-test") {
+    args = []
+    deps = [
+      ":zbi-code-patching-test.data",
+      ":zbi-code-patching-test.executable",
+      "..:dummy.txt",
+    ]
+
+    # TODO(mcgrathr): enable on hardware too
+    device_types = [
+      "AEMU",
+      "QEMU",
+    ]
+  }
+
+  group("code-patching") {
+    testonly = true
+    deps = [ ":zbi-code-patching-test" ]
+  }
+}

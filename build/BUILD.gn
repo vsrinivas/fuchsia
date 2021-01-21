@@ -826,6 +826,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/kernel/lib/zxc/*",
     "//zircon/kernel/object/*",
     "//zircon/kernel/phys/lib/memalloc/*",
+    "//zircon/kernel/phys/test/*",
     "//zircon/kernel/platform/pc/*",
     "//zircon/kernel/vm/*",
     "//zircon/system/ulib/abs_clock/*",

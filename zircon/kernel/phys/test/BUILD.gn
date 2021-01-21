@@ -113,7 +113,7 @@ if (current_toolchain != default_toolchain) {
   # `zbi_check`. Once that is no longer a requirement, remove this target.
   generated_resource("dummy.txt") {
     testonly = true
-    visibility = [ ":*" ]
+    visibility = [ "./*" ]
     contents = "This space is intentionally left blank."
     outputs = [ "$target_gen_dir/dummy.txt" ]
   }
@@ -249,6 +249,7 @@ if (current_toolchain != default_toolchain) {
       ":phys-unittests",
       ":zbi-decompress-test",
       ":zbi-memory-test",
+      "code-patching",
     ]
   }
 } else {  # current_toolchain == default_toolchain

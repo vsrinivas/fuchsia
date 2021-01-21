@@ -41,6 +41,11 @@ _phys_linker_scripts = [
 template("phys_executable") {
   if (!_is_phys) {
     group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       public_deps =
           [ ":$target_name($zx/kernel/phys:kernel.phys_$current_cpu)" ]
     }
@@ -62,9 +67,9 @@ template("phys_executable") {
                                "metadata",
                                "output_dir",
                                "output_extension",
-                               "visibility",
                                "tags",
                                "target_name",
+                               "visibility",
                              ])
       deps += [ "$zx/kernel/phys:phys_executable.deps" ]
       inputs += _phys_linker_scripts

@@ -1,0 +1,60 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//zircon/public/gn/toolchain/c_utils.gni")
+
+# Extracts the content of a ".code-patches" section from the dependent
+# executables.
+#
+# Parameters
+#
+#   * deps
+#     - Required: Dependencies, from which all transitively dependent
+#       executables will have their section content extracted.
+#     - Type: list(label)
+#
+#   * testonly, visibility, metadata
+#     - See action().
+#
+template("code_patches") {
+  assert(defined(invoker.deps), "`deps` is a required parameter")
+
+  main_target = target_name
+  output_file = "$target_out_dir/$target_name.bin"
+  rspfile_target = "_code_patches.rsp.${target_name}"
+  rspfile = "${target_gen_dir}/${target_name}.code_patches.rsp"
+
+  link_output_rspfile(rspfile_target) {
+    visibility = [ ":$main_target" ]
+    outputs = [ rspfile ]
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                           ])
+  }
+
+  toolchain_utils_action(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "metadata",
+                           ])
+    outputs = [ output_file ]
+    rebased_output = rebase_path(outputs[0], root_build_dir)
+
+    utils = [ "objcopy" ]
+    script = true
+    args = [
+      "--dump-section=.code-patches=$rebased_output",
+      "@" + rebase_path(rspfile, root_build_dir),
+      "/dev/null",
+    ]
+
+    deps = [ ":$rspfile_target" ]
+  }
+}
