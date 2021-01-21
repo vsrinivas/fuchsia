@@ -82,7 +82,7 @@ template("fidlmerge_cpp") {
 
     visibility = [ ":$main_target_name" ]
 
-    tool = "//garnet/go/src/fidlmerge"
+    tool = "//tools/fidl/fidlmerge"
 
     inputs = [
       json_representation,

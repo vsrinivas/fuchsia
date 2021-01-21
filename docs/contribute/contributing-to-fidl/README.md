@@ -95,9 +95,9 @@ Path | Contents
 [/tools/fidl/fidlgen_*](/tools/fidl/) | Various other compiler back-ends.
 [/zircon/tools/fidl/{linter,compiler}](/zircon/tools/fidl) | FIDL linter/formatter.
 [/tools/fidl/fidldoc] | Generate documentation for FIDL.
-[/tools/fidl/scripts] | Mostly one-off scripts for e.g. performing migrations that are kept for future reference.
+[/tools/fidl/fidlmerge] | Tool for generating code from FIDL JSON.
 [/tools/fidl/measure-tape] | Tool to [max out pagination][pagination].
-[/garnet/go/src/fidlmerge] | Tool for generating code from FIDL JSON.
+[/tools/fidl/scripts] | Mostly one-off scripts for e.g. performing migrations that are kept for future reference.
 [/garnet/public/lib/fostr] | `fidlmerge` based tool to generate formatting code in C++.
 [/garnet/public/build/fostr] | Build templates for the `fostr` formatting library.
 [/topaz/bin/dart_fidl_json] | `fidlmerge` based tool to generate code to serialize FIDL to JSON in Dart.
@@ -738,9 +738,9 @@ fidl fmt --library my_library.fidl -i
 [/topaz/tests/fidl-dangerous-identifiers]: /topaz/tests/fidl-dangerous-identifiers
 
 [/tools/fidl/fidldoc]: /tools/fidl/fidldoc
-[/tools/fidl/scripts]: /tools/fidl/scripts
+[/tools/fidl/fidlmerge]: /tools/fidl/fidlmerge
 [/tools/fidl/measure-tape]: /tools/fidl/measure-tape
-[/garnet/go/src/fidlmerge]: /garnet/go/src/fidlmerge
+[/tools/fidl/scripts]: /tools/fidl/scripts
 [/garnet/public/lib/fostr]: /garnet/public/lib/fostr
 [/garnet/public/build/fostr]: /garnet/public/build/fostr
 [/topaz/bin/dart_fidl_json]: /topaz/bin/dart_fidl_json

@@ -47,7 +47,6 @@ allowed_deps = [
     # Tools
     '//tools',
     # Will move to //tools or //sdk:
-    '//garnet/go/src/fidlmerge:fidlmerge(//build/toolchain:host_x64)',
     '//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)',
     '//zircon/public/tool',
 

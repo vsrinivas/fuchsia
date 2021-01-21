@@ -16,7 +16,7 @@ go_library("gopkg") {
 }
 
 go_binary("fidlmerge") {
-  gopackage = "go.fuchsia.dev/fuchsia/garnet/go/src/fidlmerge"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlmerge"
 
   deps = [ ":gopkg" ]
 }

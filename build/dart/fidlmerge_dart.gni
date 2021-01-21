@@ -68,7 +68,7 @@ template("fidlmerge_dart") {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
 
-    tool = "//garnet/go/src/fidlmerge"
+    tool = "//tools/fidl/fidlmerge"
 
     inputs = [
       json_representation,
