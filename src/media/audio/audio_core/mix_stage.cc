@@ -453,6 +453,33 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 
     {
       int32_t raw_source_offset = frac_source_offset.raw_value();
+      // TODO(fxbug.dev/67996): remove after debugging
+      // We are seeing crashes with the PointSampler and raw_source_offset == 0xffffb000, but we
+      // think we might get crashes for any offset <= Fixed(-1).
+      if (mixer.pos_filter_width().raw_value() == Mixer::FRAC_HALF &&
+          ((static_cast<uint32_t>(raw_source_offset) == 0xffffb000) ||
+           frac_source_offset.Ceiling() <= Fixed(-1))) {
+        FX_LOGS_FIRST_N(WARNING, 10)
+            << "Unexpectedly large source_offset:"
+            << " format.channels = " << format().channels()
+            << ", format.sample_format = " << static_cast<int>(format().sample_format())
+            << ", frac_source_offset = " << frac_source_offset.raw_value()
+            << ", raw_source_offset = " << raw_source_offset
+            << ", computed src_iter in PointSamplerImpl = "
+            << (((raw_source_offset + Mixer::FRAC_HALF /* kPositiveFilterWidth */) >>
+                 kPtsFractionalBits) *
+                2 /* SrcChanCount */)
+            << ", frac_source_for_first_mix_job_frame = "
+            << frac_source_for_first_mix_job_frame.raw_value()
+            << ", frac_source_for_first_packet_frame = "
+            << frac_source_for_first_packet_frame.raw_value()
+            << ", info.next_frac_source_frame = " << info.next_frac_source_frame.raw_value()
+            << ", info.dest_frames_to_frac_source_frames = {" << std::dec
+            << info.dest_frames_to_frac_source_frames.subject_time() << ", "
+            << info.dest_frames_to_frac_source_frames.reference_time() << ", "
+            << info.dest_frames_to_frac_source_frames.subject_delta() << ", "
+            << info.dest_frames_to_frac_source_frames.reference_delta() << "}";
+      }
       consumed_source = mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
                                   source_buffer.length().raw_value(), &raw_source_offset,
                                   cur_mix_job_.accumulate);
