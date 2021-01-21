@@ -355,7 +355,7 @@ async fn validate_intl_set() -> Result<(), Error> {
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    intl::command(
+    if let utils::Either::Set(_) = intl::command(
         intl_service,
         Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
         Some(TEST_TEMPERATURE_UNIT),
@@ -363,9 +363,12 @@ async fn validate_intl_set() -> Result<(), Error> {
         Some(TEST_HOUR_CYCLE),
         false,
     )
-    .await?;
-
-    Ok(())
+    .await?
+    {
+        Ok(())
+    } else {
+        panic!("Did not expect watch result for a set command");
+    }
 }
 
 async fn validate_intl_watch() -> Result<(), Error> {
@@ -389,23 +392,27 @@ async fn validate_intl_watch() -> Result<(), Error> {
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    let output = intl::command(intl_service, None, None, vec![], None, false).await?;
-
-    assert_eq!(
-        output,
-        format!(
-            "{:#?}",
-            IntlSettings {
-                locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
-                temperature_unit: Some(TEST_TEMPERATURE_UNIT),
-                time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
-                hour_cycle: Some(TEST_HOUR_CYCLE),
-                ..IntlSettings::EMPTY
-            }
-        )
-    );
-
-    Ok(())
+    if let utils::Either::Watch(mut stream) =
+        intl::command(intl_service, None, None, vec![], None, false).await?
+    {
+        let output = stream.try_next().await?.expect("Watch should have a result");
+        assert_eq!(
+            output,
+            format!(
+                "{:#?}",
+                IntlSettings {
+                    locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
+                    temperature_unit: Some(TEST_TEMPERATURE_UNIT),
+                    time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
+                    hour_cycle: Some(TEST_HOUR_CYCLE),
+                    ..IntlSettings::EMPTY
+                }
+            )
+        );
+        Ok(())
+    } else {
+        panic!("Did not expect a set result for a watch command");
+    }
 }
 
 async fn validate_device() -> Result<(), Error> {

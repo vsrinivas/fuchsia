@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use crate::utils::{self, Either, WatchOrSetResult};
 use fidl_fuchsia_settings::{IntlProxy, IntlSettings};
 
 pub async fn command(
@@ -12,7 +12,7 @@ pub async fn command(
     locales: Vec<fidl_fuchsia_intl::LocaleId>,
     hour_cycle: Option<fidl_fuchsia_settings::HourCycle>,
     clear_locales: bool,
-) -> Result<String, Error> {
+) -> WatchOrSetResult {
     let mut settings = IntlSettings::EMPTY;
     if clear_locales {
         settings.locales = Some(vec![]);
@@ -26,14 +26,13 @@ pub async fn command(
     settings.time_zone_id = time_zone;
     settings.hour_cycle = hour_cycle;
 
-    if settings == IntlSettings::EMPTY {
+    Ok(if settings == IntlSettings::EMPTY {
         // No values set, perform a watch instead.
-        let setting_value = proxy.watch().await?;
-        Ok(format!("{:#?}", setting_value))
+        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
     } else {
-        match proxy.set(settings).await? {
-            Ok(_) => Ok(format!("Successfully set IntlSettings")),
-            Err(err) => Ok(format!("{:#?}", err)),
-        }
-    }
+        Either::Set(match proxy.set(settings).await? {
+            Ok(_) => format!("Successfully set IntlSettings"),
+            Err(err) => format!("{:#?}", err),
+        })
+    })
 }

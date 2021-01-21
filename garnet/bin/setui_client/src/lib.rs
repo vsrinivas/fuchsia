@@ -428,16 +428,19 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         SettingClient::Intl { time_zone, temperature_unit, locales, hour_cycle, clear_locales } => {
             let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()
                 .context("Failed to connect to intl service")?;
-            let output = intl::command(
-                intl_service,
-                time_zone,
-                temperature_unit,
-                locales,
-                hour_cycle,
-                clear_locales,
+            utils::handle_mixed_result(
+                "Intl",
+                intl::command(
+                    intl_service,
+                    time_zone,
+                    temperature_unit,
+                    locales,
+                    hour_cycle,
+                    clear_locales,
+                )
+                .await,
             )
             .await?;
-            println!("Intl: {}", output);
         }
         SettingClient::Light { light_group } => {
             let light_mode_service = connect_to_service::<fidl_fuchsia_settings::LightMarker>()
