@@ -123,7 +123,9 @@ class FakeGe2d {
     return ZX_OK;
   }
 
-  void Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) {}
+  void Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) { crop_rect_ = *crop; }
+
+  std::optional<rect_t>& crop_rect() { return crop_rect_; }
 
  private:
   static zx_status_t Ge2dInitTaskResize(
@@ -203,6 +205,7 @@ class FakeGe2d {
   const hw_accel_frame_callback_t* frame_callback_;
   const hw_accel_res_change_callback_t* res_change_callback_;
   uint32_t image_format_index_ = -1;
+  std::optional<rect_t> crop_rect_;
 };
 
 #endif  // SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_GE2D_H_

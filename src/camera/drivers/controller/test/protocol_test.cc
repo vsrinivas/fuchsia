@@ -14,6 +14,8 @@
 
 #include <utility>
 
+#include <safemath/safe_conversions.h>
+
 #include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
@@ -156,6 +158,33 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
     EXPECT_TRUE(callback_called);
     return output_formats;
+  }
+
+  rect_t GetRectFromCropParameters(float x_min, float y_min, float x_max, float y_max,
+                                   uint32_t coded_width, uint32_t coded_height) {
+    ZX_ASSERT(x_max >= x_min);
+    ZX_ASSERT(y_max >= y_min);
+    x_min = std::clamp(x_min, 0.0f, 1.0f);
+    x_max = std::clamp(x_max, 0.0f, 1.0f);
+    y_min = std::clamp(y_min, 0.0f, 1.0f);
+    y_max = std::clamp(y_max, 0.0f, 1.0f);
+    auto normalized_x_min =
+        safemath::checked_cast<uint32_t>(x_min * safemath::checked_cast<float>(coded_width) + 0.5f);
+    auto normalized_y_min = safemath::checked_cast<uint32_t>(
+        y_min * safemath::checked_cast<float>(coded_height) + 0.5f);
+    auto normalized_x_max =
+        safemath::checked_cast<uint32_t>(x_max * safemath::checked_cast<float>(coded_width) + 0.5f);
+    auto normalized_y_max = safemath::checked_cast<uint32_t>(
+        y_max * safemath::checked_cast<float>(coded_height) + 0.5f);
+    auto width = normalized_x_max - normalized_x_min;
+    auto height = normalized_y_max - normalized_y_min;
+    rect_t rect = {
+        .x = normalized_x_min,
+        .y = normalized_y_min,
+        .width = width,
+        .height = height,
+    };
+    return rect;
   }
 
   FakeIsp fake_isp_;
@@ -920,6 +949,7 @@ TEST_F(ControllerProtocolTest, TestCropRectChange) {
   async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
   RunLoopUntilIdle();
 
+  fake_ge2d_.crop_rect().reset();
   auto callback_called = false;
   async::PostTask(dispatcher(), [&]() {
     stream->SetRegionOfInterest(0.0, 0.0, 0.0, 0.0, [&](zx_status_t status) {
@@ -929,8 +959,15 @@ TEST_F(ControllerProtocolTest, TestCropRectChange) {
   });
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
+  EXPECT_TRUE(fake_ge2d_.crop_rect().has_value());  // Was set_crop_rect() ever called?
+  rect_t expected_rect_1 = GetRectFromCropParameters(0.0, 0.0, 0.0, 0.0, 2240, 1792);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->x, expected_rect_1.x);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->y, expected_rect_1.y);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->width, expected_rect_1.width);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->height, expected_rect_1.height);
 
   // x_min > x_max
+  fake_ge2d_.crop_rect().reset();
   callback_called = false;
   async::PostTask(dispatcher(), [&]() {
     stream->SetRegionOfInterest(0.6, 0.0, 0.5, 0.0, [&](zx_status_t status) {
@@ -940,8 +977,10 @@ TEST_F(ControllerProtocolTest, TestCropRectChange) {
   });
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
+  EXPECT_FALSE(fake_ge2d_.crop_rect().has_value());  // Was set_crop_rect() ever called?
 
   // y_min > y_max
+  fake_ge2d_.crop_rect().reset();
   callback_called = false;
   async::PostTask(dispatcher(), [&]() {
     stream->SetRegionOfInterest(0.6, 0.0, 0.5, 0.0, [&](zx_status_t status) {
@@ -951,6 +990,30 @@ TEST_F(ControllerProtocolTest, TestCropRectChange) {
   });
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
+  EXPECT_FALSE(fake_ge2d_.crop_rect().has_value());  // Was set_crop_rect() ever called?
+}
+
+TEST_F(ControllerProtocolTest, TestCropRectWithoutStart) {
+  auto stream_type = kStreamTypeVideo;
+  fuchsia::camera2::StreamPtr stream;
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::VIDEO, stream_type, stream));
+
+  fake_ge2d_.crop_rect().reset();
+  auto callback_called = false;
+  async::PostTask(dispatcher(), [&]() {
+    stream->SetRegionOfInterest(0.2, 0.4, 0.6, 0.8, [&](zx_status_t status) {
+      callback_called = true;
+      EXPECT_EQ(status, ZX_OK);
+    });
+  });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_TRUE(fake_ge2d_.crop_rect().has_value());  // Was set_crop_rect() ever called?
+  rect_t expected_rect = GetRectFromCropParameters(0.2, 0.4, 0.6, 0.8, 2240, 1792);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->x, expected_rect.x);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->y, expected_rect.y);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->width, expected_rect.width);
+  EXPECT_EQ(fake_ge2d_.crop_rect()->height, expected_rect.height);
 }
 
 TEST_F(ControllerProtocolTest, TestCropRectChangeInvalidStream) {
@@ -962,6 +1025,7 @@ TEST_F(ControllerProtocolTest, TestCropRectChangeInvalidStream) {
   async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
   RunLoopUntilIdle();
 
+  fake_ge2d_.crop_rect().reset();
   auto callback_called = false;
   async::PostTask(dispatcher(), [&]() {
     stream->SetRegionOfInterest(0.0, 0.0, 0.0, 0.0, [&](zx_status_t status) {
@@ -971,6 +1035,7 @@ TEST_F(ControllerProtocolTest, TestCropRectChangeInvalidStream) {
   });
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
+  EXPECT_FALSE(fake_ge2d_.crop_rect().has_value());  // Was set_crop_rect() ever called?
 }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {

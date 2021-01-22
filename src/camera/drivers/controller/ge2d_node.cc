@@ -306,18 +306,16 @@ zx_status_t Ge2dNode::OnSetCropRect(float x_min, float y_min, float x_max, float
   auto normalized_y_max = safemath::checked_cast<uint32_t>(
       y_max * safemath::checked_cast<float>(input_image_format.coded_height) + 0.5f);
 
-  if (enabled_) {
-    auto width = normalized_x_max - normalized_x_min;
-    auto height = normalized_y_max - normalized_y_min;
+  auto width = normalized_x_max - normalized_x_min;
+  auto height = normalized_y_max - normalized_y_min;
 
-    rect_t crop = {
-        .x = normalized_x_min,
-        .y = normalized_y_min,
-        .width = width,
-        .height = height,
-    };
-    ge2d_.SetCropRect(task_index_, &crop);
-  }
+  rect_t crop = {
+      .x = normalized_x_min,
+      .y = normalized_y_min,
+      .width = width,
+      .height = height,
+  };
+  ge2d_.SetCropRect(task_index_, &crop);
   return ZX_OK;
 }
 
