@@ -65,6 +65,7 @@ driver_module("astro") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/devices/bind/fuchsia.ams.platform:bind.fuchsia.ams.platform",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",

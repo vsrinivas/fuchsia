@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <bind/fuchsia/ams/platform/cpp/fidl.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 
 #include <ddk/binding.h>
@@ -64,9 +65,9 @@ zx_status_t Astro::LightInit() {
       },
   };
   constexpr zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMS},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMS_TCS3400},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT},
+      {BIND_PLATFORM_DEV_VID, 0, bind::fuchsia::ams::platform::BIND_PLATFORM_DEV_VID_AMS},
+      {BIND_PLATFORM_DEV_PID, 0, bind::fuchsia::ams::platform::BIND_PLATFORM_DEV_PID_TCS3400},
+      {BIND_PLATFORM_DEV_DID, 0, bind::fuchsia::ams::platform::BIND_PLATFORM_DEV_DID_LIGHT},
   };
 
   const composite_device_desc_t comp_desc = {

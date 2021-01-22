@@ -173,11 +173,6 @@ __BEGIN_CDECLS
 #define PDEV_DID_IMX_I2C            0x04
 #define PDEV_DID_PCF8563_RTC        0x05
 
-// AMS
-#define PDEV_VID_AMS                0x0A
-#define PDEV_PID_AMS_TCS3400        0x01
-#define PDEV_DID_AMS_LIGHT          0x01
-
 // REALTEK
 #define PDEV_VID_REALTEK            0x0B
 #define PDEV_PID_RTL8211F           0x01
