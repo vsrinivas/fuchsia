@@ -26,6 +26,7 @@ zx_library("stdcompat") {
   ]
   sources = [
     "include/lib/stdcompat/internal/constructors.h",
+    "include/lib/stdcompat/internal/exception.h",
     "include/lib/stdcompat/internal/storage.h",
     "include/lib/stdcompat/internal/utility.h",
   ]

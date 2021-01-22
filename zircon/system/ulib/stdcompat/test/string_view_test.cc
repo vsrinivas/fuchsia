@@ -7,14 +7,11 @@
 #include <cstring>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 
-// Disable ASSERT_DEATH.
-#ifdef NDEBUG
-#undef ASSERT_DEATH
-#define ASSERT_DEATH(a, b)
-#endif
+#include "test_helper.h"
 
 namespace {
 
@@ -185,12 +182,12 @@ TEST(StringViewTest, AtReturnsElementAtIndex) {
 }
 
 TEST(StringViewTest, AtThrowsExceptionWhenIndexIsOOR) {
-  ASSERT_DEATH(
+  ASSERT_THROW_OR_ABORT(
       {
         constexpr cpp17::string_view kFitLiteral("12345");
         kFitLiteral.at(1000);
       },
-      ".*");
+      std::out_of_range);
 }
 
 // Even though we use a custom compare implementation, because we lack a constexpr compare
@@ -415,7 +412,7 @@ TEST(StringViewTest, Copy) {
 }
 
 TEST(StringViewTest, CopyThrowsExceptionOnOOR) {
-  ASSERT_DEATH(
+  ASSERT_THROW_OR_ABORT(
       {
         constexpr cpp17::string_view v_str = "Base";
         cpp17::string_view::value_type dest[v_str.length()] = {};
@@ -423,7 +420,16 @@ TEST(StringViewTest, CopyThrowsExceptionOnOOR) {
 
         v_str.copy(dest, v_str.length(), v_str.length() + 1);
       },
-      ".*");
+      std::out_of_range);
+}
+
+TEST(StringViewTest, SubstrThrowsExceptionOnOOR) {
+  ASSERT_THROW_OR_ABORT(
+      {
+        constexpr cpp17::string_view v_str = "Base";
+        [[gnu::unused]] auto s_str = v_str.substr(v_str.length() + 1);
+      },
+      std::out_of_range);
 }
 
 TEST(StringViewTest, MaxSizeIsMaxAddressableSize) {
@@ -892,6 +898,27 @@ TEST(StringViewTest, OutputStreamOperatorResetsWidthToZero) {
   oss << kStringView;
 
   EXPECT_EQ(0, oss.width());
+}
+
+TEST(StringViewTest, BracketOperatorAssersOnUB) {
+  DEBUG_ASSERT_DEATH({
+    constexpr cpp17::string_view kView = "1234";
+    kView[kView.size()];
+  });
+}
+
+TEST(StringViewTest, RemovePrefixAssertsOnUB) {
+  DEBUG_ASSERT_DEATH({
+    cpp17::string_view kView = "1234";
+    kView.remove_prefix(kView.size() + 1);
+  });
+}
+
+TEST(StringViewTest, RemoveSuffixAssertOnUB) {
+  DEBUG_ASSERT_DEATH({
+    cpp17::string_view kView = "1234";
+    kView.remove_suffix(kView.size() + 1);
+  });
 }
 
 }  // namespace

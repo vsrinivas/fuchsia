@@ -5,6 +5,8 @@
 #ifndef LIB_STDCOMPAT_STRING_VIEW_H_
 #define LIB_STDCOMPAT_STRING_VIEW_H_
 
+#include <stdexcept>
+
 #include "version.h"
 
 #if __cpp_lib_string_view >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
@@ -25,12 +27,15 @@ using std::wstring_view;
 
 #include <cassert>
 #include <cstdlib>
+#include <exception>
 #include <ios>
 #include <iterator>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
+
+#include "internal/exception.h"
 
 namespace cpp17 {
 
@@ -103,17 +108,28 @@ class basic_string_view {
   constexpr const_reference back() const { return this->operator[](size() - 1); }
   constexpr bool empty() const { return size() == 0; }
 
-  constexpr const_reference operator[](size_type pos) const { return *(data() + pos); }
-  constexpr const_reference at(size_type pos) const {
+  constexpr const_reference operator[](size_type pos) const {
     assert(pos < size());
+    return *(data() + pos);
+  }
+
+  constexpr const_reference at(size_type pos) const {
+    if (pos >= size()) {
+      internal::throw_or_abort<std::out_of_range>(
+          "Index out of bounds for basic_stirng_view<T>::at");
+    }
     return this->operator[](pos);
   }
 
   constexpr void remove_prefix(size_type n) {
+    assert(n <= size());
     data_ += n;
     length_ -= n;
   }
-  constexpr void remove_suffix(size_type n) { length_ -= n; }
+  constexpr void remove_suffix(size_type n) {
+    assert(n <= size());
+    length_ -= n;
+  }
 
   constexpr void swap(basic_string_view& other) noexcept {
     internal::constexpr_swap(data_, other.data_);
@@ -121,12 +137,19 @@ class basic_string_view {
   }
 
   size_type copy(CharT* dest, size_type count, size_type pos = 0) const {
-    assert(pos <= size());
+    if (pos > size()) {
+      internal::throw_or_abort<std::out_of_range>(
+          "Index out of bounds for basic_string_view<>::copy.");
+    }
     Traits::copy(dest, data() + pos, calculate_length(pos, count));
     return count;
   }
 
   constexpr basic_string_view substr(size_type pos = 0, size_type count = npos) const {
+    if (pos > size()) {
+      internal::throw_or_abort<std::out_of_range>(
+          "Index out of bounds for basic_string_view<>::substr.");
+    }
     return basic_string_view(data() + pos, calculate_length(pos, count));
   }
 
