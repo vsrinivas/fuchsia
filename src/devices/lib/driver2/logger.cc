@@ -59,22 +59,14 @@ Logger& Logger::operator=(Logger&& other) noexcept {
   return *this;
 }
 
-#define LOGGER_FUNCTION(name, severity)     \
-  void Logger::name(const char* msg, ...) { \
-    va_list args;                           \
-    va_start(args, msg);                    \
-    log(severity, msg, args);               \
-    va_end(args);                           \
-  }
+void Logger::log(fx_log_severity_t severity, const char* file, int line, const char* msg, ...) {
+  va_list args;
+  va_start(args, msg);
+  log(severity, file, line, msg, args);
+  va_end(args);
+}
 
-LOGGER_FUNCTION(trace, FX_LOG_TRACE)
-LOGGER_FUNCTION(debug, FX_LOG_DEBUG)
-LOGGER_FUNCTION(info, FX_LOG_INFO)
-LOGGER_FUNCTION(warning, FX_LOG_WARNING)
-LOGGER_FUNCTION(error, FX_LOG_ERROR)
-
-#undef LOGGER_FUNCTION
-
-void Logger::log(fx_log_severity_t severity, const char* msg, va_list args) {
-  fx_logger_logvf(logger_, severity, nullptr, msg, args);
+void Logger::log(fx_log_severity_t severity, const char* file, int line, const char* msg,
+                 va_list args) {
+  fx_logger_logf_with_source(logger_, severity, nullptr, file, line, msg, args);
 }

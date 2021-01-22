@@ -104,17 +104,17 @@ TEST(LoggerTest, CreateAndLog) {
   CheckLogUnreadable(log_socket);
 
   // Check state of logger after writing logs that were below |min_severity|.
-  logger->trace(kMessage);
+  FDF_LOGL(TRACE, logger.value(), kMessage);
   CheckLogUnreadable(log_socket);
-  logger->debug(kMessage);
+  FDF_LOGL(DEBUG, logger.value(), kMessage);
   CheckLogUnreadable(log_socket);
 
   // Check state of logger after writing logs.
-  logger->info(kMessage);
+  FDF_LOGL(INFO, logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_INFO);
-  logger->warning(kMessage);
+  FDF_LOGL(WARNING, logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_WARNING);
-  logger->error(kMessage);
+  FDF_LOGL(ERROR, logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_ERROR);
 }
 
