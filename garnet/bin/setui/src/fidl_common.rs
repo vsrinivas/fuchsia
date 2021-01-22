@@ -12,7 +12,11 @@ use crate::handler::base::Error;
 /// - `Switchboard` setting type.
 /// - FIDL setting type.
 /// - The responder type for the `HangingGetHandler`.
-/// - An optional type of a key for change functions if custom change functions are used.
+/// - A type of a key for change functions if custom change functions are used.
+///     - If change functions aren't used, the [`change_func_key`] is ingnored,
+///       so can be anything.  
+///       TODO(fxb/68167): Restructure this code to avoid needing to specify
+///       unneeded parameters.
 /// - The handler function for requests.
 #[macro_export]
 macro_rules! fidl_process_full {
