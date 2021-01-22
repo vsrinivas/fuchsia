@@ -14,7 +14,6 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
-#include <zircon/device/sysmem.h>
 #include <zircon/errors.h>
 
 #include <ddktl/device.h>

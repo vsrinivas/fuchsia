@@ -4,18 +4,19 @@
 
 #include "fake_buffer_collection.h"
 
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/c/banjo.h>
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <zircon/device/sysmem.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>
 
 #include <fbl/algorithm.h>
 #include <safemath/safe_conversions.h>
+
+#include "src/devices/lib/sysmem/sysmem.h"
 
 namespace camera {
 
@@ -58,8 +59,10 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
   // Round coded_width up to a multiple of 128 to meet the ISP alignment restrictions.
   // TODO(jsasinowski) Determine if this should be handled in the buffer negotiation elsewhere.
   // For now, plan to move the alignment to a parameter (?)
+  fuchsia_sysmem_PixelFormat temp_pixel_format;
+  sysmem::pixel_format_fidl_from_banjo(image_format.pixel_format, temp_pixel_format);
   image_format.bytes_per_row = fbl::round_up(
-      image_format.coded_width * ImageFormatStrideBytesPerWidthPixel(&image_format.pixel_format),
+      image_format.coded_width * ImageFormatStrideBytesPerWidthPixel(&temp_pixel_format),
       kIspLineAlignment);
 
   return ZX_OK;
@@ -76,8 +79,10 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
   if (bti_handle == ZX_HANDLE_INVALID || num_buffers >= countof(buffer_collection.buffers)) {
     return ZX_ERR_INVALID_ARGS;
   }
+  fuchsia_sysmem_ImageFormat_2 temp_image_format;
+  sysmem::image_format_2_fidl_from_banjo(image_format, temp_image_format);
+  size_t vmo_size = ImageFormatImageSize(&temp_image_format);
 
-  size_t vmo_size = ImageFormatImageSize(&image_format);
   buffer_collection.buffer_count = num_buffers;
   GetFakeBufferSettings(buffer_collection, vmo_size);
   zx_status_t status;
@@ -93,8 +98,7 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
   return ZX_OK;
 }
 
-zx_status_t DestroyContiguousBufferCollection(
-    fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection) {
+zx_status_t DestroyContiguousBufferCollection(buffer_collection_info_2_t& buffer_collection) {
   auto result = ZX_OK;
 
   // Release all the vmo handles.

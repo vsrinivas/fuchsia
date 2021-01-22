@@ -8,6 +8,6 @@ banjo("fuchsia.hardware.gdc") {
   sources = [ "gdc.banjo" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.camerahwaccel",
-    "//sdk/banjo/zircon.device.sysmem",
+    "//sdk/banjo/fuchsia.sysmem",
   ]
 }

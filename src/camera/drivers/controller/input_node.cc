@@ -14,6 +14,7 @@
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
+#include "src/devices/lib/sysmem/sysmem.h"
 
 namespace camera {
 
@@ -60,8 +61,13 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
     return fit::error(ZX_ERR_INTERNAL);
   }
 
+  buffer_collection_info_2 temp_buffer_collection;
+  image_format_2_t temp_image_format;
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*buffer_collection_helper.GetC(),
+                                                   temp_buffer_collection);
+  sysmem::image_format_2_banjo_from_fidl(image_format, temp_image_format);
   auto status = isp.CreateOutputStream(
-      buffer_collection_helper.GetC(), &image_format,
+      &temp_buffer_collection, &temp_image_format,
       reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
       processing_node->isp_frame_callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {

@@ -36,6 +36,7 @@ executable("test") {
     "//src/camera/drivers/test_utils",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/devices/lib/sysmem",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",

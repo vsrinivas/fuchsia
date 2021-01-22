@@ -15,6 +15,7 @@
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
+#include "src/devices/lib/sysmem/sysmem.h"
 
 namespace camera {
 
@@ -75,10 +76,13 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   BufferCollectionHelper input_buffer_collection_helper(input_buffers_hlcpp);
 
   // Convert the formats to C type
-  std::vector<fuchsia_sysmem_ImageFormat_2> output_image_formats_c;
+  std::vector<image_format_2_t> output_image_formats_c;
   for (const auto& format : internal_gdc_node.image_formats) {
-    output_image_formats_c.push_back(GetImageFormatFromBufferCollection(
-        *output_buffer_collection_helper.GetC(), format.coded_width, format.coded_height));
+    image_format_2_t value;
+    auto original = GetImageFormatFromBufferCollection(*output_buffer_collection_helper.GetC(),
+                                                       format.coded_width, format.coded_height);
+    sysmem::image_format_2_banjo_from_fidl(original, value);
+    output_image_formats_c.push_back(value);
   }
 
   // GDC only supports one input format and multiple output format at the
@@ -117,12 +121,18 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 
   // Initialize the GDC to get a unique task index
   uint32_t gdc_task_index;
-  auto status =
-      gdc.InitTask(input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
-                   &input_image_formats_c, output_image_formats_c.data(),
-                   output_image_formats_c.size(), info->image_format_index, config_vmos_info.data(),
-                   config_vmos_info.size(), gdc_node->frame_callback(), gdc_node->res_callback(),
-                   gdc_node->remove_task_callback(), &gdc_task_index);
+  buffer_collection_info_2 temp_input_collection, temp_output_collection;
+  image_format_2_t temp_image_format;
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*input_buffer_collection_helper.GetC(),
+                                                   temp_input_collection);
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*output_buffer_collection_helper.GetC(),
+                                                   temp_output_collection);
+  sysmem::image_format_2_banjo_from_fidl(input_image_formats_c, temp_image_format);
+  auto status = gdc.InitTask(
+      &temp_input_collection, &temp_output_collection, &temp_image_format,
+      output_image_formats_c.data(), output_image_formats_c.size(), info->image_format_index,
+      config_vmos_info.data(), config_vmos_info.size(), gdc_node->frame_callback(),
+      gdc_node->res_callback(), gdc_node->remove_task_callback(), &gdc_task_index);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GDC";
     return fit::error(status);

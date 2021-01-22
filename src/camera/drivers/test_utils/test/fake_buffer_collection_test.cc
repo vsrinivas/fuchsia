@@ -4,6 +4,7 @@
 
 #include "../fake_buffer_collection.h"
 
+#include <fuchsia/sysmem/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/bti.h>
@@ -25,8 +26,8 @@ TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
   zx::bti bti;
   ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK);
 
-  fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection;
-  fuchsia_sysmem_ImageFormat_2 image_format;
+  buffer_collection_info_2_t buffer_collection;
+  image_format_2_t image_format;
 
   EXPECT_EQ(GetImageFormat(image_format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight),
             ZX_OK);
@@ -52,8 +53,8 @@ TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
 
 TEST(CreateContiguousBufferCollectionInfo2, FailsOnBadHandle) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
-  fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection;
-  fuchsia_sysmem_ImageFormat_2 image_format;
+  buffer_collection_info_2_t buffer_collection;
+  image_format_2_t image_format;
 
   EXPECT_EQ(GetImageFormat(image_format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight),
             ZX_OK);

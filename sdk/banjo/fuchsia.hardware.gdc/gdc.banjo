@@ -4,8 +4,8 @@
 
 library fuchsia.hardware.gdc;
 using zx;
-using zircon.device.sysmem;
 using fuchsia.hardware.camerahwaccel;
+using fuchsia.sysmem;
 
 struct GdcConfigInfo {
     handle<vmo> config_vmo;
@@ -22,10 +22,10 @@ protocol Gdc {
     // |config_vmos| : Static configuration for GDC is stored in this vmo for this task.
     // |callback| : This function is called when GDC is done processing the task.
     // @Returns: |task_index| : Task ID for this task.
-    InitTask(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
-             zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
-             zircon.device.sysmem.ImageFormat_2	input_image_format,
-             vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
+    InitTask(fuchsia.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+             fuchsia.sysmem.BufferCollectionInfo_2 output_buffer_collection,
+             fuchsia.sysmem.ImageFormat_2	input_image_format,
+             vector<fuchsia.sysmem.ImageFormat_2> output_image_format_table,
              uint32 output_image_format_index,
              vector<GdcConfigInfo> config_vmos,
              fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,

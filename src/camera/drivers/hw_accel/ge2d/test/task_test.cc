@@ -26,6 +26,7 @@
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 #include "src/camera/drivers/test_utils/fake_buffer_collection.h"
+#include "src/devices/lib/sysmem/sysmem.h"
 
 namespace ge2d {
 namespace {
@@ -151,7 +152,10 @@ class TaskTest : public zxtest::Test {
                                      fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
                                      kHeight / 4));
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
-    uint32_t watermark_size = ImageFormatImageSize(&watermark_info_.wm_image_format);
+
+    fuchsia_sysmem_ImageFormat_2 temp_image_format;
+    sysmem::image_format_2_fidl_from_banjo(watermark_info_.wm_image_format, temp_image_format);
+    uint32_t watermark_size = ImageFormatImageSize(&temp_image_format);
 
     zx_status_t status = zx_vmo_create_contiguous(bti_handle_.get(), watermark_size, 0,
                                                   watermark_vmo_.reset_and_get_address());

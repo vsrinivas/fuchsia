@@ -1,0 +1,16 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/banjo/banjo.gni")
+
+banjo("fuchsia.sysmem") {
+  sources = [
+    "constraints.banjo",
+    "format_modifier.banjo",
+    "image_formats.banjo",
+    "image_formats_deprecated.banjo",
+    "metadata.banjo",
+    "usages.banjo",
+  ]
+}

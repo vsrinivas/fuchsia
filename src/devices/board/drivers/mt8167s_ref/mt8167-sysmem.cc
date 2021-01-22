@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
-#include <zircon/device/sysmem.h>
+#include <fuchsia/sysmem/c/banjo.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>

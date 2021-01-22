@@ -4,9 +4,9 @@
 
 library fuchsia.hardware.ge2d;
 using zx;
-using zircon.device.sysmem;
 using fuchsia.hardware.camera;
 using fuchsia.hardware.camerahwaccel;
+using fuchsia.sysmem;
 
 enum Ge2dRotation : uint8 {
     ROTATION_0 = 0;
@@ -28,7 +28,7 @@ struct WaterMarkInfo {
     uint32 loc_x;
     uint32 loc_y;
     // Watermark Image Format - must be R8G8B8A8
-    zircon.device.sysmem.ImageFormat_2 wm_image_format;
+    fuchsia.sysmem.ImageFormat_2 wm_image_format;
     // Watermark VMO must have non-premultiplied alpha.
     handle<vmo> watermark_vmo;
     // The global alpha is multiplied with the input watermark per-pixel alpha to get the
@@ -55,11 +55,11 @@ protocol Ge2d {
     // The resize task only supports dynamically changing the output resolution
     // (not the input resolution). Since the input resolution never changes after
     // Init, we just pass a single input ImageFormat.
-    InitTaskResize(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
-                   zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
+    InitTaskResize(fuchsia.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+                   fuchsia.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                    ResizeInfo info,
-                   zircon.device.sysmem.ImageFormat_2 image_format,
-                   vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
+                   fuchsia.sysmem.ImageFormat_2 image_format,
+                   vector<fuchsia.sysmem.ImageFormat_2> output_image_format_table,
                    uint32 output_image_format_index,
                    fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
                    fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
@@ -71,10 +71,10 @@ protocol Ge2d {
     // resolution, setting them to the same new resolution. Therefore we pass
     // a single ImageFormat table, with a single ImageFormat table index, which
     // applies to both input and output frames. Watermark info is per-resolution.
-    InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
-                      zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
+    InitTaskWaterMark(fuchsia.sysmem.BufferCollectionInfo_2 input_buffer_collection,
+                      fuchsia.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                       vector<WaterMarkInfo> info,
-                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                      vector<fuchsia.sysmem.ImageFormat_2> image_format_table,
                       uint32 image_format_index,
                       fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
                       fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
@@ -84,9 +84,9 @@ protocol Ge2d {
     // This watermark task modifies the images in the input buffer collection.  The output image
     // index will be identical with the input image index, so the caller must manage the output
     // buffer lifetimes.  Watermark info is per-resolution.
-    InitTaskInPlaceWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 buffer_collection,
+    InitTaskInPlaceWaterMark(fuchsia.sysmem.BufferCollectionInfo_2 buffer_collection,
                       vector<WaterMarkInfo> info,
-                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                      vector<fuchsia.sysmem.ImageFormat_2> image_format_table,
                       uint32 image_format_index,
                       fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
                       fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,

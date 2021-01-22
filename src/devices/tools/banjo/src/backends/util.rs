@@ -27,6 +27,6 @@ pub fn to_c_name(name: &str) -> String {
 }
 
 pub fn is_banjo_namespace(name: &str) -> bool {
-    let banjo_namespaces = vec!["ddk.hw", "fuchsia.hardware"];
+    let banjo_namespaces = vec!["ddk.hw", "fuchsia.hardware", "fuchsia.sysmem"];
     banjo_namespaces.iter().any(|n| name.contains(n))
 }

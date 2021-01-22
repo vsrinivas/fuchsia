@@ -17,6 +17,7 @@
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
+#include "src/devices/lib/sysmem/sysmem.h"
 
 namespace camera {
 
@@ -62,16 +63,22 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
   BufferCollectionHelper output_buffer_collection_helper(output_buffers_hlcpp);
   BufferCollectionHelper input_buffer_collection_helper(input_buffers_hlcpp);
 
-  std::vector<fuchsia_sysmem_ImageFormat_2> output_image_formats_c;
+  std::vector<image_format_2_t> output_image_formats_c;
   for (auto& format : internal_ge2d_node.image_formats) {
-    output_image_formats_c.push_back(GetImageFormatFromBufferCollection(
-        *output_buffer_collection_helper.GetC(), format.coded_width, format.coded_height));
+    image_format_2_t value;
+    auto original = GetImageFormatFromBufferCollection(*output_buffer_collection_helper.GetC(),
+                                                       format.coded_width, format.coded_height);
+    sysmem::image_format_2_banjo_from_fidl(original, value);
+    output_image_formats_c.push_back(value);
   }
 
-  std::vector<fuchsia_sysmem_ImageFormat_2> input_image_formats_c;
+  std::vector<image_format_2_t> input_image_formats_c;
   for (auto& format : parent_node->output_image_formats()) {
-    input_image_formats_c.push_back(GetImageFormatFromBufferCollection(
-        *input_buffer_collection_helper.GetC(), format.coded_width, format.coded_height));
+    image_format_2_t value;
+    auto original = GetImageFormatFromBufferCollection(*input_buffer_collection_helper.GetC(),
+                                                       format.coded_width, format.coded_height);
+    sysmem::image_format_2_banjo_from_fidl(original, value);
+    input_image_formats_c.push_back(value);
   }
 
   auto ge2d_node = std::make_unique<camera::Ge2dNode>(
@@ -84,11 +91,16 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 
   // Initialize the GE2D to get a unique task index.
   uint32_t ge2d_task_index = 0;
+  buffer_collection_info_2 temp_input_collection, temp_output_collection;
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*input_buffer_collection_helper.GetC(),
+                                                   temp_input_collection);
+  sysmem::buffer_collection_info_2_banjo_from_fidl(*output_buffer_collection_helper.GetC(),
+                                                   temp_output_collection);
   switch (internal_ge2d_node.ge2d_info.config_type) {
     case Ge2DConfig::GE2D_RESIZE: {
       status = ge2d.InitTaskResize(
-          input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
-          ge2d_node->resize_info(), input_image_formats_c.data(), output_image_formats_c.data(),
+          &temp_input_collection, &temp_output_collection, ge2d_node->resize_info(),
+          input_image_formats_c.data(), output_image_formats_c.data(),
           output_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
           ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
       if (status != ZX_OK) {
@@ -115,8 +127,9 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
         water_mark_info info;
         info.loc_x = internal_ge2d_node.ge2d_info.watermark[i].loc_x;
         info.loc_y = internal_ge2d_node.ge2d_info.watermark[i].loc_y;
-        info.wm_image_format =
+        auto format =
             ConvertHlcppImageFormat2toCType(internal_ge2d_node.ge2d_info.watermark[i].image_format);
+        sysmem::image_format_2_banjo_from_fidl(format, info.wm_image_format);
         info.watermark_vmo = watermark_vmos[i].release();
         constexpr float kGlobalAlpha = 200.f / 255;
         info.global_alpha = kGlobalAlpha;
@@ -132,16 +145,16 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 
       if (internal_ge2d_node.in_place) {
         status = ge2d.InitTaskInPlaceWaterMark(
-            input_buffer_collection_helper.GetC(), watermarks_info.data(), watermarks_info.size(),
+            &temp_input_collection, watermarks_info.data(), watermarks_info.size(),
             input_image_formats_c.data(), input_image_formats_c.size(), info->image_format_index,
             ge2d_node->frame_callback(), ge2d_node->res_callback(),
             ge2d_node->remove_task_callback(), &ge2d_task_index);
       } else {
         status = ge2d.InitTaskWaterMark(
-            input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
-            watermarks_info.data(), watermarks_info.size(), input_image_formats_c.data(),
-            input_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
-            ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
+            &temp_input_collection, &temp_output_collection, watermarks_info.data(),
+            watermarks_info.size(), input_image_formats_c.data(), input_image_formats_c.size(),
+            info->image_format_index, ge2d_node->frame_callback(), ge2d_node->res_callback(),
+            ge2d_node->remove_task_callback(), &ge2d_task_index);
       }
       if (status != ZX_OK) {
         FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D watermark task";

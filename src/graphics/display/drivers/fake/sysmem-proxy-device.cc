@@ -20,7 +20,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
-#include <zircon/device/sysmem.h>
 
 #include <memory>
 

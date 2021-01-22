@@ -1,0 +1,459 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+using zx;
+
+// TODO(dustingreen): FIDL C generated code doesn't implement field defaults, so
+// either move to FIDL C++ generated code (for this reason among several others;
+// preferred), or make 0 values be aliases for the intended default value.  For
+// now, the field defaults don't take effect and the field ends up having value
+// 0 if not explicitly initialized, despite having a default value in the FIDL.
+
+/// Constraints on BufferCollection parameters.  These constraints can be
+/// specified per-participant.  The sysmem service implements aggregation of
+/// constraints from multiple participants.
+[ForDeprecatedCBindings]
+struct BufferCollectionConstraints {
+    /// The usage is only meant as a hint to help sysmem choose a more optimal
+    /// PixelFormat or similar when multiple compatible options exist.
+    ///
+    /// When aggregating BufferCollectionConstraints, these values bitwise-OR.
+    ///
+    /// At least one usage bit must be specified unless the whole
+    /// BufferCollectionConstraints is logically null due to !has_constraints.
+    BufferUsage usage;
+
+    /// Per-participant minimum number of buffers that are needed for camping
+    /// purposes.  A participant should specify a number for min_buffer_count
+    /// that's >= the maximum number of buffers that the participant may
+    /// concurrently camp on for any non-transient period of time.
+    ///
+    /// For example, a video decoder would specify (at least) the maximum number
+    /// of reference frames + 1 frame currently being decoded into.
+    ///
+    /// A participant must not camp on more buffers than specified here (except
+    /// very transiently) else processing may get stuck.
+    ///
+    /// When aggregating BufferCollectionConstraints, these values add.
+    ///
+    /// In testing scenarios, camping on more buffers than this for any
+    /// significant duration may (ideally will) be flagged as a failure.  In
+    /// testing scenarios, the participant may not be provided with more buffers
+    /// than this concurrently.
+    uint32 min_buffer_count_for_camping;
+
+    /// Per-participant minimum number of buffers that are needed for slack
+    /// reasons, for better overlap of processing / better performance.
+    ///
+    /// When aggregating BufferCollectionConstraints, these values add.
+    ///
+    /// A participant should typically specify 0 or 1 here - typically 0 is
+    /// appropriate if min_buffer_count_for_camping is already enough to keep
+    /// the participant busy 100% of the time when the participant is slightly
+    /// behind, while 1 can be appropriate if 1 more buffer than strictly needed
+    /// for min-camping reasons gives enough slack to stay busy 100% of the time
+    /// (when slightly behind, vs. lower % without the extra buffer).
+    ///
+    /// In testing scenarios, this field may be forced to 0, and all
+    /// participants are expected to continue to work without getting stuck.  If
+    /// a buffer is needed for forward progress reasons, that buffer should be
+    /// accounted for in min_buffer_count_for_camping.
+    uint32 min_buffer_count_for_dedicated_slack;
+
+    /// Similar to min_buffer_count_for_dedicated_slack, except when aggregating
+    /// these values max (instead of add).  The value here is not shared with
+    /// any participant's min_buffer_count_for_dedicated_slack.
+    ///
+    /// A participant can specify > 0 here if a participant would like to ensure
+    /// there's some slack overall, but doesn't need that slack to be dedicated.
+    ///
+    /// The choice whether to use min_buffer_count_for_dedicated_slack or
+    /// min_buffer_count_for_shared_slack (or both) will typically be about the
+    /// degree to which the extra slack improves performance.
+    ///
+    /// In testing scenarios, this field may be forced to 0, and all
+    /// participants are expected to continue to work without getting stuck.  If
+    /// a buffer is needed for forward progress reasons, that buffer should be
+    /// accounted for in min_buffer_count_for_camping.
+    uint32 min_buffer_count_for_shared_slack;
+
+    /// A particularly-picky participant may unfortunately need to demand a
+    /// tight range of buffer_count, or even a specific buffer_count.  This
+    /// field should remain 0 unless a participant really must set this field to
+    /// constrain the overall BufferCollectionInfo_2.buffer_count.  Any such
+    /// participant should still fill out the min_buffer_count_for_* fields
+    /// above.
+    uint32 min_buffer_count;
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 max_buffer_count;
+
+    /// Constraints on BufferCollectionSettings.buffer_settings.
+    ///
+    /// A participant that intends to specify image_format_constraints_count > 1
+    /// will typically specify the minimum buffer size implicitly via
+    /// image_format_constraints, and possibly specify only the max buffer size
+    /// via buffer_memory_constraints.
+    bool has_buffer_memory_constraints;
+    BufferMemoryConstraints buffer_memory_constraints;
+
+    /// Optional constraints on the image format parameters of an image stored
+    /// in a buffer of the BufferCollection.  This includes pixel format and
+    /// image layout.  These constraints are per-pixel-format, so more than one
+    /// is permitted. Entries in the list must have unique pixel_formats.
+    ///
+    /// When aggregating, only pixel formats that are specified by all
+    /// particpants with non-zero image_format_constraints_count (and non-Null)
+    /// BufferCollectionConstraints) are retained.
+    uint32 image_format_constraints_count;
+    // TODO(fxb/): restore MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS below.
+    array<ImageFormatConstraints>:32 image_format_constraints;
+};
+
+[ForDeprecatedCBindings]
+struct BufferCollectionConstraintsAuxBuffers {
+    /// If true, a secure heap may only be selected if all participants with
+    /// BufferMemoryConstraints specify allow_clear_aux_buffers_for_secure.  If
+    /// "need" is true, "allow" must also be true.
+    ///
+    /// If false, the participant can still work, potentially even with secure
+    /// memory (depending on supported heaps), without clear aux buffers.
+    bool need_clear_aux_buffers_for_secure;
+
+    /// If true, the participant will use clear aux buffers, if they are
+    /// allocated, as appropriate to the participant's role.  If the participant
+    /// is a producer, then the participant producer will populate the clear aux
+    /// buffers with the clear (not-encrypted, not-DRM-protected) bytes, and
+    /// fill protected bytes with data that does not emulate start codes, such
+    /// as 0xFF.
+    ///
+    /// If BufferCollectionConstraintsAuxBuffers is never sent by a
+    /// participant, then "allow" is true iff the participant specifies usage
+    /// which is read only.
+    ///
+    /// If unspecified by a participant with write usage, or false, the
+    /// buffer collection won't be able to allocate if any participant specifies
+    /// need_clear_aux_buffers_for_secure true.
+    bool allow_clear_aux_buffers_for_secure;
+};
+
+[ForDeprecatedCBindings]
+resource struct VmoBuffer {
+    /// The same VMO can be used by more than one CodecBuffer (only of the same
+    /// buffer_lifetime_ordinal), but each vmo handle must be a separate handle.
+    ///
+    /// The vmo field can be 0 if this is a VmoBuffer in BufferCollectionInfo_2
+    /// that's at or beyond BufferCollectionInfo_2.buffer_count.
+    zx.handle:VMO? vmo;
+
+    /// Offset within the VMO of the first usable byte.  Must be < the VMO's
+    /// size in bytes, and leave sufficient room for
+    /// BufferMemorySettings.size_bytes before the end of the VMO.
+    uint64 vmo_usable_start;
+};
+
+/// Information about a buffer collection and its buffers.
+// TODO(fxbug.dev/32119): change struct to table
+[ForDeprecatedCBindings]
+resource struct BufferCollectionInfo_2 {
+    /// The total number of buffers.
+    uint32 buffer_count;
+
+    /// These settings apply to all the buffers in the inital buffer allocation.
+    SingleBufferSettings settings;
+
+    /// VMO handles (and vmo_usable_start offset) for each buffer in the
+    /// collection.
+    ///
+    /// If present, all the VMOs at or after index `buffer_count` are invalid
+    /// (0) handles.
+    ///
+    /// All buffer VMO handles have identical size and access rights.  The size
+    /// is in settings.buffer_settings.size_bytes.
+    ///
+    /// The VMO access rights are determined based on the usages which the
+    /// client specified when allocating the buffer collection.  For example,
+    /// a client which expressed a read-only usage will receive VMOs without
+    /// write rights.  In addition, the rights can be attenuated by the
+    /// parameter to BufferCollectionToken.Duplicate() calls.
+    // TODO(fxb/): restore MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS below.
+    array<VmoBuffer>:64 buffers;
+};
+
+[ForDeprecatedCBindings]
+resource struct SingleBufferInfo {
+    SingleBufferSettings settings;
+    VmoBuffer buffer;
+};
+
+/// After the initial buffer allocation, it's allowed to close old buffers and
+/// allocate new buffers.  When a new buffer is allocated its settings can
+/// differ from the rest of the buffers in the collection, and the single
+/// buffer's settings are delivered via OnSingleBufferAllocated() using this
+/// struct:
+[ForDeprecatedCBindings]
+struct SingleBufferSettings {
+    BufferMemorySettings buffer_settings;
+
+    /// Buffers holding data that is not uncompressed image data will not have
+    /// this field set.  Buffers holding data that is uncompressed image data
+    /// _may_ have this field set.
+    ///
+    /// At least for now, changing the PixelFormat requires re-allocating
+    /// buffers.
+    bool has_image_format_constraints;
+    ImageFormatConstraints image_format_constraints;
+};
+
+/// Known heap types.
+/// Device specific types should have bit 60 set. Top order bit is reserved
+/// and should not be set.
+enum HeapType : uint64 {
+    SYSTEM_RAM = 0x0000000000000000;
+
+    /// Heap used for amlogic protected memory.
+    AMLOGIC_SECURE = 0x1000000000010000;
+
+    /// Heap used for amlogic protected memory between decrypt and video decode.
+    AMLOGIC_SECURE_VDEC = 0x1000000000010001;
+
+    /// Heap used by goldfish vulkan for device-local memory.
+    GOLDFISH_DEVICE_LOCAL = 0x1000000000020000;
+
+    /// Heap used by goldfish vulkan for host-visible memory.
+    GOLDFISH_HOST_VISIBLE = 0x1000000000020001;
+};
+
+[ForDeprecatedCBindings]
+struct BufferMemoryConstraints {
+    uint32 min_size_bytes = 0;
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 max_size_bytes = 0xFFFFFFFF;
+
+    bool physically_contiguous_required = false;
+
+    /// If true, at least one participant requires secure memory.
+    ///
+    /// When aggregating BufferCollectionConstraints, these values boolean-OR.
+    bool secure_required = false;
+
+    /// By default, participants must ensure the CPU can read or write data to
+    /// the buffer without cache operations. If they support using the RAM
+    /// domain, data must be available in RAM (with CPU cache state such that
+    /// the RAM data won't get corrupted by a dirty CPU cache line writing
+    /// incorrect data to RAM), and a consumer reading using the CPU must
+    /// invalidate CPU cache before reading (the producer doesn't guarantee
+    /// zero stale "clean" cache lines)
+    bool ram_domain_supported = false;
+    bool cpu_domain_supported = true;
+    bool inaccessible_domain_supported = false;
+
+    /// Optional heap constraints. Participants that don't care which heap
+    /// memory is allocated on should leave this field 0.
+    uint32 heap_permitted_count;
+    // TODO(fxb/): restore MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED below.
+    array<HeapType>:32 heap_permitted;
+};
+
+/// Inaccessible is only for cases where there is no CPU-based access to the
+/// buffers.  A secure_required buffer can still have CoherencyDomain Cpu or
+/// Ram even if the secure_required buffer can only be accessed by the CPU when
+/// the CPU is running in secure mode (or similar).  In contrast, device-local
+/// memory that isn't reachable from the CPU is CoherencyDomain Inaccessible,
+/// even if it's possible to cause a device (physical or virtual) to copy the
+/// data from the Inaccessible buffers to buffers that are visible to the CPU.
+enum CoherencyDomain {
+    CPU = 0;
+    RAM = 1;
+    INACCESSIBLE = 2;
+};
+
+[ForDeprecatedCBindings]
+struct BufferMemorySettings {
+    uint32 size_bytes;
+    bool is_physically_contiguous;
+    bool is_secure;
+    CoherencyDomain coherency_domain;
+    /// The specific heap from which buffers are allocated.
+    /// See above in this file for heap identifier values.
+    HeapType heap;
+};
+
+/// Describes constraints on layout of image data in buffers.
+// TODO(fxbug.dev/32119): change struct to table
+[ForDeprecatedCBindings]
+struct ImageFormatConstraints {
+    /// The PixelFormat for which the following constraints apply.  A
+    /// participant may have more than one PixelFormat that's supported, in
+    /// which case that participant can use a list of ImageFormatConstraints
+    /// with an entry per PixelFormat.  It's not uncommon for the other fields
+    /// of ImageFormatConstraints to vary by PixelFormat - for example for a
+    /// linear format to support smaller max size than a tiled format.
+    PixelFormat pixel_format;
+
+    /// Empty is an error.  Redundant entries are an error.  Arbitrary ordering
+    /// is not an error.
+    uint32 color_spaces_count;
+    // TODO(fxb/): restore MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES below.
+    array<ColorSpace>:32 color_space;
+
+    /// Minimum permitted width in pixels.
+    ///
+    /// For example a video decoder participant may set this field to the
+    /// minimum coded_width that might potentially be specified by a stream.  In
+    /// contrast, required_min_coded_width would be set to the current
+    /// coded_width specified by the stream.  While min_coded_width aggregates
+    /// by taking the max, required_min_coded_width aggregates by taking the
+    /// min.
+    ///
+    /// See also required_min_coded_width.
+    uint32 min_coded_width;
+    /// Maximum width in pixels.  For example Scenic may set this field
+    /// (directly or via sub-participants) to the maximum width that can be
+    /// composited.
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 max_coded_width;
+
+    /// Minimum height in pixels.  For example a video decoder participant may
+    /// set this field to the coded_height specified by a stream.
+    uint32 min_coded_height;
+    /// Maximum height in pixels.  For example Scenic may set this field
+    /// (directly or via sub-participants) to the maximum height that can be
+    /// composited.
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 max_coded_height;
+
+    /// Must be >= the value implied by min_coded_width for plane 0.
+    uint32 min_bytes_per_row;
+    /// Must be >= the value implied by max_coded_width for plane 0.
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 max_bytes_per_row;
+
+    /// The max image area in pixels is limited indirectly via
+    /// BufferSettings.size_bytes, and can also be enforced directly via this
+    /// field.
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 max_coded_width_times_coded_height = 0xFFFFFFFF;
+
+    /// Number of layers within a multi-layered image.
+    /// 0 is treated as 1.
+    uint32 layers = 1;
+
+    /// coded_width % width_divisor must be 0.
+    /// 0 is treated as 1.
+    uint32 coded_width_divisor = 1;
+
+    /// coded_height % height_divisor must be 0.
+    /// 0 is treated as 1.
+    uint32 coded_height_divisor = 1;
+
+    /// bytes_per_row % bytes_per_row_divisor must be 0.
+    /// 0 is treated as 1.
+    uint32 bytes_per_row_divisor = 1;
+
+    /// vmo_usable_start % start_offset_divisor must be 0.
+    /// 0 is treated as 1.
+    uint32 start_offset_divisor = 1;
+
+    /// display_width % display_width_divisor must be 0.
+    /// 0 is treated as 1.
+    uint32 display_width_divisor = 1;
+
+    /// display_height % display_height_divisor must be 0.
+    /// 0 is treated as 1.
+    uint32 display_height_divisor = 1;
+
+    /// required_ dimension bounds.
+    ///
+    /// In contrast to the corresponding fields without "required_" at the
+    /// start, these fields (when set to non-zero values) express a requirement
+    /// that the resulting aggregated non-required_ fields specify a space that
+    /// fully contain the space expressed by each participant's required_
+    /// fields.
+    ///
+    /// For example, a producer video decoder is perfectly happy for the
+    /// consumer to be willing to accept anything, and the video decoder doesn't
+    /// really want to constrain the potential space of dimensions that might be
+    /// seen in a stream and may be acceptable to the consumer, but the video
+    /// decoder needs to ensure that the resulting dimension ranges contain
+    /// at least the current dimensions decoded from the stream.
+    ///
+    /// Similarly, an initiator with a particular dynamic-dimension scenario in
+    /// mind may wish to require up front that participants agree to handle at
+    /// least the range of dimensions expected by the initiator in that
+    /// scenario (else fail earlier rather than later, maybe trying again with
+    /// smaller required_ space).
+    ///
+    /// It's much more common for a producer or initiator to set these fields
+    /// than for a consumer to set these fields.
+    ///
+    /// While the non-required_ fields aggregate by taking the intersection, the
+    /// required_ fields aggregate by taking the union.
+    ///
+    /// If set, the required_max_coded_width and required_max_coded_height will
+    /// cause the allocated buffers to be large enough to hold an image that is
+    /// required_max_coded_width * required_max_coded_height.
+    ///
+    /// TODO(dustingreen): Make it easier to allocate buffers of minimal size
+    /// that can (optionally) also handle 90 degree rotated version of the max
+    /// dimensions / alternate required bounds for another main aspect ratio.
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 required_min_coded_width;
+    uint32 required_max_coded_width;
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 required_min_coded_height;
+    uint32 required_max_coded_height;
+    /// 0 is treated as 0xFFFFFFFF.
+    uint32 required_min_bytes_per_row;
+    uint32 required_max_bytes_per_row;
+};
+
+/// Describes how an image is represented.
+// TODO(fxbug.dev/32119): change struct to table
+[ForDeprecatedCBindings]
+struct ImageFormat_2 {
+    /// Pixel format.
+    PixelFormat pixel_format;
+
+    /// Row width in pixels that exist in the buffer.  Must be >= display_width.
+    /// Can be < the width implied by stride_bytes.
+    uint32 coded_width;
+
+    /// Number of rows.  Must be >= display_height.
+    uint32 coded_height;
+
+    // Stride in bytes of plane 0.  Planes beyond plane 0 (if any, depending on
+    // pixel_format) have a known fixed relationship with plane 0's stride.
+    uint32 bytes_per_row;
+
+    /// Row width in pixels that are to be displayed.  This can be <=
+    /// coded_width.  Any cropping occurs on the right of the image (not left).
+    uint32 display_width;
+
+    /// Number of rows to be displayed.  This can be <= coded_height, with any
+    /// cropping on the bottom (not top).
+    uint32 display_height;
+
+    /// Number of layers within a multi-layered image.
+    uint32 layers = 1;
+
+    /// Color space.
+    ColorSpace color_space;
+
+    /// The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the
+    /// pixel aspect ratio (AKA sample aspect ratio aka SAR) for the luma
+    /// (AKA Y) samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
+    /// pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice
+    /// as wide as they are tall. Codec implementation should ensure these
+    /// two values are relatively prime by reducing the fraction (dividing
+    /// both by GCF) if necessary.
+    ///
+    /// When has_pixel_aspect_ratio == false, the pixel_aspect_ratio is unknown.
+    /// A default of 1:1 can be appropriate in some cases, but as always, a
+    /// consumer may determine the actual pixel_aspect_ratio by OOB means.
+    bool has_pixel_aspect_ratio = false;
+    uint32 pixel_aspect_ratio_width = 1;
+    uint32 pixel_aspect_ratio_height = 1;
+};

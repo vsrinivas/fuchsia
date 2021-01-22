@@ -6,10 +6,10 @@
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_TASK_TASK_H_
 
 #include <fuchsia/hardware/camerahwaccel/cpp/banjo.h>
+#include <fuchsia/sysmem/c/banjo.h>
 #include <lib/fit/result.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-pool.h>
-#include <zircon/device/sysmem.h>
 #include <zircon/fidl.h>
 
 #include <deque>

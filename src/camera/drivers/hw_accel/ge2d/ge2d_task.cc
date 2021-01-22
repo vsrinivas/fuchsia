@@ -4,6 +4,7 @@
 
 #include "ge2d_task.h"
 
+#include <fuchsia/sysmem/c/fidl.h>
 #include <lib/syslog/global.h>
 #include <stdint.h>
 #include <zircon/pixelformat.h>

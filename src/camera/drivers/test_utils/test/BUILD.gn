@@ -11,6 +11,7 @@ executable("test_utils_test") {
   testonly = true
   sources = [ "fake_buffer_collection_test.cc" ]
   deps = [
+    "//sdk/banjo/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fdio",
     "//src/camera/drivers/test_utils",

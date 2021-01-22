@@ -5,9 +5,8 @@
 #ifndef SRC_CAMERA_DRIVERS_TEST_UTILS_FAKE_BUFFER_COLLECTION_H_
 #define SRC_CAMERA_DRIVERS_TEST_UTILS_FAKE_BUFFER_COLLECTION_H_
 
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/c/banjo.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/sysmem.h>
 
 namespace camera {
 
@@ -25,13 +24,12 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
 // |num_buffers| : number of buffers to allocate in the buffer collection
 // @Return: ZX_OK if allocation works, otherwise returns status from
 //          failed zx_vmo_create_contiguous.
-zx_status_t CreateContiguousBufferCollectionInfo(
-    fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, const image_format_2_t& image_format,
-    zx_handle_t bti_handle, uint32_t num_buffers);
+zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buffer_collection,
+                                                 const image_format_2_t& image_format,
+                                                 zx_handle_t bti_handle, uint32_t num_buffers);
 
 // Tears down the buffer collection.
-zx_status_t DestroyContiguousBufferCollection(
-    fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection);
+zx_status_t DestroyContiguousBufferCollection(buffer_collection_info_2_t& buffer_collection);
 }  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_TEST_UTILS_FAKE_BUFFER_COLLECTION_H_

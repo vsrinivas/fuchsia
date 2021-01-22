@@ -1,0 +1,60 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem;
+
+/// Describes how an image is represented.
+// TODO(fxbug.dev/32119): change struct to table
+[ForDeprecatedCBindings]
+struct ImageFormat {
+    /// Row width in pixels.
+    uint32 width;
+
+    /// Number of rows.
+    uint32 height;
+
+    /// Number of layers within a multi-layered image.
+    /// Defaults to 1 if not specified.
+    uint32 layers = 1;
+
+    /// Pixel format.
+    PixelFormat pixel_format;
+
+    /// Color space.
+    ColorSpace color_space;
+
+    array<ImagePlane>:4 planes;
+};
+
+[ForDeprecatedCBindings]
+struct ImagePlane {
+    /// Byte offset of the start of the plane from the beginning of the image.
+    uint32 byte_offset;
+
+    /// Stride in bytes per row.
+    /// Only meaningful for linear buffer formats.
+    uint32 bytes_per_row;
+};
+
+/// Describes constraints for allocating images of some desired form.
+// TODO(fxbug.dev/32119): change struct to table
+struct ImageSpec {
+    /// Minimum width in pixels.
+    uint32 min_width;
+
+    /// Minimum height in pixels.
+    uint32 min_height;
+
+    /// Number of layers within a multi-layered image.
+    /// Defaults to 1 if not specified.
+    uint32 layers = 1;
+
+    /// Pixel format.
+    PixelFormat pixel_format;
+
+    /// Color space.
+    ColorSpace color_space;
+
+    // TODO(fxbug.dev/32128): Add tiling formats.
+};

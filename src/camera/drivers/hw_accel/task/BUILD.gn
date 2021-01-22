@@ -10,6 +10,8 @@ source_set("camera-task") {
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.camerahwaccel",
+    "//sdk/banjo/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/fzl",

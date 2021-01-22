@@ -9,6 +9,6 @@ banjo("fuchsia.hardware.ge2d") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.camera",
     "//sdk/banjo/fuchsia.hardware.camerahwaccel",
-    "//sdk/banjo/zircon.device.sysmem",
+    "//sdk/banjo/fuchsia.sysmem",
   ]
 }

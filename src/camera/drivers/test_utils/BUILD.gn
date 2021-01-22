@@ -23,7 +23,8 @@ source_set("fake_buffer_collection") {
     "fake_buffer_collection.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/banjo/fuchsia.sysmem",
+    "//src/devices/lib/sysmem",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/safemath",
