@@ -71,6 +71,9 @@ mov %edx, CPUID_EDX + \addr
   // routine.
   mov CPUID_EAX(START), %eax
 
+  // Skip to the hypervisor range if the extended range is unsupported.
+  cmpl $0, GLOBAL(gBootCpuidExt0 + CPUID_EAX)
+  je .Ltry_hypervisor
   cmp GLOBAL(gBootCpuidExt0 + CPUID_EAX), %eax
   ja .Lunsupported_leaf  // (max extended leaf, UINT32_MAX]
   cmp $CPUID_EXT_LEAF0, %eax
@@ -80,11 +83,16 @@ mov %edx, CPUID_EDX + \addr
 .error "unexpected leaf values"
 .endif
 
+.Ltry_hypervisor:
+  // Skip to the basic range if the hypervisor range is unsupported.
+  cmpl $0, GLOBAL(gBootCpuidHyp0 + CPUID_EAX)
+  je .Ltry_basic
   cmp GLOBAL(gBootCpuidHyp0 + CPUID_EAX), %eax
   ja .Lunsupported_leaf // (max hypervisor leaf, 0th extended leaf]
   cmp $CPUID_HYP_LEAF0, %eax
   ja .Linit // (0th hypervisor leaf, max hypervisor leaf]
 
+.Ltry_basic:
   cmp GLOBAL(gBootCpuid0 + CPUID_EAX), %eax
   ja .Lunsupported_leaf // (max basic leaf, 0th hypervisor leaf]
 
