@@ -250,18 +250,20 @@ done
 # and clear the device name to avoid any confusion.
 remote_cmds=(
   "cd \$HOME" "&&" # change directories to home, to avoid issues if the remote dir was deleted out from under us.
-  "cd ${REMOTE_DIR}" "&&"
-  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
-  "./bin/fconfig.sh default device-name"
+  "cd ${REMOTE_DIR}"
   )
 
+fconfig_cmd="./tools/x64/fconfig set-device ${DEVICE_NAME} --default --device-ip 127.0.0.1"
+
 if [[ "${BUCKET}" != "" ]]; then
-    remote_cmds+=("&&" "./bin/fconfig.sh set bucket ${BUCKET}")
+    fconfig_cmd="${fconfig_cmd} --bucket ${BUCKET}"
 fi
 
 if [[ "${IMAGE}" != "" ]]; then
-    remote_cmds+=("&&" "./bin/fconfig.sh set image ${IMAGE}")
+      fconfig_cmd="${fconfig_cmd} --image ${IMAGE}"
 fi
+
+remote_cmds+=("&&" "${fconfig_cmd}")
 
 # Run fconfig.sh list to print out the settings, this will help diagnosing any
 # problems.

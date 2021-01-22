@@ -160,9 +160,8 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fconfig"
   expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
-    "./bin/fconfig.sh" "default" "device-name" "&&"
-    "./bin/fconfig.sh" "set" "image" "image1" "&&"
+    "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee" "--default" "--device-ip" "127.0.0.1"
+    "--image" "image1" "&&"
     "./bin/fconfig.sh" "list" )
   gn-test-check-mock-args "${expected[@]}"
 
@@ -320,11 +319,9 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fconfig"
   expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
-    "./bin/fconfig.sh" "default" "device-name" "&&"
-    "./bin/fconfig.sh" "set" "bucket" "custom-bucket" "&&"
-    "./bin/fconfig.sh" "set" "image" "test-image" "&&"
-    "./bin/fconfig.sh" "list")
+    "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee"
+    "--default" "--device-ip" "127.0.0.1" "--bucket" "custom-bucket"
+    "--image" "test-image" "&&" "./bin/fconfig.sh" "list")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
@@ -502,13 +499,12 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fconfig"
   expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
-    "./bin/fconfig.sh" "default" "device-name" "&&"
-    "./bin/fconfig.sh" "set" "image" "image1" "&&"
+    "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee"
+    "--default" "--device-ip" "127.0.0.1" "--image" "image1" "&&"
     "./bin/fconfig.sh" "list")
   gn-test-check-mock-args "${expected[@]}"
 
-  # shellcheck disable=SC1090
+   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.check_for_8083"
   expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8083")
   gn-test-check-mock-args "${expected[@]}"
@@ -672,9 +668,8 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fconfig"
   expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
-    "./bin/fconfig.sh" "default" "device-name" "&&"
-    "./bin/fconfig.sh" "set" "image" "image1" "&&"
+    "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee"
+    "--default" "--device-ip" "127.0.0.1" "--image" "image1" "&&"
     "./bin/fconfig.sh" "list")
   gn-test-check-mock-args "${expected[@]}"
 
