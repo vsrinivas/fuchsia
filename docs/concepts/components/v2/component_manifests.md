@@ -664,7 +664,7 @@ expect their facets to adhere to a particular schema.
 This section may be omitted.
 
 [doc-children]: realms.md#child-component-instances
-[doc-collections]: realms.md#component-collections
+[doc-collections]: realms.md#collections
 [doc-environments]: environments.md
 [glossary-appmgr]: /docs/glossary.md#appmgr
 [glossary-hub]: /docs/glossary.md#hub

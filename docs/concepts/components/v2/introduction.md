@@ -79,7 +79,7 @@ A component is a **composable** isolated unit of software.
 -   It can combine and be combined with other components to form composite
     components with parent-child relationships.
 -   It declares the capabilities it needs to use and those it needs to delegate
-    to its children with [capability routing](#capability-routing).
+    to its children with [capability routing][doc-capability-routing].
 
 A component is a **hermetic** composable isolated unit of software.
 
@@ -121,6 +121,7 @@ There are only a few exceptions, notably:
 -   [Component lifecycle][doc-lifecycle]
 -   [Design principles][doc-design-principles]
 
+[doc-capability-routing]: /docs/concepts/components/v2/topology.md#capability-routing
 [doc-component-manager]: /docs/concepts/components/v2/component_manager.md
 [doc-declarations]: /docs/concepts/components/v2/declarations.md
 [doc-design-principles]: /docs/concepts/components/v2/design_principles.md
