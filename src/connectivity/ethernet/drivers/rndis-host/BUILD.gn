@@ -2,8 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+
+bind_rules("rndishost_bind") {
+  rules = "rndishost.bind"
+  output = "rndishost_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.wireless",
+  ]
+}
 
 driver_module("driver") {
   visibility = [
@@ -22,6 +33,7 @@ driver_module("driver") {
     "rndis_host.h",
   ]
   deps = [
+    ":rndishost_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
@@ -30,9 +42,6 @@ driver_module("driver") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
   ]
 }
@@ -45,4 +54,9 @@ driver_package("rndis-host") {
       name = "rndis-host.so"
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":rndishost_bind_test" ]
 }

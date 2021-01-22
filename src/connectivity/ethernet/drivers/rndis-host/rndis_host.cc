@@ -14,7 +14,6 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -22,6 +21,8 @@
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/connectivity/ethernet/drivers/rndis-host/rndishost_bind.h"
 
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 4
@@ -707,9 +708,5 @@ static zx_driver_ops_t rndis_driver_ops = []() {
 // TODO: Make sure we can bind to all RNDIS use cases. USB_CLASS_WIRELESS only
 // covers the tethered device case.
 // clang-format off
-ZIRCON_DRIVER_BEGIN(rndishost, rndis_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_WIRELESS_MISC),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_WIRELESS_MISC_RNDIS),
-ZIRCON_DRIVER_END(rndishost)
+ZIRCON_DRIVER(rndishost, rndis_driver_ops, "zircon", "0.1");
+

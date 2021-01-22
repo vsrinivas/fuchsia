@@ -15,6 +15,7 @@ group("tests") {
     "realtek-8111:tests",
     "realtek-8211f:tests",
     "rndis-function:tests",
+    "rndis-host:tests",
     "usb-cdc-ecm:tests",
     "usb-cdc-function:tests",
     "virtio:tests",

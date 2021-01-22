@@ -1,0 +1,19 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.WIRELESS",
+            "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.wireless.BIND_USB_PROTOCOL.MISC_RNDIS",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.wireless.BIND_USB_SUBCLASS.MISC"
+        },
+        "expected": "match",
+        "name": "RNDIS host"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Bad protocol"
+    }
+]
