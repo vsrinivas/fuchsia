@@ -16,14 +16,7 @@ Before you do static analysis, make sure you have the following:
   information on compiling a toolchain, see the [toolchain guide][toolchain].
   Note: This guide assumes that you are using the prebuilt toolchain.
 * Compilation database: You need the compilation database to use `clang-tidy` and Clang static
-  analyzer.
-  Note: You must run this command daily to make sure that the compilation database is up to
-  date.
-
-```
-fx compdb
-```
-
+  analyzer. It is created at the root of your build directory automatically by `fx set`.
 ## Clang tidy
 
 There is a more detailed guide available [here][lint].

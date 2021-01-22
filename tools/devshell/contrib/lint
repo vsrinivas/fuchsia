@@ -272,18 +272,6 @@ ensure_fidl_lint() {
   return 0
 }
 
-ensure_compile_commands() {
-  local compdb="${FUCHSIA_DIR}/compile_commands.json"
-  if [[ ! -f ${compdb} ]]; then
-    fx-error "Missing compdb file: ${compdb}"
-    echo "To generate or refresh the compdb, run: fx compdb"
-    echo "(Note that a valid 'fx set' configuration is required, and a"
-    echo "full build is recommended, prior to running 'fx compdb'.)"
-    return 1
-  fi
-  return 0
-}
-
 execute() {
   if [[ -n "${VERBOSE}" || -n "${DRY_RUN}" ]]; then
     echo "$@"
@@ -297,7 +285,6 @@ execute() {
 
 call_linters() {
   if (( "${#CLANG_TIDY_CMD[@]}" > 0 && "${#CLANG_TIDY_FILES[@]}" > 0 )); then
-    execute ensure_compile_commands || return $?
     execute "${CLANG_TIDY_CMD[@]}" "${COMMAND_ARGS[@]}" "${CLANG_TIDY_FILES[@]}" || return $?
   fi
   if (( "${#DART_LINT_CMD[@]}" > 0 && "${#DART_LINT_FILES[@]}" > 0 )); then

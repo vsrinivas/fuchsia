@@ -90,14 +90,12 @@ suggested by VS Code.
 You can use [tasks](https://code.visualstudio.com/docs/editor/tasks) to
 configure a compilation step.
 
-## Compilation Database (fx compdb)
+## Compilation Database
 
 A [Compilation
-Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) file
-can be generated using `fx compdb`. This will create/update the file
-`compile_commands.json` in the fuchsia root directory. When you add,
-delete, or rename source files the command needs to be rerun to update
-the `compile_commands.json` file.
+Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) file,
+`compile_commands.json`, will be created automatically by `fx` within your
+current build directory as well as automatically symlinked to your source root.
 
 Note that this file is only intended to help the IDE find and parse
 the source files. Building should still be done with `fx build`.

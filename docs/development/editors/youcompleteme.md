@@ -19,8 +19,6 @@ settings path in your editor, in order to disable the internal `use_clangd`
 flag. If you want to use clangd, you can additionally edit that file to set
 `use_clangd` to 1, and `clang_binary_path` to
 `${FUCHSIA_DIR}/prebuilt/third_party/clang/${HOST_PLATFORM}/bin/clangd`.
-Remember that in that case, you'll need to build a compilation database with
-`fx compdb`.
 
 {% dynamic else %}
 
@@ -36,9 +34,8 @@ library compatibility errors. Use the official installation guide instead.
 
 YouCompleteMe (and other tools like clang-tidy) require a [JSON compilation
 database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) that
-specifies how each file is compiled. This database is normally stored in a file
-called `compile_commands.json`. You can build a compilation database with `fx compdb`,
-or `fx -i compdb` if you want it rebuilt automatically as you edit files.
+specifies how each file is compiled. `fx` will automatically symlink the database,
+`compile_commands.json`, from your current build directory to your source root.
 
 If this database is not present, then Vim can be configured to fall back to the configuration
 in [/scripts/youcompleteme/ycm_extra_conf.py](/scripts/youcompleteme/ycm_extra_conf.py). See

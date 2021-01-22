@@ -19,7 +19,7 @@ if jiri_manifest != ""
   " other editors.
   let g:ycm_extra_conf_globlist = [ '!' . g:fuchsia_dir . '/*']
   " Google-internal options - use clangd completer if the user has a compilation
-  " database (built with `fx compdb`).
+  " database.
   if filereadable(g:fuchsia_dir . '/compile_commands.json')
     let g:ycm_use_clangd = 1
     let g:ycm_clangd_binary_path = systemlist(g:fuchsia_dir . "/scripts/youcompleteme/paths.py CLANG_PATH")[0] . '/bin/clangd'

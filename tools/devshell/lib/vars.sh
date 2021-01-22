@@ -151,12 +151,23 @@ function fx-config-read {
   _FX_LOCK_FILE="${FUCHSIA_BUILD_DIR}.build_lock"
 }
 
-function fx-build-dir-write {
+function fx-change-build-dir {
   local build_dir="$1"
 
   local -r tempfile="$(mktemp)"
   echo "${build_dir}" > "${tempfile}"
   mv -f "${tempfile}" "${FUCHSIA_DIR}/.fx-build-dir"
+
+  # Now update the environment and root-symlinked build artifacts to reflect
+  # the change.
+  fx-config-read
+
+  local -r linked_artifacts=("compile_commands.json" "rust-project.json")
+  for artifact in "${linked_artifacts[@]}" ; do
+    if [[ -f "${FUCHSIA_BUILD_DIR}/$artifact" ]]; then
+      ln -sf "${FUCHSIA_BUILD_DIR}/$artifact" "${FUCHSIA_DIR}/$artifact"
+    fi
+  done
 }
 
 function get-device-pair {

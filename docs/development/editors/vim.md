@@ -73,19 +73,6 @@ To verify that your YCM works, place the cursor on an identifier in a `.cc` or
 `.h` file in Vim, then hit `Ctrl+]` to navigate to the definition of the
 identifier.
 
-### Build a compilation database {#build-a-compilation-database}
-
-YCM uses the
-[compilation database](https://github.com/ycm-core/YouCompleteMe#option-1-use-a-compilation-database){:.external},
-which is more reliable and efficient than the default
-[`ycm_extra_config.py` configuration](/docs/development/editors/youcompleteme.md#generate_compilation_database).
-
-To build a compilation database, run the following command:
-
-```shell
-fx compdb
-```
-
 ## Auto-formatting
 
 Google's [vim-codefmt](https://github.com/google/vim-codefmt) can auto-format

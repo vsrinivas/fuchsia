@@ -121,7 +121,7 @@ TEST_fx-hosttools-subcommand-run() {
   (
       source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../lib/vars.sh || exit $?
       mkdir -p "${BT_TEMP_DIR}/${build_dir}"
-      fx-build-dir-write "${build_dir}"
+      fx-change-build-dir "${build_dir}"
   )
   local host_tools_dir="${build_dir}/host-tools"
   local subcommand="myhosttool"

@@ -466,11 +466,7 @@ host_labels+=["
 
   fx-gn ${gn_cmd} "${build_dir}" "${gn_switches[@]}" --args="${gn_args}" "$@"
 
-  fx-build-dir-write "${config_build_dir}"
-
-  if [[ -f "${build_dir}/rust-project.json" ]]; then
-    ln -f -s "${build_dir}/rust-project.json" $FUCHSIA_DIR/rust-project.json
-  fi
+  fx-change-build-dir "${config_build_dir}"
 
   if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
     fx-command-run goma || return $?
