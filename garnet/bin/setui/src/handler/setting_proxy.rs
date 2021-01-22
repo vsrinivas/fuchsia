@@ -30,7 +30,7 @@ use fuchsia_zircon::Duration;
 struct ActiveRequest {
     id: u64,
     request: Request,
-    client: core::message::Client,
+    client: core::message::MessageClient,
     attempts: u64,
     last_result: Option<SettingHandlerResult>,
 }
@@ -239,7 +239,7 @@ impl SettingProxy {
     async fn process_action(
         &mut self,
         action: SettingAction,
-        mut message_client: core::message::Client,
+        mut message_client: core::message::MessageClient,
     ) {
         if self.setting_type != action.setting_type {
             message_client
@@ -329,7 +329,12 @@ impl SettingProxy {
     /// Forwards request to proper sink. A new task is spawned in order to receive
     /// the response. If no sink is available, an error is immediately reported
     /// back.
-    async fn process_request(&mut self, id: u64, request: Request, client: core::message::Client) {
+    async fn process_request(
+        &mut self,
+        id: u64,
+        request: Request,
+        client: core::message::MessageClient,
+    ) {
         match self.get_handler_signature(false).await {
             None => {
                 client

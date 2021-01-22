@@ -423,7 +423,7 @@ mod tests {
     struct TestSwitchboard {
         id_to_send: Option<f32>,
         setting_type: Option<SettingType>,
-        listener: Option<switchboard::message::Client>,
+        listener: Option<switchboard::message::MessageClient>,
         always_fail: bool,
     }
 
@@ -494,14 +494,18 @@ mod tests {
             panic!("Missing listener to notify");
         }
 
-        fn listen(&mut self, listener: switchboard::message::Client, setting_type: SettingType) {
+        fn listen(
+            &mut self,
+            listener: switchboard::message::MessageClient,
+            setting_type: SettingType,
+        ) {
             self.setting_type = Some(setting_type);
             self.listener = Some(listener);
         }
 
         fn request(
             &mut self,
-            requestor: switchboard::message::Client,
+            requestor: switchboard::message::MessageClient,
             setting_type: SettingType,
             request: Request,
         ) {

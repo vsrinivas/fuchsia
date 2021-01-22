@@ -43,7 +43,7 @@ macro_rules! message_hub_definition {
             pub type MessageError = BaseMessageError<$address>;
 
             #[allow(dead_code)]
-            pub type Client = BaseMessageClient<$payload, $address, $role>;
+            pub type MessageClient = BaseMessageClient<$payload, $address, $role>;
 
             #[allow(dead_code)]
             pub type Receptor = BaseReceptor<$payload, $address, $role>;

@@ -17,7 +17,7 @@ use futures::StreamExt;
 use crate::base::SettingInfo;
 use crate::clock;
 use crate::handler::base::{Command, Event, Request};
-use crate::internal::handler::message::{Client, Factory, Messenger, Signature};
+use crate::internal::handler::message::{Factory, MessageClient, Messenger, Signature};
 use crate::internal::handler::Payload;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 
@@ -107,7 +107,7 @@ impl InspectBroker {
     }
 
     /// Watches for the reply to a sent message and return the author of the reply.
-    async fn watch_reply(mut client: Client) -> Result<Signature, Error> {
+    async fn watch_reply(mut client: MessageClient) -> Result<Signature, Error> {
         let mut reply_receptor = client.observe();
 
         reply_receptor.next_payload().await.map(|(_, reply_client)| reply_client.get_author())
@@ -187,7 +187,7 @@ mod tests {
     /// Verifies the next payload on the given receptor matches the given payload.
     ///
     /// Returns the message client of the received payload for convenience.
-    async fn verify_payload(mut receptor: Receptor, expected: Payload) -> Client {
+    async fn verify_payload(mut receptor: Receptor, expected: Payload) -> MessageClient {
         let result = receptor.next_payload().await;
         assert!(result.is_ok());
         let (received, message_client) = result.unwrap();

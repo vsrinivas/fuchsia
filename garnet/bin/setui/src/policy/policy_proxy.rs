@@ -140,7 +140,7 @@ impl PolicyProxy {
     async fn process_policy_request(
         &mut self,
         request: PolicyRequest,
-        message_client: policy::message::Client,
+        message_client: policy::message::MessageClient,
     ) {
         let response = self.policy_handler.handle_policy_request(request).await;
         message_client.reply(policy::Payload::Response(response)).send();
@@ -157,7 +157,7 @@ impl PolicyProxy {
         request_id: u64,
         setting_type: SettingType,
         request: Request,
-        message_client: core::message::Client,
+        message_client: core::message::MessageClient,
     ) {
         let handler_result = self.policy_handler.handle_setting_request(request).await;
         match handler_result {
@@ -195,7 +195,7 @@ impl PolicyProxy {
     async fn process_settings_event(
         &mut self,
         event: SettingEvent,
-        message_client: core::message::Client,
+        message_client: core::message::MessageClient,
     ) {
         let handler_result = self.policy_handler.handle_setting_event(event).await;
         match handler_result {

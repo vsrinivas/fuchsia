@@ -20,7 +20,7 @@ pub enum Payload {
     Result(SettingHandlerResult),
 }
 
-pub fn reply(client: message::Client, result: SettingHandlerResult) {
+pub fn reply(client: message::MessageClient, result: SettingHandlerResult) {
     client.reply(Payload::Result(result)).send().ack();
 }
 

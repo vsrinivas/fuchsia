@@ -24,7 +24,7 @@ use std::result::Result::Ok;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
-type SwitchboardListenerMap = HashMap<SettingType, Vec<switchboard::message::Client>>;
+type SwitchboardListenerMap = HashMap<SettingType, Vec<switchboard::message::MessageClient>>;
 
 const INSPECT_REQUESTS_COUNT: usize = 25;
 
@@ -174,7 +174,7 @@ pub struct Switchboard {
     next_action_id: u64,
     /// Passed as with an `ActionFuse` to listen clients to capture when
     /// the listen session goes out of scope.
-    listen_cancellation_sender: UnboundedSender<(SettingType, switchboard::message::Client)>,
+    listen_cancellation_sender: UnboundedSender<(SettingType, switchboard::message::MessageClient)>,
     /// mapping of listeners for changes
     listeners: SwitchboardListenerMap,
     /// core messenger
@@ -201,8 +201,10 @@ impl Switchboard {
         policy_proxies: HashMap<core::message::Signature, SettingType>,
         inspect_node: inspect::Node,
     ) -> Result<(), anyhow::Error> {
-        let (cancel_listen_tx, mut cancel_listen_rx) =
-            futures::channel::mpsc::unbounded::<(SettingType, switchboard::message::Client)>();
+        let (cancel_listen_tx, mut cancel_listen_rx) = futures::channel::mpsc::unbounded::<(
+            SettingType,
+            switchboard::message::MessageClient,
+        )>();
 
         let (core_messenger, mut core_receptor) = core_messenger_factory
             .create(MessengerType::Addressable(core::Address::Switchboard))
@@ -255,13 +257,13 @@ impl Switchboard {
                     // Invoked when there is a new message from the switchboard
                     // message interface.
                     switchboard_event = switchboard_receptor => {
-                        if let Some(MessageEvent::Message(payload, client)) = switchboard_event {
+                        if let Some(MessageEvent::Message(payload, message_client)) = switchboard_event {
                             match payload {
                                 switchboard::Payload::Action(switchboard::Action::Request(setting_type, request)) => {
-                                    switchboard_clone.lock().await.process_action_request(setting_type, request, client).ok();
+                                    switchboard_clone.lock().await.process_action_request(setting_type, request, message_client).ok();
                                 }
                                 switchboard::Payload::Listen(switchboard::Listen::Request(setting_type)) => {
-                                    switchboard_clone.lock().await.process_listen_request(setting_type, client).await;
+                                    switchboard_clone.lock().await.process_listen_request(setting_type, message_client).await;
                                 }
                                 _ => {
                                 }
@@ -307,7 +309,7 @@ impl Switchboard {
     async fn process_listen_request(
         &mut self,
         setting_type: SettingType,
-        mut reply_client: switchboard::message::Client,
+        mut reply_client: switchboard::message::MessageClient,
     ) {
         let cancellation_sender = self.listen_cancellation_sender.clone();
         let client = reply_client.clone();
@@ -339,7 +341,7 @@ impl Switchboard {
     async fn remove_setting_listener(
         &mut self,
         setting_type: SettingType,
-        mut client: switchboard::message::Client,
+        mut client: switchboard::message::MessageClient,
     ) {
         if let Some(listeners) = self.listeners.get_mut(&setting_type) {
             if let Some(index) = listeners.iter().position(|x| *x == client) {
@@ -360,7 +362,7 @@ impl Switchboard {
         &mut self,
         setting_type: SettingType,
         request: Request,
-        reply_client: switchboard::message::Client,
+        reply_client: switchboard::message::MessageClient,
     ) -> Result<(), Error> {
         let messenger = self.core_messenger.clone();
         let action_id = self.get_next_action_id();
@@ -517,7 +519,7 @@ mod tests {
         receptor: &mut core::message::Receptor,
         setting_type: SettingType,
         setting_data: SettingActionData,
-    ) -> (core::message::Client, SettingAction) {
+    ) -> (core::message::MessageClient, SettingAction) {
         while let Some(event) = receptor.next().await {
             match event {
                 MessageEvent::Message(core::Payload::Action(action), client) => {

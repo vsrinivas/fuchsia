@@ -111,7 +111,7 @@ impl AuthorityImpl {
 }
 
 fn process_payload(
-    payload: Result<(agent::Payload, agent::message::Client), Error>,
+    payload: Result<(agent::Payload, agent::message::MessageClient), Error>,
 ) -> Result<(), Error> {
     match payload {
         Ok((agent::Payload::Complete(Ok(_)), _)) => Ok(()),
