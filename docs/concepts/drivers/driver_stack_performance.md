@@ -118,6 +118,12 @@ device driver implementations, part of the fast path is often in interrupt threa
  - **Return shared resources quickly**. If the API defines a finite pool of shared resources, such
  as shared memory regions, those should be reused or returned to the  "available" pool as quickly as
  possible, preferably in batches.
+ - **Map VMOs read-only rather than read-write whenever possible**. Mapping VMOs read-only
+ reduces the number of cache operations that need to be performed for DMA. For example, when using
+ DMA to write to a shared VMO that may have dirty cache lines, caches would have to be flushed and
+ invalidated before and after DMA. On the other hand, with a read-only mapping the cache lines are
+ known to always be clean, meaning they only need to be flushed and invalidated after DMA is
+ complete.
 
 
 [netdevice-fidl]: /sdk/fidl/fuchsia.hardware.network/device.fidl
