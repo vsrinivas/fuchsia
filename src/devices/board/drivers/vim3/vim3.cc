@@ -106,6 +106,9 @@ int Vim3::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
+  if ((status = MaliInit()) != ZX_OK) {
+    zxlogf(ERROR, "MaliInit() failed: %d\n", status);
+  }
   if ((status = NnaInit()) != ZX_OK) {
     zxlogf(ERROR, "NnaInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);

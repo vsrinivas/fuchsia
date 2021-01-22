@@ -239,7 +239,9 @@ zx_status_t AmlGpu::Bind() {
     case PDEV_PID_AMLOGIC_S905D2:
       gpu_block_ = &s905d2_gpu_blocks;
       break;
+    // A311D and T931 have the same GPU registers.
     case PDEV_PID_AMLOGIC_T931:
+    case PDEV_PID_AMLOGIC_A311D:
       gpu_block_ = &t931_gpu_blocks;
       break;
     default:
