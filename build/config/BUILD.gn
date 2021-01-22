@@ -101,6 +101,11 @@ config("rust_allow_redundant_semicolons") {
   rustflags = [ "-Aredundant-semicolons" ]
 }
 
+# TODO(fxbug.dev/68148) remove this allowance
+config("rust_allow_unused_extern_crates") {
+  rustflags = [ "-Aunused-extern-crates" ]
+}
+
 config("language") {
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++$experimental_cxx_version" ]
