@@ -121,6 +121,9 @@
 ##                                which the method name satisfies the filter is found.
 ##                                This option can be specified multiple times.
 ##                                Message filtering works on the method's fully qualified name.
+##    --thread=<thread koid>      Only display the events for the specified thread.
+##                                This option can be specified multiple times to display several
+##                                threads. By default all the events are displayed.
 ##    --dump-messages             Always does a hexadecimal dump of the messages even if we can
 ##                                decode them.
 ##
@@ -260,6 +263,8 @@ while [[ $# -gt 0 ]]; do
   elif equal_argument $1 "--exclude-messages" "<regexp>"; then
     arguments+=("$1")
   elif equal_argument $1 "--trigger" "<regexp>"; then
+    arguments+=("$1")
+  elif equal_argument $1 "--thread" "<thread koid>"; then
     arguments+=("$1")
   elif [[ $1 == "--dump-messages" ]]; then
     arguments+=("$1")

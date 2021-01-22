@@ -185,6 +185,11 @@ const char* const kTriggerFilterHelp = R"(  --trigger
       This option can be specified multiple times.
       Message filtering works on the method's fully qualified name.)";
 
+const char* const kThreadFilterHelp = R"(  --thread
+      Only display the events for the specified thread.
+      This option can be specified multiple times to display several threads.
+      By default all the events are displayed.)";
+
 const char* const kDumpMessagesHelp = R"(  --dump-messages
       Always display the message binary dump even if we can decode the message.
       By default the dump is only displayed if we can't decode the message.)";
@@ -325,6 +330,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("exclude-messages", 0, kExcludeMessageFilterHelp,
                    &CommandLineOptions::exclude_message_filters);
   parser.AddSwitch("trigger", 0, kTriggerFilterHelp, &CommandLineOptions::trigger_filters);
+  parser.AddSwitch("thread", 0, kThreadFilterHelp, &CommandLineOptions::thread_filters);
   parser.AddSwitch("dump-messages", 0, kDumpMessagesHelp, &CommandLineOptions::dump_messages);
   parser.AddSwitch("colors", 0, kColorsHelp, &CommandLineOptions::colors);
   parser.AddSwitch("columns", 0, kColumnsHelp, &CommandLineOptions::columns);
@@ -416,6 +422,9 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     } else {
       return "Bad filter for --trigger: " + filter;
     }
+  }
+  for (const auto& filter : options->thread_filters) {
+    decode_options->thread_filters.emplace_back(static_cast<zx_koid_t>(std::stol(filter)));
   }
 
   decode_options->save = options->to;

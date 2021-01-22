@@ -635,6 +635,9 @@ double SyscallDisplayDispatcher::GetTime(int64_t timestamp) {
 void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
     std::shared_ptr<ProcessLaunchedEvent> event) {
   if (decode_options().output_mode == OutputMode::kStandard) {
+    if (!decode_options().thread_filters.empty()) {
+      return;
+    }
     last_displayed_syscall_ = nullptr;
     os_ << '\n' << colors().green << GetTime(event->timestamp()) << colors().reset << ' ';
     if (event->error_message().empty()) {
@@ -651,6 +654,9 @@ void SyscallDisplayDispatcher::AddProcessLaunchedEvent(
 
 void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
     std::shared_ptr<ProcessMonitoredEvent> event) {
+  if (!decode_options().thread_filters.empty()) {
+    return;
+  }
   if (decode_options().output_mode == OutputMode::kStandard) {
     last_displayed_syscall_ = nullptr;
     os_ << '\n' << colors().green << GetTime(event->timestamp()) << colors().reset << ' ';
@@ -677,6 +683,9 @@ void SyscallDisplayDispatcher::AddProcessMonitoredEvent(
 }
 
 void SyscallDisplayDispatcher::AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) {
+  if (!decode_options().thread_filters.empty()) {
+    return;
+  }
   if (decode_options().output_mode == OutputMode::kStandard) {
     last_displayed_syscall_ = nullptr;
     os_ << '\n' << colors().green << GetTime(event->timestamp()) << colors().reset << ' ';
@@ -698,6 +707,9 @@ void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> inv
   invoked_event->set_id(GetNextInvokedEventId());
   if (!extra_generation().empty()) {
     invoked_event->ComputeHandleInfo(this);
+  }
+  if (!invoked_event->thread()->displayed()) {
+    return;
   }
   if (!display_started()) {
     // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
@@ -747,6 +759,9 @@ void SyscallDisplayDispatcher::DisplayInvokedEvent(const InvokedEvent* invoked_e
 }
 
 void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> output_event) {
+  if (!output_event->thread()->displayed()) {
+    return;
+  }
   if (!extra_generation().empty()) {
     if (output_event->invoked_event()->handle_info() != nullptr) {
       output_event->invoked_event()->handle_info()->AddEvent(output_event.get());
@@ -810,6 +825,9 @@ void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> outpu
 }
 
 void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) {
+  if (!exception_event->thread()->displayed()) {
+    return;
+  }
   if (decode_options().output_mode == OutputMode::kStandard) {
     os_ << '\n';
 

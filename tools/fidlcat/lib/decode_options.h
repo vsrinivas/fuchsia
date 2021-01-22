@@ -6,6 +6,7 @@
 #define TOOLS_FIDLCAT_LIB_DECODE_OPTIONS_H_
 
 #include <regex.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <string>
@@ -47,6 +48,7 @@ struct DecodeOptions {
   // If this is not empty, messages and syscalls are only displayed when a message method name
   // satisfies one of these filters.
   std::vector<std::unique_ptr<Regex>> trigger_filters;
+  std::vector<zx_koid_t> thread_filters;
   // Input mode.
   InputMode input_mode = InputMode::kDevice;
   // Output mode.

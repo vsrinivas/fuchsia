@@ -45,6 +45,7 @@ struct CommandLineOptions {
   std::vector<std::string> message_filters;
   std::vector<std::string> exclude_message_filters;
   std::vector<std::string> trigger_filters;
+  std::vector<std::string> thread_filters;
   bool dump_messages = false;
   std::string colors = "auto";
   int columns = 0;

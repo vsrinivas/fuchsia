@@ -233,14 +233,17 @@ inline FidlcatPrinter& operator<<(FidlcatPrinter& printer, const Process& proces
 
 class Thread {
  public:
-  Thread(Process* process, zx_koid_t koid) : process_(process), koid_(koid) {}
+  Thread(Process* process, zx_koid_t koid, bool displayed)
+      : process_(process), koid_(koid), displayed_(displayed) {}
 
   Process* process() const { return process_; }
   zx_koid_t koid() const { return koid_; }
+  bool displayed() const { return displayed_; }
 
  private:
   Process* const process_;
   const zx_koid_t koid_;
+  const bool displayed_;
 };
 
 // Defines a location in the source (used by stack frames).

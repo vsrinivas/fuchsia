@@ -1817,7 +1817,19 @@ class SyscallDecoderDispatcher {
 
   Thread* CreateThread(zx_koid_t koid, Process* process) {
     FX_DCHECK(threads_.find(koid) == threads_.end());
-    auto thread = std::make_unique<Thread>(process, koid);
+    bool displayed;
+    if (decode_options_.thread_filters.empty()) {
+      displayed = true;
+    } else {
+      displayed = false;
+      for (const auto thread_koid : decode_options_.thread_filters) {
+        if (thread_koid == koid) {
+          displayed = true;
+          break;
+        }
+      }
+    }
+    auto thread = std::make_unique<Thread>(process, koid, displayed);
     auto returned_value = thread.get();
     threads_.emplace(std::make_pair(koid, std::move(thread)));
     return returned_value;
