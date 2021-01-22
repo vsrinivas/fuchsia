@@ -752,8 +752,6 @@ mod tests {
         }
     }
 
-    impl<I: Ip> FragmentContext<I> for DummyContext<I> {}
-
     macro_rules! assert_frag_proc_state_need_more {
         ($lhs:expr) => {{
             let lhs_val = $lhs;

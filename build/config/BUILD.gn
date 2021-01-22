@@ -65,7 +65,7 @@ config("rust_no_features") {
 
 config("netstack3_only_specialization_feature") {
   rustflags = [
-    "-Zallow-features=specialization",
+    "-Zallow-features=min_specialization,specialization",
     "-Aincomplete-features",
   ]
 }

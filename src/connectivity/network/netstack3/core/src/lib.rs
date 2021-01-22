@@ -7,7 +7,7 @@
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
-#![feature(specialization)]
+#![feature(min_specialization)]
 #![deny(missing_docs, unreachable_patterns)]
 // This is a hack until we migrate to a different benchmarking framework. To run
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then

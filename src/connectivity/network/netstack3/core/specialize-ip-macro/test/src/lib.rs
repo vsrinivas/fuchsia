@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // Enable the specialize ip macro feature since that is what we are testing.
-#![feature(specialization)]
+#![feature(min_specialization)]
 
 /// Module with types that have the same identifiers that `specialize_ip` and
 /// `specialize_ip_macro` attributes looks for. Both of these attributes

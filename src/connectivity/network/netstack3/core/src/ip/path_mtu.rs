@@ -484,8 +484,6 @@ mod tests {
         }
     }
 
-    impl<I: Ip> PmtuContext<I> for DummyContext<I> {}
-
     /// Get an IPv4 or IPv6 address within the same subnet as that of `DUMMY_CONFIG_*`,
     /// but with the last octet set to `3`.
     fn get_other_ip_address<I: TestIpExt>() -> SpecifiedAddr<I::Addr> {
