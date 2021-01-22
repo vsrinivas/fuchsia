@@ -22,11 +22,11 @@ zx_handle_t zx_take_startup_handle(uint32_t hnd_info);
 zx_handle_t _zx_thread_self(void);
 zx_handle_t zx_thread_self(void);
 
-zx_handle_t _zx_process_self(void) ZX_HANDLE_ACQUIRE_UNOWNED;
-zx_handle_t zx_process_self(void) ZX_HANDLE_ACQUIRE_UNOWNED;
+ZX_HANDLE_ACQUIRE_UNOWNED zx_handle_t _zx_process_self(void);
+ZX_HANDLE_ACQUIRE_UNOWNED zx_handle_t zx_process_self(void);
 
-zx_handle_t _zx_vmar_root_self(void) ZX_HANDLE_ACQUIRE_UNOWNED;
-zx_handle_t zx_vmar_root_self(void) ZX_HANDLE_ACQUIRE_UNOWNED;
+ZX_HANDLE_ACQUIRE_UNOWNED zx_handle_t _zx_vmar_root_self(void);
+ZX_HANDLE_ACQUIRE_UNOWNED zx_handle_t zx_vmar_root_self(void);
 
 zx_handle_t _zx_job_default(void);
 zx_handle_t zx_job_default(void);
