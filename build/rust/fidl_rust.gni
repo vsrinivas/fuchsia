@@ -45,9 +45,11 @@ template("fidl_rust") {
 
     tool = "//tools/fidl/fidlgen_rust"
 
-    sources = [ "//rustfmt.toml" ]
-
-    inputs = [ json_representation ]
+    inputs = [
+      json_representation,
+      "//rustfmt.toml",
+      "$fidl_rust_tools_dir/.versions/rust_tools.cipd_version",
+    ]
 
     outputs = [ filename ]
 
