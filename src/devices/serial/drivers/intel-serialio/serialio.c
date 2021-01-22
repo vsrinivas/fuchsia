@@ -9,9 +9,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <hw/pci.h>
 #include <intel-serialio/serialio.h>
+
+#include "src/devices/serial/drivers/intel-serialio/intel_serialio_bind.h"
 
 static zx_status_t intel_serialio_bind(void* ctx, zx_device_t* dev) {
   pci_protocol_t pci;
@@ -55,20 +56,4 @@ static zx_driver_ops_t intel_serialio_driver_ops = {
     .bind = intel_serialio_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(intel_serialio, intel_serialio_driver_ops, "zircon", "0.1", 14)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_DMA_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_SDIO_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_SPI0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_SPI1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_UART0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_UART1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
-ZIRCON_DRIVER_END(intel_serialio)
+ZIRCON_DRIVER(intel_serialio, intel_serialio_driver_ops, "zircon", "0.1");
