@@ -74,18 +74,6 @@ impl<T: LockInner> PollWeakMutex<T> {
         }
         ret
     }
-
-    #[must_use]
-    pub async fn with_lock<R>(
-        &mut self,
-        f: impl FnOnce(&mut MutexGuard<'_, T::Inner>) -> R,
-    ) -> Option<R> {
-        let mut f = Some(f);
-        futures::future::poll_fn(move |ctx| {
-            self.poll_fn(ctx, |_ctx, inner| Poll::Ready((f.take().unwrap())(inner)))
-        })
-        .await
-    }
 }
 
 struct ObservableState<T> {

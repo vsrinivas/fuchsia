@@ -11,6 +11,7 @@ import("//src/sys/build/components.gni")
 CORE_DEPS = [
   "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
   "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+  "//src/connectivity/overnet/lib/quic",
   "//src/lib/cutex",
   "//src/lib/async-utils",
   "//src/lib/fidl/rust/fidl",
@@ -54,7 +55,6 @@ CORE_SOURCES = [
   "src/link/frame_label.rs",
   "src/link/ping_tracker.rs",
   "src/peer/mod.rs",
-  "src/peer/async_quic.rs",
   "src/peer/framed_stream.rs",
   "src/proxy/mod.rs",
   "src/proxy/run/mod.rs",

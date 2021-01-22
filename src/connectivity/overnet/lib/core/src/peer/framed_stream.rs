@@ -4,12 +4,12 @@
 
 //! Framing and deframing datagrams onto QUIC streams
 
-use super::{
-    AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ReadExact, StreamProperties,
-};
+use super::{PeerConnRef, ReadExact};
+use crate::labels::NodeId;
 use crate::stat_counter::StatCounter;
 use anyhow::{format_err, Error};
 use futures::{prelude::*, ready};
+use quic::{AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties};
 use std::{
     convert::TryInto,
     pin::Pin,
@@ -92,20 +92,28 @@ impl MessageStats {
 pub(crate) struct FramedStreamWriter {
     /// The underlying QUIC stream
     quic: AsyncQuicStreamWriter,
-}
-
-impl From<AsyncQuicStreamWriter> for FramedStreamWriter {
-    fn from(quic: AsyncQuicStreamWriter) -> Self {
-        Self { quic }
-    }
+    /// The peer node id
+    peer_node_id: NodeId,
 }
 
 impl FramedStreamWriter {
-    pub(crate) async fn abandon(&mut self) {
+    pub fn from_quic(quic: AsyncQuicStreamWriter, peer_node_id: NodeId) -> Self {
+        Self { quic, peer_node_id }
+    }
+
+    pub async fn abandon(&mut self) {
         self.quic.abandon().await
     }
 
-    pub(crate) async fn send(
+    pub fn conn(&self) -> PeerConnRef<'_> {
+        PeerConnRef::from_quic(self.quic.conn(), self.peer_node_id)
+    }
+
+    pub fn id(&self) -> u64 {
+        self.quic.id()
+    }
+
+    pub async fn send(
         &mut self,
         frame_type: FrameType,
         bytes: &[u8],
@@ -139,20 +147,12 @@ impl FramedStreamWriter {
     }
 }
 
-impl StreamProperties for FramedStreamWriter {
-    fn id(&self) -> u64 {
-        self.quic.id()
-    }
-
-    fn conn(&self) -> &AsyncConnection {
-        self.quic.conn()
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct FramedStreamReader {
     /// The underlying QUIC stream
     quic: AsyncQuicStreamReader,
+    /// Peer node id
+    peer_node_id: NodeId,
     /// Current read state
     read_state: ReadState,
     /// Scratch space for reading the frame header
@@ -161,20 +161,27 @@ pub(crate) struct FramedStreamReader {
     payload: Vec<u8>,
 }
 
-impl From<AsyncQuicStreamReader> for FramedStreamReader {
-    fn from(quic: AsyncQuicStreamReader) -> Self {
+impl FramedStreamReader {
+    pub fn from_quic(quic: AsyncQuicStreamReader, peer_node_id: NodeId) -> Self {
         Self {
             quic,
+            peer_node_id,
             read_state: ReadState::Initial,
             hdr: [0u8; FRAME_HEADER_LENGTH],
             payload: Vec::new(),
         }
     }
-}
 
-impl FramedStreamReader {
     pub(crate) async fn abandon(&mut self) {
         self.quic.abandon().await
+    }
+
+    pub fn conn(&self) -> PeerConnRef<'_> {
+        PeerConnRef::from_quic(self.quic.conn(), self.peer_node_id)
+    }
+
+    pub fn is_initiator(&self) -> bool {
+        self.quic.is_initiator()
     }
 
     pub(crate) fn next<'b>(&'b mut self) -> ReadNextFrame<'b> {
@@ -188,7 +195,12 @@ impl FramedStreamReader {
                 (self.quic.read_exact(&mut self.payload), None)
             }
         };
-        ReadNextFrame { read, payload, read_state: &mut self.read_state }
+        ReadNextFrame {
+            read,
+            payload,
+            read_state: &mut self.read_state,
+            peer_node_id: self.peer_node_id,
+        }
     }
 }
 
@@ -203,12 +215,17 @@ pub(crate) struct ReadNextFrame<'b> {
     read: ReadExact<'b>,
     read_state: &'b mut ReadState,
     payload: Option<&'b mut Vec<u8>>,
+    peer_node_id: NodeId,
 }
 
 impl<'b> ReadNextFrame<'b> {
     #[allow(dead_code)]
     pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
         self.read.debug_id()
+    }
+
+    pub(crate) fn conn(&self) -> PeerConnRef<'_> {
+        PeerConnRef::from_quic(self.read.conn(), self.peer_node_id)
     }
 
     fn poll_inner(
@@ -246,16 +263,6 @@ impl<'b> Future for ReadNextFrame<'b> {
     type Output = Result<(FrameType, Vec<u8>, bool), Error>;
     fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         Pin::into_inner(self).poll_inner(ctx)
-    }
-}
-
-impl StreamProperties for FramedStreamReader {
-    fn id(&self) -> u64 {
-        self.quic.id()
-    }
-
-    fn conn(&self) -> &AsyncConnection {
-        self.quic.conn()
     }
 }
 
