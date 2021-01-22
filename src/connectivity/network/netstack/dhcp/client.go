@@ -328,6 +328,7 @@ func (c *Client) Run(ctx context.Context) {
 			} else if waitDuration != 0 {
 				timer.Reset(waitDuration)
 			}
+			_ = syslog.InfoTf(tag, "scheduling renewal in %s", waitDuration)
 			select {
 			case <-ctx.Done():
 				return
