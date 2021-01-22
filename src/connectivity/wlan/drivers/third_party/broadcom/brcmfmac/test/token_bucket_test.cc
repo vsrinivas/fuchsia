@@ -110,4 +110,25 @@ TEST(TokenBucket, TokenGenerationRateLessThanOne) {
   ASSERT_FALSE(bucket.consume());
 }
 
+TEST(TokenBucket, ExtendedRunTime) {
+  // Ensure that the bucket is behaving well during extended operation where we might see
+  // spurious wakeups and other issues related to running for a long time. The number of iterations
+  // was selected to almost certainly trigger issues with sporadic wakeups while still not taking
+  // too long.
+  for (int i = 0; i < 10'000'000; ++i) {
+    TokenBucket bucket(1.0, 3); // Initial capacity of 3 tokens
+
+    // Consume one token, we should now be left at 2 tokens left in the bucket
+    ASSERT_TRUE(bucket.consume());
+    // Advance time by 5 seconds, we should now be back at 3 tokens but no more
+    g_current_ticks += 5 * zx_ticks_per_second();
+    // Consume all three tokens
+    ASSERT_TRUE(bucket.consume());
+    ASSERT_TRUE(bucket.consume());
+    ASSERT_TRUE(bucket.consume());
+    // And further attempts should fail
+    ASSERT_FALSE(bucket.consume());
+  }
+}
+
 } // namespace

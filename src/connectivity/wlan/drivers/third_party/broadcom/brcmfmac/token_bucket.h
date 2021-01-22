@@ -50,9 +50,11 @@ class TokenBucket {
       // If the last tick that we issued a token is further back than the capacity of the bucket we
       // need to update it to be full but not over capacity.
       zx_ticks_t min_tick = current_tick - ticks_per_token_ * capacity_;
-      zx_ticks_t updated_tick = min_tick > old_tick ? min_tick : old_tick;
 
       while (true) {
+        // This check needs to happen every loop since we might get a new updated_tick if the
+        // compare exchange below spuriously fails and returns an old_tick that is too far back.
+        zx_ticks_t updated_tick = min_tick > old_tick ? min_tick : old_tick;
         // Add the cost of a token to the time we last issued a token, if the total exceeds the
         // current number of ticks that is the same as the cost being too high.
         updated_tick += ticks_per_token_;
@@ -62,11 +64,9 @@ class TokenBucket {
         }
         if (last_issued_tick_.compare_exchange_weak(old_tick, updated_tick,
                                                     std::memory_order_relaxed)) {
-          // lastIssuedTick_ didn't change and now contains updatedTick
+          // The atomic value didn't change and now contains the updated tick
           return true;
         }
-        // lastIssuedTick_ changed, updated value is in old_tick, check again
-        updated_tick = old_tick;
       }
     }
 
