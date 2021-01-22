@@ -10,9 +10,3 @@ import("//build/config/clang/clang.gni")
 # We instead require that users (or `fx build`) run ninja in
 # $zircon_root_build_dir before running ninja in $root_build_dir.
 zircon_root_build_dir = "${root_build_dir}.zircon"
-
-# Zircon tools get added to that directory by the Fuchsia GN build.
-# When using to a tool from this directory, add the corresponding dependency on
-# `//zircon/public/tool/$tool_name($host_toolchain)`.
-zircon_tools_dir =
-    get_label_info("//zircon/public/tool($host_toolchain)", "root_out_dir")

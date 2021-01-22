@@ -7,7 +7,6 @@ import("//build/compiled_action.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/config/clang/clang.gni")
-import("//build/config/fuchsia/zircon.gni")
 import("//build/dev.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
@@ -27,6 +26,7 @@ import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/zx_host_tool.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
+import("//build/zircon/tools.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
@@ -1147,13 +1147,16 @@ generate_fvm("fvm.sparse.blk") {
 }
 default_image_deps += [ ":fvm.sparse.blk" ]
 
+fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
+fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
+
 filesystem_sizes_deps += [
   ":blob.blk",
   ":data.blk",
   ":fvm.sparse.blk",
-  "//src/storage/bin/fvm($host_toolchain)",
-  "//zircon/tools/blobfs($host_toolchain)",
-  "//zircon/tools/minfs($host_toolchain)",
+  blobfs_tool_target,
+  fvm_tool_target,
+  minfs_tool_target,
 ]
 filesystem_sizes_inputs += [
   blob_image_path,
@@ -1168,11 +1171,11 @@ filesystem_sizes_args += [
   "--data-blk",
   rebase_path(data_image_path),
   "--fvm-tool",
-  rebase_path("$zircon_tools_dir/fvm"),
+  rebase_path(fvm_tool_path, root_build_dir),
   "--blobfs-tool",
-  rebase_path("$zircon_tools_dir/blobfs"),
+  rebase_path(blobfs_tool_path, root_build_dir),
   "--minfs-tool",
-  rebase_path("$zircon_tools_dir/minfs"),
+  rebase_path(minfs_tool_path, root_build_dir),
   "--max-fvm-contents-size",
   max_fvm_size,
   "--max-blob-contents-size",

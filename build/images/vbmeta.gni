@@ -6,7 +6,7 @@
 # See [this document](https://android.googlesource.com/platform/external/avb/+/HEAD/README.md)
 # for more information.
 
-import("//build/config/fuchsia/zircon.gni")
+import("//build/zircon/tools.gni")
 
 declare_args() {
   # If true, then a vbmeta image will be generated for provided ZBI
@@ -80,7 +80,7 @@ template("vbmeta") {
 
   if (defined(invoker.prop_from_file)) {
     action("${target_name}__zbi_props") {
-      script = "$zircon_tools_dir/zbi"
+      script = zbi_tool_path
 
       forward_variables_from(invoker,
                              [
@@ -107,7 +107,7 @@ template("vbmeta") {
       if (!defined(deps)) {
         deps = []
       }
-      deps += [ "//zircon/tools/zbi($host_toolchain)" ]
+      deps += [ zbi_tool_target ]
     }
   }
 

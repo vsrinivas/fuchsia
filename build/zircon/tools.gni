@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define convenience variables used to reference a few common Zircon host tools.
+
+zbi_tool_target = "//zircon/tools/zbi($host_toolchain)"
+zbi_tool_path = get_label_info(zbi_tool_target, "root_out_dir") + "/zbi"
+if (host_os == "win") {
+  zbi_tool_path += ".exe"
+}
+
+blobfs_tool_target = "//zircon/tools/blobfs($host_toolchain)"
+blobfs_tool_path =
+    get_label_info(blobfs_tool_target, "root_out_dir") + "/blobfs"
+if (host_os == "win") {
+  blobfs_tool_path += ".exe"
+}
+
+minfs_tool_target = "//zircon/tools/minfs($host_toolchain)"
+minfs_tool_path = get_label_info(minfs_tool_target, "root_out_dir") + "/minfs"
+if (host_os == "win") {
+  minfs_tool_path += ".exe"
+}
