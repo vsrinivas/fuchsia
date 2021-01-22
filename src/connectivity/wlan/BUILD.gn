@@ -48,6 +48,7 @@ group("tests") {
     "drivers/third_party/broadcom/brcmfmac:brcmfmac_tests",
     "drivers/third_party/intel/iwlwifi:tests",
     "drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
+    "drivers/wlan:tests",
     "drivers/wlan:wlan_drivers_tests",
     "drivers/wlanif/test:wlanif_unittest",
     "drivers/wlanphy:wlanphy-unittests",
