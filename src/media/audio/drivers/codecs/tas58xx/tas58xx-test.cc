@@ -179,8 +179,9 @@ TEST(Tas58xxTest, GetDai) {
   EXPECT_EQ(formats.value().frame_formats.size(), 2);
   EXPECT_EQ(formats.value().frame_formats[0], FrameFormat::I2S);
   EXPECT_EQ(formats.value().frame_formats[1], FrameFormat::TDM1);
-  EXPECT_EQ(formats.value().frame_rates.size(), 1);
-  EXPECT_EQ(formats.value().frame_rates[0], 48000);
+  EXPECT_EQ(formats.value().frame_rates.size(), 2);
+  EXPECT_EQ(formats.value().frame_rates[0], 48'000);
+  EXPECT_EQ(formats.value().frame_rates[1], 96'000);
   EXPECT_EQ(formats.value().bits_per_slot.size(), 2);
   EXPECT_EQ(formats.value().bits_per_slot[0], 16);
   EXPECT_EQ(formats.value().bits_per_slot[1], 32);

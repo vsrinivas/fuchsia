@@ -52,7 +52,7 @@ static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2, 4};
 static const std::vector<SampleFormat> kSupportedDaiSampleFormats = {SampleFormat::PCM_SIGNED};
 static const std::vector<FrameFormat> kSupportedDaiFrameFormats = {FrameFormat::I2S,
                                                                    FrameFormat::TDM1};
-static const std::vector<uint32_t> kSupportedDaiRates = {48'000};
+static const std::vector<uint32_t> kSupportedDaiRates = {48'000, 96'000};  // FS_MODE = Auto.
 static const std::vector<uint8_t> kSupportedDaiBitsPerSlot = {16, 32};
 static const std::vector<uint8_t> kSupportedDaiBitsPerSample = {16, 32};
 static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
