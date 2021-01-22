@@ -447,6 +447,156 @@ class AccessConstraintsTests(unittest.TestCase):
                 allowed_writes=abspaths({"foo.d", "foo.o", "foo.cc", "foo.h"})))
 
 
+class DiagnoseStaleOutputsTest(unittest.TestCase):
+
+    def test_no_accesses_no_constraints(self):
+        output_diagnostics = action_tracer.diagnose_stale_outputs(
+            accesses=[],
+            access_constraints=action_tracer.AccessConstraints(),
+        )
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.OutputDiagnostics(),
+        )
+
+    def test_missing_write_no_inputs(self):
+        required_writes = {"write.me"}
+        output_diagnostics = action_tracer.diagnose_stale_outputs(
+            accesses=[],
+            access_constraints=action_tracer.AccessConstraints(
+                required_writes=required_writes),
+        )
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.OutputDiagnostics(
+                required_writes=required_writes,
+                nonexistent_outputs={"write.me"}),
+        )
+
+    def test_missing_write_with_used_input(self):
+        used_input = "read.me"
+        required_writes = {"write.me"}
+        output_diagnostics = action_tracer.diagnose_stale_outputs(
+            accesses=[action_tracer.Read(used_input)],
+            access_constraints=action_tracer.AccessConstraints(
+                allowed_reads={used_input},
+                required_writes=required_writes,
+            ),
+        )
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.OutputDiagnostics(
+                required_writes=required_writes,
+                nonexistent_outputs={"write.me"}),
+        )
+
+    def test_stale_output_no_inputs(self):
+        required_writes = {"write.me"}
+        with mock.patch.object(os.path, 'exists', return_value=True):
+            output_diagnostics = action_tracer.diagnose_stale_outputs(
+                accesses=[],
+                access_constraints=action_tracer.AccessConstraints(
+                    required_writes=required_writes),
+            )
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.OutputDiagnostics(required_writes=required_writes),
+        )
+
+    def test_stale_output_with_used_input(self):
+
+        def fake_getctime(path: str):
+            if path.startswith("read"):
+                return 200
+            if path.startswith("write"):
+                return 100
+            return 0
+
+        used_input = "read.me"
+        required_writes = {"write.me"}
+        with mock.patch.object(os.path, 'exists', return_value=True):
+            with mock.patch.object(os.path, 'getctime', wraps=fake_getctime):
+                output_diagnostics = action_tracer.diagnose_stale_outputs(
+                    accesses=[action_tracer.Read(used_input)],
+                    access_constraints=action_tracer.AccessConstraints(
+                        allowed_reads={used_input},
+                        required_writes=required_writes),
+                )
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.OutputDiagnostics(
+                required_writes=required_writes,
+                newest_input=used_input,
+                stale_outputs={"write.me"}),
+        )
+
+    def test_stale_output_with_multiple_used_inputs(self):
+
+        def fake_getctime(path: str):
+            if path == "read.me":
+                return 200
+            if path == "read.me.newer":
+                return 300
+            if path.startswith("write"):
+                return 250
+            return 0
+
+        used_input = "read.me"
+        # Make sure the timestamp of the newest input is used for comparison.
+        used_input_newer = "read.me.newer"
+        required_writes = {"write.me"}
+        with mock.patch.object(os.path, 'exists', return_value=True):
+            with mock.patch.object(os.path, 'getctime', wraps=fake_getctime):
+                output_diagnostics = action_tracer.diagnose_stale_outputs(
+                    accesses=[
+                        action_tracer.Read(used_input),
+                        action_tracer.Read(used_input_newer),
+                    ],
+                    access_constraints=action_tracer.AccessConstraints(
+                        allowed_reads={used_input, used_input_newer},
+                        required_writes=required_writes),
+                )
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.OutputDiagnostics(
+                required_writes=required_writes,
+                # newer input is used for comparison
+                newest_input=used_input_newer,
+                stale_outputs={"write.me"}),
+        )
+
+    def test_fresh_output_with_used_input(self):
+
+        def fake_getctime(path: str):
+            if path.startswith("read"):
+                return 100
+            if path.startswith("write"):
+                return 200
+            return 0
+
+        used_input = "read.me"
+        written_output = "write.me"
+        with mock.patch.object(os.path, 'exists', return_value=True):
+            with mock.patch.object(os.path, 'getctime', wraps=fake_getctime):
+                output_diagnostics = action_tracer.diagnose_stale_outputs(
+                    accesses=[
+                        action_tracer.Read(used_input),
+                        action_tracer.Write(written_output),
+                    ],
+                    access_constraints=action_tracer.AccessConstraints(
+                        allowed_reads={used_input},
+                        required_writes={written_output}),
+                )
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.OutputDiagnostics(
+                required_writes={written_output},
+                # newest_input is not evaluated
+                stale_outputs=set(),
+            ),
+        )
+
+
 class MainArgParserTests(unittest.TestCase):
 
     # These args are required, and there's nothing interesting about them to test.

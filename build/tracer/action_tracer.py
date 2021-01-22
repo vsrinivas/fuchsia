@@ -11,11 +11,25 @@ import os
 import shlex
 import subprocess
 import sys
-from typing import AbstractSet, Collection, FrozenSet, Iterable, Optional, Sequence, Tuple
+from typing import AbstractSet, Any, Callable, Collection, FrozenSet, Iterable, Optional, Sequence, TextIO, Tuple
+
+
+def _partition(
+        iterable: Iterable[Any],
+        predicate: Callable[[Any],
+                            bool]) -> Tuple[Sequence[Any], Sequence[Any]]:
+    """Splits sequence into two sequences based on predicate function."""
+    trues = []
+    falses = []
+    for item in iterable:
+        if predicate(item):
+            trues.append(item)
+        else:
+            falses.append(item)
+    return trues, falses
 
 
 class FileAccessType(enum.Enum):
-    # String values for readable diagnostics.
     READ = enum.auto()
     WRITE = enum.auto()
     DELETE = enum.auto()
@@ -240,6 +254,13 @@ def check_missing_writes(
     return missing_writes
 
 
+def actually_read_files(accesses: Iterable[FSAccess]) -> AbstractSet[str]:
+    """Returns subset of files that were actually used/read."""
+    return {
+        access.path for access in accesses if access.op == FileAccessType.READ
+    }
+
+
 @dataclasses.dataclass
 class DepEdges(object):
     ins: FrozenSet[str] = dataclasses.field(default_factory=set)
@@ -299,7 +320,97 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
     return DepFile(deps=[parse_dep_edges(line) for line in depfile_lines])
 
 
-def main_arg_parser():
+@dataclasses.dataclass
+class OutputDiagnostics(object):
+    """Just a structure to capture results of diagnosing outputs."""
+    required_writes: FrozenSet[str] = dataclasses.field(default_factory=set)
+    nonexistent_outputs: FrozenSet[str] = dataclasses.field(default_factory=set)
+    # If there are stale_outputs, then it must have been compared against a
+    # newest_input.
+    newest_input: Optional[str] = None
+    stale_outputs: FrozenSet[str] = dataclasses.field(default_factory=set)
+
+    @property
+    def has_findings(self):
+        return self.nonexistent_outputs or self.stale_outputs
+
+    def print_findings(self, stream: TextIO):
+        required_writes_formatted = "\n".join(self.required_writes)
+        print(
+            f"""
+Required writes:
+{required_writes_formatted}
+""", file=stream)
+        if self.nonexistent_outputs:
+            nonexistent_outputs_formatted = "\n".join(selfnonexistent_outputs)
+            print(
+                f"""
+Missing outputs:
+{nonexistent_outputs_formatted}
+""",
+                file=stream)
+
+        if self.stale_outputs:
+            stale_outputs_formatted = "\n".join(self.stale_outputs)
+            print(
+                f"""
+Stale outputs: (older than newest input: {self.newest_input})
+{stale_outputs_formatted}
+""",
+                file=stream)
+
+
+def diagnose_stale_outputs(
+        accesses: Iterable[FSAccess],
+        access_constraints: AccessConstraints) -> OutputDiagnostics:
+    """Analyzes access stream for missing writes.
+
+    Also compares timestamps of inputs relative to outputs
+    to determine staleness.
+
+    Args:
+      accesses: trace of file system accesses.
+      access_constraints: access that may/must[not] occur.
+
+    Returns:
+      Structure of findings, including missing/stale outputs.
+    """
+    # Verify that outputs are written as promised.
+    missing_writes = check_missing_writes(
+        accesses, access_constraints.required_writes)
+
+    # Distinguish stale from nonexistent output files.
+    untouched_outputs, nonexistent_outputs = _partition(
+        missing_writes, os.path.exists)
+
+    # Check that timestamps relative to inputs (allowed_reads) are newer,
+    # in which case, not-writing outputs is acceptable.
+    # Determines file use based on the `accesses` trace,
+    # not the stat() filesystem function.
+    read_files = actually_read_files(accesses)
+    # Ignore allowed-but-unused inputs.
+    used_inputs = access_constraints.allowed_reads.intersection(read_files)
+
+    # Compare timestamps vs. newest input to find stale outputs.
+    stale_outputs = set()
+    newest_input = None
+    if used_inputs and untouched_outputs:
+        newest_input = max(used_inputs, key=os.path.getctime)
+        # Filter out untouched outputs that are still newer than used inputs.
+        input_timestamp = os.path.getctime(newest_input)
+        stale_outputs = {
+            out for out in untouched_outputs
+            if os.path.getctime(out) < input_timestamp
+        }
+    return OutputDiagnostics(
+        required_writes=access_constraints.required_writes,
+        nonexistent_outputs=set(nonexistent_outputs),
+        newest_input=newest_input,
+        stale_outputs=stale_outputs)
+
+
+def main_arg_parser() -> argparse.ArgumentParser:
+    """Construct the argument parser, called by main()."""
     parser = argparse.ArgumentParser(
         description="Traces a GN action and enforces strict inputs/outputs",
         argument_default=[],
@@ -357,7 +468,10 @@ def main():
     os.makedirs(trace_output_dir, exist_ok=True)
 
     retval = subprocess.call(
-        ["../../prebuilt/fsatrace/fsatrace", "rwmdt", args.trace_output, "--", args.script] + args.args)
+        [
+            "../../prebuilt/fsatrace/fsatrace", "rwmdt", args.trace_output,
+            "--", args.script
+        ] + args.args)
 
     # If inner action failed that's a build error, don't bother with the trace.
     if retval != 0:
@@ -465,39 +579,30 @@ Full access trace:
 See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
 
 """,
-                file=sys.stderr,
-            )
+                file=sys.stderr)
             exit_code = 1
 
     if args.check_output_freshness:
-        # Verify that outputs are written as promised.
-        missing_writes = check_missing_writes(
-            filtered_accesses, access_constraints.required_writes)
+        output_diagnostics = diagnose_stale_outputs(
+            accesses=filtered_accesses, access_constraints=access_constraints)
+        if output_diagnostics.has_findings:
 
-        if missing_writes:
-            required_writes_formatted = "\n".join(
-                access_constraints.required_writes)
-            missing_writes_formatted = "\n".join(missing_writes)
             print(
                 f"""
 Not all outputs of {args.label} were written or touched, which can cause subsequent
 build invocations to re-execute actions due to a missing file or old timestamp.
-Writes to the following files are missing:
-
-Required writes:
-{required_writes_formatted}
-
-Missing writes:
-{missing_writes_formatted}
-
+""",
+                file=sys.stderr)
+            output_diagnostics.print_findings(sys.stderr)
+            print(
+                f"""
 Full access trace:
 {raw_trace}
 
 See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op
 
 """,
-                file=sys.stderr,
-            )
+                file=sys.stderr)
             exit_code = 1
 
     return exit_code
