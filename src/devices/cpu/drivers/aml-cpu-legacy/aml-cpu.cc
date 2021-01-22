@@ -14,13 +14,13 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 
 #include "fuchsia/hardware/thermal/llcpp/fidl.h"
+#include "src/devices/cpu/drivers/aml-cpu-legacy/aml-cpu-legacy-bind.h"
 
 namespace {
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
@@ -299,9 +299,5 @@ static constexpr zx_driver_ops_t aml_cpu_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_cpu, aml_cpu_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_GOOGLE_AMLOGIC_CPU),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK),
-ZIRCON_DRIVER_END(aml_cpu)
+ZIRCON_DRIVER(aml_cpu, aml_cpu_driver_ops, "zircon", "0.1");
+
