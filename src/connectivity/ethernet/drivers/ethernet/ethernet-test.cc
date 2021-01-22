@@ -46,7 +46,7 @@ class FakeEthernetImplProtocol
     completion_cb(cookie, ZX_OK, netbuf);
   }
 
-  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                    size_t data_size) {
     if (param == ETHERNET_SETPARAM_DUMP_REGS) {
       dump_called_ = true;

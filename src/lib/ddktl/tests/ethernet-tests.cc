@@ -30,7 +30,7 @@ class TestEthernetIfc : public ddk::Device<TestEthernetIfc>,
     status_called_ = true;
   }
 
-  void EthernetIfcRecv(const void* data, size_t length, uint32_t flags) {
+  void EthernetIfcRecv(const uint8_t* data, size_t length, uint32_t flags) {
     recv_this_ = get_this();
     recv_called_ = true;
   }
@@ -100,7 +100,7 @@ class TestEthernetImplProtocol
     queue_tx_called_ = true;
   }
 
-  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                    size_t data_size) {
     set_param_this_ = get_this();
     set_param_called_ = true;

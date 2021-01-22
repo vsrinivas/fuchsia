@@ -228,7 +228,7 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   op.Complete(status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status);
 }
 
-zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                             size_t data_size) {
   fbl::AutoLock lock(&lock_);
   if (!(options_ & ETHERTAP_OPT_REPORT_PARAM) || dead_) {

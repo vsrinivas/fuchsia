@@ -60,7 +60,7 @@ static zx_protocol_device_t eth_device_ops = {
 
 static wlanmac_ifc_protocol_ops_t wlanmac_ifc_ops = {
     .status = [](void* cookie, uint32_t status) { DEV(cookie)->WlanmacStatus(status); },
-    .recv = [](void* cookie, uint32_t flags, const void* data, size_t length,
+    .recv = [](void* cookie, uint32_t flags, const uint8_t* data, size_t length,
                const wlan_rx_info_t* info) { DEV(cookie)->WlanmacRecv(flags, data, length, info); },
     .complete_tx = [](void* cookie, wlan_tx_packet_t* pkt,
                       zx_status_t status) { DEV(cookie)->WlanmacCompleteTx(pkt, status); },
@@ -87,7 +87,7 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
         [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
            ethernet_impl_queue_tx_callback completion_cb,
            void* cookie) { DEV(ctx)->EthernetImplQueueTx(options, netbuf, completion_cb, cookie); },
-    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
+    .set_param = [](void* ctx, uint32_t param, int32_t value, const uint8_t* data, size_t data_size)
         -> zx_status_t { return DEV(ctx)->EthernetImplSetParam(param, value, data, data_size); },
 };
 #undef DEV

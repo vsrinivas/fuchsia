@@ -98,7 +98,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   zx_status_t EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size);
 
   // wlanif_impl_ifc (wlanif-impl -> ethernet_ifc_t)
-  void EthRecv(const void* data, size_t length, uint32_t flags);
+  void EthRecv(const uint8_t* data, size_t length, uint32_t flags);
 
   zx_status_t Connect(zx::channel request);
 

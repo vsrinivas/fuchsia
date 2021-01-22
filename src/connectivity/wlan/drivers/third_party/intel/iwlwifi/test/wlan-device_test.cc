@@ -35,7 +35,7 @@ typedef mock_function::MockFunction<void, void*, uint32_t, const void*, size_t,
     recv_cb_t;
 
 // The wrapper used by wlanmac_ifc_t.recv() to call mock-up.
-void recv_wrapper(void* cookie, uint32_t flags, const void* data, size_t length,
+void recv_wrapper(void* cookie, uint32_t flags, const uint8_t* data, size_t length,
                   const wlan_rx_info_t* info) {
   auto recv = reinterpret_cast<recv_cb_t*>(cookie);
   recv->Call(cookie, flags, data, length, info);

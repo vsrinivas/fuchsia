@@ -48,7 +48,7 @@ class EthernetDeviceTests : public zxtest::Test {
     ops_.status = [](void* ctx, uint32_t status) {
       reinterpret_cast<EthernetDeviceTests*>(ctx)->set_status(status);
     };
-    ops_.recv = [](void* ctx, const void* data_buffer, size_t data_size, uint32_t flags) {
+    ops_.recv = [](void* ctx, const uint8_t* data_buffer, size_t data_size, uint32_t flags) {
       reinterpret_cast<EthernetDeviceTests*>(ctx)->receive(data_buffer, data_size, flags);
     };
     protocol_.ops = &ops_;

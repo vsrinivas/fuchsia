@@ -358,7 +358,7 @@ void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   size_t eth_payload_len = length - kEthFrameHdrSize;
 
   // Check data type. Only Arp or IPv4 packet will be handled.
-  const EthFrameHdr* eth_hdr = static_cast<const EthFrameHdr*>(netbuf->data_buffer);
+  const EthFrameHdr* eth_hdr = reinterpret_cast<const EthFrameHdr*>(netbuf->data_buffer);
   switch (betoh16(eth_hdr->ethertype)) {
     // Arp request. Send back Arp response.
     case kEthertypeArp: {
@@ -368,7 +368,7 @@ void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
         return;
       }
 
-      auto eth_arp = static_cast<const EthArpFrame*>(netbuf->data_buffer);
+      auto eth_arp = reinterpret_cast<const EthArpFrame*>(netbuf->data_buffer);
       zx_status_t res = HandleArpReq(eth_arp->arp);
       if (res != ZX_OK) {
         eth_tx_stats_.arp_dropped_cnt += 1;
@@ -393,7 +393,7 @@ void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
         if (device_unbound_) {
           status = ZX_ERR_IO_NOT_PRESENT;
         } else {
-          auto eth_ip = static_cast<const EthFrame*>(netbuf->data_buffer);
+          auto eth_ip = reinterpret_cast<const EthFrame*>(netbuf->data_buffer);
           status = SendLocked(eth_ip->eth_payload, eth_payload_len);
           if (status == ZX_ERR_SHOULD_WAIT) {
             // No buffers available, queue it up
@@ -428,7 +428,7 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
         [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
            ethernet_impl_queue_tx_callback completion_cb,
            void* cookie) { DEV(ctx)->EthernetImplQueueTx(options, netbuf, completion_cb, cookie); },
-    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
+    .set_param = [](void* ctx, uint32_t param, int32_t value, const uint8_t* data, size_t data_size)
         -> zx_status_t { return DEV(ctx)->EthernetImplSetParam(param, value, data, data_size); },
 };
 #undef DEV

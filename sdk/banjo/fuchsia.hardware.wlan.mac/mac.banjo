@@ -230,7 +230,7 @@ protocol WlanmacIfc {
     Status(uint32 status) -> ();
 
     /// Submit received data to the next driver. info must not be NULL.
-    Recv(uint32 flags, vector<voidptr> data, WlanRxInfo info);
+    Recv(uint32 flags, [Buffer] vector<uint8> data, WlanRxInfo info);
 
     /// complete_tx() is called to return ownership of a packet to the wlan driver.
     /// Return status indicates queue state:

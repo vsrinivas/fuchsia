@@ -398,7 +398,7 @@ static zx_status_t ecm_ethernet_impl_manipulate_bits(ecm_ctx_t* eth, uint16_t mo
 }
 
 static zx_status_t ecm_ethernet_impl_set_param(void* cookie, uint32_t param, int32_t value,
-                                               const void* data, size_t data_size) {
+                                               const uint8_t* data, size_t data_size) {
   zx_status_t status;
   ecm_ctx_t* ctx = cookie;
 

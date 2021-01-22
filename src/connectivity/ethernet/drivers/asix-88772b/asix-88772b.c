@@ -476,7 +476,7 @@ static zx_status_t ax88772b_set_promisc(ax88772b_t* eth, bool on) {
   return status;
 }
 
-static zx_status_t ax88772b_set_param(void* ctx, uint32_t param, int32_t value, const void* data,
+static zx_status_t ax88772b_set_param(void* ctx, uint32_t param, int32_t value, const uint8_t* data,
                                       size_t data_size) {
   ax88772b_t* eth = ctx;
   zx_status_t status = ZX_OK;

@@ -4252,7 +4252,8 @@ zx_status_t ath10k_mac_op_tx(struct ath10k* ar, wlan_tx_packet_t* pkt) {
 
   ath10k_mac_tx_h_tx_flags(ar, tx_buf, &pkt->info);
 
-  const struct ieee80211_frame_header* hdr = pkt->packet_head.data_buffer;
+  const struct ieee80211_frame_header* hdr =
+      (struct ieee80211_frame_header*)pkt->packet_head.data_buffer;
 
   if (is_htt) {
     mtx_lock(&ar->htt.tx_lock);

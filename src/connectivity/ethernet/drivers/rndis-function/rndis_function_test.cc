@@ -139,7 +139,7 @@ class FakeEthernetInterface : public ddk::EthernetIfcProtocol<FakeEthernetInterf
 
   void EthernetIfcStatus(uint32_t status) { last_status_ = status; }
 
-  void EthernetIfcRecv(const void* data, size_t size, uint32_t flags) {
+  void EthernetIfcRecv(const uint8_t* data, size_t size, uint32_t flags) {
     sync_completion_signal(&packet_received_sync_);
   }
 
@@ -412,7 +412,7 @@ TEST_F(RndisFunctionTest, Send) {
   for (size_t i = 0; i != 8; ++i) {
     auto buffer = eth::Operation<>::Alloc(info.netbuf_size);
     char data[] = "abcd";
-    buffer->operation()->data_buffer = &data;
+    buffer->operation()->data_buffer = reinterpret_cast<uint8_t*>(&data);
     buffer->operation()->data_size = sizeof(data);
 
     zx_status_t result;
@@ -436,7 +436,7 @@ TEST_F(RndisFunctionTest, Send) {
   {
     auto buffer = eth::Operation<>::Alloc(info.netbuf_size);
     char data[] = "abcd";
-    buffer->operation()->data_buffer = &data;
+    buffer->operation()->data_buffer = reinterpret_cast<uint8_t*>(&data);
     buffer->operation()->data_size = sizeof(data);
 
     zx_status_t result;
@@ -468,7 +468,7 @@ TEST_F(RndisFunctionTest, Send) {
   do {
     auto buffer = eth::Operation<>::Alloc(info.netbuf_size);
     char data[] = "abcd";
-    buffer->operation()->data_buffer = &data;
+    buffer->operation()->data_buffer = reinterpret_cast<uint8_t*>(&data);
     buffer->operation()->data_size = sizeof(data);
 
     device_->EthernetImplQueueTx(/*options=*/0, buffer->take(),

@@ -728,7 +728,7 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
   transmit_ok_ += 1;
 }
 
-zx_status_t RndisFunction::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+zx_status_t RndisFunction::EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                                 size_t data_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }

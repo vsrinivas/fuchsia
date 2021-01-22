@@ -72,8 +72,8 @@ zx_status_t EthDev::RebuildMulticastFilterLocked() {
       n_multicast++;
     }
   }
-  return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_multicast, multicast,
-                               n_multicast * ETH_MAC_SIZE);
+  return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_multicast,
+                               reinterpret_cast<uint8_t*>(multicast), n_multicast * ETH_MAC_SIZE);
 }
 
 int EthDev::MulticastAddressIndex(const uint8_t* mac) {
@@ -270,7 +270,7 @@ void EthDev0::CompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status) {
 ethernet_ifc_protocol_ops_t ethernet_ifc = {
     .status = [](void* cookie,
                  uint32_t status) { reinterpret_cast<EthDev0*>(cookie)->SetStatus(status); },
-    .recv = [](void* cookie, const void* data, size_t len,
+    .recv = [](void* cookie, const uint8_t* data, size_t len,
                uint32_t flags) { reinterpret_cast<EthDev0*>(cookie)->Recv(data, len, flags); },
 };
 
@@ -338,7 +338,7 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
         zxlogf(TRACE, "setting OPT_MORE (%lu packets to go)", count);
       }
       transmit_buffer->operation()->data_buffer =
-          reinterpret_cast<char*>(io_buffer_.start()) + e->offset;
+          reinterpret_cast<uint8_t*>(io_buffer_.start()) + e->offset;
       if (edev0_->info_.features & ETHERNET_FEATURE_DMA) {
         transmit_buffer->operation()->phys =
             paddr_map_[e->offset / PAGE_SIZE] + (e->offset & kPageMask);

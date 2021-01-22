@@ -518,7 +518,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
 
   // Send to MLME
   // TODO(43218): replace rxq->napi with interface instance so that we can map to mvmvif.
-  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, 0, frame, res_len, &rx_info);
+  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, 0, (uint8_t*)frame, res_len, &rx_info);
 
 #if 0   // NEEDS_PORTING
   if (take_ref) {

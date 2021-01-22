@@ -247,7 +247,7 @@ wlanif_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
           static_cast<DataFrameTest*>(cookie)->OnEapolInd(ind);
         },
     .data_recv =
-        [](void* cookie, const void* data_buffer, size_t data_size, uint32_t flags) {
+        [](void* cookie, const uint8_t* data_buffer, size_t data_size, uint32_t flags) {
           static_cast<DataFrameTest*>(cookie)->OnDataRecv(data_buffer, data_size);
         },
 };
@@ -339,7 +339,6 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
   data_context_.received_data.push_back(std::move(resp));
   non_eapol_data_count++;
 }
-
 
 void DataFrameTest::StartAssoc() {
   // Send join request

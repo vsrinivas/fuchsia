@@ -110,7 +110,7 @@ static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
         },
 
     // Ethernet operations
-    .data_recv = [](void* cookie, const void* data, size_t length,
+    .data_recv = [](void* cookie, const uint8_t* data, size_t length,
                     uint32_t flags) { DEV(cookie)->EthRecv(data, length, flags); },
 };
 
@@ -126,7 +126,7 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
         [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
            ethernet_impl_queue_tx_callback completion_cb,
            void* cookie) { return DEV(ctx)->EthQueueTx(options, netbuf, completion_cb, cookie); },
-    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
+    .set_param = [](void* ctx, uint32_t param, int32_t value, const uint8_t* data, size_t data_size)
         -> zx_status_t { return DEV(ctx)->EthSetParam(param, value, data, data_size); },
 };
 #undef DEV
@@ -1156,7 +1156,7 @@ void Device::SetEthernetStatusUnlocked(bool online) {
   SetEthernetStatusLocked(online);
 }
 
-void Device::EthRecv(const void* data, size_t length, uint32_t flags) {
+void Device::EthRecv(const uint8_t* data, size_t length, uint32_t flags) {
   std::lock_guard<std::mutex> lock(lock_);
   if (eth_started_) {
     ethernet_ifc_recv(&ethernet_ifc_, data, length, flags);

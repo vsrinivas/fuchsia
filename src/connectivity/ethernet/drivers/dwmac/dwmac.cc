@@ -594,7 +594,7 @@ void DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbu
   op.Complete(ZX_OK);
 }
 
-zx_status_t DWMacDevice::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+zx_status_t DWMacDevice::EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                               size_t data_size) {
   zxlogf(INFO, "dwmac: SetParam called  %x  %x", param, value);
   return ZX_OK;

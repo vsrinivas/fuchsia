@@ -414,7 +414,7 @@ static void cdc_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet
 }
 
 static zx_status_t cdc_ethernet_impl_set_param(void* cookie, uint32_t param, int32_t value,
-                                               const void* data, size_t data_size) {
+                                               const uint8_t* data, size_t data_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -530,7 +530,8 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
     if (cdc->ethernet_ifc.ops) {
       void* data = NULL;
       usb_request_mmap(req, &data);
-      ethernet_ifc_recv(&cdc->ethernet_ifc, data, req->response.actual, 0);
+      ethernet_ifc_recv(&cdc->ethernet_ifc, reinterpret_cast<uint8_t*>(data), req->response.actual,
+                        0);
     }
     mtx_unlock(&cdc->ethernet_mutex);
   }

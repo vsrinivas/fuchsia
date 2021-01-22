@@ -290,7 +290,7 @@ static zx_status_t rtl8111_set_promisc(ethernet_device_t* edev, bool on) {
   return ZX_OK;
 }
 
-static zx_status_t rtl8111_set_param(void* ctx, uint32_t param, int32_t value, const void* data,
+static zx_status_t rtl8111_set_param(void* ctx, uint32_t param, int32_t value, const uint8_t* data,
                                      size_t data_size) {
   ethernet_device_t* edev = ctx;
   zx_status_t status = ZX_OK;

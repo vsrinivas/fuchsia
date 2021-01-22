@@ -613,8 +613,8 @@ zx_status_t Asix88179Ethernet::SetMulticastFilter(int32_t n_addresses, const uin
   return status;
 }
 
-zx_status_t Asix88179Ethernet::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
-                                                    size_t data_size) {
+zx_status_t Asix88179Ethernet::EthernetImplSetParam(uint32_t param, int32_t value,
+                                                    const uint8_t* data, size_t data_size) {
   zx_status_t status = ZX_OK;
 
   fbl::AutoLock lock(&lock_);

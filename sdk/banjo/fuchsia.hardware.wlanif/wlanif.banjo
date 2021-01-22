@@ -725,7 +725,7 @@ protocol WlanifImplIfc {
     OnWmmStatusResp(zx.status s, fuchsia.hardware.wlan.info.WlanWmmParams wmm_params) -> ();
 
     // Data operations
-    DataRecv(vector<voidptr> data, uint32 flags) -> ();
+    DataRecv([Buffer] vector<uint8> data, uint32 flags) -> ();
 };
 
 [Layout = "ddk-protocol"]

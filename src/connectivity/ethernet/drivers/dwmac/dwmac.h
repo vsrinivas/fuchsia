@@ -110,7 +110,7 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
   void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                            ethernet_impl_queue_tx_callback completion_cb, void* cookie)
       __TA_EXCLUDES(lock_);
-  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                    size_t data_size);
   void EthernetImplGetBti(zx::bti* bti);
 

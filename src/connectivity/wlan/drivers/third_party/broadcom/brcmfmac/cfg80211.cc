@@ -1090,7 +1090,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   }
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
     BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)\n",
-              vif->sme_state.load());
+               vif->sme_state.load());
     return ZX_ERR_UNAVAILABLE;
   }
   if (brcmf_is_ap_start_pending(cfg)) {
@@ -2213,7 +2213,7 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
     // queue up the eapol frame along with events to ensure processing order
     brcmf_fweh_queue_eapol_frame(ifp, data, size);
   } else {
-    wlanif_impl_ifc_data_recv(&ndev->if_proto, data, size, 0);
+    wlanif_impl_ifc_data_recv(&ndev->if_proto, reinterpret_cast<const uint8_t*>(data), size, 0);
   }
 }
 

@@ -54,7 +54,7 @@ class EthernetDevice : public Device,
       TA_EXCL(state_lock_);
 
   const char* tag() const override { return "virtio-net"; }
-  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data_buffer,
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
                                    size_t data_size) {
     return ZX_ERR_NOT_SUPPORTED;
   }

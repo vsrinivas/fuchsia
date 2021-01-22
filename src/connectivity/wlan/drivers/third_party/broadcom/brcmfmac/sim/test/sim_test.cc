@@ -91,7 +91,7 @@ wlanif_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
           static_cast<SimInterface*>(ctx)->OnRelayCapturedFrame(result);
         },
     .data_recv =
-        [](void* ctx, const void* data, size_t data_size, uint32_t flags) {
+        [](void* ctx, const uint8_t* data, size_t data_size, uint32_t flags) {
           static_cast<SimInterface*>(ctx)->OnDataRecv(data, data_size, flags);
         },
 };

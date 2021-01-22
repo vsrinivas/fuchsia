@@ -30,9 +30,7 @@
 #include "ddk/driver.h"
 #include "e1000_api.h"
 #include "src/lib/listnode/listnode.h"
-
 #include "zircon/third_party/dev/ethernet/e1000/e1000_bind.h"
-
 
 typedef enum {
   ETH_RUNNING = 0,
@@ -102,7 +100,7 @@ struct framebuf {
  * See Intel 82574 Driver Programming Interface Manual, Section 10.2.6.9
  */
 #define TARC_SPEED_MODE_BIT (1 << 21) /* On PCI-E MACs only */
-#define TARC_ERRATA_BIT (1 << 26) /* Note from errata on 82574 */
+#define TARC_ERRATA_BIT (1 << 26)     /* Note from errata on 82574 */
 
 struct txrx_funcs;
 
@@ -511,7 +509,7 @@ static void e1000_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbu
   completion_cb(cookie, status, netbuf);
 }
 
-static zx_status_t e1000_set_param(void* ctx, uint32_t param, int32_t value, const void* data,
+static zx_status_t e1000_set_param(void* ctx, uint32_t param, int32_t value, const uint8_t* data,
                                    size_t data_size) {
   return ZX_OK;
 }
