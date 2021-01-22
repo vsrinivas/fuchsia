@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:math';
-
-import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -41,18 +38,4 @@ void main() {
     bool isAllBlack = image.data.every((pixel) => pixel & 0x00ffffff == 0);
     expect(isAllBlack, false);
   });
-}
-
-Future<Point<int>> centerFromFinder(
-    FlutterDriver driver, SerializableFinder finder) async {
-  // Get the bottom right of the main screen.
-  final mainScreenFinder = find.byValueKey('main');
-  final bottomRight = await driver.getBottomRight(mainScreenFinder);
-
-  // The `input` utility expects screen coordinates to be scaled 0 - 1000.
-  final center = await driver.getCenter(finder);
-  int x = (center.dx / bottomRight.dx * 1000).toInt();
-  int y = (center.dy / bottomRight.dy * 1000).toInt();
-
-  return Point<int>(x, y);
 }

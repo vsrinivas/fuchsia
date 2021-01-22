@@ -15,12 +15,14 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "ermine_session_shell_ask_test.dart",
     "ermine_session_shell_simple_browser_test.dart",
     "ermine_smoke_test.dart",
+    "ermine_spinning_square_view_test.dart",
   ]
 
   deps = [
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/test",
     "//third_party/dart-pkg/pub/webdriver",
   ]

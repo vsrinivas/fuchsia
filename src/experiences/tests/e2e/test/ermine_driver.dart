@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:math';
+
+import 'package:image/image.dart';
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:flutter_driver_sl4f/flutter_driver_sl4f.dart';
 import 'package:sl4f/sl4f.dart';
@@ -16,6 +19,7 @@ const _chromeDriverPath = 'runtime_deps/chromedriver';
 class ErmineDriver {
   /// The instance of [Sl4f] used to connect to Ermine flutter app.
   final Sl4f sl4f;
+  final Component _component;
 
   FlutterDriver _driver;
   final FlutterDriverConnector _connector;
@@ -26,10 +30,14 @@ class ErmineDriver {
   /// Constructor.
   ErmineDriver(this.sl4f)
       : _connector = FlutterDriverConnector(sl4f),
+        _component = Component(sl4f),
         _webDriverConnector = WebDriverConnector(_chromeDriverPath, sl4f);
 
   /// The instance of [FlutterDriver] that is connected to Ermine flutter app.
   FlutterDriver get driver => _driver;
+
+  /// The instance of [Component] that is connected to the DUT.
+  Component get component => _component;
 
   /// Set up the test environment for Ermine.
   ///
@@ -99,7 +107,7 @@ class ErmineDriver {
     // [FlutterDriverConnector] in flutter_driver_sl4f.dart
     final browserIsolate = await browserConnector.isolate('simple-browser');
     if (browserIsolate == null) {
-      fail("couldn't find simple browser.");
+      fail('couldn\'t find simple browser.');
     }
 
     // Connect to the browser.
@@ -120,5 +128,76 @@ class ErmineDriver {
   /// Returns a web driver connected to a given URL.
   Future<WebDriver> getWebDriverFor(String hostUrl) async {
     return (await _webDriverConnector.webDriversForHost(hostUrl)).single;
+  }
+
+  Future<Rectangle> getViewRect(String viewUrl,
+      [Duration timeout = const Duration(seconds: 30)]) async {
+    final component = await waitForView(viewUrl, timeout);
+    final viewport = component['viewport'];
+    final viewRect =
+        viewport.split(',').map((e) => double.parse(e).round()).toList();
+
+    return Rectangle(viewRect[0], viewRect[1], viewRect[2], viewRect[3]);
+  }
+
+  /// Finds the first launched component given its [viewUrl] and returns it's
+  /// Inspect data. Waits for [timeout] duration for view to launch.
+  Future<Map<String, dynamic>> waitForView(String viewUrl,
+      [Duration timeout = const Duration(seconds: 30)]) async {
+    final end = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(end)) {
+      final views = await launchedViews();
+      final view = views.firstWhere((view) => view['url'] == viewUrl,
+          orElse: () => null);
+      if (view != null) {
+        return view;
+      }
+      // Wait a second to query inspect again.
+      await Future.delayed(Duration(seconds: 1));
+    }
+    fail('Failed to find component: $viewUrl');
+    // ignore: dead_code
+    return null;
+  }
+
+  /// Returns [Inspect] data for all launched views.
+  Future<List<Map<String, dynamic>>> launchedViews() async {
+    final snapshot = await Inspect(sl4f).snapshotRoot('ermine.cmx');
+    final workspace = snapshot['workspaces'];
+
+    final clusters = <Map<String, dynamic>>[];
+    int instance = 0;
+    while (workspace['cluster-$instance'] != null) {
+      clusters.add(workspace['cluster-${instance++}']);
+    }
+
+    final views = <Map<String, dynamic>>[];
+    for (final cluster in clusters) {
+      int instance = 0;
+      while (cluster['component-$instance'] != null) {
+        views.add(cluster['component-${instance++}']);
+      }
+    }
+    return views;
+  }
+
+  /// Take a screenshot of a View given its screen co-ordinates.
+  Future<Image> screenshot(Rectangle rect) async {
+    final scenic = Scenic(sl4f);
+    final image = await scenic.takeScreenshot();
+    return copyCrop(image, rect.left, rect.top, rect.width, rect.height);
+  }
+
+  /// Returns a histogram, i.e. occurences of colors, in an image.
+  /// [Color] is encoded as  0xAABBGGRR.
+  Map<int, int> histogram(Image image) {
+    final colors = <int, int>{};
+    for (int j = 0; j < image.height; j++) {
+      for (int i = 0; i < image.width; i++) {
+        final color = image.getPixel(i, j);
+        colors[color] = (colors[color] ?? 0) + 1;
+      }
+    }
+    return colors;
   }
 }
