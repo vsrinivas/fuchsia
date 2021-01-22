@@ -390,6 +390,7 @@ mod tests {
     async fn drain_stash_iterator<T, F>(mut f: F) -> Vec<T>
     where
         F: FnMut() -> QueryResponseFut<Vec<T>>,
+        T: Unpin,
     {
         let mut res = Vec::new();
         loop {

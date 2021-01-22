@@ -62,7 +62,7 @@ pub type DecodedQueryResponseFut<T> =
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct QueryResponseFut<T>(pub MaybeDone<DecodedQueryResponseFut<T>>);
 
-impl<T> FusedFuture for QueryResponseFut<T> {
+impl<T: Unpin> FusedFuture for QueryResponseFut<T> {
     fn is_terminated(&self) -> bool {
         match self.0 {
             MaybeDone::Gone => true,
@@ -71,7 +71,7 @@ impl<T> FusedFuture for QueryResponseFut<T> {
     }
 }
 
-impl<T> Future for QueryResponseFut<T> {
+impl<T: Unpin> Future for QueryResponseFut<T> {
     type Output = Result<T, Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
