@@ -11,6 +11,15 @@ group("misc") {
   ]
 }
 
+group("goldfish_driver_modules") {
+  deps = [
+    "goldfish:goldfish_driver",
+    "goldfish_address_space:address_space_driver",
+    "goldfish_control:control_driver",
+    "goldfish_sync:goldfish_sync_driver",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [

@@ -231,7 +231,6 @@ group("drivers-system") {
     "//src/camera/drivers:all",
     "//src/connectivity/ppp/drivers",
     "//src/connectivity/telephony/drivers",
-    "//src/graphics/drivers",
     "//src/media/drivers",
   ]
   if (target_cpu == "x64") {
