@@ -27,20 +27,13 @@ mod commands;
 mod types;
 
 /// Command line arguments that the tool accepts.
-/// Currently, the only supported argument at launch is the profile version.
+/// Currently, the only supported argument at launch is the initiator delay.
 #[derive(FromArgs)]
-#[argh(description = "A2DP Profile")]
+#[argh(description = "Command Line Options")]
 struct Options {
-    /// a2dp profile to use with the tool (values: "sink", "source")
-    #[argh(option, short = 'p')]
-    profile: String,
-}
-
-/// Generates the next local identifier for the current session.
-/// Increments linearly, and returns the id as a string.
-// TODO(fxbug.dev/37089): Generate IDs based on the peer_id, and clean up state accordingly.
-fn next_string(input: &str) -> String {
-    (input.parse::<u64>().unwrap() + 1).to_string()
+    /// initiator delay value to use with the tool (eg values: "0", "2000")
+    #[argh(option, short = 'd', description = "A2DP Initiator Delay (in milliseconds)")]
+    initiator_delay: Option<String>,
 }
 
 // TODO(fxbug.dev/37089): Spawn listener for PeerEventStream to delete peer from map
@@ -50,29 +43,30 @@ async fn peer_manager_listener(
     mut stream: PeerManagerEventStream,
     peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<(), Error> {
-    let mut id_count = "0".to_string();
     while let Some(evt) = stream.try_next().await? {
         print!("{}", CLEAR_LINE);
         match evt {
             PeerManagerEvent::OnPeerConnected { mut peer_id } => {
-                let id: String = format!("{:016x}", peer_id.value);
-
                 let (client, server) = create_endpoints::<PeerControllerMarker>()
                     .expect("Failed to create peer endpoint");
                 let peer = client.into_proxy().expect("Error: Couldn't obtain peer client proxy");
 
-                match peer_map.write().entry(id_count.clone()) {
-                    Entry::Occupied(_) => {}
+                match peer_map.write().entry(peer_id.value.to_string()) {
+                    Entry::Occupied(mut entry) => {
+                        entry.insert(peer);
+                        println!("Known peer connected with id: {}", peer_id.value.to_string())
+                    }
                     Entry::Vacant(entry) => {
                         entry.insert(peer);
-                        info!("Inserted device into PeerFactoryMap");
+                        println!(
+                            "Inserted device into PeerFactoryMap with id: {}",
+                            peer_id.value.to_string()
+                        );
                     }
                 };
                 // Establish channel with the given peer_id and server endpoint.
                 let _ = avdtp_svc.get_peer(&mut peer_id, server);
-                info!("Getting peer with peer_id: {} and local id: {}", id, id_count);
-                // Increment id count every time a new peer connects.
-                id_count = next_string(&id_count);
+                info!("Getting peer with peer_id: {}", peer_id.value.to_string());
             }
         }
     }
@@ -371,26 +365,27 @@ async fn main() -> Result<(), Error> {
     let args: Options = argh::from_env();
 
     fuchsia_syslog::init_with_tags(&["bt-avdtp-tool"]).expect("Can't init logger");
-
     // Launch the A2DP `profile` locally, and connect to the local service.
-    // If an invalid `profile` is given, the tool will exit with an error.
-    let launcher = client::launcher().expect("Failed to launch bt-avdtp-tool service");
-    let profile = if args.profile == "source".to_string() {
-        fuchsia_single_component_package_url!("bt-a2dp-source").to_string()
-    } else if args.profile == "sink".to_string() {
-        fuchsia_single_component_package_url!("bt-a2dp-sink").to_string()
-    } else {
-        return Err(format_err!("Invalid A2DP profile. Exiting tool.").into());
+    let launcher_url = client::launcher().expect("Failed to launch bt-avdtp-tool service");
+    let component = fuchsia_single_component_package_url!("bt-a2dp").to_string();
+
+    let mut options: Vec<String> = Vec::new();
+
+    match args.initiator_delay {
+        Some(initiator_delay) => {
+            options.push("--initiator-delay".to_string());
+            options.push(initiator_delay.to_string());
+        }
+        None => {}
     };
 
-    let bt_a2dp = client::launch(&launcher, profile, None)?;
-    info!("Running bt-avdtp-tool with A2DP {}", &args.profile);
+    let bt_a2dp = client::launch(&launcher_url, component, Some(options))?;
 
     let avdtp_svc = bt_a2dp
         .connect_to_service::<PeerManagerMarker>()
         .context("Failed to connect to AVDTP Peer Manager")?;
     // Get the list of currently connected peers.
-    // Since we are spinning up bt-a2dp-sink locally, there should be no connected peers.
+    // Since we are spinning up bt-a2dp locally, there should be no connected peers.
     let _peers = avdtp_svc.connected_peers().await?;
 
     let evt_stream = avdtp_svc.take_event_stream();
@@ -410,20 +405,6 @@ mod tests {
     use super::*;
 
     use fidl::endpoints::create_proxy;
-
-    #[test]
-    // Please note finishing bug 37089 will make next_string() obsolete.
-    // This bug fix will introduce a better ID management system that is more robust.
-    // This is a short term solution to pass PTS certifications.
-    fn test_next_string() {
-        let id = "0";
-        let res = next_string(id);
-        assert_eq!("1".to_string(), res);
-
-        let id = "10";
-        let res = next_string(id);
-        assert_eq!("11".to_string(), res);
-    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     /// Tests parsing input arguments works successfully.
