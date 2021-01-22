@@ -39,6 +39,7 @@ use {
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent, ScanRequest},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure},
+    fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
     log::{error, info, warn},
     std::{
@@ -110,6 +111,7 @@ pub struct ClientSme {
     cfg: ClientConfig,
     state: Option<ClientState>,
     scan_sched: ScanScheduler<Responder<BssDiscoveryResult>, ConnectConfig>,
+    wmm_status_responders: Vec<Responder<fidl_sme::ClientSmeWmmStatusResult>>,
     context: Context,
 }
 
@@ -284,6 +286,7 @@ impl ClientSme {
                 cfg,
                 state: Some(ClientState::new(cfg)),
                 scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
+                wmm_status_responders: vec![],
                 context: Context {
                     mlme_sink: MlmeSink::new(mlme_sink),
                     device_info,
@@ -438,6 +441,13 @@ impl ClientSme {
                 ..status
             }
         }
+    }
+
+    pub fn wmm_status(&mut self) -> oneshot::Receiver<fidl_sme::ClientSmeWmmStatusResult> {
+        let (responder, receiver) = Responder::new();
+        self.wmm_status_responders.push(responder);
+        self.context.mlme_sink.send(MlmeRequest::WmmStatusReq);
+        receiver
     }
 
     fn send_scan_request(&mut self, req: Option<ScanRequest>) {
@@ -601,6 +611,16 @@ impl super::Station for ClientSme {
                         }
                     }
                 }
+            }
+            MlmeEvent::OnWmmStatusResp { status, resp } => {
+                for responder in self.wmm_status_responders.drain(..) {
+                    let result =
+                        if status == zx::sys::ZX_OK { Ok(resp.clone()) } else { Err(status) };
+                    responder.respond(result);
+                }
+                let event = MlmeEvent::OnWmmStatusResp { status, resp };
+                self.state =
+                    self.state.take().map(|state| state.on_mlme_event(event, &mut self.context));
             }
             other => {
                 self.state =
@@ -801,7 +821,8 @@ mod tests {
     use wlan_common::{assert_variant, fake_bss, fake_fidl_bss, ie::rsn::akm, RadioConfig};
 
     use super::test_utils::{
-        create_assoc_conf, create_auth_conf, create_join_conf, expect_stream_empty,
+        create_assoc_conf, create_auth_conf, create_join_conf, create_on_wmm_status_resp,
+        expect_stream_empty, fake_wmm_status_resp,
     };
 
     use crate::test_utils;
@@ -1765,6 +1786,32 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
             assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
         });
+    }
+
+    #[test]
+    fn test_wmm_status_success() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        let mut receiver = sme.wmm_status();
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::WmmStatusReq)));
+
+        let resp = fake_wmm_status_resp();
+        sme.on_mlme_event(MlmeEvent::OnWmmStatusResp {
+            status: zx::sys::ZX_OK,
+            resp: resp.clone(),
+        });
+
+        assert_eq!(receiver.try_recv(), Ok(Some(Ok(resp))));
+    }
+
+    #[test]
+    fn test_wmm_status_failed() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        let mut receiver = sme.wmm_status();
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::WmmStatusReq)));
+        sme.on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_ERR_IO));
+        assert_eq!(receiver.try_recv(), Ok(Some(Err(zx::sys::ZX_ERR_IO))));
     }
 
     fn assert_connect_result(

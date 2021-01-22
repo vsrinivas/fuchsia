@@ -754,7 +754,10 @@ impl ClientState {
 
         let new_state = match self {
             Self::Idle(_) => {
-                warn!("Unexpected MLME message while Idle: {:?}", event);
+                match event {
+                    MlmeEvent::OnWmmStatusResp { .. } => (),
+                    _ => warn!("Unexpected MLME message while Idle: {:?}", event),
+                }
                 self
             }
             Self::Joining(state) => match event {
@@ -1354,7 +1357,7 @@ mod tests {
     };
 
     use crate::client::test_utils::{
-        create_assoc_conf, create_auth_conf, create_join_conf, create_wmm_status_resp,
+        create_assoc_conf, create_auth_conf, create_join_conf, create_on_wmm_status_resp,
         expect_stream_empty, fake_negotiated_channel_and_capabilities, fake_wmm_param,
         mock_psk_supplicant, MockSupplicant, MockSupplicantController,
     };
@@ -2547,7 +2550,7 @@ mod tests {
             wmm_param,
         );
 
-        let state = state.on_mlme_event(create_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
+        let state = state.on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
             assert_variant!(state.wmm_param, Some(wmm_param) => {
                 assert!(wmm_param.wmm_info.ap_wmm_info().uapsd());
@@ -2568,7 +2571,7 @@ mod tests {
             Some(existing_wmm_param),
         );
 
-        let state = state.on_mlme_event(create_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
+        let state = state.on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
             assert_variant!(state.wmm_param, Some(wmm_param) => {
                 assert!(wmm_param.wmm_info.ap_wmm_info().uapsd());
@@ -2589,7 +2592,7 @@ mod tests {
         );
 
         let state = state
-            .on_mlme_event(create_wmm_status_resp(zx::sys::ZX_ERR_UNAVAILABLE), &mut h.context);
+            .on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_ERR_UNAVAILABLE), &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
             assert_variant!(state.wmm_param, Some(wmm_param) => {
                 assert_eq!(wmm_param, existing_wmm_param);

@@ -7,6 +7,7 @@ use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy, ScanResultCodes};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
+use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::{prelude::*, select, stream::FuturesUnordered};
 use itertools::Itertools;
@@ -130,11 +131,7 @@ async fn handle_fidl_request(
             responder.send()
         }
         ClientSmeRequest::Status { responder } => responder.send(&mut status(sme)),
-        ClientSmeRequest::WmmStatus { responder: _ } => {
-            // TODO(fxbug.dev/52811): implement
-            error!("ClientSme::WmmStatus unimplemented");
-            Ok(())
-        }
+        ClientSmeRequest::WmmStatus { responder } => wmm_status(sme, responder).await,
     }
 }
 
@@ -184,6 +181,18 @@ fn status(sme: &Mutex<Sme>) -> fidl_sme::ClientStatusResponse {
         connected_to: status.connected_to.map(|bss| Box::new(convert_bss_info(bss))),
         connecting_to_ssid: status.connecting_to.unwrap_or(Vec::new()),
     }
+}
+
+async fn wmm_status(
+    sme: &Mutex<Sme>,
+    responder: fidl_sme::ClientSmeWmmStatusResponder,
+) -> Result<(), fidl::Error> {
+    let receiver = sme.lock().unwrap().wmm_status();
+    let mut wmm_status = match receiver.await {
+        Ok(result) => result,
+        Err(_) => Err(zx::sys::ZX_ERR_CANCELED),
+    };
+    responder.send(&mut wmm_status)
 }
 
 fn handle_info_event(

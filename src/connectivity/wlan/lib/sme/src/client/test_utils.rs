@@ -127,39 +127,40 @@ pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> fidl_m
     }
 }
 
-pub fn create_wmm_status_resp(status: zx::zx_status_t) -> fidl_mlme::MlmeEvent {
-    fidl_mlme::MlmeEvent::OnWmmStatusResp {
-        status,
-        resp: fidl_internal::WmmStatusResponse {
-            apsd: true,
-            ac_be_params: fidl_internal::WmmAcParams {
-                aifsn: 1,
-                acm: false,
-                ecw_min: 2,
-                ecw_max: 3,
-                txop_limit: 4,
-            },
-            ac_bk_params: fidl_internal::WmmAcParams {
-                aifsn: 5,
-                acm: false,
-                ecw_min: 6,
-                ecw_max: 7,
-                txop_limit: 8,
-            },
-            ac_vi_params: fidl_internal::WmmAcParams {
-                aifsn: 9,
-                acm: true,
-                ecw_min: 10,
-                ecw_max: 11,
-                txop_limit: 12,
-            },
-            ac_vo_params: fidl_internal::WmmAcParams {
-                aifsn: 13,
-                acm: true,
-                ecw_min: 14,
-                ecw_max: 15,
-                txop_limit: 16,
-            },
+pub fn create_on_wmm_status_resp(status: zx::zx_status_t) -> fidl_mlme::MlmeEvent {
+    fidl_mlme::MlmeEvent::OnWmmStatusResp { status, resp: fake_wmm_status_resp() }
+}
+
+pub fn fake_wmm_status_resp() -> fidl_internal::WmmStatusResponse {
+    fidl_internal::WmmStatusResponse {
+        apsd: true,
+        ac_be_params: fidl_internal::WmmAcParams {
+            aifsn: 1,
+            acm: false,
+            ecw_min: 2,
+            ecw_max: 3,
+            txop_limit: 4,
+        },
+        ac_bk_params: fidl_internal::WmmAcParams {
+            aifsn: 5,
+            acm: false,
+            ecw_min: 6,
+            ecw_max: 7,
+            txop_limit: 8,
+        },
+        ac_vi_params: fidl_internal::WmmAcParams {
+            aifsn: 9,
+            acm: true,
+            ecw_min: 10,
+            ecw_max: 11,
+            txop_limit: 12,
+        },
+        ac_vo_params: fidl_internal::WmmAcParams {
+            aifsn: 13,
+            acm: true,
+            ecw_min: 14,
+            ecw_max: 15,
+            txop_limit: 16,
         },
     }
 }
