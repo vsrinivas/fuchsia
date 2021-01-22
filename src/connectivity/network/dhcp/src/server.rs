@@ -142,6 +142,9 @@ pub enum ServerError {
 
     #[error("inconsistent initial server state: {}", _0)]
     InconsistentInitialServerState(AddressPoolError),
+
+    #[error("client request message missing requested ip addr")]
+    MissingRequestedAddr,
 }
 
 impl From<AddressPoolError> for ServerError {
@@ -185,11 +188,13 @@ impl<DS: DataStore> Server<DS> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
-        for (_id, CachedConfig { client_addr, .. }) in
-            cache.iter().filter(|(_id, config)| !config.expired(now))
+        for client_addr in cache
+            .iter()
+            .filter(|(_id, config)| !config.expired(now))
+            .filter_map(|(_id, config)| config.client_addr)
         {
             let () = pool
-                .allocate_addr(*client_addr)
+                .allocate_addr(client_addr)
                 .map_err(ServerError::InconsistentInitialServerState)?;
         }
         Ok(Self { cache, pool, params, store, options_repo })
@@ -288,22 +293,26 @@ impl<DS: DataStore> Server<DS> {
 
     fn get_addr(&mut self, client: &Message) -> Result<Ipv4Addr, ServerError> {
         if let Some(config) = self.cache.get(&ClientIdentifier::from(client)) {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
-            if !config.expired(now) {
-                // Release cached address so that it can be reallocated to same client.
-                // This should NEVER return an `Err`. If it does it indicates
-                // the server's notion of client bindings is wrong.
-                // Its non-recoverable and we therefore panic.
-                if let Err(AddressPoolError::UnallocatedIpv4AddrRelease(addr)) =
-                    self.pool.release_addr(config.client_addr)
-                {
-                    panic!("server tried to release unallocated ip {}", addr)
+            if let Some(client_addr) = config.client_addr {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
+                if !config.expired(now) {
+                    // Release cached address so that it can be reallocated to same client.
+                    // This should NEVER return an `Err`. If it does it indicates
+                    // the server's notion of client bindings is wrong.
+                    // Its non-recoverable and we therefore panic.
+                    if let Err(AddressPoolError::UnallocatedIpv4AddrRelease(addr)) =
+                        self.pool.release_addr(client_addr)
+                    {
+                        panic!("server tried to release unallocated ip {}", addr)
+                    }
+                    return Ok(client_addr);
+                } else {
+                    if self.pool.addr_is_available(&client_addr) {
+                        return Ok(client_addr);
+                    }
                 }
-                return Ok(config.client_addr);
-            } else if self.pool.addr_is_available(&config.client_addr) {
-                return Ok(config.client_addr);
             }
         }
         if let Some(requested_addr) = get_requested_ip_addr(&client) {
@@ -337,7 +346,7 @@ impl<DS: DataStore> Server<DS> {
             .cloned()
             .collect();
         let config = CachedConfig::new(
-            client_addr,
+            Some(client_addr),
             options,
             std::time::SystemTime::now(),
             lease_length_seconds,
@@ -401,17 +410,18 @@ impl<DS: DataStore> Server<DS> {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
-            if client_config.client_addr != *requested_ip {
-                Err(ServerError::RequestedIpOfferIpMismatch(
-                    *requested_ip,
-                    client_config.client_addr,
-                ))
-            } else if client_config.expired(now) {
-                Err(ServerError::ExpiredClientConfig)
-            } else if !self.pool.addr_is_allocated(requested_ip) {
-                Err(ServerError::UnidentifiedRequestedIp(*requested_ip))
+            if let Some(client_addr) = client_config.client_addr {
+                if client_addr != *requested_ip {
+                    Err(ServerError::RequestedIpOfferIpMismatch(*requested_ip, client_addr))
+                } else if client_config.expired(now) {
+                    Err(ServerError::ExpiredClientConfig)
+                } else if !self.pool.addr_is_allocated(requested_ip) {
+                    Err(ServerError::UnidentifiedRequestedIp(*requested_ip))
+                } else {
+                    Ok(())
+                }
             } else {
-                Ok(())
+                Err(ServerError::MissingRequestedAddr)
             }
         } else {
             Err(ServerError::UnknownClientId(client_id))
@@ -462,8 +472,17 @@ impl<DS: DataStore> Server<DS> {
 
     fn handle_release(&mut self, rel: Message) -> Result<ServerAction, ServerError> {
         let client_id = ClientIdentifier::from(&rel);
-        if self.cache.contains_key(&client_id) {
+        if let Some(config) = self.cache.get_mut(&client_id) {
+            // From https://tools.ietf.org/html/rfc2131#section-4.3.4:
+            //
+            // Upon receipt of a DHCPRELEASE message, the server marks the network address as not
+            // allocated.  The server SHOULD retain a record of the client's initialization
+            // parameters for possible reuse in response to subsequent requests from the client.
             let () = self.pool.release_addr(rel.ciaddr)?;
+            config.client_addr = None;
+            let () = self.store.store_client_config(&client_id, config).map_err(|e| {
+                ServerError::ServerCacheUpdateFailure(StashError { error: anyhow::Error::from(e) })
+            })?;
             Ok(ServerAction::AddressRelease(rel.ciaddr))
         } else {
             Err(ServerError::UnknownClientId(client_id))
@@ -632,18 +651,20 @@ impl<DS: DataStore> Server<DS> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
-        let expired_clients: Vec<(ClientIdentifier, Ipv4Addr)> = self
+        let expired_clients: Vec<(ClientIdentifier, Option<Ipv4Addr>)> = self
             .cache
             .iter()
             .filter(|(_id, config)| config.expired(now))
-            .map(|(id, config)| (id.clone(), config.client_addr))
+            .map(|(id, CachedConfig { client_addr, .. })| (id.clone(), *client_addr))
             .collect();
         // Expired client entries must be removed in a separate statement because otherwise we
         // would be attempting to change a cache as we iterate over it.
         for (id, ip) in expired_clients.into_iter() {
-            //  We ignore the `Result` here since a failed release of the `ip`
-            // in this iteration will be reattempted in the next.
-            let _release_result = self.pool.release_addr(ip);
+            if let Some(ip) = ip {
+                // We ignore the `Result` here since a failed release of the `ip`
+                // in this iteration will be reattempted in the next.
+                let _release_result = self.pool.release_addr(ip);
+            }
             self.cache.remove(&id);
             // The call to delete will immediately be committed to the Stash. Since DHCP lease
             // acquisitions occur on a human timescale, e.g. a cellphone is brought in range of an
@@ -931,11 +952,13 @@ impl<DS: DataStore> ServerDispatcher for Server<DS> {
 
     fn dispatch_clear_leases(&mut self) -> Result<(), Status> {
         for (id, config) in &self.cache {
-            let () = self.pool.release_addr(config.client_addr).unwrap_or_else(|e| {
-                // Log and panic because server has irrecoverable inconsistent state.
-                log::error!("release_addr({}) failed: {:?}", config.client_addr, e);
-                panic!("server tried to release unallocated addr {}", config.client_addr);
-            });
+            if let Some(client_addr) = config.client_addr {
+                let () = self.pool.release_addr(client_addr).unwrap_or_else(|e| {
+                    // Log and panic because server has irrecoverable inconsistent state.
+                    log::error!("release_addr({}) failed: {:?}", client_addr, e);
+                    panic!("server tried to release unallocated addr {}", client_addr);
+                });
+            }
             let () = self.store.delete(&id).map_err(|e| {
                 log::warn!("delete({}) failed: {:?}", id, e);
                 fuchsia_zircon::Status::INTERNAL
@@ -960,7 +983,7 @@ pub type CachedClients = HashMap<ClientIdentifier, CachedConfig>;
 /// `fuchsia.stash` persistent storage.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CachedConfig {
-    client_addr: Ipv4Addr,
+    client_addr: Option<Ipv4Addr>,
     options: Vec<DhcpOption>,
     lease_start_epoch_seconds: u64,
     lease_length_seconds: u32,
@@ -970,7 +993,7 @@ pub struct CachedConfig {
 impl Default for CachedConfig {
     fn default() -> Self {
         CachedConfig {
-            client_addr: Ipv4Addr::UNSPECIFIED,
+            client_addr: None,
             options: vec![],
             lease_start_epoch_seconds: std::u64::MIN,
             lease_length_seconds: std::u32::MAX,
@@ -1001,7 +1024,7 @@ impl PartialEq for CachedConfig {
 
 impl CachedConfig {
     fn new(
-        client_addr: Ipv4Addr,
+        client_addr: Option<Ipv4Addr>,
         options: Vec<DhcpOption>,
         lease_start: std::time::SystemTime,
         lease_length_seconds: u32,
@@ -1755,7 +1778,7 @@ pub mod tests {
         let router = get_router(&server)?;
         let dns_server = get_dns_server(&server)?;
         let expected_client_config = CachedConfig::new(
-            offer_ip,
+            Some(offer_ip),
             vec![
                 DhcpOption::ServerIdentifier(*server_id),
                 DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
@@ -1837,7 +1860,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&disc),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -1865,8 +1888,13 @@ pub mod tests {
 
         server.cache.insert(
             ClientIdentifier::from(&disc),
-            CachedConfig::new(bound_client_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)
-                .unwrap(),
+            CachedConfig::new(
+                Some(bound_client_ip),
+                vec![],
+                std::time::SystemTime::now(),
+                std::u32::MAX,
+            )
+            .unwrap(),
         );
 
         let _ = server.dispatch(disc);
@@ -1886,7 +1914,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&disc),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MIN,
@@ -1919,7 +1947,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&disc),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MIN,
@@ -1954,7 +1982,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&disc),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MIN,
@@ -1991,7 +2019,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&disc),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MIN,
@@ -2150,7 +2178,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                requested_ip,
+                Some(requested_ip),
                 vec![
                     DhcpOption::ServerIdentifier(*server_id),
                     DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
@@ -2189,7 +2217,12 @@ pub mod tests {
         server.pool.allocated_addrs.insert(requested_ip);
         server.cache.insert(
             client_id.clone(),
-            CachedConfig::new(requested_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
+            CachedConfig::new(
+                Some(requested_ip),
+                vec![],
+                std::time::SystemTime::now(),
+                std::u32::MAX,
+            )?,
         );
         let _response = server.dispatch(req).unwrap();
         assert!(server.cache.contains_key(&client_id));
@@ -2242,7 +2275,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                server_offered_ip,
+                Some(server_offered_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -2267,7 +2300,12 @@ pub mod tests {
 
         server.cache.insert(
             ClientIdentifier::from(&req),
-            CachedConfig::new(requested_ip, vec![], std::time::SystemTime::now(), std::u32::MIN)?,
+            CachedConfig::new(
+                Some(requested_ip),
+                vec![],
+                std::time::SystemTime::now(),
+                std::u32::MIN,
+            )?,
         );
 
         assert_eq!(server.dispatch(req), Err(ServerError::ExpiredClientConfig));
@@ -2283,7 +2321,12 @@ pub mod tests {
 
         server.cache.insert(
             ClientIdentifier::from(&req),
-            CachedConfig::new(requested_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
+            CachedConfig::new(
+                Some(requested_ip),
+                vec![],
+                std::time::SystemTime::now(),
+                std::u32::MAX,
+            )?,
         );
 
         assert_eq!(server.dispatch(req), Err(ServerError::UnidentifiedRequestedIp(requested_ip)));
@@ -2311,7 +2354,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                init_reboot_client_ip,
+                Some(init_reboot_client_ip),
                 vec![
                     DhcpOption::ServerIdentifier(*server_id),
                     DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
@@ -2406,7 +2449,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                server_cached_ip,
+                Some(server_cached_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -2437,7 +2480,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                init_reboot_client_ip,
+                Some(init_reboot_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MIN,
@@ -2467,7 +2510,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                init_reboot_client_ip,
+                Some(init_reboot_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -2500,7 +2543,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![
                     DhcpOption::ServerIdentifier(*server_id),
                     DhcpOption::IpAddressLeaseTime(server.params.lease_length.default_seconds),
@@ -2560,7 +2603,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -2588,7 +2631,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MIN,
@@ -2611,7 +2654,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&req),
             CachedConfig::new(
-                bound_client_ip,
+                Some(bound_client_ip),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -2725,9 +2768,9 @@ pub mod tests {
         matches::assert_matches!(
             &server.cache.iter().collect::<Vec<_>>()[..],
             [
-                (id1, CachedConfig {client_addr: ip1, ..}),
-                (id2, CachedConfig {client_addr: ip2, ..}),
-                (id3, CachedConfig {client_addr: ip3, ..}),
+                (id1, CachedConfig {client_addr: Some(ip1), ..}),
+                (id2, CachedConfig {client_addr: Some(ip2), ..}),
+                (id3, CachedConfig {client_addr: Some(ip3), ..}),
             ] if [id1, id2, id3].iter().all(|id| {
                     [&client_1_id, &client_2_id, &client_3_id].contains(id)
                 }) && [ip1, ip2, ip3].iter().all(|ip| client_ips.contains(*ip))
@@ -2845,8 +2888,8 @@ pub mod tests {
         matches::assert_matches!(
             &server.cache.iter().collect::<Vec<_>>()[..],
             [
-                (id1, CachedConfig {client_addr: ip1, ..}),
-                (id3, CachedConfig {client_addr: ip3, ..}),
+                (id1, CachedConfig {client_addr: Some(ip1), ..}),
+                (id3, CachedConfig {client_addr: Some(ip3), ..}),
             ] if [id1, id3].iter().all(|id| [&client_1_id, &client_3_id].contains(id)) &&
                 [ip1, ip3].iter().all(|ip| client_ips.contains(*ip))
         );
@@ -2880,23 +2923,35 @@ pub mod tests {
         server.pool.allocated_addrs.insert(release_ip);
         release.ciaddr = release_ip;
 
-        let test_client_config = || {
-            CachedConfig::new(release_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)
-                .unwrap()
+        let test_client_config = |client_addr: Option<Ipv4Addr>, dns: Ipv4Addr| {
+            CachedConfig::new(
+                client_addr,
+                vec![DhcpOption::DomainNameServer(vec![dns])],
+                std::time::SystemTime::now(),
+                std::u32::MAX,
+            )
+            .unwrap()
         };
 
-        server.cache.insert(client_id.clone(), test_client_config());
+        let dns = random_ipv4_generator();
+        server.cache.insert(client_id.clone(), test_client_config(Some(release_ip), dns));
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
-
+        matches::assert_matches!(
+            server.store.actions().as_slice(),
+            [
+                DataStoreAction::StoreClientConfig { client_id: id, client_config }
+            ] if *id == client_id && *client_config == test_client_config(None, dns)
+        );
         assert!(!server.pool.addr_is_allocated(&release_ip), "addr marked allocated");
         assert!(server.pool.addr_is_available(&release_ip), "addr not marked available");
         assert!(server.cache.contains_key(&client_id), "client config not retained");
         assert_eq!(
             server.cache.get(&client_id).unwrap(),
-            &test_client_config(),
-            "retained client config changed"
+            &test_client_config(None, dns),
+            "retained client config changed other field than client_addr"
         );
+
         Ok(())
     }
 
@@ -2955,7 +3010,12 @@ pub mod tests {
 
         server.cache.insert(
             client_id.clone(),
-            CachedConfig::new(declined_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
+            CachedConfig::new(
+                Some(declined_ip),
+                vec![],
+                std::time::SystemTime::now(),
+                std::u32::MAX,
+            )?,
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
@@ -2990,7 +3050,7 @@ pub mod tests {
         server.cache.insert(
             client_id.clone(),
             CachedConfig::new(
-                client_ip_according_to_server,
+                Some(client_ip_according_to_server),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -3020,7 +3080,12 @@ pub mod tests {
 
         server.cache.insert(
             client_id.clone(),
-            CachedConfig::new(declined_ip, vec![], std::time::SystemTime::now(), std::u32::MIN)?,
+            CachedConfig::new(
+                Some(declined_ip),
+                vec![],
+                std::time::SystemTime::now(),
+                std::u32::MIN,
+            )?,
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
@@ -3046,7 +3111,7 @@ pub mod tests {
         server.cache.insert(
             ClientIdentifier::from(&decline),
             CachedConfig::new(
-                random_ipv4_generator(),
+                Some(random_ipv4_generator()),
                 vec![],
                 std::time::SystemTime::now(),
                 std::u32::MAX,
@@ -3101,7 +3166,12 @@ pub mod tests {
         server.pool.allocated_addrs.insert(declined_ip);
         server.cache.insert(
             client_id.clone(),
-            CachedConfig::new(declined_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
+            CachedConfig::new(
+                Some(declined_ip),
+                vec![],
+                std::time::SystemTime::now(),
+                std::u32::MAX,
+            )?,
         );
 
         assert_eq!(server.dispatch(decline), Ok(ServerAction::AddressDecline(declined_ip)));
@@ -3438,7 +3508,7 @@ pub mod tests {
         server.cache = [(
             client_id.clone(),
             CachedConfig {
-                client_addr: client,
+                client_addr: Some(client),
                 options: vec![],
                 lease_start_epoch_seconds: 0,
                 lease_length_seconds: 42,
