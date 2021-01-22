@@ -38,7 +38,7 @@ zx_status_t AmlDsiHost::HostModeInit(const display_setting_t& disp_setting) {
   dw_cfg.phy_timer_hs_to_lp = PHY_TMR_HS_TO_LP;
   dw_cfg.phy_timer_lp_to_hs = PHY_TMR_LP_TO_HS;
   dw_cfg.auto_clklane = 1;
-  dsi_cfg.vendor_config_buffer = &dw_cfg;
+  dsi_cfg.vendor_config_buffer = reinterpret_cast<uint8_t*>(&dw_cfg);
 
   dsiimpl_.Config(&dsi_cfg);
 

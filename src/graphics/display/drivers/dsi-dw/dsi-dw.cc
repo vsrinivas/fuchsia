@@ -253,7 +253,7 @@ void DsiDw::DsiImplSetMode(dsi_mode_t mode) {
 zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
   const display_setting_t disp_setting = dsi_config->display_setting;
   const designware_config_t dw_cfg =
-      *(static_cast<designware_config_t*>(dsi_config->vendor_config_buffer));
+      *(reinterpret_cast<designware_config_t*>(dsi_config->vendor_config_buffer));
 
   bool packed;
   uint8_t code;
@@ -936,4 +936,3 @@ static constexpr zx_driver_ops_t dsi_dw_ops = [] {
 
 // clang-format off
 ZIRCON_DRIVER(dsi_dw, dsi_dw::dsi_dw_ops, "zircon", "0.1");
-
