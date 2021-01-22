@@ -67,7 +67,7 @@ pub struct TimView<B> {
             }
 )]
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned, Default)]
 pub struct WmmInfo(pub u8);
 
 // WFA WMM v1.2, 2.2.1 Figure 6
@@ -96,7 +96,7 @@ pub struct ClientWmmInfo(pub u8);
 
 // WFA WMM v1.2, 2.2.2 Table 5
 #[repr(C, packed)]
-#[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned, Default)]
 pub struct WmmParam {
     pub wmm_info: WmmInfo,
     pub _reserved: u8,
@@ -108,7 +108,7 @@ pub struct WmmParam {
 
 // WFA WMM v1.2, 2.2.2 Figure 9
 #[repr(C, packed)]
-#[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes, Unaligned, Default)]
 pub struct WmmAcParams {
     pub aci_aifsn: WmmAciAifsn,
     pub ecw_min_max: EcwMinMax,
@@ -124,7 +124,7 @@ pub struct WmmAcParams {
     7       _  // reserved
 )]
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned, Default)]
 pub struct WmmAciAifsn(pub u8);
 
 // WFA WMM v1.2, 2.2.2 Figure 11
@@ -133,7 +133,7 @@ pub struct WmmAciAifsn(pub u8);
     4..=7   ecw_max,
 )]
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
+#[derive(PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned, Default)]
 pub struct EcwMinMax(pub u8);
 
 // IEEE Std 802.11-2016, 9.4.2.9

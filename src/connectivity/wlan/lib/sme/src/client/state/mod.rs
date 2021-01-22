@@ -689,6 +689,23 @@ impl Associated {
         self.last_channel_switch_time.replace(now());
     }
 
+    fn on_wmm_status_resp(
+        &mut self,
+        status: zx::zx_status_t,
+        resp: fidl_internal::WmmStatusResponse,
+    ) {
+        if status == zx::sys::ZX_OK {
+            let wmm_param = self.wmm_param.get_or_insert_with(|| ie::WmmParam::default());
+            let mut wmm_info = wmm_param.wmm_info.ap_wmm_info();
+            wmm_info.set_uapsd(resp.apsd);
+            wmm_param.wmm_info.0 = wmm_info.0;
+            update_wmm_ac_param(&mut wmm_param.ac_be_params, &resp.ac_be_params);
+            update_wmm_ac_param(&mut wmm_param.ac_bk_params, &resp.ac_bk_params);
+            update_wmm_ac_param(&mut wmm_param.ac_vo_params, &resp.ac_vo_params);
+            update_wmm_ac_param(&mut wmm_param.ac_vi_params, &resp.ac_vi_params);
+        }
+    }
+
     fn handle_timeout(
         self,
         event_id: EventId,
@@ -851,6 +868,10 @@ impl ClientState {
                 }
                 MlmeEvent::OnChannelSwitched { info } => {
                     state.on_channel_switched(info);
+                    state.into()
+                }
+                MlmeEvent::OnWmmStatusResp { status, resp } => {
+                    state.on_wmm_status_resp(status, resp);
                     state.into()
                 }
                 _ => state.into(),
@@ -1078,6 +1099,14 @@ impl ClientState {
             },
         }
     }
+}
+
+fn update_wmm_ac_param(ac_params: &mut ie::WmmAcParams, update: &fidl_internal::WmmAcParams) {
+    ac_params.aci_aifsn.set_aifsn(update.aifsn);
+    ac_params.aci_aifsn.set_acm(update.acm);
+    ac_params.ecw_min_max.set_ecw_min(update.ecw_min);
+    ac_params.ecw_min_max.set_ecw_max(update.ecw_max);
+    ac_params.txop_limit = update.txop_limit;
 }
 
 fn process_sae_updates(updates: UpdateSink, peer_sta_address: [u8; 6], context: &mut Context) {
@@ -1325,9 +1354,9 @@ mod tests {
     };
 
     use crate::client::test_utils::{
-        create_assoc_conf, create_auth_conf, create_join_conf, expect_stream_empty,
-        fake_negotiated_channel_and_capabilities, fake_wmm_param, mock_psk_supplicant,
-        MockSupplicant, MockSupplicantController,
+        create_assoc_conf, create_auth_conf, create_join_conf, create_wmm_status_resp,
+        expect_stream_empty, fake_negotiated_channel_and_capabilities, fake_wmm_param,
+        mock_psk_supplicant, MockSupplicant, MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
@@ -2509,6 +2538,91 @@ mod tests {
         test_sae_timeout_failure(suppl_mock, state);
     }
 
+    #[test]
+    fn update_wmm_ac_params_new() {
+        let mut h = TestHelper::new();
+        let wmm_param = None;
+        let state = link_up_state_with_wmm(
+            Box::new(fake_bss!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
+            wmm_param,
+        );
+
+        let state = state.on_mlme_event(create_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
+        assert_variant!(state, ClientState::Associated(state) => {
+            assert_variant!(state.wmm_param, Some(wmm_param) => {
+                assert!(wmm_param.wmm_info.ap_wmm_info().uapsd());
+                assert_wmm_param_acs(&wmm_param);
+            })
+        });
+    }
+
+    #[test]
+    fn update_wmm_ac_params_existing() {
+        let mut h = TestHelper::new();
+
+        let existing_wmm_param =
+            *ie::parse_wmm_param(&fake_wmm_param().bytes[..]).expect("parse wmm");
+        existing_wmm_param.wmm_info.ap_wmm_info().set_uapsd(false);
+        let state = link_up_state_with_wmm(
+            Box::new(fake_bss!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
+            Some(existing_wmm_param),
+        );
+
+        let state = state.on_mlme_event(create_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
+        assert_variant!(state, ClientState::Associated(state) => {
+            assert_variant!(state.wmm_param, Some(wmm_param) => {
+                assert!(wmm_param.wmm_info.ap_wmm_info().uapsd());
+                assert_wmm_param_acs(&wmm_param);
+            })
+        });
+    }
+
+    #[test]
+    fn update_wmm_ac_params_fails() {
+        let mut h = TestHelper::new();
+
+        let existing_wmm_param =
+            *ie::parse_wmm_param(&fake_wmm_param().bytes[..]).expect("parse wmm");
+        let state = link_up_state_with_wmm(
+            Box::new(fake_bss!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
+            Some(existing_wmm_param),
+        );
+
+        let state = state
+            .on_mlme_event(create_wmm_status_resp(zx::sys::ZX_ERR_UNAVAILABLE), &mut h.context);
+        assert_variant!(state, ClientState::Associated(state) => {
+            assert_variant!(state.wmm_param, Some(wmm_param) => {
+                assert_eq!(wmm_param, existing_wmm_param);
+            })
+        });
+    }
+
+    fn assert_wmm_param_acs(wmm_param: &ie::WmmParam) {
+        assert_eq!(wmm_param.ac_be_params.aci_aifsn.aifsn(), 1);
+        assert!(!wmm_param.ac_be_params.aci_aifsn.acm());
+        assert_eq!(wmm_param.ac_be_params.ecw_min_max.ecw_min(), 2);
+        assert_eq!(wmm_param.ac_be_params.ecw_min_max.ecw_max(), 3);
+        assert_eq!({ wmm_param.ac_be_params.txop_limit }, 4);
+
+        assert_eq!(wmm_param.ac_bk_params.aci_aifsn.aifsn(), 5);
+        assert!(!wmm_param.ac_bk_params.aci_aifsn.acm());
+        assert_eq!(wmm_param.ac_bk_params.ecw_min_max.ecw_min(), 6);
+        assert_eq!(wmm_param.ac_bk_params.ecw_min_max.ecw_max(), 7);
+        assert_eq!({ wmm_param.ac_bk_params.txop_limit }, 8);
+
+        assert_eq!(wmm_param.ac_vi_params.aci_aifsn.aifsn(), 9);
+        assert!(wmm_param.ac_vi_params.aci_aifsn.acm());
+        assert_eq!(wmm_param.ac_vi_params.ecw_min_max.ecw_min(), 10);
+        assert_eq!(wmm_param.ac_vi_params.ecw_min_max.ecw_max(), 11);
+        assert_eq!({ wmm_param.ac_vi_params.txop_limit }, 12);
+
+        assert_eq!(wmm_param.ac_vo_params.aci_aifsn.aifsn(), 13);
+        assert!(wmm_param.ac_vo_params.aci_aifsn.acm());
+        assert_eq!(wmm_param.ac_vo_params.ecw_min_max.ecw_min(), 14);
+        assert_eq!(wmm_param.ac_vo_params.ecw_min_max.ecw_max(), 15);
+        assert_eq!({ wmm_param.ac_vo_params.txop_limit }, 16);
+    }
+
     // Helper functions and data structures for tests
     struct TestHelper {
         mlme_stream: MlmeStream,
@@ -2883,6 +2997,13 @@ mod tests {
     }
 
     fn link_up_state(bss: Box<BssDescription>) -> ClientState {
+        link_up_state_with_wmm(bss, None)
+    }
+
+    fn link_up_state_with_wmm(
+        bss: Box<BssDescription>,
+        wmm_param: Option<ie::WmmParam>,
+    ) -> ClientState {
         let link_state = testing::new_state(LinkUp {
             protection: Protection::Open,
             since: now(),
@@ -2902,7 +3023,7 @@ mod tests {
             chan: fake_channel(),
             cap: None,
             protection_ie: None,
-            wmm_param: None,
+            wmm_param,
             last_channel_switch_time: None,
         })
         .into()

@@ -105,6 +105,7 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
         MlmeRequest::MeshPeeringEstablished(mut req) => proxy.mesh_peering_established(&mut req),
         MlmeRequest::SaeHandshakeResp(mut resp) => proxy.sae_handshake_resp(&mut resp),
         MlmeRequest::SaeFrameTx(mut frame) => proxy.sae_frame_tx(&mut frame),
+        MlmeRequest::WmmStatusReq => proxy.wmm_status_req(),
         MlmeRequest::FinalizeAssociation(mut cap) => proxy.finalize_association_req(&mut cap),
     }
 }

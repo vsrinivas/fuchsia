@@ -59,6 +59,7 @@ pub enum MlmeRequest {
     MeshPeeringEstablished(fidl_mlme::MeshPeeringParams),
     SaeHandshakeResp(fidl_mlme::SaeHandshakeResponse),
     SaeFrameTx(fidl_mlme::SaeFrame),
+    WmmStatusReq,
     FinalizeAssociation(fidl_mlme::NegotiatedCapabilities),
 }
 

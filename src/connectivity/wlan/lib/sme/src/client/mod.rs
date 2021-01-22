@@ -620,6 +620,7 @@ impl super::Station for ClientSme {
                 state.handle_timeout(timed_event.id, event, &mut self.context)
             }
             Event::InspectPulseCheck(..) => {
+                self.context.mlme_sink.send(MlmeRequest::WmmStatusReq);
                 self.context.timer.schedule(event::InspectPulseCheck);
                 state
             }

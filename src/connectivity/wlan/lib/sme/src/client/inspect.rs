@@ -240,8 +240,8 @@ pub struct BssInfoNode {
     signal_report_time: TimeProperty,
     channel: ChannelNode,
     protection: StringProperty,
-    _is_wmm_assoc: BoolProperty,
-    _wmm_param: Option<BssWmmParamNode>,
+    is_wmm_assoc: BoolProperty,
+    wmm_param: Option<BssWmmParamNode>,
     ht_cap: Option<BytesProperty>,
     vht_cap: Option<BytesProperty>,
     wsc: Option<BssWscNode>,
@@ -278,8 +278,8 @@ impl BssInfoNode {
             signal_report_time,
             channel,
             protection,
-            _is_wmm_assoc: is_wmm_assoc,
-            _wmm_param: wmm_param,
+            is_wmm_assoc,
+            wmm_param,
             ht_cap,
             vht_cap,
             wsc: None,
@@ -316,7 +316,29 @@ impl BssInfoNode {
                 self.vht_cap.take();
             }
         }
+        self.update_wmm_node(bss_info);
         self.update_wsc_node(bss_info);
+    }
+
+    fn update_wmm_node(&mut self, bss_info: &BssInfo) {
+        match &bss_info.wmm_param {
+            Some(wmm_param) => {
+                self.is_wmm_assoc.set(true);
+                match self.wmm_param.as_mut() {
+                    Some(wmm_param_node) => wmm_param_node.update(wmm_param),
+                    None => {
+                        self.wmm_param = Some(BssWmmParamNode::new(
+                            self.node.create_child("wmm_param"),
+                            wmm_param,
+                        ))
+                    }
+                }
+            }
+            None => {
+                self.is_wmm_assoc.set(false);
+                self.wmm_param.take();
+            }
+        }
     }
 
     fn update_wsc_node(&mut self, bss_info: &BssInfo) {
@@ -356,11 +378,11 @@ impl ChannelNode {
 
 pub struct BssWmmParamNode {
     _node: Node,
-    _wmm_info: BssWmmInfoNode,
-    _ac_be: BssWmmAcParamsNode,
-    _ac_bk: BssWmmAcParamsNode,
-    _ac_vi: BssWmmAcParamsNode,
-    _ac_vo: BssWmmAcParamsNode,
+    wmm_info: BssWmmInfoNode,
+    ac_be: BssWmmAcParamsNode,
+    ac_bk: BssWmmAcParamsNode,
+    ac_vi: BssWmmAcParamsNode,
+    ac_vo: BssWmmAcParamsNode,
 }
 
 impl BssWmmParamNode {
@@ -371,21 +393,22 @@ impl BssWmmParamNode {
         let ac_bk = BssWmmAcParamsNode::new(node.create_child("ac_bk"), wmm_param.ac_bk_params);
         let ac_vi = BssWmmAcParamsNode::new(node.create_child("ac_vi"), wmm_param.ac_vi_params);
         let ac_vo = BssWmmAcParamsNode::new(node.create_child("ac_vo"), wmm_param.ac_vo_params);
-        Self {
-            _node: node,
-            _wmm_info: wmm_info,
-            _ac_be: ac_be,
-            _ac_bk: ac_bk,
-            _ac_vi: ac_vi,
-            _ac_vo: ac_vo,
-        }
+        Self { _node: node, wmm_info, ac_be, ac_bk, ac_vi, ac_vo }
+    }
+
+    fn update(&mut self, wmm_param: &ie::WmmParam) {
+        self.wmm_info.update(&wmm_param.wmm_info.ap_wmm_info());
+        self.ac_be.update(&wmm_param.ac_be_params);
+        self.ac_bk.update(&wmm_param.ac_bk_params);
+        self.ac_vi.update(&wmm_param.ac_vi_params);
+        self.ac_vo.update(&wmm_param.ac_vo_params);
     }
 }
 
 pub struct BssWmmInfoNode {
     _node: Node,
-    _param_set_count: UintProperty,
-    _uapsd: BoolProperty,
+    param_set_count: UintProperty,
+    uapsd: BoolProperty,
 }
 
 impl BssWmmInfoNode {
@@ -393,17 +416,22 @@ impl BssWmmInfoNode {
         let param_set_count =
             node.create_uint("param_set_count", info.parameter_set_count() as u64);
         let uapsd = node.create_bool("uapsd", info.uapsd());
-        Self { _node: node, _param_set_count: param_set_count, _uapsd: uapsd }
+        Self { _node: node, param_set_count, uapsd }
+    }
+
+    fn update(&mut self, info: &ie::ApWmmInfo) {
+        self.param_set_count.set(info.parameter_set_count() as u64);
+        self.uapsd.set(info.uapsd());
     }
 }
 
 pub struct BssWmmAcParamsNode {
     _node: Node,
-    _aifsn: UintProperty,
-    _acm: BoolProperty,
-    _ecw_min: UintProperty,
-    _ecw_max: UintProperty,
-    _txop_limit: UintProperty,
+    aifsn: UintProperty,
+    acm: BoolProperty,
+    ecw_min: UintProperty,
+    ecw_max: UintProperty,
+    txop_limit: UintProperty,
 }
 
 impl BssWmmAcParamsNode {
@@ -413,14 +441,15 @@ impl BssWmmAcParamsNode {
         let ecw_min = node.create_uint("ecw_min", ac_params.ecw_min_max.ecw_min() as u64);
         let ecw_max = node.create_uint("ecw_max", ac_params.ecw_min_max.ecw_max() as u64);
         let txop_limit = node.create_uint("txop_limit", ac_params.txop_limit as u64);
-        Self {
-            _node: node,
-            _aifsn: aifsn,
-            _acm: acm,
-            _ecw_min: ecw_min,
-            _ecw_max: ecw_max,
-            _txop_limit: txop_limit,
-        }
+        Self { _node: node, aifsn, acm, ecw_min, ecw_max, txop_limit }
+    }
+
+    fn update(&self, ac_params: &ie::WmmAcParams) {
+        self.aifsn.set(ac_params.aci_aifsn.aifsn() as u64);
+        self.acm.set(ac_params.aci_aifsn.acm());
+        self.ecw_min.set(ac_params.ecw_min_max.ecw_min() as u64);
+        self.ecw_max.set(ac_params.ecw_min_max.ecw_max() as u64);
+        self.txop_limit.set(ac_params.txop_limit as u64);
     }
 }
 
@@ -482,7 +511,7 @@ mod tests {
     };
 
     #[test]
-    fn test_inspect_update_pulse() {
+    fn test_inspect_update_pulse_connect_disconnect() {
         let hasher = WlanHasher::new([7; 8]);
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -553,6 +582,143 @@ mod tests {
                         ssid_hash: AnyProperty,
                         bssid: AnyProperty,
                         bssid_hash: AnyProperty,
+                    },
+                },
+            }
+        });
+    }
+
+    #[test]
+    fn test_inspect_update_pulse_wmm_status_changed() {
+        let hasher = WlanHasher::new([7; 8]);
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        let mut pulse = PulseNode::new(root.create_child("last_pulse"));
+
+        let mut bss_info = test_utils::fake_bss_info();
+        bss_info.wmm_param = None;
+        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        pulse.update(status, &hasher);
+        assert_inspect_tree!(inspector, root: {
+            last_pulse: contains {
+                status: contains {
+                    connected_to: contains {
+                        is_wmm_assoc: false,
+                    },
+                },
+            }
+        });
+
+        let mut wmm_param =
+            *ie::parse_wmm_param(&test_utils::fake_wmm_param().bytes[..]).expect("parse wmm");
+        bss_info.wmm_param = Some(wmm_param);
+        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        pulse.update(status, &hasher);
+        assert_inspect_tree!(inspector, root: {
+            last_pulse: contains {
+                status: contains {
+                    connected_to: contains {
+                        is_wmm_assoc: true,
+                        wmm_param: contains {
+                            ac_be: {
+                                aifsn: 3u64,
+                                acm: false,
+                                ecw_min: 4u64,
+                                ecw_max: 10u64,
+                                txop_limit: 0u64,
+                            },
+                            ac_bk: {
+                                aifsn: 7u64,
+                                acm: false,
+                                ecw_min: 4u64,
+                                ecw_max: 10u64,
+                                txop_limit: 0u64,
+                            },
+                            ac_vi: {
+                                aifsn: 2u64,
+                                acm: false,
+                                ecw_min: 3u64,
+                                ecw_max: 4u64,
+                                txop_limit: 0x5eu64,
+                            },
+                            ac_vo: {
+                                aifsn: 2u64,
+                                acm: false,
+                                ecw_min: 2u64,
+                                ecw_max: 3u64,
+                                txop_limit: 0x2fu64,
+                            },
+                            wmm_info: contains {
+                                uapsd: true,
+                            },
+                        }
+                    },
+                },
+            }
+        });
+
+        let mut wmm_info = wmm_param.wmm_info.ap_wmm_info();
+        wmm_info.set_uapsd(false);
+        wmm_param.wmm_info.0 = wmm_info.0;
+        wmm_param.ac_be_params.aci_aifsn.set_aifsn(9);
+        wmm_param.ac_bk_params.aci_aifsn.set_acm(true);
+        wmm_param.ac_vi_params.ecw_min_max.set_ecw_min(11);
+        wmm_param.ac_vi_params.ecw_min_max.set_ecw_max(14);
+        wmm_param.ac_vo_params.txop_limit = 0xaa;
+        bss_info.wmm_param = Some(wmm_param);
+        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        pulse.update(status, &hasher);
+        assert_inspect_tree!(inspector, root: {
+            last_pulse: contains {
+                status: contains {
+                    connected_to: contains {
+                        is_wmm_assoc: true,
+                        wmm_param: contains {
+                            ac_be: {
+                                aifsn: 9u64,
+                                acm: false,
+                                ecw_min: 4u64,
+                                ecw_max: 10u64,
+                                txop_limit: 0u64,
+                            },
+                            ac_bk: {
+                                aifsn: 7u64,
+                                acm: true,
+                                ecw_min: 4u64,
+                                ecw_max: 10u64,
+                                txop_limit: 0u64,
+                            },
+                            ac_vi: {
+                                aifsn: 2u64,
+                                acm: false,
+                                ecw_min: 11u64,
+                                ecw_max: 14u64,
+                                txop_limit: 0x5eu64,
+                            },
+                            ac_vo: {
+                                aifsn: 2u64,
+                                acm: false,
+                                ecw_min: 2u64,
+                                ecw_max: 3u64,
+                                txop_limit: 0xaau64,
+                            },
+                            wmm_info: contains {
+                                uapsd: false,
+                            },
+                        }
+                    },
+                },
+            }
+        });
+
+        bss_info.wmm_param = None;
+        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        pulse.update(status, &hasher);
+        assert_inspect_tree!(inspector, root: {
+            last_pulse: contains {
+                status: contains {
+                    connected_to: contains {
+                        is_wmm_assoc: false,
                     },
                 },
             }
