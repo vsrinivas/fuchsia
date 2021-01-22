@@ -4,6 +4,8 @@
 
 #include "convert.h"
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+
 #include <algorithm>
 #include <bitset>
 #include <memory>
@@ -1064,6 +1066,23 @@ void ConvertSaeAuthFrame(const wlanif_sae_frame_t* frame_in,
   frame_out.sae_fields.resize(frame_in->sae_fields_count);
   frame_out.sae_fields.assign(frame_in->sae_fields_list,
                               frame_in->sae_fields_list + frame_in->sae_fields_count);
+}
+
+static void ConvertWmmAcParams(const wlan_wmm_ac_params_t* params_in,
+                               ::fuchsia::wlan::internal::WmmAcParams* params_out) {
+  params_out->aifsn = params_in->aifsn;
+  params_out->ecw_min = params_in->ecw_min;
+  params_out->ecw_max = params_in->ecw_max;
+  params_out->txop_limit = params_in->txop_limit;
+  params_out->acm = params_in->acm;
+}
+
+void ConvertWmmStatus(const wlan_wmm_params_t* params_in,
+                      ::fuchsia::wlan::internal::WmmStatusResponse* resp) {
+  resp->apsd = params_in->apsd, ConvertWmmAcParams(&params_in->ac_be_params, &resp->ac_be_params);
+  ConvertWmmAcParams(&params_in->ac_bk_params, &resp->ac_bk_params);
+  ConvertWmmAcParams(&params_in->ac_vi_params, &resp->ac_vi_params);
+  ConvertWmmAcParams(&params_in->ac_vo_params, &resp->ac_vo_params);
 }
 
 }  // namespace wlanif

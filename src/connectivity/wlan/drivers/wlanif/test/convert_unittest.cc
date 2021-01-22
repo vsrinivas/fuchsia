@@ -538,5 +538,63 @@ TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {
   EXPECT_EQ(memcmp(frame.sae_fields_list, fidl_frame.sae_fields.data(), frame.sae_fields_count), 0);
 }
 
+TEST(ConvertTest, ToFidlWmmStatus) {
+  wlan_wmm_params_t params;
+  params.apsd = true;
+
+  params.ac_be_params.aifsn = 1;
+  params.ac_be_params.ecw_min = 2;
+  params.ac_be_params.ecw_max = 3;
+  params.ac_be_params.txop_limit = 4;
+  params.ac_be_params.acm = false;
+
+  params.ac_bk_params.aifsn = 5;
+  params.ac_bk_params.ecw_min = 6;
+  params.ac_bk_params.ecw_max = 7;
+  params.ac_bk_params.txop_limit = 8;
+  params.ac_bk_params.acm = false;
+
+  params.ac_vi_params.aifsn = 9;
+  params.ac_vi_params.ecw_min = 10;
+  params.ac_vi_params.ecw_max = 11;
+  params.ac_vi_params.txop_limit = 12;
+  params.ac_vi_params.acm = true;
+
+  params.ac_vo_params.aifsn = 13;
+  params.ac_vo_params.ecw_min = 14;
+  params.ac_vo_params.ecw_max = 15;
+  params.ac_vo_params.txop_limit = 16;
+  params.ac_vo_params.acm = true;
+
+  ::fuchsia::wlan::internal::WmmStatusResponse resp;
+  ConvertWmmStatus(&params, &resp);
+
+  EXPECT_TRUE(resp.apsd);
+
+  EXPECT_EQ(resp.ac_be_params.aifsn, 1);
+  EXPECT_EQ(resp.ac_be_params.ecw_min, 2);
+  EXPECT_EQ(resp.ac_be_params.ecw_max, 3);
+  EXPECT_EQ(resp.ac_be_params.txop_limit, 4);
+  EXPECT_FALSE(resp.ac_be_params.acm);
+
+  EXPECT_EQ(resp.ac_bk_params.aifsn, 5);
+  EXPECT_EQ(resp.ac_bk_params.ecw_min, 6);
+  EXPECT_EQ(resp.ac_bk_params.ecw_max, 7);
+  EXPECT_EQ(resp.ac_bk_params.txop_limit, 8);
+  EXPECT_FALSE(resp.ac_bk_params.acm);
+
+  EXPECT_EQ(resp.ac_vi_params.aifsn, 9);
+  EXPECT_EQ(resp.ac_vi_params.ecw_min, 10);
+  EXPECT_EQ(resp.ac_vi_params.ecw_max, 11);
+  EXPECT_EQ(resp.ac_vi_params.txop_limit, 12);
+  EXPECT_TRUE(resp.ac_vi_params.acm);
+
+  EXPECT_EQ(resp.ac_vo_params.aifsn, 13);
+  EXPECT_EQ(resp.ac_vo_params.ecw_min, 14);
+  EXPECT_EQ(resp.ac_vo_params.ecw_max, 15);
+  EXPECT_EQ(resp.ac_vo_params.txop_limit, 16);
+  EXPECT_TRUE(resp.ac_vo_params.acm);
+}
+
 }  // namespace
 }  // namespace wlanif

@@ -673,9 +673,7 @@ void Device::SaeFrameTx(::fuchsia::wlan::mlme::SaeFrame frame) {
   wlanif_impl_sae_frame_tx(&wlanif_impl_, &sae_frame);
 }
 
-void Device::WmmStatusReq() {
-  // TODO(fxbug.dev/52811) - Implement
-}
+void Device::WmmStatusReq() { wlanif_impl_wmm_status_req(&wlanif_impl_); }
 
 void Device::OnScanResult(const wlanif_scan_result_t* result) {
   std::lock_guard<std::mutex> lock(lock_);
@@ -987,7 +985,14 @@ void Device::SaeFrameRx(const wlanif_sae_frame_t* frame) {
 }
 
 void Device::OnWmmStatusResp(const zx_status_t status, const wlan_wmm_params_t* params) {
-  // TODO(fxbug.dev/52811) - Implement
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!binding_.is_bound()) {
+    return;
+  }
+
+  ::fuchsia::wlan::internal::WmmStatusResponse resp;
+  ConvertWmmStatus(params, &resp);
+  binding_.events().OnWmmStatusResp(status, std::move(resp));
 }
 
 void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {

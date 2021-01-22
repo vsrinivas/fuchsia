@@ -81,6 +81,8 @@ void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
 
 void ConvertSaeAuthFrame(const wlanif_sae_frame_t* frame_in,
                          ::fuchsia::wlan::mlme::SaeFrame& frame_out);
+void ConvertWmmStatus(const wlan_wmm_params_t* params_in,
+                      ::fuchsia::wlan::internal::WmmStatusResponse* resp);
 }  // namespace wlanif
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
