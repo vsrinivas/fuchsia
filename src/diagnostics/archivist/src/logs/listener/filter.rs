@@ -101,17 +101,17 @@ mod tests {
     use super::*;
     use crate::{
         container::ComponentIdentity,
-        events::types::{ComponentIdentifier, LegacyIdentifier},
+        events::types::ComponentIdentifier,
         logs::message::{LegacySeverity, LogsHierarchy, Severity},
     };
 
     fn test_message() -> Message {
         let identity = ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy(LegacyIdentifier {
+            &ComponentIdentifier::Legacy {
                 realm_path: vec!["bogus".to_string()].into(),
                 component_name: "specious-at-best.cmx".to_string(),
                 instance_id: "0".into(),
-            }),
+            },
             "fuchsia-pkg://not-a-package",
         );
         Message::new(

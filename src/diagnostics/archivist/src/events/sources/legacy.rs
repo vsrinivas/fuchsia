@@ -159,11 +159,11 @@ mod tests {
         fn into(self) -> EventMetadata {
             EventMetadata {
                 identity: ComponentIdentity::from_identifier_and_url(
-                    &ComponentIdentifier::Legacy(LegacyIdentifier {
+                    &ComponentIdentifier::Legacy {
                         component_name: self.component_name,
                         instance_id: self.instance_id,
                         realm_path: RealmPath(self.realm_path),
-                    }),
+                    },
                     &*MOCK_URL,
                 ),
                 timestamp: zx::Time::from_nanos(0),

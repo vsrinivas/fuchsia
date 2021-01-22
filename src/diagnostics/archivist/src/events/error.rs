@@ -63,4 +63,22 @@ pub enum EventError {
 
     #[error("FIDL Component error: {0}")]
     FidlComponent(String),
+
+    #[error("couldn't parse a moniker we received")]
+    ParsingMoniker {
+        #[from]
+        source: MonikerError,
+    },
+}
+
+#[derive(Debug, Error)]
+pub enum MonikerError {
+    #[error("couldn't parse `{0}` as a moniker due to incorrect prefix, expected `./`")]
+    InvalidMonikerPrefix(String),
+
+    #[error(
+        "moniker segment `{0}` couldn't be parsed, \
+        expected either COLLECTION:NAME:INSTANCE or NAME:INSTANCE"
+    )]
+    InvalidSegment(String),
 }

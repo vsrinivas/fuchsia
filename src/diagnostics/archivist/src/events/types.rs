@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{container::ComponentIdentity, events::error::EventError},
+    crate::{
+        container::ComponentIdentity,
+        events::error::{EventError, MonikerError},
+    },
     async_trait::async_trait,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_inspect::TreeProxy,
@@ -63,8 +66,17 @@ impl Into<String> for RealmPath {
 /// Represents the ID of a component.
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum ComponentIdentifier {
-    Legacy(LegacyIdentifier),
-    Moniker(String),
+    Legacy {
+        /// The name of the component.
+        component_name: String,
+
+        /// The instance ID of the component.
+        instance_id: String,
+
+        /// The path to the component's realm.
+        realm_path: RealmPath,
+    },
+    Moniker(Vec<MonikerSegment>),
 }
 
 impl ComponentIdentifier {
@@ -72,88 +84,117 @@ impl ComponentIdentifier {
     /// For legacy components (v1), this is the relative moniker with respect to the root realm.
     pub fn relative_moniker_for_selectors(&self) -> Vec<String> {
         match self {
-            Self::Legacy(identifier) => {
-                let mut moniker = identifier.realm_path.clone();
-                moniker.push(identifier.component_name.clone());
+            Self::Legacy { realm_path, component_name, .. } => {
+                let mut moniker = realm_path.clone();
+                moniker.push(component_name.clone());
                 moniker.0
             }
-            Self::Moniker(moniker) => {
-                // Synthesis of root of hierarchy yields a `.` moniker,
-                // treating it as an empty moniker works for our data
-                // repository.
-                if moniker == "." {
-                    return Vec::new();
+            Self::Moniker(segments) => {
+                if segments.is_empty() {
+                    vec![]
+                } else {
+                    segments.iter().map(|s| s.to_string()).collect()
                 }
-                // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
-                // a/b/coll:dynamic_child/c
-                // 2.. to remove the `./`, always present as this is a relative moniker.
-                moniker[2..]
-                    .split("/")
-                    .map(|component| match &component.split(":").collect::<Vec<_>>()[..] {
-                        [collection_name, component_name, _instance_id] => {
-                            format!("{}:{}", collection_name, component_name)
-                        }
-                        [component_name, _instance_id] => component_name.to_string(),
-                        x => unreachable!("We only expect two or three parts. Got: {:?}", x),
-                    })
-                    .collect::<Vec<_>>()
             }
         }
     }
 
     pub fn unique_key(&self) -> Vec<String> {
         match self {
-            Self::Legacy(identifier) => {
+            Self::Legacy { instance_id, .. } => {
                 let mut key = self.relative_moniker_for_selectors();
-                key.push(identifier.instance_id.clone());
+                key.push(instance_id.clone());
                 key
             }
-            Self::Moniker(moniker) => {
-                if moniker == "." {
-                    return Vec::new();
+            Self::Moniker(segments) => {
+                let mut key = vec![];
+                for segment in segments {
+                    key.push(segment.to_string());
+                    key.push(segment.instance_id.clone());
                 }
+                key
+            }
+        }
+    }
 
-                // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
-                // [a, 0, b, 0, coll:dynamic_child, c]
-                // 2.. to remove the `./`, always present as this is a relative moniker.
-                moniker[2..]
-                    .split("/")
-                    .flat_map(|parts| match &parts.split(":").collect::<Vec<_>>()[..] {
-                        [collection_name, component_name, instance_id] => vec![
-                            format!("{}:{}", collection_name, component_name),
-                            instance_id.to_string(),
-                        ]
-                        .into_iter(),
-                        [coll, comp] => vec![coll.to_string(), comp.to_string()].into_iter(),
-                        x => unreachable!("We only expect two or three parts. Got: {:?}", x),
-                    })
-                    .collect::<Vec<_>>()
+    pub fn parse_from_moniker(moniker: &str) -> Result<Self, MonikerError> {
+        let mut segments = vec![];
+
+        if moniker == "." {
+            return Ok(ComponentIdentifier::Moniker(segments));
+        }
+
+        let without_root = moniker
+            .strip_prefix("./")
+            .ok_or_else(|| MonikerError::InvalidMonikerPrefix(moniker.to_string()))?;
+
+        for raw_segment in without_root.split("/") {
+            let mut parts = raw_segment.split(":");
+            let segment = match (parts.next(), parts.next(), parts.next()) {
+                // we have a collection, a component name, and an instance id
+                (Some(c), Some(n), Some(i)) => MonikerSegment {
+                    collection: Some(c.to_string()),
+                    name: n.to_string(),
+                    instance_id: i.to_string(),
+                },
+                // we have a name and an instance id, no collection
+                (Some(n), Some(i), None) => MonikerSegment {
+                    collection: None,
+                    name: n.to_string(),
+                    instance_id: i.to_string(),
+                },
+                _ => return Err(MonikerError::InvalidSegment(raw_segment.to_string())),
+            };
+            segments.push(segment);
+        }
+
+        Ok(ComponentIdentifier::Moniker(segments))
+    }
+}
+
+impl std::fmt::Display for ComponentIdentifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Legacy { component_name, instance_id, realm_path } => {
+                for segment in &**realm_path {
+                    write!(f, "{}/", segment)?;
+                }
+                write!(f, "{}:{}", component_name, instance_id)
+            }
+            Self::Moniker(segments) => {
+                if segments.is_empty() {
+                    write!(f, ".")
+                } else {
+                    for (i, segment) in segments.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, "/")?;
+                        }
+                        write!(f, "{}", segment)?;
+                    }
+                    Ok(())
+                }
             }
         }
     }
 }
 
-impl TryFrom<SourceIdentity> for EventMetadata {
-    type Error = EventError;
-    fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
-        Ok(EventMetadata {
-            identity: ComponentIdentity::try_from(component)?,
-            timestamp: zx::Time::get_monotonic(),
-        })
-    }
+/// A single segment in the moniker of a component.
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct MonikerSegment {
+    /// The name of the component's collection, if any.
+    collection: Option<String>,
+    /// The name of the component.
+    name: String,
+    /// The instance of the component.
+    instance_id: String,
 }
 
-impl ToString for ComponentIdentifier {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Legacy(identifier) => format!(
-                "{}/{}:{}",
-                identifier.realm_path.join("/"),
-                identifier.component_name,
-                identifier.instance_id
-            ),
-            Self::Moniker(moniker) => moniker.clone(),
+impl std::fmt::Display for MonikerSegment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(collection) = &self.collection {
+            write!(f, "{}:", collection)?;
         }
+        write!(f, "{}", self.name)
     }
 }
 
@@ -187,18 +228,6 @@ pub struct ValidatedEvent {
 }
 
 /// The ID of a component as used in components V1.
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub struct LegacyIdentifier {
-    /// The name of the component.
-    pub component_name: String,
-
-    /// The instance ID of the component.
-    pub instance_id: String,
-
-    /// The path to the component's realm.
-    pub realm_path: RealmPath,
-}
-
 /// Represents the shared data associated with
 /// all component events.
 #[derive(Debug, PartialEq, Clone)]
@@ -211,6 +240,16 @@ pub struct EventMetadata {
 impl EventMetadata {
     pub fn new(identity: ComponentIdentity) -> Self {
         Self { identity, timestamp: zx::Time::get_monotonic() }
+    }
+}
+
+impl TryFrom<SourceIdentity> for EventMetadata {
+    type Error = EventError;
+    fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
+        Ok(EventMetadata {
+            identity: ComponentIdentity::try_from(component)?,
+            timestamp: zx::Time::get_monotonic(),
+        })
     }
 }
 
@@ -350,7 +389,7 @@ impl TryFrom<Event> for ComponentEvent {
 
         let metadata = EventMetadata {
             identity: ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Moniker(event.header.moniker.clone()),
+                &ComponentIdentifier::parse_from_moniker(&event.header.moniker)?,
                 &event.header.component_url,
             ),
             timestamp: zx::Time::from_nanos(event.header.timestamp),
@@ -467,31 +506,31 @@ mod tests {
 
     #[test]
     fn convert_v2_moniker_for_diagnostics() {
-        let identifier = ComponentIdentifier::Moniker("./a:0".into());
+        let identifier = ComponentIdentifier::parse_from_moniker("./a:0").unwrap();
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a"]);
         assert_eq!(identifier.unique_key(), vec!["a", "0"]);
 
-        let identifier = ComponentIdentifier::Moniker("./a:0/b:1".into());
+        let identifier = ComponentIdentifier::parse_from_moniker("./a:0/b:1").unwrap();
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "b"]);
         assert_eq!(identifier.unique_key(), vec!["a", "0", "b", "1"]);
 
-        let identifier = ComponentIdentifier::Moniker("./a:0/coll:comp:1/b:0".into());
+        let identifier = ComponentIdentifier::parse_from_moniker("./a:0/coll:comp:1/b:0").unwrap();
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "coll:comp", "b"]);
         assert_eq!(identifier.unique_key(), vec!["a", "0", "coll:comp", "1", "b", "0"]);
 
-        let identifier = ComponentIdentifier::Moniker(".".into());
+        let identifier = ComponentIdentifier::parse_from_moniker(".").unwrap();
         assert!(identifier.relative_moniker_for_selectors().is_empty());
         assert!(identifier.unique_key().is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)] // we need an executor for the fidl types
     async fn validate_logsink_requested_event() {
-        let target_moniker = "./foo:0".to_string();
+        let target_moniker = "./foo:0";
         let target_url = "http://foo.com".to_string();
         let (_log_sink_proxy, log_sink_server_end) =
             fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
         let raw_event = create_log_sink_requested_event(
-            target_moniker.clone(),
+            target_moniker.to_owned(),
             target_url.clone(),
             log_sink_server_end.into_channel(),
         );
@@ -503,7 +542,7 @@ mod tests {
         assert_eq!(
             event.metadata.identity,
             ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Moniker(target_moniker),
+                &ComponentIdentifier::parse_from_moniker(target_moniker).unwrap(),
                 target_url
             )
         );

@@ -3,7 +3,7 @@
 
 use crate::{
     container::ComponentIdentity,
-    events::types::{ComponentIdentifier, LegacyIdentifier},
+    events::types::ComponentIdentifier,
     logs::{buffer::Accounted, error::StreamError, stats::LogStreamStats},
 };
 use byteorder::{ByteOrder, LittleEndian};
@@ -440,11 +440,11 @@ lazy_static! {
     pub static ref EMPTY_IDENTITY: ComponentIdentity = ComponentIdentity::unknown();
     pub static ref TEST_IDENTITY: Arc<ComponentIdentity> = {
         Arc::new(ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy(LegacyIdentifier {
+            &ComponentIdentifier::Legacy {
                 realm_path: vec!["fake-test-env".to_string()].into(),
                 component_name: "test-component.cm".into(),
                 instance_id: "".into(),
-            }),
+            },
             "fuchsia-pkg://fuchsia.com/testing123#test-component.cm",
         ))
     };

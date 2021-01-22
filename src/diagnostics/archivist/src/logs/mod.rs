@@ -21,7 +21,7 @@ pub use message::Message;
 mod tests {
     use crate::{
         container::ComponentIdentity,
-        events::types::{ComponentIdentifier, LegacyIdentifier},
+        events::types::ComponentIdentifier,
         logs::{message::LegacySeverity, testing::*},
     };
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
@@ -185,21 +185,21 @@ mod tests {
 
         let log_reader1 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Legacy(LegacyIdentifier {
+                &ComponentIdentifier::Legacy {
                     realm_path: vec![".".into()].into(),
                     component_name: "foo".into(),
                     instance_id: "0".into(),
-                }),
+                },
                 "http://foo.com",
             ));
 
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Legacy(LegacyIdentifier {
+                &ComponentIdentifier::Legacy {
                     realm_path: vec![".".into()].into(),
                     component_name: "bar".into(),
                     instance_id: "0".into(),
-                }),
+                },
                 "http://bar.com",
             ));
 
@@ -229,11 +229,11 @@ mod tests {
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Legacy(LegacyIdentifier {
+                &ComponentIdentifier::Legacy {
                     realm_path: vec![".".into()].into(),
                     component_name: "bar".into(),
                     instance_id: "0".into(),
-                }),
+                },
                 "http://bar.com",
             ));
 

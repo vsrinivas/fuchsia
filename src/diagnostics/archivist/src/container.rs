@@ -5,7 +5,7 @@ use {
     crate::{
         events::{
             error::EventError,
-            types::{ComponentIdentifier, LegacyIdentifier, ValidatedSourceIdentity},
+            types::{ComponentIdentifier, ValidatedSourceIdentity},
         },
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
@@ -68,11 +68,11 @@ impl ComponentIdentity {
     /// Returns generic metadata, suitable for providing a uniform ID to unattributed data.
     pub fn unknown() -> Self {
         Self::from_identifier_and_url(
-            &ComponentIdentifier::Legacy(LegacyIdentifier {
+            &ComponentIdentifier::Legacy {
                 component_name: "UNKNOWN".into(),
                 instance_id: "0".to_string(),
                 realm_path: vec![].into(),
-            }),
+            },
             "fuchsia-pkg://UNKNOWN",
         )
     }
@@ -82,11 +82,11 @@ impl TryFrom<SourceIdentity> for ComponentIdentity {
     type Error = EventError;
     fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
         let component: ValidatedSourceIdentity = ValidatedSourceIdentity::try_from(component)?;
-        let id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let id = ComponentIdentifier::Legacy {
             component_name: component.component_name,
             instance_id: component.instance_id,
             realm_path: component.realm_path.into(),
-        });
+        };
         Ok(Self::from_identifier_and_url(&id, component.component_url))
     }
 }

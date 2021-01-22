@@ -50,7 +50,7 @@ async fn log_attribution() {
         info!("{}", log_str);
         let log_record = result.next().await.expect("received log");
 
-        assert_eq!(log_record.moniker, "./driver:0");
+        assert_eq!(log_record.moniker, "driver");
         assert_eq!(log_record.metadata.component_url, DRIVER_COMPONENT);
         assert_eq!(log_record.metadata.severity, Severity::Info);
         assert_data_tree!(log_record.payload.unwrap(), root: contains {

@@ -14,7 +14,7 @@ async fn main() {
 
     let mut treasure = HashMap::<String, Vec<Vec<&str>>>::new();
     treasure.insert(
-        "./routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-parent:0".to_string(),
+        "routing-tests/offers-to-children-unavailable/child-for-offer-from-parent".to_string(),
         vec![vec![
             "Failed to route",
             "fidl.test.components.Trigger",
@@ -24,7 +24,7 @@ async fn main() {
         ]],
     );
     treasure.insert(
-        "./routing-tests:0/child:0".to_string(),
+        "routing-tests/child".to_string(),
         vec![vec![
             "Failed to route",
             "`fidl.test.components.Trigger`",
@@ -35,7 +35,7 @@ async fn main() {
         ]],
     );
     treasure.insert(
-        "./routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-sibling:0".to_string(),
+        "routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling".to_string(),
         vec![vec![
             "Failed to route",
             "`fidl.test.components.Trigger`",
@@ -46,7 +46,7 @@ async fn main() {
     );
 
     treasure.insert(
-        "./routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0".to_string(),
+        "routing-tests/offers-to-children-unavailable/child-open-unrequested".to_string(),
         vec![vec![
             "No capability available",
             "fidl.test.components.Trigger",

@@ -330,7 +330,7 @@ mod tests {
             accessor::BatchIterator,
             container::ComponentIdentity,
             diagnostics,
-            events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
+            events::types::{ComponentIdentifier, InspectData, RealmPath},
             pipeline::Pipeline,
             repository::DataRepo,
         },
@@ -641,11 +641,11 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let identity = ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy(LegacyIdentifier {
+            &ComponentIdentifier::Legacy {
                 instance_id,
                 realm_path,
                 component_name: "foo.cmx".into(),
-            }),
+            },
             TEST_URL,
         );
         let (proxy, _) =
@@ -759,11 +759,11 @@ mod tests {
                             let proxy = InspectDataCollector::find_directory_proxy(&full_path)
                                 .await
                                 .unwrap();
-                            let unique_cid = ComponentIdentifier::Legacy(LegacyIdentifier {
+                            let unique_cid = ComponentIdentifier::Legacy {
                                 instance_id: "1234".into(),
                                 realm_path: vec![].into(),
                                 component_name: format!("component_{}.cmx", dir).into(),
-                            });
+                            };
                             (unique_cid, proxy)
                         }
                     }))
@@ -851,11 +851,11 @@ mod tests {
 
         // The absolute moniker here is made up since the selector is a glob
         // selector, so any path would match.
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id: "1234".into(),
             realm_path: vec![].into(),
             component_name: "test_component.cmx".into(),
-        });
+        };
 
         let inspector = Inspector::new();
         let root = inspector.root();

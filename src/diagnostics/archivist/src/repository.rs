@@ -303,7 +303,7 @@ impl DataRepoState {
 
     pub fn get_own_log_container(&mut self) -> Arc<LogsArtifactsContainer> {
         self.get_log_container(ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Moniker(ARCHIVIST_MONIKER.to_string()),
+            &ComponentIdentifier::parse_from_moniker(ARCHIVIST_MONIKER).unwrap(),
             ARCHIVIST_URL,
         ))
     }
@@ -506,7 +506,7 @@ impl DataRepoState {
 mod tests {
     use {
         super::*,
-        crate::events::types::{ComponentIdentifier, LegacyIdentifier, RealmPath},
+        crate::events::types::{ComponentIdentifier, RealmPath},
         diagnostics_hierarchy::trie::TrieIterableNode,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -521,11 +521,11 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id,
             realm_path,
             component_name: "foo.cmx".into(),
-        });
+        };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let (proxy, _) =
@@ -553,11 +553,11 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id,
             realm_path,
             component_name: "foo.cmx".into(),
-        });
+        };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -585,11 +585,11 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id,
             realm_path,
             component_name: "foo.cmx".into(),
-        });
+        };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -622,11 +622,11 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id,
             realm_path,
             component_name: "foo.cmx".into(),
-        });
+        };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let component_insertion = data_repo.add_new_component(
@@ -656,11 +656,11 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id,
             realm_path,
             component_name: "foo.cmx".into(),
-        });
+        };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let (proxy, _) =
@@ -691,11 +691,11 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id,
             realm_path,
             component_name: "foo.cmx".into(),
-        });
+        };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -723,11 +723,11 @@ mod tests {
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id = ComponentIdentifier::Legacy {
             instance_id,
             realm_path: realm_path.clone(),
             component_name: "foo.cmx".into(),
-        });
+        };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -745,11 +745,11 @@ mod tests {
             )
             .expect("add inspect artifacts");
 
-        let component_id2 = ComponentIdentifier::Legacy(LegacyIdentifier {
+        let component_id2 = ComponentIdentifier::Legacy {
             instance_id: "12345".to_string(),
             realm_path,
             component_name: "foo2.cmx".into(),
-        });
+        };
         let identity2 = ComponentIdentity::from_identifier_and_url(&component_id2, TEST_URL);
 
         data_repo

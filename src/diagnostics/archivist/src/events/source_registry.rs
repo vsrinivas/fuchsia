@@ -260,15 +260,15 @@ mod tests {
 
     lazy_static! {
         static ref TEST_URL: String = "NO-OP URL".to_string();
-        static ref LEGACY_ID: ComponentIdentifier = ComponentIdentifier::Legacy(LegacyIdentifier {
+        static ref LEGACY_ID: ComponentIdentifier = ComponentIdentifier::Legacy {
             component_name: "foo.cmx".to_string(),
             instance_id: "12345".to_string(),
             realm_path: RealmPath(vec!["a".to_string(), "b".to_string()]),
-        });
+        };
         static ref LEGACY_IDENTITY: ComponentIdentity =
             ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL);
         static ref MONIKER_ID: ComponentIdentifier =
-            ComponentIdentifier::Moniker("./a:0/b:1".to_string());
+            ComponentIdentifier::parse_from_moniker("./a:0/b:1").unwrap();
         static ref MONIKER_IDENTITY: ComponentIdentity =
             ComponentIdentity::from_identifier_and_url(&*MONIKER_ID, &*TEST_URL);
     }
@@ -431,22 +431,22 @@ mod tests {
                     "4": {
                         "@time": inspect::testing::AnyProperty,
                         event: "START",
-                        moniker: "./a:0/b:1"
+                        moniker: "a/b"
                     },
                     "5": {
                         "@time": inspect::testing::AnyProperty,
                         event: "DIAGNOSTICS_DIR_READY",
-                        moniker: "./a:0/b:1"
+                        moniker: "a/b"
                     },
                     "6": {
                         "@time": inspect::testing::AnyProperty,
                         event: "STOP",
-                        moniker: "./a:0/b:1"
+                        moniker: "a/b"
                     },
                     "7": {
                         "@time": inspect::testing::AnyProperty,
                         event: "LOG_SINK_REQUESTED",
-                        moniker: "./a:0/b:1"
+                        moniker: "a/b"
                     },
                 }
             }

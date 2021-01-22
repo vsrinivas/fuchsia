@@ -464,9 +464,7 @@ mod test {
     use super::*;
 
     use archivist_lib::{
-        container::ComponentIdentity,
-        events::types::{ComponentIdentifier, LegacyIdentifier},
-        logs::Message,
+        container::ComponentIdentity, events::types::ComponentIdentifier, logs::Message,
     };
     use diagnostics_data::Severity;
     use diagnostics_testing::assert_data_tree;
@@ -494,11 +492,11 @@ mod test {
         let mut buffer: [u8; 1024] = [0; 1024];
         let read_len = tx.read(&mut buffer).expect("socket read failed");
         let src_id = ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy(LegacyIdentifier {
+            &ComponentIdentifier::Legacy {
                 realm_path: vec!["fake-test-env".to_string()].into(),
                 component_name: "test-component.cm".into(),
                 instance_id: "".into(),
-            }),
+            },
             "fuchsia-pkg://fuchsia.com/testing123#test-component.cm",
         );
 
