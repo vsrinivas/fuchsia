@@ -27,6 +27,7 @@ class WeaveConfigReader {
   virtual WEAVE_ERROR ReadConfigValue(const std::string& key, uint16_t* value) const = 0;
   virtual WEAVE_ERROR ReadConfigValue(const std::string& key, uint32_t* value) const = 0;
   virtual WEAVE_ERROR ReadConfigValue(const std::string& key, uint64_t* value) const = 0;
+  virtual WEAVE_ERROR ReadConfigValueArray(const std::string &key, std::vector<std::string>& out) const = 0;
   virtual WEAVE_ERROR ReadConfigValueStr(const std::string& key, char* value, size_t value_size,
                                          size_t* out_size) const = 0;
   virtual WEAVE_ERROR ReadConfigValueBin(const std::string& key, uint8_t* value, size_t value_size,
@@ -41,6 +42,7 @@ class WeaveConfigWriter {
   virtual WEAVE_ERROR WriteConfigValue(const std::string& key, bool value) = 0;
   virtual WEAVE_ERROR WriteConfigValue(const std::string& key, uint32_t value) = 0;
   virtual WEAVE_ERROR WriteConfigValue(const std::string& key, uint64_t value) = 0;
+  virtual WEAVE_ERROR WriteConfigValueArray(const std::string& key, std::vector<std::string>& value) = 0;
   virtual WEAVE_ERROR WriteConfigValueStr(const std::string& key, const char* value,
                                           size_t value_size) = 0;
   virtual WEAVE_ERROR WriteConfigValueBin(const std::string& key, const uint8_t* value,
@@ -72,6 +74,7 @@ class WeaveConfigManager : public WeaveConfigReader, WeaveConfigWriter {
   WEAVE_ERROR ReadConfigValue(const std::string& key, uint16_t* value) const override;
   WEAVE_ERROR ReadConfigValue(const std::string& key, uint32_t* value) const override;
   WEAVE_ERROR ReadConfigValue(const std::string& key, uint64_t* value) const override;
+  WEAVE_ERROR ReadConfigValueArray(const std::string &key, std::vector<std::string>& out) const override;
   WEAVE_ERROR ReadConfigValueStr(const std::string& key, char* value, size_t value_size,
                                  size_t* out_size) const override;
   WEAVE_ERROR ReadConfigValueBin(const std::string& key, uint8_t* value, size_t value_size,
@@ -82,6 +85,7 @@ class WeaveConfigManager : public WeaveConfigReader, WeaveConfigWriter {
   WEAVE_ERROR WriteConfigValue(const std::string& key, bool value) override;
   WEAVE_ERROR WriteConfigValue(const std::string& key, uint32_t value) override;
   WEAVE_ERROR WriteConfigValue(const std::string& key, uint64_t value) override;
+  WEAVE_ERROR WriteConfigValueArray(const std::string& key, std::vector<std::string>& value) override;
   WEAVE_ERROR WriteConfigValueStr(const std::string& key, const char* value,
                                   size_t value_size) override;
   WEAVE_ERROR WriteConfigValueBin(const std::string& key, const uint8_t* value,

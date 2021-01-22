@@ -16,6 +16,8 @@
 #include "third_party/modp_b64/modp_b64.h"
 #include "weave_device_platform_error.h"
 
+#include <vector>
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
@@ -131,6 +133,21 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueBin(const std::string& key, uint8
   return WEAVE_NO_ERROR;
 }
 
+WEAVE_ERROR WeaveConfigManager::ReadConfigValueArray(const std::string &key, std::vector<std::string>& out) const {
+  rapidjson::Value config_value;
+  WEAVE_ERROR error = WEAVE_NO_ERROR;
+  if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
+    return error;
+  } else if (!config_value.IsArray()) {
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
+  }
+
+  for (rapidjson::SizeType i = 0; i < config_value.Size(); i++) {
+    out.push_back(config_value[i].GetString());
+  }
+  return WEAVE_NO_ERROR;
+}
+
 WEAVE_ERROR WeaveConfigManager::WriteConfigValue(const std::string& key, bool value) {
   return WriteKVPair(key, rapidjson::Value(value).Move());
 }
@@ -158,6 +175,19 @@ WEAVE_ERROR WeaveConfigManager::WriteConfigValueBin(const std::string& key, cons
   std::string binary_string((const char*)value, value_size);
   std::string encoded_string(modp_b64_encode(binary_string));
   return WriteConfigValueStr(key, encoded_string.c_str(), encoded_string.size());
+}
+
+WEAVE_ERROR WeaveConfigManager::WriteConfigValueArray(const std::string& key, std::vector<std::string>& value) {
+  rapidjson::Value array_value(rapidjson::kArrayType);
+  {
+    const std::lock_guard<std::mutex> write_lock(config_mutex_);
+    for (size_t i = 0; i < value.size(); i++) {
+     rapidjson::Value string_value;
+     string_value.SetString(value[i].c_str(), value[i].size(), config_.GetAllocator());
+     array_value.PushBack(string_value, config_.GetAllocator());
+    }
+  }
+  return WriteKVPair(key, array_value.Move());
 }
 
 WEAVE_ERROR WeaveConfigManager::ClearConfigValue(const std::string& key) {

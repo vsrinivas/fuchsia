@@ -283,22 +283,27 @@ TEST_F(WeaveConfigManagerTest, FailOnMismatchedTypes) {
   constexpr char kTestKeyUint[] = "test-key-uint";
   constexpr char kTestKeyUint64[] = "test-key-uint64";
   constexpr char kTestKeyString[] = "test-key-string";
+  constexpr char kTestKeyArray[] = "test-key-array";
   // Binary values are intentionally ignored, as they are stored as strings.
   constexpr bool kTestValBool = true;
   constexpr uint32_t kTestValUint = 12345U;
   constexpr uint64_t kTestValUint64 = 123456789U;
   constexpr char kTestValString[] = "test-string-val";
+  std::vector<std::string> kTestValArray = {"test1", "test2"};
 
   weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool);
   weave_config_manager_.WriteConfigValue(kTestKeyUint, kTestValUint);
   weave_config_manager_.WriteConfigValue(kTestKeyUint64, kTestValUint64);
   weave_config_manager_.WriteConfigValueStr(kTestKeyString, kTestValString, sizeof(kTestValString));
+  weave_config_manager_.WriteConfigValueArray(kTestKeyArray, kTestValArray);
 
   bool read_bool_value = false;
   uint32_t read_uint_value = 0U;
   uint64_t read_uint64_value = 0U;
   char read_string_value[256];
   size_t read_string_value_size = 0;
+  std::vector<std::string> read_array_value;
+
   // Every key is mapped to an incompatible type.
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_uint_value),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
@@ -309,6 +314,8 @@ TEST_F(WeaveConfigManagerTest, FailOnMismatchedTypes) {
                                                sizeof(read_string_value), &read_string_value_size),
       WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyString, &read_uint64_value),
+            WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
+  EXPECT_EQ(weave_config_manager_.ReadConfigValueArray(kTestKeyUint64, read_array_value),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
 }
 
@@ -389,6 +396,21 @@ TEST_F(WeaveConfigManagerTest, SetDefaultConfigurationInvalidConfig) {
   EXPECT_EQ(weave_config_manager_.SetDefaultConfiguration(kWeaveConfigInvalidDefaultStorePath,
                                                           kWeaveConfigDefaultStoreSchemaPath),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID);
+}
+
+TEST_F(WeaveConfigManagerTest, ReadArray) {
+  constexpr char kTestKeyArray[] = "applets";
+  std::vector<std::string> write_value = {"applet1", "applet2", "applet3"};
+  std::vector<std::string> read_value;
+
+  EXPECT_EQ(weave_config_manager_.WriteConfigValueArray(kTestKeyArray, write_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager_.ReadConfigValueArray(kTestKeyArray, read_value), WEAVE_NO_ERROR);
+
+  EXPECT_EQ(write_value.size(), read_value.size());
+
+  for (size_t i = 0; i < read_value.size(); i++) {
+    EXPECT_EQ(write_value[i], read_value[i]);
+  }
 }
 
 }  // namespace testing
