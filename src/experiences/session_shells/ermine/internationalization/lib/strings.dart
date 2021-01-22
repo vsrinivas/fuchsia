@@ -343,4 +343,9 @@ class Strings {
         name: 'disconnect',
         desc: 'The label for "disconnect" button.',
       );
+  static String get channel => Intl.message(
+        'Channel',
+        name: 'channel',
+        desc: 'The short name for the "channel" label',
+      );
 }
