@@ -24,6 +24,16 @@ bind_rules("one_endpoint_hid_bind") {
   ]
 }
 
+bind_rules("two_endpoint_hid_bind") {
+  rules = "function/two_endpoint_hid.bind"
+  output = "function/two_endpoint_hid-bind.h"
+  tests = "function/two_endpoint_hid_bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/ui/input/drivers/usb-hid/fuchsia.usb.hid.bind:fuchsia.usb.hid.test",
+  ]
+}
+
 driver_module("usb-hid") {
   configs += [
     "//build/config:all_source",
@@ -80,6 +90,7 @@ driver_module("usb-two-endpoint-hid-fake-usb") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "function/two-endpoint-hid-function.cc" ]
   deps = [
+    ":two_endpoint_hid_bind",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.function",
@@ -87,9 +98,6 @@ driver_module("usb-two-endpoint-hid-fake-usb") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -144,6 +152,7 @@ group("tests") {
   testonly = true
   deps = [
     ":one_endpoint_hid_bind_test",
+    ":two_endpoint_hid_bind_test",
     ":usb-hid-test-package",
     ":usb_hid_bind_test",
   ]
