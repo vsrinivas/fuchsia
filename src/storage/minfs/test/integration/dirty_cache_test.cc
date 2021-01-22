@@ -45,7 +45,8 @@ void EnableStats(DirtyCacheTest* fs) {
 class BufferedFile {
  public:
   BufferedFile(DirtyCacheTest* fs, std::string path, size_t max_size, size_t bytes_to_write,
-               size_t bytes_per_write) {
+               size_t bytes_per_write, bool remount_verify = true) {
+    remount_verify_ = remount_verify;
     EXPECT_NE(fs, nullptr);
     EXPECT_NE(path.length(), 0ul);
     EXPECT_LE(bytes_to_write, max_size);
@@ -81,8 +82,10 @@ class BufferedFile {
     Verify(expected_file_size_);
 
     // Verify file after unmount and mount.
-    RemountAndReopen();
-    Verify(expected_file_size_);
+    if (remount_verify_) {
+      RemountAndReopen();
+      Verify(expected_file_size_);
+    }
   }
 
   void Reopen() {
@@ -140,6 +143,9 @@ class BufferedFile {
 
   // The current expected size of the file.
   size_t expected_file_size_ = 0;
+
+  // If true, verifies file after unmount and mount.
+  bool remount_verify_ = true;
 };
 
 void CheckDirtyStats(std::string mount_path, uint64_t dirty_bytes) {
@@ -168,10 +174,11 @@ void CheckDirtyStats(std::string mount_path, uint64_t dirty_bytes) {
 }
 
 BufferedFile EnableStatsAndCreateFile(DirtyCacheTest* fs, size_t file_max_size, int bytes_to_write,
-                                      int bytes_per_write, std::string file_name = "foo") {
+                                      int bytes_per_write, std::string file_name = "foo",
+                                      bool remount_verify = true) {
   EnableStats(fs);
   return BufferedFile(fs, fs->fs().mount_path() + file_name, file_max_size, bytes_to_write,
-                      bytes_per_write);
+                      bytes_per_write, remount_verify);
 }
 
 TEST_P(DirtyCacheTest, DirtyCacheEnabled) {
@@ -251,6 +258,25 @@ TEST_P(DirtyCacheTest, MultipleBlocWritesMakesMultipleBlocksDirty) {
     CheckDirtyStats(fs().mount_path(), kBytesToWrite);
   }
   CheckDirtyStats(fs().mount_path(), 0);
+}
+
+// Test creates a few files and writes to few of them. He we test that the fs handles such a case
+// well.
+TEST_P(DirtyCacheTest, FewCleanFewDirtyFiles) {
+  constexpr size_t kBytesPerWrite = kMinfsBlockSize;
+  constexpr size_t kBytesToWrite = 2 * kBytesPerWrite;
+  constexpr size_t kFileMaxSize = kBytesToWrite;
+  {
+    auto dirty1 = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite,
+                                           "dirty1", false);
+    auto clean1 = EnableStatsAndCreateFile(this, 0, 0, 0, "clean1", false);
+    auto dirty2 = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite,
+                                           "dirty2", false);
+    auto clean2 = EnableStatsAndCreateFile(this, 0, 0, 0, "clean2", false);
+    auto dirty3 = EnableStatsAndCreateFile(this, kFileMaxSize, kBytesToWrite, kBytesPerWrite,
+                                           "dirty3", false);
+    CheckDirtyStats(fs().mount_path(), kBytesToWrite * 3);
+  }
 }
 
 }  // namespace

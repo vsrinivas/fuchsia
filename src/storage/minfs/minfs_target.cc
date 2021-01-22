@@ -25,13 +25,23 @@ bool Minfs::DirtyCacheEnabled() {
 std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {
   fbl::RefPtr<VnodeMinfs> vn;
   std::vector<fbl::RefPtr<VnodeMinfs>> vnodes;
+
+  // vnode_hash_ is locked to release vnode reference. If we are the last one to hold vnode
+  // reference and the vnode is clean then this block will end up releasing the vnode. To avoid
+  // deadlock, we park clean vnodes in an array which will be released outside of the lock.
+  std::vector<fbl::RefPtr<VnodeMinfs>> unused_clean_vnodes;
   if (DirtyCacheEnabled()) {
     // Avoid releasing a reference to |vn| while holding |hash_lock_|.
     fbl::AutoLock lock(&hash_lock_);
     for (auto& raw_vnode : vnode_hash_) {
       vn = fbl::MakeRefPtrUpgradeFromRaw(&raw_vnode, hash_lock_);
-      if (vn != nullptr && vn->IsDirty()) {
+      if (vn == nullptr) {
+        continue;
+      }
+      if (vn->IsDirty()) {
         vnodes.push_back(std::move(vn));
+      } else {
+        unused_clean_vnodes.push_back(std::move(vn));
       }
     }
   }
