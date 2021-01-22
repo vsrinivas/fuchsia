@@ -20,7 +20,6 @@
 #include <iostream>
 #include <iterator>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -34,7 +33,8 @@
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 
-#include "ot_radio_bootloader.h"
+#include "src/connectivity/openthread/drivers/ot-radio/ot_radio_bind.h"
+#include "src/connectivity/openthread/drivers/ot-radio/ot_radio_bootloader.h"
 
 namespace ot {
 namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
@@ -657,10 +657,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace ot
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ot, ot::driver_ops, "ot_radio", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_OT_RADIO),
-ZIRCON_DRIVER_END(ot)
-    // clang-format on
+ZIRCON_DRIVER(ot, ot::driver_ops, "ot_radio", "0.1");

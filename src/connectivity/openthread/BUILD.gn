@@ -21,6 +21,7 @@ group("drivers") {
 group("tests") {
   testonly = true
   deps = [
+    "drivers/ot-radio:tests",
     "tests",
     "third_party:tests",
   ]
