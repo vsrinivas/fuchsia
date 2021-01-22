@@ -130,6 +130,11 @@ async fn handle_fidl_request(
             responder.send()
         }
         ClientSmeRequest::Status { responder } => responder.send(&mut status(sme)),
+        ClientSmeRequest::WmmStatus { responder: _ } => {
+            // TODO(fxbug.dev/52811): implement
+            error!("ClientSme::WmmStatus unimplemented");
+            Ok(())
+        }
     }
 }
 

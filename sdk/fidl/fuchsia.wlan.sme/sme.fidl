@@ -154,6 +154,7 @@ protocol ClientSme {
     Connect(ConnectRequest req, request<ConnectTransaction>? txn);
     Disconnect(UserDisconnectReason reason) -> ();
     Status() -> (ClientStatusResponse resp);
+    WmmStatus() -> (fuchsia.wlan.internal.WmmStatusResponse resp) error int32;
 };
 
 struct ApConfig {
