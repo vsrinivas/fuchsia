@@ -35,7 +35,7 @@ namespace {
 
 namespace frpmb = ::llcpp::fuchsia::hardware::rpmb;
 
-constexpr TEEC_UUID kOpteeOsUuid = {
+constexpr llcpp::fuchsia::tee::Uuid kOpteeOsUuid = {
     0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
 
 class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
@@ -64,32 +64,12 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     zx::channel service_provider;
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
-    optee_client_.reset(new OpteeClient(this, std::move(service_provider),
-                                        std::nullopt /* application_uuid */,
-                                        true /* use_old_api */));
-    fidl::BindServer<::llcpp::fuchsia::tee::Device::Interface>(
+    optee_client_.reset(
+        new OpteeClient(this, std::move(service_provider), optee::Uuid{kOpteeOsUuid}));
+    fidl::BindServer<::llcpp::fuchsia::tee::Application::Interface>(
         loop_.dispatcher(), std::move(server), optee_client_.get());
-    optee_client_fidl_ = ::llcpp::fuchsia::tee::Device::SyncClient(std::move(client));
+    optee_client_fidl_ = ::llcpp::fuchsia::tee::Application::SyncClient(std::move(client));
   }
-
-  OsInfo GetOsInfo() const override {
-    fuchsia_tee::Uuid uuid;
-    uuid.time_low = kOpteeOsUuid.timeLow;
-    uuid.time_mid = kOpteeOsUuid.timeMid;
-    uuid.time_hi_and_version = kOpteeOsUuid.timeHiAndVersion;
-    std::memcpy(uuid.clock_seq_and_node.data(), kOpteeOsUuid.clockSeqAndNode,
-                sizeof(uuid.clock_seq_and_node));
-
-    OsRevision os_revision;
-    os_revision.set_major(os_revision_.major);
-    os_revision.set_minor(os_revision_.minor);
-
-    OsInfo os_info;
-    os_info.set_uuid(uuid);
-    os_info.set_revision(std::move(os_revision));
-    os_info.set_is_global_platform_compliant(true);
-    return os_info;
-  };
 
   SharedMemoryManager::DriverMemoryPool *driver_pool() const override {
     return shared_memory_manager_->driver_pool();
@@ -120,7 +100,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   zx_vaddr_t shared_memory_vaddr_;
 
   std::unique_ptr<OpteeClient> optee_client_;
-  ::llcpp::fuchsia::tee::Device::SyncClient optee_client_fidl_;
+  ::llcpp::fuchsia::tee::Application::SyncClient optee_client_fidl_;
   async::Loop loop_;
 };
 
@@ -250,10 +230,8 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
   };
 
   void SetUp() override {
-    fuchsia_tee::Uuid uuid;
-
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set;
-    auto res = optee_client_fidl_.OpenSession(std::move(uuid), std::move(parameter_set));
+    auto res = optee_client_fidl_.OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->session_id, kDefaultSessionId);
   }

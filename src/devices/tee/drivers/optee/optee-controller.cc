@@ -31,9 +31,6 @@ namespace optee {
 
 namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 
-constexpr TEEC_UUID kOpteeOsUuid = {
-    0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
-
 static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
   return returned_uid.uid_0_3 == kOpteeApiUid_0 && returned_uid.uid_4_7 == kOpteeApiUid_1 &&
          returned_uid.uid_8_11 == kOpteeApiUid_2 && returned_uid.uid_12_15 == kOpteeApiUid_3;
@@ -361,30 +358,6 @@ void OpteeController::DdkRelease() {
   delete this;
 }
 
-zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
-                                        zx::channel service_provider) {
-  ZX_DEBUG_ASSERT(tee_device_request.is_valid());
-
-  // Create a new `OpteeClient` device and hand off client communication to it.
-  auto client =
-      std::make_unique<OpteeClient>(this, std::move(service_provider),
-                                    std::nullopt /* application_uuid */, true /* use_old_api */);
-
-  // Add a child `OpteeClient` device instance and have it immediately start serving
-  // `tee_device_request`
-  zx_status_t status = client->DdkAdd(ddk::DeviceAddArgs("optee-client")
-                                          .set_flags(DEVICE_ADD_INSTANCE)
-                                          .set_client_remote(std::move(tee_device_request)));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // devmgr is now in charge of the memory for `client`
-  [[maybe_unused]] auto client_ptr = client.release();
-
-  return ZX_OK;
-}
-
 zx_status_t OpteeController::TeeConnectToApplication(const uuid_t* application_uuid,
                                                      zx::channel tee_app_request,
                                                      zx::channel service_provider) {
@@ -392,11 +365,6 @@ zx_status_t OpteeController::TeeConnectToApplication(const uuid_t* application_u
   ZX_DEBUG_ASSERT(tee_app_request.is_valid());
   return ConnectToApplicationInternal(Uuid(*application_uuid), std::move(service_provider),
                                       std::move(tee_app_request));
-}
-
-void OpteeController::ConnectTee(zx::channel service_provider, zx::channel tee_request,
-                                 [[maybe_unused]] ConnectTeeCompleter::Sync& _completer) {
-  TeeConnect(std::move(tee_request), std::move(service_provider));
 }
 
 void OpteeController::ConnectToDeviceInfo(
@@ -435,8 +403,7 @@ zx_status_t OpteeController::ConnectToApplicationInternal(Uuid application_uuid,
   ZX_DEBUG_ASSERT(application_request.is_valid());
 
   // Create a new `OpteeClient` device and hand off client communication to it.
-  auto client = std::make_unique<OpteeClient>(this, std::move(service_provider), application_uuid,
-                                              false /* use_old_api */);
+  auto client = std::make_unique<OpteeClient>(this, std::move(service_provider), application_uuid);
 
   // Add a child `OpteeClient` device instance and have it immediately start serving
   // `device_request`
@@ -451,25 +418,6 @@ zx_status_t OpteeController::ConnectToApplicationInternal(Uuid application_uuid,
   // devmgr is now in charge of the memory for `client`
   [[maybe_unused]] auto client_ptr = client.release();
   return ZX_OK;
-}
-
-OsInfo OpteeController::GetOsInfo() const {
-  fuchsia_tee::Uuid uuid;
-  uuid.time_low = kOpteeOsUuid.timeLow;
-  uuid.time_mid = kOpteeOsUuid.timeMid;
-  uuid.time_hi_and_version = kOpteeOsUuid.timeHiAndVersion;
-  std::memcpy(uuid.clock_seq_and_node.data(), kOpteeOsUuid.clockSeqAndNode,
-              sizeof(uuid.clock_seq_and_node));
-
-  OsRevision os_revision;
-  os_revision.set_major(os_revision_.major);
-  os_revision.set_minor(os_revision_.minor);
-
-  OsInfo os_info;
-  os_info.set_uuid(uuid);
-  os_info.set_revision(std::move(os_revision));
-  os_info.set_is_global_platform_compliant(true);
-  return os_info;
 }
 
 uint32_t OpteeController::CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) {

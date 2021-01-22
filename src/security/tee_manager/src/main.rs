@@ -10,13 +10,11 @@ mod provider_server;
 
 use {
     crate::config::Config,
-    crate::device_server::{
-        serve_application_passthrough, serve_device_info_passthrough, serve_passthrough,
-    },
+    crate::device_server::{serve_application_passthrough, serve_device_info_passthrough},
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_hardware_tee::{DeviceConnectorMarker, DeviceConnectorProxy},
-    fidl_fuchsia_tee::{self as fuchsia_tee, DeviceInfoMarker, DeviceMarker},
+    fidl_fuchsia_tee::{self as fuchsia_tee, DeviceInfoMarker},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog as syslog,
@@ -31,7 +29,6 @@ use {
 const DEV_TEE_PATH: &str = "/dev/class/tee";
 
 enum IncomingRequest {
-    Device(zx::Channel),
     Application(zx::Channel, fuchsia_tee::Uuid),
     DeviceInfo(zx::Channel),
 }
@@ -55,11 +52,9 @@ async fn main() -> Result<(), Error> {
         open_tee_device_connector(device_list.first().unwrap().to_str().unwrap())?;
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("svc")
-        .add_service_at(DeviceMarker::NAME, |channel| Some(IncomingRequest::Device(channel)))
-        .add_service_at(DeviceInfoMarker::NAME, |channel| {
-            Some(IncomingRequest::DeviceInfo(channel))
-        });
+    fs.dir("svc").add_service_at(DeviceInfoMarker::NAME, |channel| {
+        Some(IncomingRequest::DeviceInfo(channel))
+    });
 
     match Config::from_file() {
         Ok(config) => {
@@ -89,9 +84,6 @@ async fn serve(
     let mut service_fut =
         service_stream.for_each_concurrent(None, |request: IncomingRequest| async {
             match request {
-                IncomingRequest::Device(channel) => {
-                    serve_passthrough(dev_connector_proxy.clone(), channel).await
-                }
                 IncomingRequest::Application(channel, uuid) => {
                     fx_log_trace!("Connecting application: {:?}", uuid);
                     serve_application_passthrough(uuid, dev_connector_proxy.clone(), channel).await
@@ -215,58 +207,6 @@ mod tests {
         assert!(maybe_node_info.is_ok());
         let node_info = maybe_node_info.unwrap();
         assert!(is_directory(&node_info));
-    }
-
-    // TODO(fxbug.dev/44664): Remove once ConnectTee is deprecated
-    #[fasync::run_singlethreaded(test)]
-    async fn connect() {
-        let dev_connector = spawn_device_connector(|request| async move {
-            match request {
-                DeviceConnectorRequest::ConnectTee {
-                    service_provider,
-                    tee_request,
-                    control_handle: _,
-                } => {
-                    assert!(service_provider.is_some());
-                    assert!(!tee_request.channel().is_invalid_handle());
-
-                    let provider_proxy = service_provider
-                        .unwrap()
-                        .into_proxy()
-                        .expect("Failed to convert ClientEnd to ProviderProxy");
-
-                    assert_is_valid_storage(&get_storage(&provider_proxy)).await;
-
-                    tee_request
-                        .close_with_epitaph(Status::OK)
-                        .expect("Unable to close tee_request");
-                }
-                _ => {
-                    assert!(false);
-                }
-            }
-        });
-
-        let (mut sender, receiver) = mpsc::channel::<IncomingRequest>(1);
-
-        fasync::Task::local(async move {
-            let result = serve(dev_connector, receiver.fuse()).await;
-            assert!(result.is_ok(), "{}", result.unwrap_err());
-        })
-        .detach();
-
-        let (device_client, device_server) = endpoints::create_endpoints::<DeviceMarker>()
-            .expect("Failed to create Device endpoints");
-
-        let device_proxy =
-            device_client.into_proxy().expect("Failed to convert ClientEnd to DeviceProxy");
-
-        sender
-            .try_send(IncomingRequest::Device(device_server.into_channel()))
-            .expect("Unable to send Device Request");
-
-        let (result, _) = device_proxy.take_event_stream().into_future().await;
-        assert!(is_closed_with_status(result.unwrap().unwrap_err(), Status::OK));
     }
 
     #[fasync::run_singlethreaded(test)]

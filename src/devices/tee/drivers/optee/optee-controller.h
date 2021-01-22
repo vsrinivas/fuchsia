@@ -40,7 +40,6 @@ class OpteeControllerBase {
  public:
   using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
 
-  virtual OsInfo GetOsInfo() const = 0;
   virtual uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
   virtual SharedMemoryManager::DriverMemoryPool* driver_pool() const = 0;
   virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
@@ -71,26 +70,16 @@ class OpteeController : public OpteeControllerBase,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // TODO(44664): Once all clients are transitioned off of the old TEE connection model, remove this
-  // function.
-  zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
-
   // fuchsia.hardware.Tee
   zx_status_t TeeConnectToApplication(const uuid_t* application_uuid, zx::channel tee_app_request,
                                       zx::channel service_provider);
 
   // `DeviceConnector` FIDL protocol
-  void ConnectTee(zx::channel service_provider, zx::channel tee_request,
-                  ConnectTeeCompleter::Sync& _completer) override;
   void ConnectToDeviceInfo(::zx::channel device_info_request,
                            ConnectToDeviceInfoCompleter::Sync& _completer) override;
   void ConnectToApplication(llcpp::fuchsia::tee::Uuid application_uuid,
                             zx::channel service_provider, zx::channel application_request,
                             ConnectToApplicationCompleter::Sync& _completer) override;
-
-  // TODO(fxbug.dev/44664): Once all clients are transitioned off of the old TEE connection model,
-  // remove this function.
-  OsInfo GetOsInfo() const override;
 
   uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
 

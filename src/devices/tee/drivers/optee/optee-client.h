@@ -46,11 +46,10 @@ using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 class OpteeClient : public OpteeClientBase,
                     public OpteeClientProtocol,
                     public fbl::DoublyLinkedListable<OpteeClient*>,
-                    public fuchsia_tee::Device::Interface,
                     public fuchsia_tee::Application::Interface {
  public:
   explicit OpteeClient(OpteeControllerBase* controller, zx::channel provider_channel,
-                       std::optional<Uuid> application_uuid, bool use_old_api)
+                       Uuid application_uuid)
       : OpteeClientBase(controller->GetDevice()),
         controller_(controller),
         provider_channel_(std::move(provider_channel)),
@@ -67,24 +66,7 @@ class OpteeClient : public OpteeClientBase,
 
   void Shutdown();
 
-  // `fuchsia.tee.Device` FIDL Handlers
-  void GetOsInfo(fuchsia_tee::Device::Interface::GetOsInfoCompleter::Sync& completer) override;
-  void OpenSession(fuchsia_tee::Uuid trusted_app,
-                   fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-                   fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync& completer) override;
-  void InvokeCommand(
-      uint32_t session_id, uint32_t command_id,
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync& completer) override;
-  void CloseSession(
-      uint32_t session_id,
-      fuchsia_tee::Device::Interface::CloseSessionCompleter::Sync& completer) override;
-
   // `fuchsia.tee.Application` FIDL Handlers
-  void GetOsInfo(fuchsia_tee::Application::Interface::GetOsInfoCompleter::Sync& completer) override;
-  void OpenSession(
-      fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync& completer) override;
   void OpenSession2(
       fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
       fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) override;
@@ -98,8 +80,6 @@ class OpteeClient : public OpteeClientBase,
 
  private:
   using SharedMemoryList = fbl::DoublyLinkedList<std::unique_ptr<SharedMemory>>;
-
-  bool use_old_api() const { return !application_uuid_.has_value(); }
 
   // Shared FIDL handler logic used for migration.
   //
@@ -300,10 +280,7 @@ class OpteeClient : public OpteeClientBase,
   std::optional<::llcpp::fuchsia::hardware::rpmb::Rpmb::SyncClient> rpmb_client_;
 
   // The (only) trusted application UUID this client is allowed to use.
-  //
-  // TODO(fxbug.dev/44664): Currently, no application UUID indicates that the old API is being used.
-  // TODO(fxbug.dev/44664): Remove optionality once transition to new API is complete.
-  std::optional<Uuid> application_uuid_;
+  Uuid application_uuid_;
 };
 
 }  // namespace optee
