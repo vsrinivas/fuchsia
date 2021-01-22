@@ -98,3 +98,8 @@ local changes, and to make sure there aren't any version mismatch issues with
 the code used by the Fuchsia build to generate the vbmeta images.
 
 libavb will be in the Firmware SDK under `pkg/avb/`.
+
+### Demo/Test avb_keys
+
+The "avb_key" subdirectory holds a set of board/product specific certificates
+and keys for for demonstrating the use of verified booting with libavb.
