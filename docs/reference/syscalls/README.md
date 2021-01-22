@@ -231,7 +231,7 @@
 
 ## Syscall generation
 
-Syscall support is generated from `//zircon/syscalls`. The FIDL files in that
+Syscall support is generated from `//zircon/vdso`. The FIDL files in that
 directory are first run through `fidlc` which produces an intermediate format.
 That intermediate format is consumed by [kazoo](/zircon/tools/kazoo) which
 produces output for both the kernel and userspace in a variety of languages.

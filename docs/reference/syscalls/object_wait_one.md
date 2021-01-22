@@ -36,8 +36,11 @@ the `zx_object_wait_one` syscall completed.
 
 The *deadline* parameter specifies a deadline with respect to
 **ZX_CLOCK_MONOTONIC** and will be automatically adjusted according to the job's
-[timer slack] policy.  **ZX_TIME_INFINITE** is a special value meaning wait
-forever.
+[timer slack] policy.
+
+  * **ZX_TIME_INFINITE** is a special value meaning wait forever.
+  * 0 (or any value before the current time in **ZX_CLOCK_MONOTONIC**) will
+    query the current value of the signal(s).
 
 ## RIGHTS
 
