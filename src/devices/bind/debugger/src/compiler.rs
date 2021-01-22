@@ -10,6 +10,7 @@ use crate::encode_bind_program_v1::{encode_to_bytecode_v1, encode_to_string_v1};
 use crate::encode_bind_program_v2::{encode_to_bytecode_v2, encode_to_string_v2};
 use crate::errors::UserError;
 use crate::instruction;
+use crate::linter;
 use crate::make_identifier;
 use crate::offline_debugger::AstLocation;
 use crate::parser_common::{self, CompoundIdentifier, Include, Value};
@@ -23,6 +24,7 @@ use thiserror::Error;
 pub enum CompilerError {
     BindParserError(parser_common::BindParserError),
     DependencyError(dependency_graph::DependencyError<CompoundIdentifier>),
+    LinterError(linter::LinterError),
     DuplicateIdentifier(CompoundIdentifier),
     TypeMismatch(CompoundIdentifier),
     UnresolvedQualification(CompoundIdentifier),
@@ -66,13 +68,19 @@ pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
 pub fn compile<'a>(
     program_str: &'a str,
     libraries: &[String],
+    lint: bool,
 ) -> Result<BindProgram<'a>, CompilerError> {
     let ast = bind_program::Ast::try_from(program_str).map_err(CompilerError::BindParserError)?;
 
     let library_asts: Vec<bind_library::Ast> = libraries
         .into_iter()
         .map(|lib| {
-            bind_library::Ast::try_from(lib.as_str()).map_err(CompilerError::BindParserError)
+            let ast = bind_library::Ast::try_from(lib.as_str())
+                .map_err(CompilerError::BindParserError)?;
+            if lint {
+                linter::lint_library(&ast).map_err(CompilerError::LinterError)?;
+            }
+            Ok(ast)
         })
         .collect::<Result<_, CompilerError>>()?;
 

@@ -89,6 +89,7 @@ template("bind_host_test") {
       response_file_filename = get_path_info(response_file, "file")
       args = [
         "test",
+        "--lint",
         rebase_path("${test_data_dir}/${rules_filename}", root_build_dir),
         "--test-spec",
         rebase_path("${test_data_dir}/${test_spec_filename}", root_build_dir),
@@ -249,6 +250,7 @@ template("bind_rules") {
 
     args = [
       "compile",
+      "--lint",
       "--output",
       rebase_path("$target_gen_dir/$output_file", root_build_dir),
       "--include-file",
@@ -382,6 +384,7 @@ template("bind_library") {
 
       args = [
         "generate",
+        "--lint",
         "--output",
         rebase_path("${fidl_file}", root_build_dir),
         rebase_path("${invoker.source}", root_build_dir),

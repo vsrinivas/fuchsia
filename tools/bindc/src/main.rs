@@ -8,7 +8,7 @@ use anyhow::{anyhow, Context, Error};
 use bind_debugger::compiler::{
     self, encode_to_bytecode, encode_to_string, BindProgram, SymbolicInstructionInfo,
 };
-use bind_debugger::{bind_library, offline_debugger, test};
+use bind_debugger::{bind_library, linter, offline_debugger, test};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fmt::Write;
@@ -36,6 +36,10 @@ struct SharedOptions {
     /// the driver while bind unconditionally (but only on the user's request.)
     #[structopt(parse(from_os_str))]
     input: Option<PathBuf>,
+
+    /// Check inputs for style guide violations.
+    #[structopt(short = "l", long = "lint")]
+    lint: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -164,7 +168,7 @@ fn handle_command(command: Command) -> Result<(), Error> {
             let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
             let input = options.input.ok_or(anyhow!("The debug command requires an input."))?;
             let program = read_file(&input)?;
-            let bind_program = compiler::compile(&program, &includes)?;
+            let bind_program = compiler::compile(&program, &includes, options.lint)?;
 
             let device = read_file(&device_file)?;
             let binds = offline_debugger::debug_from_str(&bind_program, &device)?;
@@ -201,11 +205,14 @@ fn handle_command(command: Command) -> Result<(), Error> {
                 disable_autobind,
                 output_bytecode,
                 use_new_bytecode,
+                options.lint,
                 output,
                 depfile,
             )
         }
-        Command::Generate { options, output } => handle_generate(options.input, output),
+        Command::Generate { options, output } => {
+            handle_generate(options.input, options.lint, output)
+        }
     }
 }
 
@@ -232,6 +239,7 @@ fn handle_compile(
     disable_autobind: bool,
     output_bytecode: bool,
     use_new_bytecode: bool,
+    lint: bool,
     output: Option<PathBuf>,
     depfile: Option<PathBuf>,
 ) -> Result<(), Error> {
@@ -253,12 +261,12 @@ fn handle_compile(
         let input = input.ok_or(anyhow!("An input is required when disable_autobind is false."))?;
         program = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        compiler::compile(&program, &includes)?
+        compiler::compile(&program, &includes, lint)?
     } else if let Some(input) = input {
         // Autobind is disabled but there are some bind rules for manual binding.
         program = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-        let mut bind_program = compiler::compile(&program, &includes)?;
+        let mut bind_program = compiler::compile(&program, &includes, lint)?;
         bind_program.instructions.insert(0, SymbolicInstructionInfo::create_autobind());
         bind_program
     } else {
@@ -392,13 +400,20 @@ fn write_fidl_template(syntax_tree: bind_library::Ast) -> Result<String, Error> 
     Ok(output.to_string())
 }
 
-fn handle_generate(input: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> {
+fn handle_generate(
+    input: Option<PathBuf>,
+    lint: bool,
+    output: Option<PathBuf>,
+) -> Result<(), Error> {
     let input = input.ok_or(anyhow!("An input is required."))?;
     let input_content = read_file(&input)?;
 
     // Generate the FIDL library.
     let keys = bind_library::Ast::try_from(input_content.as_str())
         .map_err(compiler::CompilerError::BindParserError)?;
+    if lint {
+        linter::lint_library(&keys).map_err(compiler::CompilerError::LinterError)?;
+    }
     let template = write_fidl_template(keys)?;
 
     // Create and open output file.

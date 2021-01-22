@@ -5,6 +5,7 @@
 use crate::compiler::CompilerError;
 use crate::debugger;
 use crate::dependency_graph::DependencyError;
+use crate::linter::LinterError;
 use crate::offline_debugger;
 use crate::parser_common::{BindParserError, CompoundIdentifier};
 use crate::test;
@@ -147,6 +148,7 @@ impl From<CompilerError> for UserError {
         match error {
             CompilerError::BindParserError(error) => UserError::from(error),
             CompilerError::DependencyError(error) => UserError::from(error),
+            CompilerError::LinterError(error) => UserError::from(error),
             CompilerError::DuplicateIdentifier(identifier) => UserError::new(
                 "E102",
                 &format!("The identifier `{}` is defined multiple times.", identifier),
@@ -367,6 +369,19 @@ impl From<test::TestError> for UserError {
             test::TestError::JsonParserError(error) => {
                 UserError::new("E403", &format!("Failed to parse JSON: {}.", error), None, false)
             }
+        }
+    }
+}
+
+impl From<LinterError> for UserError {
+    fn from(error: LinterError) -> Self {
+        match error {
+            LinterError::LibraryNameMustNotContainUnderscores(name) => UserError::new(
+                "E501",
+                &format!("Library names should not contain underscores: `{}`.", name),
+                None,
+                false,
+            ),
         }
     }
 }
