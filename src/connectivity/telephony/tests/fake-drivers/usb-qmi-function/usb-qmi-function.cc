@@ -17,12 +17,13 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <usb/usb-request.h>
+
+#include "src/connectivity/telephony/tests/fake-drivers/usb-qmi-function/usb_qmi_function_bind.h"
 
 namespace usb_qmi_function {
 
@@ -242,9 +243,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace usb_qmi_function
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(usb_qmi_function, usb_qmi_function::driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_VENDOR),
-ZIRCON_DRIVER_END(usb_qmi_function)
-    // clang-format on
+ZIRCON_DRIVER(usb_qmi_function, usb_qmi_function::driver_ops, "zircon", "0.1");
