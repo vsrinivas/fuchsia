@@ -77,3 +77,29 @@ struct BssDescription {
     // client is associated to an AP.
     int8 snr_db;
 };
+
+struct WmmStatusResponse {
+    bool apsd;
+    WmmAcParams ac_be_params;
+    WmmAcParams ac_bk_params;
+    WmmAcParams ac_vi_params;
+    WmmAcParams ac_vo_params;
+};
+
+/// WFA WMM v1.2, 2.2.2
+struct WmmAcParams {
+    /// Lower bound of contention window in exponential form
+    /// `cw_min = 2^(ecw_min) - 1`. The unit for contention window is "slot time", which
+    /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
+    uint8 ecw_min;
+    /// Upper bound of contention window in exponential form
+    /// `cw_max = 2^(ecw_max) - 1`. The unit for contention window is "slot time", which
+    /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
+    uint8 ecw_max;
+    /// Arbitration Interframe Spacing Number (control wait time between sending each frame)
+    uint8 aifsn;
+    /// TXOP limit in unit of 32 microseconds
+    uint16 txop_limit;
+    /// Whether admission control is mandatory
+    bool acm;
+};

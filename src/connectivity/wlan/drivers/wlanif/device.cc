@@ -104,6 +104,10 @@ static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
         },
     .sae_frame_rx = [](void* cookie,
                        const wlanif_sae_frame_t* ind) { DEV(cookie)->SaeFrameRx(ind); },
+    .on_wmm_status_resp =
+        [](void* cookie, const zx_status_t status, const wlan_wmm_params_t* params) {
+          DEV(cookie)->OnWmmStatusResp(status, params);
+        },
 
     // Ethernet operations
     .data_recv = [](void* cookie, const void* data, size_t length,
@@ -669,6 +673,10 @@ void Device::SaeFrameTx(::fuchsia::wlan::mlme::SaeFrame frame) {
   wlanif_impl_sae_frame_tx(&wlanif_impl_, &sae_frame);
 }
 
+void Device::WmmStatusReq() {
+  // TODO(fxbug.dev/52811) - Implement
+}
+
 void Device::OnScanResult(const wlanif_scan_result_t* result) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
@@ -976,6 +984,10 @@ void Device::SaeFrameRx(const wlanif_sae_frame_t* frame) {
   wlan_mlme::SaeFrame fidl_frame;
   ConvertSaeAuthFrame(frame, fidl_frame);
   binding_.events().OnSaeFrameRx(std::move(fidl_frame));
+}
+
+void Device::OnWmmStatusResp(const zx_status_t status, const wlan_wmm_params_t* params) {
+  // TODO(fxbug.dev/52811) - Implement
 }
 
 void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {

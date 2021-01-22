@@ -686,6 +686,9 @@ protocol MLME {
     SaeFrameTx(SaeFrame frame);
     -> OnSaeFrameRx(SaeFrame frame);
 
+    WmmStatusReq();
+    -> OnWmmStatusResp(int32 status, internal.WmmStatusResponse resp);
+
     // For SoftMAC drivers only. Let SME inform MLME about the capability negotiation outcome.
     // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
     // remove this function and the capabilities from AssociateConfirm and use AssociateRequest.

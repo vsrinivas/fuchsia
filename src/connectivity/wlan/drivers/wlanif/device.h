@@ -59,6 +59,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void StopCaptureFrames() override;
   void SaeHandshakeResp(::fuchsia::wlan::mlme::SaeHandshakeResponse resp) override;
   void SaeFrameTx(::fuchsia::wlan::mlme::SaeFrame frame) override;
+  void WmmStatusReq() override;
 
   // FinalizeAssociationReq is ignored because it is for SoftMAC drivers ONLY.
   void FinalizeAssociationReq(::fuchsia::wlan::mlme::NegotiatedCapabilities cap) override {}
@@ -86,6 +87,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void OnPmkAvailable(const wlanif_pmk_info_t* info);
   void SaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind);
   void SaeFrameRx(const wlanif_sae_frame_t* ind);
+  void OnWmmStatusResp(zx_status_t status, const wlan_wmm_params_t* params);
 
   // wlanif_protocol_t (ethernet_impl_protocol -> wlanif_impl_protocol)
   zx_status_t EthStart(const ethernet_ifc_protocol_t* ifc);
