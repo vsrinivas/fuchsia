@@ -194,6 +194,7 @@ static_library("console") {
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/debug_adapter",
     "//src/developer/debug/zxdb/expr",
+    "//src/lib/analytics/cpp/core_dev_tools",
     "//src/lib/fxl",
     "//src/lib/line_input",
     "//zircon/public/lib/fit",

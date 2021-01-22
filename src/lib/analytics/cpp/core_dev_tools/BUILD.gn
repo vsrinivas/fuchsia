@@ -5,10 +5,11 @@
 import("//build/test.gni")
 
 static_library("core_dev_tools") {
-  friend = [ ":analytics_cpp_core_dev_tools_unittests" ]
+  friend = [ ":unittests" ]
 
   public = [
     "analytics.h",
+    "analytics_executor.h",
     "general_parameters.h",
     "system_info.h",
     "user_agent.h",
@@ -16,6 +17,8 @@ static_library("core_dev_tools") {
 
   sources = [
     "analytics.h",
+    "analytics_executor.cc",
+    "analytics_executor.h",
     "analytics_internal.cc",
     "analytics_internal.h",
     "analytics_messages.cc",
@@ -33,6 +36,7 @@ static_library("core_dev_tools") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/developer/debug/shared",
     "//src/lib/analytics/cpp/google_analytics",
     "//src/lib/analytics/cpp/metric_properties",
     "//src/lib/fxl",
@@ -40,7 +44,8 @@ static_library("core_dev_tools") {
   ]
 }
 
-test("analytics_cpp_core_dev_tools_unittests") {
+test("unittests") {
+  output_name = "analytics_cpp_core_dev_tools_unittests"
   sources = [
     "persistent_status_unittest.cc",
     "user_agent_unittest.cc",
@@ -56,17 +61,28 @@ test("analytics_cpp_core_dev_tools_unittests") {
   ]
 }
 
-test("analytics_cpp_core_dev_tools_system_info_manualtest") {
+test("system_info_manualtest") {
+  output_name = "analytics_cpp_core_dev_tools_system_info_manualtest"
   sources = [ "system_info_manualtest.cc" ]
-
   deps = [ ":core_dev_tools" ]
+}
+
+test("analytics_executor_manualtest") {
+  output_name = "analytics_cpp_core_dev_tools_analytics_executor_manualtest"
+  sources = [ "analytics_executor_manualtest.cc" ]
+  deps = [
+    ":core_dev_tools",
+    "//src/developer/debug/shared",
+    "//src/lib/fxl",
+  ]
 }
 
 group("tests") {
   testonly = true
 
   deps = [
-    ":analytics_cpp_core_dev_tools_system_info_manualtest",
-    ":analytics_cpp_core_dev_tools_unittests",
+    ":analytics_executor_manualtest",
+    ":system_info_manualtest",
+    ":unittests",
   ]
 }
