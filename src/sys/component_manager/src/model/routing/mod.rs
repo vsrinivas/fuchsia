@@ -84,6 +84,14 @@ pub(super) async fn route_use_capability<'a>(
     match use_decl {
         UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Directory(_) | UseDecl::Runner(_) => {
             let (source, cap_state) = find_used_capability_source(use_decl, target).await?;
+            match use_decl {
+                UseDecl::Protocol(UseProtocolDecl { source: UseSource::Debug, .. }) => {
+                    // TODO(anmittal): add and validate security policy
+                }
+                _ => {
+                    //do nothing
+                }
+            }
             let relative_path = cap_state.make_relative_path(relative_path);
             open_capability_at_source(flags, open_mode, relative_path, source, target, server_chan)
                 .await
@@ -861,6 +869,39 @@ async fn find_environment_capability_source<'a>(
                 ))),
             }
         }
+        UseDecl::Protocol(cm_rust::UseProtocolDecl {
+            source: cm_rust::UseSource::Debug,
+            target_path: _,
+            source_name,
+        }) => match target.environment.get_debug_capability(source_name)? {
+            Some((Some(env_component), reg)) => {
+                let capability = ComponentCapability::Environment(EnvironmentCapability::Debug {
+                    source_name: reg.source_name,
+                    source: reg.source.clone(),
+                });
+                Ok(Some(
+                    find_environment_component_capability_source(
+                        &env_component,
+                        capability,
+                        cap_state,
+                        &reg.source,
+                    )
+                    .await?,
+                ))
+            }
+            Some((None, reg)) => {
+                // Root environment.
+                let cap_source = CapabilitySource::Builtin {
+                    capability: InternalCapability::Protocol(reg.source_name.clone()),
+                };
+                Ok(Some((cap_source, cap_state)))
+            }
+            None => Err(ModelError::from(RoutingError::use_from_environment_not_found(
+                &target.abs_moniker,
+                "debug",
+                source_name.to_string(),
+            ))),
+        },
         _ => Ok(None),
     }
 }
@@ -936,6 +977,14 @@ fn find_capability_source_from_self(
                     capability.find_resolver_source(decl).expect("missing resolver").clone();
                 CapabilitySource::Component {
                     capability: ComponentCapability::Resolver(resolver_decl),
+                    component: env_component.as_weak(),
+                }
+            }
+            EnvironmentCapability::Debug { .. } => {
+                let protocol_decl =
+                    capability.find_protocol_source(decl).expect("missing protocol").clone();
+                CapabilitySource::Component {
+                    capability: ComponentCapability::Protocol(protocol_decl),
                     component: env_component.as_weak(),
                 }
             }

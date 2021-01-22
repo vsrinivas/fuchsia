@@ -411,6 +411,7 @@ impl EnvironmentDeclBuilder {
             extends: fsys::EnvironmentExtends::None,
             runners: vec![],
             resolvers: vec![],
+            debug_capabilities: vec![],
             stop_timeout_ms: None,
         })
     }
@@ -436,6 +437,12 @@ impl EnvironmentDeclBuilder {
     /// Registers a resolver with the environment.
     pub fn add_resolver(mut self, resolver: cm_rust::ResolverRegistration) -> Self {
         self.0.resolvers.push(resolver);
+        self
+    }
+
+    /// Registers a debug capability with the environment.
+    pub fn add_debug_registration(mut self, debug: cm_rust::DebugRegistration) -> Self {
+        self.0.debug_capabilities.push(debug);
         self
     }
 

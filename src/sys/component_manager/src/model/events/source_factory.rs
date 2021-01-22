@@ -200,7 +200,7 @@ mod tests {
         crate::config::RuntimeConfig,
         crate::model::{
             component::WeakComponentInstance,
-            environment::{Environment, RunnerRegistry},
+            environment::{DebugRegistry, Environment, RunnerRegistry},
             hooks::Hooks,
             model::ModelParams,
             resolver::ResolverRegistry,
@@ -280,6 +280,7 @@ mod tests {
                     root_environment: Environment::new_root(
                         RunnerRegistry::default(),
                         resolver_registry,
+                        DebugRegistry::default(),
                     ),
                     namespace_capabilities: vec![],
                 })
@@ -316,7 +317,11 @@ mod tests {
                 Model::new(ModelParams {
                     runtime_config: Arc::new(RuntimeConfig::default()),
                     root_component_url: "test:///root".to_string(),
-                    root_environment: Environment::new_root(RunnerRegistry::default(), resolver),
+                    root_environment: Environment::new_root(
+                        RunnerRegistry::default(),
+                        resolver,
+                        DebugRegistry::default(),
+                    ),
                     namespace_capabilities: vec![],
                 })
                 .await

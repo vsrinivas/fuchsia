@@ -31,7 +31,7 @@ use {
         fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
             binding::Binder,
-            environment::{Environment, RunnerRegistration, RunnerRegistry},
+            environment::{DebugRegistry, Environment, RunnerRegistration, RunnerRegistry},
             error::ModelError,
             event_logger::EventLogger,
             events::{
@@ -233,6 +233,7 @@ impl BuiltinEnvironmentBuilder {
             root_environment: Environment::new_root(
                 RunnerRegistry::new(runner_map),
                 self.resolvers,
+                DebugRegistry::default(),
             ),
             runtime_config: Arc::clone(&runtime_config),
             namespace_capabilities: runtime_config.namespace_capabilities.clone(),

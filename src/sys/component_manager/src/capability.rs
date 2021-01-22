@@ -332,6 +332,7 @@ impl ComponentCapability {
             ComponentCapability::Environment(env) => match env {
                 EnvironmentCapability::Runner { .. } => CapabilityTypeName::Runner,
                 EnvironmentCapability::Resolver { .. } => CapabilityTypeName::Resolver,
+                EnvironmentCapability::Debug { .. } => CapabilityTypeName::Protocol,
             },
             ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
                 match expose {
@@ -390,6 +391,7 @@ impl ComponentCapability {
             ComponentCapability::Environment(env_cap) => match env_cap {
                 EnvironmentCapability::Runner { source_name, .. } => Some(source_name),
                 EnvironmentCapability::Resolver { source_name, .. } => Some(source_name),
+                EnvironmentCapability::Debug { source_name, .. } => Some(source_name),
             },
             ComponentCapability::Expose(expose) => match expose {
                 ExposeDecl::Protocol(ExposeProtocolDecl { source_name, .. }) => Some(source_name),
@@ -853,12 +855,15 @@ fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoni
 pub enum EnvironmentCapability {
     Runner { source_name: CapabilityName, source: RegistrationSource },
     Resolver { source_name: CapabilityName, source: RegistrationSource },
+    Debug { source_name: CapabilityName, source: RegistrationSource },
 }
 
 impl EnvironmentCapability {
     pub fn registration_source(&self) -> &RegistrationSource {
         match self {
-            Self::Runner { source, .. } | Self::Resolver { source, .. } => &source,
+            Self::Runner { source, .. }
+            | Self::Resolver { source, .. }
+            | Self::Debug { source, .. } => &source,
         }
     }
 }

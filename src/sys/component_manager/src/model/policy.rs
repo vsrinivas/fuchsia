@@ -223,7 +223,7 @@ mod tests {
             model::{
                 component::{ComponentInstance, WeakComponentInstance, WeakExtendedInstance},
                 context::WeakModelContext,
-                environment::{Environment, RunnerRegistry},
+                environment::{DebugRegistry, Environment, RunnerRegistry},
                 hooks::Hooks,
                 resolver::ResolverRegistry,
             },
@@ -488,7 +488,11 @@ mod tests {
         // Create a fake component instance.
         let resolver = ResolverRegistry::new();
         let component = ComponentInstance::new(
-            Arc::new(Environment::new_root(RunnerRegistry::default(), resolver)),
+            Arc::new(Environment::new_root(
+                RunnerRegistry::default(),
+                resolver,
+                DebugRegistry::default(),
+            )),
             vec!["foo:0"].into(),
             "test:///foo".into(),
             fsys::StartupMode::Lazy,
@@ -551,7 +555,11 @@ mod tests {
         // Create a fake component instance.
         let resolver = ResolverRegistry::new();
         let component = ComponentInstance::new(
-            Arc::new(Environment::new_root(RunnerRegistry::default(), resolver)),
+            Arc::new(Environment::new_root(
+                RunnerRegistry::default(),
+                resolver,
+                DebugRegistry::default(),
+            )),
             vec!["foo:0"].into(),
             "test:///foo".into(),
             fsys::StartupMode::Lazy,

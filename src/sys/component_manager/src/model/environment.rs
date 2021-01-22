@@ -26,6 +26,8 @@ pub struct Environment {
     runner_registry: RunnerRegistry,
     /// The resolvers in this environment, mapped to URL schemes.
     resolver_registry: ResolverRegistry,
+    /// Protocols available in this environment as debug capabilities.
+    debug_registry: DebugRegistry,
     /// The deadline for runners to respond to `ComponentController.Stop` calls.
     stop_timeout: Duration,
 }
@@ -58,6 +60,7 @@ impl Environment {
             extends: EnvironmentExtends::None,
             runner_registry: RunnerRegistry::default(),
             resolver_registry: ResolverRegistry::new(),
+            debug_registry: DebugRegistry::default(),
             stop_timeout: DEFAULT_STOP_TIMEOUT,
         }
     }
@@ -66,12 +69,14 @@ impl Environment {
     pub fn new_root(
         runner_registry: RunnerRegistry,
         resolver_registry: ResolverRegistry,
+        debug_registry: DebugRegistry,
     ) -> Environment {
         Environment {
             parent: None,
             extends: EnvironmentExtends::None,
             runner_registry,
             resolver_registry,
+            debug_registry: debug_registry,
             stop_timeout: DEFAULT_STOP_TIMEOUT,
         }
     }
@@ -86,6 +91,7 @@ impl Environment {
             extends: env_decl.extends.into(),
             runner_registry: RunnerRegistry::from_decl(&env_decl.runners),
             resolver_registry: ResolverRegistry::from_decl(&env_decl.resolvers, parent),
+            debug_registry: env_decl.debug_capabilities.clone().into(),
             stop_timeout: match env_decl.stop_timeout_ms {
                 Some(timeout) => Duration::from_millis(timeout.into()),
                 None => match env_decl.extends {
@@ -105,6 +111,7 @@ impl Environment {
             extends: EnvironmentExtends::Realm,
             runner_registry: RunnerRegistry::default(),
             resolver_registry: ResolverRegistry::new(),
+            debug_registry: DebugRegistry::default(),
             stop_timeout: parent.environment.stop_timeout(),
         }
     }
@@ -127,6 +134,25 @@ impl Environment {
                 EnvironmentExtends::Realm => {
                     parent.unwrap().environment.get_registered_runner(name)
                 }
+                EnvironmentExtends::None => {
+                    return Ok(None);
+                }
+            },
+        }
+    }
+
+    /// Returns the debug capability registered to `name` and the realm that created the environment the
+    /// capability was registered to (`None` for component manager's realm). Returns `None` if there
+    /// was no match.
+    pub fn get_debug_capability(
+        &self,
+        name: &cm_rust::CapabilityName,
+    ) -> Result<Option<(Option<Arc<ComponentInstance>>, DebugRegistration)>, ModelError> {
+        let parent = self.parent.as_ref().map(|p| p.upgrade()).transpose()?;
+        match self.debug_registry.get_capability(name) {
+            Some(reg) => Ok(Some((parent, reg.clone()))),
+            None => match self.extends {
+                EnvironmentExtends::Realm => parent.unwrap().environment.get_debug_capability(name),
                 EnvironmentExtends::None => {
                     return Ok(None);
                 }
@@ -201,6 +227,47 @@ pub struct RunnerRegistration {
     pub source_name: cm_rust::CapabilityName,
 }
 
+/// The set of debug capabilities available in this environment.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DebugRegistry {
+    debug_capabilities: HashMap<cm_rust::CapabilityName, DebugRegistration>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DebugRegistration {
+    pub source: cm_rust::RegistrationSource,
+    pub source_name: cm_rust::CapabilityName,
+}
+
+impl Default for DebugRegistry {
+    fn default() -> Self {
+        Self { debug_capabilities: HashMap::new() }
+    }
+}
+
+impl From<Vec<cm_rust::DebugRegistration>> for DebugRegistry {
+    fn from(regs: Vec<cm_rust::DebugRegistration>) -> Self {
+        let mut debug_capabilities = HashMap::new();
+        for reg in regs {
+            match reg {
+                cm_rust::DebugRegistration::Protocol(r) => {
+                    debug_capabilities.insert(
+                        r.target_name,
+                        DebugRegistration { source_name: r.source_name, source: r.source },
+                    );
+                }
+            };
+        }
+        Self { debug_capabilities }
+    }
+}
+
+impl DebugRegistry {
+    pub fn get_capability(&self, name: &cm_rust::CapabilityName) -> Option<&DebugRegistration> {
+        self.debug_capabilities.get(name)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -252,6 +319,30 @@ mod tests {
                 .build(),
         );
         assert_matches!(environment.parent, Some(_));
+
+        let environment = Environment::from_decl(
+            &component,
+            &EnvironmentDeclBuilder::new()
+                .name("env")
+                .extends(fsys::EnvironmentExtends::None)
+                .stop_timeout(1234)
+                .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                    cm_rust::DebugProtocolRegistration {
+                        source_name: "source_name".into(),
+                        target_name: "target_name".into(),
+                        source: cm_rust::RegistrationSource::Parent,
+                    },
+                ))
+                .build(),
+        );
+        let expected_debug_capability: HashMap<cm_rust::CapabilityName, DebugRegistration> = hashmap! {
+            "target_name".into() =>
+            DebugRegistration {
+                source_name: "source_name".into(),
+                source: cm_rust::RegistrationSource::Parent,
+            }
+        };
+        assert_eq!(environment.debug_registry.debug_capabilities, expected_debug_capability);
     }
 
     // Each component declares an environment for their child that inherits from the component's
@@ -265,6 +356,16 @@ mod tests {
         let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
             "test".into() => runner_reg.clone()
         };
+
+        let debug_reg = DebugRegistration {
+            source_name: "source_name".into(),
+            source: cm_rust::RegistrationSource::Self_,
+        };
+
+        let debug_capabilities: HashMap<cm_rust::CapabilityName, DebugRegistration> = hashmap! {
+            "target_name".into() => debug_reg.clone()
+        };
+        let debug_registry = DebugRegistry { debug_capabilities };
 
         let mut resolver = MockResolver::new();
         resolver.add_component(
@@ -299,7 +400,11 @@ mod tests {
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            root_environment: Environment::new_root(
+                RunnerRegistry::new(runners),
+                resolvers,
+                debug_registry,
+            ),
             namespace_capabilities: vec![],
         })
         .await
@@ -311,6 +416,11 @@ mod tests {
             component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner.as_ref(), Some((None, r)) if r == &runner_reg);
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
+
+        let debug_capability =
+            component.environment.get_debug_capability(&"target_name".into()).unwrap();
+        assert_matches!(debug_capability.as_ref(), Some((None, d)) if d == &debug_reg);
+        assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
     }
@@ -327,6 +437,11 @@ mod tests {
             "test".into() => runner_reg.clone()
         };
 
+        let debug_reg = DebugRegistration {
+            source_name: "source_name".into(),
+            source: cm_rust::RegistrationSource::Parent,
+        };
+
         let mut resolver = MockResolver::new();
         resolver.add_component(
             "root",
@@ -340,7 +455,14 @@ mod tests {
                             source: cm_rust::RegistrationSource::Parent,
                             source_name: "test-src".into(),
                             target_name: "test".into(),
-                        }),
+                        })
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "source_name".into(),
+                                target_name: "target_name".into(),
+                                source: cm_rust::RegistrationSource::Parent,
+                            },
+                        )),
                 )
                 .build(),
         );
@@ -365,7 +487,11 @@ mod tests {
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            root_environment: Environment::new_root(
+                RunnerRegistry::new(runners),
+                resolvers,
+                DebugRegistry::default(),
+            ),
             namespace_capabilities: vec![],
         })
         .await?;
@@ -378,6 +504,13 @@ mod tests {
         let parent_moniker = &registered_runner.unwrap().0.unwrap().abs_moniker;
         assert_eq!(parent_moniker, &AbsoluteMoniker::root());
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
+
+        let debug_capability =
+            component.environment.get_debug_capability(&"target_name".into()).unwrap();
+        assert_matches!(debug_capability.as_ref(), Some((Some(_), d)) if d == &debug_reg);
+        let parent_moniker = &debug_capability.unwrap().0.unwrap().abs_moniker;
+        assert_eq!(parent_moniker, &AbsoluteMoniker::root());
+        assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
     }
@@ -394,6 +527,11 @@ mod tests {
             "test".into() => runner_reg.clone()
         };
 
+        let debug_reg = DebugRegistration {
+            source_name: "source_name".into(),
+            source: cm_rust::RegistrationSource::Parent,
+        };
+
         let mut resolver = MockResolver::new();
         resolver.add_component(
             "root",
@@ -407,7 +545,14 @@ mod tests {
                             source: cm_rust::RegistrationSource::Parent,
                             source_name: "test-src".into(),
                             target_name: "test".into(),
-                        }),
+                        })
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "source_name".into(),
+                                target_name: "target_name".into(),
+                                source: cm_rust::RegistrationSource::Parent,
+                            },
+                        )),
                 )
                 .build(),
         );
@@ -434,7 +579,11 @@ mod tests {
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            root_environment: Environment::new_root(
+                RunnerRegistry::new(runners),
+                resolvers,
+                DebugRegistry::default(),
+            ),
             namespace_capabilities: vec![],
         })
         .await?;
@@ -457,6 +606,13 @@ mod tests {
         assert_eq!(parent_moniker, &AbsoluteMoniker::root());
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
+        let debug_capability =
+            component.environment.get_debug_capability(&"target_name".into()).unwrap();
+        assert_matches!(debug_capability.as_ref(), Some((Some(_), d)) if d == &debug_reg);
+        let parent_moniker = &debug_capability.unwrap().0.unwrap().abs_moniker;
+        assert_eq!(parent_moniker, &AbsoluteMoniker::root());
+        assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
+
         Ok(())
     }
 
@@ -472,6 +628,16 @@ mod tests {
         let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
             "test".into() => runner_reg.clone()
         };
+
+        let debug_reg = DebugRegistration {
+            source_name: "source_name".into(),
+            source: cm_rust::RegistrationSource::Parent,
+        };
+
+        let debug_capabilities: HashMap<cm_rust::CapabilityName, DebugRegistration> = hashmap! {
+            "target_name".into() => debug_reg.clone()
+        };
+        let debug_registry = DebugRegistry { debug_capabilities };
 
         let mut resolver = MockResolver::new();
         resolver.add_component(
@@ -501,7 +667,11 @@ mod tests {
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+            root_environment: Environment::new_root(
+                RunnerRegistry::new(runners),
+                resolvers,
+                debug_registry,
+            ),
             namespace_capabilities: vec![],
         })
         .await
@@ -514,6 +684,11 @@ mod tests {
             component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner.as_ref(), Some((None, r)) if r == &runner_reg);
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
+
+        let debug_capability =
+            component.environment.get_debug_capability(&"target_name".into()).unwrap();
+        assert_matches!(debug_capability.as_ref(), Some((None, d)) if d == &debug_reg);
+        assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
     }
@@ -555,7 +730,11 @@ mod tests {
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
-            root_environment: Environment::new_root(RunnerRegistry::default(), registry),
+            root_environment: Environment::new_root(
+                RunnerRegistry::default(),
+                registry,
+                DebugRegistry::default(),
+            ),
             namespace_capabilities: vec![],
         })
         .await?;

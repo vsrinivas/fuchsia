@@ -704,6 +704,7 @@ fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys:
     extends: fsys::EnvironmentExtends,
     runners: Vec<RunnerRegistration>,
     resolvers: Vec<ResolverRegistration>,
+    debug_capabilities: Vec<DebugRegistration>,
     stop_timeout_ms: Option<u32>,
 });
 fidl_into_struct!(RunnerRegistration, RunnerRegistration, fsys::RunnerRegistration,
@@ -720,6 +721,18 @@ fsys::ResolverRegistration,
     source: RegistrationSource,
     scheme: String,
 });
+fidl_into_enum!(DebugRegistration, DebugRegistration, fsys::DebugRegistration, fsys::DebugRegistration,
+fsys::DebugRegistrationUnknown,
+{
+    Protocol(DebugProtocolRegistration),
+});
+fidl_into_struct!(DebugProtocolRegistration, DebugProtocolRegistration, fsys::DebugProtocolRegistration,
+fsys::DebugProtocolRegistration,
+{
+    source_name: CapabilityName,
+    source: RegistrationSource,
+    target_name: CapabilityName,
+});
 
 fidl_into_vec!(UseDecl, fsys::UseDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
@@ -729,6 +742,7 @@ fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
 fidl_into_vec!(RunnerRegistration, fsys::RunnerRegistration);
 fidl_into_vec!(ResolverRegistration, fsys::ResolverRegistration);
 fidl_into_vec!(EventSubscription, fsys::EventSubscription);
+fidl_into_vec!(DebugRegistration, fsys::DebugRegistration);
 fidl_translations_opt_type!(Vec<String>);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
@@ -1038,6 +1052,7 @@ fn to_fidl_dict(dict: HashMap<String, DictionaryValue>) -> fdata::Dictionary {
 pub enum UseSource {
     Parent,
     Framework,
+    Debug,
     Capability(CapabilityName),
 }
 
@@ -1046,6 +1061,7 @@ impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
         match self.unwrap() {
             fsys::Ref::Parent(_) => UseSource::Parent,
             fsys::Ref::Framework(_) => UseSource::Framework,
+            fsys::Ref::Debug(_) => UseSource::Debug,
             fsys::Ref::Capability(c) => UseSource::Capability(c.name.into()),
             _ => panic!("invalid UseSource variant"),
         }
@@ -1057,6 +1073,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for UseSource {
         Some(match self {
             UseSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             UseSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+            UseSource::Debug => fsys::Ref::Debug(fsys::DebugRef {}),
             UseSource::Capability(name) => {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
             }
@@ -2035,6 +2052,17 @@ mod tests {
                                ..fsys::ResolverRegistration::EMPTY
                            }
                        ]),
+                       debug_capabilities: Some(vec![
+                        fsys::DebugRegistration::Protocol(fsys::DebugProtocolRegistration {
+                            source_name: Some("some_protocol".to_string()),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "gtest".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("some_protocol".to_string()),
+                            ..fsys::DebugProtocolRegistration::EMPTY
+                           })
+                       ]),
                        stop_timeout_ms: Some(4567),
                        ..fsys::EnvironmentDecl::EMPTY
                    }
@@ -2275,6 +2303,13 @@ mod tests {
                                     source: RegistrationSource::Parent,
                                     scheme: "fuchsia-pkg".to_string(),
                                 }
+                            ],
+                            debug_capabilities: vec![
+                                DebugRegistration::Protocol(DebugProtocolRegistration {
+                                    source_name: "some_protocol".into(),
+                                    source: RegistrationSource::Child("gtest".to_string()),
+                                    target_name: "some_protocol".into(),
+                                })
                             ],
                             stop_timeout_ms: Some(4567),
                         }

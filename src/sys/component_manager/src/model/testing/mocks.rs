@@ -8,7 +8,7 @@ use {
         model::{
             binding::Binder,
             component::{BindReason, ComponentInstance, WeakComponentInstance},
-            environment::{Environment, RunnerRegistry},
+            environment::{DebugRegistry, Environment, RunnerRegistry},
             error::ModelError,
             policy::ScopedPolicyChecker,
             resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
@@ -393,7 +393,7 @@ impl Binder for FakeBinder {
         let resolver = ResolverRegistry::new();
         let root_component_url = "test:///root".to_string();
         Ok(ComponentInstance::new_root(
-            Environment::new_root(RunnerRegistry::default(), resolver),
+            Environment::new_root(RunnerRegistry::default(), resolver, DebugRegistry::default()),
             Weak::new(),
             Weak::new(),
             root_component_url,
