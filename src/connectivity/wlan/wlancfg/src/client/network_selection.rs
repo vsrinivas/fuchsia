@@ -510,6 +510,7 @@ mod tests {
                 testing::{
                     create_mock_cobalt_sender_and_receiver, generate_channel,
                     generate_random_bss_desc, generate_random_channel,
+                    poll_for_and_validate_sme_scan_request_and_send_results,
                     validate_sme_scan_request_and_send_results,
                 },
             },
@@ -519,7 +520,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-        fuchsia_async::{self as fasync, DurationExt},
+        fuchsia_async as fasync,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
         futures::{
             channel::{mpsc, oneshot},
@@ -1602,40 +1603,18 @@ mod tests {
             &mut exec,
             &mut test_values.sme_stream,
             &expected_scan_request,
-            mock_scan_results,
+            mock_scan_results.clone(),
         );
 
         // Process scan results
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
-        // It takes an indeterminate amount of time for the scan module to either send the results
-        // to the location sensor, or be notified by the component framework that the location
-        // sensor's channel is closed / non-existent. Keep trying to advance the future until the
-        // next expected event happens (i.e. an event is present on the sme stream for the expected
-        // active scan).
-        let mut counter = 0;
-        let sme_stream_result = loop {
-            counter += 1;
-            if counter > 1000 {
-                panic!("Failed to progress network selection future until active scan");
-            };
-            let sleep_duration = zx::Duration::from_millis(2);
-            exec.run_singlethreaded(fasync::Timer::new(sleep_duration.after_now()));
-            assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
-            match exec.run_until_stalled(&mut test_values.sme_stream.next()) {
-                Poll::Pending => continue,
-                other_result => {
-                    debug!("Required {} iterations to get an SME stream message", counter);
-                    break other_result;
-                }
-            }
-        };
         // An additional directed active scan should be made for the selected network
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![test_id_1.ssid.clone()],
             channels: vec![1],
         });
-        let mut mock_scan_results = vec![fidl_sme::BssInfo {
+        let mock_active_scan_results = vec![fidl_sme::BssInfo {
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
@@ -1649,23 +1628,12 @@ mod tests {
             compatible: true,
             bss_desc: bss_desc1_active.clone(),
         }];
-        assert_variant!(
-            sme_stream_result,
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, expected_scan_request);
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
-                    .expect("failed to send scan data");
-
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
+        poll_for_and_validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut network_selection_fut,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            mock_active_scan_results,
         );
 
         // Check that we pick a network
@@ -1681,6 +1649,15 @@ mod tests {
             })
         );
 
+        // Set the scan result cache's age so it is guaranteed to be old enough to trigger another
+        // passive scan. Without this manual adjustment, the test timing is such that sometimes the
+        // cache is fresh enough to use (therefore no new passive scan is performed).
+        let mut scan_result_guard =
+            exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+        scan_result_guard.updated_at =
+            zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_millis(1));
+        drop(scan_result_guard);
+
         // Ignore that network, check that we pick the other one
         let ignore_list = vec![test_id_1.clone()];
         let network_selection_fut = network_selector
@@ -1688,12 +1665,24 @@ mod tests {
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
+        // Check that a scan request was sent to the sme and send back results
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            mock_scan_results,
+        );
+
+        // Process scan results
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
         // An additional directed active scan should be made for the selected network
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![test_id_2.ssid.clone()],
             channels: vec![1],
         });
-        let mock_scan_results = vec![fidl_sme::BssInfo {
+        let mock_active_scan_results = vec![fidl_sme::BssInfo {
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: test_id_2.ssid.clone(),
             rssi_dbm: 10,
@@ -1707,11 +1696,12 @@ mod tests {
             compatible: true,
             bss_desc: bss_desc2_active.clone(),
         }];
-        validate_sme_scan_request_and_send_results(
+        poll_for_and_validate_sme_scan_request_and_send_results(
             &mut exec,
+            &mut network_selection_fut,
             &mut test_values.sme_stream,
             &expected_scan_request,
-            mock_scan_results,
+            mock_active_scan_results,
         );
 
         let results = exec.run_singlethreaded(&mut network_selection_fut);

@@ -4,11 +4,16 @@
 #![cfg(test)]
 
 use {
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+    core::pin::Pin,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_zircon as zx,
     futures::{prelude::*, stream::StreamFuture, task::Poll},
+    log::debug,
     wlan_common::assert_variant,
 };
 
+#[track_caller]
 pub fn poll_sme_req(
     exec: &mut fasync::Executor,
     next_sme_req: &mut StreamFuture<fidl_fuchsia_wlan_sme::ClientSmeRequestStream>,
@@ -30,6 +35,61 @@ pub fn validate_sme_scan_request_and_send_results(
     // Check that a scan request was sent to the sme and send back results
     assert_variant!(
         exec.run_until_stalled(&mut sme_stream.next()),
+        Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+            txn, req, control_handle: _
+        }))) => {
+            // Validate the request
+            assert_eq!(req, *expected_scan_request);
+            // Send all the APs
+            let (_stream, ctrl) = txn
+                .into_stream_and_control_handle().expect("error accessing control handle");
+            ctrl.send_on_result(&mut scan_results.iter_mut())
+                .expect("failed to send scan data");
+
+            // Send the end of data
+            ctrl.send_on_finished()
+                .expect("failed to send scan data");
+        }
+    );
+}
+
+/// It takes an indeterminate amount of time for the scan module to either send the results
+/// to the location sensor, or be notified by the component framework that the location
+/// sensor's channel is closed / non-existent. This function continues trying to advance the
+/// future until the next expected event happens (e.g. an event is present on the sme stream
+/// for the expected active scan).
+#[track_caller]
+pub fn poll_for_and_validate_sme_scan_request_and_send_results(
+    exec: &mut fasync::Executor,
+    network_selection_fut: &mut Pin<&mut impl futures::Future>,
+    sme_stream: &mut fidl_sme::ClientSmeRequestStream,
+    expected_scan_request: &fidl_sme::ScanRequest,
+    mut scan_results: Vec<fidl_sme::BssInfo>,
+) {
+    let mut counter = 0;
+    let sme_stream_result = loop {
+        counter += 1;
+        if counter > 1000 {
+            panic!("Failed to progress network selection future until active scan");
+        };
+        let sleep_duration = zx::Duration::from_millis(2);
+        exec.run_singlethreaded(fasync::Timer::new(sleep_duration.after_now()));
+        assert_variant!(
+            exec.run_until_stalled(network_selection_fut),
+            Poll::Pending,
+            "Did not get 'poll::Pending' on network_selection_fut"
+        );
+        match exec.run_until_stalled(&mut sme_stream.next()) {
+            Poll::Pending => continue,
+            other_result => {
+                debug!("Required {} iterations to get an SME stream message", counter);
+                break other_result;
+            }
+        }
+    };
+
+    assert_variant!(
+        sme_stream_result,
         Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
             txn, req, control_handle: _
         }))) => {
