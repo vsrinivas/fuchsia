@@ -28,8 +28,8 @@ Integration tests are also available in the `${PROJECT_NAME}_integration_tests`
 package.
 
 ```
-$ fx run-test ${PROJECT_NAME}_tests
-$ fx run-test ${PROJECT_NAME}_integration_tests
+$ fx test ${PROJECT_NAME}_tests
+$ fx test ${PROJECT_NAME}_integration_tests
 ```
 
 ## Source layout
