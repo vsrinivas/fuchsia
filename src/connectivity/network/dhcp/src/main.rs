@@ -10,9 +10,10 @@ use {
         configuration,
         protocol::{Message, SERVER_PORT},
         server::{
-            get_server_id_from, Server, ServerAction, ServerDispatcher, ServerError,
-            DEFAULT_STASH_ID,
+            get_server_id_from, DataStore as _, Server, ServerAction, ServerDispatcher,
+            ServerError, DEFAULT_STASH_ID,
         },
+        stash::Stash,
     },
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
@@ -46,7 +47,7 @@ async fn main() -> Result<(), Error> {
     let () = fuchsia_syslog::init().context("cannot init logger")?;
     log::info!("starting");
 
-    let stash = dhcp::stash::Stash::new(DEFAULT_STASH_ID).context("failed to instantiate stash")?;
+    let stash = Stash::new(DEFAULT_STASH_ID).context("failed to instantiate stash")?;
     let default_params = configuration::ServerParameters {
         server_ips: vec![],
         lease_length: dhcp::configuration::LeaseLength {
@@ -54,11 +55,11 @@ async fn main() -> Result<(), Error> {
             max_seconds: DEFAULT_LEASE_DURATION_SECONDS,
         },
         managed_addrs: dhcp::configuration::ManagedAddresses {
-            network_id: std::net::Ipv4Addr::UNSPECIFIED,
-            broadcast: std::net::Ipv4Addr::UNSPECIFIED,
+            network_id: Ipv4Addr::UNSPECIFIED,
+            broadcast: Ipv4Addr::UNSPECIFIED,
             mask: std::convert::TryInto::try_into(0u8).unwrap(),
-            pool_range_start: std::net::Ipv4Addr::UNSPECIFIED,
-            pool_range_stop: std::net::Ipv4Addr::UNSPECIFIED,
+            pool_range_start: Ipv4Addr::UNSPECIFIED,
+            pool_range_stop: Ipv4Addr::UNSPECIFIED,
         },
         permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
         static_assignments: dhcp::configuration::StaticAssignments(
@@ -146,7 +147,7 @@ trait SocketServerDispatcher: ServerDispatcher {
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError>;
 }
 
-impl SocketServerDispatcher for Server {
+impl SocketServerDispatcher for Server<Stash> {
     type Socket = UdpSocket;
 
     fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error> {
@@ -388,7 +389,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
 
 async fn define_msg_handling_loop_future(
     sock: UdpSocket,
-    server: &RefCell<ServerDispatcherRuntime<Server>>,
+    server: &RefCell<ServerDispatcherRuntime<Server<Stash>>>,
 ) -> Result<Void, Error> {
     let mut handler = MessageHandler::new(server);
     let mut buf = vec![0u8; BUF_SZ];
@@ -406,7 +407,7 @@ async fn define_msg_handling_loop_future(
 }
 
 fn define_lease_expiration_handler_future<'a>(
-    server: &'a RefCell<ServerDispatcherRuntime<Server>>,
+    server: &'a RefCell<ServerDispatcherRuntime<Server<Stash>>>,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
     expiration_interval
@@ -416,12 +417,13 @@ fn define_lease_expiration_handler_future<'a>(
 }
 
 fn define_running_server_fut<'a, S>(
-    server: &'a RefCell<ServerDispatcherRuntime<Server>>,
+    server: &'a RefCell<ServerDispatcherRuntime<Server<Stash>>>,
     socket_stream: S,
 ) -> impl Future<Output = Result<(), Error>> + 'a
 where
-    S: futures::Stream<Item = ServerSocketCollection<<Server as SocketServerDispatcher>::Socket>>
-        + 'static,
+    S: futures::Stream<
+        Item = ServerSocketCollection<<Server<Stash> as SocketServerDispatcher>::Socket>,
+    > + 'static,
 {
     socket_stream.map(Ok).try_for_each(move |socket_collection| async move {
         let ServerSocketCollection { sockets, abort_registration } = socket_collection;

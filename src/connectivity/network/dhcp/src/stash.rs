@@ -4,7 +4,7 @@
 
 use crate::configuration::ServerParameters;
 use crate::protocol::{identifier::ClientIdentifier, DhcpOption, OptionCode};
-use crate::server::{CachedClients, CachedConfig};
+use crate::server::{CachedClients, CachedConfig, DataStore};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr as _;
 use std::string::ToString as _;
@@ -45,78 +45,33 @@ pub enum StashError {
     StashConnect(#[source] anyhow::Error),
 }
 
-const OPTIONS_KEY: &'static str = "options";
-const PARAMETERS_KEY: &'static str = "parameters";
-const CLIENT_KEY_PREFIX: &'static str = "client";
-#[cfg(test)]
-pub(crate) const CLIENT_KEY_PREFIX_FOR_TEST: &'static str = CLIENT_KEY_PREFIX;
-
-impl Stash {
-    /// Instantiates a new `Stash` value.
-    ///
-    /// The newly instantiated value will use `id` to identify itself with the `fuchsia.stash`
-    /// service.
-    pub fn new(id: &str) -> Result<Self, StashError> {
-        Self::new_with_prefix(id, CLIENT_KEY_PREFIX)
-    }
-
-    fn new_with_prefix(id: &str, prefix: &str) -> Result<Self, StashError> {
-        if prefix.is_empty() {
-            return Err(StashError::EmptyPrefix);
-        }
-        let invalid_chars: HashSet<char> =
-            prefix.matches(&['-', ':'][..]).filter_map(|s| char::from_str(s).ok()).collect();
-        if !invalid_chars.is_empty() {
-            return Err(StashError::InvalidPrefix { prefix: prefix.to_string(), invalid_chars });
-        }
-        let store_client = fuchsia_component::client::connect_to_service::<
-            fidl_fuchsia_stash::SecureStoreMarker,
-        >()
-        .map_err(StashError::StashConnect)?;
-        let () = store_client.identify(id)?;
-        let (proxy, accessor_server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_stash::StoreAccessorMarker>()?;
-        let () = store_client.create_accessor(false, accessor_server)?;
-        let prefix = prefix.to_string();
-        Ok(Stash { prefix, proxy })
-    }
+#[async_trait::async_trait]
+impl DataStore for Stash {
+    type Error = StashError;
 
     /// Stores the `client_config` value with the `client_id` key in `fuchsia.stash`.
     ///
     /// This function stores the `client_config` as a serialized JSON string.
-    pub fn store_client_config<'a>(
-        &'a self,
+    fn store_client_config(
+        &self,
         client_id: &ClientIdentifier,
-        client_config: &'a CachedConfig,
-    ) -> Result<(), StashError> {
+        client_config: &CachedConfig,
+    ) -> Result<(), Self::Error> {
         self.store(&self.client_key(client_id), client_config)
     }
 
     /// Stores `opts` in `fuchsia.stash`.
     ///
     /// This function stores the `opts` as a serialized JSON string.
-    pub fn store_options(&self, opts: &[DhcpOption]) -> Result<(), StashError> {
+    fn store_options(&self, opts: &[DhcpOption]) -> Result<(), Self::Error> {
         self.store(OPTIONS_KEY, opts)
     }
 
     /// Stores `params` in `fuchsia.stash`.
     ///
     /// This function stores the `params` as a serialized JSON string.
-    pub fn store_parameters(&self, params: &ServerParameters) -> Result<(), StashError> {
+    fn store_parameters(&self, params: &ServerParameters) -> Result<(), Self::Error> {
         self.store(PARAMETERS_KEY, params)
-    }
-
-    fn store<T>(&self, key: &str, v: &T) -> Result<(), StashError>
-    where
-        T: serde::Serialize + std::fmt::Debug + ?Sized,
-    {
-        let mut v = fidl_fuchsia_stash::Value::Stringval(
-            serde_json::to_string(v)
-                .map_err(|e| StashError::JsonSerialization(key.to_string(), e))?,
-        );
-        let () = self.proxy.set_value(key, &mut v)?;
-        let () = self.proxy.commit()?;
-        Ok(())
     }
 
     /// Loads a `CachedClients` map from data stored in `fuchsia.stash`.
@@ -125,7 +80,7 @@ impl Stash {
     /// the JSON string values, and load the resulting structured data into a `CachedClients`
     /// hashmap. Any key-value pair which could not be parsed or deserialized will be removed and
     /// skipped.
-    pub async fn load_client_configs(&self) -> Result<CachedClients, StashError> {
+    async fn load_client_configs(&self) -> Result<CachedClients, Self::Error> {
         let (iter, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()?;
         let () = self.proxy.get_prefix(&self.prefix, server)?;
@@ -170,7 +125,7 @@ impl Stash {
     }
 
     /// Loads a map of `OptionCode`s to `DhcpOption`s from data stored in `fuchsia.stash`.
-    pub async fn load_options(&self) -> Result<HashMap<OptionCode, DhcpOption>, StashError> {
+    async fn load_options(&self) -> Result<HashMap<OptionCode, DhcpOption>, Self::Error> {
         let val = self.proxy.get_value(&OPTIONS_KEY.to_string()).await?;
         let val = match val {
             Some(v) => v,
@@ -192,7 +147,7 @@ impl Stash {
     }
 
     /// Loads a new instance of `ServerParameters` from data stored in `fuchsia.stash`.
-    pub async fn load_parameters(&self) -> Result<ServerParameters, StashError> {
+    async fn load_parameters(&self) -> Result<ServerParameters, Self::Error> {
         let val = self
             .proxy
             .get_value(&PARAMETERS_KEY.to_string())
@@ -208,18 +163,66 @@ impl Stash {
         }
     }
 
-    fn rm_key(&self, key: &str) -> Result<(), StashError> {
-        let () = self.proxy.delete_value(key)?;
-        let () = self.proxy.commit()?;
-        Ok(())
-    }
-
     /// Deletes the stash entry associated with `client`, if any.
     ///
     /// This function immediately commits the deletion operation to the Stash, i.e. there is no
     /// batching of delete operations.
-    pub fn delete(&self, client_id: &ClientIdentifier) -> Result<(), StashError> {
+    fn delete(&self, client_id: &ClientIdentifier) -> Result<(), Self::Error> {
         self.rm_key(&self.client_key(client_id))
+    }
+}
+
+const OPTIONS_KEY: &'static str = "options";
+const PARAMETERS_KEY: &'static str = "parameters";
+const CLIENT_KEY_PREFIX: &'static str = "client";
+
+impl Stash {
+    /// Instantiates a new `Stash` value.
+    ///
+    /// The newly instantiated value will use `id` to identify itself with the `fuchsia.stash`
+    /// service.
+    pub fn new(id: &str) -> Result<Self, StashError> {
+        Self::new_with_prefix(id, CLIENT_KEY_PREFIX)
+    }
+
+    fn new_with_prefix(id: &str, prefix: &str) -> Result<Self, StashError> {
+        if prefix.is_empty() {
+            return Err(StashError::EmptyPrefix);
+        }
+        let invalid_chars: HashSet<char> =
+            prefix.matches(&['-', ':'][..]).map(|s| char::from_str(s).unwrap()).collect();
+        if !invalid_chars.is_empty() {
+            return Err(StashError::InvalidPrefix { prefix: prefix.to_string(), invalid_chars });
+        }
+        let store_client = fuchsia_component::client::connect_to_service::<
+            fidl_fuchsia_stash::SecureStoreMarker,
+        >()
+        .map_err(StashError::StashConnect)?;
+        let () = store_client.identify(id)?;
+        let (proxy, accessor_server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_stash::StoreAccessorMarker>()?;
+        let () = store_client.create_accessor(false, accessor_server)?;
+        let prefix = prefix.to_string();
+        Ok(Stash { prefix, proxy })
+    }
+
+    fn store<T>(&self, key: &str, v: &T) -> Result<(), StashError>
+    where
+        T: serde::Serialize + std::fmt::Debug + ?Sized,
+    {
+        let mut v = fidl_fuchsia_stash::Value::Stringval(
+            serde_json::to_string(v)
+                .map_err(|e| StashError::JsonSerialization(key.to_string(), e))?,
+        );
+        let () = self.proxy.set_value(key, &mut v)?;
+        let () = self.proxy.commit()?;
+        Ok(())
+    }
+
+    fn rm_key(&self, key: &str) -> Result<(), StashError> {
+        let () = self.proxy.delete_value(key)?;
+        let () = self.proxy.commit()?;
+        Ok(())
     }
 
     /// Clears all configuration data from `fuchsia.stash`.
