@@ -7,6 +7,11 @@ library fuchsia.driver.framework;
 using fuchsia.component;
 
 using zx;
+alias NodePropertyKey = string:256;
+alias NodePropertyValueUint = uint32;
+alias NodePropertyValueString = string:256;
+alias NodePropertyValueBool = bool;
+alias NodePropertyValueEnum = string:256;
 
 const uint8 MAX_OFFER_COUNT = 64;
 const uint8 MAX_SYMBOL_COUNT = 64;

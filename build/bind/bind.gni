@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/fidl/fidl.gni")
 import("//build/host.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
@@ -300,14 +301,36 @@ template("bind_rules") {
 #   public_deps (optional)
 #     [list of labels]: List of other bind_library targets included by the library.
 #
+#   name (optional)
+#     [string] Name of the library. Defaults to the target's name. This is only used when
+#     fidl_target (see below) is not provided, to set the generated FIDL target name.
+#
+#   fidl_target (optional)
+#     [label]: The FIDL library target. Defaults to the FIDL library name, which is the bind
+#     library name prepended with the `bind` namespace.
+#
 #   testonly, visibility
 #     Forwarded from invoker.
 #
 template("bind_library") {
   assert(defined(invoker.source), "Need a source file")
 
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  } else {
+    library_name = target_name
+  }
+
+  fidl_file = "${target_gen_dir}/bind.${library_name}.fidl"
+  if (defined(invoker.fidl_target)) {
+    fidl_target = "${invoker.fidl_target}"
+  } else {
+    fidl_target = "bind.${library_name}"
+  }
+
   test_data_dir = "${target_out_dir}/test_data/bind-tests/"
   test_data_target = "${target_name}_test_data"
+
   copy(test_data_target) {
     visibility = [ ":*" ]
     sources = [ invoker.source ]
@@ -326,7 +349,10 @@ template("bind_library") {
                                  root_build_dir)
     }
 
-    deps = [ ":${test_data_target}" ]
+    deps = [
+      ":${fidl_target}",
+      ":${test_data_target}",
+    ]
 
     forward_variables_from(invoker,
                            [
@@ -334,5 +360,48 @@ template("bind_library") {
                              "testonly",
                              "visibility",
                            ])
+  }
+
+  if (current_toolchain == fidl_toolchain) {
+    # Generates a FIDL file with all the generated FIDL file. It is only ran in
+    # the FIDL toolchain because we want to run this conversion only once.
+
+    fidl_file_target = "${target_name}_fidl"
+
+    compiled_action(fidl_file_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      tool = "//tools/bindc:bin"
+      tool_output_name = "bindc"
+
+      sources = [ invoker.source ]
+
+      args = [
+        "generate",
+        "--output",
+        rebase_path("${fidl_file}", root_build_dir),
+        rebase_path("${invoker.source}", root_build_dir),
+      ]
+
+      outputs = [ fidl_file ]
+    }
+
+    fidl(fidl_target) {
+      sources = [ "${fidl_file}" ]
+      non_fidl_deps = [ ":${fidl_file_target}" ]
+      should_lint = false
+      public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
+    }
+  } else {
+    # The non-FIDL toolchain FIDL libraries are built normally; except based
+    # off of the generated FIDL file.
+    fidl(fidl_target) {
+      sources = [ fidl_file ]
+      public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
+    }
   }
 }
