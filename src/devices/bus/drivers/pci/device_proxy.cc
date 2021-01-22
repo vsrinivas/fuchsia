@@ -11,10 +11,10 @@
 
 #include <cstring>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 
 #include "common.h"
+#include "src/devices/bus/drivers/pci/pci_proxy_bind.h"
 
 #define RPC_ENTRY zxlogf(TRACE, "[%s] %s: entry", cfg_->addr(), __func__)
 
@@ -356,7 +356,4 @@ static constexpr zx_driver_ops_t pci_device_proxy_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(pci_device_proxy, pci_device_proxy_driver_ops, "zircon", "0.1", 1)
-    BI_ABORT_IF_AUTOBIND,
-ZIRCON_DRIVER_END(pci_device_proxy)
+ZIRCON_DRIVER(pci_device_proxy, pci_device_proxy_driver_ops, "zircon", "0.1");

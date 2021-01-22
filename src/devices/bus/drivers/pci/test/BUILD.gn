@@ -78,6 +78,7 @@ driver_module("pci_fake") {
   testonly = true
   sources = [ "driver/fake_bus_driver.cc" ]
   public_deps = [
+    "driver:fake_pci_bus_driver_bind",
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
@@ -110,6 +111,7 @@ driver_module("pci_protocol_test_driver") {
   }
   sources = [ "driver/protocol_test_driver.cc" ]
   deps = [
+    "driver:pci_protocol_test_driver_bind",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/lib/driver",
@@ -128,5 +130,6 @@ group("tests") {
   deps = [
     ":pci-driver-test",
     ":pci-unit-test",
+    "driver:tests",
   ]
 }

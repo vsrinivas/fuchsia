@@ -4,13 +4,13 @@
 
 #include "fake_bus_driver.h"
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 
 #include "../../config.h"
 #include "../../device.h"
 #include "../fakes/test_device.h"
 #include "driver_tests.h"
+#include "src/devices/bus/drivers/pci/test/driver/fake_pci_bus_driver_bind.h"
 
 namespace pci {
 
@@ -63,10 +63,4 @@ static const zx_driver_ops_t fake_pci_bus_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(fake_pci_bus_driver, fake_pci_bus_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PCI_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, 0),
-    BI_MATCH()
-ZIRCON_DRIVER_END(fake_pci_bus_driver)
+ZIRCON_DRIVER(fake_pci_bus_driver, fake_pci_bus_driver_ops, "zircon", "0.1");

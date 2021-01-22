@@ -17,7 +17,6 @@
 #include <array>
 #include <optional>
 
-#include <ddk/binding.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -31,6 +30,7 @@
 #include "capabilities/msix.h"
 #include "common.h"
 #include "ref_counted.h"
+#include "src/devices/bus/drivers/pci/pci_bind.h"
 #include "upstream_node.h"
 
 namespace pci {

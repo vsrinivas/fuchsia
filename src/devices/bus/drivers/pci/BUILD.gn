@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("pci.gni")
 
@@ -35,14 +36,12 @@ source_set("user_pci") {
     "upstream_node.cc",
   ]
   public_deps = [
+    ":pci_bind",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.pciroot",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -62,16 +61,29 @@ source_set("user_pci") {
 source_set("user_pci.proxy") {
   sources = [ "device_proxy.cc" ]
   public_deps = [
+    ":pci_proxy_bind",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/pretty",
+  ]
+}
+
+bind_rules("pci_proxy_bind") {
+  disable_autobind = true
+  output = "pci_proxy_bind.h"
+}
+
+bind_rules("pci_bind") {
+  rules = "pci.bind"
+  output = "pci_bind.h"
+  tests = "pci_bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.pciroot",
+    "//src/devices/bind/fuchsia.platform",
   ]
 }
 
@@ -88,9 +100,11 @@ if (platform_enable_user_pci) {
       # The driver needs bind glue, unlike tests.
       "bind.cc",
     ]
-    deps = [ ":user_pci" ]
+    deps = [
+      ":pci_bind",
+      ":user_pci",
+    ]
   }
-
   driver_module("bus-pci.proxy") {
     configs += [
       "//build/config:all_source",
@@ -99,7 +113,10 @@ if (platform_enable_user_pci) {
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
     }
-    deps = [ ":user_pci.proxy" ]
+    deps = [
+      ":pci_proxy_bind",
+      ":user_pci.proxy",
+    ]
   }
 } else {
   driver_module("bus-pci") {
@@ -112,20 +129,17 @@ if (platform_enable_user_pci) {
     }
     sources = [ "kpci/kpci.c" ]
     deps = [
+      ":pci_bind",
       "//sdk/banjo/fuchsia.hardware.pci",
       "//sdk/banjo/fuchsia.hardware.pciroot",
       "//sdk/banjo/fuchsia.hardware.platform.device",
       "//sdk/banjo/fuchsia.hardware.sysmem",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
-
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
       "//zircon/public/lib/fidl",
     ]
   }
-
   driver_module("bus-pci.proxy") {
     configs += [
       "//build/config:all_source",
@@ -136,23 +150,21 @@ if (platform_enable_user_pci) {
     }
     sources = [ "kpci/proxy.c" ]
     deps = [
+      ":pci_proxy_bind",
       "//sdk/banjo/fuchsia.hardware.pci",
       "//sdk/banjo/fuchsia.hardware.pciroot",
       "//sdk/banjo/fuchsia.hardware.platform.device",
       "//sdk/banjo/fuchsia.hardware.sysmem",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
-
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
     ]
   }
 }
-
 group("tests") {
   testonly = true
   deps = [
+    ":pci_bind_test",
     "test:pci-driver-test",
     "test:pci-unit-test",
   ]

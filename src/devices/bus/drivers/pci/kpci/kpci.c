@@ -13,7 +13,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/pci.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -21,6 +20,7 @@
 #include <hw/pci.h>
 
 #include "kpci-private.h"
+#include "src/devices/bus/drivers/pci/pci_bind.h"
 
 #define KPCIDBG(f, ...) zxlogf(DEBUG, "%s: " f, __func__, ##__VA_ARGS__)
 #define KPCIERR(f, ...) zxlogf(ERROR, "%s: " f, __func__, ##__VA_ARGS__)
@@ -395,11 +395,4 @@ static zx_driver_ops_t kpci_driver_ops = {
     .bind = pci_drv_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(pci, kpci_driver_ops, "zircon", "0.1", 5)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PCIROOT),
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_KPCI),
-ZIRCON_DRIVER_END(pci)
+ZIRCON_DRIVER(pci, kpci_driver_ops, "zircon", "0.1");

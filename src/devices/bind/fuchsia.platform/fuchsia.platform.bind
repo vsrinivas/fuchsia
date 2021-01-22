@@ -19,6 +19,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  KPCI = 0x03,
   RTC_PL031 = 0x06,
   OPTEE = 0x0E,
   FALLBACK_RTC = 0x0F,

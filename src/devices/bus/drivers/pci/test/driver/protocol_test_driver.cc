@@ -17,7 +17,6 @@
 
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
@@ -26,6 +25,7 @@
 #include "../../common.h"
 #include "../../config.h"
 #include "../fakes/test_device.h"
+#include "src/devices/bus/drivers/pci/test/driver/pci_protocol_test_driver_bind.h"
 
 ProtocolTestDriver* ProtocolTestDriver::instance_;
 
@@ -552,8 +552,4 @@ static const zx_driver_ops_t protocol_test_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(pci_protocol_test_driver, protocol_test_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, PCI_TEST_DRIVER_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, PCI_TEST_DRIVER_DID),
-ZIRCON_DRIVER_END(pci_protocol_test_driver)
+ZIRCON_DRIVER(pci_protocol_test_driver, protocol_test_driver_ops, "zircon", "0.1");

@@ -9,6 +9,7 @@ extend uint fuchsia.BIND_PROTOCOL {
 };
 
 extend uint fuchsia.BIND_PCI_VID {
+  TEST = 0x0eff,
   AMD = 0x1002,
   REALTEK = 0x10ec,
   NVIDIA = 0x10de,
@@ -19,6 +20,7 @@ extend uint fuchsia.BIND_PCI_VID {
 };
 
 extend uint fuchsia.BIND_PCI_DID {
+  TEST = 0x0fff,
   VIRTIO_DEV_TYPE_NETWORK = 0x1041,
   VIRTIO_DEV_TYPE_BLOCK = 0x1042,
   VIRTIO_DEV_TYPE_BALLOON = 0x104d,
