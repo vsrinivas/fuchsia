@@ -48,7 +48,6 @@ allowed_deps = [
     '//tools',
     # Will move to //tools or //sdk:
     '//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)',
-    '//zircon/public/tool',
 
     # This is currently implicitly generated as a dependency on any C++
     # generation of a FIDL target.
