@@ -8,8 +8,8 @@ in pkgfs or other external sources belonging to the `fuchsia.com` repo.
 
 ## Building
 
-The `universe-resolver` component should be part of the core product configuration and be
-buildable by any `fx set` invocation.
+The `universe-resolver` component should only be included in eng builds.
+Include in your local build with `fx set ... --with-base //src/sys/universe-resolver`.
 
 ## Running
 
@@ -24,6 +24,7 @@ exposed resolver capability in an environment.
 ## Testing
 
 Unit tests are available in the `universe-resolver-unittests` package.
+Make sure they are included in your build: `fx set ... --with-base //src/sys/universe-resolver:tests`.
 
 ```
 $ fx test universe-resolver-unittests
