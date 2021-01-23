@@ -69,6 +69,9 @@ class Control : public ControlType,
                      CreateBuffer2Completer::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
+  void CreateSyncFence(zx::eventpair event, CreateSyncFenceCompleter::Sync& completer) override;
+
+  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) override;
 
   // Device protocol implementation.
@@ -77,6 +80,7 @@ class Control : public ControlType,
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   zx_status_t GoldfishControlGetColorBuffer(zx::vmo vmo, uint32_t* out_id);
+  zx_status_t GoldfishControlCreateSyncFence(zx::eventpair event);
 
   // Used by heaps. Removes a specific heap from the linked list.
   void RemoveHeap(Heap* heap);
@@ -100,7 +104,10 @@ class Control : public ControlType,
 
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
-  zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
+  zx_status_t ReadResultLocked(void* result, size_t size) TA_REQ(lock_);
+  zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_) {
+    return ReadResultLocked(result, sizeof(uint32_t));
+  }
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
   zx_status_t CreateBuffer2Locked(uint64_t size, uint32_t memory_property, uint32_t* id)
       TA_REQ(lock_);
@@ -115,6 +122,7 @@ class Control : public ControlType,
                                               uint32_t* result) TA_REQ(lock_);
   zx_status_t MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint64_t size, uint32_t* result)
       TA_REQ(lock_);
+  zx_status_t CreateSyncKHRLocked(uint64_t* glsync_out, uint64_t* syncthread_out) TA_REQ(lock_);
 
   fbl::Mutex lock_;
   ddk::GoldfishPipeProtocolClient pipe_;

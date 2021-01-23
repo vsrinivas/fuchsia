@@ -1358,6 +1358,31 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
   }
 }
 
+TEST(GoldfishControlTests, CreateSyncKhr) {
+  if (access("/dev/sys/platform/acpi/goldfish-sync", F_OK) != 0) {
+    GTEST_FAIL() << "Cannot access goldfish-sync device";
+  }
+
+  int fd = open("/dev/class/goldfish-control/000", O_RDWR);
+  EXPECT_GE(fd, 0);
+
+  zx::channel channel;
+  EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
+
+  llcpp::fuchsia::hardware::goldfish::ControlDevice::SyncClient control(std::move(channel));
+
+  zx::eventpair event_client, event_server;
+  zx_status_t status = zx::eventpair::create(0u, &event_client, &event_server);
+  {
+    auto result = control.CreateSyncFence(std::move(event_server));
+    ASSERT_TRUE(result.ok());
+  }
+
+  zx_signals_t pending;
+  status = event_client.wait_one(ZX_EVENTPAIR_SIGNALED, zx::deadline_after(zx::sec(10)), &pending);
+  EXPECT_EQ(status, ZX_OK);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     ColorBufferTests, GoldfishCreateColorBufferTest,
     testing::Values(llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType::RGBA,

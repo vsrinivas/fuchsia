@@ -528,6 +528,15 @@ void Control::CreateBuffer2(zx::vmo vmo,
   }
 }
 
+void Control::CreateSyncFence(zx::eventpair event, CreateSyncFenceCompleter::Sync& completer) {
+  zx_status_t status = GoldfishControlCreateSyncFence(std::move(event));
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess();
+  }
+}
+
 void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandle");
 
@@ -610,6 +619,24 @@ zx_status_t Control::GoldfishControlGetColorBuffer(zx::vmo vmo, uint32_t* out_id
   return ZX_OK;
 }
 
+zx_status_t Control::GoldfishControlCreateSyncFence(zx::eventpair event) {
+  fbl::AutoLock lock(&lock_);
+  uint64_t glsync = 0;
+  uint64_t syncthread = 0;
+  zx_status_t status = CreateSyncKHRLocked(&glsync, &syncthread);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "CreateSyncFence: cannot call rcCreateSyncKHR, status=%d", status);
+    return ZX_ERR_INTERNAL;
+  }
+
+  auto result = sync_timeline_->TriggerHostWait(glsync, syncthread, std::move(event));
+  if (!result.ok()) {
+    zxlogf(ERROR, "TriggerHostWait: FIDL call failed, status=%d", result.status());
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
 int32_t Control::WriteLocked(uint32_t cmd_size, int32_t* consumed_size) {
   TRACE_DURATION("gfx", "Control::Write", "cmd_size", cmd_size);
 
@@ -633,7 +660,7 @@ void Control::WriteLocked(uint32_t cmd_size) {
   ZX_DEBUG_ASSERT(consumed_size == static_cast<int32_t>(cmd_size));
 }
 
-zx_status_t Control::ReadResultLocked(uint32_t* result) {
+zx_status_t Control::ReadResultLocked(void* result, size_t size) {
   TRACE_DURATION("gfx", "Control::ReadResult");
 
   while (true) {
@@ -642,15 +669,15 @@ zx_status_t Control::ReadResultLocked(uint32_t* result) {
     buffer->cmd = PIPE_CMD_CODE_READ;
     buffer->status = PIPE_ERROR_INVAL;
     buffer->rw_params.ptrs[0] = io_buffer_.phys();
-    buffer->rw_params.sizes[0] = sizeof(*result);
+    buffer->rw_params.sizes[0] = static_cast<uint32_t>(size);
     buffer->rw_params.buffers_count = 1;
     buffer->rw_params.consumed_size = 0;
     pipe_.Exec(id_);
 
     // Positive consumed size always indicate a successful transfer.
     if (buffer->rw_params.consumed_size) {
-      ZX_DEBUG_ASSERT(buffer->rw_params.consumed_size == sizeof(*result));
-      *result = *static_cast<uint32_t*>(io_buffer_.virt());
+      ZX_DEBUG_ASSERT(buffer->rw_params.consumed_size == static_cast<int32_t>(size));
+      memcpy(result, io_buffer_.virt(), size);
       return ZX_OK;
     }
 
@@ -779,6 +806,55 @@ zx_status_t Control::MapGpaToBufferHandleLocked(uint32_t id, uint64_t gpa, uint6
   cmd->map_size = size;
 
   return ExecuteCommandLocked(kSize_rcMapGpaToBufferHandle2, result);
+}
+
+zx_status_t Control::CreateSyncKHRLocked(uint64_t* glsync_out, uint64_t* syncthread_out) {
+  TRACE_DURATION("gfx", "Control::CreateSyncKHRLocked");
+
+  constexpr size_t kAttribSize = 2u;
+
+  struct {
+    CreateSyncKHRCmdHeader header;
+    int32_t attribs[kAttribSize];
+    CreateSyncKHRCmdFooter footer;
+  } cmd = {
+      .header =
+          {
+              .op = kOP_rcCreateSyncKHR,
+              .size = kSize_rcCreateSyncKHRCmd + kAttribSize * sizeof(int32_t),
+              .type = EGL_SYNC_NATIVE_FENCE_ANDROID,
+              .attribs_size = kAttribSize * sizeof(int32_t),
+          },
+      .attribs =
+          {
+              EGL_SYNC_NATIVE_FENCE_FD_ANDROID,
+              EGL_NO_NATIVE_FENCE_FD_ANDROID,
+          },
+      .footer =
+          {
+              .attribs_size = kAttribSize * sizeof(int32_t),
+              .destroy_when_signaled = 1,
+              .size_glsync_out = kSize_GlSyncOut,
+              .size_syncthread_out = kSize_SyncThreadOut,
+          },
+  };
+
+  auto cmd_buffer = static_cast<uint8_t*>(io_buffer_.virt());
+  memcpy(cmd_buffer, &cmd, sizeof(cmd));
+
+  WriteLocked(static_cast<uint32_t>(sizeof(cmd)));
+
+  struct {
+    uint64_t glsync;
+    uint64_t syncthread;
+  } result;
+  zx_status_t status = ReadResultLocked(&result, kSize_GlSyncOut + kSize_SyncThreadOut);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *glsync_out = result.glsync;
+  *syncthread_out = result.syncthread;
+  return ZX_OK;
 }
 
 void Control::RemoveHeap(Heap* heap) {

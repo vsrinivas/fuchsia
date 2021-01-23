@@ -169,4 +169,14 @@ protocol ControlDevice {
     /// Fails if VMO is not associated with neither a color buffer nor a buffer.
     GetBufferHandle(zx.handle:VMO vmo)
         -> (zx.status res, uint32 id, BufferHandleType type);
+
+    /// Create a sync fence on goldfish control device. Client pass half of an
+    /// eventpair to this method, and `event` will signal its peer when all the
+    /// graphics work already queued on the EGL display context associated with
+    /// the control device when it is created has finished.
+    ///
+    /// Errors:
+    ///     - ZX_ERR_INTERNAL if device fail to create the fence or fail to
+    ///       trigger the wait.
+    CreateSyncFence(zx.handle:EVENTPAIR event) -> () error zx.status;
 };

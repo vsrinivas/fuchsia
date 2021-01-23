@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_RENDER_CONTROL_COMMANDS_H_
 
 #include <cstdint>
+#include <memory>
 
 namespace goldfish {
 
@@ -63,6 +64,43 @@ struct __attribute__((__packed__)) CreateBuffer2Cmd {
 };
 constexpr uint32_t kOP_rcCreateBuffer2 = 10053;
 constexpr uint32_t kSize_rcCreateBuffer2 = 20;
+
+constexpr int32_t EGL_SYNC_NATIVE_FENCE_ANDROID = 0x3144;
+constexpr int32_t EGL_SYNC_NATIVE_FENCE_FD_ANDROID = 0x3145;
+constexpr int32_t EGL_NO_NATIVE_FENCE_FD_ANDROID = -1;
+
+// Encoded rcCreateSyncKHR commands have the following layout:
+// - uint32_t  opcode
+// - uint32_t  total command size
+// - uint32_t  type                  [input argument]
+// - uint32_t  byte-size of attribs array
+// - int32_t[] attribs               [input argument]
+// - uint32_t  byte-size of attribs array
+// - int32_t   destroy_when_signaled [input argument]
+// - uint32_t  size of size_glsync_out     (output) [const]
+// - uint32_t  size of size_syncthread_out (output) [const]
+//
+// Since the size of attribs array is variable, the size of generated
+// command is also variable. So we separate the command into three parts:
+// header, attribs array, and footer.
+struct __attribute__((__packed__)) CreateSyncKHRCmdHeader {
+  uint32_t op;
+  uint32_t size;
+  uint32_t type;
+  uint32_t attribs_size;
+};
+
+struct __attribute__((__packed__)) CreateSyncKHRCmdFooter {
+  uint32_t attribs_size;
+  int32_t destroy_when_signaled;
+  uint32_t size_glsync_out;
+  uint32_t size_syncthread_out;
+};
+
+constexpr uint32_t kOP_rcCreateSyncKHR = 10029;
+constexpr uint32_t kSize_rcCreateSyncKHRCmd = 32;
+constexpr uint32_t kSize_GlSyncOut = sizeof(uint64_t);
+constexpr uint32_t kSize_SyncThreadOut = sizeof(uint64_t);
 
 }  // namespace goldfish
 
