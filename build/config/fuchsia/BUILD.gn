@@ -4,11 +4,10 @@
 
 import("//build/config/build_id.gni")
 import("//build/config/clang/clang.gni")
+import("//build/config/sanitizers/sanitizer_default_options.gni")
 import("//build/config/sysroot.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
-import(
-    "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
 import("//zircon/public/sysroot/rust.gni")
 
 assert(current_os == "fuchsia")

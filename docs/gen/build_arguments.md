@@ -84,7 +84,7 @@ injected that way can override that option's setting in this list.
 
 **Current value (from the default):** `["detect_stack_use_after_return=1"]`
 
-From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:16
+From //build/config/sanitizers/sanitizer_default_options.gni:16
 
 ### auto_login_to_guest
 Whether basemgr should use a random identifier for sessions, leading to
@@ -1838,7 +1838,7 @@ injected that way can override that option's setting in this list.
 
 **Current value (from the default):** `[]`
 
-From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:28
+From //build/config/sanitizers/sanitizer_default_options.gni:28
 
 ### magma_build_root
 
@@ -2882,7 +2882,7 @@ tests) can use the sanitizer_extra_options() mechanism instead.
 
 **Current value (from the default):** `[]`
 
-From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:60
+From //build/config/sanitizers/sanitizer_default_options.gni:60
 
 ### sdk_dirs
 The directories to search for parts of the SDK.
@@ -3266,7 +3266,7 @@ injected that way can override that option's setting in this list.
 
 **Current value (from the default):** `["print_stacktrace=1", "halt_on_error=1"]`
 
-From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
+From //build/config/sanitizers/sanitizer_default_options.gni:40
 
 ### universal_variants
 

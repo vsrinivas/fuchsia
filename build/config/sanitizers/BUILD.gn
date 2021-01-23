@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
+import("//build/config/sanitizers/sanitizer_default_options.gni")
 import("//build/toolchain/variant.gni")
-import(
-    "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
 
 variant("asan") {
   common_flags = [ "-fsanitize=address" ]
@@ -149,10 +148,6 @@ sanitizer_extra_options("suppress-asan-stack-use-after-return") {
     "//zircon/system/ulib/c/test/sanitizer:*",
 
     # TODO(fxbug.dev/59214): allow only necessary third-party or TODO(bug-filed) cases
-
-    # TODO(fxbug.dev/59214): These are constrained indirectly via the target of the same
-    # name in //zircon/public/gn/config/instrumentation.
-    "//zircon/public/lib/*",
 
     # TODO(fxbug.dev/62979): fix input_unit_tests
     "//src/lib/ui/input:gesture_tests",

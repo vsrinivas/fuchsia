@@ -70,32 +70,23 @@ sanitizer_default_options_args = [
 ]
 
 # Adapt to being used in the Fuchsia GN build or in the Zircon build.
-if ("//zircon/" == "//") {
-  _sanitizer_config_dir = "//zircon/public/gn/config/instrumentation"
-  _hidden_config = "//zircon/public/gn/config:visibility_hidden"
-  _no_sanitizers_config = "//zircon/public/gn/config:no_sanitizers"
-  _is_kernel = is_kernel
-
-  _tags = toolchain.tags
+if (zircon_toolchain == false) {
+  _sanitizer_config_dir = "//build/config/sanitizers"
+  _hidden_config = "//build/config:symbol_visibility_hidden"
+  _no_sanitizers_config = "//build/config:no_sanitizers"
+  _is_kernel = false
 } else {
-  if (zircon_toolchain == false) {
-    _sanitizer_config_dir = "//build/config/sanitizers"
-    _hidden_config = "//build/config:symbol_visibility_hidden"
-    _no_sanitizers_config = "//build/config:no_sanitizers"
-    _is_kernel = false
-  } else {
-    _sanitizer_config_dir = "//build/config/zircon/instrumentation"
-    _hidden_config = "//build/config/zircon:visibility_hidden"
-    _no_sanitizers_config = "//build/config/zircon:no_sanitizers"
-    _is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
-                 toolchain_variant.tags
-  }
+  _sanitizer_config_dir = "//build/config/zircon/instrumentation"
+  _hidden_config = "//build/config/zircon:visibility_hidden"
+  _no_sanitizers_config = "//build/config/zircon:no_sanitizers"
+  _is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
+               toolchain_variant.tags
+}
 
-  if (defined(toolchain_variant.tags)) {
-    _tags = toolchain_variant.tags
-  } else {
-    _tags = []
-  }
+if (defined(toolchain_variant.tags)) {
+  _tags = toolchain_variant.tags
+} else {
+  _tags = []
 }
 
 # Subroutine of the templates below.  A source_set() using the same source
@@ -158,8 +149,7 @@ template("_sanitizer_default_options_target") {
         "SANITIZER_DEFAULT_OPTIONS_STRING=\"${string}\"",
       ]
 
-      this_dir = "//zircon/public/gn/config/instrumentation"
-      sources = [ "$this_dir/sanitizer_default_options.c" ]
+      sources = [ "//build/config/sanitizers/sanitizer_default_options.c" ]
 
       # The library archive is in the link, but there's no symbol reference
       # that would bring the object into the link from that archive.  So we
