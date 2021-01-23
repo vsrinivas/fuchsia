@@ -6,7 +6,6 @@
 
 mod ast_tests;
 mod codegen_tests;
-mod fidl_tests;
 mod negative_tests;
 
 /// Makes a banjo backend test.
@@ -34,7 +33,7 @@ macro_rules! codegen_test {
                     )*
                 };
 
-                let ast = banjo_lib::ast::BanjoAst::parse(pair_vec, Vec::new()).unwrap();
+                let ast = banjo_lib::ast::BanjoAst::parse(pair_vec).unwrap();
                 {
                     let mut backend: Box<dyn backends::Backend<'_, _>> =
                         Box::new(backends::$backend::new(&mut output $(, $subtype)?));

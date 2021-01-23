@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::fidl,
     crate::Rule,
     anyhow::{format_err, Error},
     pest::iterators::{Pair, Pairs},
@@ -1190,10 +1189,7 @@ impl BanjoAst {
         Ok(())
     }
 
-    pub fn parse(
-        pair_vec: Vec<Pairs<'_, Rule>>,
-        _fidl_vec: Vec<fidl::Ir>,
-    ) -> Result<Self, ParseError> {
+    pub fn parse(pair_vec: Vec<Pairs<'_, Rule>>) -> Result<Self, ParseError> {
         let mut primary_namespace = None;
         let mut namespaces = BTreeMap::default();
 

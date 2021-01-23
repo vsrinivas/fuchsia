@@ -7,4 +7,3 @@ use crate::parser::Rule;
 pub mod ast;
 pub mod backends;
 pub mod parser;
-pub mod fidl;

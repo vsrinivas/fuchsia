@@ -46,7 +46,6 @@ rustc_binary("banjo_bin") {
     "src/backends/templates/rust/struct.rs",
     "src/backends/templates/rust/union.rs",
     "src/backends/util.rs",
-    "src/fidl.rs",
     "src/main.rs",
     "src/parser.rs",
   ]
@@ -106,7 +105,6 @@ rustc_library("banjo_lib") {
     "src/backends/templates/rust/struct.rs",
     "src/backends/templates/rust/union.rs",
     "src/backends/util.rs",
-    "src/fidl.rs",
     "src/lib.rs",
     "src/parser.rs",
   ]
@@ -153,7 +151,6 @@ if (host_toolchain == current_toolchain) {
     sources = [
       "test/ast_tests.rs",
       "test/codegen_tests.rs",
-      "test/fidl_tests.rs",
       "test/negative_tests.rs",
       "test/rust/alignment.rs",
       "test/rust/attributes.rs",
@@ -294,7 +291,6 @@ if (host_toolchain == current_toolchain) {
       "test/cpp/protocol-array.h",
       "test/cpp/interface-internal.h",
       "test/c/example-1.h",
-      "test/fidl/test.fidl.json",
       "test/cpp/protocol-handle-internal.h",
       "test/cpp/example-4-internal.h",
       "test/ast/tables.test.ast",
