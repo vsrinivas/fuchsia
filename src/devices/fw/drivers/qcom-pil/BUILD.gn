@@ -5,8 +5,6 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
-import("//zircon/public/gn/firmware.gni")
-
 bind_rules("qcom_pil_bind") {
   rules = "qcom_pil.bind"
   output = "qcom_pil_bind.h"
@@ -44,29 +42,5 @@ driver_module("qcom-pil") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-  ]
-  data_deps = [ ":firmware" ]
-}
-
-firmware("firmware") {
-  sources = [
-    # TODO(andresoportus): remove files below, these are only included in testing builds until we
-    # load FW from non-volatile memory.
-    # "$firmware_dir/adsp.mdt",
-    # "$firmware_dir/adsp.b00",
-    # "$firmware_dir/adsp.b01",
-    # "$firmware_dir/adsp.b02",
-    # "$firmware_dir/adsp.b03",
-    # "$firmware_dir/adsp.b04",
-    # "$firmware_dir/adsp.b05",
-    # "$firmware_dir/adsp.b06",
-    # "$firmware_dir/adsp.b07",
-    # "$firmware_dir/adsp.b08",
-    # "$firmware_dir/adsp.b09",
-    # "$firmware_dir/adsp.b10",
-    # "$firmware_dir/adsp.b11",
-    # "$firmware_dir/adsp.b12",
-    # "$firmware_dir/adsp.b13",
-    # "$firmware_dir/adsp.b14",
   ]
 }
