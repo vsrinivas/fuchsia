@@ -15,11 +15,12 @@
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+
+#include "src/connectivity/bluetooth/hci/transport/uart/bt_transport_uart_bind.h"
 
 // The maximum HCI ACL frame size used for data transactions
 #define ACL_MAX_FRAME_SIZE 1029  // (1024 + 4 bytes for the ACL header + 1 byte packet indicator)
@@ -709,8 +710,4 @@ static zx_driver_ops_t bt_hci_driver_ops = {
     .bind = hci_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(bt_transport_uart, bt_hci_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SERIAL_IMPL_ASYNC),
-    BI_MATCH_IF(EQ, BIND_SERIAL_CLASS, fuchsia_hardware_serial_Class_BLUETOOTH_HCI),
-ZIRCON_DRIVER_END(bt_transport_uart)
+ZIRCON_DRIVER(bt_transport_uart, bt_hci_driver_ops, "zircon", "0.1");

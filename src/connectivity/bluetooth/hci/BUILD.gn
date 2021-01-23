@@ -18,6 +18,7 @@ group("tests") {
     "emulator:tests",
     "lib:tests",
     "passthrough:tests",
+    "transport/uart:tests",
     "transport/usb:tests",
     "vendor:tests",
   ]

@@ -1,0 +1,17 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Incorrect_Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.serial.BIND_PROTOCOL.IMPL_ASYNC",
+            "fuchsia.BIND_SERIAL_CLASS": "fuchsia.serial.BIND_SERIAL_CLASS.BLUETOOTH_HCI"
+        },
+        "expected": "match",
+        "name": "Correct_Protocol"
+    }
+]

@@ -9,3 +9,13 @@ extend uint fuchsia.BIND_PROTOCOL {
   IMPL = 88,
   IMPL_ASYNC = 125,
 };
+
+extend uint fuchsia.BIND_SERIAL_CLASS {
+  GENERIC = 1,
+  // A Bluetooth host controller
+  BLUETOOTH_HCI = 2,
+  // An interactive console
+  CONSOLE = 3,
+  // Kernel debug serial
+  KERNEL_DEBUG = 4,
+};
