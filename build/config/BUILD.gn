@@ -12,7 +12,6 @@ import("//build/toolchain/ccache.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 import("//build/toolchain/goma.gni")
 import("//build/unification/global_variables.gni")
-import("//zircon/public/gn/config/experimental_cxx_version.gni")
 
 declare_args() {
   if (is_fuchsia) {
@@ -32,6 +31,10 @@ declare_args() {
   # so it is not on by default.
   # TODO(fxbug.dev/57302): Enable v0 mangling by default.
   rust_v0_symbol_mangling = false
+
+  # **NOTE:** This is for **experimentation only** and should not normally be
+  # changed.  Set the version of the C++ standard to compile for, 17 or 20.
+  experimental_cxx_version = 17
 }
 
 # No frame pointers for host compiles.
