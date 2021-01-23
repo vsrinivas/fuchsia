@@ -52,5 +52,10 @@ void main() {
 
     final termsLink = webdriver.findElement(By.linkText('Terms'));
     expect(termsLink, isNotNull, reason: 'Cannot find text link "Terms".');
+
+    // Close the view.
+    await ermine.driver.requestData('close');
+    // Verify the view is closed.
+    await ermine.driver.waitForAbsent(find.text('simple_browser'));
   });
 }

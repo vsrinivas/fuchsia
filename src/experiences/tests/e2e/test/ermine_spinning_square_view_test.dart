@@ -34,7 +34,6 @@ void main() {
     const componentUrl =
         'fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx';
     await ermine.launch(componentUrl);
-    await ermine.component.search('spinning_square_view.cmx');
     // Get the view rect.
     final viewRect = await ermine.getViewRect(componentUrl);
     // Give the view couple of seconds to draw before taking its screenshot.
@@ -45,6 +44,7 @@ void main() {
     // spinning_square_view displays a red square on purple background.
     const purple = 0xffb73a67; //  (0xAABBGGRR)
     const red = 0xff5700f5; //  (0xAABBGGRR)
+    expect(histogram.keys.length, 2);
     expect(histogram[purple], isNotNull);
     expect(histogram[red], isNotNull);
     expect(histogram[purple] > histogram[red], isTrue);

@@ -38,6 +38,25 @@ void main() {
     expect(askResult, 'spinning_square_view');
   });
 
+  test('use ask to launch terminal and verify focus', () async {
+    await ermine.gotoOverview();
+    await ermine.driver.enterText('');
+    final terminalResult = find.text('terminal');
+    await ermine.driver.tap(terminalResult);
+
+    // The terminal view should be displayed in a window with title.
+    final terminalTitle = await ermine.driver.getText(find.text('terminal'));
+    expect(terminalTitle, 'terminal');
+
+    // The inspect data should show that the view has focus.
+    const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
+    final inspect = await ermine.waitForView(componentUrl);
+    expect(inspect['focused'], isTrue);
+
+    // Close the terminal view.
+    await ermine.driver.requestData('close');
+  });
+
   // TODO(http://fxbug.dev/60790): Implement this when input tool is ready.
   test('use ask to resolve spinning_square_view using input tool', () async {},
       skip: true);
