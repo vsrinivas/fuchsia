@@ -218,9 +218,6 @@ config("toolchain_version_stamp") {
 }
 
 config("relative_paths") {
-  # TODO(fxbug.dev/54161): Keep in sync with //zircon/public/gn/config:relative_paths
-  # until build unification completes.
-
   if (is_gcc) {
     if (use_goma) {
       # TODO(fxbug.dev/27308): `-fdebug-prefix-map` is also used by Goma to canonicalize
@@ -367,8 +364,6 @@ config("linker_string_merging") {
 # The linker_gc_$optimize configs are an exact parallel.  default_linker_gc
 # is separate from default_optimize so it can be removed separately.
 
-# NOTE: Keep in sync with //zircon/public/gn/config/BUILD.gn
-
 config("optimize_none") {
   cflags = [ "-O0" ]
   ldflags = cflags
@@ -480,8 +475,6 @@ config("default_linker_gc") {
 # the debuginfo argument. The default_debuginfo level is set to
 # debuginfo_$debuginfo for convenience, but individual targets can override
 # their debuginfo level by manually applying one of the configs below.
-
-# NOTE: Keep in sync with //zircon/public/gn/config/BUILD.gn
 
 config("debuginfo_none") {
   cflags = [ "-g0" ]
@@ -972,9 +965,6 @@ config("no_profile") {
     "-fno-coverage-mapping",
   ]
 }
-
-# IMPORTANT: Keep the configs below in sync with //zircon/public/gn/config/BUILD.zircon.gn
-# TODO(fxbug.dev/54322): Remove above comment after build unification.
 
 config("icf") {
   # This changes C/C++ semantics and might be incompatible with third-party

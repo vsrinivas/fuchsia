@@ -9,8 +9,8 @@ if (is_debug) {
   default_optimize = "speed"
 }
 
-# NOTE: Keep in sync with //zircon/public/gn/config/levels.gni
-# TODO: Unify the default value between the two builds.
+# NOTE: Keep in sync with //build/config/zircon/levels.gni
+# TODO: Unify the default value between the two files.
 declare_args() {
   # * `none`: really unoptimized, usually only build-tested and not run
   # * `debug`: "optimized for debugging", light enough to avoid confusion
@@ -45,7 +45,7 @@ if (clang_ml_inliner) {
   assert(optimize == "size", "clang_ml_inliner requires `optimize = \"size\"`")
 }
 
-# NOTE: Keep in sync with //zircon/public/gn/config/levels.gni
+# NOTE: Keep in sync with //build/config/zircon/levels.gni
 declare_args() {
   # * `none` means no debugging information
   # * `backtrace` means sufficient debugging information to symbolize backtraces

@@ -6,9 +6,6 @@ import("//build/config/clang/clang.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/zircon/clang.gni")
 
-# NOTE: Keep in sync with //zircon/public/gn/toolchain/toolchain_runtime_deps.gni
-# until build unification completes.
-
 # ## runtime.json
 #
 # Each toolchain (i.e. Clang or rustc) provides a "runtime.json" file

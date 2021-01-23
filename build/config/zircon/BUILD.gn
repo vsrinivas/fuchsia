@@ -11,10 +11,10 @@ import("//build/config/zircon/levels.gni")
 import("//build/toolchain/goma.gni")
 import("//build/unification/global_variables.gni")
 
-# NOTE: This file was written from the content of
-# //zircon/public/gn/config/BUILD.zircon.gn and provides the GN configs used
-# by zircon toolchains exclusively. See //build/toolchain/zircon/BUILD.gn.
+# NOTE: This file provides the GN configs used by Zircon toolchains
+# exclusively. See //build/toolchain/zircon/zircon_toolchain.gni.
 #
+# They come from a rewrite of the configs from the old Zircon build.
 # Major differences in the rewrite:
 #
 #  - Uses |zircon_toolchain| global variable, instead of |toolchain|.
@@ -326,11 +326,6 @@ config("linker_string_merging") {
 # configs, but some of them have slightly different values. Until build
 # unification completes, the configs below should match the Zircon build
 # values instead.
-#
-# NOTE: Keep in sync with //zircon/public/gn:optimize_${level} definitions,
-# keeping in mind that the Zircon build `optimize` variable is named
-# `zircon_optimize` in the Fuchsia build.
-
 config("optimize_none") {
   configs = [ "//build/config:optimize_none" ]
 }

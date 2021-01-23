@@ -325,8 +325,7 @@ if (zircon_toolchain == false) {
     default_common_binary_configs += [ "//build/config:shared_library_config" ]
   }
 } else {
-  # This list is adapted from the `standard_configs` list defined in
-  # //zircon/public/gn/config/standard.gni
+  # Zircon-specific toolchain use a different list of default configs.
   #
   # IMPORTANT: Some of the configs below are simple redirections to equivalent
   # configs in //build/config/BUILD.gn, but are used to ensure that the order
