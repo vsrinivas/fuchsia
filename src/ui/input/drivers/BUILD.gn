@@ -35,6 +35,7 @@ group("tests") {
     "hid-input-report:tests",
     "hidctl:tests",
     "i2c-hid:tests",
+    "pc-ps2:tests",
     "usb-hid:tests",
     "virtio:tests",
   ]
