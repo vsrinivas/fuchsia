@@ -107,7 +107,7 @@ template("fidl_c_header") {
         fidlc_path += ".exe"
       }
 
-      script = "//zircon/public/gn/create_fidl_header.py"
+      script = "//build/zircon/create_fidl_header.py"
       outputs = [ header_file ]
       deps = [
         ":$library_target",
