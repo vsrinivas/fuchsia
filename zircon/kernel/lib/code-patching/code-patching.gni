@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//zircon/public/gn/toolchain/c_utils.gni")
+import("//build/zircon/c_utils.gni")
 
 # Extracts the content of a ".code-patches" section from the dependent
 # executables.

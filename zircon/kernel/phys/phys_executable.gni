@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/zircon/c_utils.gni")
 import("//build/zircon/migrated_targets.gni")
-import("//zircon/public/gn/toolchain/c_utils.gni")
 
 _is_phys = toolchain.environment == "kernel.phys" ||
            toolchain.environment == "kernel.phys32"

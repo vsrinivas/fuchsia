@@ -122,7 +122,7 @@ template("toolchain_utils_action") {
       if (script == true) {
         assert(!defined(depfile),
                "script=true is incompatible with setting depfile")
-        script = "//zircon/public/gn/toolchain/toolchain_utils_action.sh"
+        script = "//build/zircon/toolchain_utils_action.sh"
         depfile = "$target_out_dir/_host_tool_action.$target_name.d"
         args = [
           rebase_path(outputs[0], root_build_dir),
@@ -176,7 +176,6 @@ template("link_output_rspfile") {
     # The second is used as a walk key to provide a dependency barrier
     # against e.g. shared_library() deps or other executable() data_deps.
     #
-    # Used in: //zircon/public/gn/BUILDCONFIG.gn
     # Used in: //build/config/BUILDCONFIG.gn
 
     data_keys = [ "link_output_path" ]

@@ -5,8 +5,8 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/images/args.gni")
+import("//build/zircon/c_utils.gni")
 import("//build/zircon/migrated_targets.gni")
-import("//zircon/public/gn/toolchain/c_utils.gni")
 
 # The boot shims need to be compiled in the special environment for running
 # in physical memory with the MMU disabled.

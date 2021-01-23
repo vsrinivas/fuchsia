@@ -9,7 +9,7 @@ import("//build/testing/zbi_test_success.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
 
-import("//zircon/public/gn/toolchain/c_utils.gni")
+import("//build/zircon/c_utils.gni")
 
 # userboot gets its own toolchain for its special build requirements.
 if (current_toolchain == default_toolchain) {
