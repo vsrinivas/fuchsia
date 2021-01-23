@@ -327,6 +327,7 @@ if (is_kernel) {
     configs += [ ":kernel_defsym" ]
 
     deps = [
+      ":code-patching",
       ":test",  # TODO: make optional, add testonly taint
       "top",
     ]
@@ -363,6 +364,14 @@ if (is_kernel) {
       "debugcommands",
       "tests",
     ]
+  }
+
+  # Aggregates code-patching selection logic across the kernel.
+  group("code-patching") {
+    deps = []
+    if (current_cpu == "x64") {
+      deps += [ "lib/libc/string/arch/x86:code-patching" ]
+    }
   }
 
   # Extract the raw binary image (no ELF headers) of the kernel proper.

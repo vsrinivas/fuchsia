@@ -7,7 +7,10 @@
 import("//build/zircon/migrated_targets.gni")
 
 group("tests") {
-  deps = [ ":phys" ]
+  deps = [
+    ":phys",
+    "//zircon/kernel/lib/libc:tests",
+  ]
   if (toolchain.environment == "kernel") {
     deps += [ ":kernel" ]
   } else {  # TODO(fxbug.dev/67010): testonly in kernel proper

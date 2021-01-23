@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/unittest/unittest.h>
 #include <stddef.h>
 
@@ -143,7 +144,7 @@ static bool memcpy_test() { return memcpy_func_test(memcpy); }
 static bool memcpy_quad_test() { return memcpy_func_test(memcpy_quad); }
 
 static bool memcpy_erms_test() {
-  if (!x86_feature_test(X86_FEATURE_ERMS)) {
+  if (!arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().erms()) {
     return true;
   }
 
@@ -155,7 +156,7 @@ static bool memset_test() { return memset_func_test(memset); }
 static bool memset_quad_test() { return memset_func_test(memset_quad); }
 
 static bool memset_erms_test() {
-  if (!x86_feature_test(X86_FEATURE_ERMS)) {
+  if (!arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().erms()) {
     return true;
   }
 

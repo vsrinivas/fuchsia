@@ -421,7 +421,7 @@ struct CpuidExtendedFeatureFlagsB
   DEF_BIT(12, rdt_m);
   DEF_BIT(11, rtm);
   DEF_BIT(10, invpcid);
-  DEF_BIT(9, enhanced_rep_movsb_stosb);
+  DEF_BIT(9, erms);
   DEF_BIT(8, bmi2);
   DEF_BIT(7, smep);
   DEF_BIT(6, fdp_excptn_only_x87);

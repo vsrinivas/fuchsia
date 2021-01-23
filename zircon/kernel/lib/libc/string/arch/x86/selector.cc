@@ -5,11 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/code_patching.h>
 #include <stddef.h>
 #include <string.h>
-
-#include <arch/x86/feature.h>
 
 extern "C" {
 
@@ -31,7 +30,7 @@ void x86_memcpy_select(const CodePatchInfo* patch) {
                reinterpret_cast<uintptr_t>(__unsanitized_memcpy));
 
   intptr_t offset;
-  if (x86_feature_test(X86_FEATURE_ERMS)) {
+  if (arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().erms()) {
     offset = reinterpret_cast<intptr_t>(memcpy_erms) - jmp_from_address;
   } else {
     offset = reinterpret_cast<intptr_t>(memcpy_quad) - jmp_from_address;
@@ -53,7 +52,7 @@ void x86_memset_select(const CodePatchInfo* patch) {
                reinterpret_cast<uintptr_t>(__unsanitized_memset));
 
   intptr_t offset;
-  if (x86_feature_test(X86_FEATURE_ERMS)) {
+  if (arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().erms()) {
     offset = reinterpret_cast<intptr_t>(memset_erms) - jmp_from_address;
   } else {
     offset = reinterpret_cast<intptr_t>(memset_quad) - jmp_from_address;

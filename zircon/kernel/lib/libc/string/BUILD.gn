@@ -37,3 +37,8 @@ source_set("string") {
     "//zircon/kernel/lib/libc:headers",
   ]
 }
+
+group("tests") {
+  # TODO: testonly = true.
+  deps = [ "arch/$zircon_cpu:tests" ]
+}
