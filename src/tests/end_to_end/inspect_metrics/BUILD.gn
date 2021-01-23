@@ -166,7 +166,9 @@ group("test") {
   deps = [
     ":archivist_metrics_test($host_toolchain)",
     ":archivist_reader_test($host_toolchain)",
-    ":inspect_metrics_emulator_test($host_toolchain)",
+
+    # TODO(68208): Disabled -- please refer to fxb/68208
+    #":inspect_metrics_emulator_test($host_toolchain)",
     ":inspect_metrics_test($host_toolchain)",
     ":legacy_metrics_test($host_toolchain)",
     ":log_stats_test($host_toolchain)",
