@@ -14,7 +14,6 @@
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <threads.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
@@ -32,41 +31,41 @@
   TEST(TestCase, Socket##Test) { Test(SOCK_STREAM); } \
   TEST(TestCase, Datagram##Test) { Test(SOCK_DGRAM); }
 
-void SocketpairSetup(std::array<fbl::unique_fd, 2>* fds, uint32_t type) {
-  int int_fds[countof(*fds)];
+void SocketpairSetup(std::array<fbl::unique_fd, 2>& fds, uint16_t type) {
+  int int_fds[fds.size()];
   int status = socketpair(AF_UNIX, type, 0, int_fds);
   ASSERT_EQ(status, 0, "socketpair(AF_UNIX, %u, 0, fds) failed", type);
-  (*fds)[0].reset(int_fds[0]);
-  (*fds)[1].reset(int_fds[1]);
+  fds[0].reset(int_fds[0]);
+  fds[1].reset(int_fds[1]);
 }
 
-void SocketpairShutdownSetup(std::array<fbl::unique_fd, 2>* fds, uint32_t type) {
+void SocketpairShutdownSetup(std::array<fbl::unique_fd, 2>& fds, uint16_t type) {
   ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   // Set both ends to non-blocking to make testing for readability/writability easier.
-  ASSERT_EQ(fcntl((*fds)[0].get(), F_SETFL, O_NONBLOCK), 0);
-  ASSERT_EQ(fcntl((*fds)[1].get(), F_SETFL, O_NONBLOCK), 0);
+  ASSERT_EQ(fcntl(fds[0].get(), F_SETFL, O_NONBLOCK), 0);
+  ASSERT_EQ(fcntl(fds[1].get(), F_SETFL, O_NONBLOCK), 0);
 
   char buf[1] = {};
   // Both sides should be readable.
   errno = 0;
-  EXPECT_EQ(read((*fds)[0].get(), buf, sizeof(buf)), -1, "fds[0] should initially be readable");
+  EXPECT_EQ(read(fds[0].get(), buf, sizeof(buf)), -1, "fds[0] should initially be readable");
   EXPECT_EQ(errno, EAGAIN);
   errno = 0;
-  EXPECT_EQ(read((*fds)[1].get(), buf, sizeof(buf)), -1, "fds[1] should initially be readable");
+  EXPECT_EQ(read(fds[1].get(), buf, sizeof(buf)), -1, "fds[1] should initially be readable");
   EXPECT_EQ(errno, EAGAIN);
 
   // Both sides should be writable.
-  EXPECT_EQ(write((*fds)[0].get(), buf, sizeof(buf)), 1, "fds[0] should be initially writable");
-  EXPECT_EQ(write((*fds)[1].get(), buf, sizeof(buf)), 1, "fds[1] should be initially writable");
+  EXPECT_EQ(write(fds[0].get(), buf, sizeof(buf)), 1, "fds[0] should be initially writable");
+  EXPECT_EQ(write(fds[1].get(), buf, sizeof(buf)), 1, "fds[1] should be initially writable");
 
-  EXPECT_EQ(read((*fds)[0].get(), buf, sizeof(buf)), 1);
-  EXPECT_EQ(read((*fds)[1].get(), buf, sizeof(buf)), 1);
+  EXPECT_EQ(read(fds[0].get(), buf, sizeof(buf)), 1);
+  EXPECT_EQ(read(fds[1].get(), buf, sizeof(buf)), 1);
 }
 
-void Control(uint32_t type) {
+void Control(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   // write() and read() should work.
   const char buf[] = "abc";
@@ -99,9 +98,9 @@ static_assert(EAGAIN == EWOULDBLOCK, "Assuming EAGAIN and EWOULDBLOCK have same 
 #define SEND_FLAGS MSG_NOSIGNAL
 #endif
 
-void ShutdownRead(uint32_t type) {
+void ShutdownRead(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(fds, type));
 
   // Write a byte into fds[1] to test for readability later.
   char buf[1] = {};
@@ -128,9 +127,9 @@ void ShutdownRead(uint32_t type) {
 
 TEST_P(SocketpairTest, ShutdownRead)
 
-void ShutdownWrite(uint32_t type) {
+void ShutdownWrite(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(fds, type));
 
   // Close one side down for writing.
   int status = shutdown(fds[0].get(), SHUT_WR);
@@ -157,9 +156,9 @@ void ShutdownWrite(uint32_t type) {
 
 TEST_P(SocketpairTest, ShutdownWrite)
 
-void ShutdownReadWrite(uint32_t type) {
+void ShutdownReadWrite(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(fds, type));
 
   // Close one side for reading and writing.
   int status = shutdown(fds[0].get(), SHUT_RDWR);
@@ -179,146 +178,92 @@ void ShutdownReadWrite(uint32_t type) {
 
 TEST_P(SocketpairTest, ShutdownReadWrite)
 
-typedef struct poll_for_read_args {
-  fbl::unique_fd* fd;
-  int poll_result;
-  zx_time_t poll_time;
-} poll_for_read_args_t;
+std::thread poll_for_read_with_timeout(const fbl::unique_fd& fd) {
+  return std::thread([&]() {
+    struct pollfd pfd = {
+        .fd = fd.get(),
+        .events = POLLIN,
+    };
 
-int poll_for_read_with_timeout(void* arg) {
-  poll_for_read_args_t* poll_args = (poll_for_read_args_t*)arg;
-  struct pollfd pollfd;
-  pollfd.fd = poll_args->fd->get();
-  pollfd.events = POLLIN;
-  pollfd.revents = 0;
+    int timeout_ms = 100;
+    zx_time_t time_before = zx_clock_get_monotonic();
+    EXPECT_EQ(poll(&pfd, 1, timeout_ms), 1, "poll should have one entry");
+    zx_time_t time_after = zx_clock_get_monotonic();
+    EXPECT_LT(time_after - time_before, 100u * 1000 * 1000, "poll should not have timed out");
 
-  int timeout_ms = 100;
-  zx_time_t time_before = zx_clock_get_monotonic();
-  poll_args->poll_result = poll(&pollfd, 1, timeout_ms);
-  zx_time_t time_after = zx_clock_get_monotonic();
-  poll_args->poll_time = time_after - time_before;
-
-  int num_readable = 0;
-  EXPECT_EQ(ioctl(poll_args->fd->get(), FIONREAD, &num_readable), 0, "ioctl(FIONREAD)");
-  EXPECT_EQ(num_readable, 0);
-
-  return 0;
+    int num_readable = 0;
+    EXPECT_EQ(ioctl(pfd.fd, FIONREAD, &num_readable), 0, "ioctl(FIONREAD)");
+    EXPECT_EQ(num_readable, 0);
+  });
 }
 
-void ShutdownSelfWritePoll(uint32_t type) {
+void ShutdownSelfWritePoll(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(fds, type));
 
-  poll_for_read_args_t poll_args = {};
-  poll_args.fd = &fds[0];
-  thrd_t poll_thread;
-  int thrd_create_result = thrd_create(&poll_thread, poll_for_read_with_timeout, &poll_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking read thread");
+  std::thread poll_thread = poll_for_read_with_timeout(fds[0]);
 
-  shutdown(fds[0].get(), SHUT_RDWR);
+  EXPECT_EQ(shutdown(fds[0].get(), SHUT_RDWR), 0, "%s", strerror(errno));
 
-  ASSERT_EQ(thrd_join(poll_thread, NULL), thrd_success, "join blocking read thread");
-
-  EXPECT_EQ(poll_args.poll_result, 1, "poll should have one entry");
-  EXPECT_LT(poll_args.poll_time, 100u * 1000 * 1000, "poll should not have timed out");
+  poll_thread.join();
 }
 
 TEST_P(SocketpairTest, ShutdownSelfWritePoll)
 
-void ShutdownPeerWritePoll(uint32_t type) {
+void ShutdownPeerWritePoll(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairShutdownSetup(fds, type));
 
-  poll_for_read_args_t poll_args = {};
-  poll_args.fd = &fds[0];
-  thrd_t poll_thread;
-  int thrd_create_result = thrd_create(&poll_thread, poll_for_read_with_timeout, &poll_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking read thread");
+  std::thread poll_thread = poll_for_read_with_timeout(fds[0]);
 
-  shutdown(fds[1].get(), SHUT_RDWR);
+  EXPECT_EQ(shutdown(fds[1].get(), SHUT_RDWR), 0, "%s", strerror(errno));
 
-  ASSERT_EQ(thrd_join(poll_thread, NULL), thrd_success, "join blocking read thread");
-
-  EXPECT_EQ(poll_args.poll_result, 1, "poll should have one entry");
-  EXPECT_LT(poll_args.poll_time, 100u * 1000 * 1000, "poll should not have timed out");
+  poll_thread.join();
 }
 
 TEST_P(SocketpairTest, ShutdownPeerWritePoll)
 
-static constexpr size_t BUF_SIZE = 256;
+std::thread recv_thread(const fbl::unique_fd& fd) {
+  return std::thread([&]() {
+    std::array<char, 256> buf;
 
-typedef struct recv_args {
-  fbl::unique_fd* fd;
-  ssize_t recv_result;
-  int recv_errno;
-  char buf[BUF_SIZE];
-} recv_args_t;
-
-int recv_thread(void* arg) {
-  recv_args_t* recv_args = (recv_args_t*)arg;
-
-  recv_args->recv_result = recv(recv_args->fd->get(), recv_args->buf, BUF_SIZE, 0u);
-  if (recv_args->recv_result < 0)
-    recv_args->recv_errno = errno;
-
-  return 0;
+    EXPECT_EQ(recv(fd.get(), buf.data(), buf.size(), 0), 0, "%s", strerror(errno));
+  });
 }
 
-void ShutdownSelfReadDuringRecv(uint32_t type) {
+void ShutdownSelfReadDuringRecv(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
-  recv_args_t recv_args = {};
-  recv_args.fd = &fds[0];
-  thrd_t t;
-  int thrd_create_result = thrd_create(&t, recv_thread, &recv_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking read thread");
+  std::thread t = recv_thread(fds[0]);
 
-  shutdown(fds[0].get(), SHUT_RD);
+  EXPECT_EQ(shutdown(fds[0].get(), SHUT_RD), 0, "%s", strerror(errno));
 
-  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking read thread");
-
-  EXPECT_EQ(recv_args.recv_result, 0, "recv should have returned 0");
-  EXPECT_EQ(recv_args.recv_errno, 0, "recv should have left errno alone");
+  t.join();
 }
 
 TEST_P(SocketpairTest, ShutdownSelfReadDuringRecv)
 
-void ShutdownSelfWriteDuringRecv(uint32_t type) {
+void ShutdownSelfWriteDuringRecv(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
-  recv_args_t recv_args = {};
-  recv_args.fd = &fds[0];
-  thrd_t t;
-  int thrd_create_result = thrd_create(&t, recv_thread, &recv_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking read thread");
+  std::thread t = recv_thread(fds[0]);
 
-  shutdown(fds[1].get(), SHUT_WR);
+  EXPECT_EQ(shutdown(fds[1].get(), SHUT_WR), 0, "%s", strerror(errno));
 
-  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking read thread");
-
-  EXPECT_EQ(recv_args.recv_result, 0, "recv should have returned 0");
-  EXPECT_EQ(recv_args.recv_errno, 0, "recv should have left errno alone");
+  t.join();
 }
 
 TEST_P(SocketpairTest, ShutdownSelfWriteDuringRecv)
 
-typedef struct send_args {
-  fbl::unique_fd* fd;
-  ssize_t send_result;
-  int send_errno;
-  char buf[BUF_SIZE];
-} send_args_t;
+std::thread send_thread(const fbl::unique_fd& fd) {
+  return std::thread([&]() {
+    std::array<char, 256> buf;
 
-int send_thread(void* arg) {
-  send_args_t* send_args = (send_args_t*)arg;
-
-  send_args->send_result = send(send_args->fd->get(), send_args->buf, BUF_SIZE, 0u);
-  if (send_args->send_result < 0)
-    send_args->send_errno = errno;
-
-  return 0;
+    EXPECT_EQ(send(fd.get(), buf.data(), buf.size(), 0), -1);
+    EXPECT_EQ(errno, EPIPE, "%s", strerror(errno));
+  });
 }
 
 constexpr zx::duration kStateCheckIntervals = zx::usec(5);
@@ -340,137 +285,111 @@ zx_status_t WaitForState(const zx::thread& thread, zx_thread_state_t desired_sta
   }
 }
 
-void ShutdownSelfWriteDuringSend(uint32_t type) {
+void ShutdownSelfWriteDuringSend(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   // First, fill up the socket so the next send() will block.
-  char buf[BUF_SIZE] = {};
+  std::array<char, 256> buf;
   while (true) {
-    ssize_t status = send(fds[0].get(), buf, sizeof(buf), MSG_DONTWAIT);
+    ssize_t status = send(fds[0].get(), buf.data(), buf.size(), MSG_DONTWAIT);
     if (status < 0) {
       ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
       break;
     }
   }
-  send_args_t send_args = {};
-  send_args.fd = &fds[0];
-  thrd_t t;
   // Then start a thread blocking on a send().
-  int thrd_create_result = thrd_create(&t, send_thread, &send_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
+  std::thread t = send_thread(fds[0]);
 
   // Wait for the thread to sleep in send.
-  ASSERT_OK(
-      WaitForState(*(zx::unowned_thread(thrd_get_zx_handle(t))), ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  ASSERT_OK(WaitForState(*(zx::unowned_thread(thrd_get_zx_handle(t.native_handle()))),
+                         ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
 
-  shutdown(fds[0].get(), SHUT_WR);
+  EXPECT_EQ(shutdown(fds[0].get(), SHUT_WR), 0, "%s", strerror(errno));
 
-  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
-
-  EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
-  EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
+  t.join();
 }
 
 TEST_P(SocketpairTest, ShutdownSelfWriteDuringSend)
 
-void ShutdownSelfWriteBeforeSend(uint32_t type) {
+void ShutdownSelfWriteBeforeSend(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   // First, fill up the socket so the next send() will block.
-  char buf[BUF_SIZE] = {};
+  std::array<char, 256> buf;
   while (true) {
-    ssize_t status = send(fds[0].get(), buf, sizeof(buf), MSG_DONTWAIT);
+    ssize_t status = send(fds[0].get(), buf.data(), buf.size(), MSG_DONTWAIT);
     if (status < 0) {
       ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
       break;
     }
   }
-  send_args_t send_args = {};
-  send_args.fd = &fds[0];
-  thrd_t t;
 
-  shutdown(fds[0].get(), SHUT_WR);
+  EXPECT_EQ(shutdown(fds[0].get(), SHUT_WR), 0, "%s", strerror(errno));
 
   // Then start a thread blocking on a send().
-  int thrd_create_result = thrd_create(&t, send_thread, &send_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
+  std::thread t = send_thread(fds[0]);
 
-  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
-
-  EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
-  EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
+  t.join();
 }
 
 TEST_P(SocketpairTest, ShutdownSelfWriteBeforeSend)
 
-void ShutdownPeerReadDuringSend(uint32_t type) {
+void ShutdownPeerReadDuringSend(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   // First, fill up the socket so the next send() will block.
-  char buf[BUF_SIZE] = {};
+  std::array<char, 256> buf;
   while (true) {
-    ssize_t status = send(fds[0].get(), buf, sizeof(buf), MSG_DONTWAIT);
+    ssize_t status = send(fds[0].get(), buf.data(), buf.size(), MSG_DONTWAIT);
     if (status < 0) {
       ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
       break;
     }
   }
-  send_args_t send_args = {};
-  send_args.fd = &fds[0];
-  thrd_t t;
-  int thrd_create_result = thrd_create(&t, send_thread, &send_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
+
+  // Then start a thread blocking on a send().
+  std::thread t = send_thread(fds[0]);
 
   // Wait for the thread to sleep in send.
-  ASSERT_OK(
-      WaitForState(*(zx::unowned_thread(thrd_get_zx_handle(t))), ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  ASSERT_OK(WaitForState(*(zx::unowned_thread(thrd_get_zx_handle(t.native_handle()))),
+                         ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
 
-  shutdown(fds[1].get(), SHUT_RD);
+  EXPECT_EQ(shutdown(fds[1].get(), SHUT_RD), 0, "%s", strerror(errno));
 
-  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
-
-  EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
-  EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
+  t.join();
 }
 
 TEST_P(SocketpairTest, ShutdownPeerReadDuringSend)
 
-void ShutdownPeerReadBeforeSend(uint32_t type) {
+void ShutdownPeerReadBeforeSend(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   // First, fill up the socket so the next send() will block.
-  char buf[BUF_SIZE] = {};
+  std::array<char, 256> buf;
   while (true) {
-    ssize_t status = send(fds[0].get(), buf, sizeof(buf), MSG_DONTWAIT);
+    ssize_t status = send(fds[0].get(), buf.data(), buf.size(), MSG_DONTWAIT);
     if (status < 0) {
       ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
       break;
     }
   }
 
-  shutdown(fds[1].get(), SHUT_RD);
+  EXPECT_EQ(shutdown(fds[1].get(), SHUT_RD), 0, "%s", strerror(errno));
 
-  send_args_t send_args = {};
-  send_args.fd = &fds[0];
-  thrd_t t;
-  int thrd_create_result = thrd_create(&t, send_thread, &send_args);
-  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
+  std::thread t = send_thread(fds[0]);
 
-  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
-
-  EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
-  EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
+  t.join();
 }
 
 TEST_P(SocketpairTest, ShutdownPeerReadBeforeSend)
 
-void CloneOrUnwrapAndWrap(uint32_t type) {
+void CloneOrUnwrapAndWrap(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   zx::handle handle;
   int status = fdio_fd_clone(fds[0].get(), handle.reset_and_get_address());
@@ -501,7 +420,7 @@ TEST_P(SocketpairTest, CloneOrUnwrapAndWrap)
 // number of bytes read, instead of failing with EAGAIN.
 TEST(SocketpairTest, StreamRecvmsgNonblockBoundary) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, SOCK_STREAM));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, SOCK_STREAM));
 
   ASSERT_EQ(fcntl(fds[0].get(), F_SETFL, O_NONBLOCK), 0);
   ASSERT_EQ(fcntl(fds[1].get(), F_SETFL, O_NONBLOCK), 0);
@@ -518,20 +437,19 @@ TEST(SocketpairTest, StreamRecvmsgNonblockBoundary) {
   // length as total size of data we just wrote.
   assert(sizeof(data_in1) == sizeof(data_out));
 
-  struct iovec iov[2];
-  iov[0].iov_base = &data_in1;
-  iov[0].iov_len = sizeof(data_in1);
-  iov[1].iov_base = &data_in2;
-  iov[1].iov_len = sizeof(data_in2);
+  struct iovec iov[] = {{
+                            .iov_base = &data_in1,
+                            .iov_len = sizeof(data_in1),
+                        },
+                        {
+                            .iov_base = &data_in2,
+                            .iov_len = sizeof(data_in2),
+                        }};
 
-  struct msghdr msg;
-  msg.msg_name = NULL;
-  msg.msg_namelen = 0;
-  msg.msg_iov = iov;
-  msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
-  msg.msg_control = NULL;
-  msg.msg_controllen = 0;
-  msg.msg_flags = 0;
+  struct msghdr msg = {
+      .msg_iov = iov,
+      .msg_iovlen = std::size(iov),
+  };
 
   actual = recvmsg(fds[1].get(), &msg, 0);
   EXPECT_EQ(sizeof(data_in1), actual, "Socket read failed");
@@ -546,26 +464,27 @@ TEST(SocketpairTest, StreamSendmsgNonblockBoundary) {
   const ssize_t memlength = 65536;
   void* memchunk = malloc(memlength);
 
-  struct iovec iov[2];
-  iov[0].iov_base = memchunk;
-  iov[0].iov_len = memlength;
-  iov[1].iov_base = memchunk;
-  iov[1].iov_len = memlength;
+  struct iovec iov[] = {
+      {
+          .iov_base = memchunk,
+          .iov_len = memlength,
+      },
+      {
+          .iov_base = memchunk,
+          .iov_len = memlength,
+      },
+  };
 
   std::array<fbl::unique_fd, 2> fds;
-  SocketpairSetup(&fds, SOCK_STREAM);
+  SocketpairSetup(fds, SOCK_STREAM);
 
   ASSERT_EQ(fcntl(fds[0].get(), F_SETFL, O_NONBLOCK), 0);
   ASSERT_EQ(fcntl(fds[1].get(), F_SETFL, O_NONBLOCK), 0);
 
-  struct msghdr msg;
-  msg.msg_name = NULL;
-  msg.msg_namelen = 0;
-  msg.msg_iov = iov;
-  msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
-  msg.msg_control = NULL;
-  msg.msg_controllen = 0;
-  msg.msg_flags = 0;
+  struct msghdr msg = {
+      .msg_iov = iov,
+      .msg_iovlen = std::size(iov),
+  };
 
   // 1. Keep sending data until socket is saturated.
   while (sendmsg(fds[0].get(), &msg, 0) > 0)
@@ -581,9 +500,9 @@ TEST(SocketpairTest, StreamSendmsgNonblockBoundary) {
   free(memchunk);
 }
 
-void WaitBeginEnd(uint32_t type) {
+void WaitBeginEnd(uint16_t type) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, type));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, type));
 
   fdio_t* io = fdio_unsafe_fd_to_io(fds[0].get());
 
@@ -593,8 +512,7 @@ void WaitBeginEnd(uint32_t type) {
   zx_signals_t signals;
   fdio_unsafe_wait_begin(io, POLLIN, handle.reset_and_get_address(), &signals);
   EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
-  EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED,
-            "");
+  EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
 
   fdio_unsafe_wait_begin(io, POLLOUT, handle.reset_and_get_address(), &signals);
   EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
@@ -636,7 +554,7 @@ static constexpr ssize_t WRITE_DATA_SIZE = 1024 * 1024;
 
 TEST(SocketpairTest, StreamPartialWrite) {
   std::array<fbl::unique_fd, 2> fds;
-  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(&fds, SOCK_STREAM));
+  ASSERT_NO_FATAL_FAILURES(SocketpairSetup(fds, SOCK_STREAM));
 
   // Start a thread that reads everything we write.
   auto fut = std::async(
