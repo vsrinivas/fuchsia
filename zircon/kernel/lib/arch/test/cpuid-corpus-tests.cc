@@ -5,9 +5,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/testing/x86/fake-cpuid.h>
+#include <lib/arch/x86/cache.h>
 #include <lib/arch/x86/cpuid.h>
 
 #include <string_view>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
@@ -22,6 +24,37 @@ namespace {
 using namespace std::string_view_literals;
 
 using arch::testing::X86Microprocessor;
+
+void CheckCaches(const arch::testing::FakeCpuidIo& cpuid,
+                 const std::vector<arch::CpuCacheLevelInfo>& expected_caches) {
+  arch::CpuCacheInfo caches(cpuid);
+
+  ASSERT_EQ(expected_caches.size(), caches.size());
+
+  {
+    auto actual = caches.begin();
+    auto expected = expected_caches.cbegin();
+    while (actual != caches.end() && expected != expected_caches.cend()) {
+      EXPECT_EQ(expected->level, actual->level);
+      EXPECT_EQ(expected->type, actual->type);
+      EXPECT_EQ(expected->size_kb, actual->size_kb);
+      EXPECT_EQ(expected->ways_of_associativity, actual->ways_of_associativity);
+
+      ++actual;
+      ++expected;
+    }
+  }
+
+  // And also compare last-level caches.
+  {
+    const auto& actual_llc = caches.back();
+    const auto& expected_llc = expected_caches.back();
+    EXPECT_EQ(expected_llc.level, actual_llc.level);
+    EXPECT_EQ(expected_llc.type, actual_llc.type);
+    EXPECT_EQ(expected_llc.size_kb, actual_llc.size_kb);
+    EXPECT_EQ(expected_llc.ways_of_associativity, actual_llc.ways_of_associativity);
+  }
+}
 
 //
 // Tests.
@@ -70,6 +103,29 @@ TEST(CpuidTests, IntelCore2_6300) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 2048,
+              .ways_of_associativity = 8,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelXeonE5520) {
@@ -115,6 +171,35 @@ TEST(CpuidTests, IntelXeonE5520) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 8192,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCoreI7_2600k) {
@@ -160,6 +245,35 @@ TEST(CpuidTests, IntelCoreI7_2600k) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 8192,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCoreI3_3240) {
@@ -207,6 +321,35 @@ TEST(CpuidTests, IntelCoreI3_3240) {
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 3072,
+              .ways_of_associativity = 12,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelXeonE5_2690_V3) {
@@ -254,6 +397,35 @@ TEST(CpuidTests, IntelXeonE5_2690_V3) {
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 30720,
+              .ways_of_associativity = 20,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelXeonE5_2690_V4) {
@@ -299,6 +471,35 @@ TEST(CpuidTests, IntelXeonE5_2690_V4) {
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.rdseed());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 35840,
+              .ways_of_associativity = 20,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCoreI3_6100) {
@@ -344,6 +545,35 @@ TEST(CpuidTests, IntelCoreI3_6100) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 3072,
+              .ways_of_associativity = 12,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCoreI5_7300u) {
@@ -389,6 +619,35 @@ TEST(CpuidTests, IntelCoreI5_7300u) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 3072,
+              .ways_of_associativity = 12,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCoreI7_6500u) {
@@ -434,6 +693,35 @@ TEST(CpuidTests, IntelCoreI7_6500u) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 4096,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCoreI7_6700k) {
@@ -479,6 +767,35 @@ TEST(CpuidTests, IntelCoreI7_6700k) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 8192,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCoreM3_7y30) {
@@ -524,6 +841,35 @@ TEST(CpuidTests, IntelCoreM3_7y30) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 4096,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelAtom330) {
@@ -569,6 +915,29 @@ TEST(CpuidTests, IntelAtom330) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 24,
+              .ways_of_associativity = 6,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelAtomD510) {
@@ -614,6 +983,29 @@ TEST(CpuidTests, IntelAtomD510) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 24,
+              .ways_of_associativity = 6,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelAtomX5_Z8350) {
@@ -659,6 +1051,29 @@ TEST(CpuidTests, IntelAtomX5_Z8350) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 24,
+              .ways_of_associativity = 6,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 1024,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, IntelCeleron3855u) {
@@ -704,6 +1119,35 @@ TEST(CpuidTests, IntelCeleron3855u) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 256,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 2048,
+              .ways_of_associativity = 8,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdA10_7870k) {
@@ -751,7 +1195,31 @@ TEST(CpuidTests, AmdA10_7870k) {
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 16,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 96,
+              .ways_of_associativity = 3,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 2048,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
+
 TEST(CpuidTests, AmdRyzen5_1500x) {
   arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen5_1500x);
 
@@ -797,6 +1265,35 @@ TEST(CpuidTests, AmdRyzen5_1500x) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 64,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 8192,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzen7_1700) {
@@ -844,6 +1341,35 @@ TEST(CpuidTests, AmdRyzen7_1700) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 64,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 16384,  // Total L3 size.
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzen7_2700x) {
@@ -891,6 +1417,35 @@ TEST(CpuidTests, AmdRyzen7_2700x) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 64,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 8192,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzen9_3950x) {
@@ -938,6 +1493,35 @@ TEST(CpuidTests, AmdRyzen9_3950x) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 16384,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxHyperv) {
@@ -987,6 +1571,36 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxHyperv) {
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
+
+  // Topology leaves are reserved, so we expect to only be able to be surface
+  // the total L3 size across the package.
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 4 * 16384,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxKvm) {
@@ -1036,6 +1650,36 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxKvm) {
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
+
+  // Topology leaves are reserved, so we expect to only be able to be surface
+  // the total L3 size across the package.
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 4 * 16384,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzen9_3950xVmware) {
@@ -1083,6 +1727,36 @@ TEST(CpuidTests, AmdRyzen9_3950xVmware) {
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  // Topology leaves are reserved, so we expect to only be able to be surface
+  // the total L3 size across the package.
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 4 * 16384,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
@@ -1132,6 +1806,35 @@ TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 16384,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzenThreadripper1950x) {
@@ -1178,6 +1881,35 @@ TEST(CpuidTests, AmdRyzenThreadripper1950x) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 64,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 8192,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 TEST(CpuidTests, AmdRyzenThreadripper2970wx) {
@@ -1224,6 +1956,35 @@ TEST(CpuidTests, AmdRyzenThreadripper2970wx) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
+      cpuid,                             //
+      {
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kData,
+              .size_kb = 32,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 1,
+              .type = arch::X86CacheType::kInstruction,
+              .size_kb = 64,
+              .ways_of_associativity = 4,
+          },
+          {
+              .level = 2,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 512,
+              .ways_of_associativity = 8,
+          },
+          {
+              .level = 3,
+              .type = arch::X86CacheType::kUnified,
+              .size_kb = 8192,
+              .ways_of_associativity = 16,
+          },
+      }));
 }
 
 }  // namespace

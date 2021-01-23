@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <bits.h>
 #include <lib/arch/x86/boot-cpuid.h>
+#include <lib/arch/x86/cache.h>
 #include <lib/cmdline.h>
 #include <lib/code_patching.h>
 #include <stdint.h>
@@ -371,6 +372,21 @@ void x86_feature_debug(void) {
   printf("\n");
 
   arch::BootCpuidIo io;
+
+  {
+    arch::CpuCacheInfo caches(io);
+    printf("==== X86 CACHE INFO ====\n");
+    printf("%-5s | %-11s | %-10s | %-5s | %-6s |\n", "Level", "Type", "Size (KiB)", "Sets",
+           "Assoc.");
+    for (const auto& cache : caches) {
+      auto type_str = arch::ToString(cache.type);
+      printf("L%-4zu | %-11.*s | %-10zu | %-5zu | %-6zu |\n", cache.level,
+             static_cast<int>(type_str.size()), type_str.data(), cache.size_kb,
+             cache.number_of_sets, cache.ways_of_associativity);
+    }
+    printf("\n");
+  }
+
   auto vendor = arch::ToString(arch::GetVendor(io));
   printf("Vendor: %.*s\n", static_cast<int>(vendor.size()), vendor.data());
 

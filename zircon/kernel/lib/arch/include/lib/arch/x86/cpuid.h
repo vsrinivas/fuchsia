@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_CPUID_H_
 
 #include <array>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -289,6 +290,65 @@ struct CpuidFeatureFlagsD : public CpuidIoValueBase<CpuidFeatureFlagsD, 0x1, 0x0
 };
 
 //---------------------------------------------------------------------------//
+// Leaf/Function 0x4.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+// [amd/vol3]: E.3.3  Functions 2h–4h—Reserved.
+//---------------------------------------------------------------------------//
+
+enum class X86CacheType : uint8_t {
+  kNull = 0,
+  kData = 1,
+  kInstruction = 2,
+  kUnified = 3,
+};
+
+std::string_view ToString(X86CacheType type);
+
+struct CpuidCacheTopologyA
+    : public hwreg::RegisterBase<CpuidCacheTopologyA, uint32_t, hwreg::EnablePrinter> {
+  DEF_FIELD(31, 26, max_cores);  // Reserved on AMD.
+  DEF_FIELD(25, 14, max_sharing_logical_processors);
+  // Bits [13:10] are reserved.
+  DEF_BIT(9, fully_associative);
+  DEF_BIT(8, self_initializing);
+  DEF_FIELD(7, 5, cache_level);
+  DEF_ENUM_FIELD(X86CacheType, 4, 0, cache_type);
+};
+
+struct CpuidCacheTopologyB
+    : public hwreg::RegisterBase<CpuidCacheTopologyB, uint32_t, hwreg::EnablePrinter> {
+  DEF_FIELD(31, 22, ways);
+  DEF_FIELD(21, 12, physical_line_partitions);
+  DEF_FIELD(11, 0, system_coherency_line_size);
+};
+
+struct CpuidCacheTopologyC
+    : public hwreg::RegisterBase<CpuidCacheTopologyC, uint32_t, hwreg::EnablePrinter> {
+  DEF_FIELD(31, 0, sets);
+};
+
+struct CpuidCacheTopologyD
+    : public hwreg::RegisterBase<CpuidCacheTopologyD, uint32_t, hwreg::EnablePrinter> {
+  // Bits [31:3] are reserved.
+  DEF_BIT(2, complex_cache_indexing);
+  DEF_BIT(1, inclusive);
+  DEF_BIT(0, wbinvd);
+};
+
+template <uint32_t Subleaf>
+using CpuidIntelCacheTopologyA = CpuidIoValue<CpuidCacheTopologyA, 0x4, Subleaf, CpuidIo::kEax>;
+
+template <uint32_t Subleaf>
+using CpuidIntelCacheTopologyB = CpuidIoValue<CpuidCacheTopologyB, 0x4, Subleaf, CpuidIo::kEbx>;
+
+template <uint32_t Subleaf>
+using CpuidIntelCacheTopologyC = CpuidIoValue<CpuidCacheTopologyC, 0x4, Subleaf, CpuidIo::kEcx>;
+
+template <uint32_t Subleaf>
+using CpuidIntelCacheTopologyD = CpuidIoValue<CpuidCacheTopologyD, 0x4, Subleaf, CpuidIo::kEdx>;
+
+//---------------------------------------------------------------------------//
 // Leaf/Function 0x5.
 //
 // [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
@@ -505,6 +565,47 @@ struct CpuidMaximumExtendedLeaf
 };
 
 //---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'0001
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+// [amd/vol3]: E.4.2  Function 8000_0001h—Extended Processor and Processor Feature Identifiers.
+//---------------------------------------------------------------------------//
+
+// Despite Intel implementing (parts of) the 0x8000'0000 feature set, we
+// namespace these features under "AMD", as it was pragmatically following
+// AMD's lead, and as Intel has already nabbed the more appropriate name of
+// "extended features" - this being the extended leaf range - with leaf 0x7.
+struct CpuidAmdFeatureFlagsC
+    : public CpuidIoValueBase<CpuidAmdFeatureFlagsC, 0x8000'0001, 0x0, CpuidIo::kEcx> {
+  // Bits [31:28] are reserved.
+  DEF_BIT(27, perf_tsc);
+  DEF_BIT(26, data_breakpoint_extension);
+  // Bit 25 is reserved.
+  DEF_BIT(24, perf_ctr_ext_nb);
+  DEF_BIT(23, perf_ctr_ext_core);
+  DEF_BIT(22, topology_extensions);
+  DEF_BIT(21, tbm);
+  // Bits [20:17] are reserved.
+  DEF_BIT(16, fma4);
+  DEF_BIT(15, lwp);
+  // Bit 14 is reserved.
+  DEF_BIT(13, wdt);
+  DEF_BIT(12, skinit);
+  DEF_BIT(11, xop);
+  DEF_BIT(10, ibs);
+  DEF_BIT(9, osvw);
+  DEF_BIT(8, prefetchw);
+  DEF_BIT(7, misaligned_sse);
+  DEF_BIT(6, sse4a);
+  DEF_BIT(5, lzcnt);
+  DEF_BIT(4, alt_move_cr8);
+  DEF_BIT(3, ext_apic_space);
+  DEF_BIT(2, svm);
+  DEF_BIT(1, cmp_legacy);
+  DEF_BIT(0, lahf_sahf);
+};
+
+//---------------------------------------------------------------------------//
 // Leaves/Functions 0x8000'0002 - 0x8000'0004
 //
 // [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
@@ -607,6 +708,112 @@ class ProcessorName {
   static constexpr size_t kSize = 48;
   std::array<char, kSize> str_;
 };
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'0005
+//
+// [amd/vol3]: E.4.4  Function 8000_0005h — L1 Cache and TLB Information.
+//---------------------------------------------------------------------------//
+
+struct CpuidL1CacheInformation
+    : public hwreg::RegisterBase<CpuidL1CacheInformation, uint32_t, hwreg::EnablePrinter> {
+  // The value of the associativity field representing full associativity.
+  static constexpr uint8_t kFullyAssociative = 0xff;
+
+  DEF_FIELD(31, 24, size_kb);
+  DEF_FIELD(23, 16, assoc);
+  DEF_FIELD(15, 8, lines_per_tag);
+  DEF_FIELD(7, 0, line_size);
+
+  // Indeterminate if zero.
+  size_t ways_of_associativity() const;
+
+  // Indeterminate if std::nullopt.
+  std::optional<bool> fully_associative() const;
+};
+
+using CpuidL1DataCacheInformation =
+    CpuidIoValue<CpuidL1CacheInformation, 0x8000'0005, 0, CpuidIo::kEcx>;
+
+using CpuidL1InstructionCacheInformation =
+    CpuidIoValue<CpuidL1CacheInformation, 0x8000'0005, 0, CpuidIo::kEdx>;
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'0006
+//
+// [amd/vol3]: E.4.5  Function 8000_0006h—L2 Cache and TLB and L3 Cache Information.
+//---------------------------------------------------------------------------//
+
+enum class CpuidL2L3Associativity : uint8_t {
+  kDisabled = 0x0,
+  kDirectMapped = 0x1,
+  k2Way = 0x2,
+  k3Way = 0x3,
+  k4Way = 0x4,
+  k6Way = 0x5,
+  k8Way = 0x6,
+  // 0x7 is reserved.
+  k16Way = 0x8,
+  kSeeLeaf0x8000001d = 0x9,
+  k32Way = 0xa,
+  k48Way = 0xb,
+  k64Way = 0xc,
+  k96Way = 0xd,
+  k128Way = 0xe,
+  kFullyAssociative = 0xf,
+  // 0x10-0xff are reserved.
+};
+
+struct CpuidL2CacheInformation
+    : public CpuidIoValueBase<CpuidL2CacheInformation, 0x8000'0006, 0, CpuidIo::kEcx> {
+  DEF_FIELD(31, 16, size_kb);
+  DEF_ENUM_FIELD(CpuidL2L3Associativity, 15, 12, assoc);
+  DEF_FIELD(11, 8, lines_per_tag);
+  DEF_FIELD(7, 0, line_size);
+
+  // Indeterminate if zero.
+  size_t ways_of_associativity() const;
+
+  // Indeterminate if std::nullopt.
+  std::optional<bool> fully_associative() const;
+};
+
+struct CpuidL3CacheInformation
+    : public CpuidIoValueBase<CpuidL3CacheInformation, 0x8000'0006, 0, CpuidIo::kEdx> {
+  DEF_FIELD(31, 18, size);
+  // Bits [17:16] are reserved.
+  DEF_ENUM_FIELD(CpuidL2L3Associativity, 15, 12, assoc);
+  DEF_FIELD(11, 8, lines_per_tag);
+  DEF_FIELD(7, 0, line_size);
+
+  // Indeterminate if zero.
+  size_t ways_of_associativity() const;
+
+  // Indeterminate if std::nullopt.
+  std::optional<bool> fully_associative() const;
+};
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'001d
+//
+// [amd/vol3]: E.4.15  Function 8000_001Dh—Cache Topology Information.
+//---------------------------------------------------------------------------//
+
+template <uint32_t Subleaf>
+using CpuidAmdCacheTopologyA =
+    CpuidIoValue<CpuidCacheTopologyA, 0x8000'001d, Subleaf, CpuidIo::kEax>;
+
+template <uint32_t Subleaf>
+using CpuidAmdCacheTopologyB =
+    CpuidIoValue<CpuidCacheTopologyB, 0x8000'001d, Subleaf, CpuidIo::kEbx>;
+
+template <uint32_t Subleaf>
+using CpuidAmdCacheTopologyC =
+    CpuidIoValue<CpuidCacheTopologyC, 0x8000'001d, Subleaf, CpuidIo::kEcx>;
+
+template <uint32_t Subleaf>
+using CpuidAmdCacheTopologyD =
+    CpuidIoValue<CpuidCacheTopologyD, 0x8000'001d, Subleaf, CpuidIo::kEdx>;
 
 }  // namespace arch
 

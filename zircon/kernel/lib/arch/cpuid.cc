@@ -8,6 +8,55 @@
 
 namespace arch {
 
+namespace {
+
+constexpr std::optional<bool> IsFullyAssociative(CpuidL2L3Associativity assoc) {
+  switch (assoc) {
+    case CpuidL2L3Associativity::kDisabled:
+      return std::nullopt;
+    case CpuidL2L3Associativity::kFullyAssociative:
+      return true;
+    default:
+      return false;
+  }
+}
+
+constexpr size_t ToWays(CpuidL2L3Associativity assoc) {
+  switch (assoc) {
+    case CpuidL2L3Associativity::kDisabled:
+    case CpuidL2L3Associativity::kSeeLeaf0x8000001d:
+    case CpuidL2L3Associativity::kFullyAssociative:
+      return 0;
+    case CpuidL2L3Associativity::kDirectMapped:
+      return 1;
+    case CpuidL2L3Associativity::k2Way:
+      return 2;
+    case CpuidL2L3Associativity::k3Way:
+      return 3;
+    case CpuidL2L3Associativity::k4Way:
+      return 4;
+    case CpuidL2L3Associativity::k6Way:
+      return 6;
+    case CpuidL2L3Associativity::k8Way:
+      return 8;
+    case CpuidL2L3Associativity::k16Way:
+      return 16;
+    case CpuidL2L3Associativity::k32Way:
+      return 32;
+    case CpuidL2L3Associativity::k48Way:
+      return 48;
+    case CpuidL2L3Associativity::k64Way:
+      return 64;
+    case CpuidL2L3Associativity::k96Way:
+      return 96;
+    case CpuidL2L3Associativity::k128Way:
+      return 128;
+  }
+  return 0;
+}
+
+}  // namespace
+
 std::string_view ToString(Vendor vendor) {
   switch (vendor) {
     case Vendor::kUnknown:
@@ -178,5 +227,49 @@ Microarchitecture CpuidVersionInfo::microarchitecture(Vendor vendor) const {
   }
   __UNREACHABLE;
 }
+
+std::string_view ToString(X86CacheType type) {
+  switch (type) {
+    case X86CacheType::kNull:
+      return "Null";
+    case X86CacheType::kData:
+      return "Data";
+    case X86CacheType::kInstruction:
+      return "Instruction";
+    case X86CacheType::kUnified:
+      return "Unified";
+  }
+  return "";
+}
+
+std::optional<bool> CpuidL1CacheInformation::fully_associative() const {
+  switch (assoc()) {
+    case 0:  // Disabled.
+      return std::nullopt;
+    case CpuidL1CacheInformation::kFullyAssociative:
+      return true;
+    default:
+      return false;
+  }
+}
+
+size_t CpuidL1CacheInformation::ways_of_associativity() const {
+  if (assoc() == CpuidL1CacheInformation::kFullyAssociative) {
+    return 0;
+  }
+  return assoc();
+}
+
+std::optional<bool> CpuidL2CacheInformation::fully_associative() const {
+  return IsFullyAssociative(assoc());
+}
+
+size_t CpuidL2CacheInformation::ways_of_associativity() const { return ToWays(assoc()); }
+
+std::optional<bool> CpuidL3CacheInformation::fully_associative() const {
+  return IsFullyAssociative(assoc());
+}
+
+size_t CpuidL3CacheInformation::ways_of_associativity() const { return ToWays(assoc()); }
 
 }  // namespace arch
