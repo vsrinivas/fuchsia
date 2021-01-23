@@ -7,7 +7,6 @@ use {
         container::ComponentIdentity,
         events::{error::EventError, types::*},
     },
-    fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     futures::{
@@ -36,11 +35,6 @@ pub struct EventSourceRegistry {
     /// The root node for events instrumentation.
     node: inspect::Node,
 
-    /// Used to dynamically register event sources
-    source_sender: mpsc::Sender<EventSourceRegistration>,
-
-    _source_receiver_task: fasync::Task<()>,
-
     /// The stream that is exposed to clients. It can only be taken once.
     event_stream: Option<EventStream>,
 
@@ -56,26 +50,16 @@ impl EventSourceRegistry {
     pub fn new(node: inspect::Node) -> Self {
         let sources_node = node.create_child("sources");
         let (event_sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
-        let (source_sender, source_receiver) = mpsc::channel(1);
         let sources =
             Arc::new(EventSourceStore { sources: Mutex::new(Vec::new()), node: sources_node });
         let (stop_accepting_events, event_stream) = EventStream::new(receiver);
 
-        let sources_for_task = sources.clone();
-        let event_sender_for_task = event_sender.clone();
         let registry = Self {
             sources,
             event_stream: Some(event_stream),
             node,
             event_sender,
-            source_sender,
             stop_accepting_events,
-            _source_receiver_task: fasync::Task::spawn(async move {
-                let mut stream = Box::pin(source_receiver.boxed());
-                while let Some(registration) = stream.next().await {
-                    sources_for_task.add(registration, event_sender_for_task.clone()).await;
-                }
-            }),
         };
         registry
     }
@@ -102,11 +86,6 @@ impl EventSourceRegistry {
                 })))
             }
         }
-    }
-
-    /// Gets a handle to the channel through which new EventSources can be added asynchronously.
-    pub fn get_event_source_publisher(&self) -> mpsc::Sender<EventSourceRegistration> {
-        self.source_sender.clone()
     }
 
     pub fn terminate(self) {

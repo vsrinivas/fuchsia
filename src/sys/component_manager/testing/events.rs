@@ -121,6 +121,20 @@ impl EventSource {
     pub async fn start_component_tree(self) {
         self.proxy.start_component_tree().await.unwrap();
     }
+
+    pub async fn take_static_event_stream(&self, target_path: &str) -> Result<EventStream, Error> {
+        let server_end = self
+            .proxy
+            .take_static_event_stream(target_path)
+            .await?
+            .map_err(|error| format_err!("Error: {:?}", error))?;
+        Ok(EventStream::new(server_end.into_stream()?))
+    }
+
+    pub async fn drop_event_stream(&self, target_path: &str) {
+        // Take the event stream and immediately drop it.
+        let _ = self.take_static_event_stream(target_path).await;
+    }
 }
 
 pub struct EventStream {

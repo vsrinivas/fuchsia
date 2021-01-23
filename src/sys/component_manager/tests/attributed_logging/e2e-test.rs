@@ -92,6 +92,10 @@ async fn verify_routing_failure_messages() {
                     .moniker("/archivist:0"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
+                    .capability_name("fuchsia.sys2.EventSource")
+                    .moniker("/archivist:0"),
+                EventMatcher::ok()
+                    .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
                     .moniker("/archivist:0"),
             ],

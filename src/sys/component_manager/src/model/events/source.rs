@@ -17,6 +17,7 @@ use {
                 },
                 serve::serve_event_source_sync,
                 stream::EventStream,
+                stream_provider::EventStreamProvider,
             },
             hooks::EventType,
             model::Model,
@@ -41,6 +42,10 @@ pub struct EventSource {
     /// A shared reference to the event registry used to subscribe and dispatch events.
     registry: Weak<EventRegistry>,
 
+    /// The static EventStreamProvider tracks all static event streams. It can be used to take the
+    /// server end of the static event streams.
+    stream_provider: Weak<EventStreamProvider>,
+
     /// Used for `BlockingEventSource.StartComponentTree`.
     // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
     resolve_instance_event_stream: Arc<Mutex<Option<EventStream>>>,
@@ -57,6 +62,7 @@ impl EventSource {
         options: SubscriptionOptions,
         mode: EventMode,
         registry: Weak<EventRegistry>,
+        stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
         // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
         let resolve_instance_event_stream = Arc::new(Mutex::new(match mode {
@@ -77,7 +83,7 @@ impl EventSource {
             }
         }));
 
-        Ok(Self { registry, model, options, resolve_instance_event_stream })
+        Ok(Self { registry, stream_provider, model, options, resolve_instance_event_stream })
     }
 
     pub async fn new_for_debug(
@@ -90,6 +96,7 @@ impl EventSource {
             SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Debug),
             mode,
             registry,
+            Weak::new(),
         )
         .await
     }
@@ -113,6 +120,18 @@ impl EventSource {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         // Create an event stream for the given events
         registry.subscribe(&self.options, requests).await
+    }
+
+    pub async fn take_static_event_stream(
+        &self,
+        target_path: String,
+    ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
+        if let SubscriptionType::Component(target_moniker) = &self.options.subscription_type {
+            if let Some(stream_provider) = self.stream_provider.upgrade() {
+                return stream_provider.take_static_event_stream(target_moniker, target_path).await;
+            }
+        }
+        return None;
     }
 
     /// Serves a `EventSource` FIDL protocol.

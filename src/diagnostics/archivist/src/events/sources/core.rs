@@ -106,6 +106,7 @@ pub mod tests {
         super::*,
         crate::{container::ComponentIdentity, events::types::*},
         fidl::endpoints::ClientEnd,
+        fidl_fuchsia_component as fcomponent,
         fidl_fuchsia_io::NodeMarker,
         fuchsia_zircon as zx,
         futures::{future::RemoteHandle, FutureExt, StreamExt},
@@ -302,6 +303,11 @@ pub mod tests {
                         }
                         responder.send(&mut Ok(())).expect("responder send ok");
                         return stream;
+                    }
+                    fsys::EventSourceRequest::TakeStaticEventStream { responder, .. } => {
+                        responder
+                            .send(&mut Err(fcomponent::Error::ResourceUnavailable))
+                            .expect("responder send None");
                     }
                 }
             }

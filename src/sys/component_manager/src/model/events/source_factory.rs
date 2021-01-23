@@ -11,6 +11,7 @@ use {
                 event::EventMode,
                 registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
                 source::EventSource,
+                stream_provider::EventStreamProvider,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -43,6 +44,9 @@ pub struct EventSourceFactory {
     // TODO(fxbug.dev/48512): instead of using a global registry integrate more with the hooks model.
     event_registry: Weak<EventRegistry>,
 
+    // The static event stream provider.
+    event_stream_provider: Weak<EventStreamProvider>,
+
     /// Tracks the event source used by each component identified with the given `moniker`.
     event_source_registry: Mutex<HashMap<AbsoluteMoniker, EventSource>>,
 
@@ -53,11 +57,13 @@ impl EventSourceFactory {
     pub fn new(
         model: Weak<Model>,
         event_registry: Weak<EventRegistry>,
+        event_stream_provider: Weak<EventStreamProvider>,
         execution_mode: ExecutionMode,
     ) -> Self {
         Self {
             model,
             event_registry,
+            event_stream_provider,
             event_source_registry: Mutex::new(HashMap::new()),
             execution_mode,
         }
@@ -96,6 +102,7 @@ impl EventSourceFactory {
             ),
             mode,
             self.event_registry.clone(),
+            self.event_stream_provider.clone(),
         )
         .await
     }
@@ -292,6 +299,7 @@ mod tests {
         let event_source_factory = Arc::new(EventSourceFactory::new(
             Arc::downgrade(&model),
             Arc::downgrade(&event_registry),
+            Weak::new(),
             ExecutionMode::Production,
         ));
 
@@ -332,6 +340,7 @@ mod tests {
         let event_source_factory = Arc::new(EventSourceFactory::new(
             Arc::downgrade(&model),
             Arc::downgrade(&event_registry),
+            Weak::new(),
             ExecutionMode::Production,
         ));
 

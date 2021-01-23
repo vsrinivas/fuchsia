@@ -357,6 +357,15 @@ protocol EventSource {
     Subscribe(vector<EventSubscription>:fuchsia.component.MAX_SUBSCRIPTION_REQUESTS events,
               EventStream stream)
         -> () error fuchsia.component.Error;
+
+    /// Returns the server end of a static EventStream of the provided path if it exists.
+    /// If this stream is discarded afterward then all `sync` events on the channel will be
+    /// immediately canceled.
+    /// Errors:
+    /// - `RESOURCE_UNAVAILABLE` when an event stream at the requested path is unavailable
+    /// or has already been taken.
+    TakeStaticEventStream(string:fuchsia.io.MAX_PATH path)
+        -> (request<EventStream> server_end) error fuchsia.component.Error;
 };
 
 /// Subscribe to events in component manager.

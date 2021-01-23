@@ -10,7 +10,7 @@ use {
         container::ComponentIdentity,
         diagnostics,
         events::{
-            source_registry::{EventSourceRegistration, EventSourceRegistry},
+            source_registry::EventSourceRegistry,
             sources::{StaticEventStream, UnattributedLogSinkSource},
             types::{
                 ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
@@ -26,8 +26,12 @@ use {
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
+    fidl_fuchsia_sys2::EventSourceMarker,
     fuchsia_async::{self as fasync, Task},
-    fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
+    fuchsia_component::{
+        client::connect_to_service,
+        server::{ServiceFs, ServiceObj, ServiceObjTrait},
+    },
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
@@ -353,7 +357,6 @@ impl ArchivistBuilder {
         self.event_source_registry
             .add_source("unattributed_log_sink", Box::new(unattributed_log_sink_source))
             .await;
-        let event_source_publisher = self.event_source_registry.get_event_source_publisher();
 
         self.fs
             .dir("svc")
@@ -372,23 +375,23 @@ impl ArchivistBuilder {
                     })
                 })
                 .detach();
-            })
-            .add_fidl_service(move |stream| {
-                debug!("fuchsia.sys.EventStream connection");
-                let mut publisher = event_source_publisher.clone();
-                fasync::Task::spawn(async move {
-                    publisher
-                        .send(EventSourceRegistration {
-                            name: "v2_static_event_stream".to_string(),
-                            source: Box::new(StaticEventStream::new(stream)),
-                        })
-                        .await
-                        .unwrap_or_else(|err| {
-                            error!(?err, "Failed to add static event source");
-                        })
-                })
-                .detach();
             });
+        debug!("fuchsia.sys.EventStream connection");
+        let event_source = connect_to_service::<EventSourceMarker>().unwrap();
+        match event_source.take_static_event_stream("/svc/fuchsia.sys2.EventStream").await {
+            Ok(Ok(event_stream)) => {
+                let event_stream = event_stream.into_stream().unwrap();
+                self.event_source_registry
+                    .add_source(
+                        "v2_static_event_stream",
+                        Box::new(StaticEventStream::new(event_stream)),
+                    )
+                    .await;
+            }
+            Ok(Err(err)) => debug!(?err, "Failed to open event stream"),
+            Err(err) => debug!(?err, "Failed to send request to take event stream"),
+        }
+
         debug!("Log services initialized.");
         self
     }

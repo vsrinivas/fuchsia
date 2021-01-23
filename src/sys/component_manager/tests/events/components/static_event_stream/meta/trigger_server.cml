@@ -21,7 +21,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
+            protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",

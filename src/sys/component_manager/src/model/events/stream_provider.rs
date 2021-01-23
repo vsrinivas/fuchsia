@@ -15,14 +15,13 @@ use {
             serve::serve_event_stream,
         },
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-        rights::{Rights, WRITE_RIGHTS},
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, ComponentDecl, UseDecl, UseEventStreamDecl},
     fidl::endpoints::{create_endpoints, ServerEnd},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,
+    log::warn,
     moniker::AbsoluteMoniker,
     std::{
         collections::HashMap,
@@ -65,8 +64,29 @@ impl EventStreamProvider {
         )]
     }
 
-    async fn create_static_event_stream(
+    /// Returns the server end of the event stream at the provided `target_path` associated with
+    /// the component with the provided `target_moniker`. This method returns None if such a stream
+    /// does not exist or the channel has already been taken.
+    pub async fn take_static_event_stream(
         &self,
+        target_moniker: &AbsoluteMoniker,
+        target_path: String,
+    ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
+        let mut streams = self.streams.lock().await;
+        if let Some(event_streams) = streams.get_mut(&target_moniker) {
+            if let Some(pos) = event_streams
+                .iter()
+                .position(|event_stream| event_stream.target_path == target_path)
+            {
+                let event_stream = event_streams.remove(pos);
+                return Some(event_stream.server_end);
+            }
+        }
+        return None;
+    }
+
+    async fn create_static_event_stream(
+        self: &Arc<Self>,
         registry: &Arc<EventRegistry>,
         target_moniker: &AbsoluteMoniker,
         target_path: String,
@@ -80,10 +100,11 @@ impl EventStreamProvider {
         let mut streams = self.streams.lock().await;
         let event_streams = streams.entry(target_moniker.clone()).or_insert(vec![]);
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
-        event_streams
-            .push(EventStreamAttachment { target_path: target_path.to_string(), server_end });
+        event_streams.push(EventStreamAttachment { target_path, server_end });
         fasync::Task::spawn(async move {
-            serve_event_stream(event_stream, client_end).await.unwrap();
+            if let Err(e) = serve_event_stream(event_stream, client_end).await {
+                warn!("{}", e);
+            }
         })
         .detach();
         Ok(())
@@ -129,33 +150,6 @@ impl EventStreamProvider {
         }
         Ok(())
     }
-
-    async fn on_component_started(
-        self: &Arc<Self>,
-        target_moniker: &AbsoluteMoniker,
-        outgoing_dir: &DirectoryProxy,
-    ) -> Result<(), ModelError> {
-        let mut streams = self.streams.lock().await;
-        if let Some(event_streams) = streams.remove(&target_moniker) {
-            for event_stream in event_streams {
-                let canonicalized_path = io_util::canonicalize_path(&event_stream.target_path);
-                outgoing_dir
-                    .open(
-                        Rights::from(*WRITE_RIGHTS).into_legacy(),
-                        fio::MODE_TYPE_SERVICE,
-                        &canonicalized_path,
-                        ServerEnd::new(event_stream.server_end.into_channel()),
-                    )
-                    .map_err(|_| {
-                        ModelError::open_directory_error(
-                            target_moniker.clone(),
-                            canonicalized_path.clone(),
-                        )
-                    })?;
-            }
-        }
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -167,11 +161,6 @@ impl Hook for EventStreamProvider {
             }
             Ok(EventPayload::Resolved { decl, .. }) => {
                 self.on_component_resolved(&event.target_moniker, decl).await?;
-            }
-            Ok(EventPayload::Started { runtime, .. }) => {
-                if let Some(outgoing_dir) = &runtime.outgoing_dir {
-                    self.on_component_started(&event.target_moniker, outgoing_dir).await?;
-                }
             }
             _ => {}
         }

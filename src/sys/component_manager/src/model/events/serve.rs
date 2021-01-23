@@ -26,7 +26,10 @@ use {
     fidl_fuchsia_io::{self as fio, NodeProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
-    futures::{lock::Mutex, StreamExt, TryStreamExt},
+    futures::{
+        future::BoxFuture, lock::Mutex, select, stream::FuturesUnordered, FutureExt, StreamExt,
+        TryStreamExt,
+    },
     log::{debug, error, info, warn},
     moniker::{AbsoluteMoniker, RelativeMoniker},
     std::{path::PathBuf, sync::Arc},
@@ -74,6 +77,17 @@ pub async fn serve_event_source_sync(
                             }
                         };
                     }
+                    fsys::BlockingEventSourceRequest::TakeStaticEventStream {
+                        path,
+                        responder,
+                        ..
+                    } => {
+                        let mut result = event_source
+                            .take_static_event_stream(path)
+                            .await
+                            .ok_or(fcomponent::Error::ResourceUnavailable);
+                        responder.send(&mut result).expect("responder send ok");
+                    }
                     fsys::BlockingEventSourceRequest::StartComponentTree { responder } => {
                         event_source.start_component_tree().await;
                         responder.send()?;
@@ -94,18 +108,36 @@ pub async fn serve_event_stream(
     client_end: ClientEnd<fsys::EventStreamMarker>,
 ) -> Result<(), fidl::Error> {
     let listener = client_end.into_proxy().expect("cannot create proxy from client_end");
-    while let Some(event) = event_stream.next().await {
-        trace::duration!("component_manager", "events:fidl_get_next");
-        // Create the basic Event FIDL object.
-        // This will begin serving the Handler protocol asynchronously.
-        let event_fidl_object = create_event_fidl_object(event).await?;
+    // Track sync event handlers here so they're automatically dropped if this event stream is dropped.
+    let mut handlers = FuturesUnordered::new();
 
-        if let Err(e) = listener.on_event(event_fidl_object) {
-            // It's not an error for the client to drop the listener.
-            if !e.is_closed() {
-                warn!("Unexpected error while serving EventStream: {:?}", e);
-            }
-            break;
+    loop {
+        trace::duration!("component_manager", "events:fidl_get_next");
+        // Poll both the event stream and the handlers until both futures complete.
+        select! {
+            maybe_event = event_stream.next().fuse() => {
+                match maybe_event {
+                    Some(event) => {
+                        // Create the basic Event FIDL object.
+                        // This will begin serving the Handler protocol asynchronously.
+                        let (opt_fut, event_fidl_object) = create_event_fidl_object(event).await?;
+                        if let Some(fut) = opt_fut {
+                            handlers.push(fut);
+                        }
+                        if let Err(e) = listener.on_event(event_fidl_object) {
+                            // It's not an error for the client to drop the listener.
+                            if !e.is_closed() {
+                                warn!("Unexpected error while serving EventStream: {:?}", e);
+                            }
+                            break;
+                        }
+                    },
+                    None => {
+                        break;
+                    },
+                }
+            },
+            _ = handlers.select_next_some() => {},
         }
     }
     Ok(())
@@ -321,9 +353,12 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
     }))
 }
 
-/// Creates the basic FIDL Event object containing the event type, target
-/// and basic handler for resumption.
-async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
+/// Creates the basic FIDL Event object containing the event type, target_moniker
+/// and basic handler for resumption. It returns a tuple of the future to run the
+/// handler, and the FIDL event.
+async fn create_event_fidl_object(
+    event: Event,
+) -> Result<(Option<BoxFuture<'static, ()>>, fsys::Event), fidl::Error> {
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let header = Some(fsys::EventHeader {
@@ -334,8 +369,8 @@ async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Err
         ..fsys::EventHeader::EMPTY
     });
     let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result).await?;
-    let handler = maybe_serve_handler_async(event);
-    Ok(fsys::Event { header, handler, event_result, ..fsys::Event::EMPTY })
+    let (opt_fut, handler) = maybe_serve_handler_async(event);
+    Ok((opt_fut, fsys::Event { header, handler, event_result, ..fsys::Event::EMPTY }))
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.
@@ -438,16 +473,18 @@ async fn serve_routing_protocol(
 }
 
 /// Serves the server end of Handler FIDL protocol asynchronously
-fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMarker>> {
+fn maybe_serve_handler_async(
+    event: Event,
+) -> (Option<BoxFuture<'static, ()>>, Option<ClientEnd<fsys::HandlerMarker>>) {
     if event.mode() == EventMode::Async {
-        return None;
+        return (None, None);
     }
     let (client_end, mut stream) = create_request_stream::<fsys::HandlerMarker>()
         .expect("could not create request stream for handler protocol");
-    fasync::Task::spawn(async move {
+    let handler_fut = async move {
         // Expect exactly one call to Resume
         let mut out_responder = None;
-        if let Some(Ok(fsys::HandlerRequest::Resume { responder })) = stream.next().await {
+        if let Ok(Some(fsys::HandlerRequest::Resume { responder })) = stream.try_next().await {
             out_responder = Some(responder);
         }
         // Always resume the event even if the stream has closed.
@@ -457,7 +494,7 @@ fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMark
                 debug!("failed to respond to Resume request: {:?}", e);
             }
         }
-    })
-    .detach();
-    Some(client_end)
+    }
+    .boxed();
+    (Some(handler_fut), Some(client_end))
 }

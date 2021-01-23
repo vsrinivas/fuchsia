@@ -17,13 +17,12 @@ async fn main() {
     syslog::init_with_tags(&["nested_reporter"]).unwrap();
 
     // Track all the starting child components.
-    let event_source = EventSource::new_sync().unwrap();
+    let event_source = EventSource::new_async().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
         .await
         .unwrap();
-
-    event_source.start_component_tree().await;
+    event_source.drop_event_stream("/svc/StartComponentTree").await;
 
     let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 

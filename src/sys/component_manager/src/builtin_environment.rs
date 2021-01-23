@@ -651,18 +651,19 @@ impl BuiltinEnvironment {
         };
         model.root.hooks.install(event_registry.hooks()).await;
 
-        // Set up the event source factory.
-        let event_source_factory = Arc::new(EventSourceFactory::new(
-            Arc::downgrade(&model),
-            Arc::downgrade(&event_registry),
-            execution_mode.clone(),
-        ));
-        model.root.hooks.install(event_source_factory.hooks()).await;
-
         let event_stream_provider = Arc::new(EventStreamProvider::new(
             Arc::downgrade(&event_registry),
             execution_mode.clone(),
         ));
+
+        // Set up the event source factory.
+        let event_source_factory = Arc::new(EventSourceFactory::new(
+            Arc::downgrade(&model),
+            Arc::downgrade(&event_registry),
+            Arc::downgrade(&event_stream_provider),
+            execution_mode.clone(),
+        ));
+        model.root.hooks.install(event_source_factory.hooks()).await;
         model.root.hooks.install(event_stream_provider.hooks()).await;
 
         Ok(BuiltinEnvironment {
