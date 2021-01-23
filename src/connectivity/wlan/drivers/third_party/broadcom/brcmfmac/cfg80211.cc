@@ -2279,23 +2279,25 @@ uint8_t brcmf_cfg80211_classify8021d(const uint8_t* data, size_t size) {
 }
 
 static void brcmf_iedump(uint8_t* ies, size_t total_len) {
-  size_t offset = 0;
-  while (offset + TLV_HDR_LEN <= total_len) {
-    uint8_t elem_type = ies[offset];
-    uint8_t elem_len = ies[offset + TLV_LEN_OFF];
-    offset += TLV_HDR_LEN;
-    if (offset + elem_len > total_len) {
-      break;
+  if (BRCMF_IS_ON(CONN) && BRCMF_IS_ON(BYTES)) {
+    size_t offset = 0;
+    while (offset + TLV_HDR_LEN <= total_len) {
+      uint8_t elem_type = ies[offset];
+      uint8_t elem_len = ies[offset + TLV_LEN_OFF];
+      offset += TLV_HDR_LEN;
+      if (offset + elem_len > total_len) {
+        break;
+      }
+      if (elem_type == 0) {
+        BRCMF_DBG_STRING_DUMP(true, ies + offset, elem_len, "IE 0 (name), len %d:", elem_len);
+      } else {
+        BRCMF_DBG_HEX_DUMP(true, ies + offset, elem_len, "IE %d, len %d:", elem_type, elem_len);
+      }
+      offset += elem_len;
     }
-    if (elem_type == 0) {
-      BRCMF_DBG_STRING_DUMP(true, ies + offset, elem_len, "IE 0 (name), len %d:", elem_len);
-    } else {
-      BRCMF_DBG_HEX_DUMP(true, ies + offset, elem_len, "IE %d, len %d:", elem_type, elem_len);
+    if (offset != total_len) {
+      BRCMF_DBG(ALL, " * * Offset %ld didn't match length %ld", offset, total_len);
     }
-    offset += elem_len;
-  }
-  if (offset != total_len) {
-    BRCMF_DBG(ALL, " * * Offset %ld didn't match length %ld", offset, total_len);
   }
 }
 
@@ -3882,88 +3884,96 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
 }
 
 static void brcmf_dump_ht_caps(ieee80211_ht_capabilities_t* caps) {
-  BRCMF_INFO("     ht_capability_info: %#x", caps->ht_capability_info);
-  BRCMF_INFO("     ampdu_params: %#x", caps->ampdu_params);
+  if (BRCMF_IS_ON(INFO)) {
+    BRCMF_INFO("     ht_capability_info: %#x", caps->ht_capability_info);
+    BRCMF_INFO("     ampdu_params: %#x", caps->ampdu_params);
 
-  char mcs_set_str[countof(caps->supported_mcs_set.bytes) * 5 + 1];
-  char* str = mcs_set_str;
-  for (unsigned i = 0; i < countof(caps->supported_mcs_set.bytes); i++) {
-    str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set.bytes[i]);
+    char mcs_set_str[countof(caps->supported_mcs_set.bytes) * 5 + 1];
+    char* str = mcs_set_str;
+    for (unsigned i = 0; i < countof(caps->supported_mcs_set.bytes); i++) {
+      str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set.bytes[i]);
+    }
+
+    BRCMF_INFO("     mcs_set: %s", mcs_set_str);
+    BRCMF_INFO("     ht_ext_capabilities: %#x", caps->ht_ext_capabilities);
+    BRCMF_INFO("     asel_capabilities: %#x", caps->asel_capabilities);
   }
-
-  BRCMF_INFO("     mcs_set: %s", mcs_set_str);
-  BRCMF_INFO("     ht_ext_capabilities: %#x", caps->ht_ext_capabilities);
-  BRCMF_INFO("     asel_capabilities: %#x", caps->asel_capabilities);
 }
 
 static void brcmf_dump_vht_caps(ieee80211_vht_capabilities_t* caps) {
-  BRCMF_INFO("     vht_capability_info: %#x", caps->vht_capability_info);
-  BRCMF_INFO("     supported_vht_mcs_and_nss_set: %#" PRIx64 "",
-             caps->supported_vht_mcs_and_nss_set);
+  if (BRCMF_IS_ON(INFO)) {
+    BRCMF_INFO("     vht_capability_info: %#x", caps->vht_capability_info);
+    BRCMF_INFO("     supported_vht_mcs_and_nss_set: %#" PRIx64 "",
+               caps->supported_vht_mcs_and_nss_set);
+  }
 }
 
 static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
-  char band_id_str[32];
-  switch (band->band_id) {
-    case WLAN_INFO_BAND_2GHZ:
-      sprintf(band_id_str, "2GHz");
-      break;
-    case WLAN_INFO_BAND_5GHZ:
-      sprintf(band_id_str, "5GHz");
-      break;
-    default:
-      sprintf(band_id_str, "unknown (%d)", band->band_id);
-      break;
-  }
-  BRCMF_INFO("   band_id: %s", band_id_str);
+  if (BRCMF_IS_ON(INFO)) {
+    char band_id_str[32];
+    switch (band->band_id) {
+      case WLAN_INFO_BAND_2GHZ:
+        sprintf(band_id_str, "2GHz");
+        break;
+      case WLAN_INFO_BAND_5GHZ:
+        sprintf(band_id_str, "5GHz");
+        break;
+      default:
+        sprintf(band_id_str, "unknown (%d)", band->band_id);
+        break;
+    }
+    BRCMF_INFO("   band_id: %s", band_id_str);
 
-  if (band->num_rates > WLAN_INFO_BAND_INFO_MAX_RATES) {
-    BRCMF_ERR("Number of rates reported (%zu) exceeds limit (%d), truncating", band->num_rates,
-              WLAN_INFO_BAND_INFO_MAX_RATES);
-    band->num_rates = WLAN_INFO_BAND_INFO_MAX_RATES;
-  }
-  char rates_str[WLAN_INFO_BAND_INFO_MAX_RATES * 6 + 1];
-  char* str = rates_str;
-  for (unsigned i = 0; i < band->num_rates; i++) {
-    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->rates[i]);
-  }
-  BRCMF_INFO("     basic_rates: %s", rates_str);
+    if (band->num_rates > WLAN_INFO_BAND_INFO_MAX_RATES) {
+      BRCMF_INFO("Number of rates reported (%zu) exceeds limit (%d), truncating", band->num_rates,
+                 WLAN_INFO_BAND_INFO_MAX_RATES);
+      band->num_rates = WLAN_INFO_BAND_INFO_MAX_RATES;
+    }
+    char rates_str[WLAN_INFO_BAND_INFO_MAX_RATES * 6 + 1];
+    char* str = rates_str;
+    for (unsigned i = 0; i < band->num_rates; i++) {
+      str += sprintf(str, "%s%d", i > 0 ? " " : "", band->rates[i]);
+    }
+    BRCMF_INFO("     basic_rates: %s", rates_str);
 
-  BRCMF_INFO("     base_frequency: %d", band->base_frequency);
+    BRCMF_INFO("     base_frequency: %d", band->base_frequency);
 
-  if (band->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    BRCMF_ERR("Number of channels reported (%zu) exceeds limit (%d), truncating",
-              band->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
-    band->num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
-  }
-  char channels_str[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * 4 + 1];
-  str = channels_str;
-  for (unsigned i = 0; i < band->num_channels; i++) {
-    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->channels[i]);
-  }
-  BRCMF_INFO("     channels: %s", channels_str);
+    if (band->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
+      BRCMF_INFO("Number of channels reported (%zu) exceeds limit (%d), truncating",
+                 band->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+      band->num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
+    }
+    char channels_str[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * 4 + 1];
+    str = channels_str;
+    for (unsigned i = 0; i < band->num_channels; i++) {
+      str += sprintf(str, "%s%d", i > 0 ? " " : "", band->channels[i]);
+    }
+    BRCMF_INFO("     channels: %s", channels_str);
 
-  BRCMF_INFO("     ht_supported: %s", band->ht_supported ? "true" : "false");
-  if (band->ht_supported) {
-    brcmf_dump_ht_caps(&band->ht_caps);
-  }
+    BRCMF_INFO("     ht_supported: %s", band->ht_supported ? "true" : "false");
+    if (band->ht_supported) {
+      brcmf_dump_ht_caps(&band->ht_caps);
+    }
 
-  BRCMF_INFO("     vht_supported: %s", band->vht_supported ? "true" : "false");
-  if (band->vht_supported) {
-    brcmf_dump_vht_caps(&band->vht_caps);
+    BRCMF_INFO("     vht_supported: %s", band->vht_supported ? "true" : "false");
+    if (band->vht_supported) {
+      brcmf_dump_vht_caps(&band->vht_caps);
+    }
   }
 }
 
 static void brcmf_dump_query_info(wlanif_query_info_t* info) {
-  BRCMF_INFO(" Device capabilities as reported to wlanif:");
-  BRCMF_INFO("   mac_addr: " MAC_FMT_STR, MAC_FMT_ARGS(info->mac_addr));
-  BRCMF_INFO("   role(s): %s%s%s", info->role & WLAN_INFO_MAC_ROLE_CLIENT ? "client " : "",
-             info->role & WLAN_INFO_MAC_ROLE_AP ? "ap " : "",
-             info->role & WLAN_INFO_MAC_ROLE_MESH ? "mesh " : "");
-  BRCMF_INFO("   feature(s): %s%s", info->features & WLANIF_FEATURE_DMA ? "DMA " : "",
-             info->features & WLANIF_FEATURE_SYNTH ? "SYNTH " : "");
-  for (unsigned i = 0; i < info->num_bands; i++) {
-    brcmf_dump_band_caps(&info->bands[i]);
+  if (BRCMF_IS_ON(INFO)) {
+    BRCMF_INFO(" Device capabilities as reported to wlanif:");
+    BRCMF_INFO("   mac_addr: " MAC_FMT_STR, MAC_FMT_ARGS(info->mac_addr));
+    BRCMF_INFO("   role(s): %s%s%s", info->role & WLAN_INFO_MAC_ROLE_CLIENT ? "client " : "",
+               info->role & WLAN_INFO_MAC_ROLE_AP ? "ap " : "",
+               info->role & WLAN_INFO_MAC_ROLE_MESH ? "mesh " : "");
+    BRCMF_INFO("   feature(s): %s%s", info->features & WLANIF_FEATURE_DMA ? "DMA " : "",
+               info->features & WLANIF_FEATURE_SYNTH ? "SYNTH " : "");
+    for (unsigned i = 0; i < info->num_bands; i++) {
+      brcmf_dump_band_caps(&info->bands[i]);
+    }
   }
 }
 
