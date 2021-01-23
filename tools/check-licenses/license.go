@@ -102,6 +102,10 @@ func NewLicense(path string, config *Config) (*License, error) {
 }
 
 func (l *License) Search(data []byte, path string) bool {
+	if len(l.AllowedDirs) > 0 && !contains(l.AllowedDirs, path) {
+		return false
+	}
+
 	if m := l.pattern.Find(data); m != nil {
 
 		// Extract the copyright author information from the text.

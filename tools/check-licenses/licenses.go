@@ -58,7 +58,7 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 		}
 		for _, match := range license.matches {
 			for _, path := range match.files {
-				if _, found := set[path]; !found {
+				if _, found := set[path]; !found && !contains(license.AllowedDirs, path) {
 					set[path] = true
 					filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, path)
 				}
