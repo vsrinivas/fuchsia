@@ -101,6 +101,16 @@ struct LogBuffer {
     syslog_backend::WriteKeyValue(this, value.key, value.value);
   }
 
+  // Encodes a double floating point value
+  void Encode(KeyValue<const char*, double> value) {
+    syslog_backend::WriteKeyValue(this, value.key, value.value);
+  }
+
+  // Encodes a floating point value
+  void Encode(KeyValue<const char*, float> value) {
+    syslog_backend::WriteKeyValue(this, value.key, value.value);
+  }
+
   // Encodes an arbitrary list of values recursively.
   template <size_t i, size_t size, typename... T,
             typename std::enable_if<ILessThanSize<i, size>(), int>::type = 0>

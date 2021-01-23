@@ -265,18 +265,28 @@ TEST_F(LoggingFixture, SLog) {
   int line5 = __LINE__ + 1;
   FX_SLOG(ERROR, "String log");
 
+  int line6 = __LINE__ + 1;
+  FX_SLOG(ERROR, nullptr, "float", 0.25f);
+
+  int line7 = __LINE__ + 1;
+  FX_SLOG(ERROR, "String with quotes", "value", "char is '\"'");
+
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
   EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
-                                      std::to_string(line1) + ")] {\"msg\": \"String log\"}"));
+                                      std::to_string(line1) + ")] msg=\"String log\""));
   EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
-                                      std::to_string(line2) + ")] {\"msg\": 42}"));
-  EXPECT_THAT(log,
-              testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" + std::to_string(line4) +
-                                 ")] msg {\"first\": 42, \"second\": \"string\"}"));
+                                      std::to_string(line2) + ")] msg=42"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
+                                      std::to_string(line4) + ")] msg first=42 second=\"string\""));
   EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
                                       std::to_string(line5) + ")] String log"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
+                                      std::to_string(line6) + ")] float=0.250000"));
+  EXPECT_THAT(log,
+              testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" + std::to_string(line7) +
+                                 ")] String with quotes value=\"char is '\\\"'\""));
 }
 
 TEST_F(LoggingFixture, BackendDirect) {
@@ -301,9 +311,8 @@ TEST_F(LoggingFixture, BackendDirect) {
 
   EXPECT_THAT(log,
               testing::HasSubstr("ERROR: [foo.cc(42)] Check failed: condition. Log message\n"));
-  EXPECT_THAT(log,
-              testing::HasSubstr(
-                  "ERROR: [foo.cc(42)] Check failed: condition. fake message {\"foo\": 42}\n"));
+  EXPECT_THAT(log, testing::HasSubstr(
+                       "ERROR: [foo.cc(42)] Check failed: condition. fake message foo=42\n"));
 }
 
 }  // namespace

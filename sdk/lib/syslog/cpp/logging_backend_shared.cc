@@ -6,21 +6,9 @@
 
 #include <inttypes.h>
 
-namespace syslog_backend {
+#include <cstdio>
 
-void WritePreamble(LogBuffer* buffer) {
-  auto header = MsgHeader::CreatePtr(buffer);
-  if (header->first_tag) {
-    header->first_tag = false;
-    // Sometimes we have no message. Why add an extra space if that's the case?
-    if (header->has_msg) {
-      header->WriteChar(' ');
-    }
-    header->WriteChar('{');
-  } else {
-    header->WriteString(", ");
-  }
-}
+namespace syslog_backend {
 
 void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
                  unsigned int line, const char* msg, const char* condition) {
@@ -49,72 +37,67 @@ void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* fi
   }
 }
 
-void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
+// Common initialization for all KV pairs.
+// Returns the header for writing the value.
+MsgHeader* StartKv(LogBuffer* buffer, const char* key) {
   auto header = MsgHeader::CreatePtr(buffer);
+  if (!header->first_kv || header->has_msg) {
+    header->WriteChar(' ');
+  }
+  header->WriteString(key);
+  header->WriteChar('=');
+  header->first_kv = false;
+  return header;
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
   // "tag" has special meaning to our logging API
-  if (!strcmp("tag", key)) {
+  if (strcmp("tag", key) == 0) {
+    auto header = MsgHeader::CreatePtr(buffer);
     auto tag_size = strlen(value) + 1;
     header->user_tag = (reinterpret_cast<char*>(buffer->data) + sizeof(buffer->data)) - tag_size;
     memcpy(header->user_tag, value, tag_size);
     return;
   }
-  WritePreamble(buffer);
-  // Key
+  auto header = StartKv(buffer, key);
   header->WriteChar('"');
-  header->WriteString(key);
-  header->WriteChar('"');
-  // Value
-  header->WriteString(": \"");
-  header->WriteString(value);
+  if (strchr(value, '"') != nullptr) {
+    // Escape quotes in strings.
+    size_t len = strlen(value);
+    for (size_t i = 0; i < len; ++i) {
+      char c = value[i];
+      if (c == '"') {
+        header->WriteChar('\\');
+      }
+      header->WriteChar(c);
+    }
+  } else {
+    header->WriteString(value);
+  }
   header->WriteChar('"');
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
-  auto header = MsgHeader::CreatePtr(buffer);
-  WritePreamble(buffer);
-  // Key
-  header->WriteChar('"');
-  header->WriteString(key);
-  header->WriteChar('"');
-  // Value
-  header->WriteString(": ");
+  auto header = StartKv(buffer, key);
   char a_buffer[128];
   snprintf(a_buffer, 128, "%" PRId64, value);
   header->WriteString(a_buffer);
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
-  auto header = MsgHeader::CreatePtr(buffer);
-  WritePreamble(buffer);
-  // Key
-  header->WriteChar('"');
-  header->WriteString(key);
-  header->WriteChar('"');
-  // Value
-  header->WriteString(": ");
+  auto header = StartKv(buffer, key);
   char a_buffer[128];
   snprintf(a_buffer, 128, "%" PRIu64, value);
   header->WriteString(a_buffer);
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
-  auto header = MsgHeader::CreatePtr(buffer);
-  WritePreamble(buffer);
-  // Key
-  header->WriteChar('"');
-  header->WriteString(key);
-  header->WriteChar('"');
-  // Value
-  header->WriteString(": ");
+  auto header = StartKv(buffer, key);
   char a_buffer[128];
   snprintf(a_buffer, 128, "%f", value);
   header->WriteString(a_buffer);
 }
 
-void EndRecord(LogBuffer* buffer) {
-  auto header = MsgHeader::CreatePtr(buffer);
-  if (!header->first_tag) {
-    header->WriteChar('}');
-  }
-}
+void EndRecord(LogBuffer* buffer) {}
+
 }  // namespace syslog_backend

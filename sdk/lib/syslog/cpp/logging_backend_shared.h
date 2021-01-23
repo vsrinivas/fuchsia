@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
+#ifndef LIB_SYSLOG_CPP_LOGGING_BACKEND_SHARED_H_
+#define LIB_SYSLOG_CPP_LOGGING_BACKEND_SHARED_H_
 
-#include "log_level.h"
-#include "macros.h"
+#include <assert.h>
+#include <lib/syslog/cpp/log_level.h>
+#include <lib/syslog/cpp/macros.h>
+
+#include <cstring>
 
 // This file contains shared implementations for writing string logs between the legacy backend and
 // the host backend
@@ -17,6 +21,7 @@ struct MsgHeader {
   bool first_tag;
   char* user_tag;
   bool has_msg;
+  bool first_kv;
   void WriteChar(const char value) {
     assert((offset + 1) < (reinterpret_cast<const char*>(this) + sizeof(LogBuffer)));
     *offset = value;
@@ -34,6 +39,7 @@ struct MsgHeader {
     offset = reinterpret_cast<char*>(buffer->data);
     first_tag = true;
     has_msg = false;
+    first_kv = true;
   }
   static MsgHeader* CreatePtr(LogBuffer* buffer) {
     return reinterpret_cast<MsgHeader*>(&buffer->record_state);
@@ -44,8 +50,9 @@ struct MsgHeader {
 const std::string GetNameForLogSeverity(syslog::LogSeverity severity);
 #endif
 
-static_assert(sizeof(MsgHeader) <= sizeof(LogBuffer::record_state));
-
-void WritePreamble(LogBuffer* buffer);
+static_assert(sizeof(MsgHeader) <= sizeof(LogBuffer::record_state),
+              "message header must be no larger than record_state");
 
 }  // namespace syslog_backend
+
+#endif  // LIB_SYSLOG_CPP_LOGGING_BACKEND_SHARED_H_
