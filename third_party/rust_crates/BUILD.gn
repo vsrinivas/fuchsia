@@ -102,6 +102,10 @@ group("cxxbridge-cmd") {
   deps = [ ":cxxbridge-cmd-v0_3_5" ]
 }
 
+group("darling") {
+  deps = [ ":darling-v0_12_0" ]
+}
+
 group("data-encoding") {
   deps = [ ":data-encoding-v2_1_2" ]
 }
@@ -2475,6 +2479,84 @@ rust_proc_macro("cxxbridge-macro-v0_3_5") {
   ]
 }
 
+rust_library("darling-v0_12_0") {
+  crate_name = "darling"
+  crate_root = "//third_party/rust_crates/vendor/darling/src/lib.rs"
+  output_name = "darling-4ce981851fdcfb80"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":darling_core-v0_12_0" ]
+  deps += [ ":darling_macro-v0_12_0($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=4ce981851fdcfb80",
+    "-Cextra-filename=-4ce981851fdcfb80",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"suggestions\"",
+  ]
+}
+
+rust_library("darling_core-v0_12_0") {
+  crate_name = "darling_core"
+  crate_root = "//third_party/rust_crates/vendor/darling_core/src/lib.rs"
+  output_name = "darling_core-fbdd95e1b2070c13"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":fnv-v1_0_6" ]
+  deps += [ ":ident_case-v1_0_1" ]
+  deps += [ ":proc-macro2-v1_0_24" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":strsim-v0_10_0" ]
+  deps += [ ":syn-v1_0_58" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=fbdd95e1b2070c13",
+    "-Cextra-filename=-fbdd95e1b2070c13",
+    "--cfg=feature=\"strsim\"",
+    "--cfg=feature=\"suggestions\"",
+  ]
+}
+
+rust_proc_macro("darling_macro-v0_12_0") {
+  crate_name = "darling_macro"
+  crate_root = "//third_party/rust_crates/vendor/darling_macro/src/lib.rs"
+  output_name = "darling_macro-ad9e3192968cb445"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":darling_core-v0_12_0" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_58" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=ad9e3192968cb445",
+    "-Cextra-filename=-ad9e3192968cb445",
+  ]
+}
+
 rust_library("data-encoding-v2_1_2") {
   crate_name = "data_encoding"
   crate_root = "//third_party/rust_crates/vendor/data-encoding/src/lib.rs"
@@ -3691,6 +3773,27 @@ rust_library("hyper-rustls-v0_20_0") {
     "-Cmetadata=b9f204e9124022d3",
     "-Cextra-filename=-b9f204e9124022d3",
     "--cfg=feature=\"rustls-native-certs\"",
+  ]
+}
+
+rust_library("ident_case-v1_0_1") {
+  crate_name = "ident_case"
+  crate_root = "//third_party/rust_crates/vendor/ident_case/src/lib.rs"
+  output_name = "ident_case-b27b32febfa5a05a"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=b27b32febfa5a05a",
+    "-Cextra-filename=-b27b32febfa5a05a",
   ]
 }
 
@@ -8179,9 +8282,30 @@ rust_library("stb_truetype-v0_2_6") {
   ]
 }
 
-rust_library("strsim-v0_8_0") {
+rust_library("strsim-v0_10_0") {
   crate_name = "strsim"
   crate_root = "//third_party/rust_crates/vendor/strsim/src/lib.rs"
+  output_name = "strsim-aa21785775b7b33b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=aa21785775b7b33b",
+    "-Cextra-filename=-aa21785775b7b33b",
+  ]
+}
+
+rust_library("strsim-v0_8_0") {
+  crate_name = "strsim"
+  crate_root = "//third_party/rust_crates/vendor/strsim-0.8.0/src/lib.rs"
   output_name = "strsim-a6895684b05e64cd"
   configs -= [
     "//build/config:rust_edition_2018",
