@@ -765,28 +765,102 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
     }
 }
 
+/// IP lookup variants from [`fidl_fuchsia_net::NameLookupRequest`].
+enum IpLookupRequest {
+    LookupIp {
+        hostname: String,
+        options: fnet::LookupIpOptions,
+        responder: fnet::NameLookupLookupIpResponder,
+    },
+    LookupIp2 {
+        hostname: String,
+        options: fnet::LookupIpOptions2,
+        responder: fnet::NameLookupLookupIp2Responder,
+    },
+}
+
 async fn run_name_lookup<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
-    stats: Arc<QueryStats>,
-    routes: &fidl_fuchsia_net_routes::StateProxy,
     stream: NameLookupRequestStream,
+    sender: mpsc::Sender<IpLookupRequest>,
 ) -> Result<(), fidl::Error> {
-    // TODO(fxbug.dev/45035): Limit the number of parallel requests to 1000.
     stream
         .try_for_each_concurrent(None, |request| async {
             match request {
-                NameLookupRequest::LookupIp { hostname, options, responder } => responder
-                    .send(&mut handle_lookup_ip(resolver, stats.clone(), hostname, options).await),
-                NameLookupRequest::LookupIp2 { hostname, options, responder } => responder.send(
-                    &mut handle_lookup_ip2(resolver, stats.clone(), routes, hostname, options)
-                        .await,
-                ),
+                NameLookupRequest::LookupIp { hostname, options, responder } => {
+                    let () = sender
+                        .clone()
+                        .send(IpLookupRequest::LookupIp { hostname, options, responder })
+                        .await
+                        .expect("receiver should not be closed");
+                    Ok(())
+                }
+                NameLookupRequest::LookupIp2 { hostname, options, responder } => {
+                    let () = sender
+                        .clone()
+                        .send(IpLookupRequest::LookupIp2 { hostname, options, responder })
+                        .await
+                        .expect("receiver should not be closed");
+                    Ok(())
+                }
                 NameLookupRequest::LookupHostname { addr, responder } => {
-                    responder.send(&mut handle_lookup_hostname(resolver, addr).await)
+                    let result = responder.send(&mut handle_lookup_hostname(&resolver, addr).await);
+                    // Some clients will drop the channel when timing out
+                    // requests. Mute those errors to prevent log spamming.
+                    if let Err(fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED)) = result {
+                        Ok(())
+                    } else {
+                        result
+                    }
                 }
             }
         })
         .await
+}
+
+const MAX_PARALLEL_REQUESTS: usize = 256;
+
+fn create_ip_lookup_fut<T: ResolverLookup>(
+    resolver: &SharedResolver<T>,
+    stats: Arc<QueryStats>,
+    routes: fidl_fuchsia_net_routes::StateProxy,
+    recv: mpsc::Receiver<IpLookupRequest>,
+) -> impl futures::Future<Output = ()> + '_ {
+    recv.for_each_concurrent(MAX_PARALLEL_REQUESTS, move |request| {
+        let stats = stats.clone();
+        let routes = routes.clone();
+        async move {
+            #[derive(Debug)]
+            enum IpLookupResult {
+                LookupIp(Result<fnet::IpAddressInfo, fnet::LookupError>),
+                LookupIp2(Result<fnet::LookupResult, fnet::LookupError>),
+            }
+            let (lookup_result, send_result) = match request {
+                IpLookupRequest::LookupIp { hostname, options, responder } => {
+                    let mut lookup_result =
+                        handle_lookup_ip(resolver, stats.clone(), hostname, options).await;
+                    let send_result = responder.send(&mut lookup_result);
+                    (IpLookupResult::LookupIp(lookup_result), send_result)
+                }
+                IpLookupRequest::LookupIp2 { hostname, options, responder } => {
+                    let mut lookup_result =
+                        handle_lookup_ip2(resolver, stats.clone(), &routes, hostname, options)
+                            .await;
+                    let send_result = responder.send(&mut lookup_result);
+                    (IpLookupResult::LookupIp2(lookup_result), send_result)
+                }
+            };
+            send_result.unwrap_or_else(|e| match e {
+                // Some clients will drop the channel when timing out
+                // requests. Mute those errors to prevent log spamming.
+                fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED) => {}
+                e => warn!(
+                    "failed to send IP lookup result {:?} due to FIDL error: {}",
+                    lookup_result, e
+                ),
+            })
+        }
+    })
 }
 
 /// The error variants returned by [`run_lookup_admin`].
@@ -998,6 +1072,9 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(IncomingRequest::LookupAdmin);
     fs.take_and_serve_directory_handle()?;
 
+    // Create a channel with buffer size `MAX_PARALLEL_REQUESTS`, which allows
+    // request processing to always be fully saturated.
+    let (sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
     let serve_fut = fs
         .for_each_concurrent(None, |incoming_service| async {
             match incoming_service {
@@ -1014,20 +1091,16 @@ async fn main() -> Result<(), Error> {
                         })
                 }
                 IncomingRequest::NameLookup(stream) => {
-                    run_name_lookup(&resolver, stats.clone(), &routes, stream).await.unwrap_or_else(
-                        |e| match e {
-                            // Some clients will drop the channel when timing out
-                            // requests. Mute those errors to prevent log spamming.
-                            fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED) => {}
-                            e => warn!("run_name_lookup finished with error: {}", e),
-                        },
-                    )
+                    run_name_lookup(&resolver, stream, sender.clone())
+                        .await
+                        .unwrap_or_else(|e| warn!("run_name_lookup finished with error: {}", e))
                 }
             }
         })
         .map(Ok);
+    let ip_lookup_fut = create_ip_lookup_fut(&resolver, stats.clone(), routes, recv).map(Ok);
 
-    let ((), ()) = futures::future::try_join(policy_fut, serve_fut).await?;
+    let ((), (), ()) = futures::future::try_join3(policy_fut, serve_fut, ip_lookup_fut).await?;
     Ok(())
 }
 
@@ -1045,6 +1118,7 @@ mod tests {
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::{assert_inspect_tree, testing::NonZeroUintProperty, tree_assertion};
+    use matches::assert_matches;
     use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
     use pin_utils::pin_mut;
@@ -1079,8 +1153,9 @@ mod tests {
 
     async fn setup_namelookup_service() -> (fnet::NameLookupProxy, impl futures::Future<Output = ()>)
     {
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
-            .expect("failed to create NamelookupProxy");
+        let (name_lookup_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
+                .expect("failed to create NamelookupProxy");
 
         let mut resolver_opts = ResolverOpts::default();
         resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
@@ -1091,7 +1166,6 @@ mod tests {
                 .expect("failed to create resolver"),
         );
         let stats = Arc::new(QueryStats::new());
-
         let (routes_proxy, routes_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
                 .expect("failed to create routes.StateProxy");
@@ -1099,21 +1173,20 @@ mod tests {
             routes_stream.try_for_each(|req| -> futures::future::Ready<Result<(), fidl::Error>> {
                 panic!("Should not call routes/State. Received request {:?}", req)
             });
-        (
-            proxy,
-            futures::future::try_join(
-                async move {
-                    // We must move routes_proxy into this future so routes_fut will
-                    // close.
-                    run_name_lookup(&resolver, stats.clone(), &routes_proxy, stream).await
-                },
+        let (sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
+
+        (name_lookup_proxy, async move {
+            futures::future::try_join3(
+                run_name_lookup(&resolver, stream, sender),
                 routes_fut,
+                create_ip_lookup_fut(&resolver, stats.clone(), routes_proxy, recv).map(Ok),
             )
             .map(|r| match r {
-                Ok(((), ())) => (),
+                Ok(((), (), ())) => (),
                 Err(e) => panic!("namelookup service error {:?}", e),
-            }),
-        )
+            })
+            .await
+        })
     }
 
     async fn check_lookup_ip(
@@ -1345,18 +1418,13 @@ mod tests {
                 fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
                     .expect("failed to create routes.StateProxy");
 
-            let ((), (), ()) = futures::future::try_join3(
-                async move {
-                    run_name_lookup(
-                        &self.shared_resolver,
-                        self.stats.clone(),
-                        &routes_proxy,
-                        name_lookup_stream,
-                    )
-                    .await
-                },
+            let (sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
+            let ((), (), (), ()) = futures::future::try_join4(
+                run_name_lookup(&self.shared_resolver, name_lookup_stream, sender),
                 f(name_lookup_proxy).map(Ok),
                 routes_stream.try_for_each(|req| futures::future::ok(handle_routes(req))),
+                create_ip_lookup_fut(&self.shared_resolver, self.stats.clone(), routes_proxy, recv)
+                    .map(Ok),
             )
             .await
             .expect("Error running lookup future");
@@ -1876,6 +1944,115 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             expected,
         });
+    }
+
+    struct BlockingResolver {}
+
+    #[async_trait]
+    impl ResolverLookup for BlockingResolver {
+        async fn new(_config: ResolverConfig, _options: ResolverOpts) -> Self {
+            BlockingResolver {}
+        }
+
+        async fn lookup_ip<N: IntoName + TryParseIp + Send>(
+            &self,
+            _host: N,
+        ) -> Result<lookup_ip::LookupIp, ResolveError> {
+            futures::future::pending().await
+        }
+
+        async fn ipv4_lookup<N: IntoName + Send>(
+            &self,
+            _host: N,
+        ) -> Result<lookup::Ipv4Lookup, ResolveError> {
+            futures::future::pending().await
+        }
+
+        async fn ipv6_lookup<N: IntoName + Send>(
+            &self,
+            _host: N,
+        ) -> Result<lookup::Ipv6Lookup, ResolveError> {
+            futures::future::pending().await
+        }
+
+        async fn reverse_lookup(
+            &self,
+            _addr: IpAddr,
+        ) -> Result<lookup::ReverseLookup, ResolveError> {
+            panic!("BlockingResolver does not handle reverse lookup")
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_parallel_query_limit() {
+        // Collect requests by setting up a FIDL proxy and stream for the
+        // NameLookup protocol, because there isn't a good way to directly
+        // construct fake requests to be used for testing.
+        let requests = {
+            let (name_lookup_proxy, name_lookup_stream) =
+                fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
+                    .expect("failed to create net.NameLookupProxy");
+            const NUM_REQUESTS: usize = MAX_PARALLEL_REQUESTS * 2 + 2;
+            for _ in 0..NUM_REQUESTS {
+                // Don't await on this future because we are using these
+                // requests to collect FIDL responders in order to send test
+                // requests later, and will not respond to these requests.
+                let _: fidl::client::QueryResponseFut<fnet::NameLookupLookupIpResult> =
+                    name_lookup_proxy.lookup_ip(
+                        LOCAL_HOST,
+                        fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
+                    );
+            }
+            // Terminate the stream so its items can be collected below.
+            drop(name_lookup_proxy);
+            let requests = name_lookup_stream
+                .map(|request| match request.expect("channel error") {
+                    NameLookupRequest::LookupIp { hostname, options, responder } => {
+                        IpLookupRequest::LookupIp { hostname, options, responder }
+                    }
+                    req => panic!("Expected NameLookupRequest::LookupIp request, found {:?}", req),
+                })
+                .collect::<Vec<_>>()
+                .await;
+            assert_eq!(requests.len(), NUM_REQUESTS);
+            requests
+        };
+
+        let (mut sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
+
+        // The channel's capacity is equal to buffer + num-senders. Thus the
+        // channel has a capacity of `MAX_PARALLEL_REQUESTS` + 1, and the
+        // `for_each_concurrent` future has a limit of `MAX_PARALLEL_REQUESTS`,
+        // so the sender should be able to queue `MAX_PARALLEL_REQUESTS` * 2 + 1
+        // requests before `send` fails.
+        const BEFORE_LAST_INDEX: usize = MAX_PARALLEL_REQUESTS * 2;
+        const LAST_INDEX: usize = MAX_PARALLEL_REQUESTS * 2 + 1;
+        let send_fut = async {
+            for (i, req) in requests.into_iter().enumerate() {
+                match i {
+                    BEFORE_LAST_INDEX => assert_matches!(sender.try_send(req), Ok(())),
+                    LAST_INDEX => assert_matches!(sender.try_send(req), Err(e) if e.is_full()),
+                    _ => assert_matches!(sender.send(req).await, Ok(())),
+                }
+            }
+        }
+        .fuse();
+        let recv_fut = {
+            let resolver = SharedResolver::new(
+                BlockingResolver::new(ResolverConfig::default(), ResolverOpts::default()).await,
+            );
+            let stats = Arc::new(QueryStats::new());
+            let (routes_proxy, _routes_stream) =
+                fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
+                    .expect("failed to create routes.StateProxy");
+            async move { create_ip_lookup_fut(&resolver, stats.clone(), routes_proxy, recv).await }
+                .fuse()
+        };
+        pin_mut!(send_fut, recv_fut);
+        futures::select! {
+            () = send_fut => {},
+            () = recv_fut => panic!("recv_fut should never complete"),
+        };
     }
 
     #[test]
