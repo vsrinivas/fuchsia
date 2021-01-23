@@ -16,13 +16,13 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 
+#include "src/connectivity/bluetooth/hci/transport/usb/bt_transport_usb_bind.h"
 #include "src/lib/listnode/listnode.h"
 
 #define EVENT_REQ_COUNT 8
@@ -835,10 +835,4 @@ static zx_driver_ops_t usb_bt_hci_driver_ops = {
     .bind = hci_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(bt_transport_usb, usb_bt_hci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_BLUETOOTH),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_BLUETOOTH),
-ZIRCON_DRIVER_END(bt_transport_usb)
+ZIRCON_DRIVER(bt_transport_usb, usb_bt_hci_driver_ops, "zircon", "0.1");

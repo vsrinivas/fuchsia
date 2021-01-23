@@ -9,5 +9,6 @@ extend uint fuchsia.BIND_USB_SUBCLASS {
 };
 
 extend uint fuchsia.BIND_USB_PROTOCOL {
+  BLUETOOTH = 0x01,
   MISC_RNDIS = 0x03,
 };

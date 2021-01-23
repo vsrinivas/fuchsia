@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("bt_transport_usb_bind") {
+  rules = "bt_transport_usb.bind"
+  output = "bt_transport_usb_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.usb",
+    "//src/devices/bind/fuchsia.usb.wireless",
+  ]
+}
 
 driver_module("bt-transport-usb") {
   configs += [
@@ -19,6 +30,7 @@ driver_module("bt-transport-usb") {
 source_set("common") {
   sources = [ "bt-transport-usb.c" ]
   public_deps = [
+    ":bt_transport_usb_bind",
     "//sdk/banjo/fuchsia.hardware.bt.hci",
     "//sdk/banjo/fuchsia.hardware.usb",
     "//sdk/banjo/fuchsia.hardware.usb.composite",
@@ -26,9 +38,6 @@ source_set("common") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/listnode",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",
   ]
 }
@@ -50,5 +59,8 @@ fuchsia_unittest_package("bt-transport-usb-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":bt-transport-usb-package" ]
+  deps = [
+    ":bt-transport-usb-package",
+    ":bt_transport_usb_bind_test",
+  ]
 }
