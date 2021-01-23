@@ -453,6 +453,22 @@ impl ScopedInstance {
         connect_to_protocol_at_dir_root::<S>(&self.exposed_dir)
     }
 
+    /// Connects to an instance of a FIDL protocol hosted in the component's exposed directory
+    /// using the given `server_end`.
+    pub fn connect_request_to_protocol_at_exposed_dir<S: DiscoverableService>(
+        &self,
+        server_end: ServerEnd<S>,
+    ) -> Result<(), Error> {
+        self.exposed_dir
+            .open(
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+                fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                S::SERVICE_NAME,
+                ServerEnd::new(server_end.into_channel()),
+            )
+            .context("Failed to open protocol in directory")
+    }
+
     /// Returns a reference to the component's read-only exposed directory.
     pub fn get_exposed_dir(&self) -> &DirectoryProxy {
         &self.exposed_dir

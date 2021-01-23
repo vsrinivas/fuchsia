@@ -9,10 +9,6 @@
             startup: "eager",
         },
         {
-            name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/archivist-for-embedding.cm",
-        },
-        {
             name: "pkg_cache_integration_test",
             url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-integration-test.cm",
         },
@@ -22,15 +18,9 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
-                "#archivist",
                 "#isolated_devmgr",
                 "#pkg_cache_integration_test",
             ],
-        },
-        {
-            protocol: "fuchsia.sys2.EventSource",
-            from: "parent",
-            to: [ "#archivist" ],
         },
         {
             protocol: [
@@ -58,36 +48,9 @@
             from: "#isolated_devmgr",
             to: [ "#pkg_cache_integration_test" ],
         },
-
-        // This event is not needed for the test, but it's needed for proper archivist routing.
-        {
-            event: [ "capability_requested" ],
-            from: "framework",
-            to: [ "#archivist" ],
-            filter: { name: "fuchsia.logger.LogSink" },
-            modes: [ "async" ],
-        },
-
-        // These events are not needed for the test to pass, but including them
-        // reduces log noise.
-        {
-            event: [
-                "running",
-                "started",
-                "stopped",
-            ],
-            from: "framework",
-            to: [ "#archivist" ],
-        },
-        {
-            event: "capability_ready",
-            from: "framework",
-            to: [ "#archivist" ],
-            filter: { name: "diagnostics" },
-        },
         {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
-            from: "#archivist",
+            from: "parent",
             to: [ "#pkg_cache_integration_test" ],
         },
     ],

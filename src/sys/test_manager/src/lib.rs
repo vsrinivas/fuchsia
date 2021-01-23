@@ -3,21 +3,52 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::{self, DiscoverableService, ServerEnd},
-    fidl_fuchsia_component::Error as ComponentError,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
+    anyhow::Error,
+    cm_rust,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io2 as fio2, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest::SuiteMarker,
     ftest_manager::{LaunchError, SuiteControllerRequestStream},
     fuchsia_async as fasync,
-    fuchsia_component::client,
+    fuchsia_component::server::ServiceFs,
     futures::prelude::*,
+    lazy_static::lazy_static,
+    std::sync::Arc,
     thiserror::Error,
-    tracing::error,
-    uuid::Uuid,
+    topology_builder::{
+        builder::{
+            Capability, CapabilityRoute, ComponentSource, Event, RouteEndpoint, TopologyBuilder,
+        },
+        mock::{Mock, MockHandles},
+        Topology, TopologyInstance,
+    },
+    tracing::{error, warn},
 };
+
+mod diagnostics;
+
+pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
+pub const WRAPPER_ROOT_REALM_PATH: &'static str = "test_wrapper/test_root";
+
+lazy_static! {
+    static ref ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
+        "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
+    static ref READ_RIGHTS: fio2::Operations = fio2::Operations::Connect
+        | fio2::Operations::Enumerate
+        | fio2::Operations::Traverse
+        | fio2::Operations::ReadBytes
+        | fio2::Operations::GetAttributes;
+    static ref READ_WRITE_RIGHTS: fio2::Operations = fio2::Operations::Connect
+        | fio2::Operations::Enumerate
+        | fio2::Operations::Traverse
+        | fio2::Operations::ReadBytes
+        | fio2::Operations::WriteBytes
+        | fio2::Operations::ModifyDirectory
+        | fio2::Operations::GetAttributes
+        | fio2::Operations::UpdateAttributes;
+    static ref ADMIN_RIGHTS: fio2::Operations = fio2::Operations::Admin;
+}
 
 /// Error encountered running test manager
 #[derive(Debug, Error)]
@@ -57,7 +88,7 @@ pub async fn run_test_manager(
                     Ok(c) => c,
                 };
 
-                match RunningTest::launch_test(&test_url, suite).await {
+                match launch_test(&test_url, suite).await {
                     Ok(test) => {
                         responder.send(&mut Ok(())).map_err(TestManagerError::Response)?;
                         fasync::Task::spawn(async move {
@@ -68,6 +99,7 @@ pub async fn run_test_manager(
                         .detach();
                     }
                     Err(e) => {
+                        error!("Failed to launch test: {:?}", e);
                         responder.send(&mut Err(e)).map_err(TestManagerError::Response)?;
                     }
                 }
@@ -78,142 +110,258 @@ pub async fn run_test_manager(
 }
 
 struct RunningTest {
-    child: Option<fsys::ChildRef>,
-}
-
-impl Drop for RunningTest {
-    fn drop(&mut self) {
-        let child = self.child.take();
-        fasync::Task::spawn(async move {
-            Self::destroy_test(child)
-                .await
-                .unwrap_or_else(|error| error!(%error, "cannot destroy test child"));
-        })
-        .detach();
-    }
+    instance: TopologyInstance,
+    // TODO: use this archive accessor to fetch isolated logs.
+    _archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
 }
 
 impl RunningTest {
-    /// Destroy `test_name` and remove it from realm.
-    async fn destroy_test(child_ref: Option<fsys::ChildRef>) -> Result<(), Error> {
-        if let Some(mut child_ref) = child_ref {
-            let realm = client::connect_to_service::<fsys::RealmMarker>()
-                .context("Cannot connect to realm service")?;
-            realm
-                .destroy_child(&mut child_ref)
-                .await
-                .context("error calling destroy_child")?
-                .map_err(|e| format_err!("destroy_child failed: {:?}", e))?;
-        }
-        Ok(())
+    async fn destroy(mut self) {
+        let destroy_waiter = self.instance.root().take_destroy_waiter();
+        drop(self);
+        destroy_waiter.await;
     }
 
     /// Serves Suite controller and destroys this test afterwards.
     pub async fn serve_controller(
-        mut self,
+        self,
         mut stream: SuiteControllerRequestStream,
     ) -> Result<(), Error> {
         while let Some(event) = stream.try_next().await? {
             match event {
                 ftest_manager::SuiteControllerRequest::Kill { .. } => {
-                    return Self::destroy_test(self.child.take()).await
+                    self.destroy().await;
+                    return Ok(());
                 }
             }
         }
 
-        Self::destroy_test(self.child.take()).await
+        self.destroy().await;
+        Ok(())
     }
+}
 
-    /// Launch test and return the name of test used to launch it in collection.
-    pub async fn launch_test(
-        test_url: &String,
-        suite_request: ServerEnd<SuiteMarker>,
-    ) -> Result<Self, LaunchError> {
-        let realm = client::connect_to_service::<fsys::RealmMarker>().map_err(|error| {
-            error!(%error, "Cannot connect to realm service");
+/// Launch test and return the name of test used to launch it in collection.
+async fn launch_test(
+    test_url: &str,
+    suite_request: ServerEnd<SuiteMarker>,
+) -> Result<RunningTest, LaunchError> {
+    // This archive accessor will be served by the embedded archivist.
+    let (archive_accessor, archive_accessor_server_end) =
+        fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>().map_err(|e| {
+            error!("Failed to create proxy for ArchiveAccessor: {:?}", e);
             LaunchError::InternalError
         })?;
 
-        let name = format!("test-{}", Uuid::new_v4().to_string());
-        let mut collection_ref = fsys::CollectionRef { name: "tests".to_string() };
-        let child_decl = fsys::ChildDecl {
-            name: Some(name.clone()),
-            url: Some(test_url.clone()),
-            startup: Some(fsys::StartupMode::Lazy),
-            environment: None,
-            ..fsys::ChildDecl::EMPTY
-        };
-        realm
-            .create_child(&mut collection_ref, child_decl)
-            .await
-            .map_err(|error| {
-                error!(%error, component_url = %test_url, "Failed to call realm to instantiate test component");
-                LaunchError::InternalError
-            })?
-            .map_err(|e| match e {
-                ComponentError::InvalidArguments
-                | ComponentError::CollectionNotFound
-                | ComponentError::InstanceAlreadyExists => {
-                    error!(component_url = %test_url, "Failed to instantiate test component because an instance with the same name already exists (this should not happen)");
-                    LaunchError::InternalError
-                }
-                ComponentError::ResourceUnavailable => LaunchError::ResourceUnavailable,
-                error => {
-                    error!(?error, component_url = %test_url, "Failed to instantiate test component due to an unexpected error");
-                    LaunchError::InternalError
-                }
-            })?;
-
-        let mut child_ref =
-            fsys::ChildRef { name: name.clone(), collection: Some("tests".to_string()) };
-
-        let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        realm
-            .bind_child(&mut child_ref, server_end)
-            .await
-            .map_err(|error| {
-                error!(%error, component_url = %test_url, "Failed to call realm to bind to test component");
-                LaunchError::InternalError
-            })?
-            .map_err(|e| match e {
-                ComponentError::InvalidArguments
-                | ComponentError::InstanceNotFound
-                | ComponentError::InstanceCannotStart => {
-                    error!(component_url = %test_url, "Test component could not be started");
-                    LaunchError::InternalError
-                }
-                ComponentError::InstanceCannotResolve => LaunchError::InstanceCannotResolve,
-                error => {
-                    error!(?error, component_url = %test_url, "Test component could not be resolved");
-                    LaunchError::InternalError
-                }
-            })?;
-
-        Self::connect_request_to_protocol_at_dir(&dir, suite_request).map_err(|error| {
-            error!(
-                %error,
-                component_url = %test_url,
-                "Failed to connect to `fuchsia.test.Suite` protocol"
-            );
+    let archive_accessor_arc = Arc::new(archive_accessor);
+    let mut topology = get_topology(archive_accessor_arc.clone(), test_url).await.map_err(|e| {
+        error!("Failed to create test topology: {:?}", e);
+        LaunchError::InternalError
+    })?;
+    topology.set_collection_name("tests");
+    let mut topology_instance =
+        topology.create().await.map_err(|_| LaunchError::InstanceCannotResolve)?;
+    topology_instance
+        .root()
+        .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
+            archive_accessor_server_end,
+        )
+        .map_err(|e| {
+            error!("Failed to connect to the embedded archive accessor {:?}", e);
             LaunchError::InternalError
         })?;
-        Ok(RunningTest {
-            child: Some(fsys::ChildRef { name: name, collection: Some("tests".to_string()) }),
+    topology_instance.root().connect_request_to_protocol_at_exposed_dir(suite_request).map_err(
+        |e| {
+            error!("Failed to conenct to test suite: {:?}", e);
+            LaunchError::FailedToConnectToTestSuite
+        },
+    )?;
+
+    Ok(RunningTest { instance: topology_instance, _archive_accessor: archive_accessor_arc })
+}
+
+async fn get_topology(
+    archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
+    test_url: &str,
+) -> Result<Topology, Error> {
+    let mut builder = TopologyBuilder::new().await?;
+    let test_wrapper_test_root = format!("test_wrapper/{}", TEST_ROOT_REALM_NAME);
+    builder
+        .add_eager_component(test_wrapper_test_root.as_ref(), ComponentSource::url(test_url))
+        .await?
+        .add_component(
+            "mocks-server",
+            ComponentSource::Mock(Mock::new(move |mock_handles| {
+                Box::pin(serve_mocks(archive_accessor.clone(), mock_handles))
+            })),
+        )
+        .await?
+        .add_component("test_wrapper/archivist", ComponentSource::url(*ARCHIVIST_FOR_EMBEDDING_URL))
+        .await?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.sys2.BlockingEventSource"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.process.Launcher"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.boot.WriteOnlyLog"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.sys2.EventSource"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![
+                RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH),
+                RouteEndpoint::Component("test_wrapper/archivist"),
+            ],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Storage("temp", "/tmp"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![
+                RouteEndpoint::Component("test_wrapper/archivist"),
+                // TODO(fxbug.dev/67960): use embedded archivist LogSink)
+                RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH),
+            ],
+        })?
+        // TODO(fxbug.dev/67960): uncomment when fetching isolated logs is implemented.
+        // .add_route(CapabilityRoute {
+        //     capability: Capability::Protocol("fuchsia.logger.LogSink"),
+        //     source: RouteEndpoint::Component("test_wrapper/archivist"),
+        //     targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        // })?
+        // .add_route(CapabilityRoute {
+        //     capability: Capability::Protocol("fuchsia.logger.Log"),
+        //     source: RouteEndpoint::Component("test_wrapper/archivist"),
+        //     targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        // })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.diagnostics.ArchiveAccessor"),
+            source: RouteEndpoint::Component("mocks-server"),
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.diagnostics.ArchiveAccessor"),
+            source: RouteEndpoint::Component("test_wrapper/archivist"),
+            targets: vec![RouteEndpoint::AboveRoot],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
+            source: RouteEndpoint::Component("test_wrapper"),
+            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Event(Event::Stopped, cm_rust::EventMode::Async),
+            source: RouteEndpoint::Component("test_wrapper"),
+            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Event(Event::Running, cm_rust::EventMode::Async),
+            source: RouteEndpoint::Component("test_wrapper"),
+            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Event(
+                Event::CapabilityReady("diagnostics"),
+                cm_rust::EventMode::Async,
+            ),
+            source: RouteEndpoint::Component("test_wrapper"),
+            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Event(
+                Event::CapabilityRequested("fuchsia.logger.LogSink"),
+                cm_rust::EventMode::Async,
+            ),
+            source: RouteEndpoint::Component("test_wrapper"),
+            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.test.Suite"),
+            source: RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH),
+            targets: vec![RouteEndpoint::AboveRoot],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.hardware.display.Provider"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.scheduler.ProfileProvider"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.sysmem.Allocator"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Protocol("fuchsia.tracing.provider.Registry"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Directory("config-ssl", "", *READ_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Directory("config-data", "", *READ_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Directory(
+                "deprecated-tmp",
+                "",
+                *ADMIN_RIGHTS | *READ_WRITE_RIGHTS,
+            ),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Directory("dev-input-report", "", *READ_WRITE_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::Directory("dev-display-controller", "", *READ_WRITE_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        })?;
+
+    Ok(builder.build())
+}
+
+async fn serve_mocks(
+    archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
+    mock_handles: MockHandles,
+) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(move |stream| {
+        let archive_accessor_clone = archive_accessor.clone();
+        fasync::Task::spawn(async move {
+            diagnostics::run_intermediary_archive_accessor(archive_accessor_clone, stream)
+                .await
+                .unwrap_or_else(|e| {
+                    warn!("Couldn't run proxied ArchiveAccessor: {:?}", e);
+                })
         })
-    }
-
-    /// Connect to an instance of a FIDL protocol hosted in `directory` to `server_end`.
-    fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
-        directory: &DirectoryProxy,
-        server_end: ServerEnd<S>,
-    ) -> Result<(), Error> {
-        directory
-            .open(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                fidl_fuchsia_io::MODE_TYPE_SERVICE,
-                S::SERVICE_NAME,
-                ServerEnd::new(server_end.into_channel()),
-            )
-            .context("Failed to open protocol in directory")
-    }
+        .detach()
+    });
+    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+    Ok(())
 }

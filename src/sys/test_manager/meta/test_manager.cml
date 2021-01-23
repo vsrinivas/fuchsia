@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
+    ],
     program: {
         binary: "bin/test_manager",
     },
@@ -182,6 +185,17 @@
                 {
                     runner: "go_test_runner",
                     from: "#go_test_runner",
+                },
+                {
+                    runner: "topology_builder_mocks",
+                    from: "#topology_builder_framework_intermediary",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "topology_builder_registry",
+                    from: "#topology_builder_framework_intermediary",
+                    scheme: "topology-builder-registry",
                 },
             ],
         },

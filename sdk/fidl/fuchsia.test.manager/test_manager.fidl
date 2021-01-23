@@ -23,8 +23,12 @@ enum LaunchError {
     /// Invalid argument(s) passed.
     INVALID_ARGS = 3;
 
+    /// Failed to connect to the `fuchsia.test.TestSuite` that the test should
+    /// expose.
+    FAILED_TO_CONNECT_TO_TEST_SUITE = 4;
+
     /// Some internal error occured. Something wrong with test manager setup. Check logs and report bug.
-    INTERNAL_ERROR = 4;
+    INTERNAL_ERROR = 5;
 };
 
 /// Controller for running suite. Suite would be destroyed when client end of this protocol is closed.

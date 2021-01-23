@@ -1,0 +1,23 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/inspect_publisher",
+    },
+    capabilities: [
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            directory: "diagnostics",
+            from: "self",
+            to: "framework",
+        },
+    ],
+}

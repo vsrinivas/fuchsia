@@ -1,0 +1,24 @@
+{
+    children: [
+        {
+            name: "driver",
+            url: "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/diagnostics-test-driver.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [ "#driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#driver",
+        },
+    ],
+}
