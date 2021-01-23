@@ -4,8 +4,9 @@
 
 use {
     crate::synthesizer::*,
-    anyhow::Error,
+    anyhow::{format_err, Error},
     fidl_fuchsia_ui_input::{self, Touch},
+    fuchsia_component::client::new_service_connector,
     std::time::Duration,
 };
 
@@ -33,7 +34,7 @@ pub async fn media_button_event_command(
         reset,
         pause,
         camera_disable,
-        &mut legacy_backend::InputDeviceRegistry::new(),
+        get_backend().await?.as_mut(),
     )
     .await
 }
@@ -54,7 +55,7 @@ pub async fn media_button_event_command(
 /// Per fxbug.dev/63532, this method will be replaced with a method that deals in
 /// `fuchsia.input.Key`s, instead of HID Usage IDs.
 pub async fn keyboard_event_command(usage: u32, key_event_duration: Duration) -> Result<(), Error> {
-    keyboard_event(usage, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new()).await
+    keyboard_event(usage, key_event_duration, get_backend().await?.as_mut()).await
 }
 
 /// Simulates `input` being typed on a keyboard, with `key_event_duration` between key events.
@@ -74,7 +75,7 @@ pub async fn keyboard_event_command(usage: u32, key_event_duration: Duration) ->
 /// * `key_event_duration` of zero is permitted, and will result in events being generated as
 ///    quickly as possible.
 pub async fn text_command(input: String, key_event_duration: Duration) -> Result<(), Error> {
-    text(input, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new()).await
+    text(input, key_event_duration, get_backend().await?.as_mut()).await
 }
 
 /// Simulates `tap_event_count` taps at coordinates `(x, y)` for a touchscreen with horizontal
@@ -92,16 +93,7 @@ pub async fn tap_event_command(
     tap_event_count: usize,
     duration: Duration,
 ) -> Result<(), Error> {
-    tap_event(
-        x,
-        y,
-        width,
-        height,
-        tap_event_count,
-        duration,
-        &mut legacy_backend::InputDeviceRegistry::new(),
-    )
-    .await
+    tap_event(x, y, width, height, tap_event_count, duration, get_backend().await?.as_mut()).await
 }
 
 /// Simulates `tap_event_count` times to repeat the multi-finger-taps, for touchscreen with
@@ -124,7 +116,7 @@ pub async fn multi_finger_tap_event_command(
         height,
         tap_event_count,
         duration,
-        &mut legacy_backend::InputDeviceRegistry::new(),
+        get_backend().await?.as_mut(),
     )
     .await
 }
@@ -148,18 +140,8 @@ pub async fn swipe_command(
     move_event_count: usize,
     duration: Duration,
 ) -> Result<(), Error> {
-    swipe(
-        x0,
-        y0,
-        x1,
-        y1,
-        width,
-        height,
-        move_event_count,
-        duration,
-        &mut legacy_backend::InputDeviceRegistry::new(),
-    )
-    .await
+    swipe(x0, y0, x1, y1, width, height, move_event_count, duration, get_backend().await?.as_mut())
+        .await
 }
 
 /// Simulates swipe with fingers starting at `start_fingers`, and moving to `end_fingers`,
@@ -204,16 +186,41 @@ pub async fn multi_finger_swipe_command(
         height,
         move_event_count,
         duration,
-        &mut legacy_backend::InputDeviceRegistry::new(),
+        get_backend().await?.as_mut(),
     )
     .await
 }
 
+/// Selects an injection protocol, and returns the corresponding implementation
+/// of `synthesizer::InputDeviceRegistry`.
+///
+/// # Returns
+/// * Ok(`modern_backend::InputDeviceRegistry`) if `fuchsia.input.injection.InputDeviceRegistry`
+///   is available (even if `fuchsia.ui.input.InputDeviceRegistry` is also available).
+/// * Ok(`legacy_backend::InputDeviceRegistry`) if only `fuchsia.ui.input.InputDeviceRegistry`
+///   is available.
+/// * Err otherwise. E.g.,
+///   * Neither protocol was available.
+///   * Access to `/svc` was denied.
+async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
+    let modern_registry =
+        new_service_connector::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()?;
+    if modern_registry.exists().await? {
+        return Ok(Box::new(modern_backend::InputDeviceRegistry::new(modern_registry.connect()?)));
+    }
+
+    let legacy_registry =
+        new_service_connector::<fidl_fuchsia_ui_input::InputDeviceRegistryMarker>()?;
+    if legacy_registry.exists().await? {
+        return Ok(Box::new(legacy_backend::InputDeviceRegistry::new()));
+    }
+
+    Err(format_err!("no available InputDeviceRegistry"))
+}
+
 #[cfg(test)]
 mod tests {
-    // This module provides logic-less wrappers over the synthesis module.
-    //
-    // The wrappers need to bind to FIDL services in this component's environment to do their job,
-    // but a component can't modify its own environment. Hence, we can't validate this module
-    // with unit tests.
+    // The functions in this file need to bind to FIDL services in this component's environment to
+    // do their work, but a component can't modify its own environment. Hence, we can't validate
+    // this module with unit tests.
 }

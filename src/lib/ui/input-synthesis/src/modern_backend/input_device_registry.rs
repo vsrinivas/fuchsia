@@ -57,6 +57,10 @@ impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
 }
 
 impl InputDeviceRegistry {
+    pub fn new(proxy: InputDeviceRegistryProxy) -> Self {
+        Self { proxy }
+    }
+
     /// Adds a device to the `InputDeviceRegistry` FIDL server connected to this
     /// `InputDeviceRegistry` struct.
     ///
@@ -93,7 +97,8 @@ mod tests {
         InputDeviceRegistry { proxy }.add_keyboard_device().context("adding keyboard")?;
         assert_matches!(
             request_stream.collect::<Vec<_>>().await.as_slice(),
-            [ Ok(InputDeviceRegistryRequest::Register { .. } )]);
+            [Ok(InputDeviceRegistryRequest::Register { .. })]
+        );
         Ok(())
     }
 
@@ -128,7 +133,7 @@ mod tests {
         std::mem::drop(input_device_proxy); // Terminate stream served by `input_device_server_fut`.
         assert_matches!(
             futures::future::join(input_device_server_fut, input_device_get_descriptor_fut).await,
-            (_, Ok(DeviceDescriptor { keyboard: Some(_), .. } ))
+            (_, Ok(DeviceDescriptor { keyboard: Some(_), .. }))
         );
         Ok(())
     }
