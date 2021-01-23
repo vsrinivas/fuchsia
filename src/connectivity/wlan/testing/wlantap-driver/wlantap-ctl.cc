@@ -13,11 +13,11 @@
 #include <memory>
 #include <mutex>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddktl/fidl.h>
 
+#include "src/connectivity/wlan/testing/wlantap-driver/wlantapctl_bind.h"
 #include "wlantap-phy.h"
 
 namespace {
@@ -140,7 +140,4 @@ static constexpr zx_driver_ops_t wlantapctl_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(wlantapctl, wlantapctl_driver_ops, "fuchsia", "0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-ZIRCON_DRIVER_END(wlantapctl)
+ZIRCON_DRIVER(wlantapctl, wlantapctl_driver_ops, "fuchsia", "0.1");

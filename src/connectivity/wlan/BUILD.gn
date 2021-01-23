@@ -77,6 +77,7 @@ group("tests") {
     "testing/hw-sim/test:wlan-hw-sim-test",
     "testing/wlan-service-util:wlan-service-util-tests",
     "testing/wlantap-client",
+    "testing/wlantap-driver:tests",
     "testing/wlantap-driver:wlantap",
     "tools/wlantool:wlantool-tests",
     "wlancfg:wlancfg-tests",
