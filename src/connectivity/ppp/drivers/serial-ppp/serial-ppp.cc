@@ -8,7 +8,6 @@
 #include <lib/zx/time.h>
 #include <zircon/hw/usb.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
@@ -16,6 +15,7 @@
 #include "lib/common/ppp.h"
 #include "lib/fit/result.h"
 #include "lib/hdlc/frame.h"
+#include "src/connectivity/ppp/drivers/serial-ppp/serial-ppp-bind.h"
 
 namespace ppp {
 
@@ -510,6 +510,4 @@ void SerialPpp::NetworkDeviceImplSetSnoop(bool snoop) {
 }  // namespace ppp
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(serial-ppp, ppp::driver_ops, "zircon", "0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SERIAL),
-ZIRCON_DRIVER_END(serial-ppp)
+ZIRCON_DRIVER(serial-ppp, ppp::driver_ops, "zircon", "0.1");

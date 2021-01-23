@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 import("//build/test.gni")
@@ -28,6 +29,7 @@ source_set("driver") {
   include_dirs = [ "//src/connectivity/ppp" ]
 
   public_deps = [
+    ":serial-ppp-bind",
     "//sdk/banjo/fuchsia.hardware.network.device",
     "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
@@ -35,9 +37,6 @@ source_set("driver") {
     "//src/connectivity/ppp/lib/hdlc:frame",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",
@@ -69,6 +68,13 @@ fuchsia_unittest_package("serial-ppp-driver-test") {
   deps = [ ":driver-test" ]
 }
 
+bind_rules("serial-ppp-bind") {
+  rules = "serial-ppp.bind"
+  output = "serial-ppp-bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.serial" ]
+}
+
 driver_module("serial-ppp_driver") {
   output_name = "serial-ppp"
   testonly = false
@@ -80,5 +86,8 @@ driver_module("serial-ppp_driver") {
 
 group("tests") {
   testonly = true
-  deps = [ ":serial-ppp-driver-test" ]
+  deps = [
+    ":serial-ppp-bind_test",
+    ":serial-ppp-driver-test",
+  ]
 }
