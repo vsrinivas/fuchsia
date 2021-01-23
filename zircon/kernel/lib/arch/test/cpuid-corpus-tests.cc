@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/testing/x86/fake-cpuid.h>
+#include <lib/arch/x86/apic-id.h>
 #include <lib/arch/x86/cache.h>
 #include <lib/arch/x86/cpuid.h>
 
@@ -24,6 +25,20 @@ namespace {
 using namespace std::string_view_literals;
 
 using arch::testing::X86Microprocessor;
+
+void CheckApicIdDecoding(const arch::testing::FakeCpuidIo& cpuid,  //
+                         uint32_t dies_per_package,                //
+                         uint32_t cores_per_die,                   //
+                         uint32_t threads_per_core) {
+  arch::ApicIdDecoder decoder(cpuid);
+  // We expect the maximum number of *addressible* dies per package to be
+  // be greater thans or equal to the actual count; ditto for cores
+  // per die, and threads per core. In general, the individual address
+  // spaces might be larger than needed.
+  EXPECT_LE(dies_per_package, decoder.die_id(0xffffffff) + 1);
+  EXPECT_LE(cores_per_die, decoder.core_id(0xffffffff) + 1);
+  EXPECT_LE(threads_per_core, decoder.smt_id(0xffffffff) + 1);
+}
 
 void CheckCaches(const arch::testing::FakeCpuidIo& cpuid,
                  const std::vector<arch::CpuCacheLevelInfo>& expected_caches) {
@@ -104,6 +119,9 @@ TEST(CpuidTests, IntelCore2_6300) {
     EXPECT_FALSE(features.fsgsbase());
   }
 
+  // 1 die -> 2 cores -> 1 thread each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 1));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -171,6 +189,9 @@ TEST(CpuidTests, IntelXeonE5520) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  // 1 die -> 4 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -245,6 +266,9 @@ TEST(CpuidTests, IntelCoreI7_2600k) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  // 1 die -> 4 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -322,6 +346,9 @@ TEST(CpuidTests, IntelCoreI3_3240) {
     EXPECT_FALSE(features.rdseed());
   }
 
+  // 1 die -> 2 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -398,6 +425,9 @@ TEST(CpuidTests, IntelXeonE5_2690_V3) {
     EXPECT_FALSE(features.rdseed());
   }
 
+  // 1 die -> 12 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 12, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -471,6 +501,9 @@ TEST(CpuidTests, IntelXeonE5_2690_V4) {
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.rdseed());
   }
+
+  // 1 die -> 14 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 14, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -546,6 +579,9 @@ TEST(CpuidTests, IntelCoreI3_6100) {
     EXPECT_TRUE(features.fsgsbase());
   }
 
+  // 1 die -> 2 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -619,6 +655,9 @@ TEST(CpuidTests, IntelCoreI5_7300u) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  // 1 die -> 2 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -694,6 +733,9 @@ TEST(CpuidTests, IntelCoreI7_6500u) {
     EXPECT_TRUE(features.fsgsbase());
   }
 
+  // 1 die -> 2 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -767,6 +809,9 @@ TEST(CpuidTests, IntelCoreI7_6700k) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  // 1 die -> 4 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -842,6 +887,9 @@ TEST(CpuidTests, IntelCoreM3_7y30) {
     EXPECT_TRUE(features.fsgsbase());
   }
 
+  // 1 die -> 2 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -916,6 +964,9 @@ TEST(CpuidTests, IntelAtom330) {
     EXPECT_FALSE(features.fsgsbase());
   }
 
+  // 1 die -> 2 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -983,6 +1034,9 @@ TEST(CpuidTests, IntelAtomD510) {
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
   }
+
+  // 1 die -> 2 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -1052,6 +1106,9 @@ TEST(CpuidTests, IntelAtomX5_Z8350) {
     EXPECT_FALSE(features.fsgsbase());
   }
 
+  // 1 die -> 4 cores -> 1 thread each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 1));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -1119,6 +1176,9 @@ TEST(CpuidTests, IntelCeleron3855u) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  // 1 die -> 2 cores -> 1 thread each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 1));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -1196,6 +1256,9 @@ TEST(CpuidTests, AmdA10_7870k) {
     EXPECT_FALSE(features.rdseed());
   }
 
+  // 1 die -> 4 cores -> 1 thread each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 1));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -1265,6 +1328,9 @@ TEST(CpuidTests, AmdRyzen5_1500x) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  // 1 die -> 4 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -1342,6 +1408,9 @@ TEST(CpuidTests, AmdRyzen7_1700) {
     EXPECT_FALSE(features.intel_pt());
   }
 
+  // 1 die -> 8 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 8, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -1418,6 +1487,9 @@ TEST(CpuidTests, AmdRyzen7_2700x) {
     EXPECT_FALSE(features.intel_pt());
   }
 
+  // 1 die -> 8 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 8, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -1493,6 +1565,9 @@ TEST(CpuidTests, AmdRyzen9_3950x) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  // 1 die -> 16 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 16, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
@@ -1571,6 +1646,10 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxHyperv) {
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
+
+  // Seems to emulate
+  // 1 die -> 1 core -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 1, 2));
 
   // Topology leaves are reserved, so we expect to only be able to be surface
   // the total L3 size across the package.
@@ -1651,6 +1730,10 @@ TEST(CpuidTests, AmdRyzen9_3950xVirtualBoxKvm) {
     EXPECT_FALSE(features.rdseed());
   }
 
+  // Seems to emulate
+  // 1 die -> 1 core -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 1, 2));
+
   // Topology leaves are reserved, so we expect to only be able to be surface
   // the total L3 size across the package.
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
@@ -1727,6 +1810,10 @@ TEST(CpuidTests, AmdRyzen9_3950xVmware) {
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.fsgsbase());
   }
+
+  // Seems to emulate
+  // 1 die -> 4 cores -> 1 thread each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 4, 1));
 
   // Topology leaves are reserved, so we expect to only be able to be surface
   // the total L3 size across the package.
@@ -1807,6 +1894,10 @@ TEST(CpuidTests, AmdRyzen9_3950xWsl2) {
     EXPECT_FALSE(features.intel_pt());
   }
 
+  // Like the underlying hardware, seems to emulate
+  // 1 die -> 16 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 16, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -1882,6 +1973,9 @@ TEST(CpuidTests, AmdRyzenThreadripper1950x) {
     EXPECT_FALSE(features.intel_pt());
   }
 
+  // 2 dies -> 8 cores each -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 2, 8, 2));
+
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //
       {
@@ -1956,6 +2050,9 @@ TEST(CpuidTests, AmdRyzenThreadripper2970wx) {
     // Not present:
     EXPECT_FALSE(features.intel_pt());
   }
+
+  // 4 die -> 6 cores -> 2 threads each.
+  ASSERT_NO_FATAL_FAILURES(CheckApicIdDecoding(cpuid, 1, 2, 2));
 
   ASSERT_NO_FATAL_FAILURES(CheckCaches(  //
       cpuid,                             //

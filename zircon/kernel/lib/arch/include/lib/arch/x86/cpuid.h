@@ -213,6 +213,13 @@ Microarchitecture GetMicroarchitecture(CpuidIoProvider&& io) {
       vendor);
 }
 
+struct CpuidProcessorInfo : public CpuidIoValueBase<CpuidProcessorInfo, 0x1, 0x0, CpuidIo::kEbx> {
+  DEF_FIELD(31, 24, initial_apic_id);
+  DEF_FIELD(23, 16, max_logical_processors);
+  DEF_FIELD(15, 8, clflush_size);
+  DEF_FIELD(7, 0, brand_index);
+};
+
 // [intel/vol2]: Table 3-10.  Feature Information Returned in the ECX Register.
 // [amd/vol3]: E.3.2, CPUID Fn0000_0001_ECX Feature Identifiers.
 struct CpuidFeatureFlagsC : public CpuidIoValueBase<CpuidFeatureFlagsC, 0x1, 0x0, CpuidIo::kEcx> {
@@ -462,6 +469,61 @@ struct CpuidPerformanceMonitoringD
 };
 
 //---------------------------------------------------------------------------//
+// Leaf/Function 0xb.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+//---------------------------------------------------------------------------//
+
+struct CpuidTopologyEnumerationA
+    : public hwreg::RegisterBase<CpuidTopologyEnumerationA, uint32_t, hwreg::EnablePrinter> {
+  // Bits [31:5] are reserved
+  DEF_FIELD(4, 0, next_level_apic_id_shift);
+};
+
+struct CpuidTopologyEnumerationB
+    : public hwreg::RegisterBase<CpuidTopologyEnumerationB, uint32_t, hwreg::EnablePrinter> {
+  // Bits [31:16] are reserved
+  DEF_FIELD(15, 0, num_logical_processors);
+};
+
+struct CpuidTopologyEnumerationC
+    : public hwreg::RegisterBase<CpuidTopologyEnumerationC, uint32_t, hwreg::EnablePrinter> {
+  enum class TopologyLevelType : uint8_t {
+    kInvalid = 0,
+    kSmt = 1,
+    kCore = 2,
+    kModule = 3,
+    kTile = 4,
+    kDie = 5,
+  };
+
+  // Bits [31:16] are reserved
+  DEF_ENUM_FIELD(TopologyLevelType, 15, 8, level_type);
+  DEF_FIELD(7, 0, level_number);
+};
+
+struct CpuidTopologyEnumerationD
+    : public hwreg::RegisterBase<CpuidTopologyEnumerationD, uint32_t, hwreg::EnablePrinter> {
+  DEF_FIELD(31, 0, x2apic_id);
+};
+
+template <uint32_t Level>
+using CpuidV1TopologyEnumerationA =
+    CpuidIoValue<CpuidTopologyEnumerationA, 0xb, Level, CpuidIo::kEax>;
+
+template <uint32_t Level>
+using CpuidV1TopologyEnumerationB =
+    CpuidIoValue<CpuidTopologyEnumerationB, 0xb, Level, CpuidIo::kEbx>;
+
+template <uint32_t Level>
+using CpuidV1TopologyEnumerationC =
+    CpuidIoValue<CpuidTopologyEnumerationC, 0xb, Level, CpuidIo::kEcx>;
+
+template <uint32_t Level>
+using CpuidV1TopologyEnumerationD =
+    CpuidIoValue<CpuidTopologyEnumerationD, 0xb, Level, CpuidIo::kEdx>;
+
+//---------------------------------------------------------------------------//
 // Leaf/Function 0x14.
 //
 // [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
@@ -487,6 +549,28 @@ struct CpuidProcessorTraceMainC
   DEF_BIT(1, topa_multi);
   DEF_BIT(0, topa);
 };
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x1f.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+//---------------------------------------------------------------------------//
+
+template <uint32_t Level>
+using CpuidV2TopologyEnumerationA =
+    CpuidIoValue<CpuidTopologyEnumerationA, 0x1f, Level, CpuidIo::kEax>;
+
+template <uint32_t Level>
+using CpuidV2TopologyEnumerationB =
+    CpuidIoValue<CpuidTopologyEnumerationB, 0x1f, Level, CpuidIo::kEbx>;
+
+template <uint32_t Level>
+using CpuidV2TopologyEnumerationC =
+    CpuidIoValue<CpuidTopologyEnumerationC, 0x1f, Level, CpuidIo::kEcx>;
+
+template <uint32_t Level>
+using CpuidV2TopologyEnumerationD =
+    CpuidIoValue<CpuidTopologyEnumerationD, 0x1f, Level, CpuidIo::kEdx>;
 
 //---------------------------------------------------------------------------//
 // Leaves/Functions 0x4000'0000 - 0x4fff'ffff.
@@ -794,6 +878,29 @@ struct CpuidL3CacheInformation
 };
 
 //---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'0008
+//
+// [amd/vol3]: E.4.7  Function 8000_0008h—Processor Capacity Parameters and
+// Extended Feature Identification.
+//---------------------------------------------------------------------------//
+
+struct CpuidExtendedSizeInfo
+    : public CpuidIoValueBase<CpuidExtendedSizeInfo, 0x8000'0008, 0x0, CpuidIo::kEcx> {
+  enum class PerfTimestampCounterSize : uint8_t {
+    k40Bits = 0b00,
+    k48Bits = 0b01,
+    k56Bits = 0b10,
+    k64Bits = 0b11,
+  };
+
+  // Bits [31:18] are reserved.
+  DEF_ENUM_FIELD(PerfTimestampCounterSize, 17, 16, perf_tsc_size);
+  DEF_FIELD(15, 12, apic_id_size);
+  // Bits [11:8] are reserved.
+  DEF_FIELD(7, 0, nc);
+};
+
+//---------------------------------------------------------------------------//
 // Leaf/Function 0x8000'001d
 //
 // [amd/vol3]: E.4.15  Function 8000_001Dh—Cache Topology Information.
@@ -814,6 +921,30 @@ using CpuidAmdCacheTopologyC =
 template <uint32_t Subleaf>
 using CpuidAmdCacheTopologyD =
     CpuidIoValue<CpuidCacheTopologyD, 0x8000'001d, Subleaf, CpuidIo::kEdx>;
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'001e
+//
+// [amd/vol3]: E.4.16  Function 8000_001Eh—Processor Topology Information.
+//---------------------------------------------------------------------------//
+
+struct CpuidExtendedApicId
+    : public CpuidIoValueBase<CpuidExtendedApicId, 0x8000'001e, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 0, x2apic_id);
+};
+
+struct CpuidComputeUnitInfo
+    : public CpuidIoValueBase<CpuidComputeUnitInfo, 0x8000'001e, 0x0, CpuidIo::kEbx> {
+  // Bits [31:16] are reserved.
+  DEF_FIELD(15, 8, threads_per_compute_unit);
+  DEF_FIELD(7, 0, compute_unit_id);
+};
+
+struct CpuidNodeInfo : public CpuidIoValueBase<CpuidNodeInfo, 0x8000'001e, 0x0, CpuidIo::kEcx> {
+  // Bits [31:11] are reserved.
+  DEF_FIELD(10, 8, nodes_per_package);
+  DEF_FIELD(7, 0, node_id);
+};
 
 }  // namespace arch
 
