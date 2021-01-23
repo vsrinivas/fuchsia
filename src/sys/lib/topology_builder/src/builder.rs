@@ -6,8 +6,10 @@
 
 use {
     crate::{error::*, mock, Moniker, Topology},
-    cm_rust, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
-    std::convert::TryInto,
+    anyhow, cm_rust, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    futures::future::BoxFuture,
+    maplit::hashmap,
+    std::{collections::HashMap, convert::TryInto},
 };
 
 /// A capability that is routed through the custom topology
@@ -16,6 +18,43 @@ pub enum Capability {
     Protocol(&'static str),
     // Name, Path, rights
     Directory(&'static str, &'static str, fio2::Operations),
+    Event(Event, cm_rust::EventMode),
+    // Name, path
+    Storage(&'static str, &'static str),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Event {
+    Started,
+    Stopped,
+    Running,
+    // Filter.name
+    CapabilityRequested(&'static str),
+    // Filter.name
+    CapabilityReady(&'static str),
+}
+
+impl Event {
+    fn name(&self) -> &'static str {
+        match self {
+            Event::Started => "started",
+            Event::Stopped => "stopped",
+            Event::Running => "running",
+            Event::CapabilityRequested(_) => "capability_requested",
+            Event::CapabilityReady(_) => "capability_ready",
+        }
+    }
+
+    /// Returns the Event Filter that some events (like CapabilityReady and CapabilityRequested)
+    /// have.
+    fn filter(&self) -> Option<HashMap<String, cm_rust::DictionaryValue>> {
+        match self {
+            Event::CapabilityRequested(name) | Event::CapabilityReady(name) => Some(
+                hashmap!("name".to_string() => cm_rust::DictionaryValue::Str(name.to_string())),
+            ),
+            _ => None,
+        }
+    }
 }
 
 /// The source or destination of a capability route.
@@ -50,10 +89,26 @@ pub struct CapabilityRoute {
 #[derive(Clone)]
 pub enum ComponentSource {
     /// A component URL, such as `fuchsia-pkg://fuchsia.com/package-name#meta/manifest.cm`
-    Url(&'static str),
+    Url(String),
 
     /// An in-process component mock
     Mock(mock::Mock),
+}
+
+impl ComponentSource {
+    pub fn url(url: impl Into<String>) -> Self {
+        Self::Url(url.into())
+    }
+
+    pub fn mock<M>(mock_fn: M) -> Self
+    where
+        M: Fn(mock::MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>>
+            + Sync
+            + Send
+            + 'static,
+    {
+        Self::Mock(mock::Mock::new(mock_fn))
+    }
 }
 
 #[derive(Clone)]
@@ -85,10 +140,10 @@ struct Component {
 ///
 /// ```
 /// let mut builder = TopologyBuilder::new().await?;
-/// builder.add_component("c/d", ComponentSource::Url("fuchsia-pkg://fuchsia.com/d#meta/d.cm"))?
-///        .add_component("b", ComponentSource::Mock(Mock::new(move |h: MockHandles| {
+/// builder.add_component("c/d", ComponentSource::url("fuchsia-pkg://fuchsia.com/d#meta/d.cm"))?
+///        .add_component("b", ComponentSource::mock(move |h: MockHandles| {
 ///            Box::pin(implementation_for_b(h))
-///        })))?
+///        }))?
 ///        .add_route(CapabilityRoute {
 ///            capability: Capability::Protocol("fuchsia.foobar"),
 ///            source: RouteEndpoint::Component("b"),
@@ -255,8 +310,7 @@ impl TopologyBuilder {
                         None,
                         &source_moniker,
                     )?;
-                    // TODO: add_capability_decl
-                    source_decl.capabilities.push(Self::new_capability_decl(&route.capability));
+                    Self::add_capability_decl(&mut source_decl.capabilities, &route.capability)?;
                 }
 
                 let mut current_ancestor = source_moniker;
@@ -305,7 +359,7 @@ impl TopologyBuilder {
                     target_decl.uses.push(Self::new_use_decl(&route.capability));
                 }
                 if let Ok(source_decl) = self.topology.get_decl_mut(&source_moniker) {
-                    source_decl.capabilities.push(Self::new_capability_decl(&route.capability));
+                    Self::add_capability_decl(&mut source_decl.capabilities, &route.capability)?;
                 }
 
                 let mut offering_child_name = target_moniker.child_name().unwrap().clone();
@@ -385,22 +439,35 @@ impl TopologyBuilder {
         self.topology
     }
 
-    fn new_capability_decl(capability: &Capability) -> cm_rust::CapabilityDecl {
-        match capability {
+    fn add_capability_decl(
+        capability_decls: &mut Vec<cm_rust::CapabilityDecl>,
+        capability: &Capability,
+    ) -> Result<(), BuilderError> {
+        let capability_decl = match capability {
             Capability::Protocol(name) => {
-                cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
+                Some(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
                     name: (*name).try_into().unwrap(),
                     source_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
-                })
+                }))
             }
             Capability::Directory(name, path, rights) => {
-                cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
+                Some(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
                     name: (*name).try_into().unwrap(),
                     source_path: (*path).try_into().unwrap(),
                     rights: rights.clone(),
-                })
+                }))
+            }
+            Capability::Storage(name, _) => {
+                return Err(BuilderError::StorageMustComeFromAboveRoot(name))
+            }
+            Capability::Event(_, _) => None,
+        };
+        if let Some(decl) = capability_decl {
+            if !capability_decls.contains(&decl) {
+                capability_decls.push(decl);
             }
         }
+        Ok(())
     }
 
     fn new_use_decl(capability: &Capability) -> cm_rust::UseDecl {
@@ -419,6 +486,17 @@ impl TopologyBuilder {
                     subdir: None,
                 })
             }
+            Capability::Storage(name, path) => cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
+                source_name: (*name).try_into().unwrap(),
+                target_path: (*path).try_into().unwrap(),
+            }),
+            Capability::Event(event, mode) => cm_rust::UseDecl::Event(cm_rust::UseEventDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: event.name().into(),
+                target_name: event.name().into(),
+                filter: event.filter(),
+                mode: mode.clone(),
+            }),
         }
     }
 
@@ -509,6 +587,94 @@ impl TopologyBuilder {
                     dependency_type: cm_rust::DependencyType::Strong,
                 }));
             }
+            Capability::Storage(name, _) => {
+                let offer_source = match offer_source {
+                    OfferSource::Parent => cm_rust::OfferStorageSource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferStorageSource::Self_,
+                    OfferSource::Child(_) => {
+                        return Err(BuilderError::StorageCannotBeOfferedFromChild(
+                            name,
+                            route.clone(),
+                        )
+                        .into());
+                    }
+                };
+                for offer in offers.iter() {
+                    if let cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                        source,
+                        target_name,
+                        target,
+                        ..
+                    }) = offer
+                    {
+                        if name == &target_name.str() && *target == offer_target {
+                            if *source != offer_source {
+                                return Err(BuilderError::ConflictingOffers(
+                                    route.clone(),
+                                    moniker.clone(),
+                                    target.clone(),
+                                    format!("{:?}", source),
+                                )
+                                .into());
+                            } else {
+                                // The offer we want already exists
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+                offers.push(cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                    source: offer_source,
+                    source_name: (*name).into(),
+                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
+                    target_name: (*name).into(),
+                }));
+            }
+            Capability::Event(event, mode) => {
+                let offer_source = match offer_source {
+                    OfferSource::Parent => cm_rust::OfferEventSource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferEventSource::Framework,
+                    OfferSource::Child(_) => {
+                        return Err(BuilderError::EventCannotBeOfferedFromChild(
+                            event.name(),
+                            route.clone(),
+                        )
+                        .into());
+                    }
+                };
+                for offer in offers.iter() {
+                    if let cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
+                        source,
+                        target_name,
+                        target,
+                        ..
+                    }) = offer
+                    {
+                        if event.name() == target_name.str() && *target == offer_target {
+                            if *source != offer_source {
+                                return Err(BuilderError::ConflictingOffers(
+                                    route.clone(),
+                                    moniker.clone(),
+                                    target.clone(),
+                                    format!("{:?}", source),
+                                )
+                                .into());
+                            } else {
+                                // The offer we want already exists
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+                offers.push(cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
+                    source: offer_source,
+                    source_name: event.name().into(),
+                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
+                    target_name: event.name().into(),
+                    filter: event.filter(),
+                    mode: mode.clone(),
+                }));
+            }
         }
         Ok(())
     }
@@ -582,6 +748,12 @@ impl TopologyBuilder {
                     rights: None,
                     subdir: None,
                 }))
+            }
+            Capability::Storage(name, _) => {
+                return Err(BuilderError::StorageCannotBeExposed(name).into());
+            }
+            Capability::Event(event, _) => {
+                return Err(BuilderError::EventsCannotBeExposed(event.name()).into());
             }
         }
         Ok(())
@@ -660,10 +832,10 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         let res = builder
-            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
-            .add_component("a", ComponentSource::Url("fuchsia-pkg://b"))
+            .add_component("a", ComponentSource::url("fuchsia-pkg://b"))
             .await;
 
         match res {
@@ -683,10 +855,10 @@ mod tests {
             let (_mocks_task, mut builder) = mocked_builder();
 
             let res = builder
-                .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+                .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
                 .await
                 .unwrap()
-                .add_component("a/b", ComponentSource::Url("fuchsia-pkg://b"))
+                .add_component("a/b", ComponentSource::url("fuchsia-pkg://b"))
                 .await;
 
             match res {
@@ -704,10 +876,10 @@ mod tests {
             let (_mocks_task, mut builder) = mocked_builder();
 
             let res = builder
-                .add_component("a/b", ComponentSource::Url("fuchsia-pkg://a"))
+                .add_component("a/b", ComponentSource::url("fuchsia-pkg://a"))
                 .await
                 .unwrap()
-                .add_eager_component("a", ComponentSource::Url("fuchsia-pkg://b"))
+                .add_eager_component("a", ComponentSource::url("fuchsia-pkg://b"))
                 .await;
 
             match res {
@@ -725,7 +897,7 @@ mod tests {
             let (_mocks_task, mut builder) = mocked_builder();
 
             let res = builder
-                .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+                .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
                 .await
                 .unwrap()
                 .add_eager_component(
@@ -753,7 +925,7 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         let res = builder
-            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
             .add_route(CapabilityRoute {
@@ -776,7 +948,7 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         let res = builder
-            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
             .add_route(CapabilityRoute {
@@ -797,16 +969,16 @@ mod tests {
             let (_mocks_task, mut builder) = mocked_builder();
 
             let res = builder
-                .add_component("1/a", ComponentSource::Url("fuchsia-pkg://a"))
+                .add_component("1/a", ComponentSource::url("fuchsia-pkg://a"))
                 .await
                 .unwrap()
-                .add_component("1/b", ComponentSource::Url("fuchsia-pkg://b"))
+                .add_component("1/b", ComponentSource::url("fuchsia-pkg://b"))
                 .await
                 .unwrap()
-                .add_component("2/c", ComponentSource::Url("fuchsia-pkg://c"))
+                .add_component("2/c", ComponentSource::url("fuchsia-pkg://c"))
                 .await
                 .unwrap()
-                .add_component("2/d", ComponentSource::Url("fuchsia-pkg://d"))
+                .add_component("2/d", ComponentSource::url("fuchsia-pkg://d"))
                 .await
                 .unwrap()
                 .add_route(CapabilityRoute {
@@ -847,16 +1019,16 @@ mod tests {
             let (_mocks_task, mut builder) = mocked_builder();
 
             builder
-                .add_component("1/a", ComponentSource::Url("fuchsia-pkg://a"))
+                .add_component("1/a", ComponentSource::url("fuchsia-pkg://a"))
                 .await
                 .unwrap()
-                .add_component("1/b", ComponentSource::Url("fuchsia-pkg://b"))
+                .add_component("1/b", ComponentSource::url("fuchsia-pkg://b"))
                 .await
                 .unwrap()
-                .add_component("2/c", ComponentSource::Url("fuchsia-pkg://c"))
+                .add_component("2/c", ComponentSource::url("fuchsia-pkg://c"))
                 .await
                 .unwrap()
-                .add_component("2/d", ComponentSource::Url("fuchsia-pkg://d"))
+                .add_component("2/d", ComponentSource::url("fuchsia-pkg://d"))
                 .await
                 .unwrap()
                 .add_route(CapabilityRoute {
@@ -879,7 +1051,7 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         let res = builder
-            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
             .add_route(CapabilityRoute {
@@ -917,14 +1089,345 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
+    async fn expose_event_from_child_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(error::Error::Builder(BuilderError::EventsCannotBeExposed(e)))
+                if e == "started" => {}
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn offer_event_from_child_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_component("b", ComponentSource::url("fuchsia-pkg://b"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("b")],
+            });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(error::Error::Builder(BuilderError::EventCannotBeOfferedFromChild(e, _)))
+                if e == "started" => {}
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn expose_storage_from_child_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Storage("foo", "/foo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(error::Error::Builder(BuilderError::StorageCannotBeExposed(s))) if s == "foo" => {}
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn offer_storage_from_child_error() {
+        let (_mocks_task, mut builder) = mocked_builder();
+
+        let res = builder
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
+            .await
+            .unwrap()
+            .add_component("b", ComponentSource::url("fuchsia-pkg://b"))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Storage("foo", "/foo"),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("b")],
+            });
+
+        match res {
+            Ok(_) => panic!("builder commands should have errored"),
+            Err(error::Error::Builder(BuilderError::StorageCannotBeOfferedFromChild(s, _)))
+                if s == "foo" => {}
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn verify_events_routing() {
+        let (_mocks_task, mut builder) = mocked_builder();
+        builder
+            .add_component(
+                "a",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_component(
+                "a/b",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Event(Event::Started, cm_rust::EventMode::Sync),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::Component("a")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Event(
+                    Event::CapabilityReady("diagnostics"),
+                    cm_rust::EventMode::Async,
+                ),
+                source: RouteEndpoint::Component("a"),
+                targets: vec![RouteEndpoint::Component("a/b")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Event(
+                    Event::CapabilityRequested("fuchsia.logger.LogSink"),
+                    cm_rust::EventMode::Async,
+                ),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::Component("a/b")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![
+                (
+                    "",
+                    ComponentDecl {
+                        offers: vec![
+                            OfferDecl::Event(OfferEventDecl {
+                                source: OfferEventSource::Parent,
+                                source_name: "started".into(),
+                                target: cm_rust::OfferTarget::Child("a".to_string()),
+                                target_name: "started".into(),
+                                mode: EventMode::Sync,
+                                filter: None,
+                            }),
+                            OfferDecl::Event(OfferEventDecl {
+                                source: OfferEventSource::Parent,
+                                source_name: "capability_requested".into(),
+                                target: cm_rust::OfferTarget::Child("a".to_string()),
+                                target_name: "capability_requested".into(),
+                                mode: EventMode::Async,
+                                filter: Some(hashmap!(
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "fuchsia.logger.LogSink".to_string()))),
+                            }),
+                        ],
+                        children: vec![
+                                // Mock children aren't inserted into the decls at this point, as their
+                                // URLs are unknown until registration with the framework intemediary,
+                                // and that happens during Topology::create
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![
+                            UseDecl::Runner(UseRunnerDecl {
+                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                            }),
+                            UseDecl::Event(UseEventDecl {
+                                source: UseSource::Parent,
+                                source_name: "started".into(),
+                                target_name: "started".into(),
+                                filter: None,
+                                mode: EventMode::Sync,
+                            }),
+                        ],
+                        offers: vec![
+                            OfferDecl::Event(OfferEventDecl {
+                                source: OfferEventSource::Framework,
+                                source_name: "capability_ready".into(),
+                                target: cm_rust::OfferTarget::Child("b".to_string()),
+                                target_name: "capability_ready".into(),
+                                mode: EventMode::Async,
+                                filter: Some(hashmap!(
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "diagnostics".to_string()))),
+                            }),
+                            OfferDecl::Event(OfferEventDecl {
+                                source: OfferEventSource::Parent,
+                                source_name: "capability_requested".into(),
+                                target: cm_rust::OfferTarget::Child("b".to_string()),
+                                target_name: "capability_requested".into(),
+                                mode: EventMode::Async,
+                                filter: Some(hashmap!(
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "fuchsia.logger.LogSink".to_string()))),
+                            }),
+                        ],
+                        children: vec![
+                                // Mock children aren't inserted into the decls at this point, as their
+                                // URLs are unknown until registration with the framework intemediary,
+                                // and that happens during Topology::create
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a/b",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("1".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![
+                            UseDecl::Runner(UseRunnerDecl {
+                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                            }),
+                            UseDecl::Event(UseEventDecl {
+                                source: UseSource::Parent,
+                                source_name: "capability_ready".into(),
+                                target_name: "capability_ready".into(),
+                                mode: EventMode::Async,
+                                filter: Some(hashmap!(
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "diagnostics".to_string()))),
+                            }),
+                            UseDecl::Event(UseEventDecl {
+                                source: UseSource::Parent,
+                                source_name: "capability_requested".into(),
+                                target_name: "capability_requested".into(),
+                                mode: EventMode::Async,
+                                filter: Some(hashmap!(
+                                    "name".to_string() => DictionaryValue::Str(
+                                        "fuchsia.logger.LogSink".to_string()))),
+                            }),
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+            ],
+        )
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn verify_storage_routing() {
+        let (_mocks_task, mut builder) = mocked_builder();
+        builder
+            .add_component(
+                "a",
+                ComponentSource::Mock(mock::Mock::new(|_: mock::MockHandles| {
+                    Box::pin(async move { Ok(()) })
+                })),
+            )
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::Storage("foo", "/bar"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::Component("a")],
+            })
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![
+                (
+                    "",
+                    ComponentDecl {
+                        offers: vec![OfferDecl::Storage(OfferStorageDecl {
+                            source: OfferStorageSource::Parent,
+                            source_name: "foo".into(),
+                            target: cm_rust::OfferTarget::Child("a".to_string()),
+                            target_name: "foo".into(),
+                        })],
+                        children: vec![
+                                // Mock children aren't inserted into the decls at this point, as their
+                                // URLs are unknown until registration with the framework intemediary,
+                                // and that happens during Topology::create
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    ComponentDecl {
+                        program: Some(fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: mock::MOCK_ID_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        uses: vec![
+                            UseDecl::Runner(UseRunnerDecl {
+                                source_name: mock::RUNNER_NAME.try_into().unwrap(),
+                            }),
+                            UseDecl::Storage(UseStorageDecl {
+                                source_name: "foo".into(),
+                                target_path: "/bar".try_into().unwrap(),
+                            }),
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+            ],
+        )
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
     async fn two_sibling_topology_no_mocks() {
         let (_mocks_task, mut builder) = mocked_builder();
 
         builder
-            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
-            .add_eager_component("b", ComponentSource::Url("fuchsia-pkg://b"))
+            .add_eager_component("b", ComponentSource::url("fuchsia-pkg://b"))
             .await
             .unwrap()
             .add_route(CapabilityRoute {
@@ -1085,7 +1588,7 @@ mod tests {
             )
             .await
             .unwrap()
-            .add_eager_component("a/b", ComponentSource::Url("fuchsia-pkg://b"))
+            .add_eager_component("a/b", ComponentSource::url("fuchsia-pkg://b"))
             .await
             .unwrap()
             .add_route(CapabilityRoute {
@@ -1152,7 +1655,7 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         builder
-            .add_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
             .add_component(
@@ -1163,7 +1666,7 @@ mod tests {
             )
             .await
             .unwrap()
-            .add_eager_component("c", ComponentSource::Url("fuchsia-pkg://c"))
+            .add_eager_component("c", ComponentSource::url("fuchsia-pkg://c"))
             .await
             .unwrap()
             .add_route(CapabilityRoute {
@@ -1275,13 +1778,13 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         builder
-            .add_eager_component("a", ComponentSource::Url("fuchsia-pkg://a"))
+            .add_eager_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
-            .add_component("b", ComponentSource::Url("fuchsia-pkg://b"))
+            .add_component("b", ComponentSource::url("fuchsia-pkg://b"))
             .await
             .unwrap()
-            .add_eager_component("c", ComponentSource::Url("fuchsia-pkg://c"))
+            .add_eager_component("c", ComponentSource::url("fuchsia-pkg://c"))
             .await
             .unwrap()
             .add_route(CapabilityRoute {
@@ -1372,7 +1875,7 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         builder
-            .add_component("a/b", ComponentSource::Url("fuchsia-pkg://a-b"))
+            .add_component("a/b", ComponentSource::url("fuchsia-pkg://a-b"))
             .await
             .unwrap()
             .add_eager_component(

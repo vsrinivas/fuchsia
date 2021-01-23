@@ -1479,7 +1479,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferEventSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EventMode {
     Sync,
     Async,

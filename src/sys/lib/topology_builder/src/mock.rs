@@ -8,10 +8,10 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_topology_builder as ftopologybuilder,
     fuchsia_async as fasync,
     futures::lock::Mutex,
-    futures::{future::Future, TryStreamExt},
+    futures::{future::BoxFuture, TryStreamExt},
     io_util,
     log::*,
-    std::{collections::HashMap, path::Path, pin::Pin, sync::Arc},
+    std::{collections::HashMap, path::Path, sync::Arc},
 };
 
 pub const MOCK_ID_KEY: &'static str = "mock_id";
@@ -22,7 +22,9 @@ pub const RUNNER_NAME: &'static str = "topology_builder_mocks";
 /// outgoing directory. The mock component may then use this handles to run a ServiceFs, access
 /// capabilities as the mock, or perform other such actions.
 #[derive(Clone)]
-pub struct Mock(Arc<dyn Fn(MockHandles) -> Pin<Box<dyn Future<Output = Result<(), Error>>>>>);
+pub struct Mock(
+    Arc<dyn Fn(MockHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static>,
+);
 
 impl Mock {
     /// Creates a new `Mock`. The `mock_fn` must be a function which takes a `MockHandles` struct
@@ -40,9 +42,9 @@ impl Mock {
     ///     Ok(())
     /// })});
     /// ```
-    pub fn new<M: 'static>(mock_fn: M) -> Self
+    pub fn new<M>(mock_fn: M) -> Self
     where
-        M: Fn(MockHandles) -> Pin<Box<dyn Future<Output = Result<(), Error>>>>,
+        M: Fn(MockHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static,
     {
         Mock(Arc::new(mock_fn))
     }

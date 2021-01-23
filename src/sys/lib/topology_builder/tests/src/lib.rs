@@ -28,7 +28,7 @@ async fn protocol_with_uncle_test() -> Result<(), Error> {
             })),
         )
         .await?
-        .add_eager_component("parent/echo-client", ComponentSource::Url(ECHO_CLIENT_URL))
+        .add_eager_component("parent/echo-client", ComponentSource::url(ECHO_CLIENT_URL))
         .await?
         .add_route(CapabilityRoute {
             capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
@@ -56,7 +56,7 @@ async fn protocol_with_siblings_test() -> Result<(), Error> {
 
     let mut builder = TopologyBuilder::new().await?;
     builder
-        .add_eager_component("echo-client", ComponentSource::Url(ECHO_CLIENT_URL))
+        .add_eager_component("echo-client", ComponentSource::url(ECHO_CLIENT_URL))
         .await?
         .add_component(
             "echo-server",
@@ -91,7 +91,7 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
 
     let mut builder = TopologyBuilder::new().await?;
     builder
-        .add_eager_component("parent-1/echo-client", ComponentSource::Url(ECHO_CLIENT_URL))
+        .add_eager_component("parent-1/echo-client", ComponentSource::url(ECHO_CLIENT_URL))
         .await?
         .add_component(
             "parent-2/echo-server",
@@ -133,7 +133,7 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
             })),
         )
         .await?
-        .add_eager_component("echo-server/echo-client", ComponentSource::Url(ECHO_CLIENT_URL))
+        .add_eager_component("echo-server/echo-client", ComponentSource::url(ECHO_CLIENT_URL))
         .await?
         .add_route(CapabilityRoute {
             capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
@@ -158,7 +158,7 @@ async fn echo_server_mock(
     send_echo_server_called: Arc<Mutex<Option<oneshot::Sender<Result<(), Error>>>>>,
     mock_handles: mock::MockHandles,
 ) -> Result<(), Error> {
-    let mut fs = fserver::ServiceFs::new_local();
+    let mut fs = fserver::ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |mut stream: fecho::EchoRequestStream| {
         let send_echo_server_called = send_echo_server_called.clone();
         fasync::Task::local(async move {

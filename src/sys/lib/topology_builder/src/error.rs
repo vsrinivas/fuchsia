@@ -52,6 +52,24 @@ pub enum BuilderError {
 
     #[error("failed to add route because {:?} is already being offered by {:?} to {:?} from {:?}", _0.capability, _1, _2, _3)]
     ConflictingOffers(builder::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
+    #[error(
+        "failed to add storage route because storage {0} cannot be offered from a child: {0:?}"
+    )]
+    StorageCannotBeOfferedFromChild(&'static str, builder::CapabilityRoute),
+
+    #[error(
+        "failed to add event route because an event {0} cannot be offered from a child: {0:?}"
+    )]
+    EventCannotBeOfferedFromChild(&'static str, builder::CapabilityRoute),
+
+    #[error("failed to add route because an event ({0}) cannot be exposed")]
+    EventsCannotBeExposed(&'static str),
+
+    #[error("failed to add route because storage ({0}) cannot be exposed")]
+    StorageCannotBeExposed(&'static str),
+
+    #[error("storage ({0}) must come from abvoe root")]
+    StorageMustComeFromAboveRoot(&'static str),
 }
 
 #[derive(Debug, Error)]

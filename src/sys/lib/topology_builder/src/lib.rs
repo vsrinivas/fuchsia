@@ -147,8 +147,8 @@ pub struct TopologyInstance {
 impl TopologyInstance {
     /// Returns a reference to the root component of this topology instance, which can be used to
     /// access exposed capabilities from the topology.
-    pub fn root(&self) -> &fclient::ScopedInstance {
-        &self.root_component
+    pub fn root(&mut self) -> &mut fclient::ScopedInstance {
+        &mut self.root_component
     }
 }
 
@@ -334,8 +334,8 @@ impl Topology {
     }
 
     /// Sets the name of the collection that this topology will be created in
-    pub fn set_collection_name(&mut self, collection_name: String) {
-        self.collection_name = collection_name;
+    pub fn set_collection_name(&mut self, collection_name: impl Into<String>) {
+        self.collection_name = collection_name.into();
     }
 
     /// Creates this topology in a child component collection. By default this happens in the
