@@ -267,6 +267,11 @@ impl LegacyIme {
                 };
                 self.inject_input(keyboard_event).await;
             }
+            ImeReq::DispatchKey3 { responder, .. } => {
+                responder.send(false).unwrap_or_else(|e| {
+                    fx_log_warn!("error sending response for DispatchKey3: {:?}", e)
+                });
+            }
             ImeReq::Show { .. } => {
                 // clone to ensure we only hold one lock at a time
                 let ime_service = self.0.lock().await.ime_service.clone();

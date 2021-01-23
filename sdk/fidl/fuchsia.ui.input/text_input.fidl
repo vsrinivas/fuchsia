@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 library fuchsia.ui.input;
+using fuchsia.ui.input3;
 
 enum KeyboardType {
     TEXT = 0;
@@ -41,7 +42,15 @@ struct TextInputState {
 protocol InputMethodEditor {
     SetKeyboardType(KeyboardType keyboard_type);
     SetState(TextInputState state);
+
+    // DEPRECATED: Will be replaced with DispatchKey3
     InjectInput(InputEvent event);
+
+    // Notify IME Service of a keyboard event. Will be migrated into
+    // fuchsia.ui.input after fuchsia.ui.input cleanup.
+    // TODO(fxbug.dev/68265)
+    [Transitional]
+    DispatchKey3(fuchsia.ui.input3.KeyEvent event) -> (bool handled);
 
     // TODO(fxbug.dev/26729): remove these in a later change, after PlatformView has been
     // switched over to open/close on the input_connection_ instead.
