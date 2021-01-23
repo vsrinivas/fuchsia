@@ -74,17 +74,22 @@ order:
 *   A (growing) subset of the Software Delivery stack.
 *   A (growing) subset of the Connectivity stack.
 
-In addition, Component manager launches `appmgr`, itself a v2 component, in
-order to manage all remaining v1 components in a dedicated sub-realm. As the
-migration continues, typically components will move from the v1 sub-realm to
-elsewhere in the component instance topology.
+## Interoperability with v1 components
 
-Note: `component_manager_sfw` is currently included in build configurations that
-use the [Session Framework][session-framework]. This second instance of the
-`component_manager` facilitates interoperability between v2 components (required
-under Session Framework) and legacy v1 components. Once all v1 components have
-been migrated to v2, the `session_manager` will become a direct descendent of
-the root `component_manager`, and `component_manager_sfw` can be removed.
+Component manager launches `appmgr`, itself a v2 component, in order to manage
+v1 components. All v1 components on the system run under `appmgr`.
+Users may continue developing and maintaining v1 components while v2 migrations
+take place at their own pace.
+
+Build configurations that use the [Session Framework][session-framework] also
+include the component `component_manager_sfw`. This is a second instance of
+`component_manager`, nested underneath `appmgr` and its v1 realm while
+managing its own hierarchy of v2 components. This enables interoperability
+between Session components (which are all v2 components) and legacy v1
+components.
+Once all v1 components have been migrated to v2, the `session_manager` will
+become a direct descendent of the root `component_manager`, and
+`component_manager_sfw` can be removed.
 
 ## Current areas of focus
 
