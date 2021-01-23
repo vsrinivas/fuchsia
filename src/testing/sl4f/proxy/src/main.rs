@@ -25,7 +25,7 @@ use std::{
 
 #[fasync::run_singlethreaded]
 async fn main() {
-    fuchsia_syslog::init_with_tags(&["tcp-proxy"]).expect("Can't init logger");
+    fuchsia_syslog::init().expect("Can't init logger");
     let mut fs = ServiceFs::new();
     let proxy_control = Arc::new(TcpProxyControl::new());
     fs.dir("svc").add_fidl_service(move |stream| {
@@ -174,16 +174,18 @@ impl TcpProxy {
     async fn serve_proxy(tcp_listener: fasync::net::TcpListener, target_port: u16) {
         tcp_listener
             .accept_stream()
-            .try_for_each_concurrent(None, |(client_conn, _addr)| async move {
+            .try_for_each_concurrent(None, |(client_conn, addr)| async move {
                 let v6_addr = SocketAddrV6::new(Ipv6Addr::LOCALHOST, target_port, 0, 0);
                 let v4_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, target_port);
                 let server_conn = match fasync::net::TcpStream::connect(v6_addr.into())?.await {
                     Ok(v6_conn) => v6_conn,
                     Err(_) => fasync::net::TcpStream::connect(v4_addr.into())?.await?,
                 };
+                info!("Serving a connection from {:?} to port {:?}", addr, target_port);
                 Self::serve_single_connection(client_conn, server_conn)
                     .await
                     .unwrap_or_else(|e| warn!("Error serving tunnel: {:?}", e));
+                info!("Connection from {:?} to port {:?} closed", addr, target_port);
                 Ok(())
             })
             .await
