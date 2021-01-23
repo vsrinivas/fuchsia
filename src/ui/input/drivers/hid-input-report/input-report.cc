@@ -10,7 +10,6 @@
 
 #include <array>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -24,6 +23,7 @@
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
 
+#include "src/ui/input/drivers/hid-input-report/hid_input_report_bind.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report_dev {
@@ -249,8 +249,4 @@ static zx_driver_ops_t input_report_driver_ops = []() -> zx_driver_ops_t {
 
 }  // namespace hid_input_report_dev
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(InputReport, hid_input_report_dev::input_report_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_HID_DEVICE),
-ZIRCON_DRIVER_END(inputReport)
-    // clang-format on
+ZIRCON_DRIVER(hid_input_report, hid_input_report_dev::input_report_driver_ops, "zircon", "0.1");

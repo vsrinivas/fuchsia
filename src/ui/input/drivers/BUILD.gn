@@ -32,7 +32,7 @@ group("tests") {
     "gt6853:tests",
     "hid:tests",
     "hid-buttons:tests",
-    "hid-input-report:hid-input-report-test",
+    "hid-input-report:tests",
     "hidctl:tests",
     "i2c-hid:tests",
     "usb-hid:tests",

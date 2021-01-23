@@ -2,10 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("hid_input_report_bind") {
+  rules = "hid_input_report.bind"
+  output = "hid_input_report_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.hid" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":hid-input-report-test",
+    ":hid_input_report_bind_test",
+  ]
+}
 
 driver_module("hid-input-report") {
   sources = [
@@ -13,14 +29,12 @@ driver_module("hid-input-report") {
     "input-reports-reader.cc",
   ]
   deps = [
+    ":hid_input_report_bind",
     "//sdk/banjo/fuchsia.hardware.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fbl",
@@ -41,15 +55,13 @@ test("hid-input-report-test-bin") {
     "test.cc",
   ]
   deps = [
+    ":hid_input_report_bind",
     "//sdk/banjo/fuchsia.hardware.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fbl",
