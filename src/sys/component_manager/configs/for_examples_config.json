@@ -2,6 +2,7 @@
     debug: false,
     maintain_utc_clock: false,
     use_builtin_process_launcher: false,
+    out_dir_contents: "hub",
     namespace_capabilities: [
         {
             protocol: [

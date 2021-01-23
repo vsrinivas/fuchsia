@@ -298,6 +298,10 @@ fuchsia_component("component-manager-for-examples-cmp") {
   manifest = "meta/component_manager_for_examples.cmx"
 }
 
+fuchsia_package("component-manager-for-examples") {
+  deps = [ ":component-manager-for-examples-cmp" ]
+}
+
 fuchsia_package("component-manager") {
   deps = [ ":component-manager-cmp" ]
 }
