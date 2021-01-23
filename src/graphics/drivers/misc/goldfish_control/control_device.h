@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/fit/result.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
@@ -90,6 +91,7 @@ class Control : public ControlType,
 
   zx_status_t InitAddressSpaceDeviceLocked() TA_REQ(lock_);
   zx_status_t InitPipeDeviceLocked() TA_REQ(lock_);
+  zx_status_t InitSyncDeviceLocked() TA_REQ(lock_);
 
   // Create a pair of channel and register a sysmem Heap of |heap_type| using
   // the channel pair. The client-side channel is sent to sysmem, and the
@@ -118,6 +120,7 @@ class Control : public ControlType,
   ddk::GoldfishPipeProtocolClient pipe_;
   ddk::GoldfishControlProtocolClient control_;
   ddk::GoldfishAddressSpaceProtocolClient address_space_;
+  ddk::GoldfishSyncProtocolClient sync_;
   int32_t id_ = 0;
   zx::bti bti_ TA_GUARDED(lock_);
   ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
@@ -130,6 +133,7 @@ class Control : public ControlType,
 
   std::unique_ptr<llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::SyncClient>
       address_space_child_;
+  std::unique_ptr<llcpp::fuchsia::hardware::goldfish::SyncTimeline::SyncClient> sync_timeline_;
 
   // TODO(fxbug.dev/3213): This should be std::unordered_map.
   std::map<zx_koid_t, uint32_t> buffer_handles_ TA_GUARDED(lock_);

@@ -108,6 +108,12 @@ zx_status_t Control::Init() {
     return status;
   }
 
+  status = ddk::GoldfishSyncProtocolClient::CreateFromComposite(composite, "goldfish-sync", &sync_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: goldfish sync fragment is invalid", kTag);
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -223,6 +229,31 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   return ZX_OK;
 }
 
+zx_status_t Control::InitSyncDeviceLocked() {
+  if (!sync_.is_valid()) {
+    zxlogf(ERROR, "%s: no sync protocol", kTag);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Initialize sync timeline client.
+  zx::channel timeline_client, timeline_req;
+  zx_status_t status = zx::channel::create(0u, &timeline_client, &timeline_req);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: zx_channel_create failed: %d", kTag, status);
+    return status;
+  }
+
+  status = sync_.CreateTimeline(std::move(timeline_req));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: SyncDevice::CreateTimeline failed: %d", kTag, status);
+    return status;
+  }
+
+  sync_timeline_ = std::make_unique<llcpp::fuchsia::hardware::goldfish::SyncTimeline::SyncClient>(
+      std::move(timeline_client));
+  return ZX_OK;
+}
+
 zx_status_t Control::RegisterAndBindHeap(llcpp::fuchsia::sysmem2::HeapType heap_type, Heap* heap) {
   zx::channel heap_request, heap_connection;
   zx_status_t status = zx::channel::create(0, &heap_request, &heap_connection);
@@ -251,6 +282,12 @@ zx_status_t Control::Bind() {
   status = InitAddressSpaceDeviceLocked();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: InitAddressSpaceDeviceLocked() failed: %d", kTag, status);
+    return status;
+  }
+
+  status = InitSyncDeviceLocked();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: InitSyncDeviceLocked() failed: %d", kTag, status);
     return status;
   }
 

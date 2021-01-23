@@ -99,7 +99,7 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
   }
 
  private:
-  static constexpr size_t kNumFragments = 2;
+  static constexpr size_t kNumFragments = 3;
 
   composite_protocol_t proto_;
   zx_device_t* parent_;
@@ -353,6 +353,19 @@ class FakeAddressSpace
   zx::channel request_;
 };
 
+class FakeSync : public ddk::GoldfishSyncProtocol<FakeSync, ddk::base_protocol> {
+ public:
+  FakeSync() : proto_({&goldfish_sync_protocol_ops_, this}) {}
+
+  const goldfish_sync_protocol_t* proto() const { return &proto_; }
+
+  zx_status_t GoldfishSyncCreateTimeline(zx::channel request) { return ZX_OK; }
+
+ private:
+  goldfish_sync_protocol_t proto_;
+  zx::channel request_;
+};
+
 class ControlDeviceTest : public testing::Test {
  public:
   void SetUp() override {
@@ -363,6 +376,8 @@ class ControlDeviceTest : public testing::Test {
                     *reinterpret_cast<const fake_ddk::Protocol*>(pipe_.proto())};
     protocols[2] = {ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE,
                     *reinterpret_cast<const fake_ddk::Protocol*>(address_space_.proto())};
+    protocols[3] = {ZX_PROTOCOL_GOLDFISH_SYNC,
+                    *reinterpret_cast<const fake_ddk::Protocol*>(sync_.proto())};
     ddk_.SetProtocols(std::move(protocols));
 
     dut_ = std::make_unique<Control>(fake_ddk::kFakeParent);
@@ -388,6 +403,7 @@ class ControlDeviceTest : public testing::Test {
   FakeComposite composite_{fake_ddk::kFakeParent};
   FakePipe pipe_;
   FakeAddressSpace address_space_;
+  FakeSync sync_;
 
   fake_ddk::Bind ddk_;
 

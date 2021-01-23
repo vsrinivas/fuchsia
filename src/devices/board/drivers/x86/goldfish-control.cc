@@ -34,6 +34,10 @@ static const zx_bind_inst_t goldfish_address_space_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE),
 };
 
+static const zx_bind_inst_t goldfish_sync_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_SYNC),
+};
+
 static const device_fragment_part_t goldfish_pipe_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(goldfish_pipe_match), goldfish_pipe_match},
@@ -45,10 +49,16 @@ static const device_fragment_part_t goldfish_address_space_fragment[] = {
     {std::size(goldfish_address_space_match), goldfish_address_space_match},
 };
 
+static const device_fragment_part_t goldfish_sync_fragment[] = {
+    {std::size(root_match), root_match},
+    {std::size(goldfish_sync_match), goldfish_sync_match},
+};
+
 static const device_fragment_t goldfish_control_fragments[] = {
     {"goldfish-pipe", std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
     {"goldfish-address-space", std::size(goldfish_address_space_fragment),
      goldfish_address_space_fragment},
+    {"goldfish-sync", std::size(goldfish_sync_fragment), goldfish_sync_fragment},
 };
 
 constexpr zx_device_prop_t props[] = {
