@@ -209,6 +209,60 @@
   "target": "all",
   "logLevel": "verbose",
   "licenseAllowList": {
+    "cryptsoft.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "ctsai.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "freetype3.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "harfbuzz2.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "harfbuzz.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "intentionally_blank.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "khronos.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "llvm_project3.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "mit5.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "mit_tom_wu.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "mpl2.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "nara.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "nokia.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "openssl_cryptsoft.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "openssl_short.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "unicode_ibm.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "unicode.lic": [
+      "prebuilt/third_party/flutter"
+    ],
+    "unicode_terms.lic": [
+      "prebuilt/third_party/flutter"
+    ],
     "university_of_illinois.lic": [
       "prebuilt/third_party/llvm/linux-x64/include/llvm/Support/"
     ]
