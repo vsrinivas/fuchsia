@@ -35,7 +35,7 @@ class MtkSpi : public DeviceType, public ddk::SpiImplProtocol<MtkSpi, ddk::base_
   zx_status_t SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo);
   zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                  uint64_t size);
-  zx_status_t SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+  zx_status_t SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                 uint64_t size);
   zx_status_t SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
                                  uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size);

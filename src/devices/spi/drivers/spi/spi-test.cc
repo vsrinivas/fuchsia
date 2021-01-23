@@ -200,7 +200,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     return memcmp(buf, kTestData, std::max(size, sizeof(buf))) == 0 ? ZX_OK : ZX_ERR_IO;
   }
 
-  zx_status_t SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+  zx_status_t SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                 uint64_t size) {
     if (chip_select > 1) {
       return ZX_ERR_OUT_OF_RANGE;

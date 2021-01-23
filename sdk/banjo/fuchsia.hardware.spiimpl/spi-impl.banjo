@@ -25,7 +25,7 @@ protocol SpiImpl {
 
     TransmitVmo(uint32 chip_select, uint32 vmo_id, uint64 offset, uint64 size)
             -> (zx.status status);
-    RecieveVmo(uint32 chip_select, uint32 vmo_id, uint64 offset, uint64 size)
+    ReceiveVmo(uint32 chip_select, uint32 vmo_id, uint64 offset, uint64 size)
             -> (zx.status status);
     ExchangeVmo(uint32 chip_select, uint32 tx_vmo_id, uint64 tx_offset, uint32 rx_vmo_id,
                 uint64 rx_offset, uint64 size) -> (zx.status status);

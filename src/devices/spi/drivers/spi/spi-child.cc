@@ -53,7 +53,7 @@ void SpiChild::TransmitVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
 
 void SpiChild::ReceiveVmo(uint32_t vmo_id, uint64_t offset, uint64_t size,
                           ReceiveVmoCompleter::Sync& completer) {
-  completer.Reply(spi_.RecieveVmo(cs_, vmo_id, offset, size));
+  completer.Reply(spi_.ReceiveVmo(cs_, vmo_id, offset, size));
 }
 
 void SpiChild::ExchangeVmo(uint32_t tx_vmo_id, uint64_t tx_offset, uint32_t rx_vmo_id,

@@ -130,7 +130,7 @@ zx_status_t MtkSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, ui
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MtkSpi::SpiImplRecieveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+zx_status_t MtkSpi::SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                       uint64_t size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
