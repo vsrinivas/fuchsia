@@ -38,7 +38,6 @@ config("suppress-warning.config") {
     "//build/config/fuchsia:*",
     "//build/config/sanitizers:*",
     "//zircon/kernel/*",
-    "//zircon/public/gn/*",
     "//zircon/system/ulib/*",
     "//zircon/third_party/lib/*",
     "//zircon/third_party/ulib/*",

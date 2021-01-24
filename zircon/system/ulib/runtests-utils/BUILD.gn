@@ -4,10 +4,6 @@
 
 import("//build/unification/zx_library.gni")
 
-if (false) {  # is_gcc
-  import("//zircon/public/gn/toolchain/clang.gni")
-}
-
 zx_library("runtests-utils") {
   testonly = true
   host = true
@@ -65,26 +61,6 @@ zx_library("runtests-utils") {
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/unittest",
     ]
-    if (false) {  # is_gcc
-      if (clang_tool_dir == "") {
-        clang_exec = "clang"
-      } else {
-        clang_exec = rebase_path("${clang_tool_dir}/clang")
-      }
-      resource_dir = rebase_path(exec_script("/usr/bin/env",
-                                             [
-                                               clang_exec,
-                                               "-print-resource-dir",
-                                             ],
-                                             "trim string"),
-                                 "",
-                                 root_build_dir)
-      write_file(
-          "$target_gen_dir/profile/InstrProfData.inc",
-          [ "#include \"$resource_dir/include/profile/InstrProfData.inc\"" ],
-          "list lines")
-      include_dirs = [ target_gen_dir ]
-    }
   }
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
