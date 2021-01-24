@@ -2,14 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//zircon/public/gn/fuzzer.gni")
+import("//build/cpp/cpp_fuzzer.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":cmdline-fuzzer" ]
+  deps = [ ":cmdline-fuzzers($default_toolchain)" ]
 }
 
-zx_fuzzer("cmdline-fuzzer") {
+fuzzer_package("cmdline-fuzzers") {
+  fuzz_host = true
+  cpp_fuzzers = [ ":cmdline-fuzzer" ]
+}
+
+cpp_fuzzer("cmdline-fuzzer") {
   sources = [ "cmdline_fuzzer.cc" ]
   deps = [ "//zircon/system/ulib/cmdline" ]
 }
