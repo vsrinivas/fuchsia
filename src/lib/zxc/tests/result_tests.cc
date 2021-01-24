@@ -116,14 +116,14 @@ struct test_members {
   int b;
 };
 
-static_assert(fitx::result<fitx::failed, test_members> { zx::ok(test_members{10, 20}) }->a == 10);
-static_assert(fitx::result<fitx::failed, test_members> { zx::ok(test_members{10, 20}) }->b == 20);
+static_assert(fitx::result<fitx::failed, test_members> { zx::ok(test_members{10, 20}) } -> a == 10);
+static_assert(fitx::result<fitx::failed, test_members> { zx::ok(test_members{10, 20}) } -> b == 20);
 static_assert(fitx::result<fitx::failed, std::optional<test_members>> {
   zx::ok(test_members{10, 20})
-}->a == 10);
+} -> a == 10);
 static_assert(fitx::result<fitx::failed, std::optional<test_members>> {
   zx::ok(test_members{10, 20})
-}->b == 20);
+} -> b == 20);
 
 // Status-only, no value.
 static_assert(zx::status<>{zx::ok()}.is_ok() == true);
@@ -931,6 +931,9 @@ TEST(LibZxCommon, ErrorResults) {
   counter_b::reset();
 }
 
+// status_string() is only defined in userspace Fuchsia code
+#if defined(__Fuchsia__)
+
 TEST(LibZxCommon, StatusString) {
   {
     zx::status<> status = zx::ok();
@@ -952,6 +955,8 @@ TEST(LibZxCommon, StatusString) {
     EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
   }
 }
+
+#endif  // defined(__Fuchsia__)
 
 struct ErrorMsg {
   zx_status_t status;
