@@ -452,7 +452,7 @@
                 },
                 "type": {
                     "description": "Type of the resource",
-                    "$ref": "#/definitions/primitive-type"
+                    "$ref": "#/definitions/type"
                 },
                 "properties": {
                     "description": "List of properties",
