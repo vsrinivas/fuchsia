@@ -82,11 +82,14 @@ impl BlobFsHeader {
             return Err(Error::new(BlobFsError::InvalidHeaderMagic));
         }
         let version: u32 = cursor.read_u32::<LittleEndian>()?;
-        // Version 9 removes support fo ZSTD_Seekable blobs which scrutiny
-        // does not support anyway. So both are suitable for use with the tool.
+        // BlobFS version 8 supports ZSTD_Seekable.
+        // BlobFS version 9 removes support fo ZSTD_Seekable.
+        // Scrutiny only supports ZSTD_CHUNK. So both versions are suitable
+        // for use with the tool.
         if version != BLOBFS_VERSION_8 && version != BLOBFS_VERSION_9 {
             return Err(Error::new(BlobFsError::UnsupportedVersion));
         }
+
         let flags: u32 = cursor.read_u32::<LittleEndian>()?;
         let block_size: u32 = cursor.read_u32::<LittleEndian>()?;
         let reserved_1: u32 = cursor.read_u32::<LittleEndian>()?;
@@ -220,17 +223,26 @@ fn calculate_hash_list_size(data_size: u64, node_size: u64) -> u64 {
     cmp::max(to_node * digest_size, digest_size)
 }
 
-/// Calculates the number of blocks needed to store the merkle tree for the blob
-/// based on its size. This function may return 0 for small blobs (for which
-/// only the root digest is sufficient to verify the entire contents of the blob).
-fn merkle_tree_block_count(node: &Inode) -> u64 {
+/// Returns the exact byte count for the merkle tree. This is used when a
+/// compact merkle tree format is used in Version 9+ of the BlobFS format.
+fn merkle_tree_byte_size(node: &Inode, is_compact: bool) -> u64 {
     let mut data_size: u64 = node.blob_size;
     let node_size: u64 = BLOBFS_BLOCK_SIZE;
     let mut merkle_tree_size: u64 = 0;
     while data_size > node_size {
-        data_size = round_up(calculate_hash_list_size(data_size, node_size), node_size);
+        let list_size = calculate_hash_list_size(data_size, node_size);
+        // The non compact format pads the hash list to be a multiple of the node size.
+        data_size = if is_compact { list_size } else { round_up(list_size, node_size) };
         merkle_tree_size += data_size;
     }
+    merkle_tree_size
+}
+
+/// Calculates the number of blocks needed to store the merkle tree for the blob
+/// based on its size. This function may return 0 for small blobs (for which
+/// only the root digest is sufficient to verify the entire contents of the blob).
+fn merkle_tree_block_count(node: &Inode) -> u64 {
+    let merkle_tree_size = merkle_tree_byte_size(node, false);
     round_up(merkle_tree_size, BLOBFS_BLOCK_SIZE) / BLOBFS_BLOCK_SIZE
 }
 
@@ -427,14 +439,22 @@ impl BlobFsReader {
                     (inode.inline_extent.start() * BLOBFS_BLOCK_SIZE).try_into().unwrap(),
                 ))?;
 
-                // Skip over the merkle tree blocks.
-                let merkle_tree_size = merkle_tree_block_count(&inode) * BLOBFS_BLOCK_SIZE;
-                self.cursor.seek(SeekFrom::Current(merkle_tree_size.try_into().unwrap()))?;
-
-                // Read the data blocks directly, accounting for the space taken up by the merkle
-                // tree.
-                let data_length =
-                    (inode.inline_extent.length() * BLOBFS_BLOCK_SIZE) - merkle_tree_size;
+                // Skip over the merkle tree blocks. In version 8 these are padded
+                // at the front of the block.
+                let mut data_length = 0;
+                if header.version == BLOBFS_VERSION_8 {
+                    let merkle_tree_size = merkle_tree_block_count(&inode) * BLOBFS_BLOCK_SIZE;
+                    self.cursor.seek(SeekFrom::Current(merkle_tree_size.try_into().unwrap()))?;
+                    // Read the data blocks directly, accounting for the space taken up by the merkle
+                    // tree prefixing the blob.
+                    data_length =
+                        (inode.inline_extent.length() * BLOBFS_BLOCK_SIZE) - merkle_tree_size;
+                }
+                if header.version == BLOBFS_VERSION_9 {
+                    let merkle_tree_size = merkle_tree_byte_size(&inode, true);
+                    data_length =
+                        (inode.inline_extent.length() * BLOBFS_BLOCK_SIZE) - merkle_tree_size;
+                }
                 let mut buffer = vec![0u8; data_length as usize];
                 self.cursor.read_exact(&mut buffer)?;
 
