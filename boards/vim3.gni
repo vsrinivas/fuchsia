@@ -41,7 +41,21 @@ board_package_labels += [
   "//garnet/packages/prod:vulkan",
 ]
 
+use_vbmeta = true
+avb_key = "//src/firmware/avb_keys/vim3/vim3-dev-key/vim3_devkey_atx_psk.pem"
+avb_algorithm = "SHA512_RSA4096"
+avb_atx_metadata =
+    "//src/firmware/avb_keys/vim3/vim3-dev-key/vim3_dev_atx_metadata.bin"
+
 # partitions for fx flash to flash
-zircon_a_partition = "zircon-a"
-zircon_r_partition = "zircon-r"
+zircon_a_partition = "zircon_a"
+zircon_b_partition = "zircon_b"
+zircon_r_partition = "zircon_r"
+vbmeta_a_partition = "vbmeta_a"
+vbmeta_b_partition = "vbmeta_b"
+vbmeta_r_partition = "vbmeta_r"
 fastboot_product = "galilei"
+
+fvm_emmc_partition_size = "1048576"  # 1GB
+fvm_partition = "fvm"
+active_partition = "a"
