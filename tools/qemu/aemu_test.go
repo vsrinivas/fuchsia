@@ -181,4 +181,41 @@ func TestAEMUCommandBuilder(t *testing.T) {
 			"-append", "infra.foo=bar kernel.serial=legacy"},
 		err: nil,
 	}, cmd, err)
+
+	b.AddSerial(
+		Chardev{
+			ID:      "char0",
+			Logfile: "logfile.txt",
+			Signal:  false,
+		},
+	)
+
+	cmd, err = b.Build()
+	check(t, expected{
+		cmd: []string{
+			"./bin/emulator",
+			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-gpu", "swiftshader_indirect",
+			"-no-window",
+			"-fuchsia",
+			"-kernel", "./data/qemu-kernel",
+			"-initrd", "./data/zircon-a",
+			"-vga", "none",
+			"-device", "virtio-keyboard-pci",
+			"-device", "virtio_input_multi_touch_pci_1",
+			"-machine", "virt-2.12,gic-version=host",
+			"-cpu", "host",
+			"-enable-kvm",
+			"-m", "4096",
+			"-smp", "4",
+			"-object", "iothread,id=iothread-otherdisk",
+			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
+			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
+			"-netdev", "user,id=net0",
+			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,netdev=net0",
+			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off,echo=off",
+			"-serial", "chardev:char0",
+			"-append", "infra.foo=bar kernel.serial=legacy"},
+		err: nil,
+	}, cmd, err)
 }

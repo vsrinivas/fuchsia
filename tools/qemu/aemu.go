@@ -5,6 +5,7 @@
 package qemu
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -32,6 +33,19 @@ func NewAEMUCommandBuilder() *AEMUCommandBuilder {
 	a.SetFlag("-device", "virtio_input_multi_touch_pci_1")
 	// End defaults
 	return a
+}
+
+func (a *AEMUCommandBuilder) AddSerial(c Chardev) {
+	args := []string{"stdio", fmt.Sprintf("id=%s", c.ID)}
+	if c.Logfile != "" {
+		args = append(args, fmt.Sprintf("logfile=%s", c.Logfile))
+	}
+	if !c.Signal {
+		args = append(args, "signal=off")
+	}
+	args = append(args, "echo=off")
+	a.SetFlag("-chardev", strings.Join(args, ","))
+	a.SetFlag("-serial", fmt.Sprintf("chardev:%s", c.ID))
 }
 
 func (a *AEMUCommandBuilder) SetFeature(feature string) {
