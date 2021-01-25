@@ -530,6 +530,7 @@ def main():
         # accessed by certain git commands used in the build is not viable, it's
         # not necessarily stable and doesn't make a good contract.
         os.path.join(src_root, ".git"),
+        os.path.join(src_root, "integration", ".git"),
     }
     ignored_suffixes = {
         # Allow actions to access Python code such as via imports
