@@ -42,4 +42,5 @@ additional_static_libraries = [
 
 data_files = [
     { src = "res/fuchsia-logo.png", dst = "data/logo.png"},
+    { src = "../../../prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf", dst = "data/fonts/Roboto-Regular.ttf"},
 ]

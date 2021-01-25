@@ -49,7 +49,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:thiserror",
   ]
 

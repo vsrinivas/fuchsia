@@ -157,7 +157,7 @@ impl SizedText {
         context: &mut RenderContext,
         label: &str,
         size: f32,
-        wrap: usize,
+        wrap: f32,
         face: &FontFace,
     ) -> Self {
         let mut glyphs = GlyphMap::new();
@@ -183,19 +183,19 @@ impl RenderResources {
         face: &FontFace,
     ) -> Self {
         let text_size = min_dimension / 10.0;
-        let heading_label = SizedText::new(context, heading, text_size, 100, face);
+        let heading_label = SizedText::new(context, heading, text_size, 1000.0, face);
         let heading_label_size = heading_label.text.bounding_box.size;
 
         let body_text_size = min_dimension / 18.0;
-        let body_wrap = heading_label_size.width / body_text_size * 3.0;
-        let body_label = SizedText::new(context, body, body_text_size, body_wrap as usize, face);
+        let body_label =
+            SizedText::new(context, body, body_text_size, heading_label_size.width, face);
 
         let countdown_text_size = min_dimension / 4.0;
         let countdown_label = SizedText::new(
             context,
             &format!("{:02}", countdown_ticks),
             countdown_text_size,
-            100,
+            1000.0,
             face,
         );
 

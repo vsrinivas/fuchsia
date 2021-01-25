@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "ttf-parser"
-version = "0.8.2"
+version = "0.10.1"
 authors = ["Evgeniy Reizner <razrfalcon@gmail.com>"]
 exclude = ["benches/**"]
 description = "A high-level, safe, zero-allocation TrueType font parser."
@@ -36,5 +36,6 @@ version = "0.5"
 version = "0.1"
 
 [features]
-default = ["std"]
+default = ["std", "variable-fonts"]
 std = []
+variable-fonts = []

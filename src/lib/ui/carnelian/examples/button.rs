@@ -6,10 +6,10 @@ use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
     color::Color,
-    drawing::{load_font, DisplayRotation, FontFace},
+    drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
     facet::{
-        measure_text_width, FacetId, Scene, SceneBuilder, SetColorMessage, TextFacetOptions,
-        TextHorizontalAlignment, TextVerticalAlignment,
+        FacetId, Scene, SceneBuilder, SetColorMessage, TextFacetOptions, TextHorizontalAlignment,
+        TextVerticalAlignment,
     },
     input::{self},
     make_app_assistant, make_message,

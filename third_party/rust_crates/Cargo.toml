@@ -187,7 +187,7 @@ time = "0.1"
 tokio-rustls = "0.13.0"
 trust-dns-proto = { version = "0.19.2", default-features = false, features = ["testing"] }
 trust-dns-resolver = { version = "0.19.2", default-features = false, features = ["testing"] }
-ttf-parser = "0.8.2"
+ttf-parser = "0.10.1"
 unicode-normalization = "0.1"
 vk-sys = "0.4.0"
 void = "1.0.2"
@@ -245,7 +245,6 @@ servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
 # termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
 termcolor = { path = "tiny_mirrors/termcolor" }
 tracing-core = { path = "tiny_mirrors/tracing-core" }
-ttf-parser = { path = "tiny_mirrors/ttf-parser" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
 web-sys = { path = "tiny_mirrors/web-sys" }
 wepoll-binding = { path = "tiny_mirrors/wepoll-binding" }

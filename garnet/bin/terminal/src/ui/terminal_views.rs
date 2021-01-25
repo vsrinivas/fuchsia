@@ -11,7 +11,6 @@ use {
     },
     euclid::default::Vector2D,
     fuchsia_trace as ftrace,
-    rusttype::Scale,
     term_model::{
         ansi::CursorStyle,
         term::{CursorKey, RenderableCellContent, RenderableCellsIter},
@@ -74,7 +73,6 @@ impl GridView {
 
         let font_size = size.height * 0.9;
         let baseline = font_size * 0.9;
-        let scale = Scale::uniform(font_size);
         let background_color = self.background_color;
         let (mut layers, maybe_bg_layers): (Vec<_>, Vec<_>) = cells
             .filter_map(|cell| {
@@ -84,15 +82,13 @@ impl GridView {
                         size.height * cell.line.0 as f32,
                     );
                     let char_position = cell_position + Vector2D::new(0.0, baseline);
-                    let g = font.font.glyph(character);
-                    let g = g.scaled(scale);
-                    let id = g.id();
-                    let glyph = Glyph::new(render_context, &self.font, font_size, id);
-                    let pos_vec = char_position.to_vector().to_i32();
+                    let glyph_index = font.face.glyph_index(character);
+                    let glyph = Glyph::new(render_context, &self.font, font_size, glyph_index);
                     let cell_bounds = Rect::new(cell_position, size);
-                    let fg_raster = if glyph.bounding_box.is_empty() {
+                    let fg_raster = if glyph_index.is_none() {
                         raster_for_rectangle(&cell_bounds, render_context)
                     } else {
+                        let pos_vec = char_position.to_vector().to_i32();
                         glyph.raster.translate(pos_vec)
                     };
                     let cell_background_color = make_color(&cell.bg);

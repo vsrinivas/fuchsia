@@ -164,6 +164,8 @@ impl ViewAssistant for FontMetricsViewAssistant {
             builder.round_scene_corners(self.round_scene_corners);
             let size = context.size;
             let text_size = size.height.min(size.width) / self.sample_size_divisor;
+            let ascent = self.sample_faces[self.sample_index].ascent(text_size);
+            let descent = self.sample_faces[self.sample_index].descent(text_size);
             let sample_text_size = text_size / 3.0;
             let baseline_location = size.height / 3.0;
             let baseline_left = size.width * BASELINE_INDENT;
@@ -205,13 +207,10 @@ impl ViewAssistant for FontMetricsViewAssistant {
                 self.line_color,
             ));
 
-            let scale = rusttype::Scale::uniform(text_size);
-            let v_metrics = self.sample_faces[self.sample_index].font.v_metrics(scale);
-
             let ascent_x = baseline_left + size.width * BASELINE_INDENT / 5.0;
             lines.push(builder.v_line(
                 ascent_x,
-                baseline_location - v_metrics.ascent,
+                baseline_location - ascent,
                 baseline_location,
                 LINE_THICKNESS,
                 self.line_color,
@@ -220,7 +219,7 @@ impl ViewAssistant for FontMetricsViewAssistant {
             lines.push(builder.v_line(
                 ascent_x,
                 baseline_location,
-                baseline_location - v_metrics.descent,
+                baseline_location - descent,
                 LINE_THICKNESS,
                 self.line_color,
             ));
@@ -242,7 +241,7 @@ impl ViewAssistant for FontMetricsViewAssistant {
                 self.label_face.clone(),
                 "ascent",
                 label_size,
-                point2(ascent_x - PADDING * size.width, baseline_location - v_metrics.ascent / 2.0),
+                point2(ascent_x - PADDING * size.width, baseline_location - ascent / 2.0),
                 TextFacetOptions {
                     vertical_alignment: TextVerticalAlignment::Center,
                     horizontal_alignment: TextHorizontalAlignment::Right,
@@ -254,10 +253,7 @@ impl ViewAssistant for FontMetricsViewAssistant {
                 self.label_face.clone(),
                 "descent",
                 label_size,
-                point2(
-                    ascent_x - PADDING * size.width,
-                    baseline_location - v_metrics.descent / 2.0,
-                ),
+                point2(ascent_x - PADDING * size.width, baseline_location - descent / 2.0),
                 TextFacetOptions {
                     vertical_alignment: TextVerticalAlignment::Center,
                     horizontal_alignment: TextHorizontalAlignment::Right,

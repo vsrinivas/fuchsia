@@ -10,7 +10,7 @@
 use crate::{
     color::Color,
     geometry::{Coord, Corners, Point, Rect},
-    render::{Context as RenderContext, Path, Raster},
+    render::{Context as RenderContext, Path, PathBuilder, Raster, RasterBuilder},
 };
 use anyhow::{Context, Error};
 use euclid::{
@@ -18,9 +18,7 @@ use euclid::{
     point2, vec2, Angle,
 };
 use fuchsia_zircon::{self as zx};
-use rusttype::{Font, FontCollection, GlyphId, Scale, Segment};
 use std::{collections::BTreeMap, fs::File, path::PathBuf, slice};
-use textwrap::wrap_iter;
 use ttf_parser::Face;
 
 /// Some Fuchsia device displays are mounted rotated. This value represents
@@ -329,11 +327,31 @@ pub fn load_font(path: PathBuf) -> Result<FontFace, Error> {
 #[derive(Clone)]
 pub struct FontFace {
     /// Font.
-    pub font: Font<'static>,
     pub face: Face<'static>,
 }
 
 impl FontFace {
+    pub fn new(data: &'static [u8]) -> Result<FontFace, Error> {
+        let face = Face::from_slice(data, 0)?;
+        Ok(FontFace { face })
+    }
+
+    pub fn ascent(&self, size: f32) -> f32 {
+        let ascent = self.face.ascender();
+        self.face
+            .units_per_em()
+            .and_then(|units_per_em| Some((ascent as f32 / units_per_em as f32) * size))
+            .expect("units_per_em")
+    }
+
+    pub fn descent(&self, size: f32) -> f32 {
+        let descender = self.face.descender();
+        self.face
+            .units_per_em()
+            .and_then(|units_per_em| Some((descender as f32 / units_per_em as f32) * size))
+            .expect("units_per_em")
+    }
+
     pub fn capital_height(&self, size: f32) -> Option<f32> {
         self.face.capital_height().and_then(|capital_height| {
             self.face
@@ -343,13 +361,123 @@ impl FontFace {
     }
 }
 
-#[allow(missing_docs)]
-impl FontFace {
-    pub fn new(data: &'static [u8]) -> Result<FontFace, Error> {
-        let collection = FontCollection::from_bytes(data as &[u8])?;
-        let font = collection.into_font()?;
-        let face = Face::from_slice(data, 0)?;
-        Ok(FontFace { font, face })
+pub fn measure_text_width(face: &FontFace, font_size: f32, text: &str) -> f32 {
+    text.chars()
+        .filter_map(|c| {
+            let glyph_index = face.face.glyph_index(c);
+            glyph_index.and_then(|glyph_index| {
+                let hor_advance = face
+                    .face
+                    .glyph_hor_advance(glyph_index)
+                    .and_then(|hor_advance| pixel_size(face, font_size, hor_advance as i16))
+                    .expect("hor_advance");
+                Some(hor_advance)
+            })
+        })
+        .sum()
+}
+
+pub fn linebreak_text(face: &FontFace, font_size: f32, text: &str, max_width: f32) -> Vec<String> {
+    let chunks: Vec<&str> = text.split_whitespace().collect();
+    let space_width = measure_text_width(face, font_size, " ");
+    let breaks: Vec<usize> = chunks
+        .iter()
+        .enumerate()
+        .scan(0.0, |width, (index, word)| {
+            let word_width = measure_text_width(face, font_size, word);
+            let resulting_line_len = *width + word_width + space_width;
+            if resulting_line_len > max_width {
+                *width = word_width + space_width;
+                Some(Some(index))
+            } else {
+                *width += word_width;
+                *width += space_width;
+                Some(None)
+            }
+        })
+        .flatten()
+        .chain(std::iter::once(chunks.len()))
+        .collect();
+    let lines: Vec<String> = breaks
+        .iter()
+        .scan(0, |first_word_index, last_word_index| {
+            let first = *first_word_index;
+            *first_word_index = *last_word_index;
+            let line = &chunks[first..*last_word_index];
+            let line_str = String::from(line.join(" "));
+            Some(line_str)
+        })
+        .collect();
+
+    lines
+}
+
+fn pixel_size(face: &FontFace, font_size: f32, value: i16) -> Option<f32> {
+    face.face
+        .units_per_em()
+        .and_then(|units_per_em| Some((value as f32 / units_per_em as f32) * font_size))
+}
+
+fn scaled_point2(x: f32, y: f32, scale: f32) -> Point {
+    point2(x * scale, -y * scale)
+}
+
+const ZERO_RECT: ttf_parser::Rect = ttf_parser::Rect { x_max: 0, x_min: 0, y_max: 0, y_min: 0 };
+
+struct GlyphBuilder<'a> {
+    scale: f32,
+    context: &'a RenderContext,
+    path_builder: Option<PathBuilder>,
+    raster_builder: RasterBuilder,
+}
+
+impl<'a> GlyphBuilder<'a> {
+    fn new(scale: f32, context: &'a mut RenderContext) -> Self {
+        let path_builder = context.path_builder().expect("path_builder");
+        let raster_builder = context.raster_builder().expect("raster_builder");
+        Self { scale, context, path_builder: Some(path_builder), raster_builder }
+    }
+
+    fn path_builder(&mut self) -> &mut PathBuilder {
+        self.path_builder.as_mut().expect("path_builder() PathBuilder")
+    }
+
+    fn raster(self) -> Raster {
+        self.raster_builder.build()
+    }
+}
+
+impl ttf_parser::OutlineBuilder for GlyphBuilder<'_> {
+    fn move_to(&mut self, x: f32, y: f32) {
+        let scale = self.scale;
+        self.path_builder().move_to(scaled_point2(x, y, scale));
+    }
+
+    fn line_to(&mut self, x: f32, y: f32) {
+        let scale = self.scale;
+        self.path_builder().line_to(scaled_point2(x, y, scale));
+    }
+
+    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
+        let scale = self.scale;
+        self.path_builder().quad_to(scaled_point2(x1, y1, scale), scaled_point2(x, y, scale));
+    }
+
+    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
+        let scale = self.scale;
+        self.path_builder().cubic_to(
+            scaled_point2(x1, y1, scale),
+            scaled_point2(x2, y2, scale),
+            scaled_point2(x, y, scale),
+        );
+    }
+
+    fn close(&mut self) {
+        let path_builder = self.path_builder.take().expect("take PathBuilder");
+        let path = path_builder.build();
+        self.raster_builder.add(&path, None);
+        let path_builder = self.context.path_builder().expect("path_builder");
+        self.path_builder = Some(path_builder);
     }
 }
 
@@ -360,62 +488,38 @@ pub struct Glyph {
 }
 
 impl Glyph {
-    pub fn new(context: &mut RenderContext, face: &FontFace, size: f32, id: GlyphId) -> Self {
-        let mut path_builder = context.path_builder().expect("path_builder");
-        let mut bounding_box = Box2D::zero();
-        let scale = Scale::uniform(size);
-
-        macro_rules! flip_y {
-            ( $p:expr ) => {
-                point2($p.x, -$p.y)
-            };
+    pub fn new(
+        context: &mut RenderContext,
+        face: &FontFace,
+        size: f32,
+        id: Option<ttf_parser::GlyphId>,
+    ) -> Self {
+        if let Some(id) = id {
+            let units_per_em = face.face.units_per_em().expect("units_per_em");
+            let scale = size / units_per_em as f32;
+            let mut builder = GlyphBuilder::new(scale, context);
+            let glyph_bounding_box =
+                &face.face.outline_glyph(id, &mut builder).unwrap_or_else(|| ZERO_RECT);
+            let min_x = glyph_bounding_box.x_min as f32 * scale;
+            let max_y = -glyph_bounding_box.y_min as f32 * scale;
+            let max_x = glyph_bounding_box.x_max as f32 * scale;
+            let min_y = -glyph_bounding_box.y_max as f32 * scale;
+            let bounding_box = Box2D::new(point2(min_x, min_y), point2(max_x, max_y)).to_rect();
+            Self { bounding_box, raster: builder.raster() }
+        } else {
+            let path_builder = context.path_builder().expect("path_builder");
+            let path = path_builder.build();
+            let mut raster_builder = context.raster_builder().expect("raster_builder");
+            raster_builder.add(&path, None);
+            let raster = raster_builder.build();
+            Self { bounding_box: Rect::zero(), raster }
         }
-
-        let glyph = face.font.glyph(id).scaled(scale);
-        if let Some(glyph_box) = glyph.exact_bounding_box() {
-            let contours = glyph.shape().expect("shape");
-            for contour in contours {
-                for segment in &contour.segments {
-                    match segment {
-                        Segment::Line(line) => {
-                            path_builder.move_to(flip_y!(line.p[0]));
-                            path_builder.line_to(flip_y!(line.p[1]));
-                        }
-                        Segment::Curve(curve) => {
-                            let p0 = flip_y!(curve.p[0]);
-                            let p1 = flip_y!(curve.p[1]);
-                            let p2 = flip_y!(curve.p[2]);
-
-                            path_builder.move_to(p0);
-                            // TODO: use quad_to when working correctly in spinel backend.
-                            path_builder.cubic_to(
-                                p0.lerp(p1, 2.0 / 3.0),
-                                p2.lerp(p1, 2.0 / 3.0),
-                                p2,
-                            );
-                        }
-                    }
-                }
-            }
-
-            bounding_box = bounding_box.union(&Box2D::new(
-                point2(glyph_box.min.x, glyph_box.min.y),
-                point2(glyph_box.max.x, glyph_box.max.y),
-            ));
-        }
-
-        let bounding_box = bounding_box.to_rect();
-        let path = path_builder.build();
-        let mut raster_builder = context.raster_builder().expect("raster_builder");
-        raster_builder.add(&path, None);
-
-        Self { raster: raster_builder.build(), bounding_box }
     }
 }
 
 #[derive(Debug)]
 pub struct GlyphMap {
-    glyphs: BTreeMap<GlyphId, Glyph>,
+    glyphs: BTreeMap<ttf_parser::GlyphId, Glyph>,
 }
 
 impl GlyphMap {
@@ -439,50 +543,45 @@ impl Text {
     ) -> Self {
         let glyphs = &mut glyph_map.glyphs;
         let mut bounding_box = Rect::zero();
-        let scale = Scale::uniform(size);
-        let v_metrics = face.font.v_metrics(scale);
-        let mut ascent = v_metrics.ascent;
         let mut raster_union = None;
-
+        let ascent = face.ascent(size);
+        let units_per_em = face.face.units_per_em().expect("units_per_em");
+        let scale = size / units_per_em as f32;
+        let mut y_offset = vec2(0.0, ascent).to_i32();
         for line in lines.iter() {
-            // TODO: adjust vertical alignment of glyphs to match first glyph.
-            let y_offset = vec2(0.0, ascent).to_i32();
             let chars = line.chars();
             let mut x: f32 = 0.0;
-            let mut last = None;
-            for g in face.font.glyphs_for(chars) {
-                let g = g.scaled(scale);
-                let id = g.id();
-                let w = g.h_metrics().advance_width
-                    + last.map(|last| face.font.pair_kerning(scale, last, id)).unwrap_or(0.0);
 
-                // Lookup glyph entry in cache.
-                // TODO: improve sub pixel placement using a larger cache.
-                let position = y_offset + vec2(x, 0.0).to_i32();
-                let glyph = glyphs.entry(id).or_insert_with(|| Glyph::new(context, face, size, id));
+            for c in chars {
+                if let Some(glyph_index) = face.face.glyph_index(c) {
+                    let horizontal_advance = face.face.glyph_hor_advance(glyph_index).unwrap_or(0);
+                    let w = horizontal_advance as f32 * scale;
+                    let position = y_offset + vec2(x, 0.0).to_i32();
+                    let glyph = glyphs
+                        .entry(glyph_index)
+                        .or_insert_with(|| Glyph::new(context, face, size, Some(glyph_index)));
+                    // Clone and translate raster.
+                    let raster =
+                        glyph.raster.clone().translate(position.cast_unit::<euclid::UnknownUnit>());
+                    raster_union = if let Some(raster_union) = raster_union {
+                        Some(raster_union + raster)
+                    } else {
+                        Some(raster)
+                    };
 
-                // Clone and translate raster.
-                let raster =
-                    glyph.raster.clone().translate(position.cast_unit::<euclid::UnknownUnit>());
-                raster_union = if let Some(raster_union) = raster_union {
-                    Some(raster_union + raster)
-                } else {
-                    Some(raster)
-                };
+                    // Expand bounding box.
+                    let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
 
-                // Expand bounding box.
-                let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
+                    if bounding_box.is_empty() {
+                        bounding_box = *glyph_bounding_box;
+                    } else {
+                        bounding_box = bounding_box.union(&glyph_bounding_box);
+                    }
 
-                if bounding_box.is_empty() {
-                    bounding_box = *glyph_bounding_box;
-                } else {
-                    bounding_box = bounding_box.union(&glyph_bounding_box);
+                    x += w;
                 }
-
-                x += w;
-                last = Some(id);
             }
-            ascent += size;
+            y_offset += vec2(0, size as i32);
         }
 
         Self { raster: raster_union.expect("raster_union"), bounding_box }
@@ -492,59 +591,12 @@ impl Text {
         context: &mut RenderContext,
         text: &str,
         size: f32,
-        wrap: usize,
+        wrap: f32,
         face: &FontFace,
         glyph_map: &mut GlyphMap,
     ) -> Self {
-        let glyphs = &mut glyph_map.glyphs;
-        let mut bounding_box = Rect::zero();
-        let scale = Scale::uniform(size);
-        let v_metrics = face.font.v_metrics(scale);
-        let mut ascent = v_metrics.ascent;
-        let mut raster_union = None;
-
-        for line in wrap_iter(text, wrap) {
-            // TODO: adjust vertical alignment of glyphs to match first glyph.
-            let y_offset = vec2(0.0, ascent).to_i32();
-            let chars = line.chars();
-            let mut x: f32 = 0.0;
-            let mut last = None;
-            for g in face.font.glyphs_for(chars) {
-                let g = g.scaled(scale);
-                let id = g.id();
-                let w = g.h_metrics().advance_width
-                    + last.map(|last| face.font.pair_kerning(scale, last, id)).unwrap_or(0.0);
-
-                // Lookup glyph entry in cache.
-                // TODO: improve sub pixel placement using a larger cache.
-                let position = y_offset + vec2(x, 0.0).to_i32();
-                let glyph = glyphs.entry(id).or_insert_with(|| Glyph::new(context, face, size, id));
-
-                // Clone and translate raster.
-                let raster =
-                    glyph.raster.clone().translate(position.cast_unit::<euclid::UnknownUnit>());
-                raster_union = if let Some(raster_union) = raster_union {
-                    Some(raster_union + raster)
-                } else {
-                    Some(raster)
-                };
-
-                // Expand bounding box.
-                let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
-
-                if bounding_box.is_empty() {
-                    bounding_box = *glyph_bounding_box;
-                } else {
-                    bounding_box = bounding_box.union(&glyph_bounding_box);
-                }
-
-                x += w;
-                last = Some(id);
-            }
-            ascent += size;
-        }
-
-        Self { raster: raster_union.expect("raster_union"), bounding_box }
+        let lines = linebreak_text(face, size, text, wrap);
+        Self::new_with_lines(context, &lines, size, face, glyph_map)
     }
 }
 
@@ -604,10 +656,10 @@ mod tests {
         let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
         let mut glyphs = GlyphMap::new();
         let text =
-            Text::new(&mut render_context, "Good Morning", 20.0, 200, &FONT_FACE, &mut glyphs);
+            Text::new(&mut render_context, "Good Morning", 20.0, 200.0, &FONT_FACE, &mut glyphs);
 
-        let expected_origin = euclid::point2(0.0, 3.4487228);
-        let expected_size = vec2(100.486115, 14.787117);
+        let expected_origin = euclid::point2(0.5371094, 4.765625);
+        let expected_size = vec2(132.33594, 19.501953);
         assert!(
             text.bounding_box.origin.approx_eq(&expected_origin),
             "Expected bounding box origin to be close to {:?} but found {:?}",

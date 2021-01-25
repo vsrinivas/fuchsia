@@ -231,36 +231,36 @@ fn render_composition(
 
         *option = Some(layer_id);
 
-        let mold_layer =
-            mold_composition.get_mut(layer_id).unwrap().enable().set_order(order as u16).set_style(
-                mold::Style {
-                    fill_rule: match layer.style.fill_rule {
-                        FillRule::NonZero => mold::FillRule::NonZero,
-                        FillRule::EvenOdd => mold::FillRule::EvenOdd,
-                        // TODO(dtiselice): Implement WholeTile.
-                        FillRule::WholeTile => mold::FillRule::NonZero,
-                    },
-                    fill: match layer.style.fill {
-                        Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
-                    },
-                    blend_mode: match layer.style.blend_mode {
-                        BlendMode::Over => mold::BlendMode::Over,
-                    },
+        let maybe_mold_layer = mold_composition.get_mut(layer_id);
+        if let Some(mold_layer) = maybe_mold_layer {
+            mold_layer.enable().set_order(order as u16).set_style(mold::Style {
+                fill_rule: match layer.style.fill_rule {
+                    FillRule::NonZero => mold::FillRule::NonZero,
+                    FillRule::EvenOdd => mold::FillRule::EvenOdd,
+                    // TODO(dtiselice): Implement WholeTile.
+                    FillRule::WholeTile => mold::FillRule::NonZero,
                 },
-            );
+                fill: match layer.style.fill {
+                    Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
+                },
+                blend_mode: match layer.style.blend_mode {
+                    BlendMode::Over => mold::BlendMode::Over,
+                },
+            });
 
-        let transform = display_rotation
-            .transform(&display_size.to_f32())
-            .pre_translate(vec2(layer.raster.translation.x, layer.raster.translation.y));
+            let transform = display_rotation
+                .transform(&display_size.to_f32())
+                .pre_translate(vec2(layer.raster.translation.x, layer.raster.translation.y));
 
-        mold_layer.set_transform(&[
-            transform.m11,
-            transform.m21,
-            transform.m12,
-            transform.m22,
-            transform.m31,
-            transform.m32,
-        ]);
+            mold_layer.set_transform(&[
+                transform.m11,
+                transform.m21,
+                transform.m12,
+                transform.m22,
+                transform.m31,
+                transform.m32,
+            ]);
+        }
     }
 
     mold_composition.render(

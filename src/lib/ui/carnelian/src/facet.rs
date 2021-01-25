@@ -5,7 +5,8 @@
 use crate::{
     color::Color,
     drawing::{
-        path_for_corner_knockouts, path_for_cursor, path_for_rectangle, FontFace, GlyphMap, Text,
+        linebreak_text, path_for_corner_knockouts, path_for_cursor, path_for_rectangle, FontFace,
+        GlyphMap, Text,
     },
     geometry::IntPoint,
     render::{
@@ -23,63 +24,6 @@ use std::{
     path::PathBuf,
     sync::atomic::{AtomicUsize, Ordering},
 };
-
-fn pixel_size(face: &FontFace, font_size: f32, value: i16) -> Option<f32> {
-    face.face
-        .units_per_em()
-        .and_then(|units_per_em| Some((value as f32 / units_per_em as f32) * font_size))
-}
-
-pub fn measure_text_width(face: &FontFace, font_size: f32, text: &str) -> f32 {
-    text.chars()
-        .filter_map(|c| {
-            let glyph_index = face.face.glyph_index(c);
-            glyph_index.and_then(|glyph_index| {
-                let hor_advance = face
-                    .face
-                    .glyph_hor_advance(glyph_index)
-                    .and_then(|hor_advance| pixel_size(face, font_size, hor_advance as i16))
-                    .expect("hor_advance");
-                Some(hor_advance)
-            })
-        })
-        .sum()
-}
-
-pub fn linebreak_text(face: &FontFace, font_size: f32, text: &str, max_width: f32) -> Vec<String> {
-    let chunks: Vec<&str> = text.split_whitespace().collect();
-    let space_width = measure_text_width(face, font_size, " ");
-    let breaks: Vec<usize> = chunks
-        .iter()
-        .enumerate()
-        .scan(0.0, |width, (index, word)| {
-            let word_width = measure_text_width(face, font_size, word);
-            let resulting_line_len = *width + word_width;
-            if resulting_line_len > max_width {
-                *width = 0.0;
-                Some(Some(index))
-            } else {
-                *width += word_width;
-                *width += space_width;
-                Some(None)
-            }
-        })
-        .flatten()
-        .chain(std::iter::once(chunks.len()))
-        .collect();
-    let lines: Vec<String> = breaks
-        .iter()
-        .scan(0, |first_word_index, last_word_index| {
-            let first = *first_word_index;
-            *first_word_index = *last_word_index;
-            let line = &chunks[first..*last_word_index];
-            let line_str = String::from(line.join(" "));
-            Some(line_str)
-        })
-        .collect();
-
-    lines
-}
 
 #[derive(Debug)]
 pub struct SetColorMessage {
@@ -283,8 +227,8 @@ impl Facet for TextFacet {
                 &mut self.glyphs,
             )
         });
-        let scale = rusttype::Scale::uniform(self.size);
-        let v_metrics = self.face.font.v_metrics(scale);
+        let ascent = self.face.ascent(self.size);
+        let descent = self.face.descent(self.size);
         let x = match self.options.horizontal_alignment {
             TextHorizontalAlignment::Left => self.location.x,
             TextHorizontalAlignment::Center => {
@@ -295,12 +239,12 @@ impl Facet for TextFacet {
             }
         };
         let y = match self.options.vertical_alignment {
-            TextVerticalAlignment::Baseline => self.location.y - v_metrics.ascent,
+            TextVerticalAlignment::Baseline => self.location.y - ascent,
             TextVerticalAlignment::Top => self.location.y,
-            TextVerticalAlignment::Bottom => self.location.y - v_metrics.ascent + v_metrics.descent,
+            TextVerticalAlignment::Bottom => self.location.y - ascent + descent,
             TextVerticalAlignment::Center => {
                 let capital_height = self.face.capital_height(self.size).unwrap_or(self.size);
-                self.location.y + capital_height / 2.0 - v_metrics.ascent
+                self.location.y + capital_height / 2.0 - ascent
             }
         };
         let translation = vec2(x, y);

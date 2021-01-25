@@ -337,10 +337,9 @@ impl Scene {
                 const TITLE_SIZE: f32 = 32.0;
 
                 let size = TITLE_SIZE * scale;
-                let wrap = 2.0 * column_width / size as f32;
+                let wrap = column_width;
                 let title = lipsum_title();
-                let text =
-                    Text::new(context, &title, size, wrap as usize, &FONT_FACE, title_glyphs);
+                let text = Text::new(context, &title, size, wrap, &FONT_FACE, title_glyphs);
 
                 (text.raster, text.bounding_box.round_out(), 0, Color { r: 0, g: 0, b: 0, a: 255 })
             }
@@ -350,10 +349,10 @@ impl Scene {
                 const BODY_MAX_WORDS: usize = 100;
 
                 let size = BODY_SIZE * scale;
-                let wrap = 2.75 * column_width / size as f32;
+                let wrap = column_width;
                 let mut rng = thread_rng();
                 let body = lipsum_words(rng.gen_range(BODY_MIN_WORDS, BODY_MAX_WORDS));
-                let text = Text::new(context, &body, size, wrap as usize, &FONT_FACE, body_glyphs);
+                let text = Text::new(context, &body, size, wrap, &FONT_FACE, body_glyphs);
 
                 (text.raster, text.bounding_box.round_out(), 0, Color { r: 0, g: 0, b: 0, a: 255 })
             }
