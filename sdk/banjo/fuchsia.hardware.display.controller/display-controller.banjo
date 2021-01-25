@@ -436,5 +436,5 @@ protocol DisplayControllerImpl {
 
     // If the system only supports single-buffered mode with a single framebuffer, then this returns
     // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
-    GetSingleBufferFramebuffer() -> (zx.status res, handle<vmo>? vmo, uint32 stride);
+    GetSingleBufferFramebuffer() -> (zx.status res, handle<vmo> vmo, uint32 stride);
 };
