@@ -32,22 +32,34 @@ pub enum PolicyError {
     CurrentConfigurationUnbootable(paver::Configuration),
 }
 
-/// Error condition that may be returned by `do_health_verification`.
+/// Error condition that may be returned when doing health verification.
 #[derive(Error, Debug)]
-// TODO(http://fxbug.dev/64595) use this.
+// TODO(http://fxbug.dev/67381) use this.
 #[allow(dead_code)]
 pub enum VerifyError {
     #[error("the blobfs verification failed")]
-    BlobFs,
+    BlobFs(#[source] VerifyFailureReason),
 
     #[error("an unexpected error occurred")]
     Other(#[source] anyhow::Error),
 }
 
+#[derive(Error, Debug)]
+pub enum VerifyFailureReason {
+    #[error("the fidl call failed")]
+    Fidl(#[source] fidl::Error),
+
+    #[error("the verify request timed out")]
+    Timeout,
+
+    #[error("the verification failed")]
+    Verify(#[source] anyhow::Error),
+}
+
 /// Error condition that may be returned by `put_metadata_in_happy_state`.
 #[derive(Error, Debug)]
 pub enum MetadataError {
-    #[error("while calling do_health_verification")]
+    #[error("while doing health verification")]
     Verify(#[source] VerifyError),
 
     #[error("while signalling EventPair peer")]
