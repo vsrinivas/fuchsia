@@ -83,8 +83,26 @@ async fn doctor<W: Write>(
             }
 
             print_status_line(writer, SPAWNING_DAEMON);
-            daemon_manager.spawn().await?;
-            writeln!(writer, "{}", SUCCESS).unwrap();
+
+            // HACK: Wait a few seconds before spawning a new daemon. Attempting
+            // to spawn one too quickly after killing one will lead to timeouts
+            // when attempting to communicate with the spawned daemon.
+            // Temporary fix for fxbug.dev/66958. Remove when that bug is resolved.
+            async_std::task::sleep(Duration::from_millis(5000)).await;
+            match timeout(retry_delay, daemon_manager.spawn()).await {
+                Ok(Ok(_)) => {
+                    writeln!(writer, "{}", SUCCESS).unwrap();
+                }
+
+                Ok(Err(e)) => {
+                    writeln!(writer, "{}", format_err(e.into())).unwrap();
+                    continue;
+                }
+                Err(_) => {
+                    writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
+                    continue;
+                }
+            }
         } else {
             writeln!(writer, "{}", FOUND).unwrap();
         }

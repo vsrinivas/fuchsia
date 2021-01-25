@@ -16,7 +16,7 @@ pub const FORCE_DAEMON_RESTART_MESSAGE: &str =
 pub const NONE_RUNNING: &str = "none running.";
 pub const KILLING_ZOMBIE_DAEMONS: &str = "Attempting to kill any zombie daemons...";
 pub const ZOMBIE_KILLED: &str = "killed at least one daemon.";
-pub const SPAWNING_DAEMON: &str = "Starting a new daemon instance...";
+pub const SPAWNING_DAEMON: &str = "Starting a new daemon instance, this will take a few seconds...";
 pub const CONNECTING_TO_DAEMON: &str =
     "Attempting to connect to the daemon. This may take a couple seconds...";
 pub const COMMUNICATING_WITH_DAEMON: &str = "Attempting to communicate with the daemon...";
