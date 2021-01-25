@@ -6,7 +6,8 @@ use super::handle::{Message, Proxyable, ProxyableHandle, RouterHolder, Serialize
 use crate::coding::{decode_fidl, encode_fidl};
 use crate::labels::{NodeId, TransferKey};
 use crate::peer::{
-    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, PeerConnRef, ReadNextFrame,
+    AsyncConnection, FrameType, FramedStreamReader, FramedStreamWriter, MessageStats,
+    ReadNextFrame, StreamProperties,
 };
 use crate::router::Router;
 use anyhow::{format_err, Context as _, Error};
@@ -26,16 +27,18 @@ pub(crate) struct StreamWriter<Msg: Message> {
     _phantom_msg: std::marker::PhantomData<Msg>,
 }
 
-impl<Msg: Message> StreamWriter<Msg> {
-    pub fn conn(&self) -> PeerConnRef<'_> {
-        self.stream.conn()
-    }
-
-    pub fn id(&self) -> u64 {
+impl<Msg: Message> StreamProperties for StreamWriter<Msg> {
+    fn id(&self) -> u64 {
         self.stream.id()
     }
 
-    pub async fn send_data(&mut self, msg: &mut Msg) -> Result<(), Error> {
+    fn conn(&self) -> &AsyncConnection {
+        self.stream.conn()
+    }
+}
+
+impl<Msg: Message> StreamWriter<Msg> {
+    pub(crate) async fn send_data(&mut self, msg: &mut Msg) -> Result<(), Error> {
         assert_ne!(self.closed, true);
         let mut s = Msg::Serializer::new();
         let send_buffer = &mut self.send_buffer;
@@ -64,15 +67,15 @@ impl<Msg: Message> StreamWriter<Msg> {
             .with_context(|| format_err!("sending control message {:?}", msg))
     }
 
-    pub async fn send_ack_transfer(mut self) -> Result<(), Error> {
+    pub(crate) async fn send_ack_transfer(mut self) -> Result<(), Error> {
         Ok(self.send_control(StreamControl::AckTransfer(Empty {}), true).await?)
     }
 
-    pub async fn send_end_transfer(mut self) -> Result<(), Error> {
+    pub(crate) async fn send_end_transfer(mut self) -> Result<(), Error> {
         Ok(self.send_control(StreamControl::EndTransfer(Empty {}), true).await?)
     }
 
-    pub async fn send_begin_transfer(
+    pub(crate) async fn send_begin_transfer(
         &mut self,
         new_destination_node: NodeId,
         transfer_key: TransferKey,
@@ -88,14 +91,17 @@ impl<Msg: Message> StreamWriter<Msg> {
             .await?)
     }
 
-    pub async fn send_hello(&mut self) -> Result<(), Error> {
+    pub(crate) async fn send_hello(&mut self) -> Result<(), Error> {
         self.stream
             .send(FrameType::Hello, &[], false, &self.stats)
             .await
             .with_context(|| format_err!("sending hello"))
     }
 
-    pub async fn send_shutdown(mut self, r: Result<(), zx_status::Status>) -> Result<(), Error> {
+    pub(crate) async fn send_shutdown(
+        mut self,
+        r: Result<(), zx_status::Status>,
+    ) -> Result<(), Error> {
         self.send_control(
             StreamControl::Shutdown(
                 match r {
@@ -145,6 +151,7 @@ pub(crate) enum Frame<'a, Msg: Message> {
 
 #[derive(Debug)]
 pub(crate) struct StreamReader<Msg: Message> {
+    conn: AsyncConnection,
     stream: FramedStreamReader,
     incoming_message: Msg,
     router: Weak<Router>,
@@ -154,33 +161,12 @@ pub(crate) struct StreamReader<Msg: Message> {
 
 #[derive(Debug)]
 pub(crate) struct ReadNext<'a, Msg: Message> {
-    read_next_frame_or_peer_conn_ref: ReadNextFrameOrPeerConnRef<'a>,
+    next_frame: Option<ReadNextFrame<'a>>,
     state: &'a mut ReadNextState<Msg::Parser>,
     incoming_message: Option<&'a mut Msg>,
     stats: &'a Arc<MessageStats>,
+    conn: &'a AsyncConnection,
     router_holder: RouterHolder<'a>,
-}
-
-#[derive(Debug)]
-enum ReadNextFrameOrPeerConnRef<'a> {
-    ReadNextFrame(ReadNextFrame<'a>),
-    PeerConnRef(PeerConnRef<'a>),
-}
-
-impl<'a> ReadNextFrameOrPeerConnRef<'a> {
-    fn as_read_next_frame_mut(&mut self) -> Option<&mut ReadNextFrame<'a>> {
-        match self {
-            Self::ReadNextFrame(x) => Some(x),
-            _ => None,
-        }
-    }
-
-    fn conn(&'a self) -> PeerConnRef<'a> {
-        match self {
-            Self::ReadNextFrame(x) => x.conn(),
-            Self::PeerConnRef(x) => *x,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -194,11 +180,8 @@ impl<'a, Msg: Message> ReadNext<'a, Msg> {
         loop {
             return Poll::Ready(Ok(match *self.state {
                 ReadNextState::Reading => {
-                    let (frame_type, mut bytes, fin) = ready!(self
-                        .read_next_frame_or_peer_conn_ref
-                        .as_read_next_frame_mut()
-                        .unwrap()
-                        .poll_unpin(ctx))?;
+                    let (frame_type, mut bytes, fin) =
+                        ready!(self.next_frame.as_mut().unwrap().poll_unpin(ctx))?;
                     match frame_type {
                         FrameType::Hello => {
                             if fin {
@@ -249,7 +232,7 @@ impl<'a, Msg: Message> ReadNext<'a, Msg> {
                     ready!(parser.poll_ser(
                         self.incoming_message.as_mut().unwrap(),
                         bytes,
-                        self.read_next_frame_or_peer_conn_ref.conn(),
+                        self.conn,
                         self.stats,
                         &mut self.router_holder,
                         ctx
@@ -269,24 +252,23 @@ impl<'a, Msg: Message> Future for ReadNext<'a, Msg> {
     }
 }
 
-impl<Msg: Message> StreamReader<Msg> {
-    pub fn conn(&self) -> PeerConnRef<'_> {
+impl<Msg: Message> StreamProperties for StreamReader<Msg> {
+    fn id(&self) -> u64 {
+        self.stream.id()
+    }
+
+    fn conn(&self) -> &AsyncConnection {
         self.stream.conn()
     }
+}
 
-    pub fn is_initiator(&self) -> bool {
-        self.stream.is_initiator()
-    }
-
-    pub fn next<'a>(&'a mut self) -> ReadNext<'a, Msg> {
+impl<Msg: Message> StreamReader<Msg> {
+    pub(crate) fn next<'a>(&'a mut self) -> ReadNext<'a, Msg> {
         ReadNext {
-            read_next_frame_or_peer_conn_ref: match self.state {
-                ReadNextState::Reading => {
-                    ReadNextFrameOrPeerConnRef::ReadNextFrame(self.stream.next())
-                }
-                ReadNextState::DeserializingData(_, _) => {
-                    ReadNextFrameOrPeerConnRef::PeerConnRef(self.stream.conn())
-                }
+            conn: &self.conn,
+            next_frame: match self.state {
+                ReadNextState::Reading => Some(self.stream.next()),
+                ReadNextState::DeserializingData(_, _) => None,
             },
             state: &mut self.state,
             incoming_message: Some(&mut self.incoming_message),
@@ -306,15 +288,15 @@ impl<Msg: Message> StreamReader<Msg> {
         }
     }
 
-    pub async fn expect_ack_transfer(mut self) -> Result<(), Error> {
+    pub(crate) async fn expect_ack_transfer(mut self) -> Result<(), Error> {
         self.expect(Frame::AckTransfer).await
     }
 
-    pub async fn expect_hello(&mut self) -> Result<(), Error> {
+    pub(crate) async fn expect_hello(&mut self) -> Result<(), Error> {
         self.expect(Frame::Hello).await
     }
 
-    pub async fn expect_shutdown(
+    pub(crate) async fn expect_shutdown(
         mut self,
         result: Result<(), zx_status::Status>,
     ) -> Result<(), Error> {
@@ -335,6 +317,7 @@ impl StreamReaderBinder for FramedStreamReader {
         hdl: &ProxyableHandle<H>,
     ) -> StreamReader<Msg> {
         StreamReader {
+            conn: self.conn().clone(),
             stream: self,
             incoming_message: Default::default(),
             router: hdl.router().clone(),

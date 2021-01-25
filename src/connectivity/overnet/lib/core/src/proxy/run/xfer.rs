@@ -8,7 +8,7 @@ use super::super::{
     Proxy, ProxyTransferInitiationReceiver, StreamRefSender,
 };
 use crate::labels::{generate_transfer_key, Endpoint, NodeId, TransferKey};
-use crate::peer::{FramedStreamReader, FramedStreamWriter};
+use crate::peer::{FramedStreamReader, FramedStreamWriter, StreamProperties};
 use crate::router::OpenedTransfer;
 use anyhow::{bail, format_err, Error};
 use fuchsia_zircon_status as zx_status;
@@ -28,6 +28,7 @@ pub(crate) async fn follow<Hdl: 'static + Proxyable>(
     transfer_key: TransferKey,
     stream_reader: StreamReader<Hdl::Message>,
 ) -> Result<(), Error> {
+    let debug_id = stream_writer.debug_id();
     futures::future::try_join(stream_reader.expect_shutdown(Ok(())), async move {
         stream_writer.send_ack_transfer().await?;
         let hdl = proxy.hdl.take().ok_or_else(|| format_err!("Handle already taken"))?;
@@ -35,14 +36,31 @@ pub(crate) async fn follow<Hdl: 'static + Proxyable>(
         let stats = hdl.stats().clone();
         let hdl = hdl.into_fidl_handle()?;
         drop(proxy);
+        // TODO actual link hint
+        log::trace!(
+            "[PROXY {:?} {:?}] open_transfer to {:?} with handle {:?}",
+            hdl,
+            debug_id,
+            new_destination_node,
+            hdl
+        );
         let r = router.open_transfer(new_destination_node.into(), transfer_key, hdl).await?;
+        log::trace!("[PROXY {:?}] open_transfer got {:?}", debug_id, r);
         match r {
             OpenedTransfer::Fused => {
+                log::trace!("[PROXY {:?}] fused after follow {:?}", debug_id, transfer_key);
                 assert!(initiate_transfer.await.unwrap().is_dropped());
                 Ok(())
             }
             OpenedTransfer::Remote(new_writer, new_reader, handle) => {
                 let handle = Hdl::from_fidl_handle(handle)?;
+                log::trace!(
+                    "[PROXY {:?}] spawn from {:?}:{:?} for follow {:?}",
+                    handle,
+                    new_writer.peer_node_id(),
+                    new_writer.id(),
+                    transfer_key
+                );
                 make_boxed_main_loop(
                     Proxy::new(handle, Arc::downgrade(&router), stats),
                     initiate_transfer,
@@ -92,7 +110,8 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
 
     let drain_stream = drain_stream.bind(&proxy.hdl());
     let drain_stream_id = drain_stream.id();
-    let peer_node_id = drain_stream.conn().peer_node_id();
+    let peer_node_id = drain_stream.peer_node_id();
+    let debug_id = stream_writer.debug_id();
 
     futures::future::try_join(
         drain_handle_to_stream(
@@ -117,9 +136,16 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
             .await?;
 
             // Send the BeginTransfer.
+            log::trace!(
+                "[PROXY {:?} {:?}] Send begin transfer {:?}",
+                proxy.hdl().hdl(),
+                debug_id,
+                transfer_key
+            );
             stream_writer.send_begin_transfer(peer_node_id, transfer_key).await?;
 
             if let Some(stream_ref_sender) = stream_ref_sender {
+                log::trace!("[PROXY {:?} {:?}] Drain original stream", proxy.hdl().hdl(), debug_id);
                 // Now we need to read any incoming messages from the original stream and prepare to send
                 // them to the drain stream.
                 drain_original_stream(
@@ -134,9 +160,17 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
             } else {
                 // This implies we got a BeginTransfer during the channel drain
                 // and consequently need to ack it (after our BeginTransfer was sent)
+                log::trace!("[PROXY {:?} {:?}] Send ack", proxy.hdl().hdl(), debug_id);
                 stream_writer.send_ack_transfer().await?;
+                log::trace!("[PROXY {:?} {:?}] Expect ack", proxy.hdl().hdl(), debug_id);
                 stream_reader.expect_ack_transfer().await?;
             }
+
+            log::trace!(
+                "[PROXY {:?} {:?}] Initiated transfer complete",
+                proxy.hdl().hdl(),
+                debug_id
+            );
             Ok(())
         },
     )
@@ -149,14 +183,19 @@ async fn drain_handle_to_stream<Hdl: 'static + Proxyable>(
     mut stream_writer: StreamWriter<Hdl::Message>,
 ) -> Result<(), Error> {
     let mut message = Default::default();
+    let debug_id = stream_writer.debug_id();
     loop {
-        match hdl.read(&mut message).await {
+        let read_result = hdl.read(&mut message).await;
+        log::trace!("[PROXY {:?} {:?}] Drain stream gets {:?}", hdl.hdl(), debug_id, read_result);
+        match read_result {
             Ok(()) => stream_writer.send_data(&mut message).await?,
             Err(zx_status::Status::PEER_CLOSED) => break,
             Err(x) => return Err(x.into()),
         }
     }
-    stream_writer.send_end_transfer().await
+    stream_writer.send_end_transfer().await?;
+    log::trace!("[PROXY {:?} {:?}] Sent end transfer", hdl.hdl(), debug_id);
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -174,7 +213,8 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
     stream_ref_sender: StreamRefSender,
 ) -> Result<Option<StreamRefSender>, Error> {
     let mut message = Default::default();
-    let endpoint = stream_reader.conn().endpoint();
+    let endpoint = stream_reader.endpoint();
+    let debug_id = stream_writer.debug_id();
     let mut ctx = Context::from_waker(noop_waker_ref());
     loop {
         let msg = match futures::future::select(
@@ -190,6 +230,12 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
             }
             Poll::Ready(Either::Right((msg, _))) => FlushOutgoingMsg::FromStream(msg?),
         };
+        log::trace!(
+            "[PROXY {:?} {:?}] flush_outgoing_messages gets {:?}",
+            proxy.hdl().hdl(),
+            debug_id,
+            msg
+        );
         match msg {
             FlushOutgoingMsg::FromChannel => {
                 // Message was read from the channel (it's not empty yet)... so we send it out on
@@ -209,6 +255,13 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
                 // handle. We use the quic endpoint to determine behavior (such that each end makes
                 // a consistent decision) - clients start a new stream to the target, servers await
                 // that stream, and then we just need to drain messages.
+                log::trace!(
+                    "[PROXY {:?} {:?}] remote is also transferring with key {:?}; this is the {:?}",
+                    proxy.hdl().hdl(),
+                    debug_id,
+                    new_transfer_key,
+                    endpoint
+                );
                 match endpoint {
                     Endpoint::Client => {
                         stream_ref_sender.draining_initiate(
@@ -248,9 +301,16 @@ async fn drain_original_stream<Hdl: 'static + Proxyable>(
     drain_stream_id: u64,
     stream_ref_sender: StreamRefSender,
 ) -> Result<(), Error> {
-    let endpoint = stream_reader.conn().endpoint();
+    let endpoint = stream_reader.endpoint();
+    let debug_id = stream_writer.debug_id();
     loop {
         let r = stream_reader.next().await;
+        log::trace!(
+            "[PROXY {:?} {:?}] drain_original_stream gets {:?}",
+            proxy.hdl().hdl(),
+            debug_id,
+            r
+        );
         match r {
             Ok(Frame::Hello) => {
                 bail!("Hello frame received after stream established");
@@ -265,6 +325,13 @@ async fn drain_original_stream<Hdl: 'static + Proxyable>(
                 // handle. We use the quic endpoint to determine behavior (such that each end makes
                 // a consistent decision) - clients start a new stream to the target, servers await
                 // that stream. We've flushed messages, so we need to do an ack dance too.
+                log::trace!(
+                    "[PROXY {:?} {:?}] remote is also transferring with key {:?}; this is the {:?}",
+                    proxy.hdl().hdl(),
+                    debug_id,
+                    new_transfer_key,
+                    endpoint
+                );
                 match endpoint {
                     Endpoint::Client => {
                         stream_ref_sender.draining_initiate(

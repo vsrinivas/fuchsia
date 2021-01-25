@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod async_quic;
 mod framed_stream;
 
+use self::async_quic::ConnState;
+pub(crate) use self::async_quic::{
+    AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ReadExact, StreamProperties,
+};
 pub(crate) use self::framed_stream::{
     FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, ReadNextFrame,
 };
@@ -30,10 +35,6 @@ use futures::{
     lock::Mutex,
     prelude::*,
     ready,
-};
-use quic::{
-    AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ConnState, ReadExact,
-    StreamProperties,
 };
 use std::{
     convert::TryInto,
@@ -77,96 +78,12 @@ pub struct PeerConnStats {
     pub pong: MessageStats,
 }
 
-#[derive(Clone)]
-pub(crate) struct PeerConn {
-    conn: Arc<AsyncConnection>,
-    node_id: NodeId,
-}
-
-impl std::fmt::Debug for PeerConn {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_ref().fmt(f)
-    }
-}
-
-impl PeerConn {
-    pub fn from_quic(conn: Arc<AsyncConnection>, node_id: NodeId) -> Self {
-        PeerConn { conn, node_id }
-    }
-
-    pub fn as_ref(&self) -> PeerConnRef<'_> {
-        PeerConnRef { conn: &self.conn, node_id: self.node_id }
-    }
-
-    pub fn trace_id(&self) -> &str {
-        self.conn.trace_id()
-    }
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct PeerConnRef<'a> {
-    conn: &'a Arc<AsyncConnection>,
-    node_id: NodeId,
-}
-
-impl<'a> std::fmt::Debug for PeerConnRef<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PeerConn({}; {})", self.node_id.0, self.conn.trace_id())
-    }
-}
-
-impl<'a> PeerConnRef<'a> {
-    pub fn from_quic(conn: &'a Arc<AsyncConnection>, node_id: NodeId) -> Self {
-        PeerConnRef { conn, node_id }
-    }
-
-    pub fn into_peer_conn(&self) -> PeerConn {
-        PeerConn { conn: self.conn.clone(), node_id: self.node_id }
-    }
-
-    pub fn trace_id(&self) -> &str {
-        self.conn.trace_id()
-    }
-
-    pub fn endpoint(&self) -> Endpoint {
-        self.conn.endpoint()
-    }
-
-    pub fn peer_node_id(&self) -> NodeId {
-        self.node_id
-    }
-
-    pub fn alloc_uni(&self) -> FramedStreamWriter {
-        FramedStreamWriter::from_quic(self.conn.alloc_uni(), self.node_id)
-    }
-
-    pub fn alloc_bidi(&self) -> (FramedStreamWriter, FramedStreamReader) {
-        let (w, r) = self.conn.alloc_bidi();
-        (
-            FramedStreamWriter::from_quic(w, self.node_id),
-            FramedStreamReader::from_quic(r, self.node_id),
-        )
-    }
-
-    pub fn bind_uni_id(&self, id: u64) -> FramedStreamReader {
-        FramedStreamReader::from_quic(self.conn.bind_uni_id(id), self.node_id)
-    }
-
-    pub fn bind_id(&self, id: u64) -> (FramedStreamWriter, FramedStreamReader) {
-        let (w, r) = self.conn.bind_id(id);
-        (
-            FramedStreamWriter::from_quic(w, self.node_id),
-            FramedStreamReader::from_quic(r, self.node_id),
-        )
-    }
-}
-
 pub(crate) struct Peer {
     node_id: NodeId,
     endpoint: Endpoint,
     conn_id: ConnectionId,
     /// The QUIC connection itself
-    conn: Arc<AsyncConnection>,
+    conn: AsyncConnection,
     commands: Option<mpsc::Sender<ClientPeerCommand>>,
     conn_stats: Arc<PeerConnStats>,
     channel_proxy_stats: Arc<MessageStats>,
@@ -180,12 +97,22 @@ impl std::fmt::Debug for Peer {
     }
 }
 
+impl Drop for Peer {
+    fn drop(&mut self) {
+        let shutdown = self.shutdown.load(Ordering::Acquire);
+        if !shutdown {
+            let conn = self.conn.clone();
+            Task::spawn(async move { conn.close().await }).detach()
+        }
+    }
+}
+
 /// Future to perform one send from a peer to its current link.
 struct OneSend<'a> {
     /// Link upon which to send.
     link: &'a LinkRouting,
     /// QUIC connection that is forming frames to send.
-    conn: PeerConnRef<'a>,
+    conn: &'a AsyncConnection,
     /// Current lock state.
     state: OneSendState<'a>,
 }
@@ -242,7 +169,7 @@ impl<'a> OneSend<'a> {
                 Poll::Pending
             }
             Poll::Ready(cutex_guard) => {
-                self.poll_locking_conn(ctx, cutex_guard, self.conn.conn.poll_lock_state())
+                self.poll_locking_conn(ctx, cutex_guard, self.conn.poll_lock_state())
             }
         }
     }
@@ -272,7 +199,7 @@ impl<'a> OneSend<'a> {
                 } else {
                     Poll::Ready(Err(format_err!(
                         "QUIC connection {:?} closed",
-                        self.conn.trace_id()
+                        self.conn.debug_id()
                     )))
                 }
             }
@@ -282,20 +209,20 @@ impl<'a> OneSend<'a> {
     fn routing_target(&self) -> RoutingTarget {
         RoutingTarget {
             src: self.link.own_node_id(),
-            dst: RoutingDestination::Message(self.conn.node_id),
+            dst: RoutingDestination::Message(self.conn.peer_node_id()),
         }
     }
 }
 
 /// Task to send frames produced by a peer to a designated link.
 /// Effectively an infinite loop around `OneSend`.
-async fn peer_to_link(conn: PeerConn, link: Arc<LinkRouting>) {
+async fn peer_to_link(conn: AsyncConnection, link: Arc<LinkRouting>) {
     loop {
-        let mut one_send = OneSend { link: &*link, conn: conn.as_ref(), state: OneSendState::Idle };
+        let mut one_send = OneSend { link: &*link, conn: &conn, state: OneSendState::Idle };
         if let Err(e) = future::poll_fn(move |ctx| one_send.poll(ctx)).await {
             log::warn!(
                 "Sender for {:?} on link {:?} failed: {:?}",
-                conn.trace_id(),
+                conn.debug_id(),
                 link.debug_id(),
                 e
             );
@@ -358,13 +285,17 @@ async fn next_link(
 /// Ensure connectivity to a peer.
 /// Update the peer with a new link whenever needed.
 /// Fail if there's no connectivity to a peer.
-async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), RunnerError> {
+async fn check_connectivity(
+    router: Weak<Router>,
+    peer: NodeId,
+    conn: AsyncConnection,
+) -> Result<(), RunnerError> {
     let mut sender_and_current_link: Option<(Task<()>, Arc<LinkRouting>)> = None;
     let mut observer = Weak::upgrade(&router)
         .ok_or_else(|| RunnerError::RouterGone)?
         .new_forwarding_table_observer();
     loop {
-        let new_link = next_link(&router, conn.node_id, &mut observer).await?;
+        let new_link = next_link(&router, peer, &mut observer).await?;
         if sender_and_current_link
             .as_ref()
             .map(|sender_and_current_link| !Arc::ptr_eq(&sender_and_current_link.1, &new_link))
@@ -372,7 +303,7 @@ async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), 
         {
             log::trace!(
                 "Peer {:?} route set to {:?} from {:?}",
-                conn,
+                peer,
                 new_link.debug_id(),
                 sender_and_current_link.map(|s_and_l| s_and_l.1.debug_id())
             );
@@ -411,10 +342,11 @@ impl Peer {
             conn_id,
         );
         let (command_sender, command_receiver) = mpsc::channel(1);
-        let conn = AsyncConnection::from_connection(conn, Endpoint::Client);
+        let conn =
+            AsyncConnection::from_connection(conn, Endpoint::Client, router.node_id(), node_id);
         let conn_stats = Arc::new(PeerConnStats::default());
-        let (conn_stream_writer, conn_stream_reader) = conn.alloc_bidi();
-        assert_eq!(conn_stream_writer.id(), 0);
+        let (conn_stream_writer, conn_stream_reader) = conn.bind_id(0);
+        let conn_run = conn.run().map_err(RunnerError::ConnectionFailed);
         Arc::new(Self {
             endpoint: Endpoint::Client,
             node_id,
@@ -428,11 +360,7 @@ impl Peer {
                 Arc::downgrade(router),
                 conn_id,
                 futures::future::try_join3(
-                    conn.clone().run().map_err(RunnerError::ConnectionFailed),
-                    check_connectivity(
-                        Arc::downgrade(router),
-                        PeerConn::from_quic(conn.clone(), node_id),
-                    ),
+                    check_connectivity(Arc::downgrade(router), node_id, conn.clone()),
                     client_conn_stream(
                         Arc::downgrade(router),
                         node_id,
@@ -442,6 +370,7 @@ impl Peer {
                         service_observer,
                         conn_stats,
                     ),
+                    conn_run,
                 )
                 .map_ok(drop),
             )),
@@ -462,9 +391,11 @@ impl Peer {
             node_id,
             conn_id,
         );
-        let conn = AsyncConnection::from_connection(conn, Endpoint::Server);
+        let conn =
+            AsyncConnection::from_connection(conn, Endpoint::Server, router.node_id(), node_id);
         let conn_stats = Arc::new(PeerConnStats::default());
         let (conn_stream_writer, conn_stream_reader) = conn.bind_id(0);
+        let conn_run = conn.run().map_err(RunnerError::ConnectionFailed);
         let channel_proxy_stats = Arc::new(MessageStats::default());
         Arc::new(Self {
             endpoint: Endpoint::Server,
@@ -479,11 +410,7 @@ impl Peer {
                 Arc::downgrade(router),
                 conn_id,
                 futures::future::try_join3(
-                    conn.clone().run().map_err(RunnerError::ConnectionFailed),
-                    check_connectivity(
-                        Arc::downgrade(router),
-                        PeerConn::from_quic(conn.clone(), node_id),
-                    ),
+                    check_connectivity(Arc::downgrade(router), node_id, conn.clone()),
                     server_conn_stream(
                         node_id,
                         conn_stream_writer,
@@ -492,6 +419,7 @@ impl Peer {
                         conn_stats,
                         channel_proxy_stats,
                     ),
+                    conn_run,
                 )
                 .map_ok(drop),
             )),
@@ -546,11 +474,8 @@ impl Peer {
         router: &Arc<Router>,
     ) -> Result<(), Error> {
         if let ZirconHandle::Channel(ChannelHandle { stream_ref, rights }) = router
-            .send_proxied(
-                chan.into_handle(),
-                self.peer_conn_ref(),
-                self.channel_proxy_stats.clone(),
-            )
+            .clone()
+            .send_proxied(chan.into_handle(), self.conn.clone(), self.channel_proxy_stats.clone())
             .await?
         {
             self.commands
@@ -566,15 +491,15 @@ impl Peer {
                 .await?;
             Ok(())
         } else {
-            unreachable!();
+            Err(format_err!("Not a real channel trying to connect to service"))
         }
     }
 
     pub async fn send_open_transfer(
         &self,
         transfer_key: TransferKey,
-    ) -> Option<(FramedStreamWriter, FramedStreamReader)> {
-        let io = self.peer_conn_ref().alloc_bidi();
+    ) -> Option<(AsyncQuicStreamWriter, AsyncQuicStreamReader)> {
+        let io = self.conn.alloc_bidi();
         let (tx, rx) = oneshot::channel();
         self.commands
             .as_ref()
@@ -585,10 +510,6 @@ impl Peer {
             .ok()?;
         rx.await.ok()?;
         Some(io)
-    }
-
-    fn peer_conn_ref(&self) -> PeerConnRef<'_> {
-        PeerConnRef::from_quic(&self.conn, self.node_id)
     }
 
     pub async fn diagnostics(&self, source_node_id: NodeId) -> PeerConnectionDiagnosticInfo {
@@ -647,8 +568,7 @@ async fn client_handshake(
     async move {
         log::trace!("[{:?} clipeer:{:?}] send config request", my_node_id, peer_node_id);
         // Send config request
-        let mut conn_stream_writer =
-            FramedStreamWriter::from_quic(conn_stream_writer, peer_node_id);
+        let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
         conn_stream_writer
             .send(
                 FrameType::Data,
@@ -663,8 +583,7 @@ async fn client_handshake(
         conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
         // Await config response
         log::trace!("[{:?} clipeer:{:?}] read config", my_node_id, peer_node_id);
-        let mut conn_stream_reader =
-            FramedStreamReader::from_quic(conn_stream_reader, peer_node_id);
+        let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
         let _ = Config::from_response(
             if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
                 decode_fidl(&mut bytes)?
@@ -876,11 +795,11 @@ async fn server_handshake(
     log::trace!("[{:?} svrpeer:{:?}] read fidl header", my_node_id, node_id);
     let mut fidl_hdr = [0u8; 4];
     conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
-    let mut conn_stream_reader = FramedStreamReader::from_quic(conn_stream_reader, node_id);
+    let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
     // Send FIDL header
     log::trace!("[{:?} svrpeer:{:?}] send fidl header", my_node_id, node_id);
     conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
-    let mut conn_stream_writer = FramedStreamWriter::from_quic(conn_stream_writer, node_id);
+    let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
     // Await config request
     log::trace!("[{:?} svrpeer:{:?}] read config", my_node_id, node_id);
     let (_, mut response) = Config::negotiate(
@@ -935,9 +854,10 @@ async fn server_conn_stream(
                     }) => {
                         let app_channel = Channel::from_handle(
                             router
+                                .clone()
                                 .recv_proxied(
                                     ZirconHandle::Channel(ChannelHandle { stream_ref, rights }),
-                                    conn_stream_writer.conn(),
+                                    conn_stream_writer.conn().clone(),
                                     channel_proxy_stats.clone(),
                                 )
                                 .map_err(RunnerError::ServiceError)

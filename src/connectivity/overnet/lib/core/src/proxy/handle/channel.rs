@@ -4,7 +4,7 @@
 
 use super::{IntoProxied, Message, Proxyable, RouterHolder, Serializer, IO};
 use crate::coding::{decode_fidl, encode_fidl};
-use crate::peer::{MessageStats, PeerConnRef};
+use crate::peer::{AsyncConnection, MessageStats};
 use anyhow::{Context as _, Error};
 use fidl::{AsHandleRef, AsyncChannel, HandleBased};
 use fidl_fuchsia_overnet_protocol::{ZirconChannelMessage, ZirconHandle};
@@ -131,7 +131,7 @@ impl Serializer for ChannelMessageParser {
         &mut self,
         msg: &mut Self::Message,
         serialized: &mut Vec<u8>,
-        conn: PeerConnRef<'_>,
+        conn: &AsyncConnection,
         stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
@@ -153,7 +153,7 @@ impl Serializer for ChannelMessageParser {
                     *self = ChannelMessageParser::Done;
                     return Poll::Ready(Ok(()));
                 }
-                let closure_conn = conn.into_peer_conn();
+                let closure_conn = conn.clone();
                 let closure_stats = stats.clone();
                 let closure_router = router.get()?.clone();
                 *self = ChannelMessageParser::Pending {
@@ -164,7 +164,7 @@ impl Serializer for ChannelMessageParser {
                             handles.push(
                                 closure_router
                                     .clone()
-                                    .recv_proxied(hdl, closure_conn.as_ref(), closure_stats.clone())
+                                    .recv_proxied(hdl, closure_conn.clone(), closure_stats.clone())
                                     .await?,
                             );
                         }
@@ -201,7 +201,7 @@ impl Serializer for ChannelMessageSerializer {
         &mut self,
         msg: &mut Self::Message,
         serialized: &mut Vec<u8>,
-        conn: PeerConnRef<'_>,
+        conn: &AsyncConnection,
         stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
@@ -228,7 +228,7 @@ impl Serializer for ChannelMessageSerializer {
                     *self = ChannelMessageSerializer::Done;
                     return Poll::Ready(Ok(()));
                 }
-                let closure_conn = conn.into_peer_conn();
+                let closure_conn = conn.clone();
                 let closure_stats = stats.clone();
                 let closure_router = router.get()?.clone();
                 *self = ChannelMessageSerializer::Pending(
@@ -239,9 +239,10 @@ impl Serializer for ChannelMessageSerializer {
                             let raw_handle = handle.raw_handle();
                             send_handles.push(
                                 closure_router
+                                    .clone()
                                     .send_proxied(
                                         handle,
-                                        closure_conn.as_ref(),
+                                        closure_conn.clone(),
                                         closure_stats.clone(),
                                     )
                                     .await

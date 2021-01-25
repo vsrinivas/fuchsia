@@ -6,7 +6,7 @@ mod channel;
 mod socket;
 
 use super::stream::{Frame, StreamReaderBinder, StreamWriter};
-use crate::peer::{FramedStreamReader, MessageStats, PeerConnRef};
+use crate::peer::{AsyncConnection, FramedStreamReader, MessageStats};
 use crate::router::Router;
 use anyhow::{bail, format_err, Error};
 use fuchsia_zircon_status as zx_status;
@@ -61,7 +61,7 @@ pub(crate) trait Serializer: Send {
         &mut self,
         msg: &mut Self::Message,
         bytes: &mut Vec<u8>,
-        conn: PeerConnRef<'_>,
+        conn: &AsyncConnection,
         stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
@@ -126,6 +126,10 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
 
     pub(crate) fn stats(&self) -> &Arc<MessageStats> {
         &self.stats
+    }
+
+    pub(crate) fn hdl(&self) -> &Hdl {
+        &self.hdl
     }
 
     fn handle_io<'a>(
