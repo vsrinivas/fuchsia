@@ -254,8 +254,10 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 
 	if err := session.Run(ctx, command); err != nil {
 		if ctx.Err() != nil {
-			// Don't bother logging the error if the context was canceled.
-			return err
+			// Ignore `err` if the context was canceled. It's probably a side
+			// effect of context cancellation and not actually
+			// meaningful/useful.
+			return ctx.Err()
 		}
 		var log string
 		var level logger.LogLevel
