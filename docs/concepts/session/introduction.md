@@ -1,18 +1,19 @@
 # Session framework
 
-The session framework is a framework for building products on Fuchsia. The
-framework provides software libraries, FIDL protocols, developer tools, and
-standards to help product owners build their product's user experience.
-
-A session is a [component](/docs/concepts/components/v2/introduction.md)
-that encapsulates a product’s user experience. It is the first product-specific
-component started  on boot. There is only one session component, but it can be
-composed of many sub-components. For example, the session for a graphical
-product instantiates Scenic (graphics) as a child component.
+A session is a [component][component-introduction] that encapsulates a product’s
+user experience. It is the first product-specific component started on boot.
+There is only one session component, but it can be composed of many
+sub-components. For example, the session for a graphical product instantiates
+Scenic (graphics) as a child component.
 
 At runtime, the session manager (the component that starts the session) offers
-capabilities (e.g., storage, network access, and hardware protocols) to the
-session which the session uses to construct the product experience.
+[component capabilities][component-capability] (e.g., storage, network access,
+and hardware protocols) to the session, which the session uses to construct the
+product experience, including:
+
+* Management of user "apps" and their composition into a user experience
+* Handling of user input data flow
+* Common configuration between the [compositor][compositor] and a11y subsystems
 
 ## From collection of components to cohesive product
 
@@ -23,23 +24,23 @@ present only on a subset of Fuchsia products.
 ![Component Topology](images/platform-product.png)
 
 The diagram above depicts a running Fuchsia product. The
-[`component_manager`](/docs/glossary.md#component-manager)
-instantiates several different platform components, including
-`session_manager`. `session_manager` then launches the session for the given
-product configuration, and the session instantiates its own, product-specific,
-component hierarchy.
+[`component_manager`][component-manager] instantiates several different platform
+components, including `session_manager`. `session_manager` then launches the
+session for the given product configuration, and the session instantiates its
+own, product-specific, component hierarchy.
 
 Even for simple products, the session ends up with a lot of responsibilities.
 For example, it configures the scene graph, wires up input, integrates
 accessibility, and so on. The session framework helps the session fulfill these
 responsibilities by:
 
-*   Providing client libraries that implement functionality common across
-sessions.
-*   Building components that expose said libraries as [FIDL](/docs/concepts/fidl/overview.md)
-protocols, for sessions not written in languages supported by client libraries.
-*   Defining FIDL protocols to standardize communication between sessions and
-components that are present on a wide range of products.
+* Providing client libraries that implement functionality common across
+  sessions.
+* Building components that expose said libraries as
+  [FIDL][fidl-overview] protocols, for sessions not written
+  in languages supported by client libraries.
+* Defining FIDL protocols to standardize communication between sessions and
+  components that are present on a wide range of products.
 
 ### Providing client libraries
 
@@ -96,3 +97,9 @@ If the session accepts the request, the component is instantiated:
 Since the element proposer and the session use a protocol that is defined by
 the session framework, the same element proposer can be used across all sessions
 that implement the `ElementManager` protocol.
+
+[component-introduction]: /docs/concepts/components/v2/introduction.md
+[component-capability]: /docs/glossary.md#capability
+[component-manager]: /docs/glossary.md#component-manager
+[compositor]: /docs/concepts/graphics/scenic/scenic.md#compositor
+[fidl-overview]: /docs/concepts/fidl/overview.md
