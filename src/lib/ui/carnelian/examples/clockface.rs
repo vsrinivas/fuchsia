@@ -190,19 +190,19 @@ impl ClockFaceFacet {
         let index = ((R0 + hour / 12.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.hour_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.hour_hand.update(context, scale, -angle);
+            self.hour_hand.update(context, scale, angle);
             self.hour_index = index;
         }
         let index = ((R0 + minute / 60.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.minute_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.minute_hand.update(context, scale, -angle);
+            self.minute_hand.update(context, scale, angle);
             self.minute_index = index;
         }
         let index = ((R0 + second / 60.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.second_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.second_hand.update(context, scale, -angle);
+            self.second_hand.update(context, scale, angle);
             self.second_index = index;
         }
     }
