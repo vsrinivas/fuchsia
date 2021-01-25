@@ -29,7 +29,7 @@
         },
         {
             name: "decompressor",
-            url: "fuchsia-boot://#meta/decompressor-sandbox.cm",
+            url: "fuchsia-boot:///#meta/decompressor-sandbox.cm",
         },
         {
             name: "miscsvc",
