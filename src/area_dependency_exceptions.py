@@ -7,10 +7,6 @@
 # within an area is allowed to depend on any target whose label starts with a
 # prefix in that area's list.
 exceptions = {
-    '//src/camera': [
-        '//garnet/tests/zircon/',
-        '//src/ui/lib/glm_workaround',
-    ],
     '//src/cobalt': ['//src/connectivity/wlan/lib/mlme/cpp:mlme',],
     '//src/connectivity/network':
         [
