@@ -76,6 +76,7 @@ template("static_icu_data") {
              "--output=${rebased_output_path}",
            ] + command_args
 
+    # TODO(fxbug.dev/68307): fix underlying issue and delete the below
     hermetic_deps = false
   }
 }
