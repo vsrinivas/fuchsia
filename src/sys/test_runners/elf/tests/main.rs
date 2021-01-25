@@ -112,7 +112,7 @@ async fn launch_and_run_test_with_custom_args() {
 
     let expected_events = vec![
         TestEvent::test_case_started("main"),
-        TestEvent::log_message("main", "Got argv[1]=\"expected_arg\""),
+        TestEvent::stdout_message("main", "Got argv[1]=\"expected_arg\""),
         TestEvent::test_case_finished("main", TestResult::Passed),
         TestEvent::test_finished(),
     ];

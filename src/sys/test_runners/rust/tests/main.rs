@@ -92,13 +92,13 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
         TestEvent::test_case_started("my_tests::failing_test"),
         TestEvent::test_case_finished("my_tests::failing_test", TestResult::Failed),
         TestEvent::test_case_started("my_tests::sample_test_one"),
-        TestEvent::log_message("my_tests::sample_test_one", "My only job is not to panic!()"),
+        TestEvent::stdout_message("my_tests::sample_test_one", "My only job is not to panic!()"),
         TestEvent::test_case_finished("my_tests::sample_test_one", TestResult::Passed),
         TestEvent::test_case_started("my_tests::sample_test_two"),
-        TestEvent::log_message("my_tests::sample_test_two", "My only job is not to panic!()"),
+        TestEvent::stdout_message("my_tests::sample_test_two", "My only job is not to panic!()"),
         TestEvent::test_case_finished("my_tests::sample_test_two", TestResult::Passed),
         TestEvent::test_case_started("my_tests::passing_test"),
-        TestEvent::log_message("my_tests::passing_test", "My only job is not to panic!()"),
+        TestEvent::stdout_message("my_tests::passing_test", "My only job is not to panic!()"),
         TestEvent::test_case_finished("my_tests::passing_test", TestResult::Passed),
         TestEvent::test_case_started("my_tests::ignored_failing_test"),
         TestEvent::test_case_finished("my_tests::ignored_failing_test", TestResult::Skipped),
@@ -115,7 +115,7 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
 
     let (failing_test_logs, events_without_failing_test_logs): (Vec<TestEvent>, Vec<TestEvent>) =
         events.into_iter().partition(|x| match x {
-            TestEvent::LogMessage { test_case_name, msg: _ } => {
+            TestEvent::StdoutMessage { test_case_name, msg: _ } => {
                 test_case_name == "my_tests::failing_test"
             }
             _ => false,
@@ -131,14 +131,14 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
     assert_eq!(
         &failing_test_logs[0..3],
         &[
-            TestEvent::log_message("my_tests::failing_test", panic_message),
-            TestEvent::log_message("my_tests::failing_test", "stack backtrace:"),
-            TestEvent::log_message("my_tests::failing_test", "{{{reset}}}"),
+            TestEvent::stdout_message("my_tests::failing_test", panic_message),
+            TestEvent::stdout_message("my_tests::failing_test", "stack backtrace:"),
+            TestEvent::stdout_message("my_tests::failing_test", "{{{reset}}}"),
         ]
     );
     assert_eq!(
         failing_test_logs.last().unwrap(),
-        &TestEvent::log_message("my_tests::failing_test", "test failed.")
+        &TestEvent::stdout_message("my_tests::failing_test", "test failed.")
     );
 }
 
@@ -167,7 +167,7 @@ async fn launch_and_run_sample_test_include_disabled() {
     assert_eq!(&events_failing_test[0], &TestEvent::test_case_started("my_tests::failing_test"));
     assert_eq!(
         &events_failing_test[2],
-        &TestEvent::log_message("my_tests::failing_test", "stack backtrace:")
+        &TestEvent::stdout_message("my_tests::failing_test", "stack backtrace:")
     );
 
     let events_ignored_failing_test =
@@ -184,7 +184,7 @@ async fn launch_and_run_sample_test_include_disabled() {
         events_ignored_failing_test
             .iter()
             .filter(|event| match event {
-                TestEvent::LogMessage { test_case_name: _, msg: _ } => true,
+                TestEvent::StdoutMessage { test_case_name: _, msg: _ } => true,
                 _ => false,
             })
             .count()
@@ -198,7 +198,7 @@ async fn launch_and_run_sample_test_include_disabled() {
         events_ignored_passing_test,
         &vec![
             TestEvent::test_case_started("my_tests::ignored_passing_test"),
-            TestEvent::log_message("my_tests::ignored_passing_test", "Everybody ignores me"),
+            TestEvent::stdout_message("my_tests::ignored_passing_test", "Everybody ignores me"),
             TestEvent::test_case_finished("my_tests::ignored_passing_test", TestResult::Passed),
         ]
     );

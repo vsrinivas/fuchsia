@@ -173,7 +173,7 @@ async fn run_test_for_invocations<W: Write>(
                             writeln!(writer, "[{}]\t{}", result_str, test_case_name)
                                 .expect("Cannot write logs");
                         }
-                        TestEvent::LogMessage { test_case_name, mut msg } => {
+                        TestEvent::StdoutMessage { test_case_name, mut msg } => {
                             if !test_cases_executed.contains(&test_case_name) {
                                 return Err(anyhow::anyhow!(
                                     "test case: '{}' was never started, still got a log",

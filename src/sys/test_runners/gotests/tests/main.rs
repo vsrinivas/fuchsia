@@ -58,9 +58,9 @@ async fn run_test(
 
     for event in test_events.iter_mut() {
         match event {
-            TestEvent::LogMessage { test_case_name, msg } => {
+            TestEvent::StdoutMessage { test_case_name, msg } => {
                 let log = time_taken.replace(&msg, "");
-                *event = TestEvent::log_message(test_case_name, &log);
+                *event = TestEvent::stdout_message(test_case_name, &log);
             }
             _ => {}
         }
@@ -104,35 +104,35 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
 
     let mut expected_events = vec![
         TestEvent::test_case_started("TestFailing"),
-        TestEvent::log_message("TestFailing", "    sample_go_test.go:25: This will fail"),
+        TestEvent::stdout_message("TestFailing", "    sample_go_test.go:25: This will fail"),
         TestEvent::test_case_finished("TestFailing", TestResult::Failed),
         TestEvent::test_case_started("TestPassing"),
         TestEvent::test_case_started("TestPrefix"),
-        TestEvent::log_message("TestPrefix", "Testing that given two tests where one test is prefix of another can execute independently."),
+        TestEvent::stdout_message("TestPrefix", "Testing that given two tests where one test is prefix of another can execute independently."),
         TestEvent::test_case_finished("TestPrefix", TestResult::Passed),
-        TestEvent::log_message("TestPassing", "This test will pass"),
-        TestEvent::log_message("TestPassing", "It will also print this line"),
-        TestEvent::log_message("TestPassing", "And this line"),
+        TestEvent::stdout_message("TestPassing", "This test will pass"),
+        TestEvent::stdout_message("TestPassing", "It will also print this line"),
+        TestEvent::stdout_message("TestPassing", "And this line"),
         TestEvent::test_case_finished("TestPassing", TestResult::Passed),
         TestEvent::test_case_started("TestCrashing"),
-        TestEvent::log_message("TestCrashing", "Test exited abnormally"),
+        TestEvent::stdout_message("TestCrashing", "Test exited abnormally"),
         TestEvent::test_case_finished("TestCrashing", TestResult::Failed),
         TestEvent::test_case_started("TestSkipped"),
-        TestEvent::log_message("TestSkipped", "    sample_go_test.go:33: Skipping this test"),
+        TestEvent::stdout_message("TestSkipped", "    sample_go_test.go:33: Skipping this test"),
         TestEvent::test_case_finished("TestSkipped", TestResult::Skipped),
         TestEvent::test_case_started("TestSubtests"),
-        TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest1"),
-        TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest2"),
-        TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest3"),
-        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest1"),
-        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest2"),
-        TestEvent::log_message("TestSubtests", "    --- PASS: TestSubtests/Subtest3"),
+        TestEvent::stdout_message("TestSubtests", "=== RUN   TestSubtests/Subtest1"),
+        TestEvent::stdout_message("TestSubtests", "=== RUN   TestSubtests/Subtest2"),
+        TestEvent::stdout_message("TestSubtests", "=== RUN   TestSubtests/Subtest3"),
+        TestEvent::stdout_message("TestSubtests", "    --- PASS: TestSubtests/Subtest1"),
+        TestEvent::stdout_message("TestSubtests", "    --- PASS: TestSubtests/Subtest2"),
+        TestEvent::stdout_message("TestSubtests", "    --- PASS: TestSubtests/Subtest3"),
         TestEvent::test_case_finished("TestSubtests", TestResult::Passed),
         TestEvent::test_case_started("TestPrefixExtra"),
-        TestEvent::log_message("TestPrefixExtra", "Testing that given two tests where one test is prefix of another can execute independently."),
+        TestEvent::stdout_message("TestPrefixExtra", "Testing that given two tests where one test is prefix of another can execute independently."),
         TestEvent::test_case_finished("TestPrefixExtra", TestResult::Passed),
         TestEvent::test_case_started("TestPrintMultiline"),
-        TestEvent::log_message("TestPrintMultiline", "This test will print the msg in multi-line."),
+        TestEvent::stdout_message("TestPrintMultiline", "This test will print the msg in multi-line."),
         TestEvent::test_case_finished("TestPrintMultiline", TestResult::Passed),
         TestEvent::test_case_started("TestCustomArg"),
         TestEvent::test_case_finished("TestCustomArg", TestResult::Passed),
@@ -146,16 +146,16 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
     let passed_test_logs: Vec<&TestEvent> = events
         .iter()
         .filter(|x| match x {
-            TestEvent::LogMessage { test_case_name, msg: _ } => test_case_name == "TestPassing",
+            TestEvent::StdoutMessage { test_case_name, msg: _ } => test_case_name == "TestPassing",
             _ => false,
         })
         .collect();
     assert_eq!(
         passed_test_logs,
         vec![
-            &TestEvent::log_message("TestPassing", "This test will pass"),
-            &TestEvent::log_message("TestPassing", "It will also print this line"),
-            &TestEvent::log_message("TestPassing", "And this line")
+            &TestEvent::stdout_message("TestPassing", "This test will pass"),
+            &TestEvent::stdout_message("TestPassing", "It will also print this line"),
+            &TestEvent::stdout_message("TestPassing", "And this line")
         ]
     );
 

@@ -70,13 +70,13 @@ async fn run_test(
     // break logs as they can come in any order.
     for event in events {
         match event {
-            TestEvent::LogMessage { test_case_name, mut msg } => {
+            TestEvent::StdoutMessage { test_case_name, mut msg } => {
                 if msg.ends_with("\n") {
                     msg.truncate(msg.len() - 1)
                 }
                 let logs = msg.split("\n");
                 for log in logs {
-                    test_events.push(TestEvent::LogMessage {
+                    test_events.push(TestEvent::StdoutMessage {
                         test_case_name: test_case_name.clone(),
                         msg: log.to_string(),
                     });
@@ -173,7 +173,8 @@ async fn launch_and_test_no_on_finished() {
     for case in &test_cases {
         expected_events.push(TestEvent::test_case_started(case));
         for i in 1..=3 {
-            expected_events.push(TestEvent::log_message(case, &format!("log{} for {}", i, case)));
+            expected_events
+                .push(TestEvent::stdout_message(case, &format!("log{} for {}", i, case)));
         }
         expected_events.push(TestEvent::test_case_finished(case, TestResult::Passed));
     }

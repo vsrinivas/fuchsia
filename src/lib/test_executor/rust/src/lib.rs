@@ -101,8 +101,8 @@ pub enum TestEvent {
     /// Test case finished.
     TestCaseFinished { test_case_name: String, result: TestResult },
 
-    /// Test case produced a log message.
-    LogMessage { test_case_name: String, msg: String },
+    /// Test case produced a stdout message.
+    StdoutMessage { test_case_name: String, msg: String },
 
     /// Test finishes successfully.
     Finish,
@@ -113,8 +113,8 @@ impl TestEvent {
         TestEvent::TestCaseStarted { test_case_name: s.to_string() }
     }
 
-    pub fn log_message(name: &str, log: &str) -> TestEvent {
-        TestEvent::LogMessage { test_case_name: name.to_string(), msg: log.to_string() }
+    pub fn stdout_message(name: &str, message: &str) -> TestEvent {
+        TestEvent::StdoutMessage { test_case_name: name.to_string(), msg: message.to_string() }
     }
 
     pub fn test_case_finished(name: &str, result: TestResult) -> TestEvent {
@@ -130,7 +130,7 @@ impl TestEvent {
         match self {
             TestEvent::TestCaseStarted { test_case_name } => Some(test_case_name),
             TestEvent::TestCaseFinished { test_case_name, result: _ } => Some(test_case_name),
-            TestEvent::LogMessage { test_case_name, msg: _ } => Some(test_case_name),
+            TestEvent::StdoutMessage { test_case_name, msg: _ } => Some(test_case_name),
             TestEvent::Finish => None,
             // NOTE: If new global event types (not tied to a specific test case) are added,
             // `GroupByTestCase` must also be updated so as to preserve correct event ordering.
@@ -196,33 +196,33 @@ pub trait GroupByTestCase: Iterator<Item = TestEvent> + Sized {
 impl<T> GroupByTestCase for T where T: Iterator<Item = TestEvent> + Sized {}
 
 #[must_use = "futures/streams"]
-pub struct LoggerStream {
+pub struct StdoutStream {
     socket: fidl::AsyncSocket,
 }
-impl Unpin for LoggerStream {}
+impl Unpin for StdoutStream {}
 
 thread_local! {
     pub static BUFFER:
         RefCell<[u8; 2048]> = RefCell::new([0; 2048]);
 }
 
-impl LoggerStream {
-    /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: fidl::Socket) -> Result<LoggerStream, anyhow::Error> {
-        let l = LoggerStream {
+impl StdoutStream {
+    /// Creates a new `StdoutStream` for given `socket`.
+    pub fn new(socket: fidl::Socket) -> Result<StdoutStream, anyhow::Error> {
+        let stream = StdoutStream {
             socket: fidl::AsyncSocket::from_socket(socket).context("Invalid zircon socket")?,
         };
-        Ok(l)
+        Ok(stream)
     }
 }
 
-fn process_log_bytes(bytes: &[u8]) -> String {
+fn process_stdout_bytes(bytes: &[u8]) -> String {
     // TODO(anmittal): Change this to consider break in logs and handle it.
     let log = std::str::from_utf8(bytes).unwrap();
     log.to_string()
 }
 
-impl Stream for LoggerStream {
+impl Stream for StdoutStream {
     type Item = io::Result<String>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -232,7 +232,7 @@ impl Stream for LoggerStream {
             if len == 0 {
                 return Poll::Ready(None);
             }
-            Poll::Ready(Some(process_log_bytes(&b[0..len])).map(Ok))
+            Poll::Ready(Some(process_stdout_bytes(&b[0..len])).map(Ok))
         })
     }
 }
@@ -242,17 +242,17 @@ struct TestCaseProcessor {
 }
 
 impl TestCaseProcessor {
-    /// This will start processing of logs and events in the background. The owner of this object
-    /// should call `wait_for_finish` method  to make sure all the background task completed.
+    /// This will start processing of stdout logs and events in the background. The owner of this
+    /// object should call `wait_for_finish` method  to make sure all the background task completed.
     pub fn new(
         test_case_name: String,
         listener: CaseListenerRequestStream,
-        logger_socket: fidl::Socket,
+        stdout_socket: fidl::Socket,
         sender: mpsc::Sender<TestEvent>,
     ) -> Self {
-        let log_fut =
-            Self::collect_and_send_logs(test_case_name.clone(), logger_socket, sender.clone());
-        let f = Self::process_run_event(test_case_name, listener, log_fut, sender);
+        let stdout_fut =
+            Self::collect_and_send_stdout(test_case_name.clone(), stdout_socket, sender.clone());
+        let f = Self::process_run_event(test_case_name, listener, stdout_fut, sender);
 
         let (remote, remote_handle) = f.remote_handle();
         fuchsia_async::Task::spawn(remote).detach();
@@ -263,15 +263,15 @@ impl TestCaseProcessor {
     async fn process_run_event(
         name: String,
         mut listener: CaseListenerRequestStream,
-        mut log_fut: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
+        mut stdout_fut: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
         mut sender: mpsc::Sender<TestEvent>,
     ) -> Result<(), anyhow::Error> {
         while let Some(result) = listener.try_next().await.context("waiting for listener")? {
             match result {
                 Finished { result, control_handle: _ } => {
-                    // get all logs before sending finish event.
-                    if let Some(ref mut log_fut) = log_fut.take().as_mut() {
-                        log_fut.await?;
+                    // get all test stdout logs before sending finish event.
+                    if let Some(ref mut stdout_fut) = stdout_fut.take().as_mut() {
+                        stdout_fut.await?;
                     }
 
                     let result = match result.status {
@@ -289,34 +289,37 @@ impl TestCaseProcessor {
                 }
             }
         }
-        if let Some(ref mut log_fut) = log_fut.take().as_mut() {
-            log_fut.await?;
+        if let Some(ref mut stdout_fut) = stdout_fut.take().as_mut() {
+            stdout_fut.await?;
         }
         Ok(())
     }
 
-    /// Internal method that put a listener on `logger_socket`, process and send logs asynchronously
-    /// in the background.
-    fn collect_and_send_logs(
+    /// Internal method that put a listener on `stdout_socket`, process and send test stdout logs
+    /// asynchronously in the background.
+    fn collect_and_send_stdout(
         name: String,
-        logger_socket: fidl::Socket,
+        stdout_socket: fidl::Socket,
         mut sender: mpsc::Sender<TestEvent>,
     ) -> Option<BoxFuture<'static, Result<(), anyhow::Error>>> {
-        if logger_socket.as_handle_ref().is_invalid() {
+        if stdout_socket.as_handle_ref().is_invalid() {
             return None;
         }
 
-        let mut ls = match LoggerStream::new(logger_socket) {
+        let mut stream = match StdoutStream::new(stdout_socket) {
             Err(e) => {
-                error!("Logger: Failed to create fuchsia async socket: {:?}", e);
+                error!("Stdout Logger: Failed to create fuchsia async socket: {:?}", e);
                 return None;
             }
-            Ok(ls) => ls,
+            Ok(stream) => stream,
         };
 
         let f = async move {
-            while let Some(log) = ls.try_next().await.context("reading log msg")? {
-                sender.send(TestEvent::log_message(&name, &log)).await.context("sending log msg")?
+            while let Some(log) = stream.try_next().await.context("reading stdout log msg")? {
+                sender
+                    .send(TestEvent::stdout_message(&name, &log))
+                    .await
+                    .context("sending stdout log msg")?
             }
             Ok(())
         };
@@ -326,7 +329,7 @@ impl TestCaseProcessor {
         Some(remote_handle.boxed())
     }
 
-    /// This will wait for all the logs and events to be collected
+    /// This will wait for all the stdout logs and events to be collected
     pub async fn wait_for_finish(&mut self) -> Result<(), anyhow::Error> {
         if let Some(ref mut f) = self.f.take().as_mut() {
             return Ok(f.await?);
@@ -427,7 +430,7 @@ impl SuiteInstance {
         self.run_and_collect_results_for_invocations(sender, invocations, run_options).await
     }
 
-    /// Runs the test component using `suite` and collects logs and results.
+    /// Runs the test component using `suite` and collects test stdout logs and results.
     pub async fn run_and_collect_results_for_invocations(
         &self,
         mut sender: mpsc::Sender<TestEvent>,
@@ -455,7 +458,7 @@ impl SuiteInstance {
         Ok(())
     }
 
-    /// Runs the test component using `suite` and collects logs and results.
+    /// Runs the test component using `suite` and collects stdout logs and results.
     async fn run_invocations(
         &self,
         invocations: Vec<Invocation>,
@@ -537,7 +540,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn collect_logs() {
+    async fn collect_test_stdout() {
         let (sock_server, sock_client) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).expect("Failed while creating socket");
 
@@ -545,7 +548,7 @@ mod tests {
 
         let (sender, mut recv) = mpsc::channel(1);
 
-        let fut = TestCaseProcessor::collect_and_send_logs(name.to_string(), sock_client, sender)
+        let fut = TestCaseProcessor::collect_and_send_stdout(name.to_string(), sock_client, sender)
             .expect("future should not be None");
 
         sock_server.write(b"test message 1").expect("Can't write msg to socket");
@@ -556,14 +559,14 @@ mod tests {
 
         assert_eq!(
             msg,
-            Some(TestEvent::log_message(&name, "test message 1test message 2test message 3"))
+            Some(TestEvent::stdout_message(&name, "test message 1test message 2test message 3"))
         );
 
         // can receive messages multiple times
         sock_server.write(b"test message 4").expect("Can't write msg to socket");
         msg = recv.next().await;
 
-        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 4")));
+        assert_eq!(msg, Some(TestEvent::stdout_message(&name, "test message 4")));
 
         // messages can be read after socket server is closed.
         sock_server.write(b"test message 5").expect("Can't write msg to socket");
@@ -572,7 +575,7 @@ mod tests {
 
         msg = recv.next().await;
 
-        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 5")));
+        assert_eq!(msg, Some(TestEvent::stdout_message(&name, "test message 5")));
 
         // socket was closed, this should return None
         msg = recv.next().await;
@@ -584,9 +587,9 @@ mod tests {
         let events = vec![
             TestEvent::test_case_started("a::a"),
             TestEvent::test_case_started("b::b"),
-            TestEvent::log_message("a::a", "log"),
+            TestEvent::stdout_message("a::a", "log"),
             TestEvent::test_case_started("c::c"),
-            TestEvent::log_message("b::b", "log"),
+            TestEvent::stdout_message("b::b", "log"),
             TestEvent::test_case_finished("c::c", TestResult::Passed),
             TestEvent::test_case_finished("a::a", TestResult::Failed),
             TestEvent::test_case_finished("b::b", TestResult::Passed),
@@ -601,7 +604,7 @@ mod tests {
                 Some("a::a".to_string()),
                 vec![
                     TestEvent::test_case_started("a::a"),
-                    TestEvent::log_message("a::a", "log"),
+                    TestEvent::stdout_message("a::a", "log"),
                     TestEvent::test_case_finished("a::a", TestResult::Failed),
                 ],
             ),
@@ -609,7 +612,7 @@ mod tests {
                 Some("b::b".to_string()),
                 vec![
                     TestEvent::test_case_started("b::b"),
-                    TestEvent::log_message("b::b", "log"),
+                    TestEvent::stdout_message("b::b", "log"),
                     TestEvent::test_case_finished("b::b", TestResult::Passed),
                 ],
             ),
@@ -631,9 +634,9 @@ mod tests {
         let events = vec![
             TestEvent::test_case_started("a::a"),
             TestEvent::test_case_started("b::b"),
-            TestEvent::log_message("a::a", "log"),
+            TestEvent::stdout_message("a::a", "log"),
             TestEvent::test_case_started("c::c"),
-            TestEvent::log_message("b::b", "log"),
+            TestEvent::stdout_message("b::b", "log"),
             TestEvent::test_case_finished("c::c", TestResult::Passed),
             TestEvent::test_case_finished("a::a", TestResult::Failed),
             TestEvent::test_case_finished("b::b", TestResult::Passed),
@@ -642,10 +645,10 @@ mod tests {
 
         let expected = vec![
             TestEvent::test_case_started("a::a"),
-            TestEvent::log_message("a::a", "log"),
+            TestEvent::stdout_message("a::a", "log"),
             TestEvent::test_case_finished("a::a", TestResult::Failed),
             TestEvent::test_case_started("b::b"),
-            TestEvent::log_message("b::b", "log"),
+            TestEvent::stdout_message("b::b", "log"),
             TestEvent::test_case_finished("b::b", TestResult::Passed),
             TestEvent::test_case_started("c::c"),
             TestEvent::test_case_finished("c::c", TestResult::Passed),
@@ -662,9 +665,9 @@ mod tests {
         let events = vec![
             TestEvent::test_case_started("a::a"),
             TestEvent::test_case_started("b::b"),
-            TestEvent::log_message("a::a", "log"),
+            TestEvent::stdout_message("a::a", "log"),
             TestEvent::test_case_started("c::c"),
-            TestEvent::log_message("b::b", "log"),
+            TestEvent::stdout_message("b::b", "log"),
             TestEvent::test_case_finished("c::c", TestResult::Passed),
             TestEvent::test_case_finished("a::a", TestResult::Failed),
             TestEvent::test_case_finished("b::b", TestResult::Passed),
@@ -674,12 +677,12 @@ mod tests {
         let expected = hashmap! {
             Some("a::a".to_string()) => vec![
                 TestEvent::test_case_started("a::a"),
-                TestEvent::log_message("a::a", "log"),
+                TestEvent::stdout_message("a::a", "log"),
                 TestEvent::test_case_finished("a::a", TestResult::Failed),
             ],
             Some("b::b".to_string()) => vec![
                 TestEvent::test_case_started("b::b"),
-                TestEvent::log_message("b::b", "log"),
+                TestEvent::stdout_message("b::b", "log"),
                 TestEvent::test_case_finished("b::b", TestResult::Passed),
             ],
             Some("c::c".to_string()) => vec![

@@ -160,7 +160,7 @@ pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<T
     // break logs as they can be grouped in any way.
     for event in events {
         match event {
-            TestEvent::LogMessage { test_case_name, msg } => {
+            TestEvent::StdoutMessage { test_case_name, msg } => {
                 let logs = msg.split("\n");
                 let mut logs = logs.collect::<Vec<&str>>();
                 // discard last empty log(if it ended in newline, or  store im-complete line)
@@ -179,7 +179,7 @@ pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<T
                     if let Some(prev_log) = buffered_logs.remove(&test_case_name) {
                         msg = format!("{}{}", prev_log, msg);
                     }
-                    test_events.push(TestEvent::LogMessage {
+                    test_events.push(TestEvent::StdoutMessage {
                         test_case_name: test_case_name.clone(),
                         msg: msg,
                     });
@@ -199,7 +199,7 @@ pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<T
     }
 
     for (test_case_name, log) in buffered_logs {
-        test_events.push(TestEvent::LogMessage { test_case_name: test_case_name, msg: log });
+        test_events.push(TestEvent::StdoutMessage { test_case_name: test_case_name, msg: log });
     }
 
     test_events
