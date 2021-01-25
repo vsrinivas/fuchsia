@@ -38,6 +38,7 @@ struct ktrace_state {
   uint32_t marker;
 
   // raw trace buffer
+  // if this is nullptr, then bufsize == 0
   uint8_t* buffer;
 
   // buffer is full or not
@@ -98,6 +99,7 @@ inline void ktrace_disable(ktrace_state* ks) {
 
 // The global ktrace state.
 ktrace_state KTRACE_STATE;
+uint32_t ktrace_bufsize_mb;
 
 // Allocates a new trace record in the trace buffer. Returns a pointer to the
 // start of the record or nullptr the end of the buffer is reached.
@@ -117,6 +119,60 @@ void* ktrace_open(uint32_t tag, uint64_t ts) {
                  ? arch_curr_cpu_num()
                  : static_cast<uint32_t>(Thread::Current::Get()->user_tid());
   return hdr + 1;
+}
+
+void ktrace_rewind() {
+  ktrace_state* ks = &KTRACE_STATE;
+
+  // roll back to just after the metadata
+  ks->offset.store(KTRACE_RECSIZE * 2);
+  ks->buffer_full.store(false);
+  ktrace_report_syscalls();
+  ktrace_report_probes();
+  ktrace_report_vcpu_meta();
+}
+
+zx_status_t ktrace_alloc_buffer() {
+  ktrace_state* ks = &KTRACE_STATE;
+
+  // The buffer is allocated once, then never deleted.
+  if (ks->buffer || ktrace_bufsize_mb == 0) {
+    return ZX_OK;
+  }
+
+  auto bytes = ktrace_bufsize_mb * 1024 * 1024;
+  zx_status_t status;
+  VmAspace* aspace = VmAspace::kernel_aspace();
+  if ((status = aspace->Alloc("ktrace", bytes, reinterpret_cast<void**>(&ks->buffer), 0,
+                              VmAspace::VMM_FLAG_COMMIT,
+                              ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE)) < 0) {
+    dprintf(INFO, "ktrace: cannot alloc buffer %d\n", status);
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  // The last packet written can overhang the end of the buffer,
+  // so we reduce the reported size by the max size of a record
+  ks->bufsize = bytes - 256;
+  dprintf(INFO, "ktrace: buffer at %p (%u bytes)\n", ks->buffer, bytes);
+
+  // write metadata to the first two event slots
+  uint64_t n = ktrace_ticks_per_ms();
+  ktrace_rec_32b_t* rec = reinterpret_cast<ktrace_rec_32b_t*>(ks->buffer);
+  rec[0].tag = TAG_VERSION;
+  rec[0].a = KTRACE_VERSION;
+  rec[1].tag = TAG_TICKS_PER_MS;
+  rec[1].a = static_cast<uint32_t>(n);
+  rec[1].b = static_cast<uint32_t>(n >> 32);
+
+  ktrace_rewind();
+
+  // Report an event for "tracing is all set up now".  This also
+  // serves to ensure that there will be at least one static probe
+  // entry so that the __{start,stop}_ktrace_probe symbols above
+  // will be defined by the linker.
+  ktrace_probe(TraceAlways, TraceContext::Thread, "ktrace_ready"_stringref);
+
+  return ZX_OK;
 }
 
 }  // namespace
@@ -164,6 +220,9 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
 
   switch (action) {
     case KTRACE_ACTION_START:
+      if (auto status = ktrace_alloc_buffer(); status != ZX_OK) {
+        return status;
+      }
       options = KTRACE_GRP_TO_MASK(options);
       ks->marker = 0;
       ktrace_grpmask.store(options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
@@ -183,12 +242,7 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     }
 
     case KTRACE_ACTION_REWIND:
-      // roll back to just after the metadata
-      ks->offset.store(KTRACE_RECSIZE * 2);
-      ks->buffer_full.store(false);
-      ktrace_report_syscalls();
-      ktrace_report_probes();
-      ktrace_report_vcpu_meta();
+      ktrace_rewind();
       break;
 
     case KTRACE_ACTION_NEW_PROBE: {
@@ -227,66 +281,27 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
 }
 
 void ktrace_init(unsigned level) {
-  ktrace_state* ks = &KTRACE_STATE;
-
   // There's no utility in setting up ktrace if there's no syscalls to access
   // it. See zircon/kernel/syscalls/debug.cc for the corresponding syscalls.
   // Note that because KTRACE_STATE grpmask starts at 0 and will not be changed,
   // the other functions in this file need not check for enabled-ness manually.
   bool syscalls_enabled = gCmdline.GetBool("kernel.enable-debugging-syscalls", false);
-
-  uint32_t mb = gCmdline.GetUInt32("ktrace.bufsize", KTRACE_DEFAULT_BUFSIZE);
+  ktrace_bufsize_mb = gCmdline.GetUInt32("ktrace.bufsize", KTRACE_DEFAULT_BUFSIZE);
   uint32_t grpmask = gCmdline.GetUInt32("ktrace.grpmask", KTRACE_DEFAULT_GRPMASK);
 
-  if (mb == 0 || !syscalls_enabled) {
+  if (ktrace_bufsize_mb == 0 || !syscalls_enabled) {
     dprintf(INFO, "ktrace: disabled\n");
     return;
   }
 
-  mb *= (1024 * 1024);
-
-  zx_status_t status;
-  VmAspace* aspace = VmAspace::kernel_aspace();
-  if ((status = aspace->Alloc("ktrace", mb, reinterpret_cast<void**>(&ks->buffer), 0,
-                              VmAspace::VMM_FLAG_COMMIT,
-                              ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE)) < 0) {
-    dprintf(INFO, "ktrace: cannot alloc buffer %d\n", status);
-    return;
+  if (grpmask > 0) {
+    ktrace_alloc_buffer();
+    ktrace_report_live_threads();
+  } else {
+    dprintf(INFO, "ktrace: delaying buffer allocation\n");
   }
 
-  // The last packet written can overhang the end of the buffer,
-  // so we reduce the reported size by the max size of a record
-  ks->bufsize = mb - 256;
-  ks->buffer_full.store(false);
-
-  dprintf(INFO, "ktrace: buffer at %p (%u bytes)\n", ks->buffer, mb);
-
-  // write metadata to the first two event slots
-  uint64_t n = ktrace_ticks_per_ms();
-  ktrace_rec_32b_t* rec = reinterpret_cast<ktrace_rec_32b_t*>(ks->buffer);
-  rec[0].tag = TAG_VERSION;
-  rec[0].a = KTRACE_VERSION;
-  rec[1].tag = TAG_TICKS_PER_MS;
-  rec[1].a = static_cast<uint32_t>(n);
-  rec[1].b = static_cast<uint32_t>(n >> 32);
-
-  // enable tracing
-  ks->offset.store(KTRACE_RECSIZE * 2);
-  ktrace_report_syscalls();
-  ktrace_report_probes();
   ktrace_grpmask.store(KTRACE_GRP_TO_MASK(grpmask));
-
-  // report names of existing threads
-  ktrace_report_live_threads();
-
-  // report metadata for VCPUs
-  ktrace_report_vcpu_meta();
-
-  // Report an event for "tracing is all set up now".  This also
-  // serves to ensure that there will be at least one static probe
-  // entry so that the __{start,stop}_ktrace_probe symbols above
-  // will be defined by the linker.
-  ktrace_probe(TraceAlways, TraceContext::Thread, "ktrace_ready"_stringref);
 }
 
 void ktrace_write_record_tiny(uint32_t tag, uint32_t arg) {
