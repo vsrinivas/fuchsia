@@ -278,8 +278,8 @@ template("hotsort_gen_target") {
   #
   compiled_action(target_name) {
     tool = "${_hotsort_dir}/hotsort_gen:hotsort_gen"
-    outputs =
-        _hs_comp_sources + _hs_target_gen_sources + _hs_target_gen_includes
+    outputs = [ "${invoker.output_dir}/hs_modules.txt" ] + _hs_comp_sources +
+              _hs_target_gen_sources + _hs_target_gen_includes
     args = [
       "-D",
       _hs_target_name,
