@@ -13,7 +13,14 @@ declare_args() {
   # their own `__asan_default_options` C function.  Instead, they can use a
   # sanitizer_extra_options() target in their `deps` and then any options
   # injected that way can override that option's setting in this list.
-  asan_default_options = [ "detect_stack_use_after_return=1" ]
+  asan_default_options = [
+    "detect_stack_use_after_return=1",
+
+    # TODO(fxbug.dev/67985): Using default quarantine size of 256MiB causes
+    # asan bots to OOM, this reduces the per-app quarantine size until we
+    # investigate other possible fixes.
+    "quarantine_size_mb=64",
+  ]
 
   # Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
   # options (before the `LSAN_OPTIONS` environment variable is read at
