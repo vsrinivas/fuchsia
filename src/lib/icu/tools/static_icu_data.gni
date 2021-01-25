@@ -8,19 +8,23 @@ import("//build/compiled_action.gni")
 #
 # Example:
 #
+#   import("//src/lib/icu/tools/static_icu_data.gni")
+#   import("//src/sys/build/components.gni")
+#   import("//build/dist/resource.gni")
+#
 #   static_icu_data("revision") {
 #     command = "tz-version"
 #     output = "${target_gen_dir}/revision.txt"
 #   }
 #
-#   package("my_package") {
-#     # ...
-#     resources = [
-#       {
-#         path = rebase_path("${target_gen_dir}/revision.txt"})
-#         dest = "revision.txt"
-#       }
-#     ]
+#   resource("resource") {
+#     sources = get_target_outputs(":revision")
+#     outputs = [ "data/revision.txt" ]
+#   }
+#
+#   fuchsia_component("component") {
+#     deps = [ ":resource" ]
+#     ...
 #   }
 #
 # To view all the supported commands and arguments, run
@@ -31,7 +35,7 @@ import("//build/compiled_action.gni")
 #
 #   output:
 #     Required: Path to the output file. This should usually be something like
-#     "${target_gen_dir}/myfile.txt".
+#     "$target_gen_dir/myfile.txt".
 #     Type: file
 #
 #   command:
@@ -62,18 +66,14 @@ template("static_icu_data") {
     icu_data_file = "//third_party/icu/common/icudtl.dat"
     tz_res_dir = "//third_party/icu/tzres/"
 
-    sources = [ icu_data_file ]
+    inputs = [ icu_data_file ]
     outputs = [ output ]
 
-    rebased_icu_data_file = rebase_path(icu_data_file)
-    rebased_tz_res_dir = rebase_path(tz_res_dir)
-    rebased_output_path = rebase_path(output)
-
     args = [
-             "--icu-data-file=${rebased_icu_data_file}",
-             "--tz-res-dir=${rebased_tz_res_dir}",
+             "--icu-data-file=" + rebase_path(icu_data_file, root_build_dir),
+             "--tz-res-dir=" + rebase_path(tz_res_dir, root_build_dir),
              command,
-             "--output=${rebased_output_path}",
+             "--output=" + rebase_path(output, root_build_dir),
            ] + command_args
 
     # TODO(fxbug.dev/68307): fix underlying issue and delete the below
