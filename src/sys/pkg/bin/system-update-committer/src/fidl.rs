@@ -5,22 +5,22 @@
 use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_update::{CommitStatusProviderRequest, CommitStatusProviderRequestStream},
-    fuchsia_async::OnSignals,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon::{self as zx, EventPair, HandleBased},
-    futures::prelude::*,
+    futures::{channel::oneshot, future, prelude::*},
     std::sync::Arc,
 };
 
 pub struct FidlServer {
-    p_check: EventPair,
-    p_fidl: EventPair,
+    p_external: EventPair,
+    // The blocker is shared to support multiple IsCurrentSystemCommitted calls while blocked.
+    blocker: future::Shared<oneshot::Receiver<()>>,
 }
 
 impl FidlServer {
-    pub fn new(p_check: EventPair, p_fidl: EventPair) -> Self {
-        Self { p_check, p_fidl }
+    pub fn new(p_external: EventPair, blocker: oneshot::Receiver<()>) -> Self {
+        Self { p_external, blocker: blocker.shared() }
     }
 
     pub async fn run(server: Arc<Self>, mut fs: ServiceFs<ServiceObjLocal<'_, IncomingService>>) {
@@ -57,28 +57,28 @@ impl FidlServer {
         server: Arc<Self>,
         req: CommitStatusProviderRequest,
     ) -> Result<(), Error> {
-        // The server should only unblock when p_check observes `USER_1`, which only happens
-        // if either of these conditions are met:
-        // * The system is committed on boot and p_fidl already has `USER_0` asserted.
-        // * The system is pending commit and p_fidl does not have `USER_0` asserted.
+        // The server should only unblock when either of these conditions are met:
+        // * The system is committed on boot and p_external already has `USER_0` asserted.
+        // * The system is pending commit and p_external does not have `USER_0` asserted.
         //
         // This ensures that consumers (e.g. the GC service) will always observe the `USER_0` signal
-        // on p_fidl if the system is committed. Otherwise, there would be an edge case where
+        // on p_external if the system is committed. Otherwise, there would be an edge case where
         // the system is committed and the consumer received the EventPair, but we haven't yet
         // asserted the signal on the EventPair.
         //
         // If there is an error with `put_metadata_in_happy_state`, the FIDL server will hang here
         // indefinitely. This is acceptable because we'll Soon™ reboot on error.
-        OnSignals::new(&server.p_check, zx::Signals::USER_1).await?;
+        let () = server.blocker.clone().await.context("while unblocking fidl server")?;
 
         let CommitStatusProviderRequest::IsCurrentSystemCommitted { responder } = req;
 
         responder
             .send(
                 server
-                    .p_fidl
+                    .p_external
                     .duplicate_handle(zx::Rights::BASIC)
-                    .context("while duplicating p_fidl")?,
+                    .context("while duplicating p_external")?
+                    .into(),
             )
             .context("while sending IsCurrentSystemCommitted response")
     }

@@ -38,11 +38,11 @@ rustc_library("lib") {
     "src/fidl.rs",
     "src/main.rs",
     "src/metadata.rs",
-    "src/metadata/check.rs",
     "src/metadata/commit.rs",
     "src/metadata/configuration.rs",
     "src/metadata/errors.rs",
     "src/metadata/policy.rs",
+    "src/metadata/verify.rs",
   ]
 
   visibility = [

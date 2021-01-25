@@ -10,8 +10,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
-    fuchsia_zircon::{self as zx, EventPair, HandleBased},
-    futures::{prelude::*, stream::FuturesUnordered},
+    fuchsia_zircon::{self as zx, HandleBased},
+    futures::{channel::oneshot, prelude::*, stream::FuturesUnordered},
     std::sync::Arc,
 };
 
@@ -38,7 +38,7 @@ pub fn main() -> Result<(), Error> {
 
 async fn main_inner_async() -> Result<(), Error> {
     // TODO(http://fxbug.dev/64595) Actually use the configuration once we start implementing
-    // health checks.
+    // health verification.
     let _config = Config::load_from_config_data_or_default();
 
     let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()
@@ -51,10 +51,14 @@ async fn main_inner_async() -> Result<(), Error> {
         .context("transport error while calling find_boot_manager()")?;
 
     let futures = FuturesUnordered::new();
-    let (p_check, p_fidl) = EventPair::create().context("while creating EventPairs")?;
-    let p_check_clone = p_check
+    let (p_internal, p_external) = zx::EventPair::create().context("while creating EventPairs")?;
+
+    // Keep a copy of the internal pair so that external consumers don't observe EVENTPAIR_CLOSED.
+    let _p_internal_clone = p_internal
         .duplicate_handle(zx::Rights::SIGNAL_PEER | zx::Rights::SIGNAL)
-        .context("while duplicating p_check")?;
+        .context("while duplicating p_internal")?;
+
+    let (unblocker, blocker) = oneshot::channel();
 
     // Handle putting boot metadata in happy state.
     futures.push(
@@ -62,7 +66,8 @@ async fn main_inner_async() -> Result<(), Error> {
             // TODO(http://fxbug.dev/64595) combine the config and the result of
             // put_metadata_in_happy_state to determine if we should reboot. For now, we just log.
             if let Err(e) =
-                crate::metadata::put_metadata_in_happy_state(&boot_manager, &p_check_clone).await
+                crate::metadata::put_metadata_in_happy_state(&boot_manager, &p_internal, unblocker)
+                    .await
             {
                 fx_log_warn!("error putting boot metadata in happy state: {:#}", anyhow!(e));
             }
@@ -73,7 +78,7 @@ async fn main_inner_async() -> Result<(), Error> {
     // Handle FIDL.
     let mut fs = ServiceFs::new_local();
     fs.take_and_serve_directory_handle().context("while serving directory handle")?;
-    let fidl = Arc::new(FidlServer::new(p_check, p_fidl));
+    let fidl = Arc::new(FidlServer::new(p_external, blocker));
     futures.push(FidlServer::run(fidl, fs).boxed_local());
 
     let () = futures.collect::<()>().await;

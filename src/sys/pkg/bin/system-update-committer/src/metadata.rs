@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Handles interfacing with the boot metadata (e.g. checking a slot, committing a slot, etc).
+//! Handles interfacing with the boot metadata (e.g. verifying a slot, committing a slot, etc).
 
 use {
-    check::do_health_checks,
     commit::do_commit,
     errors::MetadataError,
     fidl_fuchsia_paver as paver,
-    fuchsia_zircon::{self as zx, AsHandleRef, EventPair, Peered},
+    fuchsia_zircon::{self as zx, EventPair, Peered},
+    futures::channel::oneshot,
     policy::PolicyEngine,
+    verify::do_health_verification,
 };
 
-mod check;
 mod commit;
 mod configuration;
 mod errors;
 mod policy;
+mod verify;
 
 /// Puts BootManager metadata into a happy state, provided we believe the system can OTA.
 ///
@@ -25,38 +26,47 @@ mod policy;
 /// * The current configuration is active and marked Healthy.
 /// * The alternate configuration is marked Unbootable.
 ///
-/// To put the metadata in this state, we may need to check and commit. To make it easier to
-/// determine if we should check and commit, we consult the `PolicyEngine`.
+/// To put the metadata in this state, we may need to verify and commit. To make it easier to
+/// determine if we should verify and commit, we consult the `PolicyEngine`.
 ///
 /// If this function returns an error, it likely means that the system is somehow busted, and that
 /// it should be rebooted. Rebooting will hopefully either fix the issue or decrement the boot
 /// counter, eventually leading to a rollback.
 pub async fn put_metadata_in_happy_state(
     boot_manager: &paver::BootManagerProxy,
-    p_check: &EventPair,
+    p_internal: &EventPair,
+    unblocker: oneshot::Sender<()>,
 ) -> Result<(), MetadataError> {
     let engine = PolicyEngine::build(boot_manager).await.map_err(MetadataError::Policy)?;
-    if let Some(current_config) = engine.should_check_and_commit().map_err(MetadataError::Policy)? {
+    let mut unblocker = Some(unblocker);
+    if let Some(current_config) =
+        engine.should_verify_and_commit().map_err(MetadataError::Policy)?
+    {
         // At this point, the FIDL server should start responding to requests so that clients can
-        // find out that health checks are underway.
-        let () = unblock_fidl_server(&p_check)?;
-        let () = do_health_checks().await.map_err(MetadataError::HealthCheck)?;
+        // find out that the health verification is underway.
+        unblocker = unblock_fidl_server(unblocker)?;
+        let () = do_health_verification().await.map_err(MetadataError::Verify)?;
         let () = do_commit(boot_manager, current_config).await.map_err(MetadataError::Commit)?;
     }
 
     // Tell the rest of the system we are now committed.
-    let () = p_check
+    let () = p_internal
         .signal_peer(zx::Signals::NONE, zx::Signals::USER_0)
         .map_err(MetadataError::SignalPeer)?;
 
-    // Ensure the FIDL server will be unblocked, even if we didn't run health checks.
-    unblock_fidl_server(&p_check)
+    // Ensure the FIDL server will be unblocked, even if we didn't verify health.
+    unblock_fidl_server(unblocker)?;
+
+    Ok(())
 }
 
-fn unblock_fidl_server(p_check: &zx::EventPair) -> Result<(), MetadataError> {
-    p_check
-        .signal_handle(zx::Signals::NONE, zx::Signals::USER_1)
-        .map_err(MetadataError::SignalHandle)
+fn unblock_fidl_server(
+    unblocker: Option<oneshot::Sender<()>>,
+) -> Result<Option<oneshot::Sender<()>>, MetadataError> {
+    if let Some(sender) = unblocker {
+        let () = sender.send(()).map_err(|_| MetadataError::Unblock)?;
+    }
+    Ok(None)
 }
 
 // There is intentionally some overlap between the tests here and in `policy`. We do this so we can
@@ -82,16 +92,19 @@ mod tests {
                 .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
                 .build(),
         );
-        let (p_check, p_fidl) = EventPair::create().unwrap();
+        let (p_internal, p_external) = EventPair::create().unwrap();
+        let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
+            .await
+            .unwrap();
 
         assert_eq!(paver.take_events(), vec![]);
         assert_eq!(
-            p_fidl.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            p_external.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
             Ok(zx::Signals::USER_0)
         );
-        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
+        assert_eq!(unblocker_recv.await, Ok(()));
     }
 
     /// When we're in recovery, we should not update metadata.
@@ -104,16 +117,19 @@ mod tests {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Healthy)))
                 .build(),
         );
-        let (p_check, p_fidl) = EventPair::create().unwrap();
+        let (p_internal, p_external) = EventPair::create().unwrap();
+        let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
+            .await
+            .unwrap();
 
         assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
         assert_eq!(
-            p_fidl.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            p_external.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
             Ok(zx::Signals::USER_0)
         );
-        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
+        assert_eq!(unblocker_recv.await, Ok(()));
     }
 
     /// When the current slot is healthy, we should not update metadata.
@@ -125,9 +141,12 @@ mod tests {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Healthy)))
                 .build(),
         );
-        let (p_check, p_fidl) = EventPair::create().unwrap();
+        let (p_internal, p_external) = EventPair::create().unwrap();
+        let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
+            .await
+            .unwrap();
 
         assert_eq!(
             paver.take_events(),
@@ -137,10 +156,10 @@ mod tests {
             ]
         );
         assert_eq!(
-            p_fidl.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            p_external.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
             Ok(zx::Signals::USER_0)
         );
-        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
+        assert_eq!(unblocker_recv.await, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -153,24 +172,27 @@ mod tests {
         test_does_not_change_metadata_when_current_is_healthy(&Configuration::B).await
     }
 
-    /// When the current slot is pending, we should check, commit, & unblock the fidl server.
-    async fn test_checks_and_commits_when_current_is_pending(current_config: &Configuration) {
+    /// When the current slot is pending, we should verify, commit, & unblock the fidl server.
+    async fn test_verifies_and_commits_when_current_is_pending(current_config: &Configuration) {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(current_config.into())
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
                 .build(),
         );
-        let (p_check, p_fidl) = EventPair::create().unwrap();
+        let (p_internal, p_external) = EventPair::create().unwrap();
+        let (unblocker, unblocker_recv) = oneshot::channel();
 
-        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+        put_metadata_in_happy_state(&paver.spawn_boot_manager_service(), &p_internal, unblocker)
+            .await
+            .unwrap();
 
         assert_eq!(
             paver.take_events(),
             vec![
                 PaverEvent::QueryCurrentConfiguration,
                 PaverEvent::QueryConfigurationStatus { configuration: current_config.into() },
-                // The health check gets performed here, but we don't see any side-effects.
+                // The health verification gets performed here, but we don't see any side-effects.
                 PaverEvent::SetConfigurationHealthy { configuration: current_config.into() },
                 PaverEvent::SetConfigurationUnbootable {
                     configuration: current_config.to_alternate().into()
@@ -178,17 +200,17 @@ mod tests {
                 PaverEvent::BootManagerFlush,
             ]
         );
-        assert_eq!(OnSignals::new(&p_fidl, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
-        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
+        assert_eq!(OnSignals::new(&p_external, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+        assert_eq!(unblocker_recv.await, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_checks_and_commits_when_current_is_pending_a() {
-        test_checks_and_commits_when_current_is_pending(&Configuration::A).await
+    async fn test_verifies_and_commits_when_current_is_pending_a() {
+        test_verifies_and_commits_when_current_is_pending(&Configuration::A).await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_checks_and_commits_when_current_is_pending_b() {
-        test_checks_and_commits_when_current_is_pending(&Configuration::B).await
+    async fn test_verifies_and_commits_when_current_is_pending_b() {
+        test_verifies_and_commits_when_current_is_pending(&Configuration::B).await
     }
 }

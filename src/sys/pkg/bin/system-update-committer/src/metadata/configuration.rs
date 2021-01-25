@@ -4,7 +4,7 @@
 
 use fidl_fuchsia_paver as paver;
 
-/// Wrapper for only configurations we support in checks and commits.
+/// Wrapper for only configurations we support in verification and commits.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Configuration {
     A,

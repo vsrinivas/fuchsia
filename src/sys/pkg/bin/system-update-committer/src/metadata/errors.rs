@@ -32,13 +32,13 @@ pub enum PolicyError {
     CurrentConfigurationUnbootable(paver::Configuration),
 }
 
-/// Error condition that may be returned by `do_health_checks`.
+/// Error condition that may be returned by `do_health_verification`.
 #[derive(Error, Debug)]
 // TODO(http://fxbug.dev/64595) use this.
 #[allow(dead_code)]
-pub enum HealthCheckError {
-    #[error("the blobfs check failed")]
-    BlobFsCheckFailed,
+pub enum VerifyError {
+    #[error("the blobfs verification failed")]
+    BlobFs,
 
     #[error("an unexpected error occurred")]
     Other(#[source] anyhow::Error),
@@ -47,14 +47,14 @@ pub enum HealthCheckError {
 /// Error condition that may be returned by `put_metadata_in_happy_state`.
 #[derive(Error, Debug)]
 pub enum MetadataError {
-    #[error("while calling do_health_checks")]
-    HealthCheck(#[source] HealthCheckError),
+    #[error("while calling do_health_verification")]
+    Verify(#[source] VerifyError),
 
     #[error("while signalling EventPair peer")]
     SignalPeer(#[source] Status),
 
-    #[error("while signalling EventPair handle")]
-    SignalHandle(#[source] Status),
+    #[error("while sending the unblock")]
+    Unblock,
 
     #[error("while doing commit")]
     Commit(#[source] BootManagerError),
