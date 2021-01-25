@@ -228,6 +228,11 @@ class PrettyPrinter {
   }
 #endif
 
+  PrettyPrinter& operator<<(double data) {
+    *this << std::to_string(data);
+    return *this;
+  }
+
   PrettyPrinter& operator<<(std::string_view data);
 
   // Used by the color functions.

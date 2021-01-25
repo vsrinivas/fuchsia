@@ -133,7 +133,11 @@ const char* const kWithHelp = R"(These options can be used several times.
       method. The groups are sorted by number of events, so groups with more associated events are
       listed earlier.
   --with=top=<path>
-      Like --with=top but the result is stored into the file specified by <path>..)";
+      Like --with=top but the result is stored into the file specified by <path>.
+  --with=group-by-thread
+      Like For each thread, display a short version of all the events.
+  --with=group-by-thread=<path>
+      Like --with=group-by-thread but the result is stored into the file specified by <path>.)";
 
 const char* const kCompareHelp = R"(  --compare=<path>
       Compare output with the one stored in the given file)";
@@ -482,6 +486,11 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
       display_options->AddExtraGeneration(ExtraGeneration::Kind::kCpp, "");
     } else if (extra_generation.find("generate-tests=") == 0) {
       display_options->AddExtraGeneration(ExtraGeneration::Kind::kCpp, extra_generation.substr(15));
+    } else if (extra_generation == "group-by-thread") {
+      display_options->AddExtraGeneration(ExtraGeneration::Kind::kThreads, "");
+    } else if (extra_generation.find("group-by-thread=") == 0) {
+      display_options->AddExtraGeneration(ExtraGeneration::Kind::kThreads,
+                                          extra_generation.substr(16));
     } else {
       return "Invalid generation " + extra_generation + " for option --with.";
     }

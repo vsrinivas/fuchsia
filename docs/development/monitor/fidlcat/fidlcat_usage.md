@@ -328,14 +328,10 @@ one of the regular expressions specified with **--trigger** is encountered.
 This is really useful when you need to understand what's going on after you received or emit a
 particular message.
 
-## Symbols
+## Filter threads
 
-Fidlcat can connect to a symbol server. You have to use the option:
-
-**--with-symbol-server**
-
-The first time you use this option, fidlcat will give you a link to an
-authentication page. You then have to use the generated key to authenticate.
+When using the option `--thread=<thread koid>` only the events from the specified thread are
+displayed. The option can be used several times to display several threads.
 
 ## High level summary
 
@@ -385,6 +381,10 @@ exchanged when the service is restarted.
 
 ## Top protocols
 
-The options `--with=top` and `--with=top&lt;path&gt;` generate a view that groups the output by
+The options `--with=top` and `--with=top=&lt;path&gt;` generate a view that groups the output by
 process, protocol, and method. The groups are sorted by number of events, so groups with more
 associated events are listed earlier.
+
+## Group by thread
+
+The options `--with=group-by-thread` and `--with=group-by-thread=&lt;path&gt;` generate a view that, for each thread, displays a short version of all the events.

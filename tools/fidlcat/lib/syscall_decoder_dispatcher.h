@@ -1765,6 +1765,10 @@ class SyscallDecoderDispatcher {
   const std::map<std::string, std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
   const std::map<zx_koid_t, std::unique_ptr<Process>>& processes() const { return processes_; }
+  std::map<zx_koid_t, std::unique_ptr<Process>>& processes() { return processes_; }
+
+  const std::map<zx_koid_t, std::unique_ptr<Thread>>& threads() const { return threads_; }
+  std::map<zx_koid_t, std::unique_ptr<Thread>>& threads() { return threads_; }
 
   const Inference& inference() const { return inference_; }
   Inference& inference() { return inference_; }
@@ -2104,6 +2108,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   void DisplaySummary(std::ostream& os);
 
   void DisplayTop(std::ostream& os);
+
+  void DisplayThreads(std::ostream& os);
 
   void GenerateTests(const std::string& output_directory);
 

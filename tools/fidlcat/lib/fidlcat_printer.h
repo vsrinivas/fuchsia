@@ -35,12 +35,17 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
 
   bool display_stack_frame() const { return display_stack_frame_; }
 
+  SyscallDisplayDispatcher* dispatcher() const { return dispatcher_; }
+
   bool DumpMessages() const override { return dump_messages_; }
 
   void DisplayHandle(const zx_handle_disposition_t& handle) override;
   void DisplayHandle(zx_handle_t handle) {
-    zx_handle_disposition_t disposition = {
-        .operation = fidl_codec::kNoHandleDisposition, .handle = handle, .type = 0, .rights = 0, .result = ZX_OK};
+    zx_handle_disposition_t disposition = {.operation = fidl_codec::kNoHandleDisposition,
+                                           .handle = handle,
+                                           .type = 0,
+                                           .rights = 0,
+                                           .result = ZX_OK};
     DisplayHandle(disposition);
   }
   void DisplayHandleInfo(HandleInfo* handle_info);
@@ -58,6 +63,7 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
   Process* const process_;
   const bool display_stack_frame_;
   const bool dump_messages_;
+  SyscallDisplayDispatcher* const dispatcher_;
 };
 
 }  // namespace fidlcat

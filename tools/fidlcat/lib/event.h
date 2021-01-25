@@ -275,6 +275,9 @@ class Event {
   // Timestamp in nanoseconds.
   int64_t timestamp() const { return timestamp_; }
 
+  // Returns true if the event is associated to the thread.
+  virtual bool ForThread(Thread* thread) const { return false; }
+
   // Method to downcast an event
   virtual OutputEvent* AsOutputEvent() { return nullptr; }
 
@@ -339,6 +342,8 @@ class ThreadEvent : public Event {
   ThreadEvent(int64_t timestamp, Thread* thread) : Event(timestamp), thread_(thread) {}
 
   Thread* thread() const { return thread_; }
+
+  bool ForThread(Thread* thread) const override { return thread == thread_; }
 
  private:
   Thread* const thread_;

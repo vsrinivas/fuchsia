@@ -19,7 +19,8 @@ FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* pr
       inference_(dispatcher->inference()),
       process_(process),
       display_stack_frame_(dispatcher->decode_options().stack_level != kNoStack),
-      dump_messages_(dispatcher->dump_messages()) {}
+      dump_messages_(dispatcher->dump_messages()),
+      dispatcher_(dispatcher) {}
 
 FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* process,
                                std::ostream& os, std::string_view line_header, int tabulations)
@@ -27,7 +28,8 @@ FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* pr
 
 void FidlcatPrinter::DisplayHandle(const zx_handle_disposition_t& handle) {
   HandleInfo* handle_info = process_->SearchHandleInfo(handle.handle);
-  if ((handle.type == ZX_OBJ_TYPE_NONE) && (handle_info != nullptr) && (handle.operation == fidl_codec::kNoHandleDisposition)) {
+  if ((handle.type == ZX_OBJ_TYPE_NONE) && (handle_info != nullptr) &&
+      (handle.operation == fidl_codec::kNoHandleDisposition)) {
     zx_handle_disposition_t tmp = handle;
     tmp.type = handle_info->object_type();
     fidl_codec::DisplayHandle(tmp, *this);

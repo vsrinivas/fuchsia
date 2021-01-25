@@ -264,6 +264,8 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
       return;
     }
   }
+  printer << fidl_codec::Green << printer.dispatcher()->GetTime(timestamp())
+          << fidl_codec::ResetColor << ' ';
   switch (syscall()->kind()) {
     case SyscallKind::kChannelRead:
       printer << "read  ";

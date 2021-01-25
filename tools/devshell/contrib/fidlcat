@@ -88,6 +88,9 @@
 ##                          events, so groups with more associated events are listed earlier.
 ##    --with=top=<path>     Like --with=top but the result is stored into the file specified by
 ##                          <path>.
+##    --with=group-by-thread        For each thread display a short version of all the events.
+##    --with=group-by-thread=<path> Like --with=group-by-thread but the result is stored into the
+##                                  file specified by <path>.
 ##
 ## Display options:
 ##    --with-process-info         Display the process name, process id and thread id on

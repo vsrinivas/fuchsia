@@ -845,6 +845,10 @@ void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent>
 
 void SyscallDisplayDispatcher::SessionEnded() {
   SyscallDecoderDispatcher::SessionEnded();
+  if (!decoded_events().empty()) {
+    // Uses the first event for the timestamp reference.
+    GetTime(decoded_events().front()->timestamp());
+  }
   const char* separator = "";
   for (const auto& extra_generation : extra_generation()) {
     if (extra_generation.path.empty()) {
@@ -858,6 +862,9 @@ void SyscallDisplayDispatcher::SessionEnded() {
           top.Display(os_);
           break;
         }
+        case ExtraGeneration::Kind::kThreads:
+          DisplayThreads(os_);
+          break;
         case ExtraGeneration::Kind::kCpp:
           GenerateTests("/tmp/fidlcat-generated-tests/" + std::to_string(std::time(0)));
           break;
@@ -880,6 +887,9 @@ void SyscallDisplayDispatcher::SessionEnded() {
               top.Display(output);
               break;
             }
+            case ExtraGeneration::Kind::kThreads:
+              DisplayThreads(output);
+              break;
             case ExtraGeneration::Kind::kCpp:
               break;
           }

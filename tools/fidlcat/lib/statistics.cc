@@ -5,6 +5,7 @@
 #include "tools/fidlcat/lib/statistics.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 #include "tools/fidlcat/proto/session.pb.h"
@@ -162,6 +163,40 @@ void SyscallDisplayDispatcher::DisplaySummary(std::ostream& os) {
       }
     }
     separator = "\n";
+  }
+}
+
+void SyscallDisplayDispatcher::DisplayThreads(std::ostream& os) {
+  std::vector<zx_koid_t> process_koids;
+  for (const auto& process : processes()) {
+    process_koids.emplace_back(process.first);
+  }
+  std::sort(process_koids.begin(), process_koids.end());
+  for (auto process_koid : process_koids) {
+    Process* process = processes()[process_koid].get();
+    FidlcatPrinter printer(
+        this, process, os,
+        extra_generation_needs_colors() ? fidl_codec::WithColors : fidl_codec::WithoutColors, "");
+    std::vector<zx_koid_t> thread_koids;
+    for (const auto& thread : threads()) {
+      if (thread.second->process()->koid() == process_koid) {
+        thread_koids.emplace_back(thread.first);
+      }
+    }
+    std::sort(thread_koids.begin(), thread_koids.end());
+    for (auto thread_koid : thread_koids) {
+      Thread* thread = threads()[thread_koid].get();
+      printer << "\n";
+      printer << "thread " << process->name() << " " << fidl_codec::Red << process_koid
+              << fidl_codec::ResetColor << ":" << fidl_codec::Red << thread_koid
+              << fidl_codec::ResetColor << "\n";
+      printer << "---------------------------------------------\n";
+      for (const auto& event : decoded_events()) {
+        if (event->ForThread(thread)) {
+          event->Display(printer);
+        }
+      }
+    }
   }
 }
 
