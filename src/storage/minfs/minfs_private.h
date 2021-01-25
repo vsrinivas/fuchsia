@@ -492,6 +492,7 @@ class Minfs :
   // TODO(fxbug.dev/51057): Git rid of MountState.
   MountState mount_state_ = {};
   async::TaskClosure journal_sync_task_;
+  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger_ = nullptr;
 #else
   // Store start block + length for all extents. These may differ from info block for
   // sparse files.

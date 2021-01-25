@@ -43,6 +43,7 @@
 #include <fs/pseudo_dir.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "sdk/lib/sys/cpp/service_directory.h"
 #include "src/storage/fvm/client.h"
 #endif
 
@@ -869,7 +870,6 @@ void Minfs::StopWriteback() {
   journal_ = nullptr;
   bc_->Sync();
 }
-
 #endif
 
 fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookupInternal(uint32_t ino) {
@@ -1244,24 +1244,14 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       .dirty_cache_enabled = Minfs::DirtyCacheEnabled(),
   };
 
-  // Report the oldest version mounted.  For now these are our only Cobalt metrics.  When more are
-  // added, this will have to change a bit.
-  auto cobalt_client =
-      options.collector_factory
-          ? options.collector_factory()
-          : std::make_unique<cobalt_client::Collector>(fs_metrics::kCobaltProjectId);
-  auto metrics = std::make_unique<fs_metrics::Metrics>(std::move(cobalt_client),
-                                                       fs_metrics::Component::kMinfs);
-  metrics->RecordOldestVersionMounted(std::to_string(fs->Info().format_version) + "/" +
-                                      std::to_string(fs->Info().oldest_revision));
-  std::thread metric_flusher([metrics = std::move(metrics)] {
-    // Keep trying to flush until we succeed.
-    while (!metrics->Flush()) {
-      sleep(30);
-    }
-  });
-  metric_flusher.detach();
-
+  if (options.cobalt_factory) {
+    fs->cobalt_logger_ = options.cobalt_factory();
+    fs->cobalt_logger_->LogEventCount(static_cast<uint32_t>(fs_metrics::Event::kVersion),
+                                      static_cast<uint32_t>(fs_metrics::Component::kMinfs),
+                                      std::to_string(fs->Info().format_version) + "/" +
+                                          std::to_string(fs->Info().oldest_revision),
+                                      {}, 1);
+  }
 #endif  // defined(__Fuchsia__)
 
   *out = std::move(fs);
@@ -1374,6 +1364,12 @@ zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t*
                           fbl::Closure on_unmount, ServeLayout serve_layout) {
   TRACE_DURATION("minfs", "MountAndServe");
   minfs::MountOptions options = mount_options;
+  if (!options.cobalt_factory) {
+    options.cobalt_factory = [dispatcher] {
+      return cobalt::NewCobaltLoggerFromProjectId(
+          dispatcher, sys::ServiceDirectory::CreateFromNamespace(), fs_metrics::kCobaltProjectId);
+    };
+  }
 
   fbl::RefPtr<VnodeMinfs> data_root;
   zx_status_t status = Mount(std::move(bcache), options, &data_root);

@@ -20,7 +20,7 @@
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 
-#include <fs/metrics/cobalt_metrics.h>
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #endif
 
 #include <utility>
@@ -90,8 +90,9 @@ struct MountOptions {
   bool quiet = false;
 
 #ifdef __Fuchsia__
-  // A function that generates a Cobalt collector.  If not provided, a default collector is used.
-  std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory;
+  // A function that generates a Cobalt logger.  If not provided, a default logger is used so long
+  // as the MountAndServe function is used.
+  std::function<std::unique_ptr<cobalt::CobaltLogger>()> cobalt_factory;
 #endif
 };
 

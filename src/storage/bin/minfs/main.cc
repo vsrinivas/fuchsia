@@ -75,7 +75,7 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
     return ZX_ERR_BAD_STATE;
   }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   auto on_unmount = [&loop]() {

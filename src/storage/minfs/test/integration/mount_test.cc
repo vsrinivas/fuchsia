@@ -135,7 +135,7 @@ class MountTestTemplate : public testing::Test {
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
   zx::channel root_client_end_;
   zx::channel root_server_end_;
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
 };
 
 using MountTest = MountTestTemplate<false>;

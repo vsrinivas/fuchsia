@@ -38,6 +38,7 @@ test("minfs_unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/storage/fvm",
     "//src/storage/minfs",
     "//zircon/public/lib/safemath",

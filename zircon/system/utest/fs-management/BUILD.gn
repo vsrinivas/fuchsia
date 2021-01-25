@@ -74,6 +74,12 @@ fuchsia_component("fs-management-test") {
 
 fuchsia_test_package("fs-management-test-package") {
   test_components = [ ":fs-management-test" ]
+  test_specs = {
+    log_settings = {
+      # Required due to no access to Cobalt for minfs
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

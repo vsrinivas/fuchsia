@@ -158,6 +158,7 @@ mod tests {
     use {
         super::{DirectoryEntry, Entry, EntryDistribution, FileEntry},
         fs_management::Minfs,
+        isolated_driver_manager::launch_isolated_driver_manager,
         ramdevice_client::RamdiskClient,
         rand::{rngs::StdRng, Rng, SeedableRng},
     };
@@ -232,6 +233,9 @@ mod tests {
         let dist = EntryDistribution::new(depth);
         let tree: DirectoryEntry = rng.sample(dist);
 
+        launch_isolated_driver_manager().expect("failed to launch isolated driver manager");
+        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
+            .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(512, 1 << 16).expect("failed to make ramdisk");
         let device_path = ramdisk.get_path();
 
