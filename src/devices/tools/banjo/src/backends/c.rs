@@ -290,7 +290,10 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                         }
                         ast::Ty::Struct | ast::Ty::Union => {
                             let ty_name = ty_to_c_str(ast, ty).unwrap();
-                            let prefix = if attrs.has_attribute("InOut") || ty.is_reference() {
+                            let prefix = if attrs.has_attribute("InOut")
+                                || attrs.has_attribute("Mutable")
+                                || ty.is_reference()
+                            {
                                 ""
                             } else {
                                 "const "
