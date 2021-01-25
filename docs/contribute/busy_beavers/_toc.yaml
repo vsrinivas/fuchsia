@@ -18,6 +18,8 @@ toc:
     path: /docs/contribute/busy_beavers/build/bringup_test_modernization.md
   - title: "zx_* wrappers deprecation"
     path: /docs/contribute/busy_beavers/build/zx_wrappers_deprecation.md
+  - title: "Hermetic actions"
+    path: /docs/contribute/busy_beavers/build/hermetic_actions.md
 - title: "Source control projects"
   section:
   - title: "Layer Cake deprecation"

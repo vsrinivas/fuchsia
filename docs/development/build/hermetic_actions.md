@@ -168,6 +168,10 @@ are for.
 You can find an example for fixing a build action to generate a depfile here:
 
 *   [472565: [build] Generate depfile in generate_fidl_json.py](https://fuchsia-review.googlesource.com/c/fuchsia/+/472565)
+*   [472657: [build] Fix hermeticity of hotsort_target_internal](https://fuchsia-review.googlesource.com/c/fuchsia/+/472657)
+*   [473980: [build] Fix hermeticity of fidl-c-header](https://fuchsia-review.googlesource.com/c/fuchsia/+/473980)
+*   [472658: [build] Make go_library build hermetically](https://fuchsia-review.googlesource.com/c/fuchsia/+/472658)
+*   [472637: [build] Fix hermeticity of flatbuffer](https://fuchsia-review.googlesource.com/c/third_party/flatbuffers/+/472637)
 
 ### Expanding arguments from a file
 
@@ -203,7 +207,10 @@ action("foo") {
 }
 ```
 
+See also: [hermetic actions on Busy Beavers][hermetic-actions-bb]
+
 [action]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action
 [action_foreach]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action_foreach
 [depfile]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_depfile
+[hermetic-actions-bb]: /docs/contribute/busy_beavers/build/hermetic_actions.md
 [no_op]: /docs/development/build/ninja_no_op.md
