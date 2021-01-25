@@ -11,7 +11,6 @@
 #include <zircon/types.h>
 
 #include <condition_variable>
-#include <list>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -21,6 +20,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/task_queue.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -101,8 +101,8 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   // Internal struct definitions.
   //
 
-  // Our work list type.
-  using WorkList = std::list<fit::function<void()>>;
+  // Our work queue type.
+  using WorkQueue = task_queue<fit::callback<void()>>;
 
   // Struct for state internal to an Ioctl() call.
   struct IoctlState;
@@ -111,19 +111,16 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   // Work functions.
   //
 
-  // Handle each of the relevant types of MSGBUF messages.
-  void HandleMsgbufIoctlResponse(const MsgbufIoctlResponse& ioctl_response, WorkList* work_list)
+  // Create a callback for each of the relevant types of MSGBUF messages.
+  WorkQueue::value_type CreateMsgbufIoctlResponseCallback(const MsgbufIoctlResponse& ioctl_response)
       __TA_REQUIRES(interrupt_handler_mutex_);
-  void HandleMsgbufWlEvent(const MsgbufWlEvent& wl_event, WorkList* work_list)
+  WorkQueue::value_type CreateMsgbufWlEventCallback(const MsgbufWlEvent& wl_event)
       __TA_REQUIRES(interrupt_handler_mutex_);
 
-  // Process events on each DMA completion ring.
-  void ProcessControlCompleteRing(WorkList* work_list) __TA_REQUIRES(interrupt_handler_mutex_);
-  void ProcessTxCompleteRing(WorkList* work_list) __TA_REQUIRES(interrupt_handler_mutex_);
-  void ProcessRxCompleteRing(WorkList* work_list) __TA_REQUIRES(interrupt_handler_mutex_);
-
-  // Append a list of work to the work queue.
-  void AppendToWorkQueue(WorkList work_list);
+  // Create a list of callbacks to process events on each DMA completion ring.
+  WorkQueue::container_type ProcessControlCompleteRing() __TA_REQUIRES(interrupt_handler_mutex_);
+  WorkQueue::container_type ProcessTxCompleteRing() __TA_REQUIRES(interrupt_handler_mutex_);
+  WorkQueue::container_type ProcessRxCompleteRing() __TA_REQUIRES(interrupt_handler_mutex_);
 
   // Worker thread main function.
   void WorkerThreadFunction();
@@ -150,30 +147,25 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   // Other state.
   size_t rx_data_offset_;
 
+  // The work queue.
+  WorkQueue work_queue_;
+
   //
   // Interrupt handler state.
   //
 
   // Complete rings, to be used only from the interrupt handler.
-  std::mutex interrupt_handler_mutex_ __TA_ACQUIRED_BEFORE(work_queue_mutex_);
+  std::mutex interrupt_handler_mutex_;
   ReadDmaRing* control_complete_ring_ __TA_GUARDED(interrupt_handler_mutex_) = nullptr;
   ReadDmaRing* tx_complete_ring_ __TA_GUARDED(interrupt_handler_mutex_) = nullptr;
   ReadDmaRing* rx_complete_ring_ __TA_GUARDED(interrupt_handler_mutex_) = nullptr;
-
-  //
-  // Work queue state.
-  //
-
-  std::mutex work_queue_mutex_;
-  std::condition_variable work_queue_condvar_ __TA_GUARDED(work_queue_mutex_);
-  WorkList work_queue_ __TA_GUARDED(work_queue_mutex_);
 
   //
   // Worker thread state.
   //
 
   // Submit rings and buffer counts.
-  std::mutex worker_thread_mutex_ __TA_ACQUIRED_BEFORE(work_queue_mutex_);
+  std::mutex worker_thread_mutex_;
   WriteDmaRing* control_submit_ring_ __TA_GUARDED(worker_thread_mutex_) = nullptr;
   WriteDmaRing* rx_buffer_submit_ring_ __TA_GUARDED(worker_thread_mutex_) = nullptr;
   int required_ioctl_rx_buffers_ __TA_GUARDED(worker_thread_mutex_) = 0;

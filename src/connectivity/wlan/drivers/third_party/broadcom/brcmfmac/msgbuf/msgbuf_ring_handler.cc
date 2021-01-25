@@ -69,12 +69,10 @@ MsgbufRingHandler::~MsgbufRingHandler() {
   }
 
   if (worker_thread_.joinable()) {
-    WorkList work_list;
-    work_list.emplace_back([this]() {
+    work_queue_.emplace([this]() {
       AssertIsWorkerThread();
       worker_thread_exit_ = true;
     });
-    AppendToWorkQueue(std::move(work_list));
     worker_thread_.join();
   }
 }
@@ -211,13 +209,11 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
     return status;
   }
 
-  WorkList work_list;
-
   // Submit the ioctl request on the worker thread.
   IoctlState ioctl_state = {};
   ioctl_state.response = std::move(tx_data);
   ioctl_state.status = ZX_OK;
-  work_list.emplace_back([&]() {
+  work_queue_.emplace([&]() {
     AssertIsWorkerThread();
 
     const zx_status_t status = [&]() {
@@ -259,7 +255,6 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
       sync_completion_signal(&ioctl_state.completion);
     }
   });
-  AppendToWorkQueue(std::move(work_list));
 
   // Wait for the ioctl to be serviced.
   if ((status = sync_completion_wait(&ioctl_state.completion, timeout.get())) != ZX_OK) {
@@ -268,8 +263,7 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
     }
 
     // If we timeout on the completion wait, cancel the ioctl request.
-    WorkList work_list;
-    work_list.emplace_back([this]() {
+    work_queue_.emplace([this]() {
       AssertIsWorkerThread();
       if (ioctl_state_ == nullptr) {
         // It's possible that we sent the ioctl request cancel task, but the ioctl managed to
@@ -283,7 +277,6 @@ zx_status_t MsgbufRingHandler::Ioctl(uint8_t interface_index, uint32_t command,
       sync_completion_signal(&ioctl_state_->completion);
       ioctl_state_ = nullptr;
     });
-    AppendToWorkQueue(std::move(work_list));
     sync_completion_wait(&ioctl_state.completion, ZX_TIME_INFINITE);
   }
 
@@ -306,22 +299,21 @@ uint32_t MsgbufRingHandler::HandleInterrupt(uint32_t mailboxint) {
   std::lock_guard lock(interrupt_handler_mutex_);
 
   // Process our rings.
-  WorkList work_list;
-  ProcessControlCompleteRing(&work_list);
-  ProcessTxCompleteRing(&work_list);
-  ProcessRxCompleteRing(&work_list);
+  WorkQueue::container_type work_list;
+  work_list.splice(work_list.end(), ProcessControlCompleteRing());
+  work_list.splice(work_list.end(), ProcessTxCompleteRing());
+  work_list.splice(work_list.end(), ProcessRxCompleteRing());
 
   // Append ring entries to the respective work queues.
-  AppendToWorkQueue(std::move(work_list));
+  work_queue_.splice(std::move(work_list));
 
   return kInterruptMask;
 }
 
-void MsgbufRingHandler::HandleMsgbufIoctlResponse(const MsgbufIoctlResponse& ioctl_response,
-                                                  WorkList* work_list) {
-  work_list->emplace_back([this, request_id = ioctl_response.msg.request_id,
-                           resp_len = ioctl_response.resp_len, trans_id = ioctl_response.trans_id,
-                           firmware_status = ioctl_response.compl_hdr.status]() {
+MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufIoctlResponseCallback(
+    const MsgbufIoctlResponse& ioctl_response) {
+  return [this, request_id = ioctl_response.msg.request_id, resp_len = ioctl_response.resp_len,
+          trans_id = ioctl_response.trans_id, firmware_status = ioctl_response.compl_hdr.status]() {
     AssertIsWorkerThread();
     if (ioctl_state_ == nullptr) {
       BRCMF_ERR("Received ioctl completion without request");
@@ -362,49 +354,50 @@ void MsgbufRingHandler::HandleMsgbufIoctlResponse(const MsgbufIoctlResponse& ioc
 
     ioctl_state->status = status;
     sync_completion_signal(&ioctl_state->completion);
-  });
+  };
 }
 
-void MsgbufRingHandler::HandleMsgbufWlEvent(const MsgbufWlEvent& wl_event, WorkList* work_list) {
+MsgbufRingHandler::WorkQueue::value_type MsgbufRingHandler::CreateMsgbufWlEventCallback(
+    const MsgbufWlEvent& wl_event) {
   // Invoke the event handler, defensively.
-  work_list->emplace_back(
-      [this, request_id = wl_event.msg.request_id, event_size = wl_event.event_data_len]() {
-        AssertIsWorkerThread();
-        zx_status_t status = ZX_OK;
+  return [this, request_id = wl_event.msg.request_id, event_size = wl_event.event_data_len]() {
+    AssertIsWorkerThread();
+    zx_status_t status = ZX_OK;
 
-        DmaPool::Buffer buffer;
-        if ((status = rx_buffer_pool_->Acquire(request_id, &buffer)) != ZX_OK) {
-          BRCMF_ERR("Failed to acquire rx buffer %d", request_id);
-          return;
-        }
-        // We have consumed one RX buffer for this ioctl response.
-        ++required_event_rx_buffers_;
+    DmaPool::Buffer buffer;
+    if ((status = rx_buffer_pool_->Acquire(request_id, &buffer)) != ZX_OK) {
+      BRCMF_ERR("Failed to acquire rx buffer %d", request_id);
+      return;
+    }
+    // We have consumed one RX buffer for this ioctl response.
+    ++required_event_rx_buffers_;
 
-        if (event_handler_ == nullptr) {
-          // No event handler to invoke.
-          return;
-        }
+    if (event_handler_ == nullptr) {
+      // No event handler to invoke.
+      return;
+    }
 
-        const size_t event_size_with_offset = event_size + rx_data_offset_;
-        if (event_size_with_offset > buffer.size()) {
-          BRCMF_ERR("Received bad data length %zu, max %zu", event_size_with_offset, buffer.size());
-          return;
-        }
-        const void* data = nullptr;
-        if ((status = buffer.MapRead(event_size_with_offset, &data)) != ZX_OK) {
-          BRCMF_ERR("Failed to map rx buffer %d", buffer.index());
-          return;
-        }
+    const size_t event_size_with_offset = event_size + rx_data_offset_;
+    if (event_size_with_offset > buffer.size()) {
+      BRCMF_ERR("Received bad data length %zu, max %zu", event_size_with_offset, buffer.size());
+      return;
+    }
+    const void* data = nullptr;
+    if ((status = buffer.MapRead(event_size_with_offset, &data)) != ZX_OK) {
+      BRCMF_ERR("Failed to map rx buffer %d", buffer.index());
+      return;
+    }
 
-        const void* const event_data =
-            reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(data) + rx_data_offset_);
-        event_handler_->HandleWlEvent(event_data, event_size);
-      });
+    const void* const event_data =
+        reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(data) + rx_data_offset_);
+    event_handler_->HandleWlEvent(event_data, event_size);
+  };
 }
 
-void MsgbufRingHandler::ProcessControlCompleteRing(WorkList* work_list) {
+MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessControlCompleteRing() {
   zx_status_t status = ZX_OK;
   const void* buffer = nullptr;
+  WorkQueue::container_type work_list;
 
   // IMPORTANT: we are reading data back from firmware-written command rings, which may be
   // unreliable and/or security-compromised.  Program defensively!
@@ -427,12 +420,12 @@ void MsgbufRingHandler::ProcessControlCompleteRing(WorkList* work_list) {
         }
 
         case MsgbufCommonHeader::MsgType::kIoctlResponse: {
-          HandleMsgbufIoctlResponse(entry->ioctl_response, work_list);
+          work_list.emplace_back(CreateMsgbufIoctlResponseCallback(entry->ioctl_response));
           break;
         }
 
         case MsgbufCommonHeader::MsgType::kWlEvent: {
-          HandleMsgbufWlEvent(entry->wl_event, work_list);
+          work_list.emplace_back(CreateMsgbufWlEventCallback(entry->wl_event));
           break;
         }
 
@@ -444,11 +437,14 @@ void MsgbufRingHandler::ProcessControlCompleteRing(WorkList* work_list) {
     }
     control_complete_ring_->CommitRead(entry_count);
   }
+
+  return work_list;
 }
 
-void MsgbufRingHandler::ProcessTxCompleteRing(WorkList* work_list) {
+MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessTxCompleteRing() {
   zx_status_t status = ZX_OK;
   const void* buffer = nullptr;
+  WorkQueue::container_type work_list;
 
   // IMPORTANT: we are reading data back from firmware-written command rings, which may be
   // unreliable and/or security-compromised.  Program defensively!
@@ -471,11 +467,14 @@ void MsgbufRingHandler::ProcessTxCompleteRing(WorkList* work_list) {
     }
     tx_complete_ring_->CommitRead(entry_count);
   }
+
+  return work_list;
 }
 
-void MsgbufRingHandler::ProcessRxCompleteRing(WorkList* work_list) {
+MsgbufRingHandler::WorkQueue::container_type MsgbufRingHandler::ProcessRxCompleteRing() {
   zx_status_t status = ZX_OK;
   const void* buffer = nullptr;
+  WorkQueue::container_type work_list;
 
   // IMPORTANT: we are reading data back from firmware-written command rings, which may be
   // unreliable and/or security-compromised.  Program defensively!
@@ -500,59 +499,22 @@ void MsgbufRingHandler::ProcessRxCompleteRing(WorkList* work_list) {
 
     rx_complete_ring_->CommitRead(entry_count);
   }
-}
 
-void MsgbufRingHandler::AppendToWorkQueue(WorkList work_list) {
-  if (work_list.empty()) {
-    return;
-  }
-
-  std::lock_guard lock(work_queue_mutex_);
-  work_queue_.splice(work_queue_.end(), std::move(work_list));
-  work_queue_condvar_.notify_all();
+  return work_list;
 }
 
 void MsgbufRingHandler::WorkerThreadFunction() {
   std::lock_guard worker_thread_lock(worker_thread_mutex_);
 
-  WorkList work_list;
-  std::lock_guard lock(work_queue_mutex_);
-  while (true) {
-    // Wait for something interesting to happen.
-    while (true) {
-      if (worker_thread_exit_) {
-        return;
-      }
+  while (!worker_thread_exit_) {
+    // Wait for interesting things to happen, then do them.
+    work_queue_.run();
 
-      using std::swap;
-      swap(work_list, work_queue_);
-      if (!work_list.empty()) {
-        break;
-      }
-
-      // Since std::unique_lock does not play nice with threading annotations (yet), we hold the
-      // work_queue_mutex_ using an std::lock_guard, and shim around it here.
-      std::unique_lock ulock(work_queue_mutex_, std::adopt_lock);
-      work_queue_condvar_.wait(ulock);
-      ulock.release();
+    // Perform our once-per-batch work.
+    zx_status_t status = ZX_OK;
+    if ((status = QueueRxBuffers()) != ZX_OK) {
+      BRCMF_ERR("Failed to queue rx buffers: %s", zx_status_get_string(status));
     }
-    work_queue_mutex_.unlock();
-
-    // Now do the interesting things.
-    while (!work_list.empty()) {
-      work_list.front()();
-      work_list.pop_front();
-    }
-
-    {
-      // Perform our once-per-batch work.
-      zx_status_t status = ZX_OK;
-      if ((status = QueueRxBuffers()) != ZX_OK) {
-        BRCMF_ERR("Failed to queue rx buffers: %s", zx_status_get_string(status));
-      }
-    }
-
-    work_queue_mutex_.lock();
   }
 }
 
