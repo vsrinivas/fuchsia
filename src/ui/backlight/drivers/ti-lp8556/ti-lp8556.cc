@@ -85,7 +85,7 @@ zx_status_t Lp8556Device::GetBacklightState(bool* power, double* brightness) {
 zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   brightness = std::max(brightness, 0.0);
   brightness = std::min(brightness, 1.0);
-  uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);
+  uint16_t brightness_reg_value = static_cast<uint16_t>(ceil(brightness * kBrightnessRegMaxValue));
   if (brightness != brightness_) {
     // LSB should be updated before MSB. Writing to MSB triggers the brightness change.
     uint8_t buf[2];
