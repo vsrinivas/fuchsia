@@ -12,6 +12,7 @@
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -19,6 +20,8 @@
 #include <lib/fit/function.h>
 #include <lib/fit/optional.h>
 
+#include <algorithm>
+#include <cstddef>
 #include <variant>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
@@ -70,6 +73,17 @@ class OnlyLlcpp {
   void set_x(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kX;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  void set_x(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kX;
+    set_x(::fidl::ObjectView<uint32_t>(allocator));
+  }
+
+  template <typename... Args>
+  void set_x(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kX;
+    set_x(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_x() {

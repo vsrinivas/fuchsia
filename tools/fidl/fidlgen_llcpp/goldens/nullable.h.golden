@@ -12,6 +12,7 @@
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -19,6 +20,8 @@
 #include <lib/fit/function.h>
 #include <lib/fit/optional.h>
 
+#include <algorithm>
+#include <cstddef>
 #include <variant>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
@@ -85,6 +88,17 @@ class SimpleUnion {
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
+  void set_a(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kA;
+    set_a(::fidl::ObjectView<int32_t>(allocator));
+  }
+
+  template <typename... Args>
+  void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kA;
+    set_a(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+  }
+
   int32_t& mutable_a() {
     ZX_ASSERT(ordinal_ == Ordinal::kA);
     return *static_cast<int32_t*>(envelope_.data.get());
@@ -105,6 +119,17 @@ class SimpleUnion {
   void set_b(::fidl::tracking_ptr<float>&& elem) {
     ordinal_ = Ordinal::kB;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  void set_b(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kB;
+    set_b(::fidl::ObjectView<float>(allocator));
+  }
+
+  template <typename... Args>
+  void set_b(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kB;
+    set_b(::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
   }
 
   float& mutable_b() {

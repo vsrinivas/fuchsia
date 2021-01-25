@@ -109,36 +109,32 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
   }
   void GetHandleTable(uint32_t fields, GetHandleTableCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleTable::Builder builder(std::make_unique<test::HandleTable::Frame>());
+    test::HandleTable t(allocator);
     if ((fields & 1) != 0) {
-      fidl::ObjectView<zx::event> e(allocator);
-      zx::event::create(0, e.get());
-      builder.set_h1(e);
+      zx::event event;
+      zx::event::create(0, &event);
+      t.set_h1(allocator, std::move(event));
     }
     if ((fields & 2) != 0) {
-      fidl::ObjectView<test::HandleStruct> s(allocator);
-      zx::event::create(0, &s->h);
-      builder.set_h2(s);
+      t.set_h2(allocator);
+      zx::event::create(0, &t.h2().h);
     }
-    test::HandleTable t = builder.build();
     completer.Reply(std::move(t));
   }
   void GetHandleTableStruct(uint32_t fields,
                             GetHandleTableStructCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    test::HandleTable::Builder builder(std::make_unique<test::HandleTable::Frame>());
+    test::HandleTableStruct reply;
+    reply.t.Allocate(allocator);
     if ((fields & 1) != 0) {
-      fidl::ObjectView<zx::event> e(allocator);
-      zx::event::create(0, e.get());
-      builder.set_h1(e);
+      zx::event event;
+      zx::event::create(0, &event);
+      reply.t.set_h1(allocator, std::move(event));
     }
     if ((fields & 2) != 0) {
-      fidl::ObjectView<test::HandleStruct> s(allocator);
-      zx::event::create(0, &s->h);
-      builder.set_h2(s);
+      reply.t.set_h2(allocator);
+      zx::event::create(0, &reply.t.h2().h);
     }
-    test::HandleTableStruct reply;
-    reply.t = builder.build();
     completer.Reply(std::move(reply));
   }
   void GetOptionalHandleStruct(bool defined,
@@ -192,19 +188,18 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       GetOptionalHandleTableStructCompleter::Sync& completer) override {
     if (defined) {
       fidl::FidlAllocator allocator;
-      test::HandleTable::Builder builder(std::make_unique<test::HandleTable::Frame>());
+      fidl::ObjectView<test::HandleTableStruct> reply(allocator);
+      reply->t.Allocate(allocator);
       if ((fields & 1) != 0) {
         fidl::ObjectView<zx::event> e(allocator);
         zx::event::create(0, e.get());
-        builder.set_h1(e);
+        reply->t.set_h1(e);
       }
       if ((fields & 2) != 0) {
         fidl::ObjectView<test::HandleStruct> s(allocator);
         zx::event::create(0, &s->h);
-        builder.set_h2(s);
+        reply->t.set_h2(s);
       }
-      fidl::ObjectView<test::HandleTableStruct> reply(allocator);
-      reply->t = builder.build();
       completer.Reply(reply);
     } else {
       completer.Reply(nullptr);

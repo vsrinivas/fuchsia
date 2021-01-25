@@ -12,6 +12,7 @@
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -19,6 +20,8 @@
 #include <lib/fit/function.h>
 #include <lib/fit/optional.h>
 
+#include <algorithm>
+#include <cstddef>
 #include <variant>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
@@ -82,6 +85,18 @@ class UnionWithHandle {
   void set_h(::fidl::tracking_ptr<::zx::vmo>&& elem) {
     ordinal_ = Ordinal::kH;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  void set_h(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kH;
+    set_h(::fidl::ObjectView<::zx::vmo>(allocator));
+  }
+
+  template <typename... Args>
+  void set_h(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kH;
+    set_h(
+        ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
   }
 
   ::zx::vmo& mutable_h() {
@@ -149,8 +164,26 @@ class TableWithHandle final {
   bool has_h() const {
     return max_ordinal_ >= 1 && frame_ptr_->h_.data != nullptr;
   }
+  void set_h(::fidl::ObjectView<::zx::vmo> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->h_.data = elem;
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_h(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->h_.data = nullptr;
+  }
+  template <typename... Args>
+  void set_h(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->h_.data =
+        ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
 
   TableWithHandle() = default;
+  explicit TableWithHandle(::fidl::AnyAllocator& allocator)
+      : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
   ~TableWithHandle() = default;
   TableWithHandle(TableWithHandle&& other) noexcept = default;
   TableWithHandle& operator=(TableWithHandle&& other) noexcept = default;
@@ -161,6 +194,10 @@ class TableWithHandle final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
+
+  void Allocate(::fidl::AnyAllocator& allocator) {
+    frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
 
   void _CloseHandles();
 

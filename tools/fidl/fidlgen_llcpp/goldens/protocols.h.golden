@@ -12,6 +12,7 @@
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -19,6 +20,8 @@
 #include <lib/fit/function.h>
 #include <lib/fit/optional.h>
 
+#include <algorithm>
+#include <cstddef>
 #include <variant>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
@@ -109,6 +112,23 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
+  void set_response(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ResponseAsStruct_Response>(
+            allocator));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ResponseAsStruct_Response>(
+            allocator, std::forward<Args>(args)...));
+  }
+
   ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
   mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
@@ -137,6 +157,18 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kErr;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  void set_err(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kErr;
+    set_err(::fidl::ObjectView<uint32_t>(allocator));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kErr;
+    set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_err() {
@@ -235,6 +267,23 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
+  void set_response(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsPrimitive_Response>(
+            allocator));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<::llcpp::fidl::test::protocols::
+                               WithErrorSyntax_ErrorAsPrimitive_Response>(
+            allocator, std::forward<Args>(args)...));
+  }
+
   ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
   mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
@@ -263,6 +312,18 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kErr;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  void set_err(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kErr;
+    set_err(::fidl::ObjectView<uint32_t>(allocator));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kErr;
+    set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_err() {
@@ -360,6 +421,21 @@ class WithErrorSyntax_ErrorAsEnum_Result {
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
+  void set_response(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kResponse;
+    set_response(::fidl::ObjectView<::llcpp::fidl::test::protocols::
+                                        WithErrorSyntax_ErrorAsEnum_Response>(
+        allocator));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kResponse;
+    set_response(::fidl::ObjectView<::llcpp::fidl::test::protocols::
+                                        WithErrorSyntax_ErrorAsEnum_Response>(
+        allocator, std::forward<Args>(args)...));
+  }
+
   ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&
   mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
@@ -388,6 +464,19 @@ class WithErrorSyntax_ErrorAsEnum_Result {
       ::fidl::tracking_ptr<::llcpp::fidl::test::protocols::ErrorEnun>&& elem) {
     ordinal_ = Ordinal::kErr;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  void set_err(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::kErr;
+    set_err(::fidl::ObjectView<::llcpp::fidl::test::protocols::ErrorEnun>(
+        allocator));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kErr;
+    set_err(::fidl::ObjectView<::llcpp::fidl::test::protocols::ErrorEnun>(
+        allocator, std::forward<Args>(args)...));
   }
 
   ::llcpp::fidl::test::protocols::ErrorEnun& mutable_err() {

@@ -67,6 +67,17 @@ class {{ .Name }} {
     ordinal_ = Ordinal::{{ .TagName }};
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
+
+  void set_{{ .Name }}(::fidl::AnyAllocator& allocator) {
+    ordinal_ = Ordinal::{{ .TagName }};
+    set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator));
+  }
+
+  template <typename... Args>
+  void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::{{ .TagName }};
+    set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator, std::forward<Args>(args)...));
+  }
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}

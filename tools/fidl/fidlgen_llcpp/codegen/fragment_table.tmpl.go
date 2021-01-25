@@ -48,9 +48,28 @@ public:
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
+  {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
+  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->{{ .Name }}_.data = elem;
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+  }
+  void set_{{ .Name }}(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->{{ .Name }}_.data = nullptr;
+  }
+  template <typename... Args>
+  void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->{{ .Name }}_.data =
+        ::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+  }
   {{- end }}
 
   {{ .Name }}() = default;
+  explicit {{ .Name }}(::fidl::AnyAllocator& allocator)
+      : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
   ~{{ .Name }}() = default;
   {{ .Name }}({{ .Name }}&& other) noexcept = default;
   {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
@@ -61,6 +80,10 @@ public:
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
+
+  void Allocate(::fidl::AnyAllocator& allocator) {
+    frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
 
   {{- if .IsResourceType }}
 
