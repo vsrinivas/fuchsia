@@ -40,4 +40,10 @@ zx_status_t Applet::Delete() {
   return result;
 }
 
+void Applet::HandleEvent(const nl::Weave::DeviceLayer::WeaveDeviceEvent *event) {
+  FX_DCHECK(module_);
+  FX_DCHECK(applets_handle_ != FUCHSIA_WEAVE_APPLETS_INVALID_HANDLE);
+  module_->handle_event(event);
+}
+
 }  // namespace weavestack::applets

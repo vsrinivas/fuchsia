@@ -28,6 +28,7 @@ template("weavestack_lib") {
       "//sdk/fidl/fuchsia.weave",
       "//sdk/lib/sys/cpp",
       "//sdk/lib/syslog/cpp",
+      "//src/connectivity/weave/lib/core",
       "//src/lib/files",
       "//src/lib/fsl",
       "//zircon/public/lib/zx",

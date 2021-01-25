@@ -17,7 +17,11 @@ enum WeaveDevicePlatformEventType {
 /**
  * Represents platform-specific event information for the Fuchsia platform.
  */
-struct WeaveDevicePlatformEvent final {};
+struct WeaveDevicePlatformEvent final {
+  // Currently |arg| is used by tests, to verify if the events were
+  // successfully received from higher layers. It can be used for any useful data.
+  void *arg;
+};
 
 }  // namespace DeviceLayer
 }  // namespace Weave

@@ -51,6 +51,7 @@ constexpr char kDeviceInfoConfigKey_PrivateKeyPath[] = "mfr-private-key-path";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
 constexpr char kDeviceInfoConfigKey_SerialNumber[] = "serial-number";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
+constexpr char kDeviceInfoConfigKey_AppletPaths[] = "applet-paths";
 
 // Maximum number of chars in hex for a uint64_t.
 constexpr int kWeaveDeviceIdMaxLength = 16;
@@ -445,6 +446,10 @@ zx_status_t ConfigurationManagerDelegateImpl::GetDeviceIdFromFactory(const char*
   }
 
   return ZX_OK;
+}
+
+zx_status_t ConfigurationManagerDelegateImpl::GetAppletPathList(std::vector<std::string>& out) {
+  return device_info_->ReadConfigValueArray(kDeviceInfoConfigKey_AppletPaths, out);
 }
 
 }  // namespace DeviceLayer

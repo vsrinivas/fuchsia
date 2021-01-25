@@ -144,6 +144,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     // returns ZX_OK on success.
     virtual zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) = 0;
 
+    // Reads the list of applets from the config file and populates |out| with the same.
+    virtual zx_status_t GetAppletPathList(std::vector<std::string>& out) = 0;
+
    protected:
     ConfigurationManagerImpl* impl_;
   };
@@ -174,6 +177,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
   // Retrieves test private key for signing test cert in |signing_key|,
   // returns ZX_OK on success.
   zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key);
+
+  // Reads the list of applets from the config file and populates |out| with the same.
+  zx_status_t GetAppletPathList(std::vector<std::string>& out);
 
  private:
   using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;

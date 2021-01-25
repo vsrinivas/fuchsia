@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/weave_trait_updater_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}

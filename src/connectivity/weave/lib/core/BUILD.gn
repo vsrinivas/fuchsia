@@ -1,0 +1,18 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("core") {
+  sources = [
+    "trait_updater.cc",
+    "trait_updater.h",
+    "trait_updater_delegate_impl.cc",
+    "trait_updater_delegate_impl.h",
+  ]
+  public_configs = [ "//sdk/config" ]
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/connectivity/weave/adaptation:adaptation.shared",
+    "//src/connectivity/weave/lib/applets_loader:applets_loader",
+  ]
+}

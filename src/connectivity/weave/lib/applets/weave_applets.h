@@ -41,6 +41,9 @@ struct FuchsiaWeaveAppletsModuleV1 {
 
   // Deletes an active applet instance.
   bool (*delete_applet)(fuchsia_weave_applets_handle_t);
+
+  // Handles weave device event.
+  void (*handle_event)(const nl::Weave::DeviceLayer::WeaveDeviceEvent *event);
 };
 
 // Declare an exported module instance from a loadable plugin module:
@@ -48,6 +51,7 @@ struct FuchsiaWeaveAppletsModuleV1 {
 // DECLARE_FUCHSIA_WEAVE_APPLETS_MODULE_V1 {
 //   .create_applet = &my_create_applet,
 //   .delete_applet = &my_delete_applet,
+//   .handle_event = &my_handle_event,
 //   ...
 // }
 #define DECLARE_FUCHSIA_WEAVE_APPLETS_MODULE_V1 \

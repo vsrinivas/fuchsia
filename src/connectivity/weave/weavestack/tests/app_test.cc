@@ -13,11 +13,12 @@
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 
-#include "generic_platform_manager_impl_fuchsia.ipp"
-#include "configuration_manager_delegate_impl.h"
-#include "connectivity_manager_delegate_impl.h"
-#include "network_provisioning_server_delegate_impl.h"
-#include "thread_stack_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/generic_platform_manager_impl_fuchsia.ipp"
+#include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/network_provisioning_server_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
+#include "src/connectivity/weave/lib/core/trait_updater_delegate_impl.h"
 // clang-format on
 
 #include <gtest/gtest.h>
@@ -38,6 +39,8 @@ using nl::Weave::DeviceLayer::WeaveDevicePlatformEventType;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
+using nl::Weave::DeviceLayer::TraitUpdater;
+using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
 
 class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate {
  public:
@@ -59,6 +62,14 @@ class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
   }
 };
 
+class TestTraitUpdaterDelegate : public TraitUpdaterDelegateImpl {
+public:
+  WEAVE_ERROR Init() override {
+    return WEAVE_NO_ERROR;
+  }
+  void HandleWeaveDeviceEvent(const WeaveDeviceEvent* event) override {}
+};
+
 void SetDefaultDelegates() {
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
   NetworkProvisioningSvrImpl().SetDelegate(
@@ -70,6 +81,8 @@ void SetDefaultDelegates() {
   // Similarly, the ThreadStackManager delegate is replaced with a delegate that
   // does not initialize.
   ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManagerDelegate>());
+  // TraitUpdaterImpl delegate is replaced with a dummy delegate.
+  TraitUpdater().SetDelegate(std::make_unique<TestTraitUpdaterDelegate>());
 }
 
 void ClearDelegates() {
@@ -77,6 +90,7 @@ void ClearDelegates() {
   ConnectivityMgrImpl().SetDelegate(nullptr);
   NetworkProvisioningSvrImpl().SetDelegate(nullptr);
   ThreadStackMgrImpl().SetDelegate(nullptr);
+  TraitUpdater().SetDelegate(nullptr);
 }
 
 }  // namespace

@@ -9,6 +9,8 @@
 #include <poll.h>
 #include <zircon/types.h>
 
+#include "src/connectivity/weave/lib/core/trait_updater.h"
+
 #include <Weave/DeviceLayer/PlatformManager.h>
 
 namespace weavestack {
@@ -103,6 +105,12 @@ zx_status_t App::Init() {
   WEAVE_ERROR err = PlatformMgr().InitWeaveStack();
   if (err != WEAVE_NO_ERROR) {
     FX_LOGS(ERROR) << "InitWeaveStack() failed: " << nl::ErrorStr(err);
+    return ZX_ERR_INTERNAL;
+  }
+
+  err = nl::Weave::DeviceLayer::TraitUpdater().Init();
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << "TraitUpdater init failed: " << nl::ErrorStr(err);
     return ZX_ERR_INTERNAL;
   }
 

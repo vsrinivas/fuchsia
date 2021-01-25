@@ -113,6 +113,10 @@ zx_status_t ConfigurationManagerImpl::GetPrivateKeyForSigning(std::vector<uint8_
   return delegate_->GetPrivateKeyForSigning(signing_key);
 }
 
+zx_status_t ConfigurationManagerImpl::GetAppletPathList(std::vector<std::string>& out) {
+  return delegate_->GetAppletPathList(out);
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

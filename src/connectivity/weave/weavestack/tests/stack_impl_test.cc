@@ -19,6 +19,7 @@
 #include "configuration_manager_delegate_impl.h"
 #include "connectivity_manager_delegate_impl.h"
 #include "network_provisioning_server_delegate_impl.h"
+#include "src/connectivity/weave/lib/core/trait_updater_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
 // clang-format on
 
@@ -49,6 +50,8 @@ using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
 using nl::Weave::Profiles::DeviceControl::DeviceControlDelegate;
+using nl::Weave::DeviceLayer::TraitUpdater;
+using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
 
 // Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM
 // connects to fuchsia.lowpan, which isn't provided in this test. It is unneccessary to fake out
@@ -58,6 +61,14 @@ class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
     // Simulate successful init.
     return WEAVE_NO_ERROR;
   }
+};
+
+class TestTraitUpdaterDelegate : public TraitUpdaterDelegateImpl {
+public:
+  WEAVE_ERROR Init() override {
+    return WEAVE_NO_ERROR;
+  }
+  void HandleWeaveDeviceEvent(const nl::Weave::DeviceLayer::WeaveDeviceEvent* event) override {}
 };
 
 }  // namespace
@@ -195,6 +206,7 @@ class StackImplTest : public gtest::TestLoopFixture {
     NetworkProvisioningSvrImpl().SetDelegate(
         std::make_unique<NetworkProvisioningServerDelegateImpl>());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManagerDelegate>());
+    TraitUpdater().SetDelegate(std::make_unique<TestTraitUpdaterDelegate>());
     ASSERT_EQ(PlatformMgrImpl().InitWeaveStack(), WEAVE_NO_ERROR);
 
     // Set up StackImpl
@@ -207,6 +219,7 @@ class StackImplTest : public gtest::TestLoopFixture {
   }
 
   void TearDown() override {
+    TraitUpdater().SetDelegate(nullptr);
     // Shut down the weave stack
     PlatformMgrImpl().ShutdownWeaveStack();
     TestLoopFixture::TearDown();

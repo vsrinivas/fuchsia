@@ -600,5 +600,15 @@ TEST_F(ConfigurationManagerTest, IsThreadEnabled) {
   EXPECT_TRUE(ConfigurationMgrImpl().IsThreadEnabled());
 }
 
+TEST_F(ConfigurationManagerTest, GetAppletsPathList) {
+  std::vector<std::string> applet_paths = {"test1", "test2", "test3"};
+  std::vector<std::string> expected_applet_paths;
+  EXPECT_EQ(ConfigurationMgrImpl().GetAppletPathList(expected_applet_paths), WEAVE_NO_ERROR);
+  EXPECT_TRUE(expected_applet_paths.size() == applet_paths.size());
+  for (size_t i=0; i < expected_applet_paths.size(); i++) {
+    EXPECT_EQ(expected_applet_paths[i], applet_paths[i]);
+  }
+}
+
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal

@@ -59,6 +59,9 @@ class Applet {
   // Note that this will invalidate the `Applet` even if the operation fails.
   zx_status_t Delete();
 
+  // Handles weave device events and passes it down to the applet.
+  void HandleEvent(const nl::Weave::DeviceLayer::WeaveDeviceEvent *event);
+
  private:
   // Disallow copy.
   Applet(const Applet&) = delete;

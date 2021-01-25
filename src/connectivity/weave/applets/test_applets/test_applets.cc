@@ -10,12 +10,13 @@ namespace {
 
 TestAppletSpec g_applet;
 uint32_t g_instance_count = 0;
+char g_test_string[] = "DEADBEEF";
 
 class TestApplet {
  public:
   TestApplet(FuchsiaWeaveAppletsCallbacksV1 callbacks) {
     auto applet_spec = &g_applet;
-    FX_LOGS(ERROR) << "Creating test applet - counts: " << applet_spec->trait_sources.count;
+    FX_LOGS(INFO) << "Creating test applet - counts: " << applet_spec->trait_sources.count;
     for (size_t i = 0; i < applet_spec->trait_sources.count; i++) {
       callbacks.publish_trait({}, 0, applet_spec->trait_sources.traits[i]);
     }
@@ -49,11 +50,17 @@ zx_status_t ext_set_applet(TestAppletSpec applet) {
 
 uint32_t ext_num_instances() { return g_instance_count; }
 
+void handle_event(const nl::Weave::DeviceLayer::WeaveDeviceEvent *event) {
+  char** arg = (char**)(&event->Platform.arg);
+  *arg = g_test_string;
+}
+
 }  // namespace
 
 DECLARE_FUCHSIA_WEAVE_APPLETS_MODULE_V1{
     &create_applet,
     &delete_applet,
+    &handle_event,
 };
 
 DECLARE_TEST_APPLETS_EXT{

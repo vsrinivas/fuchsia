@@ -181,6 +181,13 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    // Initialize Weave Event Logging.
+    err = InitWeaveEventLogging();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Event Logging initialization failed: " << ErrorStr(err);
+      return err;
+    }
+
     err = TraitMgr().Init();
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "TraitMgr init failed: " << ErrorStr(err);

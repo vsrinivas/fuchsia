@@ -1,0 +1,37 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+test("weave_trait_updater_unittests") {
+  sources = [ "trait_updater_impl_unittests.cc" ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/weave/adaptation",
+    "//src/connectivity/weave/lib/applets_loader",
+    "//src/connectivity/weave/lib/core:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("weave-trait-updater-unittests") {
+  deps = [
+    ":weave_trait_updater_unittests",
+    "//src/connectivity/weave/applets/test_applets:test_applets",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  manifest = rebase_path("meta/weave_trait_updater_unittests.cmx")
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":weave-trait-updater-unittests" ]
+}
