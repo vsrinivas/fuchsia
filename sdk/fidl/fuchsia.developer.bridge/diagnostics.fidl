@@ -1,0 +1,26 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.bridge;
+
+enum StreamMode : uint32 {
+    SNAPSHOT_ALL = 1;
+    SNAPSHOT_RECENT_THEN_SUBSCRIBE = 2;
+    SNAPSHOT_ALL_THEN_SUBSCRIBE = 3;
+    SUBSCRIBE = 4;
+};
+
+enum DiagnosticsStreamError : uint32 {
+    // Indicates an error that doesn't fall into any of the below types.
+    GENERIC_ERROR = 1;
+    // Indicates a required parameter is missing
+    MISSING_PARAMETER = 2;
+    // Indicates the provided target specifier does not match any targets
+    // or matches more than target.
+    TARGET_MATCH_FAILED = 3;
+};
+
+table DaemonDiagnosticsStreamParameters {
+    1: StreamMode stream_mode;
+};

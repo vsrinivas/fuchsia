@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     diagnostics_data::{LogsData, Timestamp},
     ffx_config::get,
+    ffx_log_data::{EventType, LogData, LogEntry},
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
@@ -16,7 +17,7 @@ use {
     std::future::Future,
     std::sync::Arc,
     std::time::SystemTime,
-    streamer::{EventType, GenericDiagnosticsStreamer, LogData, LogEntry},
+    streamer::GenericDiagnosticsStreamer,
 };
 
 pub mod streamer;
@@ -153,6 +154,7 @@ impl Logger {
 
         log::info!("starting logger for {}", target.nodename_str().await);
         let remote_proxy = target.rcs().await.context("failed to get RCS")?.proxy;
+        let nodename = target.nodename_str().await;
 
         let (log_proxy, log_server_end) = create_proxy::<RemoteDiagnosticsBridgeMarker>()?;
         let selector = parse_selector(BRIDGE_SELECTOR).unwrap();
@@ -160,11 +162,7 @@ impl Logger {
         match remote_proxy.connect(selector, log_server_end.into_channel()).await? {
             Ok(_) => {}
             Err(e) => {
-                log::info!(
-                    "attempt to connect to logger for {} failed. {:?}",
-                    target.nodename_str().await,
-                    e
-                );
+                log::info!("attempt to connect to logger for {} failed. {:?}", nodename, e);
                 bail!("{:?}", e);
             }
         };
@@ -218,8 +216,9 @@ mod test {
             RemoteControlRequest, RemoteDiagnosticsBridgeRequest,
             RemoteDiagnosticsBridgeRequestStream, ServiceMatch,
         },
-        fidl_fuchsia_diagnostics::{DataType, StreamMode},
+        fidl_fuchsia_diagnostics::DataType,
         futures::TryStreamExt,
+        streamer::SessionStream,
     };
 
     const NODENAME: &str = "nodename-foo";
@@ -296,6 +295,13 @@ mod test {
             let mut inner = self.inner.lock().await;
             inner.cleaned_sessions = true;
             Ok(())
+        }
+
+        async fn stream_entries(
+            &self,
+            _stream_mode: fidl_fuchsia_developer_bridge::StreamMode,
+        ) -> Result<SessionStream> {
+            panic!("unexpected stream_entries call");
         }
     }
 
@@ -385,7 +391,7 @@ mod test {
                         assert_eq!(parameters.data_type.unwrap(), DataType::Logs);
                         assert_eq!(
                             parameters.stream_mode.unwrap(),
-                            StreamMode::SnapshotThenSubscribe
+                            fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
                         );
                         setup_fake_archive_iterator(iterator, responses.clone()).unwrap();
                         responder.send(&mut Ok(())).unwrap();

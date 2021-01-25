@@ -7,6 +7,7 @@ use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::fastboot::{client::Fastboot, spawn_fastboot_discovery},
+    crate::logger::streamer::GenericDiagnosticsStreamer,
     crate::mdns::MdnsTargetFinder,
     crate::onet::create_ascendd,
     crate::target::{
@@ -20,9 +21,12 @@ use {
     ffx_core::{build_info, TryStreamUtilExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError, TargetAddrInfo,
+        DaemonError, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError, FastbootError,
+        TargetAddrInfo,
     },
-    fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
+    fidl_fuchsia_developer_remotecontrol::{
+        ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
+    },
     fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, Timer},
@@ -527,6 +531,62 @@ impl Daemon {
                 let hash: String =
                     ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await?;
                 responder.send(&hash).context("error sending response")?;
+            }
+            DaemonRequest::StreamDiagnostics { target, parameters, iterator, responder } => {
+                let target = match self.get_default_target(target).await {
+                    Ok(t) => t,
+                    Err(_e) => {
+                        responder
+                            .send(&mut Err(DiagnosticsStreamError::TargetMatchFailed))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+
+                let stream = target.stream_info();
+                if parameters.stream_mode.is_none() {
+                    log::info!("StreamDiagnostics failed: stream mode is required");
+                    return responder
+                        .send(&mut Err(DiagnosticsStreamError::MissingParameter))
+                        .context("sending missing parameter response");
+                }
+
+                let mut log_iterator =
+                    stream.stream_entries(parameters.stream_mode.unwrap()).await?;
+                let task = Task::spawn(async move {
+                    let mut iter_stream = iterator.into_stream()?;
+
+                    while let Some(request) = iter_stream.next().await {
+                        match request? {
+                            ArchiveIteratorRequest::GetNext { responder } => {
+                                let res = log_iterator.iter().await?;
+                                match res {
+                                    Some(Ok(entry)) => {
+                                        // TODO(jwing): implement truncation or migrate to a socket-based
+                                        // API.
+                                        responder.send(&mut Ok(vec![ArchiveIteratorEntry {
+                                            data: Some(serde_json::to_string(&entry)?),
+                                            truncated_chars: Some(0),
+                                            ..ArchiveIteratorEntry::EMPTY
+                                        }]))?;
+                                    }
+                                    Some(Err(e)) => {
+                                        log::warn!("got error streaming diagnostics: {}", e);
+                                        responder
+                                            .send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
+                                    }
+                                    None => {
+                                        responder.send(&mut Ok(vec![]))?;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Ok::<(), anyhow::Error>(())
+                });
+                responder.send(&mut Ok(()))?;
+                task.await?;
             }
         }
         Ok(())
