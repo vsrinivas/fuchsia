@@ -319,5 +319,11 @@ TEST_F(LoggingSocketTest, Structured) {
   CheckSocketEmpty();
 }
 
+TEST_F(LoggingSocketTest, LogId) {
+  FX_LOGS(ERROR("test")) << "Hello";
+  ReadPacketAndCompare(FX_LOG_ERROR, "Hello log_id=\"test\"");
+  CheckSocketEmpty();
+}
+
 }  // namespace
 }  // namespace syslog

@@ -315,5 +315,23 @@ TEST_F(LoggingFixture, BackendDirect) {
                        "ERROR: [foo.cc(42)] Check failed: condition. fake message foo=42\n"));
 }
 
+TEST_F(LoggingFixture, LogId) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  int line = __LINE__ + 1;
+  FX_LOGS(ERROR("test")) << "Hello";
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+  std::cerr << log;
+
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line) + ")] Hello log_id=\"test\""));
+}
+
 }  // namespace
 }  // namespace syslog

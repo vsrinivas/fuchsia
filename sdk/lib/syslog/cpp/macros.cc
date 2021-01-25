@@ -34,15 +34,16 @@ const char* StripPath(const char* path) {
 
 }  // namespace
 
-LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const char* condition,
-                       const char* tag
+LogMessage::LogMessage(LogSeverityAndId severity_and_id, const char* file, int line,
+                       const char* condition, const char* tag
 #if defined(__Fuchsia__)
                        ,
                        zx_status_t status
 #endif
                        )
-    : severity_(severity),
-      file_(severity > LOG_INFO ? StripDots(file) : StripPath(file)),
+    : severity_(severity_and_id.severity()),
+      log_id_(severity_and_id.id()),
+      file_(severity_ > LOG_INFO ? StripDots(file) : StripPath(file)),
       line_(line),
       condition_(condition),
       tag_(tag)
@@ -51,6 +52,21 @@ LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const c
       status_(status)
 #endif
 {
+}
+
+LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const char* condition,
+                       const char* tag
+#if defined(__Fuchsia__)
+                       ,
+                       zx_status_t status
+#endif
+                       )
+    : LogMessage(LogSeverityAndId(severity), file, line, condition, tag
+#if defined(__Fuchsia__)
+                 ,
+                 status
+#endif
+      ) {
 }
 
 LogMessage::~LogMessage() {
@@ -64,6 +80,9 @@ LogMessage::~LogMessage() {
   syslog_backend::BeginRecord(buffer.get(), severity_, file_, line_, str.data(), condition_);
   if (tag_) {
     syslog_backend::WriteKeyValue(buffer.get(), "tag", tag_);
+  }
+  if (log_id_) {
+    syslog_backend::WriteKeyValue(buffer.get(), "log_id", log_id_);
   }
   syslog_backend::EndRecord(buffer.get());
   syslog_backend::FlushRecord(buffer.get());
@@ -85,5 +104,9 @@ int GetVlogVerbosity() {
 }
 
 bool ShouldCreateLogMessage(LogSeverity severity) { return severity >= GetMinLogLevel(); }
+
+bool ShouldCreateLogMessage(const LogSeverityAndId& severity_and_id) {
+  return severity_and_id.severity() >= GetMinLogLevel();
+}
 
 }  // namespace syslog
