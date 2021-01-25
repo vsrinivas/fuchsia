@@ -7,7 +7,8 @@ their inputs and outputs.
 Continue reading this guide if you ran into an error that looks like this:
 
 ```
-ERROR: [label] read/wrote [path] but it is not a specified input/output!
+Unexpected file accesses building //some/target:label ...
+(FileAccessType.READ /path/to/file/not/declared/as/input)
 ```
 
 Or alternatively, if you're looking at an `action()` or `action_foreach()`
@@ -25,22 +26,30 @@ action("foo") {
 The build is defined as a directed acyclic graph such that actions have their
 inputs flowing into them and their outputs flowing from them. For instance, an
 action that compiles a `.cc` file into a `.o` file will have the source file as
-an input and an object file as an output.
+an input and an object file as an output. Any `.h` headers used in compilation
+are considered as inputs to the same action.
 
 This graph representation ensures that the build system can correctly perform
-incremental builds. An incremental build is when a build was already performed,
-but then some of the sources were changed, and now the build system is being
-asked to rebuild. In an incremental build, the build system will attempt to do
-the least amount of work needed, only rebuilding actions whose inputs have
-changed, whether due to modifications done by the user to sources or due to
-changes in the outputs of other actions that needed to be re-run.
+_incremental builds_. An incremental build is when a build was already
+performed, but then some of the actions' inputs were changed, and now the build
+system is being asked to rebuild. In an incremental build, the build system will
+attempt to do the least amount of work needed, only rebuilding actions whose
+inputs have changed, whether due to modifications done by the user to sources or
+due to changes in the outputs of other actions that needed to be re-run.
 
 For any action in the build graph, it's required that all inputs and outputs be
 stated in order for the build graph to be correct and for actions to be
-hermetic. However this is not enforced.
-Build actions run in the user's shell, with full access to all files in the
-source tree and in the `out/` directory, so they're not sandboxed and they can
-reach anywhere.
+hermetic. However, this is not validated by the underlying build system, Ninja.
+Build actions run in the user's local environment, with full access to the
+entire filesystem, including all files in the source tree and in the `out/`
+directory, so they're not sandboxed and they can reach anywhere.
+
+Failing to declare an input would result in failing to re-run an action (and
+everything downstream) when that input is updated. Failing to declare an output
+that is an input to another action produces a race condition between related
+actions, in which a single build invocation may miss a timestamp update, and
+manifest as a failure to converge in a single invocation (see
+[Ninja no-op][no_op]).
 
 If you're reading this, you're probably dealing with a build action that did not
 fully state one or more of its inputs or outputs.
@@ -56,20 +65,23 @@ incremental builds when their inputs have changed.
 
 Actions state their inputs using the following parameters:
 
-*  `script`: the tool to run. Often this is a Python script, but it can be any
-   program that can be executed on the host.
-*  `inputs`: files that are used as inputs to the tool. For instance if the tool
-   compresses a file, then the file to be compressed will be listed as an input.
-*  `sources`: this is treated the same as `inputs`. The difference is only
-   semantic, as `sources` are typically used for additional files used by the
-   tool's `script`.
+*   `script`: the tool to run. Often this is a Python script, but it can be any
+    program that can be executed on the host.
+*   `inputs`: files that are used as data inputs to the tool. For instance if
+    the tool compresses a file, then the file to be compressed will be listed as
+    an input.
+*   `sources`: this is treated the same as `inputs`. The difference is only
+    semantic, as `sources` are typically used for additional files used by the
+    tool's `script`, e.g. dependent Python or script libraries.
 
 Actions state their outputs using the following parameter:
 
-*  `outputs`: each action must produce at least one output file. Actions that
-   don't generate an output file, for instance actions that validate certain
-   inputs for correctness, will typically generate a "stamp file", which acts as
-   an indicator that the action ran and can be empty.
+*   `outputs`: each action must produce at least one output file. Actions that
+    don't generate an output file, for instance actions that validate certain
+    inputs for correctness, will typically generate a "stamp file", which acts
+    as an indicator that the action ran and can be empty.
+
+### Depfiles
 
 If some of the inputs to an action are not known prior to running the action,
 then additionally an action can specify a [`depfile`][depfile]. Depfiles list
@@ -82,6 +94,9 @@ format of a depfile is one or more lines as follows:
 
 All paths in a depfile must be relative to `root_build_dir` (which is set as the
 current working directory for actions).
+
+Tools like compilers should (and do) support emitting a trace of all of the
+files used in compilation in the form of a depfile.
 
 ## Filesystem action tracing for detecting non-hermetic actions
 
@@ -103,6 +118,9 @@ action tracing is enabled:
 <code class="devsite-terminal">fx set <var>what</var> --args=build_should_trace_actions=true</code>
 </pre>
 
+or interactively, run `fx args`, add a line `build_should_trace_actions=true`,
+save and exit.
+
 Note that if your action is not defined hermetically, and you haven't corrected
 it, then upon attempting to rebuild the action you may not be encountering an
 error. Because the action is not defined hermetically, it may not be correctly
@@ -111,12 +129,12 @@ trying to solve). To force all build actions to run, you'll need to clean up
 your build's output cache first:
 
 ```posix-terminal
-rm -rf $(fx get-build-dir)
+fx clean
 ```
 
-You can also reproduce this in Gerrit with an optional tryjob.
-In the Gerrit UI, click "choose tryjobs" and select `fuchsia-x64-debug-traced`.
-In the near future this check will be performed on all changes in CQ.
+You can also reproduce this in Gerrit with an optional tryjob. In the Gerrit UI,
+click "Choose Tryjobs" and select `fuchsia-x64-debug-traced` (search for
+"trace"). In the near future, this check will be performed on all changes in CQ.
 
 ## Suppressing hermetic action checks
 
@@ -130,16 +148,21 @@ action("foo") {
 }
 ```
 
-This suppresses the check that's described above.
-If you spot an action that has this suppression, you should remove the
-suppression, attempt to reproduce the issue as outlined above, and fix it.
+This suppresses the check that's described above. If you spot an action that has
+this suppression, you should remove the suppression, attempt to reproduce the
+issue as outlined above, and fix it.
+
+If instead of fixing it right away, you file a bug, title the bug with
+"[hermetic]" and include the output of tracing from the failed build action in
+the description. Comment about the access violation if you know where it is
+coming from.
 
 ## Common issues and how to fix them
 
 ### Inputs not known until action runtime
 
 As explained above, sometimes not all inputs are known at build time and so
-cannot be specified in `BUILD.gn` definitions. This is what [depfiles][depfiles]
+cannot be specified in `BUILD.gn` definitions. This is what [depfiles][depfile]
 are for.
 
 You can find an example for fixing a build action to generate a depfile here:
@@ -183,3 +206,4 @@ action("foo") {
 [action]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action
 [action_foreach]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action_foreach
 [depfile]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_depfile
+[no_op]: /docs/development/build/ninja_no_op.md
