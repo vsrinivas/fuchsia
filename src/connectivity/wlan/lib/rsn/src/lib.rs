@@ -44,6 +44,7 @@ pub use crate::{
 
 #[derive(Debug)]
 pub struct Supplicant {
+    auth_method: auth::Method,
     esssa: EssSa,
     pub auth_cfg: auth::Config,
 }
@@ -71,10 +72,15 @@ impl Supplicant {
             protection: negotiated_protection.clone(),
         }));
 
+        let auth_method = auth::Method::from_config(auth_cfg.clone())?;
+        let pmk = match auth_cfg.clone() {
+            auth::Config::ComputedPsk(psk) => Some(psk.to_vec()),
+            _ => None,
+        };
         let esssa = EssSa::new(
             Role::Supplicant,
+            pmk,
             negotiated_protection,
-            auth_cfg.clone(),
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Supplicant,
                 s_addr,
@@ -87,7 +93,7 @@ impl Supplicant {
             gtk_exch_cfg,
         )?;
 
-        Ok(Supplicant { esssa, auth_cfg })
+        Ok(Supplicant { auth_method, esssa, auth_cfg })
     }
 
     /// Starts the Supplicant. A Supplicant must be started after its creation and everytime it was
@@ -120,17 +126,32 @@ impl Supplicant {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
 
+    fn extract_sae_key(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        let mut found_pmk = None;
+        for update in &update_sink[..] {
+            if let rsna::SecAssocUpdate::Key(key::exchange::Key::Pmk(pmk)) = update {
+                found_pmk = Some(pmk.clone());
+            }
+        }
+        if let Some(pmk) = found_pmk {
+            self.esssa.on_pmk_available(update_sink, pmk)?;
+        }
+        Ok(())
+    }
+
     pub fn on_pmk_available(
         &mut self,
         update_sink: &mut UpdateSink,
         pmk: &[u8],
         pmkid: &[u8],
     ) -> Result<(), Error> {
-        self.esssa.on_pmk_available(update_sink, pmk, pmkid)
+        let mut updates = UpdateSink::new();
+        self.auth_method.on_pmk_available(pmk, pmkid, &mut updates)?;
+        self.extract_sae_key(update_sink)
     }
 
     pub fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
-        self.esssa.on_sae_handshake_ind(update_sink)
+        self.auth_method.on_sae_handshake_ind(update_sink).map_err(Error::AuthError)
     }
 
     pub fn on_sae_frame_rx(
@@ -138,7 +159,8 @@ impl Supplicant {
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
     ) -> Result<(), Error> {
-        self.esssa.on_sae_frame_rx(update_sink, frame)
+        self.auth_method.on_sae_frame_rx(update_sink, frame).map_err(Error::AuthError)?;
+        self.extract_sae_key(update_sink)
     }
 
     pub fn on_sae_timeout(
@@ -146,7 +168,7 @@ impl Supplicant {
         update_sink: &mut UpdateSink,
         event_id: u64,
     ) -> Result<(), Error> {
-        self.esssa.on_sae_timeout(update_sink, event_id)
+        self.auth_method.on_sae_timeout(update_sink, event_id).map_err(Error::AuthError)
     }
 }
 
@@ -170,8 +192,8 @@ impl Authenticator {
         let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
         let esssa = EssSa::new(
             Role::Authenticator,
+            Some(psk.to_vec()),
             negotiated_protection,
-            auth::Config::ComputedPsk(psk),
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Authenticator,
                 s_addr,
@@ -414,5 +436,39 @@ impl From<eapol::Error> for Error {
 impl From<auth::AuthError> for Error {
     fn from(e: auth::AuthError) -> Self {
         Error::AuthError(e)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::key::exchange::Key;
+    use crate::rsna::{test_util, SecAssocStatus, SecAssocUpdate};
+
+    #[test]
+    fn supplicant_extract_sae_key() {
+        let mut supplicant = test_util::get_supplicant();
+        let mut dummy_update_sink = vec![
+            SecAssocUpdate::ScheduleSaeTimeout(123),
+            SecAssocUpdate::Key(Key::Pmk(vec![1, 2, 3, 4, 5, 6, 7, 8])),
+        ];
+        supplicant.extract_sae_key(&mut dummy_update_sink).expect("Failed to extract key");
+        // ESSSA should register the new PMK and report this.
+        assert_eq!(
+            dummy_update_sink,
+            vec![
+                SecAssocUpdate::ScheduleSaeTimeout(123),
+                SecAssocUpdate::Key(Key::Pmk(vec![1, 2, 3, 4, 5, 6, 7, 8])),
+                SecAssocUpdate::Status(SecAssocStatus::PmkSaEstablished),
+            ]
+        );
+    }
+
+    #[test]
+    fn supplicant_extract_sae_key_no_key() {
+        let mut supplicant = test_util::get_supplicant();
+        let mut dummy_update_sink = vec![SecAssocUpdate::ScheduleSaeTimeout(123)];
+        supplicant.extract_sae_key(&mut dummy_update_sink).expect("Failed to extract key");
+        // No PMK means no new update.
+        assert_eq!(dummy_update_sink, vec![SecAssocUpdate::ScheduleSaeTimeout(123)]);
     }
 }
