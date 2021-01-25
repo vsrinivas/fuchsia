@@ -33,11 +33,13 @@ class ContextImpl : public Context {
  public:
   ContextImpl(std::unique_ptr<ThreadingModel> threading_model,
               std::unique_ptr<sys::ComponentContext> component_context,
-              std::unique_ptr<PlugDetector> plug_detector, ProcessConfig process_config)
+              std::unique_ptr<PlugDetector> plug_detector, ProcessConfig process_config,
+              std::shared_ptr<AudioClockManager> clock_manager)
       : threading_model_(std::move(threading_model)),
         component_context_(std::move(component_context)),
         process_config_(std::move(process_config)),
         route_graph_(&link_matrix_),
+        clock_manager_(clock_manager),
         device_manager_(*threading_model_, std::move(plug_detector), route_graph_, link_matrix_,
                         process_config_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
@@ -79,6 +81,7 @@ class ContextImpl : public Context {
     component_context_->outgoing()->AddPublicService(effects_controller_.GetFidlRequestHandler());
   }
   ThreadingModel& threading_model() override { return *threading_model_; }
+  std::shared_ptr<AudioClockManager> clock_manager() override { return clock_manager_; }
   AudioDeviceManager& device_manager() override { return device_manager_; }
   AudioAdmin& audio_admin() override { return audio_admin_; }
   fbl::RefPtr<fzl::VmarManager> vmar() const override { return vmar_manager_; }
@@ -98,6 +101,9 @@ class ContextImpl : public Context {
 
   LinkMatrix link_matrix_;
   RouteGraph route_graph_;
+
+  // Manages clock creation.
+  std::shared_ptr<AudioClockManager> clock_manager_;
 
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
@@ -131,9 +137,11 @@ class ContextImpl : public Context {
 std::unique_ptr<Context> Context::Create(std::unique_ptr<ThreadingModel> threading_model,
                                          std::unique_ptr<sys::ComponentContext> component_context,
                                          std::unique_ptr<PlugDetector> plug_detector,
-                                         ProcessConfig process_config) {
+                                         ProcessConfig process_config,
+                                         std::shared_ptr<AudioClockManager> clock_manager) {
   return std::make_unique<ContextImpl>(std::move(threading_model), std::move(component_context),
-                                       std::move(plug_detector), std::move(process_config));
+                                       std::move(plug_detector), std::move(process_config),
+                                       std::move(clock_manager));
 }
 
 }  // namespace media::audio

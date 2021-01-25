@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/audio_core/audio_clock_manager.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
@@ -31,7 +32,8 @@ class Context {
   static std::unique_ptr<Context> Create(std::unique_ptr<ThreadingModel> threading_model,
                                          std::unique_ptr<sys::ComponentContext> component_context,
                                          std::unique_ptr<PlugDetector> plug_detector,
-                                         ProcessConfig process_config);
+                                         ProcessConfig process_config,
+                                         std::shared_ptr<AudioClockManager> clock_manager);
 
   // Disallow copy & move.
   Context(Context&& o) = delete;
@@ -44,6 +46,7 @@ class Context {
   virtual void PublishOutgoingServices() = 0;
 
   virtual ThreadingModel& threading_model() = 0;
+  virtual std::shared_ptr<AudioClockManager> clock_manager() = 0;
   virtual AudioDeviceManager& device_manager() = 0;
   virtual AudioAdmin& audio_admin() = 0;
   virtual fbl::RefPtr<fzl::VmarManager> vmar() const = 0;

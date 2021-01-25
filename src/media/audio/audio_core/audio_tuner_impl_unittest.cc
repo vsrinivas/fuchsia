@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/audio_clock_manager.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -154,7 +155,8 @@ class AudioTunerTest : public gtest::TestLoopFixture {
     sys::testing::ComponentContextProvider component_context_provider_;
     auto plug_detector = std::make_unique<testing::FakePlugDetector>();
     return Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
-                           std::move(plug_detector), process_config);
+                           std::move(plug_detector), process_config,
+                           std::make_shared<AudioClockManager>());
   }
 
   std::unique_ptr<Context> CreateContext() { return CreateContext(kDefaultProcessConfig); }
