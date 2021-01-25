@@ -8,10 +8,10 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
             "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.AUDIO",
             "fuchsia.BIND_USB_PROTOCOL": "0",
-            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.AUDIO_CONTROL"
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.audio.BIND_USB_SUBCLASS.AUDIO_CONTROL"
         },
         "expected": "match",
         "name": "Vendor"

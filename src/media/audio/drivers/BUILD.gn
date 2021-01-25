@@ -19,5 +19,6 @@ group("tests") {
     "mt8167-tdm-input:tests",
     "mt8167-tdm-output:tests",
     "test",
+    "usb-audio:tests",
   ]
 }
