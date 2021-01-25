@@ -159,6 +159,14 @@ coming from.
 
 ## Common issues and how to fix them
 
+### Missing inputs/outputs
+
+Sometimes an input/output is well-known at build time but just isn't specified,
+or it's specified incorrectly. These are common and straightforward to fix.
+For instance:
+
+*   [472657: [build] Fix hermeticity of hotsort_target_internal](https://fuchsia-review.googlesource.com/c/fuchsia/+/472657)
+
 ### Inputs not known until action runtime
 
 As explained above, sometimes not all inputs are known at build time and so
