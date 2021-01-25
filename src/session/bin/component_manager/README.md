@@ -1,23 +1,54 @@
 # Component Manager for Session Framework
 
-Reviewed on: 2020-10-20
+Reviewed on: 2021-01-21
 
-This configuration of [Component Manager](/src/component/component_manager/README.md) allows command line tools to connect to services exposed by [`session_manager`](/src/session/bin/session_manager/README.md) at runtime. The specific configuration is set in `config.json`.
+Component Manager for Session Framework is a custom instance of [Component
+Manager][component-manager] that exposes services from
+[`session_manager`][session-manager] to make them available
+to command line tools.
 
-> TODO(fxbug.dev/45361): Remove this work-around entirely.
->
-> See below for details.
+It is currently impossible for a command line tool to acquire a service directly
+from a v2 component. This workaround uses a custom configuration of Component
+Manager to bridge service brokerage between the world of v1 components and v2
+components.
 
-## Building, Running, and Testing
+This instance of Component Manager exposes services from its child's
+`exec/expose/svc` outgoing directory in Component Manager's `out/svc` directory.
+The services are made available to command line tools by supplying the
+[`session_manager.config`][session-manager-config] configuration to `sysmgr`.
 
-Since this configuration is exclusively run in the context of using [`session_manager`](/src/session/bin/session_manager/README.md), refer to the instructions there.
+## Building
 
-## Details
+To add this project to your build, append `--with
+//src/session/bin/component_manager:component_manager_sfw` to the `fx set`
+invocation.
 
-It is currently impossible for a command line tool to acquire a service directly from a v2 component. This workaround uses a custom configuration of Component Manager to bridge service brokerage between the world of v1 components and v2 components.
+## Running
 
-This instance of Component Manager exposes services from its child's `exec/expose/svc` outgoing directory in *its* `out/svc` directory.
+To launch Component Manager for Session Framework, run:
 
-Used in combination with `sysmgr`'s knowledge of components' `out/svc` directories, this component can be used to allow command line tools to ask for specific services and have them provided by an instance of `session_manager`.
+```
+$ fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx <root_component_url>
+```
 
-For example, it provides [session_manager.config](/src/session/bin/session_manager/meta/session_manager.config) to `sysmgr` and allows [session_control](/src/session/tools/session_control/README.md) to connect to the `fuchsia.session.Launcher` service through `session_control`'s environment.
+Where `<root_component_url>` is the component URL for the component to launch
+at the root of the v2 tree. Typically, this is the `session_manager` component
+URL. For more information, see the documentation for
+[`session_manager`][session-manager].
+
+## Testing
+
+For information on testing Component Manager, see the documentation for
+[Component Manager][component-manager].
+
+## Source layout
+
+The source code for Component Manager is located in
+[`//src/sys/component_manager`][component-manager-root]. The Session
+Framework-specific configuration is in `config.json`.
+
+[component-manager-root]: /src/sys/component_manager
+[component-manager]: /src/sys/component_manager/README.md
+[core-cml]: /src/sys/core/meta/core.cml
+[session-manager-config]: /src/session/bin/session_manager/meta/session_manager.config
+[session-manager]: /src/session/bin/session_manager/README.md
