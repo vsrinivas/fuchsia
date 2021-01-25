@@ -524,6 +524,12 @@ def main():
         # Allow actions to access prebuilts that are not declared as inputs
         # (until we fix all instances of this)
         os.path.join(src_root, "prebuilt"),
+        # Allow actions to run `git` commands.
+        # Actions can set certain refs under .git as inputs to trigger on
+        # relevant changes to git. However fully predicting what files will be
+        # accessed by certain git commands used in the build is not viable, it's
+        # not necessarily stable and doesn't make a good contract.
+        os.path.join(src_root, ".git"),
     }
     ignored_suffixes = {
         # Allow actions to access Python code such as via imports

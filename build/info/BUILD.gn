@@ -32,7 +32,6 @@ if (current_toolchain == default_toolchain) {
       build_info_files.latest_commit_date,
       build_info_files.minimum_utc_stamp,
     ]
-    hermetic_deps = false
     script = "gen-latest-commit-date.sh"
     args = rebase_path([ "//integration/" ] + outputs, root_build_dir)
   }

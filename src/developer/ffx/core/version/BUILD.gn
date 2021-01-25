@@ -22,7 +22,6 @@ config("env") {
 
 if (current_toolchain == default_toolchain) {
   action("gen_version_info") {
-    hermetic_deps = false
     script = "//src/developer/ffx/core/version/build/gn_write_version_info.sh"
 
     args = [
