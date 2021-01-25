@@ -1208,7 +1208,8 @@ zx_status_t AmlSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx:
     return status;
   }
 
-  return registered_vmos_[client_id]->Unregister(vmo_id);
+  auto result = registered_vmos_[client_id]->Unregister(vmo_id);
+  return result.is_error() ? result.error() : ZX_OK;
 }
 
 zx_status_t AmlSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {

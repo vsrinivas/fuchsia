@@ -112,7 +112,14 @@ class UnorderedMapStorage : public AbstractStorage<std::string, int32_t> {
     return &srch->second;
   }
 
-  bool Erase(std::string key) override { return map_.erase(key) != 0; }
+  fit::optional<StoredVmo<int32_t>> Extract(std::string key) override {
+    auto result = map_.extract(key);
+    if (!result) {
+      return fit::optional<StoredVmo<int32_t>>();
+    }
+
+    return std::move(result.mapped());
+  }
 
   size_t count() const override { return map_.size(); }
 
@@ -190,8 +197,18 @@ TYPED_TEST(TypedStorageTest, BasicStoreOperations) {
   ASSERT_EQ(store.count(), 3u);
 
   // Unregister k3 and check that we can't get it anymore nor erase it again.
-  ASSERT_OK(store.Unregister(k3));
-  ASSERT_STATUS(store.Unregister(k3), ZX_ERR_NOT_FOUND);
+  {
+    auto status = store.Unregister(k3);
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_EQ(status.value().get(), vmo3->get());
+  }
+
+  {
+    auto status = store.Unregister(k3);
+    ASSERT_TRUE(status.is_error());
+    ASSERT_STATUS(status.error(), ZX_ERR_NOT_FOUND);
+  }
+
   ASSERT_EQ(store.GetVmo(k3), nullptr);
   // Check that the VMO handle got destroyed.
   uint64_t vmo_size;

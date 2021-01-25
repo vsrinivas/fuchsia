@@ -123,16 +123,16 @@ class OwnedVmoStore : public VmoStoreBase<VmoStore<Backing>> {
 
     // Same as `VmoStore::Unregister`, but unregistration fails with `ZX_ERR_ACCESS_DENIED` if the
     // VMO was not initially registered by this `RegistrationAgent`.
-    zx_status_t Unregister(typename VmoStore::Key key) {
+    fit::result<zx::vmo, zx_status_t> Unregister(typename VmoStore::Key key) {
       auto* vmo = store_->GetVmo(key);
       if (vmo && GetOwner(*vmo) != this) {
-        return ZX_ERR_ACCESS_DENIED;
+        return fit::error(ZX_ERR_ACCESS_DENIED);
       }
-      zx_status_t status = store_->Unregister(std::move(key));
-      if (status == ZX_OK) {
+      auto result = store_->Unregister(std::move(key));
+      if (result.is_ok()) {
         registration_count_--;
       }
-      return status;
+      return result;
     }
 
     // Same as `VmoStore::GetVmo`, but only returns non-null if the VMO referenced by `key` was

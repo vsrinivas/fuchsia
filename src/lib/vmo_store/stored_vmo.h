@@ -219,8 +219,13 @@ class StoredVmo {
  protected:
   friend internal::VmoOwner;
 
+  template <typename Backing>
+  friend class VmoStore;  // VmoStore::Unregister() needs to be able to call take_vmo().
+
   void set_owner_cookie(void* owner_cookie) { owner_cookie_ = owner_cookie; }
   void* owner_cookie() const { return owner_cookie_; }
+
+  zx::vmo take_vmo() { return std::move(vmo_); }
 
  private:
   zx::vmo vmo_;

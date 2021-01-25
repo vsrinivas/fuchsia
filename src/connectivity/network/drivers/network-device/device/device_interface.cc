@@ -684,13 +684,13 @@ void DeviceInterface::ReleaseVmo(Session* session) {
   {
     fbl::AutoLock lock(&vmos_lock_);
     vmo = session->ReleaseDataVmo();
-    zx_status_t status = vmo_store_.Unregister(vmo);
-    if (status != ZX_OK) {
+    auto result = vmo_store_.Unregister(vmo);
+    if (result.is_error()) {
       // Avoid notifying the device implementation if unregistration fails.
       // A non-ok return here means we're either attempting to double-release a VMO or the sessions
       // didn't have a registered VMO.
       LOGF_WARN("network-device(%s): Failed to unregister VMO %d: %s", session->name(), vmo,
-                zx_status_get_string(status));
+                zx_status_get_string(result.error()));
       return;
     }
   }

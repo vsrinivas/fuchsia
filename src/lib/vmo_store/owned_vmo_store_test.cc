@@ -43,11 +43,17 @@ TEST_F(OwnershipTest, TwoAgentsRegisterWithKey) {
   constexpr size_t kKey2 = 2;
   auto agent1 = store_.CreateRegistrationAgent();
   auto agent2 = store_.CreateRegistrationAgent();
-  ASSERT_OK(agent1.RegisterWithKey(kKey1, CreateVmo()));
+
+  zx::vmo vmo = CreateVmo();
+  const zx_handle_t vmo1 = vmo.get();
+  ASSERT_OK(agent1.RegisterWithKey(kKey1, std::move(vmo)));
 
   // Agent2 uses the same namespace, can't register again with key1.
   ASSERT_STATUS(agent2.RegisterWithKey(kKey1, CreateVmo()), ZX_ERR_ALREADY_EXISTS);
-  ASSERT_OK(agent2.RegisterWithKey(kKey2, CreateVmo()));
+
+  vmo = CreateVmo();
+  const zx_handle_t vmo2 = vmo.get();
+  ASSERT_OK(agent2.RegisterWithKey(kKey2, std::move(vmo)));
 
   ASSERT_EQ(store_.count(), 2u);
 
@@ -58,11 +64,27 @@ TEST_F(OwnershipTest, TwoAgentsRegisterWithKey) {
   ASSERT_EQ(agent1.GetVmo(kKey2), nullptr);
   ASSERT_EQ(agent2.GetVmo(kKey1), nullptr);
   // Each agent can't unregister each other's VMOs.
-  ASSERT_STATUS(agent1.Unregister(kKey2), ZX_ERR_ACCESS_DENIED);
-  ASSERT_STATUS(agent2.Unregister(kKey1), ZX_ERR_ACCESS_DENIED);
+  {
+    auto status = agent1.Unregister(kKey2);
+    ASSERT_TRUE(status.is_error());
+    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+  }
+  {
+    auto status = agent2.Unregister(kKey1);
+    ASSERT_TRUE(status.is_error());
+    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+  }
 
-  ASSERT_OK(agent1.Unregister(kKey1));
-  ASSERT_OK(agent2.Unregister(kKey2));
+  {
+    auto status = agent1.Unregister(kKey1);
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_EQ(status.value().get(), vmo1);
+  }
+  {
+    auto status = agent2.Unregister(kKey2);
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+    ASSERT_EQ(status.value().get(), vmo2);
+  }
 
   ASSERT_EQ(store_.count(), 0u);
 }
@@ -91,11 +113,27 @@ TEST_F(OwnershipTest, TwoAgentsRegister) {
   ASSERT_EQ(agent2.GetVmo(k1), nullptr);
 
   // Each agent can't unregister each other's VMOs.
-  ASSERT_STATUS(agent1.Unregister(k2), ZX_ERR_ACCESS_DENIED);
-  ASSERT_STATUS(agent2.Unregister(k1), ZX_ERR_ACCESS_DENIED);
+  {
+    auto status = agent1.Unregister(k2);
+    ASSERT_TRUE(status.is_error());
+    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+  }
 
-  ASSERT_OK(agent1.Unregister(k1));
-  ASSERT_OK(agent2.Unregister(k2));
+  {
+    auto status = agent2.Unregister(k1);
+    ASSERT_TRUE(status.is_error());
+    ASSERT_STATUS(status.error(), ZX_ERR_ACCESS_DENIED);
+  }
+
+  {
+    auto status = agent1.Unregister(k1);
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+  }
+
+  {
+    auto status = agent2.Unregister(k2);
+    ASSERT_TRUE(status.is_ok()) << zx_status_get_string(status.error());
+  }
 
   ASSERT_EQ(store_.count(), 0u);
 }

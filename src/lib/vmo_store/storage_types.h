@@ -35,8 +35,9 @@ class AbstractStorage {
   // VMO.
   virtual StoredVmo<Meta>* Get(const Key& key) = 0;
   // Erases the VMO referenced by `key`.
-  // Returns `true` if `key` pointed to an existing `StoredVmo`.
-  virtual bool Erase(Key key) = 0;
+  // Returns the `StoredVmo` that was previously referenced by `key`, or empty if no VMO was found
+  // for `key`.
+  virtual fit::optional<StoredVmo<Meta>> Extract(Key key) = 0;
   // Returns the number of registered `StoredVmo`s in this store.
   virtual size_t count() const = 0;
 
@@ -70,7 +71,7 @@ class SlabStorage : public AbstractStorage<_Key, _Meta> {
 
   inline Item* Get(const Key& key) override { return slab_.Get(key); }
 
-  bool Erase(Key key) override { return slab_.Erase(key).has_value(); }
+  fit::optional<Item> Extract(Key key) override { return slab_.Erase(key); }
 
   inline size_t count() const override { return slab_.count(); }
 
@@ -169,7 +170,14 @@ class HashTableStorage : public AbstractStorage<_Key, _Meta> {
     return &search->vmo_;
   }
 
-  inline bool Erase(Key key) override { return table_.erase(key) != nullptr; }
+  inline fit::optional<Item> Extract(Key key) override {
+    std::unique_ptr<HashTableVmo> stored_vmo = table_.erase(key);
+    if (!stored_vmo) {
+      return fit::optional<Item>();
+    }
+
+    return std::move(stored_vmo->vmo_);
+  }
 
   inline size_t count() const override { return table_.size(); }
 
@@ -214,7 +222,7 @@ class DynamicDispatchStorage : public AbstractStorage<_Key, _Meta> {
   }
   inline fit::optional<Key> Push(Item&& vmo) override { return impl_->Push(std::move(vmo)); }
   inline Item* Get(const Key& key) override { return impl_->Get(key); }
-  bool Erase(Key key) override { return impl_->Erase(std::move(key)); }
+  fit::optional<Item> Extract(Key key) override { return impl_->Extract(std::move(key)); }
   inline size_t count() const override { return impl_->count(); }
   inline bool is_full() const override { return impl_->is_full(); }
 

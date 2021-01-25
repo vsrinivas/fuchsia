@@ -167,13 +167,15 @@ class VmoStore : public VmoStoreBase<Backing> {
   }
 
   // Unregisters the VMO at `key`.
-  // The VMO handle will be dropped, alongside all the mapping and pinning handles.
+  // All the mapping and pinning handles will be dropped, and the VMO will be
+  // returned to the caller.
   // Returns `ZX_ERR_NOT_FOUND` if `key` does not point to a registered VMO.
-  zx_status_t Unregister(Key key) {
-    if (!this->impl_.Erase(key)) {
-      return ZX_ERR_NOT_FOUND;
+  fit::result<zx::vmo, zx_status_t> Unregister(Key key) {
+    fit::optional<StoredVmo> vmo = this->impl_.Extract(key);
+    if (vmo) {
+      return fit::ok(std::move(vmo->take_vmo()));
     }
-    return ZX_OK;
+    return fit::error(ZX_ERR_NOT_FOUND);
   }
 
   // Gets an _unowned_ pointer to the `StoredVmo` referenced by `key`.
