@@ -5,6 +5,7 @@
 use {
     cm_rust::ComponentDecl,
     moniker::PartialMoniker,
+    serde::{Deserialize, Serialize},
     std::{
         collections::{HashMap, VecDeque},
         convert::Into,
@@ -15,40 +16,50 @@ use {
 };
 
 /// Errors that may occur while building or operating on a `ComponentTree`.
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Serialize, Deserialize)]
 pub enum ComponentTreeError {
-    #[error("no component declaration found for url `{0}`")]
-    ComponentDeclNotFound(String),
-    #[error("invalid child declaration in component declaration with url `{0}`")]
-    InvalidChildDecl(String),
+    #[error("no component declaration found for url `{0}` requested by node `{1}`")]
+    ComponentDeclNotFound(String, String),
+    #[error("invalid child declaration containing url `{0}` at node `{1}`")]
+    InvalidChildDecl(String, String),
     #[error("no node found with path `{0}`")]
     ComponentNodeNotFound(String),
 }
 
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 /// A representation of a component's position in the component topology. The last segment of
 /// a component's `NodePath` is its `PartialMoniker` as designated by its parent component, and the
 /// prefix is the parent component's `NodePath`.
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct NodePath(Vec<PartialMoniker>);
 
 /// A representation of a v2 component containing a `ComponentDecl` as well as the `NodePath`s of
 /// the component itself and of its parent and children (if any).
+#[derive(Default)]
 pub struct ComponentNode {
     pub decl: ComponentDecl,
     node_path: NodePath,
+    url: String,
     parent: Option<NodePath>,
     children: Vec<NodePath>,
 }
 
 /// A representation of the set of all v2 components, together with their parent/child relationships.
+#[derive(Default)]
 pub struct ComponentTree {
     nodes: HashMap<NodePath, ComponentNode>,
+}
+
+#[derive(Default)]
+pub struct BuildTreeResult {
+    pub tree: Option<ComponentTree>,
+    pub errors: Vec<ComponentTreeError>,
 }
 
 /// A builder which constructs a ComponentTree from a collection of component declarations indexed
 /// by component URL.
 pub struct ComponentTreeBuilder {
     decls_by_url: HashMap<String, ComponentDecl>,
+    result: BuildTreeResult,
 }
 
 /// The `ComponentNodeVisitor` trait defines an interface for operating on a `ComponentNode`.
@@ -135,13 +146,23 @@ impl ComponentNode {
         self.node_path.to_string()
     }
 
-    // Creates a new `ComponentNode` with the specified declaration, parent, and moniker.
+    pub fn url(&self) -> String {
+        self.url.clone()
+    }
+
+    // Creates a new `ComponentNode` with the specified declaration, url, parent, and moniker.
     // Does not populate the node's `children` field.
-    fn new(decl: ComponentDecl, parent: Option<NodePath>, moniker: Option<PartialMoniker>) -> Self {
+    fn new(
+        decl: ComponentDecl,
+        url: String,
+        parent: Option<NodePath>,
+        moniker: Option<PartialMoniker>,
+    ) -> Self {
         ComponentNode {
             decl,
             node_path: ComponentNode::get_node_path(parent.clone(), moniker),
-            parent: parent,
+            url,
+            parent,
             children: vec![],
         }
     }
@@ -159,6 +180,14 @@ impl ComponentNode {
 }
 
 impl ComponentTree {
+    pub fn len(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+    }
+
     /// Returns the node at `node_path`, or an error if there is no node at `node_path`.
     pub fn get_node(&self, node_path: &NodePath) -> Result<&ComponentNode, ComponentTreeError> {
         match self.nodes.get(node_path) {
@@ -202,57 +231,59 @@ impl ComponentTreeBuilder {
     /// Constructs a `ComponentTreeBuilder` from a map of component declarations keyed by
     /// component url.
     pub fn new(decls_by_url: HashMap<String, ComponentDecl>) -> Self {
-        ComponentTreeBuilder { decls_by_url }
+        ComponentTreeBuilder { decls_by_url, result: BuildTreeResult::default() }
     }
 
     /// Constructs and returns a `ComponentTree` based at the component with url `root_url`,
     /// consuming the builder. Returns an error if `root_url` or the url of any subsequent
     /// child is not present in the builder's `decls_by_url` map, or if any `ComponentDecl`
     /// in `decls_by_url` contains an invalid `ChildDecl`.
-    pub fn build<T: Into<String>>(
-        mut self,
-        root_url: T,
-    ) -> Result<ComponentTree, ComponentTreeError> {
+    pub fn build<T: Into<String>>(mut self, root_url: T) -> BuildTreeResult {
         let mut tree = ComponentTree { nodes: HashMap::new() };
 
         let root_url = root_url.into();
-        match self.decls_by_url.remove(&root_url) {
+        match self.decls_by_url.get(&root_url) {
             Some(root_decl) => {
-                let mut root_node = ComponentNode::new(root_decl, None, None);
-                self.add_descendants(&mut tree, &mut root_node)?;
+                let mut root_node = ComponentNode::new(root_decl.clone(), root_url, None, None);
+                self.add_descendants(&mut tree, &mut root_node);
                 tree.nodes.insert(root_node.node_path.clone(), root_node);
-                Ok(tree)
+                self.result.tree = Some(tree)
             }
-            None => Err(ComponentTreeError::ComponentDeclNotFound(root_url)),
+            None => self
+                .result
+                .errors
+                .push(ComponentTreeError::ComponentDeclNotFound(root_url, "".to_string())),
         }
+        self.result
     }
 
-    fn add_descendants(
-        &mut self,
-        tree: &mut ComponentTree,
-        node: &mut ComponentNode,
-    ) -> Result<(), ComponentTreeError> {
+    fn add_descendants(&mut self, tree: &mut ComponentTree, node: &mut ComponentNode) {
         for child in node.decl.children.iter() {
             if child.name.is_empty() {
-                return Err(ComponentTreeError::InvalidChildDecl(child.url.to_string()));
+                self.result.errors.push(ComponentTreeError::InvalidChildDecl(
+                    child.url.to_string(),
+                    node.short_display(),
+                ));
+                continue;
             }
-            match self.decls_by_url.remove(&child.url) {
+            match self.decls_by_url.get(&child.url) {
                 Some(child_decl) => {
                     let mut child_node = ComponentNode::new(
-                        child_decl,
+                        child_decl.clone(),
+                        child.url.clone(),
                         Some(node.node_path.clone()),
                         Some(PartialMoniker::new(child.name.clone(), None)),
                     );
-                    self.add_descendants(tree, &mut child_node)?;
+                    self.add_descendants(tree, &mut child_node);
                     node.children.push(child_node.node_path.clone());
                     tree.nodes.insert(child_node.node_path.clone(), child_node);
                 }
-                None => {
-                    return Err(ComponentTreeError::ComponentDeclNotFound(child.url.to_string()))
-                }
+                None => self.result.errors.push(ComponentTreeError::ComponentDeclNotFound(
+                    child.url.to_string(),
+                    node.short_display(),
+                )),
             }
         }
-        Ok(())
     }
 }
 
@@ -319,7 +350,7 @@ mod tests {
     }
 
     // Builds a `ComponentTree` with a single node.
-    fn build_single_node_tree() -> Result<ComponentTree, ComponentTreeError> {
+    fn build_single_node_tree() -> BuildTreeResult {
         let root_url = "root_url".to_string();
         let root_decl = new_component_decl(vec![]);
         let mut decls = HashMap::new();
@@ -335,7 +366,7 @@ mod tests {
     //       /
     //     baz
     //
-    fn build_multi_node_tree() -> Result<ComponentTree, ComponentTreeError> {
+    fn build_multi_node_tree() -> BuildTreeResult {
         let root_url = "root_url".to_string();
         let foo_url = "foo_url".to_string();
         let bar_url = "bar_url".to_string();
@@ -391,28 +422,37 @@ mod tests {
     }
 
     // Builds `ComponentNode`s with and without parents and children and tests the
-    // `short_display()` method.
+    // `short_display()` and `url()` methods.
     #[test]
     fn build_node() {
         let foo_moniker = PartialMoniker::new("foo".to_string(), None);
         let bar_moniker = PartialMoniker::new("bar".to_string(), None);
 
-        let single_node = ComponentNode::new(new_component_decl(vec![]), None, None);
-        assert_eq!(single_node.short_display(), "/");
+        let root_url = "root_url".to_string();
+        let leaf_url = "leaf_url".to_string();
+
+        let root_node =
+            ComponentNode::new(new_component_decl(vec![]), root_url.clone(), None, None);
+        assert_eq!(root_node.short_display(), "/");
+        assert_eq!(root_node.url(), root_url);
 
         let leaf_node = ComponentNode::new(
             new_component_decl(vec![]),
+            leaf_url.clone(),
             Some(NodePath::new(vec![foo_moniker])),
             Some(bar_moniker),
         );
         assert_eq!(leaf_node.short_display(), "/foo/bar");
+        assert_eq!(leaf_node.url(), leaf_url);
     }
 
     // Builds a tree with a single node, retrieves the root node, and checks that `try_get_parent`
     // and `get_children` return OK but trivial results.
     #[test]
     fn single_node_tree() -> Result<(), ComponentTreeError> {
-        let tree = build_single_node_tree()?;
+        let tree_result = build_single_node_tree();
+        assert!(tree_result.errors.is_empty());
+        let tree = tree_result.tree.unwrap();
 
         let root_node = tree.get_root_node()?;
         assert!(root_node.parent.is_none());
@@ -436,9 +476,12 @@ mod tests {
         let other_url = "other_url".to_string();
         let mut decls = HashMap::new();
         decls.insert(root_url.clone(), new_component_decl(vec![]));
-        assert!(
-            ComponentTreeBuilder::new(decls).build(other_url.clone()).is_err(),
-            ComponentTreeError::ComponentDeclNotFound(other_url)
+        let build_result = ComponentTreeBuilder::new(decls).build(other_url.clone());
+        assert!(build_result.tree.is_none());
+        assert_eq!(build_result.errors.len(), 1);
+        assert_eq!(
+            build_result.errors[0],
+            ComponentTreeError::ComponentDeclNotFound(other_url, "".to_string())
         );
     }
 
@@ -448,7 +491,9 @@ mod tests {
     // of PartialMonikers.
     #[test]
     fn build_tree_and_look_up_multi_node() -> Result<(), ComponentTreeError> {
-        let tree = build_multi_node_tree()?;
+        let tree_result = build_multi_node_tree();
+        assert!(tree_result.errors.is_empty());
+        let tree = tree_result.tree.unwrap();
 
         let foo_path = NodePath::new(vec![PartialMoniker::new("foo".to_string(), None)]);
         let bar_path = NodePath::new(vec![PartialMoniker::new("bar".to_string(), None)]);
@@ -492,7 +537,9 @@ mod tests {
     // returns the expected result for each node.
     #[test]
     fn try_get_parent() -> Result<(), ComponentTreeError> {
-        let tree = build_multi_node_tree()?;
+        let tree_result = build_multi_node_tree();
+        assert!(tree_result.errors.is_empty());
+        let tree = tree_result.tree.unwrap();
 
         let foo_path = NodePath::new(vec![PartialMoniker::new("foo".to_string(), None)]);
         let bar_path = NodePath::new(vec![PartialMoniker::new("bar".to_string(), None)]);
@@ -517,7 +564,9 @@ mod tests {
     // returns the expected result for each node.
     #[test]
     fn get_children() -> Result<(), ComponentTreeError> {
-        let tree = build_multi_node_tree()?;
+        let tree_result = build_multi_node_tree();
+        assert!(tree_result.errors.is_empty());
+        let tree = tree_result.tree.unwrap();
 
         let foo_path = NodePath::new(vec![PartialMoniker::new("foo".to_string(), None)]);
         let bar_path = NodePath::new(vec![PartialMoniker::new("bar".to_string(), None)]);
@@ -542,7 +591,10 @@ mod tests {
     // ComponentTree has a single node.
     #[test]
     fn breadth_first_walker_single_node() -> Result<(), anyhow::Error> {
-        let tree = build_single_node_tree()?;
+        let tree_result = build_single_node_tree();
+        assert!(tree_result.errors.is_empty());
+        let tree = tree_result.tree.unwrap();
+
         let mut walker = BreadthFirstWalker::new(&tree)?;
         let mut visitor = RouteMappingVisitor::default();
         assert!(walker.walk(&tree, &mut visitor).is_ok());
@@ -555,7 +607,10 @@ mod tests {
     // order when the ComponentTree has multiple nodes.
     #[test]
     fn breadth_first_walker_multi_node() -> Result<(), anyhow::Error> {
-        let tree = build_multi_node_tree()?;
+        let tree_result = build_multi_node_tree();
+        assert!(tree_result.errors.is_empty());
+        let tree = tree_result.tree.unwrap();
+
         let mut walker = BreadthFirstWalker::new(&tree)?;
         let mut visitor = RouteMappingVisitor::default();
         assert!(walker.walk(&tree, &mut visitor).is_ok());

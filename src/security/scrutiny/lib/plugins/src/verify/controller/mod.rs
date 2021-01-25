@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 pub mod boot_options;
+pub mod capability_routing;

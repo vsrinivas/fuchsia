@@ -153,6 +153,7 @@ impl PluginConfig {
                 "SearchPlugin".to_string(),
                 "EnginePlugin".to_string(),
                 "ToolkitPlugin".to_string(),
+                "VerifyPlugin".to_string(),
             ],
         }
     }

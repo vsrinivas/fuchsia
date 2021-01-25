@@ -1,0 +1,31 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    cm_fidl_analyzer::component_tree::{ComponentTree, ComponentTreeError},
+    scrutiny::prelude::*,
+    serde::{Deserialize, Serialize},
+    uuid::Uuid,
+};
+
+#[derive(Deserialize, Serialize)]
+pub struct V2ComponentTree {
+    // TODO(pesk): start serializing the `tree` field if/when cm_rust::ComponentDecl
+    // implements Serialize.
+    #[serde(skip)]
+    pub tree: ComponentTree,
+    pub errors: Vec<ComponentTreeError>,
+}
+
+impl V2ComponentTree {
+    pub fn new(tree: ComponentTree, errors: Vec<ComponentTreeError>) -> Self {
+        Self { tree, errors }
+    }
+}
+
+impl DataCollection for V2ComponentTree {
+    fn uuid() -> Uuid {
+        Uuid::parse_str("42a56c22-8e21-592c-2601-35a1e0ad970c").unwrap()
+    }
+}
