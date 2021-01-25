@@ -501,6 +501,13 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
 
       DEBUG_ASSERT(mapping != nullptr);
       AssertHeld(mapping->lock_ref());
+      // If the mapping is entirely before |min_addr| or entirely after |max_addr| do not run
+      // on_mapping. This can happen when a vmar contains min_addr but has mappings entirely
+      // below it, for example.
+      if ((mapping->base() < min_addr && mapping->base() + mapping->size() < min_addr) ||
+          mapping->base() > max_addr) {
+        continue;
+      }
       if (!on_mapping(mapping, this, depth)) {
         return false;
       }

@@ -2109,4 +2109,48 @@ TEST(Vmar, ConcurrentUnmapReadMemory) {
   t.join();
 }
 
+// Test DECOMMIT on a vmar with two non-contiguous mappings (fxbug.dev/68272)
+TEST(Vmar, RangeOpCommitVmoPages2) {
+  auto root_vmar = zx::vmar::root_self();
+
+  // Create a VMO and VMAR large enough to support two multipage mappings.
+  const size_t kVmoSize = PAGE_SIZE * 10;
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_vmo_create(kVmoSize, 0, &vmo), ZX_OK);
+
+  zx_vaddr_t vmar_base = 0u;
+  zx_handle_t vmar = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_vmar_allocate(zx_vmar_root_self(),
+                             ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                             kVmoSize, &vmar, &vmar_base),
+            ZX_OK);
+
+  // Create one mapping in the VMAR
+  constexpr size_t kMappingSize = 5 * PAGE_SIZE;
+  zx_vaddr_t mapping_addr = 0u;
+  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                        kMappingSize, &mapping_addr),
+            ZX_OK);
+  ASSERT_EQ(vmar_base, mapping_addr);
+
+  // Create a second mapping in the VMAR, with one unmapped page separting this from the prior
+  // mapping
+  constexpr size_t kMappingSize2 = 4 * PAGE_SIZE;
+  zx_vaddr_t mapping_addr2 = 0u;
+  ASSERT_EQ(
+      zx_vmar_map(vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                  kMappingSize + PAGE_SIZE, vmo, PAGE_SIZE * 5, kMappingSize2, &mapping_addr2),
+      ZX_OK);
+  ASSERT_NE(mapping_addr, mapping_addr2);
+
+  memset(reinterpret_cast<void*>(mapping_addr), 0x0, kMappingSize2);
+  memset(reinterpret_cast<void*>(mapping_addr2), 0x0, kMappingSize2);
+
+  // Decommit the second mapping; the presence of the first mapping should not cause the decommit op
+  // to panic or to be invoked on the wrong range.
+  EXPECT_EQ(zx_vmar_op_range(root_vmar->get(), ZX_VMAR_OP_DECOMMIT, mapping_addr2, kMappingSize2,
+                             nullptr, 0u),
+            ZX_OK);
+}
+
 }  // namespace
