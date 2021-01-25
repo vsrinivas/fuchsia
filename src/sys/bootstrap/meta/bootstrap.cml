@@ -169,10 +169,7 @@
         {
             protocol: "fuchsia.boot.RootResource",
             from: "parent",
-            to: [
-                "#console",
-                "#sysinfo",
-            ],
+            to: [ "#console" ],
         },
         {
             protocol: [
