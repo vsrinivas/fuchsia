@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
@@ -51,9 +52,7 @@ install_host_tools("host") {
   outputs = [ "fidlgen_llcpp" ]
 }
 
-clang_format =
-    rebase_path("//prebuilt/third_party/clang/$host_platform/bin/clang-format",
-                root_build_dir)
+clang_format = rebase_path("${clang_prefix}/clang-format", "", root_build_dir)
 reformat_command = "'${clang_format}' --style=google"
 
 golden_test("fidlgen_llcpp_golden_tests") {
