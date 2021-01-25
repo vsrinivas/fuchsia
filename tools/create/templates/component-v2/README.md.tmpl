@@ -12,11 +12,14 @@ NOTE: V2 components must be included in `base`. Ephemerality is not supported ye
 
 ## Running
 
-There is no convenient way to run a V2 component directly. First launch `component_manager`
+There is no convenient way to run a V2 component directly. First launch `component_manager_for_examples`
 as a V1 component and give it the URL of this component.
 
+Note, you may need to add this variant of component manager to your build.
+If so, append `--with //src/sys/component_manager:component-manager-for-examples` to the `fx set` invocation.
+
 ```
-$ fx shell run fuchsia-pkg://fuchsia.com/component_manager#meta/component_manager.cmx \
+$ fx shell run fuchsia-pkg://fuchsia.com/component-manager-for-examples#meta/component_manager_for_examples.cmx \
   fuchsia-pkg://fuchsia.com/{{PROJECT_NAME}}#meta/{{PROJECT_NAME}}.cm
 ```
 
