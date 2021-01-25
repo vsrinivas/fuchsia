@@ -236,7 +236,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration, PlugMonitorCallback* 
 zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t channels,
                                          uint64_t channels_to_use_bitmask,
                                          audio_sample_format_t sample_format) {
-  if (!stream_ch_.is_valid() || !rb_ch_.is_valid())
+  if (!stream_ch_.is_valid() || rb_ch_.is_valid())
     return ZX_ERR_BAD_STATE;
 
   auto sizes = audio::utils::GetSampleSizes(sample_format);
