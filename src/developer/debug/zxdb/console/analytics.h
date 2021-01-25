@@ -5,10 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ANALYTICS_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ANALYTICS_H_
 
-#include "src/developer/debug/zxdb/client/analytics_scope.h"
-#include "src/developer/debug/zxdb/client/google_analytics_client.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics.h"
+#include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 
 namespace zxdb {
 
@@ -19,7 +18,6 @@ class Analytics : public analytics::core_dev_tools::Analytics<Analytics> {
 
  private:
   friend class analytics::core_dev_tools::Analytics<Analytics>;
-  friend class AnalyticsScope<Analytics>;
 
   // Move base class Init() to private. Users of this class can only call Init(Session& session).
   using analytics::core_dev_tools::Analytics<Analytics>::Init;
@@ -39,7 +37,7 @@ class Analytics : public analytics::core_dev_tools::Analytics<Analytics> {
   }
 
   static std::unique_ptr<analytics::google_analytics::Client> CreateGoogleAnalyticsClient() {
-    return std::make_unique<GoogleAnalyticsClient>();
+    return std::make_unique<analytics::core_dev_tools::GoogleAnalyticsClient>();
   }
 
   static void RunTask(fit::pending_task task);

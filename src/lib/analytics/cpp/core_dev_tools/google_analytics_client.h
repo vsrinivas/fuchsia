@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_GOOGLE_ANALYTICS_CLIENT_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_GOOGLE_ANALYTICS_CLIENT_H_
+#ifndef SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_GOOGLE_ANALYTICS_CLIENT_H_
+#define SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_GOOGLE_ANALYTICS_CLIENT_H_
 
 #include "src/lib/analytics/cpp/google_analytics/client.h"
 
-namespace zxdb {
+namespace analytics::core_dev_tools {
 
 // Forwarding types from analytics::google_analytics
 using GoogleAnalyticsEvent = ::analytics::google_analytics::Event;
@@ -25,6 +25,6 @@ class GoogleAnalyticsClient : public analytics::google_analytics::Client {
       const std::map<std::string, std::string>& parameters) const override;
 };
 
-}  // namespace zxdb
+}  // namespace analytics::core_dev_tools
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_GOOGLE_ANALYTICS_CLIENT_H_
+#endif  // SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_GOOGLE_ANALYTICS_CLIENT_H_

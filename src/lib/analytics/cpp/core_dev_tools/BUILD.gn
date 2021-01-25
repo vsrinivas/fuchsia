@@ -11,6 +11,7 @@ static_library("core_dev_tools") {
     "analytics.h",
     "analytics_executor.h",
     "general_parameters.h",
+    "google_analytics_client.h",
     "system_info.h",
     "user_agent.h",
   ]
@@ -26,6 +27,8 @@ static_library("core_dev_tools") {
     "analytics_status.h",
     "general_parameters.cc",
     "general_parameters.h",
+    "google_analytics_client.cc",
+    "google_analytics_client.h",
     "persistent_status.cc",
     "persistent_status.h",
     "system_info.cc",
@@ -77,11 +80,23 @@ test("analytics_executor_manualtest") {
   ]
 }
 
+test("google_analytics_client_manualtest") {
+  output_name =
+      "analytics_cpp_core_dev_tools_google_analytics_client_manualtest"
+  sources = [ "google_analytics_client_manualtest.cc" ]
+  deps = [
+    ":core_dev_tools",
+    "//src/developer/debug/shared",
+    "//src/lib/fxl",
+  ]
+}
+
 group("tests") {
   testonly = true
 
   deps = [
     ":analytics_executor_manualtest",
+    ":google_analytics_client_manualtest",
     ":system_info_manualtest",
     ":unittests",
   ]

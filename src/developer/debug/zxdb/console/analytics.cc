@@ -21,6 +21,7 @@ constexpr char kEventActionInvoke[] = "invoke";
 
 using ::analytics::GetOsVersion;
 using ::analytics::core_dev_tools::GeneralParameters;
+using ::analytics::core_dev_tools::GoogleAnalyticsEvent;
 using ::analytics::core_dev_tools::SubLaunchStatus;
 
 bool Analytics::should_be_enabled_runtime_ = false;

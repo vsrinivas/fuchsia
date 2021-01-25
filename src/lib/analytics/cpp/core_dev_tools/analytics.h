@@ -129,6 +129,13 @@ class Analytics {
                             T::kAnalyticsList);
   }
 
+  // Clean up the global pointer used by the Google Analytics client.
+  static void CleanUpGoogleAnalyticsClient() {
+    client_is_cleaned_up_ = true;
+    auto* client = GetGoogleAnalyticsClient().get();
+    delete client;
+  }
+
  protected:
   static void SendGoogleAnalyticsEvent(const google_analytics::Event& event,
                                        fit::callback<void()> callback = nullptr) {
@@ -146,13 +153,6 @@ class Analytics {
         T::RunTask(fit::make_promise([callback = std::move(callback)]() mutable { callback(); }));
       }
     }
-  }
-
-  // Clean up the global pointer used by the Google Analytics client.
-  static void CleanUpGoogleAnalyticsClient() {
-    client_is_cleaned_up_ = true;
-    auto* client = GetGoogleAnalyticsClient().get();
-    delete client;
   }
 
   static bool ClientIsCleanedUp() { return client_is_cleaned_up_; }

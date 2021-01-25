@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/client/google_analytics_client.h"
+#include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 
 #include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/macros.h>
@@ -10,7 +10,7 @@
 #include "src/developer/debug/shared/curl.h"
 #include "src/lib/fxl/strings/substitute.h"
 
-namespace zxdb {
+namespace analytics::core_dev_tools {
 
 using ::debug_ipc::Curl;
 
@@ -65,4 +65,4 @@ fit::promise<void, GoogleAnalyticsNetError> GoogleAnalyticsClient::SendData(
   return CurlPerformAsync(curl);
 }
 
-}  // namespace zxdb
+}  // namespace analytics::core_dev_tools

@@ -15,7 +15,6 @@
 #include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
-#include "src/developer/debug/zxdb/client/analytics_scope.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -200,8 +199,8 @@ bool EarlyProcessAnalyticsOptions(const CommandLineOptions& options) {
 
 int ConsoleMain(int argc, const char* argv[]) {
   debug_ipc::Curl::GlobalInit();
-  auto deferred_cleanup = fit::defer(debug_ipc::Curl::GlobalCleanup);
-  AnalyticsScope<Analytics> _analytics_scope;
+  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUpGoogleAnalyticsClient);
   CommandLineOptions options;
   std::vector<std::string> params;
   cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);

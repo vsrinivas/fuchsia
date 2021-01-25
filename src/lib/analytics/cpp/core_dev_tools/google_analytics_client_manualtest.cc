@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/fit/result.h>
 #include <stdio.h>
 
+#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
-#include "src/developer/debug/zxdb/client/google_analytics_client.h"
+#include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 
-using zxdb::GoogleAnalyticsClient;
-using zxdb::GoogleAnalyticsEvent;
-using zxdb::GoogleAnalyticsNetError;
-using zxdb::GoogleAnalyticsNetErrorType;
+using analytics::core_dev_tools::GoogleAnalyticsClient;
+using analytics::core_dev_tools::GoogleAnalyticsEvent;
+using analytics::core_dev_tools::GoogleAnalyticsNetError;
+using analytics::core_dev_tools::GoogleAnalyticsNetErrorType;
 
 namespace {
 
@@ -55,7 +57,9 @@ int main(int argc, char* argv[]) {
   std::string tracking_id(argv[1]);
   std::string client_id(argv[2]);
 
-  GoogleAnalyticsClient::CurlGlobalInit();
+  debug_ipc::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+
   auto ga_client = GoogleAnalyticsClient();
   ga_client.SetTrackingId(tracking_id);
   ga_client.SetClientId(client_id);
@@ -86,7 +90,6 @@ int main(int argc, char* argv[]) {
   }
 
   loop.Cleanup();
-  GoogleAnalyticsClient::CurlGlobalCleanup();
 
   return ret;
 }
