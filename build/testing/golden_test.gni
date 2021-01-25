@@ -100,6 +100,8 @@ template("golden_test") {
   # golden file through `reformat_goldens`.
   target_reformat_goldens = "${target_name}_reformat_goldens"
   action_foreach(target_reformat_goldens) {
+    hermetic_deps = false
+
     testonly = true
     visibility = [ ":*" ]
 

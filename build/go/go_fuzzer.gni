@@ -69,6 +69,8 @@ template("go_fuzzer") {
   # 3b. Alternately, create a fuzzer unit test to ensure fuzzer code is built even when not fuzzing.
   test_wrapper_name = "${fuzzer_name}_test_wrapper"
   go_build(test_wrapper_name) {
+    hermetic_deps = false
+
     gopackages = [ wrapper_name ]
     carchive = true
     deps = [ ":$library_name" ]
