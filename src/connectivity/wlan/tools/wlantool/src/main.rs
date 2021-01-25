@@ -8,6 +8,7 @@ use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::{
     self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, QueryIfaceResponse,
 };
+use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{
     self as fidl_sme, ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent,
@@ -58,6 +59,9 @@ fn main() -> Result<(), Error> {
             }
             Opt::Client(opts::ClientCmd::Scan(cmd)) | Opt::Scan(cmd) => {
                 do_client_scan(cmd, wlan_svc).await
+            }
+            Opt::Client(opts::ClientCmd::WmmStatus(cmd)) | Opt::WmmStatus(cmd) => {
+                do_client_wmm_status(cmd, wlan_svc, &mut std::io::stdout()).await
             }
             Opt::Ap(cmd) => do_ap(cmd, wlan_svc).await,
             Opt::Mesh(cmd) => do_mesh(cmd, wlan_svc).await,
@@ -346,6 +350,51 @@ async fn do_status(cmd: opts::IfaceStatusCmd, wlan_svc: WlanSvc) -> Result<(), E
             continue;
         }
     }
+    Ok(())
+}
+
+async fn do_client_wmm_status(
+    cmd: opts::ClientWmmStatusCmd,
+    wlan_svc: WlanSvc,
+    stdout: &mut dyn std::io::Write,
+) -> Result<(), Error> {
+    let sme = get_client_sme(wlan_svc, cmd.iface_id).await?;
+    let wmm_status = sme
+        .wmm_status()
+        .await
+        .map_err(|e| format_err!("error sending WmmStatus request: {}", e))?;
+    match wmm_status {
+        Ok(wmm_status) => print_wmm_status(&wmm_status, stdout)?,
+        Err(code) => writeln!(stdout, "ClientSme::WmmStatus fails with status code: {}", code)?,
+    }
+    Ok(())
+}
+
+fn print_wmm_status(
+    wmm_status: &fidl_internal::WmmStatusResponse,
+    stdout: &mut dyn std::io::Write,
+) -> Result<(), Error> {
+    writeln!(stdout, "apsd={}", wmm_status.apsd)?;
+    print_wmm_ac_params("ac_be", &wmm_status.ac_be_params, stdout)?;
+    print_wmm_ac_params("ac_bk", &wmm_status.ac_bk_params, stdout)?;
+    print_wmm_ac_params("ac_vi", &wmm_status.ac_vi_params, stdout)?;
+    print_wmm_ac_params("ac_vo", &wmm_status.ac_vo_params, stdout)?;
+    Ok(())
+}
+
+fn print_wmm_ac_params(
+    ac_name: &str,
+    ac_params: &fidl_internal::WmmAcParams,
+    stdout: &mut dyn std::io::Write,
+) -> Result<(), Error> {
+    writeln!(stdout, "{ac_name}: aifsn={aifsn} acm={acm} ecw_min={ecw_min} ecw_max={ecw_max} txop_limit={txop_limit}",
+             ac_name=ac_name,
+             aifsn=ac_params.aifsn,
+             acm=ac_params.acm,
+             ecw_min=ac_params.ecw_min,
+             ecw_max=ac_params.ecw_max,
+             txop_limit=ac_params.txop_limit,
+    )?;
     Ok(())
 }
 
@@ -1011,5 +1060,83 @@ mod tests {
         });
         // No connect request is sent to SME because the command is invalid and rejected.
         assert_variant!(exec.run_until_stalled(&mut wlansvc_stream.next()), Poll::Pending);
+    }
+
+    #[test]
+    fn test_wmm_status() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlansvc_local, wlansvc_remote) =
+            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
+        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        let mut stdout = Vec::new();
+        {
+            let fut = do_client_wmm_status(
+                ClientWmmStatusCmd { iface_id: 11 },
+                wlansvc_local,
+                &mut stdout,
+            );
+            pin_mut!(fut);
+
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+            let mut fake_sme_server_stream = assert_variant!(
+                exec.run_until_stalled(&mut wlansvc_stream.next()),
+                Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::GetClientSme {
+                    iface_id, sme, responder,
+                }))) => {
+                    assert_eq!(iface_id, 11);
+                    responder.send(zx::Status::OK.into_raw()).expect("failed to send GetClientSme response");
+                    sme.into_stream().expect("sme server stream failed")
+                }
+            );
+
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut fake_sme_server_stream.next()),
+                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::WmmStatus { responder }))) => {
+                    let mut wmm_status_resp = Ok(fidl_internal::WmmStatusResponse {
+                        apsd: true,
+                        ac_be_params: fidl_internal::WmmAcParams {
+                            aifsn: 1,
+                            acm: false,
+                            ecw_min: 2,
+                            ecw_max: 3,
+                            txop_limit: 4,
+                        },
+                        ac_bk_params: fidl_internal::WmmAcParams {
+                            aifsn: 5,
+                            acm: false,
+                            ecw_min: 6,
+                            ecw_max: 7,
+                            txop_limit: 8,
+                        },
+                        ac_vi_params: fidl_internal::WmmAcParams {
+                            aifsn: 9,
+                            acm: true,
+                            ecw_min: 10,
+                            ecw_max: 11,
+                            txop_limit: 12,
+                        },
+                        ac_vo_params: fidl_internal::WmmAcParams {
+                            aifsn: 13,
+                            acm: true,
+                            ecw_min: 14,
+                            ecw_max: 15,
+                            txop_limit: 16,
+                        },
+                    });
+                    responder.send(&mut wmm_status_resp).expect("failed to send WMM status response");
+                }
+            );
+
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+        }
+        assert_eq!(
+            String::from_utf8(stdout).expect("expect valid UTF8"),
+            "apsd=true\n\
+             ac_be: aifsn=1 acm=false ecw_min=2 ecw_max=3 txop_limit=4\n\
+             ac_bk: aifsn=5 acm=false ecw_min=6 ecw_max=7 txop_limit=8\n\
+             ac_vi: aifsn=9 acm=true ecw_min=10 ecw_max=11 txop_limit=12\n\
+             ac_vo: aifsn=13 acm=true ecw_min=14 ecw_max=15 txop_limit=16\n"
+        );
     }
 }

@@ -102,6 +102,8 @@ pub enum Opt {
     Scan(ClientScanCmd),
     #[structopt(name = "status")]
     Status(IfaceStatusCmd),
+    #[structopt(name = "wmm_status")]
+    WmmStatus(ClientWmmStatusCmd),
 
     #[structopt(name = "ap")]
     /// commands for AP stations
@@ -273,6 +275,12 @@ pub struct ClientScanCmd {
 }
 
 #[derive(StructOpt, Clone, Debug)]
+pub struct ClientWmmStatusCmd {
+    #[structopt(short = "i", long = "iface", default_value = "0")]
+    pub iface_id: u16,
+}
+
+#[derive(StructOpt, Clone, Debug)]
 pub struct IfaceStatusCmd {
     #[structopt(short = "i", long = "iface")]
     pub iface_id: Option<u16>,
@@ -286,6 +294,8 @@ pub enum ClientCmd {
     Connect(ClientConnectCmd),
     #[structopt(name = "disconnect")]
     Disconnect(ClientDisconnectCmd),
+    #[structopt(name = "wmm_status")]
+    WmmStatus(ClientWmmStatusCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
