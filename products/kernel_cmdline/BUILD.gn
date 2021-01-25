@@ -83,3 +83,7 @@ kernel_cmdline("virtcon.disable--true") {
 kernel_cmdline("virtcon.keep-log-visible--true") {
   args = [ "virtcon.keep-log-visible=true" ]
 }
+
+kernel_cmdline("ktrace.grpmask-0") {
+  args = [ "ktrace.grpmask=0" ]
+}
