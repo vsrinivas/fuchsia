@@ -442,7 +442,7 @@ static int usb_hub_thread(void* arg) {
       return ZX_ERR_IO_INVALID;
     }
 
-    usb_request_copy_from(req, status_buf, req->response.actual, 0);
+    __UNUSED size_t result = usb_request_copy_from(req, status_buf, req->response.actual, 0);
     uint8_t* bitmap = status_buf;
     uint8_t* bitmap_end = bitmap + req->response.actual;
 
