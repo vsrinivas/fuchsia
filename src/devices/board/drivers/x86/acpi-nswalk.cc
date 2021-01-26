@@ -28,12 +28,12 @@
 #include "dev.h"
 #include "errors.h"
 #include "i2c.h"
-#include "iommu.h"
 #include "methods.h"
 #include "nhlt.h"
 #include "pci.h"
 #include "power.h"
 #include "resources.h"
+#include "src/devices/lib/iommu/iommu.h"
 #include "sysmem.h"
 #include "util.h"
 

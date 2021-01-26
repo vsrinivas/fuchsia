@@ -1,0 +1,37 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/bootfs_test.gni")
+
+source_set("iommu") {
+  sources = [
+    "iommu.cc",
+    "iommu.h",
+  ]
+
+  deps = [
+    "//src/lib/ddk",
+    "//third_party/acpica",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fit",
+    "//zircon/system/ulib/syslog:syslog-headers",
+  ]
+}
+
+test("iommu-test") {
+  sources = [ "iommu-test.cc" ]
+  deps = [
+    "//src/devices/lib/iommu",
+    "//src/devices/testing/fake_ddk",
+    "//third_party/acpica",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+bootfs_test("iommu-bootfs-test") {
+  name = "iommu-test"
+  deps = [ ":iommu-test" ]
+}

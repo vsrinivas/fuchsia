@@ -11,12 +11,13 @@
 
 #include <memory>
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 
-#include "iommu.h"
+#include "src/devices/lib/iommu/iommu.h"
 
 namespace x86 {
 
@@ -67,7 +68,9 @@ class X86 : public ddk::Device<X86, ddk::Messageable>,
   zx_status_t Start();
   int Thread();
 
-  IommuManager iommu_manager_;
+  IommuManager iommu_manager_{[](fx_log_severity_t severity, const char* file, int line,
+                                 const char* msg,
+                                 va_list args) { zxlogvf_etc(severity, file, line, msg, args); }};
 
   ddk::PBusProtocolClient pbus_;
 

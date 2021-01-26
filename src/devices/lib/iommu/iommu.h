@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_IOMMU_H_
-#define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_IOMMU_H_
+#ifndef SRC_DEVICES_LIB_IOMMU_IOMMU_H_
+#define SRC_DEVICES_LIB_IOMMU_IOMMU_H_
 
+#include <lib/fit/function.h>
+#include <lib/syslog/logger.h>
 #include <lib/zx/iommu.h>
-#include <threads.h>
 #include <zircon/syscalls/iommu.h>
-#include <zircon/types.h>
 
 #include <acpica/acpi.h>
 #include <fbl/array.h>
-#include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/span.h>
 
@@ -80,16 +79,19 @@ class IommuDesc {
   zx::iommu iommu_;
 };
 
+using IommuLogger = fit::function<void(fx_log_severity_t severity, const char* file, int line,
+                                       const char* msg, va_list args)>;
+
 // Internally synchronized iommu manager.
 class IommuManager {
  public:
-  IommuManager() = default;
+  explicit IommuManager(IommuLogger logger);
   ~IommuManager();
 
   // Initializes the iommu_manager using the ACPI DMAR table. If this fails,
   // the IOMMU manager will be left in a well-defined empty state, and
   // IommuForBdf() can still succeed (yielding dummy IOMMU handles).
-  zx_status_t Init(bool force_hardware_iommu = false);
+  zx_status_t Init(zx::unowned_resource root_resource, bool force_hardware_iommu);
 
   // Returns a handle to the IOMMU that is responsible for the given BDF.
   zx::unowned_iommu IommuForBdf(uint32_t bdf);
@@ -97,12 +99,14 @@ class IommuManager {
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(IommuManager);
 
-  // Give the unit test code access.
-  friend IommuTest;
-
   // Initializes the iommus_ from the given DMAR. This does not call IommuDesc::CreateIommu and is
   // suitable for hooking into from unit test code.
   zx_status_t InitDesc(const ACPI_TABLE_DMAR* dmar);
+
+  void Logf(fx_log_severity_t severity, const char* file, int line, const char* msg, ...)
+      __PRINTFLIKE(5, 6);
+
+  IommuLogger logger_;
 
   fbl::Mutex lock_;
 
@@ -111,6 +115,9 @@ class IommuManager {
 
   // Used for BDFs not covered by the ACPI tables.
   zx::iommu dummy_iommu_;
+
+  // Give the unit test code access.
+  friend IommuTest;
 };
 
 }  // namespace x86
@@ -120,4 +127,4 @@ class IommuManager {
 // must not close the handle.
 zx_status_t iommu_manager_iommu_for_bdf(uint32_t bdf, zx_handle_t* iommu);
 
-#endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_IOMMU_H_
+#endif  // SRC_DEVICES_LIB_IOMMU_IOMMU_H_

@@ -21,9 +21,9 @@
 #include "acpi-private.h"
 #include "dev.h"
 #include "errors.h"
-#include "iommu.h"
 #include "pci.h"
 #include "pci_allocators.h"
+#include "src/devices/lib/iommu/iommu.h"
 
 static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t index,
                                       zx_handle_t* bti) {

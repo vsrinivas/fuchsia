@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iommu.h>
+#include "src/devices/lib/iommu/iommu.h"
 
 #include <vector>
 
+#include <ddk/debug.h>
 #include <zxtest/zxtest.h>
 
 namespace x86 {
@@ -169,7 +170,9 @@ class IommuTest : public zxtest::Test {
     EXPECT_EQ(reserved_mem.size(), 0);
   }
   void RunTest(const ACPI_TABLE_DMAR *dmar, const std::vector<Desc> &expected) {
-    x86::IommuManager man;
+    x86::IommuManager man([](fx_log_severity_t severity, const char *file, int line,
+                             const char *msg,
+                             va_list args) { zxlogvf_etc(severity, file, line, msg, args); });
     ASSERT_OK(man.InitDesc(dmar));
     auto it1 = man.iommus_.begin();
     auto it2 = expected.begin();

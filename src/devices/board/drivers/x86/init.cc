@@ -10,7 +10,6 @@
 #include "acpi-private.h"
 #include "dev.h"
 #include "errors.h"
-#include "iommu.h"
 #include "x86.h"
 
 #define ACPI_MAX_INIT_TABLES 32
@@ -191,9 +190,11 @@ zx_status_t X86::EarlyInit() {
   if (status != ZX_OK) {
     return status;
   }
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+  zx::unowned_resource root_resource(get_root_resource());
   // Now initialize the IOMMU manager. Any failures in setting it up we consider non-fatal and do
   // not propagate.
-  status = iommu_manager_.Init();
+  status = iommu_manager_.Init(std::move(root_resource), false /* force_hardware_iommu */);
   if (status != ZX_OK) {
     zxlogf(INFO, "acpi: Failed to initialize IOMMU manager: %d", status);
   }
