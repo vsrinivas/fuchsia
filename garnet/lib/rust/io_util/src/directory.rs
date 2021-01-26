@@ -67,6 +67,35 @@ pub async fn open_directory(
     node::verify_directory_describe_event(dir).await
 }
 
+/// Creates a directory named `path` within the `parent` directory.
+pub async fn create_directory(
+    parent: &DirectoryProxy,
+    path: &str,
+    flags: u32,
+) -> Result<DirectoryProxy, OpenError> {
+    let (dir, server_end) =
+        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(OpenError::CreateProxy)?;
+
+    // NB: POSIX does not allow open(2) to create dirs, but fuchsia.io does not have an equivalent
+    // of mkdir(2), so on Fuchsia we're expected to call open on a DirectoryMarker with (flags &
+    // OPEN_FLAG_CREATE) set.
+    // (mode & MODE_TYPE_DIRECTORY) is also required, although it is redundant (the fact that we
+    // opened a DirectoryMarker is the main way that the underlying filesystem understands our
+    // intention.)
+    let flags = flags
+        | fidl_fuchsia_io::OPEN_FLAG_CREATE
+        | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
+        | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
+    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+
+    parent
+        .open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
+        .map_err(OpenError::SendOpenRequest)?;
+
+    // wait for the directory to open and report success.
+    node::verify_directory_describe_event(dir).await
+}
+
 /// Opens the given `path` from the given `parent` directory as a [`FileProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.File protocol.
 pub fn open_file_no_describe(
@@ -160,10 +189,14 @@ pub async fn close(dir: DirectoryProxy) -> Result<(), CloseError> {
 mod tests {
     use {
         super::*,
-        crate::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio,
+        fidl_fuchsia_io::{
+            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        },
+        fuchsia_async as fasync,
         futures::prelude::*,
         matches::assert_matches,
+        tempfile::TempDir,
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
@@ -176,6 +209,16 @@ mod tests {
 
     fn open_pkg() -> DirectoryProxy {
         open_in_namespace("/pkg", OPEN_RIGHT_READABLE).unwrap()
+    }
+
+    fn open_tmp() -> (TempDir, DirectoryProxy) {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let proxy = open_in_namespace(
+            tempdir.path().to_str().unwrap(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        (tempdir, proxy)
     }
 
     // open_in_namespace
@@ -244,6 +287,52 @@ mod tests {
         assert_matches!(
             open_directory(&pkg, "data/file", OPEN_RIGHT_READABLE).await,
             Err(OpenError::OpenError(Status::NOT_DIR))
+        );
+    }
+
+    // create_directory
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_directory_simple() {
+        let (_tmp, proxy) = open_tmp();
+        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_READABLE).await.unwrap();
+        crate::directory::close(dir).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_directory_add_file() {
+        let (_tmp, proxy) = open_tmp();
+        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+            .await
+            .unwrap();
+        let file = open_file(
+            &dir,
+            "data",
+            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
+        )
+        .await
+        .unwrap();
+        crate::file::close(file).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_directory_existing_dir_opens() {
+        let (_tmp, proxy) = open_tmp();
+        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_READABLE).await.unwrap();
+        crate::directory::close(dir).await.unwrap();
+        create_directory(&proxy, "dir", OPEN_RIGHT_READABLE).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_directory_existing_dir_fails_if_flag_set() {
+        let (_tmp, proxy) = open_tmp();
+        let dir = create_directory(&proxy, "dir", OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE)
+            .await
+            .unwrap();
+        crate::directory::close(dir).await.unwrap();
+        assert_matches!(
+            create_directory(&proxy, "dir", OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE).await,
+            Err(_)
         );
     }
 
@@ -423,10 +512,7 @@ mod tests {
 
         assert_matches!(
             stream.next().await,
-            Some(Ok(fio::DirectoryRequest::Clone {
-                flags: 42,
-                ..
-            }))
+            Some(Ok(fio::DirectoryRequest::Clone { flags: 42, .. }))
         );
     }
 }
