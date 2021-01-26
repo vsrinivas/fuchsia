@@ -17,7 +17,7 @@ use {
     inspect_fidl_load as deprecated_inspect,
     std::convert::TryFrom,
     std::sync::Arc,
-    tracing::error,
+    tracing::warn,
 };
 
 pub struct InspectArtifactsContainer {
@@ -195,7 +195,7 @@ impl UnpopulatedInspectDataContainer {
                     "Exceeded per-component time limit for fetching diagnostics data: {:?}",
                     &this.identity.relative_moniker
                 );
-                error!("{}", error_string);
+                warn!("{}", error_string);
                 PopulatedInspectDataContainer {
                     identity: this.identity.clone(),
                     inspect_matcher: this.inspect_matcher.clone(),
