@@ -54,16 +54,18 @@ void percpu::InitializeSecondary(uint32_t /*init_level*/) {
   static_assert((MAX_CACHE_LINE % alignof(struct percpu)) == 0);
 
   const size_t bytes = sizeof(percpu) * (processor_count_ - 1);
-  secondary_processors_ = static_cast<percpu*>(memalign(MAX_CACHE_LINE, bytes));
+  if (bytes) {
+    secondary_processors_ = static_cast<percpu*>(memalign(MAX_CACHE_LINE, bytes));
 
-  // TODO: Remove the need to zero memory by fully initializing all of percpu
-  // members in the constructor / default initializers.
-  memset(secondary_processors_, 0, bytes);
+    // TODO: Remove the need to zero memory by fully initializing all of percpu
+    // members in the constructor / default initializers.
+    memset(secondary_processors_, 0, bytes);
 
-  // Construct the secondary percpu instances and add them to the index.
-  for (cpu_num_t i = 1; i < processor_count_; i++) {
-    processor_index_[i] = &secondary_processors_[i - 1];
-    new (&secondary_processors_[i - 1]) percpu{i};
+    // Construct the secondary percpu instances and add them to the index.
+    for (cpu_num_t i = 1; i < processor_count_; i++) {
+      processor_index_[i] = &secondary_processors_[i - 1];
+      new (&secondary_processors_[i - 1]) percpu{i};
+    }
   }
 
   // Compute the performance scale of each CPU.
