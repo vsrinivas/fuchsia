@@ -1954,7 +1954,6 @@ mod tests {
         types::Bss {
             bssid: bss.as_slice().try_into().unwrap(),
             rssi: rng.gen_range(-100, 20),
-            frequency: rng.gen_range(2000, 6000),
             channel: generate_random_channel(),
             timestamp_nanos: 0,
             snr_db: rng.gen_range(-20, 50),

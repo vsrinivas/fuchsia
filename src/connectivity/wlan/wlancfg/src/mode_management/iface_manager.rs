@@ -3952,7 +3952,6 @@ mod tests {
                 entries: vec![client_types::Bss {
                     bssid: [20, 30, 40, 50, 60, 70],
                     rssi: -15,
-                    frequency: 2400,
                     timestamp_nanos: 0,
                     compatible: true,
                     observed_in_passive_scan: false,
@@ -4070,7 +4069,6 @@ mod tests {
                 entries: vec![client_types::Bss {
                     bssid: [20, 30, 40, 50, 60, 70],
                     rssi: -15,
-                    frequency: 2400,
                     timestamp_nanos: 0,
                     compatible: true,
                     observed_in_passive_scan: false,

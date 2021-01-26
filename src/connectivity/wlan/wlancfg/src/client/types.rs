@@ -6,6 +6,7 @@ use {
     crate::config_management,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
+    wlan_common::channel::Channel,
     wlan_metrics_registry::{
         PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
     },
@@ -89,8 +90,6 @@ pub struct Bss {
     pub rssi: i8,
     /// Signal to noise ratio  for the beacon/probe response.
     pub snr_db: i8,
-    /// Operating frequency for this network (in MHz).
-    pub frequency: u32,
     /// Channel for this network.
     pub channel: WlanChan,
     /// Realtime timestamp for this scan result entry.
@@ -104,10 +103,13 @@ pub struct Bss {
 }
 impl From<Bss> for fidl_policy::Bss {
     fn from(input: Bss) -> Self {
+        // Get the frequency. On error, default to Some(0) rather than None to protect against
+        // consumer code that expects this field to always be set.
+        let frequency = Channel::from_fidl(input.channel).get_center_freq().unwrap_or(0);
         fidl_policy::Bss {
             bssid: Some(input.bssid),
             rssi: Some(input.rssi),
-            frequency: Some(input.frequency),
+            frequency: Some(frequency.into()), // u16.into() -> u32
             timestamp_nanos: Some(input.timestamp_nanos),
             ..fidl_policy::Bss::EMPTY
         }
