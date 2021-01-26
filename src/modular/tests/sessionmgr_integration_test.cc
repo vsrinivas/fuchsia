@@ -25,8 +25,8 @@
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
+
 constexpr char kTestStoryId[] = "test_story";
-constexpr char kTestModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 
 using element::annotations::AnnotationEq;
 using ::testing::ByRef;
@@ -34,45 +34,45 @@ using ::testing::ElementsAre;
 
 class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {
  public:
-  std::unique_ptr<modular_testing::FakeGraphicalPresenter> LaunchTestHarness() {
-    modular_testing::TestHarnessBuilder builder;
-    auto fake_graphical_presenter =
-        modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions();
+  SessionmgrIntegrationTest()
+      : fake_graphical_presenter_(
+            modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions()),
+        fake_module_(modular_testing::FakeModule::CreateWithDefaultOptions()) {}
 
-    builder.InterceptSessionShell(fake_graphical_presenter->BuildInterceptOptions());
+  void LaunchTestHarness() {
+    modular_testing::TestHarnessBuilder builder;
+    builder.InterceptSessionShell(fake_graphical_presenter_->BuildInterceptOptions());
+    builder.InterceptComponent(fake_module_->BuildInterceptOptions());
     builder.UseSessionShellForStoryShellFactory();
 
     bool graphical_presenter_connected = false;
-    fake_graphical_presenter->set_on_graphical_presenter_connected(
-        [&]() { graphical_presenter_connected = true; });
-    fake_graphical_presenter->set_on_graphical_presenter_error([&](zx_status_t status) {
-      FX_NOTREACHED() << "Failed to connect to FakeGraphicalPresenter";
+    fake_graphical_presenter_->set_on_graphical_presenter_connected([&]() {
+      graphical_presenter_connected = true;
+      fake_graphical_presenter_->set_on_graphical_presenter_error([&](zx_status_t status) {});
+    });
+    fake_graphical_presenter_->set_on_graphical_presenter_error([&](zx_status_t status) {
+      FX_PLOGS(FATAL, status) << "Failed to connect to FakeGraphicalPresenter";
+      FX_NOTREACHED();
     });
 
     // Create the test harness and verify the session shell is up
     builder.BuildAndRun(test_harness());
 
-    EXPECT_FALSE(fake_graphical_presenter->is_running());
-    RunLoopUntil([&] { return fake_graphical_presenter->is_running(); });
+    EXPECT_FALSE(fake_graphical_presenter_->is_running());
+    RunLoopUntil([&] { return fake_graphical_presenter_->is_running(); });
     RunLoopUntil([&] { return graphical_presenter_connected; });
-
-    return fake_graphical_presenter;
   }
 
   std::unique_ptr<modular_testing::SimpleStoryProviderWatcher> CreateStory(
-      modular_testing::FakeGraphicalPresenter* fake_graphical_presenter,
       fuchsia::modular::StoryPuppetMasterPtr* story_master,
       std::vector<fuchsia::modular::StoryState>* sequence_of_story_states) {
-    FX_DCHECK(fake_graphical_presenter != nullptr) << "FakeSessionShell is nullptr";
-
-    // Create a new story using PuppetMaster and start a new story shell.
-    // Confirm that PresentView() is called.
+    // Connect to PuppetMaster
     fuchsia::modular::PuppetMasterPtr puppet_master;
     fuchsia::modular::testing::ModularService svc;
     svc.set_puppet_master(puppet_master.NewRequest());
     test_harness()->ConnectToModularService(std::move(svc));
 
-    fuchsia::modular::StoryProvider* story_provider = fake_graphical_presenter->story_provider();
+    fuchsia::modular::StoryProvider* story_provider = fake_graphical_presenter_->story_provider();
     EXPECT_TRUE(story_provider != nullptr);
 
     // Have the mock session_shell record the sequence of story states it sees,
@@ -91,30 +91,26 @@ class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {
     return watcher;
   }
 
-  void LaunchMod(fuchsia::modular::StoryPuppetMaster* story_master) {
-    fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name_transitional = "mod1";
-    add_mod.intent.handler = kTestModuleUrl;
+  void LaunchMod() {
+    // Add the module to the story.
+    fuchsia::modular::Intent intent;
+    intent.handler = fake_module_->url();
+    intent.action = "action";
 
-    fuchsia::modular::StoryCommand command;
-    command.set_add_mod(std::move(add_mod));
-
-    std::vector<fuchsia::modular::StoryCommand> commands;
-    commands.push_back(std::move(command));
-
-    story_master->Enqueue(std::move(commands));
-    story_master->Execute([](fuchsia::modular::ExecuteResult result) {});
+    modular_testing::AddModToStory(test_harness(), kTestStoryId, "modname", std::move(intent));
   }
 
-  void StopStory(std::string story_id,
-                 modular_testing::FakeGraphicalPresenter* fake_graphical_presenter) {
+  void StopStory() {
     fuchsia::modular::StoryControllerPtr story_controller;
-    fake_graphical_presenter->story_provider()->GetController(story_id,
-                                                              story_controller.NewRequest());
+    fake_graphical_presenter_->story_provider()->GetController(kTestStoryId,
+                                                               story_controller.NewRequest());
     bool stop_called = false;
     story_controller->Stop([&] { stop_called = true; });
     RunLoopUntil([&] { return stop_called; });
   }
+
+  std::unique_ptr<modular_testing::FakeGraphicalPresenter> fake_graphical_presenter_;
+  std::unique_ptr<modular_testing::FakeModule> fake_module_;
 };
 
 class SessionmgrIntegrationTestWithoutDefaultHarness : public sys::testing::TestWithEnvironment {};
@@ -245,28 +241,27 @@ TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromGlobalEnvironment) {
 }
 
 TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {
-  auto fake_graphical_presenter = LaunchTestHarness();
+  LaunchTestHarness();
 
   // Add Event Listeners
   bool called_present_view = false;
-  fake_graphical_presenter->set_on_present_view(
+  fake_graphical_presenter_->set_on_present_view(
       [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
   bool called_dismiss = false;
-  fake_graphical_presenter->set_on_dismiss([&] { called_dismiss = true; });
+  fake_graphical_presenter_->set_on_dismiss([&] { called_dismiss = true; });
 
   // Create the story
   fuchsia::modular::StoryPuppetMasterPtr story_master;
   std::vector<fuchsia::modular::StoryState> sequence_of_story_states;
-  auto watcher =
-      CreateStory(fake_graphical_presenter.get(), &story_master, &sequence_of_story_states);
+  auto watcher = CreateStory(&story_master, &sequence_of_story_states);
 
-  LaunchMod(story_master.get());
+  LaunchMod();
 
   // Since this test is using a GraphicalPresenter PresentView should be called.
   RunLoopUntil([&] { return called_present_view; });
 
-  StopStory(kTestStoryId, fake_graphical_presenter.get());
+  StopStory();
 
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
@@ -285,7 +280,7 @@ TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {
 }
 
 TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
-  auto fake_graphical_presenter = LaunchTestHarness();
+  LaunchTestHarness();
 
   constexpr char kTestAnnotationKey[] = "test_key";
   constexpr char kTestAnnotationValue[] = "test_value";
@@ -293,7 +288,7 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
 
   // Add Event Listeners
   bool called_present_view = false;
-  fake_graphical_presenter->set_on_present_view([&](fuchsia::element::ViewSpec view_spec) {
+  fake_graphical_presenter_->set_on_present_view([&](fuchsia::element::ViewSpec view_spec) {
     called_present_view = true;
     ASSERT_TRUE(view_spec.has_annotations());
 
@@ -304,7 +299,7 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
   });
 
   bool called_on_annotate = false;
-  fake_graphical_presenter->set_on_update_annotations(
+  fake_graphical_presenter_->set_on_update_annotations(
       [&](const std::vector<fuchsia::element::Annotation>& annotations_to_set,
           const std::vector<fuchsia::element::AnnotationKey>& annotations_to_delete) {
         called_on_annotate = true;
@@ -318,8 +313,7 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
   // Create the story and add annotations
   fuchsia::modular::StoryPuppetMasterPtr story_master;
   std::vector<fuchsia::modular::StoryState> sequence_of_story_states;
-  auto watcher =
-      CreateStory(fake_graphical_presenter.get(), &story_master, &sequence_of_story_states);
+  auto watcher = CreateStory(&story_master, &sequence_of_story_states);
 
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(fuchsia::modular::Annotation{
@@ -331,7 +325,7 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
                            ASSERT_FALSE(result.is_err());
                          });
 
-  LaunchMod(story_master.get());
+  LaunchMod();
 
   // Wait for PresentView to be called and and verify that on_annotate wasn't called since it
   // should only be called when annotations are updated, not when initally set.
@@ -351,23 +345,21 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
 
   RunLoopUntil([&] { return called_on_annotate; });
 
-  StopStory(kTestStoryId, fake_graphical_presenter.get());
+  StopStory();
 }
 
 TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
+  static constexpr char kTestStoryId1[] = "test_story_1";
+  static constexpr char kTestStoryId2[] = "test_story_2";
+
   modular_testing::TestHarnessBuilder builder;
   auto fake_graphical_presenter =
       modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions();
 
-  // Add Event Listeners
   bool called_present_view = false;
   fake_graphical_presenter->set_on_present_view(
       [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
-  bool called_dismiss = false;
-  fake_graphical_presenter->set_on_dismiss([&] { called_dismiss = true; });
-
-  // Connect to FakeGraphicalPresenter
   builder.InterceptSessionShell(fake_graphical_presenter->BuildInterceptOptions());
   builder.UseSessionShellForStoryShellFactory();
 
@@ -375,19 +367,15 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
   fake_graphical_presenter->set_on_graphical_presenter_connected(
       [&]() { graphical_presenter_connected = true; });
   fake_graphical_presenter->set_on_graphical_presenter_error([&](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Failed to connect to FakeGraphicalPresenter";
-    ASSERT_EQ(status, ZX_OK);
+    FX_NOTREACHED() << "Failed to connect to FakeGraphicalPresenter";
   });
 
-  constexpr char kTestStoryId2[] = "test_story_2";
-  constexpr char kTestModuleUrl2[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module_2.cmx";
-
   // Register two fake components to be launched as a story mods
-  modular_testing::FakeModule fake_module_1{{.url = kTestModuleUrl}};
-  builder.InterceptComponent(fake_module_1.BuildInterceptOptions());
+  auto fake_module_1 = modular_testing::FakeModule::CreateWithDefaultOptions();
+  builder.InterceptComponent(fake_module_1->BuildInterceptOptions());
 
-  modular_testing::FakeModule fake_module_2{{.url = kTestModuleUrl2}};
-  builder.InterceptComponent(fake_module_2.BuildInterceptOptions());
+  auto fake_module_2 = modular_testing::FakeModule::CreateWithDefaultOptions();
+  builder.InterceptComponent(fake_module_2->BuildInterceptOptions());
 
   // Create the test harness and verify the session shell is up
   builder.BuildAndRun(test_harness());
@@ -407,39 +395,37 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
 
   // Add a modules to two different stories
   fuchsia::modular::Intent intent;
-  intent.handler = kTestModuleUrl;
+  intent.handler = fake_module_1->url();
   intent.action = "action";
   constexpr char kTestModuleName[] = "fake_module";
-  modular_testing::AddModToStory(test_harness(), kTestStoryId, kTestModuleName, std::move(intent));
+  modular_testing::AddModToStory(test_harness(), kTestStoryId1, kTestModuleName, std::move(intent));
 
-  ASSERT_FALSE(fake_module_1.is_running());
-  RunLoopUntil([&] { return fake_module_1.is_running(); });
+  ASSERT_FALSE(fake_module_1->is_running());
+  RunLoopUntil([&] { return fake_module_1->is_running(); });
 
   fuchsia::modular::Intent intent_2;
-  intent_2.handler = kTestModuleUrl2;
+  intent_2.handler = fake_module_2->url();
   intent_2.action = "action";
   constexpr char kTestModuleName2[] = "fake_module_2";
   modular_testing::AddModToStory(test_harness(), kTestStoryId2, kTestModuleName2,
                                  std::move(intent_2));
 
-  ASSERT_FALSE(fake_module_2.is_running());
-  RunLoopUntil([&] { return fake_module_2.is_running(); });
+  ASSERT_FALSE(fake_module_2->is_running());
+  RunLoopUntil([&] { return fake_module_2->is_running(); });
 
   // Since this test is using a GraphicalPresenter PresentView should be called
   RunLoopUntil([&] { return called_present_view; });
 
   // Close the view controller and wait for the module to stop.
   fake_graphical_presenter->CloseFirstViewController();
-  RunLoopUntil([&] { return !fake_module_1.is_running(); });
+  RunLoopUntil([&] { return !fake_module_1->is_running(); });
 
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
   RunLoopUntil([&] { return sequence_of_story_states.size() == 6; });
 
-  // Confirm that:
-  //  a. Dismiss was called.
-  //  b. The story went through the correct sequence of states (see StoryState FIDL file for valid
-  // state transitions). Since the test started it, ran it, and stopped it, the sequence is:
+  // Confirm that the story went through the correct sequence of states.
+  // Since the test started it, ran it, and stopped it, the sequence is:
   // STOPPED -> RUNNING -> STOPPING -> STOPPED.
   ASSERT_THAT(sequence_of_story_states,
               testing::ElementsAre(
@@ -448,7 +434,7 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
                   fuchsia::modular::StoryState::STOPPING, fuchsia::modular::StoryState::STOPPED));
 
   // Ensure that only the first module was stopped.
-  ASSERT_TRUE(fake_module_2.is_running());
+  ASSERT_TRUE(fake_module_2->is_running());
 }
 
 // Launch a session shell an ensure that it receives argv configured for it in the Modular Config.
