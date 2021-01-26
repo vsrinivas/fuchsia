@@ -1,0 +1,56 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+
+if (is_host) {
+  go_library("summary_test_lib") {
+    testonly = true
+    sources = [ "summary_test.go" ]
+    deps = [ ":gopkg" ]
+  }
+
+  _fidlc_target = "//zircon/tools/fidl:fidlc($host_toolchain)"
+  _fidlc_binary = get_label_info(_fidlc_target, "root_out_dir") + "/fidlc"
+  go_test("summary_test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidl_api_summarize" ]
+    args = [
+      "--fidlc",
+      rebase_path(_fidlc_binary, root_build_dir),
+    ]
+    deps = [
+      ":summary_test_lib",
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//tools/fidl/lib/fidlgen_testing",
+    ]
+    non_go_deps = [ _fidlc_target ]
+  }
+
+  go_library("gopkg") {
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/fidl_api_summarize/..."
+    sources = [
+      "main.go",
+      "summary.go",
+    ]
+    deps = [ "//tools/fidl/lib/fidlgen" ]
+  }
+
+  go_binary("fidl_api_summarize") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidl_api_summarize"
+    deps = [ ":gopkg" ]
+  }
+}  # is_host
+
+install_host_tools("host") {
+  deps = [ ":fidl_api_summarize" ]
+  outputs = [ "fidl_api_summarize" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":summary_test($host_toolchain)" ]
+}

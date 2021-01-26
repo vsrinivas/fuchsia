@@ -22,7 +22,7 @@ require (
 	github.com/smartystreets/assertions v1.2.0 // indirect
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	go.chromium.org/luci v0.0.0-20200828094204-41b976d93de1
-	go.fuchsia.dev/fuchsia/garnet v0.0.0-20200821151753-3226fa91b98e
+	go.fuchsia.dev/fuchsia/garnet v0.0.0-20200821151753-3226fa91b98e // indirect
 	go.fuchsia.dev/fuchsia/src v0.0.0-20200821151753-3226fa91b98e
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/net v0.0.0-20200822124328-c89045814202

@@ -6,6 +6,7 @@ group("fidl") {
   testonly = true
 
   public_deps = [
+    "fidl_api_summarize:host",
     "fidlcparsequality:host",
     "fidldoc($host_toolchain)",
     "fidlgen_dart:host",
@@ -25,6 +26,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "fidl_api_summarize:tests",
     "fidlc:tests",
     "fidldoc:tests",
     "fidlgen_dart:tests",
