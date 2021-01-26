@@ -318,19 +318,19 @@ zx_status_t DsiMt::DsiImplSendCmd(const mipi_dsi_cmd_t* cmd_list, size_t cmd_cou
     mipi_dsi_cmd_t cmd = cmd_list[i];
 
     switch (cmd.dsi_data_type) {
-      case MIPI_DSI_DT_GEN_SHORT_WRITE_0:
-      case MIPI_DSI_DT_GEN_SHORT_WRITE_1:
-      case MIPI_DSI_DT_GEN_SHORT_WRITE_2:
-      case MIPI_DSI_DT_GEN_LONG_WRITE:
-      case MIPI_DSI_DT_DCS_LONG_WRITE:
-      case MIPI_DSI_DT_DCS_SHORT_WRITE_0:
-      case MIPI_DSI_DT_DCS_SHORT_WRITE_1:
+      case kMipiDsiDtGenShortWrite0:
+      case kMipiDsiDtGenShortWrite1:
+      case kMipiDsiDtGenShortWrite2:
+      case kMipiDsiDtGenLongWrite:
+      case kMipiDsiDtDcsLongWrite:
+      case kMipiDsiDtDcsShortWrite0:
+      case kMipiDsiDtDcsShortWrite1:
         status = Write(cmd);
         break;
-      case MIPI_DSI_DT_GEN_SHORT_READ_0:
-      case MIPI_DSI_DT_GEN_SHORT_READ_1:
-      case MIPI_DSI_DT_GEN_SHORT_READ_2:
-      case MIPI_DSI_DT_DCS_READ_0:
+      case kMipiDsiDtGenShortRead0:
+      case kMipiDsiDtGenShortRead1:
+      case kMipiDsiDtGenShortRead2:
+      case kMipiDsiDtDcsRead0:
         status = Read(cmd);
         break;
       default:
@@ -536,7 +536,7 @@ zx_status_t DsiMt::Read(const mipi_dsi_cmd_t& cmd) {
   // Check whether max return packet size should be set
   if (cmd.flags & MIPI_DSI_CMD_FLAGS_SET_MAX) {
     // We will set the max return size as rlen
-    cmdq_reg.set_data_id(MIPI_DSI_DT_SET_MAX_RET_PKT);
+    cmdq_reg.set_data_id(kMipiDsiDtSetMaxRetPkt);
     cmdq_reg.set_type(TYPE_SHORT);
     cmdq_reg.set_data_0(static_cast<uint32_t>(cmd.rsp_data_count) & 0xFF);
     cmdq_reg.set_data_1((static_cast<uint32_t>(cmd.rsp_data_count) >> 8) & 0xFF);
@@ -599,10 +599,10 @@ zx_status_t DsiMt::Read(const mipi_dsi_cmd_t& cmd) {
   // Determine response type first
   auto rx_data_reg03 = DsiRxData03Reg::Get().ReadFrom(&(*dsi_mmio_));
   switch (rx_data_reg03.byte0()) {
-    case MIPI_DSI_RSP_GEN_SHORT_1:
-    case MIPI_DSI_RSP_GEN_SHORT_2:
-    case MIPI_DSI_RSP_DCS_SHORT_1:
-    case MIPI_DSI_RSP_DCS_SHORT_2:
+    case kMipiDsiRspGenShort1:
+    case kMipiDsiRspGenShort2:
+    case kMipiDsiRspDcsShort1:
+    case kMipiDsiRspDcsShort2:
       // For short response, byte1 and 2 contain the returned value
       if (cmd.rsp_data_count >= 1) {
         cmd.rsp_data_list[0] = static_cast<uint8_t>(rx_data_reg03.byte1());
@@ -611,8 +611,8 @@ zx_status_t DsiMt::Read(const mipi_dsi_cmd_t& cmd) {
         cmd.rsp_data_list[1] = static_cast<uint8_t>(rx_data_reg03.byte2());
       }
       break;
-    case MIPI_DSI_RSP_GEN_LONG:
-    case MIPI_DSI_RSP_DCS_LONG: {
+    case kMipiDsiRspGenLong:
+    case kMipiDsiRspDcsLong: {
       // For long responses, <byte2><byte1> contains the response bytes
       size_t rsp_count = rx_data_reg03.byte2() << 8 | rx_data_reg03.byte1();
       size_t actual_read = (rsp_count < cmd.rsp_data_count) ? rsp_count : cmd.rsp_data_count;
