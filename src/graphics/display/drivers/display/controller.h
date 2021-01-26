@@ -5,7 +5,11 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CONTROLLER_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CONTROLLER_H_
 
+// NOTE: this header is included first on purpose to avoid clashing with
+// Banjo-generated ones below.
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+
+#include <fuchsia/hardware/audiotypes/c/banjo.h>
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
@@ -50,7 +54,7 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   bool has_edid;
   edid::Edid edid;
   fbl::Vector<edid::timing_params_t> edid_timings;
-  fbl::Vector<audio_stream_format_range_t> edid_audio_;
+  fbl::Vector<audio_types_audio_stream_format_range_t> edid_audio_;
   display_params_t params;
 
   fbl::Array<zx_pixel_format_t> pixel_formats_;
@@ -108,8 +112,8 @@ class Controller : public ControllerParent,
                                                    size_t* display_info_actual);
   void DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                                 const uint64_t* handles, size_t handle_count);
-  zx_status_t DisplayControllerInterfaceGetAudioFormat(uint64_t display_id, uint32_t fmt_idx,
-                                                       audio_stream_format_range_t* fmt_out);
+  zx_status_t DisplayControllerInterfaceGetAudioFormat(
+      uint64_t display_id, uint32_t fmt_idx, audio_types_audio_stream_format_range_t* fmt_out);
 
   void DisplayCaptureInterfaceOnCaptureComplete();
   void OnClientDead(ClientProxy* client);

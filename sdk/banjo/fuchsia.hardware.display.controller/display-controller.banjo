@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.display.controller;
 
-using zircon.device.audio;
+using fuchsia.hardware.audiotypes;
 using zx;
 
 //using ZxPixelFormat = uint32;
@@ -145,7 +145,7 @@ protocol DisplayControllerInterface {
     OnDisplayVsync(uint64 display_id, zx.time timestamp, vector<uint64> @handle) -> ();
 
     GetAudioFormat(uint64 display_id, uint32 fmt_idx)
-               -> (zx.status s, zircon.device.audio.AudioStreamFormatRange fmt);
+               -> (zx.status s, fuchsia.hardware.audiotypes.AudioTypesAudioStreamFormatRange fmt);
 };
 
 enum Alpha : uint8 {

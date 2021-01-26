@@ -30,6 +30,7 @@
 
 #include "client.h"
 #include "eld.h"
+#include "src/devices/lib/audio/audio.h"
 #include "src/graphics/display/drivers/display/display-bind.h"
 
 namespace fidl_display = llcpp::fuchsia::hardware::display;
@@ -151,7 +152,7 @@ void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
   // and not redundant, which is not guaranteed.
 
   // Add the range for basic audio support.
-  audio_stream_format_range_t range;
+  audio_types_audio_stream_format_range_t range;
   range.min_channels = 2;
   range.max_channels = 2;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
@@ -170,7 +171,7 @@ void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
       // TODO(stevensd): Add compressed formats when audio format supports it
       continue;
     }
-    audio_stream_format_range_t range;
+    audio_types_audio_stream_format_range_t range;
 
     constexpr audio_sample_format_t zero_format = static_cast<audio_sample_format_t>(0);
     range.sample_formats = static_cast<audio_sample_format_t>(
@@ -354,7 +355,9 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       if (zxlog_level_enabled(DEBUG) && info->edid_audio_.size()) {
         zxlogf(DEBUG, "Supported audio formats:");
         for (auto range : info->edid_audio_) {
-          for (auto rate : audio::utils::FrameRateEnumerator(range)) {
+          audio_stream_format_range temp_range;
+          audio::audio_stream_format_fidl_from_banjo(range, &temp_range);
+          for (auto rate : audio::utils::FrameRateEnumerator(temp_range)) {
             zxlogf(DEBUG, "  rate=%d, channels=[%d, %d], sample=%x", rate, range.min_channels,
                    range.max_channels, range.sample_formats);
           }
@@ -614,7 +617,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
 }
 
 zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
-    uint64_t display_id, uint32_t fmt_idx, audio_stream_format_range_t* fmt_out) {
+    uint64_t display_id, uint32_t fmt_idx, audio_types_audio_stream_format_range_t* fmt_out) {
   fbl::AutoLock lock(mtx());
   auto display = displays_.find(display_id);
   if (!display.IsValid()) {

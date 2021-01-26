@@ -4,6 +4,6 @@
 
 import("//build/banjo/banjo.gni")
 
-banjo_dummy("zircon.device.audio") {
+banjo("fuchsia.hardware.audiotypes") {
   sources = [ "audio.banjo" ]
 }

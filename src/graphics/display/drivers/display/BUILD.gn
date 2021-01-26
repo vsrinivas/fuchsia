@@ -42,6 +42,7 @@ source_set("shared") {
   ]
   public_deps = [
     ":display_bind",
+    "//sdk/banjo/fuchsia.hardware.audiotypes",
     "//sdk/banjo/fuchsia.hardware.display.capture",
     "//sdk/banjo/fuchsia.hardware.display.clamprgb",
     "//sdk/banjo/fuchsia.hardware.display.controller",
@@ -49,6 +50,7 @@ source_set("shared") {
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//src/devices/lib/audio",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",

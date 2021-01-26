@@ -21,6 +21,7 @@ source_set("common") {
   public_deps = [
     ":vim-display-bind",
     "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
+    "//sdk/banjo/fuchsia.hardware.audiotypes",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.gpio",
@@ -31,6 +32,7 @@ source_set("common") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
+    "//src/devices/lib/audio",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",

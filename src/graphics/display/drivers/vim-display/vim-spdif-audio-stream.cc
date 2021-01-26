@@ -4,6 +4,8 @@
 
 #include "vim-spdif-audio-stream.h"
 
+#include <fuchsia/hardware/audiotypes/c/banjo.h>
+
 #include <algorithm>
 #include <iterator>
 #include <limits>
@@ -16,6 +18,7 @@
 #include <soc/aml-s912/s912-audio.h>
 
 #include "hdmitx.h"
+#include "src/devices/lib/audio/audio.h"
 #include "vim-display.h"
 
 #define SHIFTED_MASK(_name) ((_name##_MASK) << (_name##_SHIFT))
@@ -313,7 +316,7 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
   // cannot generate any of the 44.1k family of audio rates.  We can, however,
   // generate clock rates up to 192KHz, and can generate 16, 20, and 24 bit audio.
   for (unsigned i = 0; i < display_->audio_format_count; i++) {
-    audio_stream_format_range_t range;
+    audio_types_audio_stream_format_range_t range;
     zx_status_t status = display_controller_interface_get_audio_format(
         &display_->dc_intf, display_->display_id, i, &range);
     ZX_ASSERT(status == ZX_OK);
@@ -344,7 +347,9 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
     range.min_frames_per_second = std::max(MIN_SUPPORTED_RATE, range.min_frames_per_second);
 
     fbl::AllocChecker ac;
-    supported_formats_.push_back(range, &ac);
+    audio_stream_format_range_t temp_range;
+    audio::audio_stream_format_fidl_from_banjo(range, &temp_range);
+    supported_formats_.push_back(temp_range, &ac);
     if (!ac.check()) {
       zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
       return ZX_ERR_NO_MEMORY;

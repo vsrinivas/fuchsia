@@ -6,5 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.display.controller") {
   sources = [ "display-controller.banjo" ]
-  deps = [ "//sdk/banjo/zircon.device.audio" ]
+  deps = [ "//sdk/banjo/fuchsia.hardware.audiotypes" ]
 }
