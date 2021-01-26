@@ -24,8 +24,7 @@ std::unique_ptr<sys::ComponentContext> CreateComponentContext(
   }
 
   return std::make_unique<sys::ComponentContext>(
-      std::make_unique<sys::ServiceDirectory>(std::move(service_root)),
-      std::move(startup_info->launch_info.directory_request), dispatcher);
+      std::make_unique<sys::ServiceDirectory>(std::move(service_root)), dispatcher);
 }
 }  // namespace
 
@@ -51,7 +50,12 @@ modular_testing::TestHarnessBuilder::InterceptOptions FakeComponent::BuildInterc
         component_context_->outgoing()->AddPublicService(
             lifecycle_bindings_.GetHandler(this, dispatcher));
 
+        auto outgoing_directory_request = std::move(startup_info.launch_info.directory_request);
+
         OnCreate(std::move(startup_info));
+
+        // Serve the outgoing directory.
+        component_context_->outgoing()->Serve(std::move(outgoing_directory_request), dispatcher);
       };
 
   return options;
