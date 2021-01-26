@@ -8,7 +8,7 @@ library fuchsia.deprecatedtimezone;
 // not add new uses that depend on it.  Use instead the following functionality:
 //
 // - For `GetTimezoneOffsetMinutes` and `GetTimezoneId`, get the timezone name
-//   from `fuchsia.intl.ProfileProvider`, and use the ICU library to compute
+//   from `fuchsia.intl.PropertyProvider`, and use the ICU library to compute
 //   the offset.
 // - For `SetTimezone` and `Watch`, please use `fuchsia.settings.Intl`.
 //
