@@ -24,14 +24,14 @@ lazy_static! {
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct Ordinal(#[serde(deserialize_with = "validate_ordinal")] pub u32);
+pub struct Ordinal(#[serde(deserialize_with = "validate_ordinal")] pub u64);
 
 /// Validates that ordinal is non-zero.
-fn validate_ordinal<'de, D>(deserializer: D) -> Result<u32, D::Error>
+fn validate_ordinal<'de, D>(deserializer: D) -> Result<u64, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let ordinal = u32::deserialize(deserializer)?;
+    let ordinal = u64::deserialize(deserializer)?;
     if ordinal == 0 {
         return Err(serde::de::Error::custom("Ordinal must not be equal to 0"));
     }
@@ -105,15 +105,18 @@ where
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum Declaration {
+    Bits,
     Const,
     Enum,
     Interface,
+    Service,
+    ExperimentalResource,
     Struct,
     Table,
     Union,
-    XUnion,
+    TypeAlias,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -121,9 +124,28 @@ pub enum Declaration {
 pub struct DeclarationsMap(pub BTreeMap<CompoundIdentifier, Declaration>);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ExternalDeclaration {
+    Bits,
+    Const,
+    Enum,
+    Interface,
+    Service,
+    ExperimentalResource,
+    Struct { resource: bool },
+    Table { resource: bool },
+    Union { resource: bool },
+    TypeAlias,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct ExternalDeclarationsMap(pub BTreeMap<CompoundIdentifier, ExternalDeclaration>);
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Library {
     pub name: LibraryIdentifier,
-    pub declarations: DeclarationsMap,
+    pub declarations: ExternalDeclarationsMap,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -131,30 +153,40 @@ pub struct Location {
     pub filename: String,
     pub line: u32,
     pub column: u32,
+    pub length: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HandleSubtype {
     Handle,
-    Process,
-    Thread,
-    Vmo,
+    Bti,
     Channel,
-    Event,
-    Port,
-    Interrupt,
+    Clock,
     Debuglog,
-    Socket,
-    Resource,
-    Eventpair,
-    Job,
-    Vmar,
+    Event,
+    EventPair,
+    Exception,
     Fifo,
     Guest,
-    Timer,
-    Bti,
+    Interrupt,
+    Iommu,
+    Job,
+    Pager,
+    PciDevice,
+    Pmt,
+    Port,
+    Process,
     Profile,
+    Resource,
+    Socket,
+    Stream,
+    SuspendToken,
+    Thread,
+    Timer,
+    Vcpu,
+    Vmar,
+    Vmo,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,7 +202,7 @@ pub enum IntegerType {
     Uint64,
 }
 
-// TODO(surajmalhotra): Implement conversion begtween IntegerType and PrimitiveSubtype.
+// TODO(surajmalhotra): Implement conversion between IntegerType and PrimitiveSubtype.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PrimitiveSubtype {
@@ -206,6 +238,7 @@ pub enum Type {
     },
     Handle {
         subtype: HandleSubtype,
+        rights: u32,
         nullable: bool,
     },
     Request {
@@ -227,25 +260,53 @@ pub enum Literal {
     #[serde(rename = "string")]
     Str {
         value: String,
+        expression: String,
     },
     Numeric {
         value: String,
+        expression: String,
     },
-    True,
-    False,
-    #[serde(rename = "default")]
-    _Default,
+    True {
+        value: String,
+        expression: String,
+    },
+    False {
+        value: String,
+        expression: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "lowercase")]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Constant {
-    Identifier { identifier: CompoundIdentifier },
-    Literal { literal: Literal },
+    Identifier { identifier: CompoundIdentifier, value: String, expression: String },
+    Literal { literal: Literal, value: String, expression: String },
+    BinaryOperator { value: String, expression: String },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Bits {
+    pub maybe_attributes: Option<Vec<Attribute>>,
+    pub name: CompoundIdentifier,
+    pub location: Option<Location>,
+    #[serde(rename = "type")]
+    pub _type: Type,
+    pub mask: String,
+    pub members: Vec<BitsMember>,
+    pub strict: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BitsMember {
+    pub name: Identifier,
+    pub location: Option<Location>,
+    pub maybe_attributes: Option<Vec<Attribute>>,
+    pub value: Constant,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Const {
+    pub maybe_attributes: Option<Vec<Attribute>>,
     pub name: CompoundIdentifier,
     pub location: Option<Location>,
     #[serde(rename = "type")]
@@ -269,6 +330,25 @@ pub struct Enum {
     #[serde(rename = "type")]
     pub _type: IntegerType,
     pub members: Vec<EnumMember>,
+    pub strict: bool,
+    pub maybe_unknown_value: Option<u32>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResourceProperty {
+    #[serde(rename = "type")]
+    pub _type: Type,
+    pub name: Identifier,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Resource {
+    pub maybe_attributes: Option<Vec<Attribute>>,
+    pub name: CompoundIdentifier,
+    pub location: Option<Location>,
+    #[serde(rename = "type")]
+    pub _type: Type,
+    pub properties: Option<Vec<ResourceProperty>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -278,32 +358,44 @@ pub struct Attribute {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FieldShape {
+    pub offset: Count,
+    pub padding: Count,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MethodParameter {
     #[serde(rename = "type")]
     pub _type: Type,
     pub name: Identifier,
     pub location: Option<Location>,
-    pub size: Count,
-    pub max_out_of_line: Count,
+    pub field_shape_v1: FieldShape,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TypeShape {
+    pub inline_size: Count,
     pub alignment: Count,
-    pub offset: Count,
+    pub depth: Count,
+    pub max_handles: Count,
+    pub max_out_of_line: Count,
+    pub has_padding: bool,
+    pub has_flexible_envelope: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Method {
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub ordinal: Ordinal,
-    pub generated_ordinal: Ordinal,
     pub name: Identifier,
     pub location: Option<Location>,
     pub has_request: bool,
     pub maybe_request: Option<Vec<MethodParameter>>,
-    pub maybe_request_size: Option<Count>,
-    pub maybe_request_alignment: Option<Count>,
+    pub maybe_request_type_shape_v1: Option<TypeShape>,
     pub has_response: bool,
     pub maybe_response: Option<Vec<MethodParameter>>,
-    pub maybe_response_size: Option<Count>,
-    pub maybe_response_alignment: Option<Count>,
+    pub maybe_response_type_shape_v1: Option<TypeShape>,
+    pub is_composed: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -315,15 +407,29 @@ pub struct Interface {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ServiceMember {
+    #[serde(rename = "type")]
+    pub _type: Type,
+    pub name: Identifier,
+    pub location: Location,
+    pub maybe_attributes: Option<Vec<Attribute>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Service {
+    pub name: CompoundIdentifier,
+    pub location: Option<Location>,
+    pub members: Vec<ServiceMember>,
+    pub maybe_attributes: Option<Vec<Attribute>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StructMember {
     #[serde(rename = "type")]
     pub _type: Type,
     pub name: Identifier,
     pub location: Option<Location>,
-    pub size: Count,
-    pub max_out_of_line: Count,
-    pub alignment: Count,
-    pub offset: Count,
+    pub field_shape_v1: FieldShape,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub maybe_default_value: Option<Constant>,
 }
@@ -336,18 +442,18 @@ pub struct Struct {
     pub location: Option<Location>,
     pub anonymous: Option<bool>,
     pub members: Vec<StructMember>,
-    pub size: Count,
-    pub max_out_of_line: Count,
+    pub resource: bool,
+    pub type_shape_v1: TypeShape,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct TableMember {
-    pub ordinal: Ordinal,
     pub reserved: bool,
     #[serde(rename = "type")]
     pub _type: Option<Type>,
     pub name: Option<Identifier>,
     pub location: Option<Location>,
+    pub ordinal: Ordinal,
     pub size: Option<Count>,
     pub max_out_of_line: Option<Count>,
     pub alignment: Option<Count>,
@@ -362,20 +468,21 @@ pub struct Table {
     pub name: CompoundIdentifier,
     pub location: Option<Location>,
     pub members: Vec<TableMember>,
-    pub size: Count,
-    pub max_out_of_line: Count,
+    pub strict: bool,
+    pub resource: bool,
+    pub type_shape_v1: TypeShape,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UnionMember {
+    pub ordinal: Ordinal,
+    pub reserved: bool,
+    pub name: Option<Identifier>,
     #[serde(rename = "type")]
-    pub _type: Type,
-    pub name: Identifier,
+    pub _type: Option<Type>,
     pub location: Option<Location>,
-    pub size: Count,
-    pub max_out_of_line: Count,
-    pub alignment: Count,
-    pub offset: Count,
+    pub max_out_of_line: Option<Count>,
+    pub offset: Option<Count>,
     pub maybe_attributes: Option<Vec<Attribute>>,
 }
 
@@ -386,49 +493,43 @@ pub struct Union {
     pub name: CompoundIdentifier,
     pub location: Option<Location>,
     pub members: Vec<UnionMember>,
-    pub size: Count,
-    pub max_out_of_line: Count,
-    pub alignment: Count,
+    pub strict: bool,
+    pub resource: bool,
+    pub type_shape_v1: TypeShape,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct XUnionMember {
-    pub ordinal: Ordinal,
-    #[serde(rename = "type")]
-    pub _type: Type,
-    pub name: Identifier,
-    pub location: Option<Location>,
-    pub size: Count,
-    pub max_out_of_line: Count,
-    pub alignment: Count,
-    pub offset: Count,
-    pub maybe_attributes: Option<Vec<Attribute>>,
+pub struct TypeConstructor {
+    pub name: String,
+    pub args: Vec<TypeConstructor>,
+    pub nullable: bool,
+    pub maybe_size: Option<Constant>,
+    pub maybe_handle_subtype: Option<HandleSubtype>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct XUnion {
-    pub max_handles: Option<Count>,
-    pub maybe_attributes: Option<Vec<Attribute>>,
+pub struct TypeAlias {
     pub name: CompoundIdentifier,
-    pub location: Option<Location>,
-    pub members: Vec<XUnionMember>,
-    pub size: Count,
-    pub max_out_of_line: Count,
-    pub alignment: Count,
+    pub location: Location,
+    pub partial_type_ctor: TypeConstructor,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Ir {
+pub struct FidlIr {
     pub version: Version,
     pub name: LibraryIdentifier,
-    pub library_dependencies: Vec<Library>,
+    pub maybe_attributes: Option<Vec<Attribute>>,
+    pub bits_declarations: Vec<Bits>,
     pub const_declarations: Vec<Const>,
     pub enum_declarations: Vec<Enum>,
+    pub experimental_resource_declarations: Vec<Resource>,
     pub interface_declarations: Vec<Interface>,
+    pub service_declarations: Vec<Service>,
     pub struct_declarations: Vec<Struct>,
     pub table_declarations: Vec<Table>,
     pub union_declarations: Vec<Union>,
-    pub xunion_declarations: Vec<XUnion>,
+    pub type_alias_declarations: Vec<TypeAlias>,
     pub declaration_order: Vec<CompoundIdentifier>,
     pub declarations: DeclarationsMap,
+    pub library_dependencies: Vec<Library>,
 }
