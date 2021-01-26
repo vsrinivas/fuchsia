@@ -32,6 +32,8 @@ std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason re
       return "CRITICAL COMPONENT FAILURE";
     case RebootReason::FACTORY_DATA_RESET:
       return "FACTORY DATA RESET";
+    case RebootReason::ZBI_SWAP:
+      return "ZBI SWAP";
     default:
       return "NOT SUPPORTED";
   }

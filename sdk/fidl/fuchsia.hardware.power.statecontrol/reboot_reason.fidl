@@ -26,4 +26,7 @@ enum RebootReason {
 
     /// A critical component managed by sysmgr has failed.
     CRITICAL_COMPONENT_FAILURE = 7;
+
+    /// A boot partition change was effected.
+    ZBI_SWAP = 9;
 };

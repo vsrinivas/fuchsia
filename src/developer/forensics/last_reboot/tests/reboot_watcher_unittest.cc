@@ -92,6 +92,11 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootReasons, ImminentGracefulRebootWatcher
                                  "FACTORY DATA RESET",
                              },
                              {
+                                 "ZbiSwap",
+                                 RebootReason::ZBI_SWAP,
+                                 "ZBI SWAP",
+                             },
+                             {
                                  "NotSupported",
                                  static_cast<RebootReason>(100u),
                                  "NOT SUPPORTED",
