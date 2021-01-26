@@ -82,14 +82,18 @@ class UnionWithHandle {
     return result;
   }
 
+  template <typename... Args>
+  static UnionWithHandle WithH(::fidl::AnyAllocator& allocator,
+                               Args&&... args) {
+    UnionWithHandle result;
+    result.set_h(
+        ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_h(::fidl::tracking_ptr<::zx::vmo>&& elem) {
     ordinal_ = Ordinal::kH;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_h(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kH;
-    set_h(::fidl::ObjectView<::zx::vmo>(allocator));
   }
 
   template <typename... Args>

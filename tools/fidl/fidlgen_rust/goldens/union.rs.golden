@@ -628,15 +628,13 @@ impl fidl::endpoints::ServiceMarker for TestProtocolMarker {
 }
 
 pub trait TestProtocolProxyInterface: Send + Sync {
-    type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut: std::future::Future<
-        Output = Result<(StrictBoundedXUnion), fidl::Error>,
-    > + Send;
+    type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut: std::future::Future<Output = Result<(StrictBoundedXUnion), fidl::Error>>
+        + Send;
     fn strict_x_union_hence_response_may_be_stack_allocated(
         &self,
     ) -> Self::StrictXUnionHenceResponseMayBeStackAllocatedResponseFut;
-    type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut: std::future::Future<
-        Output = Result<(OlderSimpleUnion), fidl::Error>,
-    > + Send;
+    type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut: std::future::Future<Output = Result<(OlderSimpleUnion), fidl::Error>>
+        + Send;
     fn flexible_x_union_hence_response_must_be_heap_allocated(
         &self,
     ) -> Self::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut;

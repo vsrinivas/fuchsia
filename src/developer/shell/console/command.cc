@@ -173,9 +173,9 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
 
   IdAndType VisitString(const parser::ast::String& node) override {
     AstBuilder::NodeId id = builder_->AddStringLiteral(node.value());
-    fidl::ObjectView<llcpp::fuchsia::shell::BuiltinType> builtin_type(
-        builder_->allocator(), llcpp::fuchsia::shell::BuiltinType::STRING);
-    return {.id = id, .type = llcpp::fuchsia::shell::ShellType::WithBuiltinType(builtin_type)};
+    return {.id = id,
+            .type = llcpp::fuchsia::shell::ShellType::WithBuiltinType(
+                builder_->allocator(), llcpp::fuchsia::shell::BuiltinType::STRING)};
   }
 
   IdAndType VisitObject(const parser::ast::Object& node) override {
@@ -187,11 +187,9 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
 
     auto result = builder_->CloseObject();
     AstBuilder::NodeId id = result.value_node;
-
-    fidl::ObjectView<llcpp::fuchsia::shell::NodeId> shell_id(builder_->allocator(),
-                                                             result.schema_node);
-
-    return {.id = id, .type = llcpp::fuchsia::shell::ShellType::WithObjectSchema(shell_id)};
+    return {.id = id,
+            .type = llcpp::fuchsia::shell::ShellType::WithObjectSchema(builder_->allocator(),
+                                                                       result.schema_node)};
   }
 
   IdAndType VisitField(const parser::ast::Field& node) override {

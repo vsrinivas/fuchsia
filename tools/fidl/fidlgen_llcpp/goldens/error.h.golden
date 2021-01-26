@@ -76,18 +76,21 @@ class Example_foo_Result {
     return result;
   }
 
+  template <typename... Args>
+  static Example_foo_Result WithResponse(::fidl::AnyAllocator& allocator,
+                                         Args&&... args) {
+    Example_foo_Result result;
+    result.set_response(
+        ::fidl::ObjectView<::llcpp::fidl::test::error::Example_foo_Response>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_response(
       ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>&&
           elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_response(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kResponse;
-    set_response(
-        ::fidl::ObjectView<::llcpp::fidl::test::error::Example_foo_Response>(
-            allocator));
   }
 
   template <typename... Args>
@@ -117,14 +120,18 @@ class Example_foo_Result {
     return result;
   }
 
+  template <typename... Args>
+  static Example_foo_Result WithErr(::fidl::AnyAllocator& allocator,
+                                    Args&&... args) {
+    Example_foo_Result result;
+    result.set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kErr;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_err(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kErr;
-    set_err(::fidl::ObjectView<uint32_t>(allocator));
   }
 
   template <typename... Args>

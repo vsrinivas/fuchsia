@@ -76,14 +76,18 @@ class UnionSmallArray {
     return result;
   }
 
+  template <typename... Args>
+  static UnionSmallArray WithA(::fidl::AnyAllocator& allocator,
+                               Args&&... args) {
+    UnionSmallArray result;
+    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>&& elem) {
     ordinal_ = Ordinal::kA;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_a(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kA;
-    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(allocator));
   }
 
   template <typename... Args>
@@ -165,14 +169,18 @@ class UnionLargeArray {
     return result;
   }
 
+  template <typename... Args>
+  static UnionLargeArray WithA(::fidl::AnyAllocator& allocator,
+                               Args&&... args) {
+    UnionLargeArray result;
+    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>&& elem) {
     ordinal_ = Ordinal::kA;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_a(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kA;
-    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(allocator));
   }
 
   template <typename... Args>

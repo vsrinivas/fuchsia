@@ -59,6 +59,14 @@ class {{ .Name }} {
     result.set_{{ .Name }}(std::move(val));
     return result;
   }
+
+  template <typename... Args>
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+    {{ $.Name }} result;
+    result.set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator,
+                           std::forward<Args>(args)...));
+    return result;
+  }
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}
@@ -66,11 +74,6 @@ class {{ .Name }} {
   void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}>&& elem) {
     ordinal_ = Ordinal::{{ .TagName }};
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_{{ .Name }}(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::{{ .TagName }};
-    set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator));
   }
 
   template <typename... Args>

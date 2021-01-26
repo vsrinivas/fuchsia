@@ -82,13 +82,11 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     fidl::FidlAllocator allocator;
     test::HandleUnion u;
     if (field == 1) {
-      fidl::ObjectView<zx::event> e(allocator);
-      zx::event::create(0, e.get());
-      u = test::HandleUnion::WithH1(e);
+      u.set_h1(allocator);
+      zx::event::create(0, &u.mutable_h1());
     } else if (field == 2) {
-      fidl::ObjectView<test::HandleStruct> s(allocator);
-      zx::event::create(0, &s->h);
-      u = test::HandleUnion::WithH2(s);
+      u.set_h2(allocator);
+      zx::event::create(0, &u.mutable_h2().h);
     }
     completer.Reply(std::move(u));
   }
@@ -97,13 +95,12 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     fidl::FidlAllocator allocator;
     test::HandleUnionStruct u;
     if (field == 1) {
-      fidl::ObjectView<zx::event> e(allocator);
-      zx::event::create(0, e.get());
-      u.u = test::HandleUnion::WithH1(e);
+      zx::event event;
+      zx::event::create(0, &event);
+      u.u.set_h1(allocator, std::move(event));
     } else if (field == 2) {
-      fidl::ObjectView<test::HandleStruct> s(allocator);
-      zx::event::create(0, &s->h);
-      u.u = test::HandleUnion::WithH2(s);
+      u.u.set_h2(allocator);
+      zx::event::create(0, &u.u.mutable_h2().h);
     }
     completer.Reply(std::move(u));
   }
@@ -153,13 +150,12 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     fidl::FidlAllocator allocator;
     test::HandleUnion u;
     if (field == 1) {
-      fidl::ObjectView<zx::event> e(allocator);
-      zx::event::create(0, e.get());
-      u = test::HandleUnion::WithH1(e);
+      zx::event event;
+      zx::event::create(0, &event);
+      u.set_h1(allocator, std::move(event));
     } else if (field == 2) {
-      fidl::ObjectView<test::HandleStruct> s(allocator);
-      zx::event::create(0, &s->h);
-      u = test::HandleUnion::WithH2(s);
+      u.set_h2(allocator);
+      zx::event::create(0, &u.mutable_h2().h);
     }
     completer.Reply(std::move(u));
   }
@@ -170,13 +166,12 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
       fidl::FidlAllocator allocator;
       fidl::ObjectView<test::HandleUnionStruct> u(allocator);
       if (field == 1) {
-        fidl::ObjectView<zx::event> e(allocator);
-        zx::event::create(0, e.get());
-        u->u = test::HandleUnion::WithH1(e);
+        zx::event event;
+        zx::event::create(0, &event);
+        u->u.set_h1(allocator, std::move(event));
       } else if (field == 2) {
-        fidl::ObjectView<test::HandleStruct> s(allocator);
-        zx::event::create(0, &s->h);
-        u->u = test::HandleUnion::WithH2(s);
+        u->u.set_h2(allocator);
+        zx::event::create(0, &u->u.mutable_h2().h);
       }
       completer.Reply(u);
     } else {
@@ -223,13 +218,13 @@ class HandleCloseProviderServer : public test::HandleProvider::Interface {
     test::HandleUnionOptionalStruct reply;
     if (defined) {
       if (field == 1) {
-        fidl::ObjectView<zx::event> e(allocator);
-        zx::event::create(0, e.get());
-        reply.u = test::HandleUnion::WithH1(e);
+        zx::event event;
+        zx::event::create(0, &event);
+        reply.u.set_h1(allocator, std::move(event));
       } else if (field == 2) {
         fidl::ObjectView<test::HandleStruct> s(allocator);
-        zx::event::create(0, &s->h);
-        reply.u = test::HandleUnion::WithH2(s);
+        reply.u.set_h2(allocator);
+        zx::event::create(0, &reply.u.mutable_h2().h);
       }
     }
     completer.Reply(std::move(reply));

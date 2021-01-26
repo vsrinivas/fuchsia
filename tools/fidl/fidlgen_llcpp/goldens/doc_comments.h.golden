@@ -640,17 +640,21 @@ class StrictUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictUnion WithField(::fidl::AnyAllocator& allocator,
+                               Args&&... args) {
+    StrictUnion result;
+    result.set_Field(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   // union member comment #1
   //
   // union member comment #3
   void set_Field(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kField;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_Field(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kField;
-    set_Field(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -738,17 +742,21 @@ class FlexibleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleUnion WithField(::fidl::AnyAllocator& allocator,
+                                 Args&&... args) {
+    FlexibleUnion result;
+    result.set_Field(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   // union member comment #1
   //
   // union member comment #3
   void set_Field(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kField;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_Field(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kField;
-    set_Field(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>

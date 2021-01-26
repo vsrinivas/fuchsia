@@ -186,14 +186,18 @@ class ExampleXUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ExampleXUnion WithVariant(::fidl::AnyAllocator& allocator,
+                                   Args&&... args) {
+    ExampleXUnion result;
+    result.set_variant(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kVariant;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_variant(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kVariant;
-    set_variant(::fidl::ObjectView<uint32_t>(allocator));
   }
 
   template <typename... Args>
@@ -271,14 +275,18 @@ class ExampleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ExampleUnion WithVariant(::fidl::AnyAllocator& allocator,
+                                  Args&&... args) {
+    ExampleUnion result;
+    result.set_variant(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kVariant;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_variant(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kVariant;
-    set_variant(::fidl::ObjectView<uint32_t>(allocator));
   }
 
   template <typename... Args>

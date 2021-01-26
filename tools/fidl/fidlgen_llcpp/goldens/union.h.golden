@@ -98,14 +98,17 @@ class Union {
     return result;
   }
 
+  template <typename... Args>
+  static Union WithPrimitive(::fidl::AnyAllocator& allocator, Args&&... args) {
+    Union result;
+    result.set_Primitive(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_Primitive(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPrimitive;
-    set_Primitive(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -135,16 +138,19 @@ class Union {
     return result;
   }
 
+  template <typename... Args>
+  static Union WithStringNeedsConstructor(::fidl::AnyAllocator& allocator,
+                                          Args&&... args) {
+    Union result;
+    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_StringNeedsConstructor(
       ::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-    set_StringNeedsConstructor(
-        ::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -175,16 +181,20 @@ class Union {
     return result;
   }
 
+  template <typename... Args>
+  static Union WithVectorStringAlsoNeedsConstructor(
+      ::fidl::AnyAllocator& allocator, Args&&... args) {
+    Union result;
+    result.set_VectorStringAlsoNeedsConstructor(
+        ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_VectorStringAlsoNeedsConstructor(
       ::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_VectorStringAlsoNeedsConstructor(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    set_VectorStringAlsoNeedsConstructor(
-        ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(allocator));
   }
 
   template <typename... Args>
@@ -287,14 +297,18 @@ class StrictUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictUnion WithPrimitive(::fidl::AnyAllocator& allocator,
+                                   Args&&... args) {
+    StrictUnion result;
+    result.set_Primitive(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_Primitive(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPrimitive;
-    set_Primitive(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -324,16 +338,19 @@ class StrictUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictUnion WithStringNeedsConstructor(::fidl::AnyAllocator& allocator,
+                                                Args&&... args) {
+    StrictUnion result;
+    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_StringNeedsConstructor(
       ::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-    set_StringNeedsConstructor(
-        ::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -364,16 +381,20 @@ class StrictUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictUnion WithVectorStringAlsoNeedsConstructor(
+      ::fidl::AnyAllocator& allocator, Args&&... args) {
+    StrictUnion result;
+    result.set_VectorStringAlsoNeedsConstructor(
+        ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_VectorStringAlsoNeedsConstructor(
       ::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_VectorStringAlsoNeedsConstructor(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    set_VectorStringAlsoNeedsConstructor(
-        ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(allocator));
   }
 
   template <typename... Args>
@@ -476,14 +497,18 @@ class StrictSimpleXUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictSimpleXUnion WithI(::fidl::AnyAllocator& allocator,
+                                  Args&&... args) {
+    StrictSimpleXUnion result;
+    result.set_i(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -509,14 +534,18 @@ class StrictSimpleXUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictSimpleXUnion WithF(::fidl::AnyAllocator& allocator,
+                                  Args&&... args) {
+    StrictSimpleXUnion result;
+    result.set_f(
+        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_f(::fidl::tracking_ptr<float>&& elem) {
     ordinal_ = Ordinal::kF;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_f(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kF;
-    set_f(::fidl::ObjectView<float>(allocator));
   }
 
   template <typename... Args>
@@ -543,14 +572,18 @@ class StrictSimpleXUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictSimpleXUnion WithS(::fidl::AnyAllocator& allocator,
+                                  Args&&... args) {
+    StrictSimpleXUnion result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -645,14 +678,17 @@ class StrictFoo {
     return result;
   }
 
+  template <typename... Args>
+  static StrictFoo WithS(::fidl::AnyAllocator& allocator, Args&&... args) {
+    StrictFoo result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -679,14 +715,17 @@ class StrictFoo {
     return result;
   }
 
+  template <typename... Args>
+  static StrictFoo WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+    StrictFoo result;
+    result.set_i(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -773,14 +812,18 @@ class StrictBoundedXUnion {
     return result;
   }
 
+  template <typename... Args>
+  static StrictBoundedXUnion WithV(::fidl::AnyAllocator& allocator,
+                                   Args&&... args) {
+    StrictBoundedXUnion result;
+    result.set_v(::fidl::ObjectView<::fidl::VectorView<uint8_t>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_v(::fidl::tracking_ptr<::fidl::VectorView<uint8_t>>&& elem) {
     ordinal_ = Ordinal::kV;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_v(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kV;
-    set_v(::fidl::ObjectView<::fidl::VectorView<uint8_t>>(allocator));
   }
 
   template <typename... Args>
@@ -862,14 +905,18 @@ class ReverseOrdinalUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ReverseOrdinalUnion WithSecond(::fidl::AnyAllocator& allocator,
+                                        Args&&... args) {
+    ReverseOrdinalUnion result;
+    result.set_second(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_second(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kSecond;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_second(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kSecond;
-    set_second(::fidl::ObjectView<uint32_t>(allocator));
   }
 
   template <typename... Args>
@@ -896,14 +943,18 @@ class ReverseOrdinalUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ReverseOrdinalUnion WithFirst(::fidl::AnyAllocator& allocator,
+                                       Args&&... args) {
+    ReverseOrdinalUnion result;
+    result.set_first(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_first(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kFirst;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_first(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kFirst;
-    set_first(::fidl::ObjectView<uint32_t>(allocator));
   }
 
   template <typename... Args>
@@ -993,16 +1044,19 @@ class StrictPizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static StrictPizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
+                                      Args&&... args) {
+    StrictPizzaOrPasta result;
+    result.set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pizza(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pizza(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPizza;
-    set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(allocator));
   }
 
   template <typename... Args>
@@ -1032,16 +1086,19 @@ class StrictPizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static StrictPizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
+                                      Args&&... args) {
+    StrictPizzaOrPasta result;
+    result.set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pasta(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pasta(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPasta;
-    set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(allocator));
   }
 
   template <typename... Args>
@@ -1135,16 +1192,19 @@ class PizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static PizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
+                                Args&&... args) {
+    PizzaOrPasta result;
+    result.set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pizza(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pizza(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPizza;
-    set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(allocator));
   }
 
   template <typename... Args>
@@ -1174,16 +1234,19 @@ class PizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static PizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
+                                Args&&... args) {
+    PizzaOrPasta result;
+    result.set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pasta(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pasta(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPasta;
-    set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(allocator));
   }
 
   template <typename... Args>
@@ -1277,16 +1340,19 @@ class FlexiblePizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static FlexiblePizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
+                                        Args&&... args) {
+    FlexiblePizzaOrPasta result;
+    result.set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pizza(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pizza(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPizza;
-    set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(allocator));
   }
 
   template <typename... Args>
@@ -1316,16 +1382,19 @@ class FlexiblePizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static FlexiblePizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
+                                        Args&&... args) {
+    FlexiblePizzaOrPasta result;
+    result.set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pasta(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pasta(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPasta;
-    set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(allocator));
   }
 
   template <typename... Args>
@@ -1416,16 +1485,19 @@ class ExplicitPizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitPizzaOrPasta WithPizza(::fidl::AnyAllocator& allocator,
+                                        Args&&... args) {
+    ExplicitPizzaOrPasta result;
+    result.set_pizza(::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pizza(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pizza(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPizza;
-    set_pizza(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pizza>(allocator));
   }
 
   template <typename... Args>
@@ -1455,16 +1527,19 @@ class ExplicitPizzaOrPasta {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitPizzaOrPasta WithPasta(::fidl::AnyAllocator& allocator,
+                                        Args&&... args) {
+    ExplicitPizzaOrPasta result;
+    result.set_pasta(::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_pasta(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_pasta(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPasta;
-    set_pasta(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Pasta>(allocator));
   }
 
   template <typename... Args>
@@ -1558,14 +1633,18 @@ class OlderSimpleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static OlderSimpleUnion WithI(::fidl::AnyAllocator& allocator,
+                                Args&&... args) {
+    OlderSimpleUnion result;
+    result.set_i(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int64_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int64_t>(allocator));
   }
 
   template <typename... Args>
@@ -1591,14 +1670,18 @@ class OlderSimpleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static OlderSimpleUnion WithF(::fidl::AnyAllocator& allocator,
+                                Args&&... args) {
+    OlderSimpleUnion result;
+    result.set_f(
+        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_f(::fidl::tracking_ptr<float>&& elem) {
     ordinal_ = Ordinal::kF;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_f(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kF;
-    set_f(::fidl::ObjectView<float>(allocator));
   }
 
   template <typename... Args>
@@ -1684,14 +1767,18 @@ class NewerSimpleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static NewerSimpleUnion WithI(::fidl::AnyAllocator& allocator,
+                                Args&&... args) {
+    NewerSimpleUnion result;
+    result.set_i(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int64_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int64_t>(allocator));
   }
 
   template <typename... Args>
@@ -1718,14 +1805,18 @@ class NewerSimpleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static NewerSimpleUnion WithS(::fidl::AnyAllocator& allocator,
+                                Args&&... args) {
+    NewerSimpleUnion result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -1753,16 +1844,19 @@ class NewerSimpleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static NewerSimpleUnion WithV(::fidl::AnyAllocator& allocator,
+                                Args&&... args) {
+    NewerSimpleUnion result;
+    result.set_v(::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_v(
       ::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& elem) {
     ordinal_ = Ordinal::kV;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_v(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kV;
-    set_v(
-        ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(allocator));
   }
 
   template <typename... Args>
@@ -1860,14 +1954,18 @@ class FlexibleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleUnion WithPrimitive(::fidl::AnyAllocator& allocator,
+                                     Args&&... args) {
+    FlexibleUnion result;
+    result.set_Primitive(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_Primitive(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPrimitive;
-    set_Primitive(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -1897,16 +1995,19 @@ class FlexibleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleUnion WithStringNeedsConstructor(
+      ::fidl::AnyAllocator& allocator, Args&&... args) {
+    FlexibleUnion result;
+    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_StringNeedsConstructor(
       ::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-    set_StringNeedsConstructor(
-        ::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -1937,16 +2038,20 @@ class FlexibleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleUnion WithVectorStringAlsoNeedsConstructor(
+      ::fidl::AnyAllocator& allocator, Args&&... args) {
+    FlexibleUnion result;
+    result.set_VectorStringAlsoNeedsConstructor(
+        ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_VectorStringAlsoNeedsConstructor(
       ::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_VectorStringAlsoNeedsConstructor(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    set_VectorStringAlsoNeedsConstructor(
-        ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>>(allocator));
   }
 
   template <typename... Args>
@@ -2047,14 +2152,17 @@ class FlexibleFoo {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleFoo WithS(::fidl::AnyAllocator& allocator, Args&&... args) {
+    FlexibleFoo result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -2081,14 +2189,17 @@ class FlexibleFoo {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleFoo WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+    FlexibleFoo result;
+    result.set_i(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -2174,14 +2285,18 @@ class FieldCollision {
     return result;
   }
 
+  template <typename... Args>
+  static FieldCollision WithFieldCollisionTag(::fidl::AnyAllocator& allocator,
+                                              Args&&... args) {
+    FieldCollision result;
+    result.set_field_collision_tag(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_field_collision_tag(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kFieldCollisionTag;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_field_collision_tag(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kFieldCollisionTag;
-    set_field_collision_tag(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -2265,14 +2380,17 @@ class ExplicitXUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitXUnion WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ExplicitXUnion result;
+    result.set_i(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int64_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int64_t>(allocator));
   }
 
   template <typename... Args>
@@ -2298,14 +2416,17 @@ class ExplicitXUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitXUnion WithF(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ExplicitXUnion result;
+    result.set_f(
+        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_f(::fidl::tracking_ptr<float>&& elem) {
     ordinal_ = Ordinal::kF;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_f(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kF;
-    set_f(::fidl::ObjectView<float>(allocator));
   }
 
   template <typename... Args>
@@ -2389,14 +2510,18 @@ class ExplicitUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitUnion WithPrimitive(::fidl::AnyAllocator& allocator,
+                                     Args&&... args) {
+    ExplicitUnion result;
+    result.set_Primitive(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_Primitive(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kPrimitive;
-    set_Primitive(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -2426,16 +2551,19 @@ class ExplicitUnion {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitUnion WithStringNeedsConstructor(
+      ::fidl::AnyAllocator& allocator, Args&&... args) {
+    ExplicitUnion result;
+    result.set_StringNeedsConstructor(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_StringNeedsConstructor(
       ::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_StringNeedsConstructor(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-    set_StringNeedsConstructor(
-        ::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -2526,14 +2654,18 @@ class ExplicitStrictFoo {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitStrictFoo WithS(::fidl::AnyAllocator& allocator,
+                                 Args&&... args) {
+    ExplicitStrictFoo result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -2560,14 +2692,18 @@ class ExplicitStrictFoo {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitStrictFoo WithI(::fidl::AnyAllocator& allocator,
+                                 Args&&... args) {
+    ExplicitStrictFoo result;
+    result.set_i(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -2656,14 +2792,17 @@ class ExplicitFoo {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitFoo WithS(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ExplicitFoo result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -2690,14 +2829,17 @@ class ExplicitFoo {
     return result;
   }
 
+  template <typename... Args>
+  static ExplicitFoo WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ExplicitFoo result;
+    result.set_i(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -2783,16 +2925,19 @@ class XUnionContainingEmptyStruct {
     return result;
   }
 
+  template <typename... Args>
+  static XUnionContainingEmptyStruct WithEmpty(::fidl::AnyAllocator& allocator,
+                                               Args&&... args) {
+    XUnionContainingEmptyStruct result;
+    result.set_empty(::fidl::ObjectView<::llcpp::fidl::test::union_::Empty>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_empty(
       ::fidl::tracking_ptr<::llcpp::fidl::test::union_::Empty>&& elem) {
     ordinal_ = Ordinal::kEmpty;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_empty(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kEmpty;
-    set_empty(
-        ::fidl::ObjectView<::llcpp::fidl::test::union_::Empty>(allocator));
   }
 
   template <typename... Args>

@@ -90,16 +90,14 @@ impl fidl::endpoints::ServiceMarker for ProtocolMarker {
 }
 
 pub trait ProtocolProxyInterface: Send + Sync {
-    type RequestStrictResponseFlexibleResponseFut: std::future::Future<
-        Output = Result<(FlexibleFoo), fidl::Error>,
-    > + Send;
+    type RequestStrictResponseFlexibleResponseFut: std::future::Future<Output = Result<(FlexibleFoo), fidl::Error>>
+        + Send;
     fn request_strict_response_flexible(
         &self,
         s: &mut StrictFoo,
     ) -> Self::RequestStrictResponseFlexibleResponseFut;
-    type RequestFlexibleResponseStrictResponseFut: std::future::Future<
-        Output = Result<(StrictFoo), fidl::Error>,
-    > + Send;
+    type RequestFlexibleResponseStrictResponseFut: std::future::Future<Output = Result<(StrictFoo), fidl::Error>>
+        + Send;
     fn request_flexible_response_strict(
         &self,
         s: &mut FlexibleFoo,

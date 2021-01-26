@@ -102,8 +102,7 @@ class AstBuilder {
   }
 
   llcpp::fuchsia::shell::ShellType TypeBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
-    fidl::ObjectView<llcpp::fuchsia::shell::BuiltinType> copy(allocator_, type);
-    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(copy);
+    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(allocator_, type);
   }
 
   // The following methods generate a ShellType object for the given type.

@@ -74,14 +74,17 @@ class StrictFoo {
     return result;
   }
 
+  template <typename... Args>
+  static StrictFoo WithS(::fidl::AnyAllocator& allocator, Args&&... args) {
+    StrictFoo result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -108,14 +111,17 @@ class StrictFoo {
     return result;
   }
 
+  template <typename... Args>
+  static StrictFoo WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+    StrictFoo result;
+    result.set_i(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -204,14 +210,17 @@ class FlexibleFoo {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleFoo WithS(::fidl::AnyAllocator& allocator, Args&&... args) {
+    FlexibleFoo result;
+    result.set_s(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_s(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kS;
-    set_s(::fidl::ObjectView<::fidl::StringView>(allocator));
   }
 
   template <typename... Args>
@@ -238,14 +247,17 @@ class FlexibleFoo {
     return result;
   }
 
+  template <typename... Args>
+  static FlexibleFoo WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+    FlexibleFoo result;
+    result.set_i(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_i(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>

@@ -83,14 +83,17 @@ class SimpleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static SimpleUnion WithA(::fidl::AnyAllocator& allocator, Args&&... args) {
+    SimpleUnion result;
+    result.set_a(
+        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_a(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kA;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_a(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kA;
-    set_a(::fidl::ObjectView<int32_t>(allocator));
   }
 
   template <typename... Args>
@@ -116,14 +119,17 @@ class SimpleUnion {
     return result;
   }
 
+  template <typename... Args>
+  static SimpleUnion WithB(::fidl::AnyAllocator& allocator, Args&&... args) {
+    SimpleUnion result;
+    result.set_b(
+        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
   void set_b(::fidl::tracking_ptr<float>&& elem) {
     ordinal_ = Ordinal::kB;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  void set_b(::fidl::AnyAllocator& allocator) {
-    ordinal_ = Ordinal::kB;
-    set_b(::fidl::ObjectView<float>(allocator));
   }
 
   template <typename... Args>
