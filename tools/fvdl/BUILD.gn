@@ -15,6 +15,7 @@ if (is_host) {
     test_environments = [ host_env ]
 
     deps = [
+      "//src/developer/ffx/plugins/emulator:ffx_emulator_args",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper:fuchsia-hyper",
       "//third_party/rust_crates:ansi_term-v0_11_0",
@@ -29,7 +30,6 @@ if (is_host) {
     ]
     source_root = "src/main.rs"
     sources = [
-      "src/args.rs",
       "src/cipd.rs",
       "src/main.rs",
       "src/portpicker.rs",

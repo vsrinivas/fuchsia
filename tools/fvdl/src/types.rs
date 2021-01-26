@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::args::StartCommand;
 use crate::cipd;
 use ansi_term::Colour::*;
 use anyhow::{anyhow, format_err, Result};
+use ffx_emulator_args::StartCommand;
 use fuchsia_async::Executor;
 use home::home_dir;
 use hyper::{StatusCode, Uri};
