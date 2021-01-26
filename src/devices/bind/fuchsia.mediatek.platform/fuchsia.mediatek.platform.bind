@@ -27,4 +27,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   DSI = 0x0C,
   POWER = 0x0D,
   SPI = 0x0E,
+  MUSB_PERIPHERAL =  0x14,
 };

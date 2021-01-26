@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -25,6 +24,8 @@
 #include <soc/mt8167/mt8167-usb-phy.h>
 #include <soc/mt8167/mt8167-usb.h>
 #include <usb/usb-request.h>
+
+#include "src/devices/usb/drivers/mt-musb-peripheral/mt_usb_bind.h"
 
 namespace mt_usb {
 using namespace board_mt8167;  // Hardware registers.
@@ -844,7 +845,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace mt_usb
 
-ZIRCON_DRIVER_BEGIN(mt_usb, mt_usb::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MUSB_PERIPHERAL), ZIRCON_DRIVER_END(mt_usb)
+ZIRCON_DRIVER(mt_usb, mt_usb::driver_ops, "zircon", "0.1");
