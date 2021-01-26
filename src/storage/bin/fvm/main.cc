@@ -46,9 +46,15 @@ constexpr char kMaximumBytes[] = "--maximum-bytes";
 constexpr char kEmptyMinfs[] = "--with-empty-minfs";
 constexpr char kReserveSlices[] = "--reserve-slices";
 
-enum class DiskType {
+enum DiskType {
   File = 0,
   Mtd = 1,
+  BlockDevice = 2,
+};
+const char* kDiskTypeStr[] = {
+    [DiskType::File] = "file",
+    [DiskType::Mtd] = "mtd",
+    [DiskType::BlockDevice] = "block_device",
 };
 
 int usage(void) {
@@ -105,7 +111,9 @@ int usage(void) {
           " --compress - specify that file should be compressed (sparse and android sparse image "
           "only)\n");
   fprintf(stderr, " --disk [bytes] - Size of target disk (valid for size command only)\n");
-  fprintf(stderr, " --disk-type [file OR mtd] - Type of target disk (pave only)\n");
+  fprintf(stderr, " --disk-type [%s, %s OR %s] - Type of target disk (pave only)\n",
+          kDiskTypeStr[DiskType::File], kDiskTypeStr[DiskType::Mtd],
+          kDiskTypeStr[DiskType::BlockDevice]);
   fprintf(stderr, " --max-bad-blocks [number] - Max bad blocks for FTL (pave on mtd only)\n");
   fprintf(stderr, "Input options:\n");
   fprintf(stderr, " --blob [path] [reserve options] - Add path as blob type (must be blobfs)\n");
@@ -327,15 +335,18 @@ size_t get_disk_size(const char* path, size_t offset) {
 }
 
 zx_status_t ParseDiskType(const char* type_str, DiskType* out) {
-  if (!strcmp(type_str, "file")) {
+  if (!strcmp(type_str, kDiskTypeStr[DiskType::File])) {
     *out = DiskType::File;
     return ZX_OK;
-  } else if (!strcmp(type_str, "mtd")) {
+  } else if (!strcmp(type_str, kDiskTypeStr[DiskType::Mtd])) {
     *out = DiskType::Mtd;
+    return ZX_OK;
+  } else if (!strcmp(type_str, kDiskTypeStr[DiskType::BlockDevice])) {
+    *out = DiskType::BlockDevice;
     return ZX_OK;
   }
 
-  fprintf(stderr, "Unknown disk type: '%s'. Expected 'file' or 'mtd'.\n", type_str);
+  fprintf(stderr, "Unknown disk type: '%s'.\n", type_str);
   return ZX_ERR_INVALID_ARGS;
 }
 
@@ -754,19 +765,20 @@ int main(int argc, char** argv) {
   }
 
   // If length was not specified, use remainder of file after offset.
-  // get_disk_size may return 0 due to MTD behavior with fstat.
+  // get_disk_size may return 0 for block devices' behavior with fstat.
   // This scenario is checked in the pave section below.
-  if (length == 0 && disk_type != DiskType::Mtd) {
+  if (length == 0 && disk_type == DiskType::File) {
     length = get_disk_size(path, offset);
   }
 
-  if (disk_type == DiskType::Mtd) {
+  if (disk_type == DiskType::Mtd || disk_type == DiskType::BlockDevice) {
     if (strcmp(command, "pave")) {
-      fprintf(stderr, "Only the pave command is supported for MTD.\n");
+      fprintf(stderr, "Only the pave command is supported for disk type %s.\n",
+              kDiskTypeStr[disk_type]);
       return -1;
     }
 
-    if (!is_max_bad_blocks_set) {
+    if (!is_max_bad_blocks_set && disk_type == DiskType::Mtd) {
       fprintf(stderr, "--max-bad-blocks is required when paving to MTD.\n");
       return -1;
     }
@@ -1021,6 +1033,21 @@ int main(int argc, char** argv) {
 
       // Length may be 0 at this point if the user did not specify a size.
       // Use all of the space reported by the FTL in this case.
+      if (length == 0) {
+        length = wrapper->Size();
+      }
+    } else if (disk_type == DiskType::BlockDevice) {
+      std::unique_ptr<fvm::host::BlockDeviceFdWrapper> block_device_fd_wrapper;
+      if (fvm::host::BlockDeviceFdWrapper::Open(path, O_CREAT | O_WRONLY, 0644,
+                                                &block_device_fd_wrapper) != ZX_OK) {
+        fprintf(stderr, "BlockDeviceFd open failed: %s\n", strerror(errno));
+        return -1;
+      }
+
+      wrapper = std::move(block_device_fd_wrapper);
+
+      // Length may be 0 at this point if the user did not specify a size.
+      // Get the partition size to calculate length.
       if (length == 0) {
         length = wrapper->Size();
       }

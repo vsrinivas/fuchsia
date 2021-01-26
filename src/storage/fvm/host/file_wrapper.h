@@ -83,6 +83,19 @@ class UniqueFdWrapper : public FileWrapper {
   fbl::unique_fd fd_;
 };
 
+// Implements a FileWrapper that uses unique_fd for file access, but doesn't
+// support truncate operation. Used for writing directly to a partition that
+// has a fixed size.
+class BlockDeviceFdWrapper : public UniqueFdWrapper {
+ public:
+  static zx_status_t Open(const char* path, int flags, mode_t mode,
+                          std::unique_ptr<BlockDeviceFdWrapper>* out);
+  explicit BlockDeviceFdWrapper(fbl::unique_fd fd) : UniqueFdWrapper(std::move(fd)) {}
+  zx_status_t Truncate(size_t size) override;
+
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockDeviceFdWrapper);
+};
+
 }  // namespace fvm::host
 
 #endif  // SRC_STORAGE_FVM_HOST_FILE_WRAPPER_H_

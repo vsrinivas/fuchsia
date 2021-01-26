@@ -59,4 +59,17 @@ zx_status_t UniqueFdWrapper::Truncate(size_t size) { return ftruncate(fd_.get(),
 
 zx_status_t UniqueFdWrapper::Sync() { return fsync(fd_.get()); }
 
+zx_status_t BlockDeviceFdWrapper::Open(const char* path, int flags, mode_t mode,
+                                       std::unique_ptr<BlockDeviceFdWrapper>* out) {
+  fbl::unique_fd fd(open(path, flags, mode));
+  if (!fd) {
+    return ZX_ERR_IO;
+  }
+
+  *out = std::make_unique<BlockDeviceFdWrapper>(std::move(fd));
+  return ZX_OK;
+}
+
+zx_status_t BlockDeviceFdWrapper::Truncate(size_t size) { return ZX_ERR_NOT_SUPPORTED; }
+
 }  // namespace fvm::host
