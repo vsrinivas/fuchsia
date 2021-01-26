@@ -34,6 +34,9 @@ use {
     crate::input::input_controller::InputController,
     crate::input::types::InputInfoSources,
     crate::inspect::inspect_broker::InspectBroker,
+    crate::inspect::policy_inspect_broker::PolicyInspectBroker,
+    crate::internal::core::message as core_message,
+    crate::internal::policy::message as policy_message,
     crate::intl::intl_controller::IntlController,
     crate::intl::types::IntlInfo,
     crate::light::light_controller::LightController,
@@ -562,8 +565,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Attach inspect broker, which watches messages between proxies and setting handlers to
     // record settings values to inspect.
-    let inspect_broker_node = component::inspector().root().create_child("setting_values");
-    InspectBroker::create(setting_handler_messenger_factory.clone(), inspect_broker_node)
+    let settings_inspect_node = component::inspector().root().create_child("setting_values");
+    InspectBroker::create(setting_handler_messenger_factory.clone(), settings_inspect_node)
         .await
         .expect("could not create inspect");
 
@@ -592,20 +595,44 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
     // configured policy types.
-    let mut policy_proxies = HashMap::new();
-    if components.contains(&SettingType::Audio) {
-        policy_proxies.insert(
-            PolicyProxy::create(
-                SettingType::Audio,
-                policy_handler_factory,
+    let policy_types: HashSet<SettingType> = vec![SettingType::Audio].into_iter().collect();
+
+    // Mapping from core message hub signature to setting type.
+    let mut policy_core_signatures: HashMap<core_message::Signature, SettingType> = HashMap::new();
+
+    // Mapping from the policy proxy's signature on the policy message hub to its policy type for
+    // use by the policy inspect broker.
+    let mut policy_proxy_signatures: HashMap<policy_message::Signature, SettingType> =
+        HashMap::new();
+
+    for policy_type in policy_types {
+        if components.contains(&policy_type) {
+            let (core_signature, proxy_signature) = PolicyProxy::create(
+                policy_type,
+                policy_handler_factory.clone(),
                 core_messenger_factory.clone(),
                 policy_messenger_factory.clone(),
-                proxies.get(&SettingType::Audio).expect("Audio proxy not found").clone(),
+                proxies
+                    .get(&policy_type)
+                    .expect(format!("{:?} proxy not found", policy_type).as_str())
+                    .clone(),
             )
-            .await?,
-            SettingType::Audio,
-        );
+            .await?;
+            policy_core_signatures.insert(core_signature, policy_type);
+            policy_proxy_signatures.insert(proxy_signature, policy_type);
+        }
     }
+
+    // Attach the policy inspect broker, which watches messages to the policy layer and records
+    // policy state to inspect.
+    let policy_inspect_node = component::inspector().root().create_child("policy_values");
+    PolicyInspectBroker::create(
+        policy_messenger_factory.clone(),
+        policy_proxy_signatures,
+        policy_inspect_node,
+    )
+    .await
+    .expect("could not create inspect");
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
@@ -613,7 +640,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .core_messenger_factory(core_messenger_factory)
         .switchboard_messenger_factory(switchboard_messenger_factory.clone())
         .add_setting_proxies(proxies.clone())
-        .add_policy_proxies(policy_proxies)
+        .add_policy_proxies(policy_core_signatures)
         .build()
         .await
         .expect("could not create switchboard");

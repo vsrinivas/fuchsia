@@ -18,7 +18,7 @@ pub(crate) async fn verify_payload<
     payload: P,
     receptor: &mut Receptor<P, A, R>,
     client_fn: Option<
-        Box<dyn Fn(MessageClient<P, A, R>) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
+        Box<dyn FnOnce(MessageClient<P, A, R>) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
     >,
 ) {
     while let Some(message_event) = receptor.next().await {

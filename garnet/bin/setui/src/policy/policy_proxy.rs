@@ -27,13 +27,15 @@ pub struct PolicyProxy {
 }
 
 impl PolicyProxy {
+    /// Creates a policy proxy and returns the signatures it uses to communicate in the core and
+    /// policy message hubs.
     pub async fn create(
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         core_messenger_factory: core::message::Factory,
         policy_messenger_factory: policy::message::Factory,
         setting_proxy_signature: core::message::Signature,
-    ) -> Result<core::message::Signature, Error> {
+    ) -> Result<(core::message::Signature, policy::message::Signature), Error> {
         let (_, switchboard_receptor) = core_messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
@@ -64,10 +66,11 @@ impl PolicyProxy {
             .await
             .map_err(Error::new)?;
 
-        let policy_messenger_result = policy_messenger_factory
+        let (_, policy_receptor) = policy_messenger_factory
             .create(MessengerType::Addressable(Address::Policy(setting_type)))
-            .await;
-        let (_, policy_receptor) = policy_messenger_result.map_err(Error::new)?;
+            .await
+            .map_err(Error::new)?;
+        let policy_signature = policy_receptor.get_signature();
 
         let (handler_messenger, handler_receptor) =
             core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
@@ -134,7 +137,7 @@ impl PolicyProxy {
         })
         .detach();
 
-        Ok(handler_receptor.get_signature())
+        Ok((handler_receptor.get_signature(), policy_signature))
     }
 
     async fn process_policy_request(
