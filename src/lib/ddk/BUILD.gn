@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/library_headers.gni")
 import("//build/unification/zx_library.gni")
 
 group("tests") {
@@ -9,10 +10,8 @@ group("tests") {
   deps = [ "tests" ]
 }
 
-zx_library("ddk") {
-  sdk = "source"
-  sdk_publishable = false
-  sdk_headers = [
+library_headers("ddk-headers") {
+  headers = [
     "ddk/metadata/bad-block.h",
     "ddk/metadata/buttons.h",
     "ddk/metadata/camera.h",
@@ -47,12 +46,6 @@ zx_library("ddk") {
     "hw/sdio.h",
     "hw/sdmmc.h",
   ]
-  sources = [
-    "io-buffer.c",
-    "macros.h",
-    "mmio-buffer.c",
-    "phys-iter.c",
-  ]
   public_deps = [
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
 
@@ -66,6 +59,18 @@ zx_library("ddk") {
     # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
     #"//zircon/system/ulib/trace",
   ]
+}
+
+zx_library("ddk") {
+  sdk = "source"
+  sdk_publishable = false
+  sources = [
+    "io-buffer.c",
+    "macros.h",
+    "mmio-buffer.c",
+    "phys-iter.c",
+  ]
+  public_deps = [ ":ddk-headers" ]
   deps = [ "//zircon/public/lib/sync" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -81,11 +86,8 @@ shared_library("ddk-metadata") {
   ]
 }
 
-zx_library("ddk-deprecated-binding-headers") {
-  sdk = "source"
-  sdk_publishable = false
-  sdk_headers = [ "ddk/binding.h" ]
-  sources = []
+library_headers("ddk-deprecated-binding-headers") {
+  headers = [ "ddk/binding.h" ]
   public_deps = [ ":ddk" ]
   visibility = [
     "//src/connectivity/bluetooth/core/bt-host:*",
@@ -347,17 +349,11 @@ zx_library("ddk-deprecated-binding-headers") {
 
 # This target should only be used in vendor repositories, where we can't add the target to the
 # visibility list above.
-zx_library("ddk-deprecated-binding-headers-for-vendors") {
-  sdk = "source"
-  sdk_publishable = false
-  sdk_headers = [ "ddk/binding.h" ]
-  sources = []
+library_headers("ddk-deprecated-binding-headers-for-vendors") {
+  headers = [ "ddk/binding.h" ]
   public_deps = [ ":ddk" ]
 }
 
-zx_library("ddk-device-headers") {
-  sdk = "source"
-  sdk_publishable = false
-  sdk_headers = [ "ddk/device.h" ]
-  sources = []
+library_headers("ddk-device-headers") {
+  headers = [ "ddk/device.h" ]
 }

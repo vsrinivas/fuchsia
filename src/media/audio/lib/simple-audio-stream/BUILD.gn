@@ -2,13 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zx_library.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("simple-audio-stream") {
-  sdk = "source"
-  sdk_headers = [ "lib/simple-audio-stream/simple-audio-stream.h" ]
+library_headers("headers") {
+  headers = [ "lib/simple-audio-stream/simple-audio-stream.h" ]
+}
+
+source_set("simple-audio-stream") {
   sources = [ "simple-audio-stream.cc" ]
   public_deps = [
+    ":headers",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/lib/ddktl",
     "//zircon/public/lib/async",

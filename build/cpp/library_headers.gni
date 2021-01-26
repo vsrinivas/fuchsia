@@ -1,0 +1,139 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# library_headers() is used to define the set of public headers for a given
+# source_set(), static_library(), shared_library() or loadable_module(), and
+# their eventual dependencies.
+#
+# Other targets can depend on a library_headers() target directly if they do
+# not need to link to the library itself, e.g. if they include the headers
+# to get type definitions only. This ensures higher build parallelism.
+#
+# A few important tips to use these efficiently:
+#
+# - Naming convention:
+#
+#   If the library's target name is the same as the directory that defines
+#   it (e.g. //some/dir/foo:foo), use //some/dir/foo:headers as the label
+#   for the headers target as in:
+#
+#      # in //some/dir/foo/BUILD.gn
+#      library_headers("headers") { ... }
+#
+#      source_set("foo") { ... }
+#
+#   If this is not the case (e.g. //some/dir/foo:bar), then use the
+#   //some/dir/foo:bar.headers label instead, as in:
+#
+#     # In //some/dir/foo/BUILD.gn
+#     library_headers("bar.headers")
+#
+#     static_library("bar") { ... }
+#
+#   In rare cases, when the target is the only thing defined by the BUILD.gn
+#   file, it is ok to use //some/dir/foo:foo as its label, as in:
+#
+#     library_headers("foo") { ... }
+#
+# - Header location:
+#
+#   By default, the template assumes all paths listed in the `headers` argument
+#   are relative to an `include` directory of the current BUILD.gn directory.
+#   This can be overriden by defining the `include_dir` argument to a different
+#   value. For example, if all headers and sources are in the same directory
+#   as the BUILD.gn file, one can use:
+#
+#     library_headers("headers") {
+#       include_dir = "."
+#       headers = [ "foo.h" ]
+#     }
+#
+# - Dependencies:
+#
+#   It is important to always depend on a library_headers() target through
+#   public_deps, and _not_ deps, as it ensures dependents will use the right
+#   include directory in their search path.
+#
+#   As such, a library_headers() target should nearly never use 'deps',
+#   except when absolutely needed (i.e. when headers are auto-generated).
+#
+#   This means that the library which owns the headers from the target should
+#   depend on the library_headers() target through public_deps, to ensure that
+#   anything that depends on it will be able to include the headers properly,
+#   as in:
+#
+#     library_headers("headers") {
+#       headers = [
+#         "foo.h",
+#       ]
+#     }
+#
+#     source_set("foo") {
+#       sources = [
+#         "foo.cc",
+#       ]
+#       public_deps = [ ":headers" ]
+#     }
+#
+# Arguments:
+#   include_dir (optional)
+#     [path] Path to the top-level include directory that contains the header
+#     files for this library. Defaults to 'include'.
+#
+#   headers (required)
+#     [list of paths] A list of header file paths, relative to the include_dir
+#     for this target.
+#
+#   public_deps (optional)
+#     [list of GN labels] If defined a set of public dependencies for the
+#     headers. This is useful when the headers include the public headers
+#     from another library
+#
+#   deps (optional)
+#     [list of GN labels] Avoid using this to depend on other headers targets.
+#     Using `deps` might be necessary in the case where the headers are
+#     auto-generated though.
+#
+#  configs, public_configs, testonly, visibility (optional)
+#     Usual GN meaning.
+#
+template("library_headers") {
+  _include_dir = "include"
+  if (defined(invoker.include_dir)) {
+    _include_dir = invoker.include_dir
+  }
+
+  # This configuration ensures that the include_dir is used by any target
+  # that depends on it. It is listed as a public_configs in the main target
+  # definition below.
+  config("${target_name}.config") {
+    include_dirs = [ _include_dir ]
+  }
+
+  source_set(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_configs",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    public = []
+    foreach(header, invoker.headers) {
+      public += [ "${_include_dir}/$header" ]
+    }
+
+    # source_set() already has a set of default configs that is set
+    # in //build/config/BUILDCONFIG.gn
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+
+    if (!defined(public_configs)) {
+      public_configs = []
+    }
+    public_configs = [ ":${target_name}.config" ]
+  }
+}
