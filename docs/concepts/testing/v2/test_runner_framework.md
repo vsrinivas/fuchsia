@@ -1,6 +1,6 @@
 # The Fuchsia Test Runner Framework
 
-<<../components/_v2_banner.md>>
+<<../../components/_v2_banner.md>>
 
 ## Integrating testing frameworks with the Component Framework
 

@@ -1,6 +1,6 @@
 # Complex topologies and integration testing
 
-<<../components/_v2_banner.md>>
+<<../../components/_v2_banner.md>>
 
 Integration testing scenarios involve two or more components operating in the
 same realm and exchanging capabilities. While the majority of tests are unit

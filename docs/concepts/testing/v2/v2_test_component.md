@@ -1,6 +1,6 @@
 # Test Components
 
-<<../components/_v2_banner.md>>
+<<../../components/_v2_banner.md>>
 
 ## Introduction
 
