@@ -27,6 +27,7 @@ use {
 ///
 /// This object can be converted into a stream of incoming connections for
 /// various forms of processing.
+#[derive(Debug)]
 pub struct TcpListener(EventedFd<net::TcpListener>);
 
 impl Unpin for TcpListener {}
@@ -110,6 +111,7 @@ impl TcpListener {
 }
 
 /// A future which resolves to an `io::Result<(TcpListener, TcpStream, SocketAddr)>`.
+#[derive(Debug)]
 pub struct Acceptor(Option<TcpListener>);
 
 impl Future for Acceptor {
@@ -129,6 +131,7 @@ impl Future for Acceptor {
 }
 
 /// A stream which resolves to an `io::Result<(TcpStream, SocketAddr)>`.
+#[derive(Debug)]
 pub struct AcceptStream(TcpListener);
 
 impl Stream for AcceptStream {
@@ -145,6 +148,7 @@ impl Stream for AcceptStream {
 /// This type and references to it implement the `AsyncRead` and `AsyncWrite`
 /// traits. For more on using this type, see the `AsyncReadExt` and `AsyncWriteExt`
 /// traits.
+#[derive(Debug)]
 pub struct TcpStream {
     stream: EventedFd<net::TcpStream>,
 }
@@ -250,6 +254,7 @@ impl AsyncWrite for TcpStream {
 }
 
 /// A future which resolves to a connected `TcpStream`.
+#[derive(Debug)]
 pub struct TcpConnector {
     // The stream needs to have `need_write` called on it to defeat the optimization in
     // EventedFd::new which assumes that the operand is immediately readable and writable.

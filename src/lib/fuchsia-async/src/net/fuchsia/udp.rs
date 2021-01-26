@@ -19,6 +19,7 @@ use {
 };
 
 /// An I/O object representing a UDP socket.
+#[derive(Debug)]
 pub struct UdpSocket(EventedFd<net::UdpSocket>);
 
 impl Deref for UdpSocket {

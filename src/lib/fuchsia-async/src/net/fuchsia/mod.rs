@@ -16,6 +16,7 @@ use futures::ready;
 use futures::task::{AtomicWaker, Context};
 use libc;
 
+use std::fmt;
 use std::io::{Read, Write};
 use std::marker::Unpin;
 use std::mem;
@@ -101,6 +102,15 @@ impl<T> Drop for EventedFd<T> {
         }
 
         // Then `inner` gets dropped
+    }
+}
+
+impl<T: fmt::Debug> fmt::Debug for EventedFd<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // FIXME(https://github.com/rust-lang/rust/issues/67364): This could be
+        // better written with `.finish_non_exhaustive()` once that feature is
+        // stablized.
+        f.debug_struct("EventedFd").field("inner", &self.inner).finish()
     }
 }
 

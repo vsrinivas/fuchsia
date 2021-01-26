@@ -7,6 +7,7 @@ use std::io::Result;
 use std::net::SocketAddr;
 use std::net::UdpSocket as StdUdpSocket;
 
+#[derive(Debug)]
 pub struct UdpSocket(AsyncUdpSocket);
 
 impl UdpSocket {
