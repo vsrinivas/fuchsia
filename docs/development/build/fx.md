@@ -63,7 +63,7 @@ with this:
 
 ## Configure a build {#configure-a-build}
 
-First let's configure the build. To do this we need to make a few choices:
+First let's configure the build. To do this you need to make a few choices:
 
 * What [product configuration](#key-product-configurations) do you want?
   (unsure: try `workstation`)
@@ -84,15 +84,24 @@ directory (which is `out/default` by default). You can edit this file using the
 
 ### What just happened?
 
-* We selected the architecture `x64`
-* We selected the product `workstation` (run `fx list-products` for a list of
-  other product configurations)
-* We selected the board `x64` (on arm64 boards, the board choice is very
-  important! Run `fx list-boards` for a list of board configurations)
-* We selected to build "tests", but not have them included in our
-  [paving](#what-is-paving) images.
+* You selected the product `workstation` (run `fx list-products` for a list of
+  other product configurations).
+* You selected the board `x64`, which supports many typical boards based on the
+  `x64` architecture. (Note that `arm64` boards are less interchangable, and you
+  will most likely need to give `fx set` the specific board, when building to an
+  `arm64` architecture. Run `fx list-boards` for a list of known board
+  configurations.)
+* You are ephemerally building `tests` as part of the `universe` package set,
+  not as a part of the [paving](#what-is-paving) images.
 
-So what are `base`, `cache` and `universe`? (new names)
+### Package deployment options
+
+The `--with` option has three variants related to how packages are deployed to a
+Fuchsia device: `--with-base`, `--with-cache`, and `--with` (implies
+`universe`). (Note, `fx set` also has a `--with-host` option, for building
+host-only targets, such as host-based tools and libraries.)
+
+So what are `base`, `cache` and `universe`?
 
 Configurations ultimately specify dependencies (mostly packages) that
 contribute to output artifacts of the build (mostly images and package
