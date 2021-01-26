@@ -2,7 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("gpio_test_bind") {
+  rules = "gpio_test.bind"
+  output = "gpio_test_bind.h"
+  tests = "bind_tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":gpio_test_bind_test" ]
+}
 
 driver_module("gpio-test") {
   configs += [
@@ -14,14 +30,12 @@ driver_module("gpio-test") {
   # TODO: testonly = true
   sources = [ "gpio-test.cc" ]
   deps = [
+    ":gpio_test_bind",
     "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpioimpl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

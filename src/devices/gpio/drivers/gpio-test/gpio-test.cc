@@ -13,10 +13,11 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/gpio/drivers/gpio-test/gpio_test_bind.h"
 
 namespace gpio_test {
 
@@ -152,8 +153,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace gpio_test
 
-ZIRCON_DRIVER_BEGIN(gpio_test, gpio_test::driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GPIO_TEST), ZIRCON_DRIVER_END(gpio_test)
+ZIRCON_DRIVER(gpio_test, gpio_test::driver_ops, "zircon", "0.1");
