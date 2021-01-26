@@ -83,7 +83,7 @@ if (is_host) {
       "src/verify/collection.rs",
       "src/verify/collector/component_tree.rs",
       "src/verify/collector/mod.rs",
-      "src/verify/controller/boot_options.rs",
+      "src/verify/controller/build.rs",
       "src/verify/controller/capability_routing.rs",
       "src/verify/controller/mod.rs",
       "src/verify/mod.rs",

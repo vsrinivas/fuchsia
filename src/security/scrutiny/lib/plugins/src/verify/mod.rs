@@ -9,7 +9,7 @@ mod controller;
 use {
     crate::verify::{
         collector::component_tree::V2ComponentTreeDataCollector,
-        controller::boot_options::ZbiCmdlineVerifyController,
+        controller::build::VerifyBuildController,
         controller::capability_routing::TreeMappingController,
     },
     scrutiny::prelude::*,
@@ -23,7 +23,7 @@ plugin!(
             "V2ComponentTreeDataCollector" => V2ComponentTreeDataCollector::new(),
         },
         controllers! {
-            "/verify/zbi_cmdline" => ZbiCmdlineVerifyController::default(),
+            "/verify/build" => VerifyBuildController::default(),
             "/verify/map_tree" => TreeMappingController::default(),
         }
     ),
@@ -34,14 +34,12 @@ plugin!(
 mod tests {
     use {
         super::*,
-        crate::core::collection::{Component, Components, Manifest, ManifestData, Manifests, Zbi},
+        crate::core::collection::{Component, Components, Manifest, ManifestData, Manifests},
         anyhow::Result,
         cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
         fidl::encoding::encode_persistent,
         fidl_fuchsia_sys2 as fsys2,
-        scrutiny_utils::zbi::ZbiSection,
-        serde_json::{json, value::Value},
-        std::collections::HashMap,
+        serde_json::json,
         tempfile::tempdir,
     };
 
@@ -49,12 +47,6 @@ mod tests {
         let store_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         Arc::new(DataModel::connect(uri).unwrap())
-    }
-
-    fn zbi() -> Zbi {
-        let bootfs: HashMap<String, Vec<u8>> = HashMap::default();
-        let sections: Vec<ZbiSection> = Vec::default();
-        return Zbi { sections: sections, bootfs: bootfs, cmdline: "".to_string() };
     }
 
     fn new_child_decl(name: String, url: String) -> ChildDecl {
@@ -135,26 +127,6 @@ mod tests {
 
         model.set(Manifests::new(vec![root_manifest, foo_manifest, bar_manifest, baz_manifest]))?;
         Ok(model)
-    }
-
-    #[test]
-    fn test_zbi_cmdline_verify_accepts() {
-        let model = data_model();
-        let zbi = Zbi { cmdline: "{kernel.enable-debugging-syscalls=false}".to_string(), ..zbi() };
-        model.set(zbi).unwrap();
-        let verify = ZbiCmdlineVerifyController::default();
-        let response: Result<Value> = verify.query(model.clone(), json!("{}"));
-        assert!(response.is_ok());
-    }
-
-    #[test]
-    fn test_zbi_cmdline_verify_rejects() {
-        let model = data_model();
-        let zbi = Zbi { cmdline: "{kernel.enable-debugging-syscalls=true}".to_string(), ..zbi() };
-        model.set(zbi).unwrap();
-        let verify = ZbiCmdlineVerifyController::default();
-        let response: Result<Value> = verify.query(model.clone(), json!("{}"));
-        assert!(response.is_err());
     }
 
     #[test]

@@ -141,12 +141,20 @@ impl Scrutiny {
     /// Parses all the command line arguments passed in and returns a
     /// ScrutinyConfig.
     fn cmdline_to_config(args: ArgMatches<'static>) -> Result<Config> {
+        let mut batch_mode = false;
         let mut config = Config::default();
         if let Some(command) = args.value_of("command") {
             config.launch.command = Some(command.to_string());
+            batch_mode = true;
         }
         if let Some(script_path) = args.value_of("script") {
             config.launch.script_path = Some(script_path.to_string());
+            batch_mode = true;
+        }
+        // If we are running a script or a command we disable the server as
+        // it isn't going to be used.
+        if batch_mode {
+            config.runtime.server = None;
         }
         config.runtime.logging.path = args.value_of("log").unwrap().to_string();
         config.runtime.logging.verbosity = match args.value_of("verbosity").unwrap() {
