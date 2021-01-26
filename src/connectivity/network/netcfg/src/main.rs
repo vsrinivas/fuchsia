@@ -804,7 +804,7 @@ impl<'a> NetCfg<'a> {
 
                         // Stop DHCPv6 client if interface went down.
                         if !online {
-                            let sockaddr = match dhcpv6_client_addr {
+                            let sockaddr = match dhcpv6_client_addr.take() {
                                 Some(s) => s,
                                 None => return Ok(()),
                             };
@@ -817,22 +817,19 @@ impl<'a> NetCfg<'a> {
                                 sockaddr.display_ext(),
                             );
 
-                            let () = dhcpv6::stop_client(
+                            return dhcpv6::stop_client(
                                 &self.lookup_admin,
                                 &mut self.dns_servers,
                                 id,
                                 watchers,
                             )
                             .await
-                            .map(|()| *dhcpv6_client_addr = None)
                             .with_context(|| {
                                 format!(
                                     "error stopping DHCPv6 client on down interface {} (id={})",
                                     name, id
                                 )
-                            })?;
-
-                            return Ok(());
+                            });
                         }
 
                         // Stop the DHCPv6 client if its address can no longer be found on the
@@ -847,6 +844,9 @@ impl<'a> NetCfg<'a> {
                                     addr == fnet::IpAddress::Ipv6(address)
                                 },
                             ) {
+                                let sockaddr = *sockaddr;
+                                *dhcpv6_client_addr = None;
+
                                 info!(
                                     "stopping DHCPv6 client on host interface {} (id={}) \
                                     w/ removed sockaddr = {}",
@@ -870,7 +870,6 @@ impl<'a> NetCfg<'a> {
                                             name, id, sockaddr.display_ext()
                                         )
                                     })?;
-                                *dhcpv6_client_addr = None;
                             }
                         }
 
@@ -1562,88 +1561,77 @@ mod tests {
         ))
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dhcpv6() -> Result<(), anyhow::Error> {
-        const INTERFACE_ID: u64 = 1;
-        const DHCPV6_DNS_SOURCE: DnsServersUpdateSource =
-            DnsServersUpdateSource::Dhcpv6 { interface_id: INTERFACE_ID };
-        const LINK_LOCAL_SOCKADDR1: fnet::Ipv6SocketAddress = fnet::Ipv6SocketAddress {
-            address: fidl_ip_v6!("fe80::1"),
-            port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
-            zone_index: INTERFACE_ID,
-        };
-        const LINK_LOCAL_SOCKADDR2: fnet::Ipv6SocketAddress = fnet::Ipv6SocketAddress {
-            address: fidl_ip_v6!("fe80::2"),
-            port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
-            zone_index: INTERFACE_ID,
-        };
-        const GLOBAL_ADDR: fnet::Subnet =
-            fnet::Subnet { addr: fidl_ip!("2000::1"), prefix_len: 64 };
-        const DNS_SERVER1: fnet::SocketAddress =
-            fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fidl_ip_v6!("2001::1"),
-                port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
-                zone_index: 0,
-            });
-        const DNS_SERVER2: fnet::SocketAddress =
-            fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fidl_ip_v6!("2001::2"),
-                port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
-                zone_index: 0,
-            });
+    const INTERFACE_ID: u64 = 1;
+    const DHCPV6_DNS_SOURCE: DnsServersUpdateSource =
+        DnsServersUpdateSource::Dhcpv6 { interface_id: INTERFACE_ID };
+    const LINK_LOCAL_SOCKADDR1: fnet::Ipv6SocketAddress = fnet::Ipv6SocketAddress {
+        address: fidl_ip_v6!("fe80::1"),
+        port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
+        zone_index: INTERFACE_ID,
+    };
+    const LINK_LOCAL_SOCKADDR2: fnet::Ipv6SocketAddress = fnet::Ipv6SocketAddress {
+        address: fidl_ip_v6!("fe80::2"),
+        port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
+        zone_index: INTERFACE_ID,
+    };
+    const GLOBAL_ADDR: fnet::Subnet = fnet::Subnet { addr: fidl_ip!("2000::1"), prefix_len: 64 };
+    const DNS_SERVER1: fnet::SocketAddress = fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+        address: fidl_ip_v6!("2001::1"),
+        port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
+        zone_index: 0,
+    });
+    const DNS_SERVER2: fnet::SocketAddress = fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+        address: fidl_ip_v6!("2001::2"),
+        port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
+        zone_index: 0,
+    });
 
-        fn ipv6addrs(a: Option<fnet::Ipv6SocketAddress>) -> Vec<fnet_interfaces::Address> {
-            // The DHCPv6 client will only use a link-local address but we include a global address
-            // and expect it to not be used.
-            std::iter::once(fnet_interfaces::Address {
-                addr: Some(GLOBAL_ADDR),
+    fn ipv6addrs(a: Option<fnet::Ipv6SocketAddress>) -> Vec<fnet_interfaces::Address> {
+        // The DHCPv6 client will only use a link-local address but we include a global address
+        // and expect it to not be used.
+        std::iter::once(fnet_interfaces::Address {
+            addr: Some(GLOBAL_ADDR),
+            ..fnet_interfaces::Address::EMPTY
+        })
+        .chain(a.map(|fnet::Ipv6SocketAddress { address, port: _, zone_index: _ }| {
+            fnet_interfaces::Address {
+                addr: Some(fnet::Subnet { addr: fnet::IpAddress::Ipv6(address), prefix_len: 64 }),
                 ..fnet_interfaces::Address::EMPTY
-            })
-            .chain(a.map(|fnet::Ipv6SocketAddress { address, port: _, zone_index: _ }| {
-                fnet_interfaces::Address {
-                    addr: Some(fnet::Subnet {
-                        addr: fnet::IpAddress::Ipv6(address),
-                        prefix_len: 64,
-                    }),
-                    ..fnet_interfaces::Address::EMPTY
-                }
-            }))
-            .collect()
-        }
+            }
+        }))
+        .collect()
+    }
 
-        /// Handle receving a netstack interface changed event.
-        async fn handle_interface_changed_event(
-            netcfg: &mut NetCfg<'_>,
-            dns_watchers: &mut DnsServerWatchers<'_>,
-            online: Option<bool>,
-            addresses: Option<Vec<fnet_interfaces::Address>>,
-        ) -> Result<(), anyhow::Error> {
-            let event = fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
-                id: Some(INTERFACE_ID),
-                name: None,
-                device_class: None,
-                online,
-                addresses,
-                has_default_ipv4_route: None,
-                has_default_ipv6_route: None,
-                ..fnet_interfaces::Properties::EMPTY
-            });
-            netcfg.handle_interface_watcher_event(event, dns_watchers).await.map_err(Into::into)
-        }
+    /// Handle receving a netstack interface changed event.
+    async fn handle_interface_changed_event(
+        netcfg: &mut NetCfg<'_>,
+        dns_watchers: &mut DnsServerWatchers<'_>,
+        online: Option<bool>,
+        addresses: Option<Vec<fnet_interfaces::Address>>,
+    ) -> Result<(), errors::Error> {
+        let event = fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
+            id: Some(INTERFACE_ID),
+            name: None,
+            device_class: None,
+            online,
+            addresses,
+            has_default_ipv4_route: None,
+            has_default_ipv6_route: None,
+            ..fnet_interfaces::Properties::EMPTY
+        });
+        netcfg.handle_interface_watcher_event(event, dns_watchers).await
+    }
 
-        /// Make sure that a new DHCPv6 client was requested, and verify its parameters.
-        async fn check_new_client(
-            server: &mut fnet_dhcpv6::ClientProviderRequestStream,
-            sockaddr: fnet::Ipv6SocketAddress,
-            dns_watchers: &mut DnsServerWatchers<'_>,
-        ) -> Result<fnet_dhcpv6::ClientRequestStream, anyhow::Error> {
-            let evt = server
-                .try_next()
-                .await
-                .context("error getting next dhcpv6 client provider event")?;
-            let client_server = match evt
-                .ok_or(anyhow::anyhow!("expected dhcpv6 client provider request"))?
-            {
+    /// Make sure that a new DHCPv6 client was requested, and verify its parameters.
+    async fn check_new_client(
+        server: &mut fnet_dhcpv6::ClientProviderRequestStream,
+        sockaddr: fnet::Ipv6SocketAddress,
+        dns_watchers: &mut DnsServerWatchers<'_>,
+    ) -> Result<fnet_dhcpv6::ClientRequestStream, anyhow::Error> {
+        let evt =
+            server.try_next().await.context("error getting next dhcpv6 client provider event")?;
+        let client_server =
+            match evt.ok_or(anyhow::anyhow!("expected dhcpv6 client provider request"))? {
                 fnet_dhcpv6::ClientProviderRequest::NewClient {
                     params,
                     request,
@@ -1670,10 +1658,131 @@ mod tests {
                     request.into_stream().context("error converting client server end to stream")?
                 }
             };
-            assert!(dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should have a watcher");
-            Ok(client_server)
-        }
+        assert!(dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should have a watcher");
+        Ok(client_server)
+    }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_stopping_dhcpv6_with_down_lookup_admin() -> Result<(), anyhow::Error> {
+        let (mut netcfg, ServerEnds { lookup_admin, mut dhcpv6_client_provider }) =
+            test_netcfg().context("error creating test netcfg")?;
+        let mut dns_watchers = DnsServerWatchers::empty();
+
+        // Mock a new interface being discovered by NetCfg (we only need to make NetCfg aware of a
+        // NIC with ID `INTERFACE_ID` to test DHCPv6).
+        matches::assert_matches!(
+            netcfg.interface_states.insert(INTERFACE_ID, InterfaceState::new_host()),
+            None
+        );
+
+        // Should start the DHCPv6 client when we get an interface changed event that shows the
+        // interface as up with an link-local address.
+        let () = netcfg
+            .handle_interface_watcher_event(
+                fnet_interfaces::Event::Added(fnet_interfaces::Properties {
+                    id: Some(INTERFACE_ID),
+                    name: Some("testif01".to_string()),
+                    device_class: Some(fnet_interfaces::DeviceClass::Loopback(
+                        fnet_interfaces::Empty {},
+                    )),
+                    online: Some(true),
+                    addresses: Some(ipv6addrs(Some(LINK_LOCAL_SOCKADDR1))),
+                    has_default_ipv4_route: Some(false),
+                    has_default_ipv6_route: Some(false),
+                    ..fnet_interfaces::Properties::EMPTY
+                }),
+                &mut dns_watchers,
+            )
+            .await
+            .context("error handling interface added event with interface up and sockaddr1")
+            .map_err::<anyhow::Error, _>(Into::into)?;
+        let _: fnet_dhcpv6::ClientRequestStream =
+            check_new_client(&mut dhcpv6_client_provider, LINK_LOCAL_SOCKADDR1, &mut dns_watchers)
+                .await
+                .context("error checking for new client with sockaddr1")?;
+
+        // Drop the server-end of the lookup admin to simulate a down lookup admin service.
+        let () = std::mem::drop(lookup_admin);
+
+        // Not having any more link local IPv6 addresses should terminate the client.
+        let () = handle_interface_changed_event(
+            &mut netcfg,
+            &mut dns_watchers,
+            None,
+            Some(ipv6addrs(None)),
+        )
+        .await
+        .context("error handling interface changed event with sockaddr1 removed")
+        .or_else(|e| match e {
+            errors::Error::NonFatal(e) => {
+                println!("non-fatal error: {:?}", e);
+                Ok(())
+            }
+            errors::Error::Fatal(e) => Err(e),
+        })?;
+
+        // Another update without any link-local IPv6 addresses should do nothing
+        // since the DHCPv6 client was already stopped.
+        let () =
+            handle_interface_changed_event(&mut netcfg, &mut dns_watchers, None, Some(Vec::new()))
+                .await
+                .context("error handling interface changed event with sockaddr1 removed")
+                .or_else(|e| match e {
+                    errors::Error::NonFatal(e) => {
+                        println!("non-fatal error: {:?}", e);
+                        Ok(())
+                    }
+                    errors::Error::Fatal(e) => Err(e),
+                })?;
+
+        // Update interface with a link-local address to create a new DHCPv6 client.
+        let () = handle_interface_changed_event(
+            &mut netcfg,
+            &mut dns_watchers,
+            None,
+            Some(ipv6addrs(Some(LINK_LOCAL_SOCKADDR1))),
+        )
+        .await
+        .context("error handling interface changed event with sockaddr1 removed")
+        .or_else(|e| match e {
+            errors::Error::NonFatal(e) => {
+                println!("non-fatal error: {:?}", e);
+                Ok(())
+            }
+            errors::Error::Fatal(e) => Err(e),
+        })?;
+        let _: fnet_dhcpv6::ClientRequestStream =
+            check_new_client(&mut dhcpv6_client_provider, LINK_LOCAL_SOCKADDR1, &mut dns_watchers)
+                .await
+                .context("error checking for new client with sockaddr1")?;
+
+        // Update offline status to down to stop DHCPv6 client.
+        let () = handle_interface_changed_event(&mut netcfg, &mut dns_watchers, Some(false), None)
+            .await
+            .context("error handling interface changed event with sockaddr1 removed")
+            .or_else(|e| match e {
+                errors::Error::NonFatal(e) => {
+                    println!("non-fatal error: {:?}", e);
+                    Ok(())
+                }
+                errors::Error::Fatal(e) => Err(e),
+            })?;
+
+        // Update interface with new addresses but leave offline status as down.
+        handle_interface_changed_event(&mut netcfg, &mut dns_watchers, None, Some(ipv6addrs(None)))
+            .await
+            .context("error handling interface changed event with sockaddr1 removed")
+            .or_else(|e| match e {
+                errors::Error::NonFatal(e) => {
+                    println!("non-fatal error: {:?}", e);
+                    Ok(())
+                }
+                errors::Error::Fatal(e) => Err(e),
+            })
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dhcpv6() -> Result<(), anyhow::Error> {
         /// Waits for a `SetDnsServers` request with the specified servers.
         async fn run_lookup_admin_once(
             server: &mut fnet_name::LookupAdminRequestStream,
@@ -1808,7 +1917,8 @@ mod tests {
             Some(ipv6addrs(Some(LINK_LOCAL_SOCKADDR2))),
         )
         .await
-        .context("error handling netstack event with sockaddr2 added")?;
+        .context("error handling netstack event with sockaddr2 added")
+        .map_err(Into::<anyhow::Error>::into)?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
@@ -1825,7 +1935,8 @@ mod tests {
                 Some(false), /* down */
                 None,
             )
-            .map(|r| r.context("error handling interface changed event with interface down")),
+            .map(|r| r.context("error handling interface changed event with interface down"))
+            .map_err(Into::into),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
                 .map(|r| r.context("error running lookup admin")),
         )
@@ -1843,7 +1954,8 @@ mod tests {
             None,
         )
         .await
-        .context("error handling interface up event")?;
+        .context("error handling interface up event")
+        .map_err(Into::<anyhow::Error>::into)?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
@@ -1865,7 +1977,8 @@ mod tests {
                 r.context(
                     "error handling interface change event with sockaddr1 replacing sockaddr2",
                 )
-            }),
+            })
+            .map_err(Into::into),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
                 .map(|r| r.context("error running lookup admin")),
         )
@@ -1898,7 +2011,8 @@ mod tests {
             Some(ipv6addrs(Some(LINK_LOCAL_SOCKADDR2))),
         )
         .await
-        .context("error handling interface change event with sockaddr2 replacing sockaddr1")?;
+        .context("error handling interface change event with sockaddr2 replacing sockaddr1")
+        .map_err(Into::<anyhow::Error>::into)?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
