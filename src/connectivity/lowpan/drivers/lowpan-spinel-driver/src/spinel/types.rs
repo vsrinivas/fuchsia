@@ -278,6 +278,23 @@ pub struct DenyListEntry {
 
 pub type DenyList = HashSet<DenyListEntry>;
 
+#[spinel_packed("ESLCcCbLLc")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct NeighborTableEntry {
+    pub extended_addr: EUI64,
+    pub short_addr: u16,
+    pub age: u32,
+    pub link_quality: u8,
+    pub avg_rssi: i8,
+    pub mode: u8,
+    pub is_child: bool,
+    pub link_frame_cnt: u32,
+    pub mle_frame_cnt: u32,
+    pub last_rssi: i8,
+}
+
+pub type NeighborTable = Vec<NeighborTableEntry>;
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -964,8 +964,30 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     }
 
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
-        // TODO: Implement.
-        return Ok(vec![]);
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock("get_neighbor_table").await?;
+
+        Ok(self
+            .get_property_simple::<NeighborTable, _>(PropThread::NeighborTable)
+            .await?
+            .into_iter()
+            .map(|item| NeighborInfo {
+                mac_address: Some(item.extended_addr.0.to_vec()),
+                short_address: Some(item.short_addr),
+                age: Some(fuchsia_zircon::Duration::from_seconds(item.age.into()).into_nanos()),
+                is_child: Some(item.is_child),
+                link_frame_count: Some(item.link_frame_cnt),
+                mgmt_frame_count: Some(item.mle_frame_cnt),
+                last_rssi_in: Some(item.last_rssi.into()),
+                avg_rssi_in: Some(item.avg_rssi),
+                lqi_in: Some(item.link_quality),
+                thread_mode: Some(item.mode),
+                ..NeighborInfo::EMPTY
+            })
+            .collect::<Vec<_>>())
     }
 
     async fn get_counters(&self) -> ZxResult<Counters> {

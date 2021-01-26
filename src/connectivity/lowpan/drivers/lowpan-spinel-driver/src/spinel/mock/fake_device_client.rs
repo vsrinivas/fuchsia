@@ -546,6 +546,40 @@ impl FakeSpinelDevice {
                 spinel_write!(&mut response, "CiiS", frame.header, Cmd::PropValueIs, prop, 0x0000,)
                     .unwrap();
             }
+            Prop::Thread(PropThread::NeighborTable) => {
+                spinel_write!(
+                    &mut response,
+                    "Ciidd",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    NeighborTableEntry {
+                        extended_addr: EUI64([0, 1, 2, 3, 4, 5, 6, 7]),
+                        short_addr: 0x123,
+                        age: 11,
+                        is_child: true,
+                        link_frame_cnt: 1,
+                        mle_frame_cnt: 1,
+                        last_rssi: -20,
+                        avg_rssi: -20,
+                        link_quality: 3,
+                        mode: 0x0b,
+                    },
+                    NeighborTableEntry {
+                        extended_addr: EUI64([1, 2, 3, 4, 5, 6, 7, 8]),
+                        short_addr: 0x1234,
+                        age: 22,
+                        is_child: true,
+                        link_frame_cnt: 1,
+                        mle_frame_cnt: 1,
+                        last_rssi: -30,
+                        avg_rssi: -30,
+                        link_quality: 4,
+                        mode: 0x0b,
+                    },
+                )
+                .unwrap();
+            }
             prop => {
                 let properties = self.properties.lock();
                 if let Some(value) = properties.get(&prop) {

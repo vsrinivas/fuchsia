@@ -10,6 +10,7 @@ use mock::*;
 
 use crate::spinel::mock::PROP_DEBUG_LOGGING_TEST;
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
+use fidl_fuchsia_lowpan_test::NeighborInfo;
 use lowpan_driver_common::Driver as _;
 
 impl<DS, NI> SpinelDriver<DS, NI> {
@@ -86,6 +87,42 @@ async fn test_spinel_lowpan_driver() {
             let thread_rloc16 = driver.get_thread_rloc16().await;
             traceln!("app_task: thread_rloc16: {:?}", thread_rloc16);
             assert_eq!(thread_rloc16.map(|_| ()), Ok(()));
+
+            let thread_neighbor_table = driver.get_neighbor_table().await;
+            traceln!("app_task: thread_neighbor_table: {:?}", thread_neighbor_table);
+            let thread_neighbor_entry_vec = thread_neighbor_table.unwrap();
+            assert_eq!(
+                thread_neighbor_entry_vec[0],
+                NeighborInfo {
+                    mac_address: Some([0, 1, 2, 3, 4, 5, 6, 7].to_vec()),
+                    short_address: Some(0x123),
+                    age: Some(fuchsia_zircon::Duration::from_seconds(11).into_nanos()),
+                    is_child: Some(true),
+                    link_frame_count: Some(1),
+                    mgmt_frame_count: Some(1),
+                    last_rssi_in: Some(-20),
+                    avg_rssi_in: Some(-20),
+                    lqi_in: Some(3),
+                    thread_mode: Some(0x0b),
+                    ..NeighborInfo::EMPTY
+                }
+            );
+            assert_eq!(
+                thread_neighbor_entry_vec[1],
+                NeighborInfo {
+                    mac_address: Some([1, 2, 3, 4, 5, 6, 7, 8].to_vec()),
+                    short_address: Some(0x1234),
+                    age: Some(fuchsia_zircon::Duration::from_seconds(22).into_nanos()),
+                    is_child: Some(true),
+                    link_frame_count: Some(1),
+                    mgmt_frame_count: Some(1),
+                    last_rssi_in: Some(-30),
+                    avg_rssi_in: Some(-30),
+                    lqi_in: Some(4),
+                    thread_mode: Some(0x0b),
+                    ..NeighborInfo::EMPTY
+                }
+            );
 
             traceln!("app_task: Attempting a reset...");
             assert_eq!(driver.reset().await, Ok(()));
