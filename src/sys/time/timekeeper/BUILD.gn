@@ -101,6 +101,9 @@ fuchsia_unittest_package("timekeeper-tests") {
     ":bin_test",
     ":testdata",
   ]
+  test_specs = {
+    environments = [ nuc_env ]
+  }
 }
 
 group("tests") {
