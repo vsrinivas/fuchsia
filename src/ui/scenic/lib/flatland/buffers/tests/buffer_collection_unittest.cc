@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
 
 namespace flatland {
@@ -23,6 +24,8 @@ class BufferCollectionTest : public ::testing::Test {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                          fsl::GetCurrentProcessKoid());
   }
 
   void TearDown() override {

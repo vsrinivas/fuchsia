@@ -9,6 +9,7 @@
 
 #include <thread>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
@@ -178,6 +179,8 @@ void MultithreadingTest(Renderer* renderer) {
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
+    sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                         fsl::GetCurrentProcessKoid());
 
     auto tokens = SysmemTokens::Create(sysmem_allocator.get());
     auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();

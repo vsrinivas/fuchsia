@@ -8,6 +8,7 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
@@ -23,6 +24,8 @@ class RendererTest : public escher::test::TestWithVkValidationLayer {
     // Create the SysmemAllocator.
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                          fsl::GetCurrentProcessKoid());
   }
 
   void TearDown() override {

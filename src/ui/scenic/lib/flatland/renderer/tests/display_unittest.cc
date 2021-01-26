@@ -10,6 +10,7 @@
 
 #include <thread>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
@@ -36,6 +37,8 @@ class DisplayTest : public gtest::RealLoopFixture {
     // Create the SysmemAllocator.
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                          fsl::GetCurrentProcessKoid());
 
     async_set_default_dispatcher(dispatcher());
     executor_ = std::make_unique<async::Executor>(dispatcher());
