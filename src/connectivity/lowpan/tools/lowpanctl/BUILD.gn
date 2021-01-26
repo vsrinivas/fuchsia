@@ -36,6 +36,7 @@ rustc_binary("bin") {
     "src/form_command.rs",
     "src/get_credential.rs",
     "src/get_mac_filter_settings_command.rs",
+    "src/get_neighbor_table_command.rs",
     "src/get_supported_channels.rs",
     "src/get_supported_network_types.rs",
     "src/invocation.rs",

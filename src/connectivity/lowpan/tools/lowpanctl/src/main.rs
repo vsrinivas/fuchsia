@@ -10,6 +10,7 @@ pub mod energy_scan_command;
 pub mod form_command;
 pub mod get_credential;
 pub mod get_mac_filter_settings_command;
+pub mod get_neighbor_table_command;
 pub mod get_supported_channels;
 pub mod get_supported_network_types;
 pub mod invocation;

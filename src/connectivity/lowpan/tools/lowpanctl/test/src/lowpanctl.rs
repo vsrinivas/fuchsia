@@ -30,6 +30,7 @@ pub async fn test_lowpanctl() {
     test_lowpanctl_get_supported_network_types().await;
     test_lowpanctl_get_mac_filter_settings().await;
     test_lowpanctl_replace_mac_filter_settings().await;
+    test_lowpanctl_get_neighbor_table().await;
 }
 
 pub async fn test_lowpanctl_status() {
@@ -181,6 +182,12 @@ pub async fn test_lowpanctl_replace_mac_filter_settings() {
     ])
     .await
     .expect("Call to `lowpanctl replace-supported-network-types` failed.");
+}
+
+pub async fn test_lowpanctl_get_neighbor_table() {
+    test_lowpanctl_command(vec!["get-neighbor-table".to_string()])
+        .await
+        .expect("Call to `lowpanctl get-neighbor-table` failed.");
 }
 
 pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
