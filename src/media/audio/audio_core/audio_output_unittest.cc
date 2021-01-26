@@ -24,9 +24,9 @@ static const TimelineFunction kDriverRefPtsToFractionalFrames =
 // An OutputPipeline that always returns std::nullopt from |ReadLock|.
 class TestOutputPipeline : public OutputPipeline {
  public:
-  TestOutputPipeline(const Format& format)
+  TestOutputPipeline(const Format& format, std::shared_ptr<AudioClockManager> clock_manager)
       : OutputPipeline(format),
-        audio_clock_(AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic())) {}
+        audio_clock_(clock_manager->CreateClientFixed(clock::AdjustableCloneOfMonotonic())) {}
 
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
 
@@ -199,8 +199,8 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
 };
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
-                                                                          &context().link_matrix());
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
+      dispatcher(), &context().link_matrix(), context().clock_manager());
   SetupMixTask();
   context().link_matrix().LinkObjects(renderer, audio_output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
@@ -257,7 +257,7 @@ TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
                     .take_value();
 
   // Use an output pipeline that will always return nullopt from ReadLock.
-  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format);
+  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format, context().clock_manager());
   audio_output_->set_output_pipeline(std::move(pipeline_owned));
   SetupMixTask();
 
@@ -295,7 +295,7 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
           .take_value();
 
   // Use an output pipeline that will always return nullopt from ReadLock.
-  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format);
+  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format, context().clock_manager());
   auto pipeline = pipeline_owned.get();
   audio_output_->set_output_pipeline(std::move(pipeline_owned));
   SetupMixTask();
@@ -394,7 +394,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
                                    .frames_per_second = 48000,
                                })
                     .take_value();
-  auto default_stream = std::make_shared<testing::FakeStream>(format);
+  auto default_stream = std::make_shared<testing::FakeStream>(format, context().clock_manager());
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
   default_stream->set_usage_mask({stream_usage});
   default_stream->set_gain_db(0.0);

@@ -47,9 +47,9 @@ class TapStageTest : public testing::ThreadingModelFixture {
     auto source_timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(rate));
 
-    packet_queue_ =
-        std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function,
-                                      AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+    packet_queue_ = std::make_shared<PacketQueue>(
+        kDefaultFormat, source_timeline_function,
+        context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
     ASSERT_TRUE(packet_queue_);
 
     auto tap_timeline_function =

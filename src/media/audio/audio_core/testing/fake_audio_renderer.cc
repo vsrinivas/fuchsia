@@ -25,22 +25,26 @@ const fuchsia::media::AudioStreamType kDefaultStreamType{
 
 // static
 std::shared_ptr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
-    async_dispatcher_t* dispatcher, LinkMatrix* link_matrix) {
+    async_dispatcher_t* dispatcher, LinkMatrix* link_matrix,
+    std::shared_ptr<AudioClockManager> clock_manager) {
   auto format_result = Format::Create(kDefaultStreamType);
   FX_CHECK(format_result.is_ok());
   return FakeAudioRenderer::Create(dispatcher, {format_result.value()},
-                                   fuchsia::media::AudioRenderUsage::MEDIA, link_matrix);
+                                   fuchsia::media::AudioRenderUsage::MEDIA, link_matrix,
+                                   clock_manager);
 }
 
 FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::optional<Format> format,
                                      fuchsia::media::AudioRenderUsage usage,
-                                     LinkMatrix* link_matrix)
+                                     LinkMatrix* link_matrix,
+                                     std::shared_ptr<AudioClockManager> clock_manager)
     : AudioObject(AudioObject::Type::AudioRenderer),
       dispatcher_(dispatcher),
       format_(format),
       usage_(usage),
       packet_factory_(dispatcher, *format, 2 * PAGE_SIZE),
-      link_matrix_(*link_matrix) {}
+      link_matrix_(*link_matrix),
+      clock_manager_(clock_manager) {}
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
                                            fit::closure callback) {
@@ -78,7 +82,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> FakeAudioRenderer::Ini
     const AudioObject& dest) {
   auto queue = std::make_shared<PacketQueue>(
       *format(), timeline_function_,
-      AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic()));
+      clock_manager_->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic()));
   packet_queues_.insert({&dest, queue});
   return fit::ok(std::move(queue));
 }

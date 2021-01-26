@@ -196,7 +196,7 @@ TEST_F(DriverOutputTest, HandlePlugDetectBeforeStartResponse) {
   // the |AUDIO_RB_CMD_START| message yet.
   auto renderer = testing::FakeAudioRenderer::Create(
       dispatcher(), std::make_optional<Format>(Format::Create(kDefaultStreamType).take_value()),
-      fuchsia::media::AudioRenderUsage::MEDIA, &context().link_matrix());
+      fuchsia::media::AudioRenderUsage::MEDIA, &context().link_matrix(), context().clock_manager());
   context().route_graph().AddRenderer(renderer);
   context().route_graph().SetRendererRoutingProfile(
       *renderer, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
@@ -231,8 +231,8 @@ TEST_F(DriverOutputTest, RendererOutput) {
   RunLoopUntilIdle();
   EXPECT_TRUE(driver_->is_running());
 
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
-                                                                          &context().link_matrix());
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
+      dispatcher(), &context().link_matrix(), context().clock_manager());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(0.5, zx::msec(5));
@@ -291,8 +291,8 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   RunLoopUntilIdle();
   EXPECT_TRUE(driver_->is_running());
 
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
-                                                                          &context().link_matrix());
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
+      dispatcher(), &context().link_matrix(), context().clock_manager());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(0.875, kExpectedMixInterval);
@@ -375,8 +375,8 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
 
   // Create an add a renderer. We enqueue some audio in this renderer, however we'll expect the
   // ring to only contain silence since the output is muted.
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
-                                                                          &context().link_matrix());
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
+      dispatcher(), &context().link_matrix(), context().clock_manager());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   bool packet1_released = false;
@@ -585,8 +585,8 @@ TEST_F(DriverV2OutputTest, RendererOutput) {
   RunLoopUntilIdle();
   EXPECT_TRUE(driver_->is_running());
 
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
-                                                                          &context().link_matrix());
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
+      dispatcher(), &context().link_matrix(), context().clock_manager());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(-0.5, zx::msec(5));
@@ -648,8 +648,8 @@ TEST_F(DriverV2OutputTest, MixAtExpectedInterval) {
   RunLoopUntilIdle();
   EXPECT_TRUE(driver_->is_running());
 
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
-                                                                          &context().link_matrix());
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
+      dispatcher(), &context().link_matrix(), context().clock_manager());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(0.75, kExpectedMixInterval);
@@ -733,8 +733,8 @@ TEST_F(DriverV2OutputTest, WriteSilenceToRingWhenMuted) {
 
   // Create an add a renderer. We enqueue some audio in this renderer, however we'll expect the
   // ring to only contain silence since the output is muted.
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
-                                                                          &context().link_matrix());
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(
+      dispatcher(), &context().link_matrix(), context().clock_manager());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   bool packet1_released = false;

@@ -8,8 +8,9 @@
 
 namespace media::audio::testing {
 
-FakeStream::FakeStream(const Format& format, size_t max_buffer_size, zx::clock clock)
-    : ReadableStream(format), audio_clock_(AudioClock::ClientFixed(std::move(clock))) {
+FakeStream::FakeStream(const Format& format, std::shared_ptr<AudioClockManager> clock_manager,
+                       size_t max_buffer_size, zx::clock clock)
+    : ReadableStream(format), audio_clock_(clock_manager->CreateClientFixed(std::move(clock))) {
   buffer_size_ = max_buffer_size;
   buffer_ = std::make_unique<uint8_t[]>(buffer_size_);
   memset(buffer_.get(), 0, buffer_size_);

@@ -53,9 +53,9 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
-  auto stream =
-      std::make_shared<PacketQueue>(k48k2ChanFloatFormat, timeline_function,
-                                    AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+  auto stream = std::make_shared<PacketQueue>(
+      k48k2ChanFloatFormat, timeline_function,
+      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
   test_effects_.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
@@ -93,7 +93,8 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
 
 TEST_F(EffectsStageTest, BlockAlignRequests) {
   // Create a source stream.
-  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
+  auto stream =
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
 
   // Create an effect we can load.
   const uint32_t kBlockSize = 128;
@@ -150,7 +151,8 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
 
 TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
   // Create a source stream.
-  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
+  auto stream =
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
 
   const uint32_t kBlockSize = 128;
   const uint32_t kMaxBufferSize = 300;
@@ -178,7 +180,8 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
 }
 
 TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
-  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
+  auto stream =
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
@@ -218,7 +221,8 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
 }
 
 TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
-  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
+  auto stream =
+      std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_manager());
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
@@ -265,9 +269,9 @@ TEST_F(EffectsStageTest, UpdateEffect) {
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
-  auto stream =
-      std::make_shared<PacketQueue>(k48k2ChanFloatFormat, timeline_function,
-                                    AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+  auto stream = std::make_shared<PacketQueue>(
+      k48k2ChanFloatFormat, timeline_function,
+      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
   test_effects_.AddEffect("assign_config_size")
@@ -311,9 +315,9 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  auto stream =
-      std::make_shared<PacketQueue>(k48k2ChanFloatFormat, timeline_function,
-                                    AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+  auto stream = std::make_shared<PacketQueue>(
+      k48k2ChanFloatFormat, timeline_function,
+      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create the effects stage.
   //
@@ -372,9 +376,9 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  auto stream =
-      std::make_shared<PacketQueue>(k48k2ChanFloatFormat, timeline_function,
-                                    AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+  auto stream = std::make_shared<PacketQueue>(
+      k48k2ChanFloatFormat, timeline_function,
+      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
   std::vector<PipelineConfig::Effect> effects;
@@ -414,9 +418,9 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  auto stream =
-      std::make_shared<PacketQueue>(k48k2ChanFloatFormat, timeline_function,
-                                    AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+  auto stream = std::make_shared<PacketQueue>(
+      k48k2ChanFloatFormat, timeline_function,
+      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
   std::vector<PipelineConfig::Effect> effects;
@@ -462,7 +466,8 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   auto timeline_function = TimelineFunction(TimelineRate(
       Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, PAGE_SIZE);
+  auto input = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat,
+                                                     context().clock_manager(), PAGE_SIZE);
   input->timeline_function()->Update(timeline_function);
 
   // Create a simple effects stage.
@@ -536,9 +541,9 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  auto stream =
-      std::make_shared<PacketQueue>(k48k2ChanFloatFormat, timeline_function,
-                                    AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+  auto stream = std::make_shared<PacketQueue>(
+      k48k2ChanFloatFormat, timeline_function,
+      context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   static const uint32_t kBlockSize = 48;
   static const uint32_t kRingOutBlocks = 4;
@@ -609,9 +614,9 @@ class EffectsStageRingoutTest : public EffectsStageTest,
     auto timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
             Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-    stream_ =
-        std::make_shared<PacketQueue>(k48k2ChanFloatFormat, timeline_function,
-                                      AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic()));
+    stream_ = std::make_shared<PacketQueue>(
+        k48k2ChanFloatFormat, timeline_function,
+        context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
   }
 
   testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE};

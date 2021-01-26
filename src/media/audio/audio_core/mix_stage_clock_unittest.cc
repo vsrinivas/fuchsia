@@ -185,8 +185,8 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
         0, zx::clock::get_monotonic().get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
 
-    device_clock_ =
-        AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+    device_clock_ = context().clock_manager()->CreateDeviceFixed(clock::CloneOfMonotonic(),
+                                                                 AudioClock::kMonotonicDomain);
     audio_clock_helper::VerifyAdvances(device_clock_.value());
 
     zx::time source_start = zx::clock::get_monotonic();
@@ -203,7 +203,7 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
         zx::sec(1).to_nsecs()));
 
     auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
-    client_clock_ = AudioClock::ClientFixed(std::move(raw_clock));
+    client_clock_ = context().clock_manager()->CreateClientFixed(std::move(raw_clock));
     audio_clock_helper::VerifyAdvances(client_clock_.value());
   }
 };
@@ -245,7 +245,8 @@ class AdjustableClockTest : public MixStageClockTest,
         0, zx::clock::get_monotonic().get(), Fixed(kDefaultFormat.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
 
-    client_clock_ = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+    client_clock_ =
+        context().clock_manager()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic());
     audio_clock_helper::VerifyAdvances(client_clock_.value());
 
     auto device_start = zx::clock::get_monotonic();
@@ -262,7 +263,8 @@ class AdjustableClockTest : public MixStageClockTest,
         zx::sec(1).to_nsecs()));
 
     auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
-    device_clock_ = AudioClock::DeviceFixed(std::move(raw_clock), kNonMonotonicDomain);
+    device_clock_ =
+        context().clock_manager()->CreateDeviceFixed(std::move(raw_clock), kNonMonotonicDomain);
     audio_clock_helper::VerifyAdvances(device_clock_.value());
   }
 };

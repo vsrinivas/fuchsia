@@ -107,11 +107,11 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                   testing::PacketFactory& factory);
   AudioClock CreateClientClock() {
-    return AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic());
+    return context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic());
   }
 
   std::shared_ptr<testing::FakeStream> CreateFakeStream(StreamUsage stream_usage) {
-    auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+    auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
     stream->set_usage_mask({stream_usage});
     stream->set_gain_db(0.0);
     stream->timeline_function()->Update(kDefaultTransform);
@@ -137,8 +137,8 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void TestOutputPipelineTrim(ClockMode clock_mode);
   void TestDifferentMixRates(ClockMode clock_mode);
 
-  AudioClock device_clock_ =
-      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  AudioClock device_clock_ = context().clock_manager()->CreateDeviceFixed(
+      clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 };
 
 AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
@@ -155,7 +155,7 @@ AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
-  auto custom_audio_clock = AudioClock::ClientFixed(std::move(custom_clock));
+  auto custom_audio_clock = context().clock_manager()->CreateClientFixed(std::move(custom_clock));
 
   return custom_audio_clock;
 }
@@ -563,10 +563,12 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
 
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
-  auto default_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  auto default_stream =
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
   pipeline->AddInput(default_stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), std::nullopt,
                      Mixer::Resampler::SampleAndHold);
-  auto communications_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  auto communications_stream =
+      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
   pipeline->AddInput(communications_stream,
                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION), std::nullopt,
                      Mixer::Resampler::SampleAndHold);
