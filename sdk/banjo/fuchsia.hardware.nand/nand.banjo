@@ -119,7 +119,7 @@ protocol Nand {
     /// When the hardware is not able to correct all bitflips for a page, the
     /// driver should return ZX_ERR_IO_DATA_INTEGRITY.
     [Async]
-    Queue(NandOperation? op) -> (zx.status status, NandOperation? op);
+    Queue([InOut] NandOperation op) -> (zx.status status, [Mutable] NandOperation op);
 
     /// Gets the list of bad erase blocks, as reported by the nand manufacturer.
     /// This should only be called before writing any data to the nand, and the

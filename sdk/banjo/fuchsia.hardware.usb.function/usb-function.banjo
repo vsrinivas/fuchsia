@@ -30,8 +30,8 @@ protocol UsbFunction {
     AllocStringDesc(string @string) -> (zx.status s, uint8 index);
 
     /// Queues a USB request with the lower level driver.
-    RequestQueue(fuchsia.hardware.usb.request.UsbRequest? usb_request,
-                 fuchsia.hardware.usb.request.UsbRequestComplete? complete_cb) -> ();
+    RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
 
     /// Stalls the specified endpoint.
     EpSetStall(uint8 ep_address) -> (zx.status s);

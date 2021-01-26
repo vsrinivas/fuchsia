@@ -246,7 +246,7 @@ protocol BlockImpl {
     /// be reported via the |completion_cb|.  This / callback may be called
     /// before the queue() method returns.
     [Async]
-    Queue(BlockOp? txn) -> (zx.status status, BlockOp? op);
+    Queue([InOut] BlockOp txn) -> (zx.status status, [Mutable] BlockOp op);
 };
 
 [Layout = "ddk-protocol"]
@@ -262,5 +262,5 @@ protocol Block {
     /// be reported via the |completion_cb|.  This / callback may be called
     /// before the queue() method returns.
     [Async]
-    Queue(BlockOp? txn) -> (zx.status status, BlockOp? op);
+    Queue([InOut] BlockOp txn) -> (zx.status status, [Mutable] BlockOp op);
 };

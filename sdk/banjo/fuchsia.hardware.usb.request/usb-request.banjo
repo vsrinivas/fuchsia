@@ -91,5 +91,5 @@ struct UsbRequest {
 
 [Layout="ddk-callback"]
 protocol UsbRequestComplete {
-    Callback(UsbRequest? req) -> ();
+    Callback([InOut] UsbRequest req) -> ();
 };

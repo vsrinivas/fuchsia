@@ -85,7 +85,7 @@ protocol Sdio {
     DisableFnIntr() -> (zx.status s);
     UpdateBlockSize(uint16 blk_sz, bool deflt) -> (zx.status s);
     GetBlockSize() -> (zx.status s, uint16 cur_blk_size);
-    DoRwTxn(SdioRwTxn? txn) -> (zx.status s);
+    DoRwTxn([InOut] SdioRwTxn txn) -> (zx.status s);
     DoRwByte(bool write, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
     GetInBandIntr() -> (zx.status s, handle<interrupt> irq);
     /// The following functions access the card common control registers (CCCR) on function 0.

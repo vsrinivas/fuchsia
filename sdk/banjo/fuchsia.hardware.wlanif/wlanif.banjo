@@ -766,7 +766,7 @@ protocol WlanifImpl {
 
     // Data operations
     [Async]
-    DataQueueTx(uint32 options, fuchsia.hardware.ethernet.EthernetNetbuf? netbuf) ->
-               (zx.status status, fuchsia.hardware.ethernet.EthernetNetbuf? netbuf);
+    DataQueueTx(uint32 options, [InOut] fuchsia.hardware.ethernet.EthernetNetbuf netbuf) ->
+               (zx.status status, [Mutable] fuchsia.hardware.ethernet.EthernetNetbuf netbuf);
 
 };

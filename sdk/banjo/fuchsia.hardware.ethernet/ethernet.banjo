@@ -122,7 +122,7 @@ protocol EthernetImpl {
     /// Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
     /// the completion state of the transmission itself.
     [Async]
-    QueueTx(uint32 options, EthernetNetbuf? netbuf) -> (zx.status status, EthernetNetbuf? netbuf);
+    QueueTx(uint32 options, [InOut] EthernetNetbuf netbuf) -> (zx.status status, [Mutable] EthernetNetbuf netbuf);
 
     /// Request a settings change for the driver. Return status indicates disposition:
     ///   ZX_OK: Request has been handled.

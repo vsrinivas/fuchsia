@@ -11,8 +11,8 @@ using zx;
 [Layout = "ddk-protocol"]
 protocol UsbDci {
     /// Queues a USB request with the DCI driver.
-    RequestQueue(fuchsia.hardware.usb.request.UsbRequest? usb_request,
-                 fuchsia.hardware.usb.request.UsbRequestComplete? complete_cb) -> ();
+    RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
     /// Registers callback interface with the DCI driver.
     SetInterface(UsbDciInterface @interface) -> (zx.status s);
     /// Configures an endpoint based on provided descriptors.

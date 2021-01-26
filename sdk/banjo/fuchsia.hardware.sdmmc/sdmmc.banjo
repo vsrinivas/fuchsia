@@ -165,8 +165,8 @@ protocol Sdmmc {
     /// Perform tuning.
     PerformTuning(uint32 cmd_idx) -> (zx.status s);
     /// Issue a request.
-    Request(SdmmcReq? req) -> (zx.status s);
-    RegisterInBandInterrupt(InBandInterrupt? interrupt_cb) -> (zx.status s);
+    Request([InOut] SdmmcReq req) -> (zx.status s);
+    RegisterInBandInterrupt([InOut] InBandInterrupt interrupt_cb) -> (zx.status s);
 
     /// In the methods below, vmo_id is used to uniquely identify a VMO that will be passed to
     /// Request in an SdmmcBufferRegion. VMO IDs are chosen by the caller, and may be any uint32

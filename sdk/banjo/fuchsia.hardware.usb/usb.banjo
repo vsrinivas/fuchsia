@@ -19,8 +19,8 @@ protocol Usb {
               -> (zx.status status, vector<voidptr> read);
 
     /// Queues a USB request.
-    RequestQueue(fuchsia.hardware.usb.request.UsbRequest? usb_request,
-                 fuchsia.hardware.usb.request.UsbRequestComplete? complete_cb) -> ();
+    RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
 
     /// Returns the speed of the device.
     GetSpeed() -> (zircon.hw.usb.UsbSpeed s);
@@ -95,4 +95,3 @@ protocol Usb {
     /// all layers of the USB stack.
     GetRequestSize() -> (usize size);
 };
-

@@ -32,7 +32,7 @@ enum MipiModes : uint32 {
     DDR_MODE = 0x0;
     // Direct mode.
     DIR_MODE = 0x1;
-    // Dual Overlay mode?
+    // Dual Overlay mode.
     DOL_MODE = 0x2;
 };
 

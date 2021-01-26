@@ -13,8 +13,8 @@ using zircon.hw.usb;
 [Layout="ddk-protocol"]
 protocol UsbHci {
     /// Queues a USB request with the HCI driver.
-    RequestQueue(fuchsia.hardware.usb.request.UsbRequest? usb_request,
-                 fuchsia.hardware.usb.request.UsbRequestComplete? complete_cb) -> ();
+    RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
+                 [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
     /// Registers callbacks to the USB bus driver with the HCI driver.
     SetBusInterface(fuchsia.hardware.usb.bus.UsbBusInterface bus_intf) -> ();
     /// Returns the maximum number of USB devices that might be connected to the controller.
