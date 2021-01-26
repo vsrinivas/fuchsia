@@ -354,7 +354,6 @@ enum brcmf_disconnect_mode {
  * @scan_status: scan activity on the dongle.
  * @pub: common driver information.
  * @channel: current channel.
- * @int_escan_map: bucket map for which internal e-scan is done.
  * @ibss_starter: indicates this sta is ibss starter.
  * @pwr_save: indicate whether dongle to support power save mode.
  * @dongle_up: indicate whether dongle up or not.
@@ -376,7 +375,6 @@ enum brcmf_disconnect_mode {
  * @vif_event: vif event signalling.
  * @vif_event_pending_action: If vif_event is set, this is what it's waiting for.
  * @wowl: wowl related information.
- * @pno: information of pno module.
  * @ap_started: Boolean indicating if SoftAP has been started.
  * @signal_report_timer: Timer to periodically update signal report to SME.
  * @signal_report_work: Work structure for signal report timer.
@@ -395,7 +393,6 @@ struct brcmf_cfg80211_info {
   std::atomic<unsigned long> scan_status;
   struct brcmf_pub* pub;
   uint32_t channel;
-  uint32_t int_escan_map;
   bool ibss_starter;
   bool pwr_save;
   bool dongle_up;
@@ -418,7 +415,6 @@ struct brcmf_cfg80211_info {
   struct brcmu_d11inf d11inf;
   struct brcmf_assoclist_le assoclist;
   struct brcmf_cfg80211_wowl wowl;
-  struct brcmf_pno_info* pno;
   bool ap_started;
   Timer* signal_report_timer;
   WorkItem signal_report_work;

@@ -39,7 +39,6 @@
 #include "linuxisms.h"
 #include "macros.h"
 #include "netbuf.h"
-#include "pno.h"
 #include "proto.h"
 #include "workqueue.h"
 

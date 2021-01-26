@@ -161,8 +161,6 @@ source_set("core") {
     "feature.h",
     "fweh.cc",
     "fwil.cc",
-    "pno.cc",
-    "pno.h",
     "utils.cc",
     "wlan_interface.cc",
     "wlan_interface.h",

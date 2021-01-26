@@ -56,7 +56,6 @@
 #include "linuxisms.h"
 #include "macros.h"
 #include "netbuf.h"
-#include "pno.h"
 #include "proto.h"
 #include "third_party/bcmdhd/crossdriver/dhd.h"
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
@@ -764,22 +763,8 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
 
   brcmf_scan_config_mpc(ifp, 1);
 
-  // e-scan can be initiated internally which takes precedence.
   struct net_device* ndev = cfg_to_ndev(cfg);
-  if (cfg->int_escan_map) {
-    BRCMF_DBG(SCAN, "scheduled scan completed (%x)", cfg->int_escan_map);
-    while (cfg->int_escan_map) {
-      uint32_t bucket = ffs(cfg->int_escan_map) - 1;  // ffs() index is 1-based
-      cfg->int_escan_map &= ~BIT(bucket);
-      uint64_t reqid = brcmf_pno_find_reqid_by_bucket(cfg->pno, bucket);
-      if (!aborted) {
-        // TODO(cphoenix): Figure out how to use internal reqid infrastructure, rather
-        // than storing it separately in wiphy->scan_txn_id.
-        BRCMF_DBG(SCAN, " * * report scan results: internal reqid=%lu", reqid);
-        brcmf_signal_scan_end(ndev, ndev->scan_txn_id, WLAN_SCAN_RESULT_SUCCESS);
-      }
-    }
-  } else if (cfg->scan_request) {
+  if (cfg->scan_request) {
     BRCMF_IFDBG(WLANIF, ndev, "ESCAN Completed scan: %s", aborted ? "Aborted" : "Done");
     // Now that we're done with this scan_request we can remove it
     cfg->scan_request = nullptr;
@@ -2383,7 +2368,7 @@ static void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   struct escan_info* escan = &cfg->escan_info;
 
   brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
-  if (cfg->int_escan_map || cfg->scan_request) {
+  if (cfg->scan_request) {
     escan->escan_state = WL_ESCAN_STATE_IDLE;
     brcmf_abort_escan(escan->ifp);
   }
@@ -2393,7 +2378,7 @@ static void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
 // Abort scanning immediately and inform SME right away
 static void brcmf_abort_scanning_immediately(struct brcmf_cfg80211_info* cfg) {
   brcmf_abort_scanning(cfg);
-  if (cfg->int_escan_map || cfg->scan_request) {
+  if (cfg->scan_request) {
     brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, true);
   }
 }
@@ -2409,7 +2394,7 @@ static void brcmf_cfg80211_escan_timeout_worker(WorkItem* work) {
 static void brcmf_escan_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
 
-  if (cfg->int_escan_map || cfg->scan_request) {
+  if (cfg->scan_request) {
     BRCMF_ERR("scan timer expired");
     // If it's for SIM tests, won't enqueue.
     EXEC_TIMEOUT_WORKER(escan_timeout_work);
@@ -2487,7 +2472,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     goto chk_scan_end;
   }
 
-  if (!cfg->int_escan_map && !cfg->scan_request) {
+  if (!cfg->scan_request) {
     BRCMF_DBG(SCAN, "result without cfg80211 request");
     goto chk_scan_end;
   }
@@ -2508,7 +2493,7 @@ chk_scan_end:
   // If this is not a partial notification, indicate scan complete to wlanstack
   if (status != BRCMF_E_STATUS_PARTIAL) {
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
-    if (cfg->int_escan_map || cfg->scan_request) {
+    if (cfg->scan_request) {
       aborted = status != BRCMF_E_STATUS_SUCCESS;
       if (aborted) {
         BRCMF_WARN("Sending notification of aborted scan: %d", status);
@@ -2530,188 +2515,6 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
   cfg->escan_timer =
       new Timer(cfg->pub->bus_if, cfg->pub->dispatcher, std::bind(brcmf_escan_timeout, cfg), false);
   cfg->escan_timeout_work = WorkItem(brcmf_cfg80211_escan_timeout_worker);
-}
-
-static wlanif_scan_req_t* brcmf_alloc_internal_escan_request(void) {
-  return static_cast<wlanif_scan_req_t*>(calloc(1, sizeof(wlanif_scan_req_t)));
-}
-
-static zx_status_t brcmf_internal_escan_add_info(wlanif_scan_req_t* req, uint8_t* ssid,
-                                                 uint8_t ssid_len, uint8_t channel) {
-  size_t i;
-
-  for (i = 0; i < req->num_channels; i++) {
-    if (req->channel_list[i] == channel) {
-      break;
-    }
-  }
-  if (i == req->num_channels) {
-    if (req->num_channels < WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-      req->channel_list[req->num_channels++] = channel;
-    } else {
-      BRCMF_ERR("escan channel list full, suppressing channel %d", channel);
-    }
-  }
-
-  for (i = 0; i < req->num_ssids; i++) {
-    if (req->ssid_list[i].len == ssid_len && !memcmp(req->ssid_list[i].data, ssid, ssid_len)) {
-      break;
-    }
-  }
-  if (i == req->num_ssids) {
-    if (req->num_ssids < WLAN_SCAN_MAX_SSIDS) {
-      memcpy(req->ssid_list[req->num_ssids].data, ssid, ssid_len);
-      req->ssid_list[req->num_ssids++].len = ssid_len;
-    } else {
-      BRCMF_ERR("escan ssid list full, suppressing '%.*s'", ssid_len, ssid);
-    }
-  }
-
-  return ZX_OK;
-}
-
-static zx_status_t brcmf_start_internal_escan(struct brcmf_if* ifp, uint32_t fwmap,
-                                              wlanif_scan_req_t* req, uint16_t* sync_id_out) {
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  zx_status_t err;
-
-  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
-    if (cfg->int_escan_map) {
-      BRCMF_DBG(SCAN, "aborting internal scan: map=%u", cfg->int_escan_map);
-    }
-    /* Abort any on-going scan */
-    BRCMF_WARN("Starting internal scan, aborting existing scan in progress");
-    brcmf_abort_scanning_immediately(cfg);
-  }
-
-  BRCMF_DBG(SCAN, "start internal scan: map=%u", fwmap);
-  brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
-  cfg->escan_info.run = brcmf_run_escan;
-  err = brcmf_do_escan(ifp, req, sync_id_out);
-  if (err != ZX_OK) {
-    brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
-    return err;
-  }
-  cfg->int_escan_map = fwmap;
-  return ZX_OK;
-}
-
-static struct brcmf_pno_net_info_le* brcmf_get_netinfo_array(
-    struct brcmf_pno_scanresults_le* pfn_v1) {
-  struct brcmf_pno_scanresults_v2_le* pfn_v2;
-  struct brcmf_pno_net_info_le* netinfo;
-
-  switch (pfn_v1->version) {
-    default:
-      WARN_ON(1);
-      /* fall-thru */
-    case 1:
-      netinfo = (struct brcmf_pno_net_info_le*)(pfn_v1 + 1);
-      break;
-    case 2:
-      pfn_v2 = (struct brcmf_pno_scanresults_v2_le*)pfn_v1;
-      netinfo = (struct brcmf_pno_net_info_le*)(pfn_v2 + 1);
-      break;
-  }
-
-  return netinfo;
-}
-
-/* PFN result doesn't have all the info which are required by the supplicant
- * (For e.g IEs) Do a target Escan so that sched scan results are reported
- * via wl_inform_single_bss in the required format.
- */
-static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
-                                                   const struct brcmf_event_msg* e, void* data) {
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  struct net_device* ndev = cfg_to_ndev(cfg);
-  wlanif_scan_req_t* req = nullptr;
-  struct brcmf_pno_net_info_le* netinfo;
-  struct brcmf_pno_net_info_le* netinfo_start;
-  int i;
-  zx_status_t err = ZX_OK;
-  struct brcmf_pno_scanresults_le* pfn_result;
-  uint32_t bucket_map;
-  uint32_t result_count;
-  uint32_t status;
-  uint32_t datalen;
-  uint16_t sync_id;
-
-  BRCMF_DBG(TRACE, "Enter");
-  BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
-
-  if (e->datalen < (sizeof(*pfn_result) + sizeof(*netinfo))) {
-    BRCMF_DBG(SCAN, "Event data to small. Ignore");
-    return ZX_OK;
-  }
-
-  if (e->event_code == BRCMF_E_PFN_NET_LOST) {
-    BRCMF_DBG(SCAN, "PFN NET LOST event. Do Nothing");
-    return ZX_OK;
-  }
-
-  pfn_result = (struct brcmf_pno_scanresults_le*)data;
-  result_count = pfn_result->count;
-  status = pfn_result->status;
-
-  /* PFN event is limited to fit 512 bytes so we may get
-   * multiple NET_FOUND events. For now place a warning here.
-   */
-  WARN_ON(status != BRCMF_PNO_SCAN_COMPLETE);
-  BRCMF_DBG(SCAN, "PFN NET FOUND event. count: %d", result_count);
-  if (!result_count) {
-    BRCMF_ERR("FALSE PNO Event. (pfn_count == 0)");
-    // TODO(cphoenix): err isn't set here. Should it be?
-    goto out_err;
-  }
-
-  netinfo_start = brcmf_get_netinfo_array(pfn_result);
-  datalen = e->datalen - ((char*)netinfo_start - (char*)pfn_result);
-  if (datalen < result_count * sizeof(*netinfo)) {
-    BRCMF_ERR("insufficient event data");
-    // TODO(cphoenix): err isn't set here. Should it be?
-    goto out_err;
-  }
-
-  req = brcmf_alloc_internal_escan_request();
-  if (!req) {
-    err = ZX_ERR_NO_MEMORY;
-    goto out_err;
-  }
-
-  bucket_map = 0;
-  for (i = 0; i < (int32_t)result_count; i++) {
-    netinfo = &netinfo_start[i];
-
-    if (netinfo->SSID_len > WLAN_MAX_SSID_LEN) {
-      netinfo->SSID_len = WLAN_MAX_SSID_LEN;
-    }
-    BRCMF_DBG(SCAN, "SSID:%.32s Channel:%d", netinfo->SSID, netinfo->channel);
-    bucket_map |= brcmf_pno_get_bucket_map(cfg->pno, netinfo);
-    err = brcmf_internal_escan_add_info(req, netinfo->SSID, netinfo->SSID_len, netinfo->channel);
-    if (err != ZX_OK) {
-      goto out_err;
-    }
-  }
-
-  if (!bucket_map) {
-    goto free_req;
-  }
-
-  err = brcmf_start_internal_escan(ifp, bucket_map, req, &sync_id);
-  if (err == ZX_OK) {
-    goto free_req;
-  }
-  ndev->scan_sync_id = sync_id;
-
-out_err:
-  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
-    BRCMF_ERR("scan id:%lu err %d, signaling scan end", ndev->scan_txn_id, err);
-    brcmf_signal_scan_end(ndev, ndev->scan_txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
-  }
-free_req:
-  free(req);
-  return err;
 }
 
 static zx_status_t brcmf_parse_vndr_ies(const uint8_t* vndr_ie_buf, uint32_t vndr_ie_len,
@@ -5471,7 +5274,6 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_ROAM, brcmf_notify_roaming_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_MIC_ERROR, brcmf_notify_mic_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_SET_SSID, brcmf_process_set_ssid_event);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_PFN_NET_FOUND, brcmf_notify_sched_scan_results);
   brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_CSA_COMPLETE_IND, brcmf_notify_channel_switch);
   brcmf_fweh_register(cfg->pub, BRCMF_E_AP_STARTED, brcmf_notify_ap_started);
@@ -5942,18 +5744,13 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
     BRCMF_ERR("BT-coex initialisation failed (%d)", err);
     goto unreg_out;
   }
-  err = brcmf_pno_attach(cfg);
-  if (err != ZX_OK) {
-    BRCMF_ERR("PNO initialisation failed (%d)", err);
-    goto btcoex_out;
-  }
 
   if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_TDLS)) {
     err = brcmf_fil_iovar_int_set(ifp, "tdls_enable", 1, &fw_err);
     if (err != ZX_OK) {
       BRCMF_DBG(INFO, "TDLS not enabled: %s, fw err %s", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
-      goto pno_out;
+      goto btcoex_out;
     } else {
       brcmf_fweh_register(cfg->pub, BRCMF_E_TDLS_PEER_EVENT, brcmf_notify_tdls_peer_event);
     }
@@ -5962,8 +5759,6 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   BRCMF_DBG(TEMP, "Exit");
   return ZX_OK;
 
-pno_out:
-  brcmf_pno_detach(cfg);
 btcoex_out:
   brcmf_btcoex_detach(cfg);
 unreg_out:
@@ -5982,7 +5777,6 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
     return;
   }
 
-  brcmf_pno_detach(cfg);
   brcmf_btcoex_detach(cfg);
   BRCMF_DBG(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
   brcmf_deinit_cfg(cfg);
