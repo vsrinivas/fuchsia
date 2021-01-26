@@ -42,6 +42,7 @@ rustc_library("lib") {
 
   sources = [
     "src/diagnostics.rs",
+    "src/error.rs",
     "src/lib.rs",
   ]
 }

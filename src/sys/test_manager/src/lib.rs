@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::error::*,
     anyhow::Error,
     cm_rust,
     fidl::endpoints::ServerEnd,
@@ -15,11 +16,11 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     std::sync::Arc,
-    thiserror::Error,
     topology_builder::{
         builder::{
             Capability, CapabilityRoute, ComponentSource, Event, RouteEndpoint, TopologyBuilder,
         },
+        error::Error as TopologyBuilderError,
         mock::{Mock, MockHandles},
         Topology, TopologyInstance,
     },
@@ -27,6 +28,7 @@ use {
 };
 
 mod diagnostics;
+mod error;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
 pub const WRAPPER_ROOT_REALM_PATH: &'static str = "test_wrapper/test_root";
@@ -48,19 +50,6 @@ lazy_static! {
         | fio2::Operations::GetAttributes
         | fio2::Operations::UpdateAttributes;
     static ref ADMIN_RIGHTS: fio2::Operations = fio2::Operations::Admin;
-}
-
-/// Error encountered running test manager
-#[derive(Debug, Error)]
-pub enum TestManagerError {
-    #[error("Error sending response: {:?}", _0)]
-    Response(fidl::Error),
-
-    #[error("Error serving test manager protocol: {:?}", _0)]
-    Stream(fidl::Error),
-
-    #[error("Cannot convert to request stream: {:?}", _0)]
-    IntoStream(fidl::Error),
 }
 
 /// Start test manager and serve it over `stream`.
@@ -100,7 +89,7 @@ pub async fn run_test_manager(
                     }
                     Err(e) => {
                         error!("Failed to launch test: {:?}", e);
-                        responder.send(&mut Err(e)).map_err(TestManagerError::Response)?;
+                        responder.send(&mut Err(e.into())).map_err(TestManagerError::Response)?;
                     }
                 }
             }
@@ -145,37 +134,29 @@ impl RunningTest {
 async fn launch_test(
     test_url: &str,
     suite_request: ServerEnd<SuiteMarker>,
-) -> Result<RunningTest, LaunchError> {
+) -> Result<RunningTest, LaunchTestError> {
     // This archive accessor will be served by the embedded archivist.
     let (archive_accessor, archive_accessor_server_end) =
-        fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>().map_err(|e| {
-            error!("Failed to create proxy for ArchiveAccessor: {:?}", e);
-            LaunchError::InternalError
-        })?;
+        fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>()
+            .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
 
     let archive_accessor_arc = Arc::new(archive_accessor);
-    let mut topology = get_topology(archive_accessor_arc.clone(), test_url).await.map_err(|e| {
-        error!("Failed to create test topology: {:?}", e);
-        LaunchError::InternalError
-    })?;
+    let mut topology = get_topology(archive_accessor_arc.clone(), test_url)
+        .await
+        .map_err(LaunchTestError::InitializeTestTopology)?;
     topology.set_collection_name("tests");
     let mut topology_instance =
-        topology.create().await.map_err(|_| LaunchError::InstanceCannotResolve)?;
+        topology.create().await.map_err(LaunchTestError::CreateTestTopology)?;
     topology_instance
         .root()
         .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
             archive_accessor_server_end,
         )
-        .map_err(|e| {
-            error!("Failed to connect to the embedded archive accessor {:?}", e);
-            LaunchError::InternalError
-        })?;
-    topology_instance.root().connect_request_to_protocol_at_exposed_dir(suite_request).map_err(
-        |e| {
-            error!("Failed to conenct to test suite: {:?}", e);
-            LaunchError::FailedToConnectToTestSuite
-        },
-    )?;
+        .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
+    topology_instance
+        .root()
+        .connect_request_to_protocol_at_exposed_dir(suite_request)
+        .map_err(LaunchTestError::ConnectToTestSuite)?;
 
     Ok(RunningTest { instance: topology_instance, _archive_accessor: archive_accessor_arc })
 }
@@ -183,7 +164,7 @@ async fn launch_test(
 async fn get_topology(
     archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
-) -> Result<Topology, Error> {
+) -> Result<Topology, TopologyBuilderError> {
     let mut builder = TopologyBuilder::new().await?;
     let test_wrapper_test_root = format!("test_wrapper/{}", TEST_ROOT_REALM_NAME);
     builder
