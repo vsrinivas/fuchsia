@@ -784,7 +784,7 @@ async fn run_name_lookup<T: ResolverLookup>(
     stream: NameLookupRequestStream,
     sender: mpsc::Sender<IpLookupRequest>,
 ) -> Result<(), fidl::Error> {
-    stream
+    let result = stream
         .try_for_each_concurrent(None, |request| async {
             match request {
                 NameLookupRequest::LookupIp { hostname, options, responder } => {
@@ -804,18 +804,18 @@ async fn run_name_lookup<T: ResolverLookup>(
                     Ok(())
                 }
                 NameLookupRequest::LookupHostname { addr, responder } => {
-                    let result = responder.send(&mut handle_lookup_hostname(&resolver, addr).await);
-                    // Some clients will drop the channel when timing out
-                    // requests. Mute those errors to prevent log spamming.
-                    if let Err(fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED)) = result {
-                        Ok(())
-                    } else {
-                        result
-                    }
+                    responder.send(&mut handle_lookup_hostname(&resolver, addr).await)
                 }
             }
         })
-        .await
+        .await;
+    // Some clients will drop the channel when timing out
+    // requests. Mute those errors to prevent log spamming.
+    if let Err(fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED)) = result {
+        Ok(())
+    } else {
+        result
+    }
 }
 
 const MAX_PARALLEL_REQUESTS: usize = 256;
