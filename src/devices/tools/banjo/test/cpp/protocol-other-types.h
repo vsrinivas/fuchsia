@@ -113,9 +113,9 @@
 //     OtherTypesReferenceDevice(zx_device_t* parent)
 //         : OtherTypesReferenceDeviceType(parent) {}
 //
-//     void OtherTypesReferenceStruct(this_is_astruct_t* s, this_is_astruct_t** out_s);
+//     void OtherTypesReferenceStruct(const this_is_astruct_t* s, this_is_astruct_t** out_s);
 //
-//     void OtherTypesReferenceUnion(this_is_aunion_t* u, this_is_aunion_t** out_u);
+//     void OtherTypesReferenceUnion(const this_is_aunion_t* u, this_is_aunion_t** out_u);
 //
 //     void OtherTypesReferenceString(const char* s, char* out_s, size_t s_capacity);
 //
@@ -147,9 +147,9 @@
 //     OtherTypesAsyncReferenceDevice(zx_device_t* parent)
 //         : OtherTypesAsyncReferenceDeviceType(parent) {}
 //
-//     void OtherTypesAsyncReferenceStruct(this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);
+//     void OtherTypesAsyncReferenceStruct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);
 //
-//     void OtherTypesAsyncReferenceUnion(this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);
+//     void OtherTypesAsyncReferenceUnion(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);
 //
 //     void OtherTypesAsyncReferenceString(const char* s, other_types_async_reference_string_callback callback, void* cookie);
 //
@@ -511,10 +511,10 @@ protected:
     other_types_reference_protocol_ops_t other_types_reference_protocol_ops_ = {};
 
 private:
-    static void OtherTypesReferenceStruct(void* ctx, this_is_astruct_t* s, this_is_astruct_t** out_s) {
+    static void OtherTypesReferenceStruct(void* ctx, const this_is_astruct_t* s, this_is_astruct_t** out_s) {
         static_cast<D*>(ctx)->OtherTypesReferenceStruct(s, out_s);
     }
-    static void OtherTypesReferenceUnion(void* ctx, this_is_aunion_t* u, this_is_aunion_t** out_u) {
+    static void OtherTypesReferenceUnion(void* ctx, const this_is_aunion_t* u, this_is_aunion_t** out_u) {
         static_cast<D*>(ctx)->OtherTypesReferenceUnion(u, out_u);
     }
     static void OtherTypesReferenceString(void* ctx, const char* s, char* out_s, size_t s_capacity) {
@@ -600,11 +600,11 @@ public:
         ops_ = nullptr;
     }
 
-    void Struct(this_is_astruct_t* s, this_is_astruct_t** out_s) const {
+    void Struct(const this_is_astruct_t* s, this_is_astruct_t** out_s) const {
         ops_->struct(ctx_, s, out_s);
     }
 
-    void Union(this_is_aunion_t* u, this_is_aunion_t** out_u) const {
+    void Union(const this_is_aunion_t* u, this_is_aunion_t** out_u) const {
         ops_->union(ctx_, u, out_u);
     }
 
@@ -649,10 +649,10 @@ protected:
     other_types_async_reference_protocol_ops_t other_types_async_reference_protocol_ops_ = {};
 
 private:
-    static void OtherTypesAsyncReferenceStruct(void* ctx, this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
+    static void OtherTypesAsyncReferenceStruct(void* ctx, const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
         static_cast<D*>(ctx)->OtherTypesAsyncReferenceStruct(s, callback, cookie);
     }
-    static void OtherTypesAsyncReferenceUnion(void* ctx, this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
+    static void OtherTypesAsyncReferenceUnion(void* ctx, const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
         static_cast<D*>(ctx)->OtherTypesAsyncReferenceUnion(u, callback, cookie);
     }
     static void OtherTypesAsyncReferenceString(void* ctx, const char* s, other_types_async_reference_string_callback callback, void* cookie) {
@@ -738,11 +738,11 @@ public:
         ops_ = nullptr;
     }
 
-    void Struct(this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) const {
+    void Struct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) const {
         ops_->struct(ctx_, s, callback, cookie);
     }
 
-    void Union(this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) const {
+    void Union(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) const {
         ops_->union(ctx_, u, callback, cookie);
     }
 

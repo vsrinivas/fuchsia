@@ -41,7 +41,7 @@ struct vector_field_in_struct {
 
 typedef struct in_out_protocol_protocol_ops {
     void (*do_something)(void* ctx, some_type_t* param);
-    void (*do_some_other_thing)(void* ctx, some_type_t* param);
+    void (*do_some_other_thing)(void* ctx, const some_type_t* param);
     void (*do_some_default_thing)(void* ctx, const some_type_t* param);
 } in_out_protocol_protocol_ops_t;
 
@@ -55,7 +55,7 @@ static inline void in_out_protocol_do_something(const in_out_protocol_protocol_t
     proto->ops->do_something(proto->ctx, param);
 }
 
-static inline void in_out_protocol_do_some_other_thing(const in_out_protocol_protocol_t* proto, some_type_t* param) {
+static inline void in_out_protocol_do_some_other_thing(const in_out_protocol_protocol_t* proto, const some_type_t* param) {
     proto->ops->do_some_other_thing(proto->ctx, param);
 }
 

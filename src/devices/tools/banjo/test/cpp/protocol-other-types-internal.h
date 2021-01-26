@@ -107,10 +107,10 @@ constexpr void CheckOtherTypesAsyncProtocolSubclass() {
 }
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_struct, OtherTypesReferenceStruct,
-        void (C::*)(this_is_astruct_t* s, this_is_astruct_t** out_s));
+        void (C::*)(const this_is_astruct_t* s, this_is_astruct_t** out_s));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_union, OtherTypesReferenceUnion,
-        void (C::*)(this_is_aunion_t* u, this_is_aunion_t** out_u));
+        void (C::*)(const this_is_aunion_t* u, this_is_aunion_t** out_u));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_string, OtherTypesReferenceString,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
@@ -126,11 +126,11 @@ template <typename D>
 constexpr void CheckOtherTypesReferenceProtocolSubclass() {
     static_assert(internal::has_other_types_reference_protocol_struct<D>::value,
         "OtherTypesReferenceProtocol subclasses must implement "
-        "void OtherTypesReferenceStruct(this_is_astruct_t* s, this_is_astruct_t** out_s);");
+        "void OtherTypesReferenceStruct(const this_is_astruct_t* s, this_is_astruct_t** out_s);");
 
     static_assert(internal::has_other_types_reference_protocol_union<D>::value,
         "OtherTypesReferenceProtocol subclasses must implement "
-        "void OtherTypesReferenceUnion(this_is_aunion_t* u, this_is_aunion_t** out_u);");
+        "void OtherTypesReferenceUnion(const this_is_aunion_t* u, this_is_aunion_t** out_u);");
 
     static_assert(internal::has_other_types_reference_protocol_string<D>::value,
         "OtherTypesReferenceProtocol subclasses must implement "
@@ -147,10 +147,10 @@ constexpr void CheckOtherTypesReferenceProtocolSubclass() {
 }
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_struct, OtherTypesAsyncReferenceStruct,
-        void (C::*)(this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie));
+        void (C::*)(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_union, OtherTypesAsyncReferenceUnion,
-        void (C::*)(this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie));
+        void (C::*)(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_string, OtherTypesAsyncReferenceString,
         void (C::*)(const char* s, other_types_async_reference_string_callback callback, void* cookie));
@@ -166,11 +166,11 @@ template <typename D>
 constexpr void CheckOtherTypesAsyncReferenceProtocolSubclass() {
     static_assert(internal::has_other_types_async_reference_protocol_struct<D>::value,
         "OtherTypesAsyncReferenceProtocol subclasses must implement "
-        "void OtherTypesAsyncReferenceStruct(this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);");
+        "void OtherTypesAsyncReferenceStruct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);");
 
     static_assert(internal::has_other_types_async_reference_protocol_union<D>::value,
         "OtherTypesAsyncReferenceProtocol subclasses must implement "
-        "void OtherTypesAsyncReferenceUnion(this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);");
+        "void OtherTypesAsyncReferenceUnion(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);");
 
     static_assert(internal::has_other_types_async_reference_protocol_string<D>::value,
         "OtherTypesAsyncReferenceProtocol subclasses must implement "

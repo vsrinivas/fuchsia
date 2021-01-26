@@ -16,7 +16,7 @@ DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_in_out_protocol_protocol
         void (C::*)(some_type_t* param));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_in_out_protocol_protocol_do_some_other_thing, InOutProtocolDoSomeOtherThing,
-        void (C::*)(some_type_t* param));
+        void (C::*)(const some_type_t* param));
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_in_out_protocol_protocol_do_some_default_thing, InOutProtocolDoSomeDefaultThing,
         void (C::*)(const some_type_t* param));
@@ -30,7 +30,7 @@ constexpr void CheckInOutProtocolProtocolSubclass() {
 
     static_assert(internal::has_in_out_protocol_protocol_do_some_other_thing<D>::value,
         "InOutProtocolProtocol subclasses must implement "
-        "void InOutProtocolDoSomeOtherThing(some_type_t* param);");
+        "void InOutProtocolDoSomeOtherThing(const some_type_t* param);");
 
     static_assert(internal::has_in_out_protocol_protocol_do_some_default_thing<D>::value,
         "InOutProtocolProtocol subclasses must implement "

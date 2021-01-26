@@ -164,11 +164,7 @@ fn get_in_params(
                         }
                         ast::Ty::Struct | ast::Ty::Union => {
                             let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
-                            let prefix = if attrs.has_attribute("InOut") || ty.is_reference() {
-                                ""
-                            } else {
-                                "const "
-                            };
+                            let prefix = if attrs.has_attribute("InOut") { "" } else { "const " };
                             Ok(format!("{}{}* {}", prefix, ty_name, to_c_name(name)))
                         }
                         ast::Ty::Enum => Ok(format!(

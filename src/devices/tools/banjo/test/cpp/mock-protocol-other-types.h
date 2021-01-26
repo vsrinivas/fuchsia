@@ -301,12 +301,12 @@ public:
         mock_string_sized2_.VerifyAndClear();
     }
 
-    virtual void OtherTypesReferenceStruct(this_is_astruct_t* s, this_is_astruct_t** out_s) {
+    virtual void OtherTypesReferenceStruct(const this_is_astruct_t* s, this_is_astruct_t** out_s) {
         std::tuple<this_is_astruct_t> ret = mock_struct_.Call(*s);
         *out_s = std::get<0>(ret);
     }
 
-    virtual void OtherTypesReferenceUnion(this_is_aunion_t* u, this_is_aunion_t** out_u) {
+    virtual void OtherTypesReferenceUnion(const this_is_aunion_t* u, this_is_aunion_t** out_u) {
         std::tuple<this_is_aunion_t> ret = mock_union_.Call(*u);
         *out_u = std::get<0>(ret);
     }
@@ -401,12 +401,12 @@ public:
         mock_string_sized2_.VerifyAndClear();
     }
 
-    virtual void OtherTypesAsyncReferenceStruct(this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
+    virtual void OtherTypesAsyncReferenceStruct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
         std::tuple<this_is_astruct_t> ret = mock_struct_.Call(*s);
         callback(cookie, &std::get<0>(ret));
     }
 
-    virtual void OtherTypesAsyncReferenceUnion(this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
+    virtual void OtherTypesAsyncReferenceUnion(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
         std::tuple<this_is_aunion_t> ret = mock_union_.Call(*u);
         callback(cookie, &std::get<0>(ret));
     }

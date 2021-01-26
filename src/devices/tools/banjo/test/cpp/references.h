@@ -43,7 +43,7 @@
 //
 //     void InOutProtocolDoSomething(some_type_t* param);
 //
-//     void InOutProtocolDoSomeOtherThing(some_type_t* param);
+//     void InOutProtocolDoSomeOtherThing(const some_type_t* param);
 //
 //     void InOutProtocolDoSomeDefaultThing(const some_type_t* param);
 //
@@ -77,7 +77,7 @@ private:
     static void InOutProtocolDoSomething(void* ctx, some_type_t* param) {
         static_cast<D*>(ctx)->InOutProtocolDoSomething(param);
     }
-    static void InOutProtocolDoSomeOtherThing(void* ctx, some_type_t* param) {
+    static void InOutProtocolDoSomeOtherThing(void* ctx, const some_type_t* param) {
         static_cast<D*>(ctx)->InOutProtocolDoSomeOtherThing(param);
     }
     static void InOutProtocolDoSomeDefaultThing(void* ctx, const some_type_t* param) {
@@ -161,7 +161,7 @@ public:
         ops_->do_something(ctx_, param);
     }
 
-    void DoSomeOtherThing(some_type_t* param) const {
+    void DoSomeOtherThing(const some_type_t* param) const {
         ops_->do_some_other_thing(ctx_, param);
     }
 
