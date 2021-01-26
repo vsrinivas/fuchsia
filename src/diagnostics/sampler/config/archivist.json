@@ -391,6 +391,30 @@
        "metric_id": 7,
        "metric_type": "EventCount",
        "event_codes": [0]
-     }
+    },
+    {
+      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_schema_truncation_count",
+      "metric_id": 8,
+      "metric_type": "EventCount",
+      "event_codes": [
+        0, 0
+      ]
+    },
+    {
+      "selector": "bootstrap/archivist:root/feedback_archive_accessor:inspect_schema_truncation_count",
+      "metric_id": 8,
+      "metric_type": "EventCount",
+      "event_codes": [
+        1, 0
+      ]
+    },
+    {
+      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:inspect_schema_truncation_count",
+      "metric_id": 8,
+      "metric_type": "EventCount",
+      "event_codes": [
+        2, 0
+      ]
+    }
   ]
 }
