@@ -27,7 +27,7 @@ pub(crate) struct RegulatoryManager<I: IfaceManagerApi + ?Sized, P: PhyManagerAp
     iface_manager: Arc<Mutex<I>>,
 }
 
-const REGION_CODE_LEN: usize = 2;
+pub(crate) const REGION_CODE_LEN: usize = 2;
 
 impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
     pub fn new(
@@ -74,6 +74,8 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
                 .await?;
             iface_manager.stop_all_aps().await?;
 
+            // TODO(68373): Unify the logic of saving and setting the country code.
+            self.phy_manager.lock().await.save_region_code(Some(region_array));
             let phy_ids = self.phy_manager.lock().await.get_phy_ids();
             let _ = stream::iter(phy_ids)
                 .map(|phy_id| Ok(phy_id))
@@ -98,8 +100,6 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
             // TODO(fxbug.dev/49632): Respect the initial state of client connections, instead of
             // restarting them unconditionally.
             iface_manager.start_client_connections().await?;
-
-            // TODO(fxbug.dev/49634): Have new PHYs respect current country.
         }
     }
 }
@@ -110,7 +110,7 @@ mod tests {
         super::{Arc, IfaceManagerApi, Mutex, PhyManagerApi, RegulatoryManager, SetCountryRequest},
         crate::{
             access_point::state_machine as ap_fsm, client::types,
-            mode_management::phy_manager::PhyManagerError,
+            mode_management::phy_manager::PhyManagerError, regulatory_manager::REGION_CODE_LEN,
         },
         anyhow::{format_err, Error},
         async_trait::async_trait,
@@ -143,6 +143,7 @@ mod tests {
         U: Stream<Item = Result<(), Error>> + Send + Unpin,
     > {
         executor: fasync::Executor,
+        phy_manager: Arc<Mutex<StubPhyManager>>,
         iface_manager: Arc<Mutex<StubIfaceManager<S, T, U>>>,
         regulatory_manager: RegulatoryManager<StubIfaceManager<S, T, U>, StubPhyManager>,
         device_service_requests: DeviceServiceRequestStream,
@@ -173,10 +174,11 @@ mod tests {
                 create_proxy::<RegulatoryRegionWatcherMarker>()
                     .expect("failed to create RegulatoryRegionWatcher proxy");
             let iface_manager = Arc::new(Mutex::new(iface_manager));
+            let phy_manager = Arc::new(Mutex::new(phy_manager));
             let regulatory_manager = RegulatoryManager::new(
                 regulatory_region_proxy,
                 device_service_proxy,
-                Arc::new(Mutex::new(phy_manager)),
+                phy_manager.clone(),
                 iface_manager.clone(),
             );
             let device_service_requests =
@@ -188,6 +190,7 @@ mod tests {
             let (regulatory_sender, regulatory_receiver) = oneshot::channel();
             Self {
                 executor,
+                phy_manager,
                 iface_manager,
                 regulatory_manager,
                 device_service_requests,
@@ -405,6 +408,18 @@ mod tests {
             device_service_responder.send(ZX_OK).expect("failed to send device service response");
         }
 
+        // Verify that the PhyManager has been updated with the new region code.
+        {
+            let phy_manager_fut = context.phy_manager.lock();
+            pin_mut!(phy_manager_fut);
+            assert_variant!(
+                context.executor.run_until_stalled(&mut phy_manager_fut),
+                Poll::Ready(phy_manager) => {
+                    assert_eq!(phy_manager.saved_country_code, Some(*b"US"));
+                }
+            );
+        }
+
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
         assert_variant!(
             &context.executor.run_until_stalled(&mut context.regulatory_receiver),
@@ -433,12 +448,24 @@ mod tests {
             assert_eq!(request_params, SetCountryRequest { phy_id: 0, alpha2: *b"CA" });
             device_service_responder.send(ZX_OK).expect("failed to send device service response");
         }
+
+        // Verify that the PhyManager has been updated with the new region code.
+        {
+            let phy_manager_fut = context.phy_manager.lock();
+            pin_mut!(phy_manager_fut);
+            assert_variant!(
+                context.executor.run_until_stalled(&mut phy_manager_fut),
+                Poll::Ready(phy_manager) => {
+                    assert_eq!(phy_manager.saved_country_code, Some(*b"CA"));
+                }
+            );
+        }
     }
 
     #[test]
     fn propagates_single_update_to_multiple_phys() {
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: vec![0, 1] },
+            StubPhyManager { phy_ids: vec![0, 1], saved_country_code: None },
             make_default_stub_iface_manager(),
         );
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -482,7 +509,7 @@ mod tests {
     #[test]
     fn keeps_running_after_update_with_empty_phy_list() {
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: Vec::new() },
+            StubPhyManager { phy_ids: Vec::new(), saved_country_code: None },
             make_default_stub_iface_manager(),
         );
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -506,7 +533,7 @@ mod tests {
     #[test]
     fn does_not_send_device_service_request_when_phy_list_is_empty() {
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: Vec::new() },
+            StubPhyManager { phy_ids: Vec::new(), saved_country_code: None },
             make_default_stub_iface_manager(),
         );
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
@@ -540,7 +567,7 @@ mod tests {
     #[test]
     fn does_not_attempt_to_configure_second_phy_when_first_fails_to_configure() {
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: vec![0, 1] },
+            StubPhyManager { phy_ids: vec![0, 1], saved_country_code: None },
             make_default_stub_iface_manager(),
         );
 
@@ -589,7 +616,7 @@ mod tests {
         let (mut stop_client_connections_responder, stop_client_connections_response_stream) =
             mpsc::channel(0);
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: vec![0] },
+            StubPhyManager { phy_ids: vec![0], saved_country_code: None },
             StubIfaceManager {
                 was_start_client_connections_called: false,
                 stop_client_connections_response_stream,
@@ -645,7 +672,7 @@ mod tests {
     fn waits_for_stop_all_access_points_response_before_changing_country() {
         let (mut stop_aps_responder, stop_aps_response_stream) = mpsc::channel(0);
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: vec![0] },
+            StubPhyManager { phy_ids: vec![0], saved_country_code: None },
             StubIfaceManager {
                 was_start_client_connections_called: false,
                 stop_client_connections_response_stream: stream::unfold((), |_| async {
@@ -760,7 +787,7 @@ mod tests {
     #[test]
     fn propagates_error_from_stop_client_connections() {
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: vec![0] },
+            StubPhyManager { phy_ids: vec![0], saved_country_code: None },
             StubIfaceManager {
                 was_start_client_connections_called: false,
                 stop_client_connections_response_stream: stream::unfold((), |_| async {
@@ -807,7 +834,7 @@ mod tests {
     #[test]
     fn propagates_error_from_start_client_connections() {
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: vec![0] },
+            StubPhyManager { phy_ids: vec![0], saved_country_code: None },
             StubIfaceManager {
                 was_start_client_connections_called: false,
                 stop_client_connections_response_stream: stream::unfold((), |_| async {
@@ -864,7 +891,7 @@ mod tests {
     #[test]
     fn propagates_error_from_stop_all_access_points() {
         let mut context = TestContext::new(
-            StubPhyManager { phy_ids: vec![0] },
+            StubPhyManager { phy_ids: vec![0], saved_country_code: None },
             StubIfaceManager {
                 was_start_client_connections_called: false,
                 stop_client_connections_response_stream: stream::unfold((), |_| async {
@@ -908,13 +935,15 @@ mod tests {
         );
     }
 
+    #[derive(Debug)]
     struct StubPhyManager {
         phy_ids: Vec<u16>,
+        saved_country_code: Option<[u8; REGION_CODE_LEN]>,
     }
 
     /// A default StubPhyManager has one Phy, with ID 0.
     fn make_default_stub_phy_manager() -> StubPhyManager {
-        StubPhyManager { phy_ids: vec![0] }
+        StubPhyManager { phy_ids: vec![0], saved_country_code: None }
     }
 
     #[async_trait]
@@ -969,6 +998,10 @@ mod tests {
 
         fn log_phy_add_failure(&mut self) {
             unimplemented!();
+        }
+
+        fn save_region_code(&mut self, region_code: Option<[u8; REGION_CODE_LEN]>) {
+            self.saved_country_code = region_code;
         }
     }
 

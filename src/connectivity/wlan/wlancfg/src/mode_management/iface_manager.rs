@@ -955,6 +955,7 @@ mod tests {
             client::{scan::ScanResultUpdate, types as client_types},
             config_management::{Credential, NetworkIdentifier, SecurityType},
             mode_management::phy_manager::{self, PhyManagerError},
+            regulatory_manager::REGION_CODE_LEN,
             util::{
                 logger::set_logger_for_test,
                 testing::{
@@ -1163,6 +1164,10 @@ mod tests {
         }
 
         fn log_phy_add_failure(&mut self) {
+            unimplemented!();
+        }
+
+        fn save_region_code(&mut self, _region_code: Option<[u8; REGION_CODE_LEN]>) {
             unimplemented!();
         }
     }
