@@ -39,7 +39,7 @@ class RndisHost : public RndisHostType,
   zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc_);
   void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                            ethernet_impl_queue_tx_callback completion_cb, void* cookie);
-  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                    size_t data_size);
   void EthernetImplGetBti(zx::bti* out_bti);
 

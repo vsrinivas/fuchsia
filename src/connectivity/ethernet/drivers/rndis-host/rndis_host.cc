@@ -367,7 +367,7 @@ void RndisHost::DdkRelease() {
   }
 }
 
-zx_status_t RndisHost::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+zx_status_t RndisHost::EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
                                             size_t data_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
