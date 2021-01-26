@@ -158,13 +158,13 @@ zx_status_t MtkSpi::Init() {
   uint32_t cs_time = sck_time * 2;
   Cfg0Reg::Get()
       .ReadFrom(&mmio_)
-      .set_cs_setup_count((cs_time - 1) & 0xFF)
-      .set_cs_hold_count((cs_time - 1) & 0xFF)
+      .set_cs_setup_count((cs_time - 1) & 0xFFFF)
+      .set_cs_hold_count((cs_time - 1) & 0xFFFF)
       .WriteTo(&mmio_);
   Cfg2Reg::Get()
       .ReadFrom(&mmio_)
-      .set_sck_low_count((sck_time - 1) & 0xFF)
-      .set_sck_high_count((sck_time - 1) & 0xFF)
+      .set_sck_low_count((sck_time - 1) & 0xFFFF)
+      .set_sck_high_count((sck_time - 1) & 0xFFFF)
       .WriteTo(&mmio_);
   Cfg1Reg::Get().ReadFrom(&mmio_).set_cs_idle_count((cs_time - 1) & 0xFF).WriteTo(&mmio_);
 
