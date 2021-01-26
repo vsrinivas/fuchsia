@@ -14,7 +14,7 @@
 #include <fbl/auto_call.h>
 
 #include "mt-dsi-reg.h"
-#include "src/graphic/display/drivers/dsi-mt/dsi-mt-bind.h"
+#include "src/graphics/display/drivers/dsi-mt/dsi-mt-bind.h"
 
 namespace dsi_mt {
 

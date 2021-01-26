@@ -11,6 +11,7 @@
 #include <soc/mt8183/mt8183-hw.h>
 
 #include "c18.h"
+#include "src/devices/board/drivers/c18/c18_bind.h"
 
 namespace {
 

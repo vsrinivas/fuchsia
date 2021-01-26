@@ -13,6 +13,7 @@
 #include <soc/msm8x53/msm8x53-clock.h>
 
 #include "msm8x53.h"
+#include "src/devices/board/drivers/msm8x53-som/msm8x53_bind.h"
 
 namespace board_msm8x53 {
 

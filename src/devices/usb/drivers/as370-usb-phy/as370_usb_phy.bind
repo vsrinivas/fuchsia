@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 using fuchsia.platform;
-using fuchsia.platform.synaptics;
+using fuchsia.synaptics.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
