@@ -311,8 +311,11 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     }
 
     fbl::Array<ChipInfo> chips = InitChips(&gpio_map[i], composite);
-    if (!chips || chips.size() == 0) {
+    if (!chips) {
       return ZX_ERR_NO_RESOURCES;
+    }
+    if (chips.size() == 0) {
+      continue;
     }
 
     fbl::AllocChecker ac;
