@@ -364,6 +364,17 @@ func main() {
 	// This action should rerun if the input .build-id directory or debug archive changes.
 	var dep string
 	if buildIDDirIn != "" {
+		empty, err := osmisc.DirIsEmpty(buildIDDirIn)
+		if err != nil {
+			log.Fatalf("while checking if build-id-dir-in existed: %v", err)
+		}
+		if empty {
+			if err := writeManifest(nil); err != nil {
+				log.Fatalf("failed to write empty manifest: %v", err)
+			}
+			log.Tracef("%s does not exist, no work needed", buildIDDirIn)
+			return
+		}
 		dep = buildIDDirIn
 	} else {
 		dep = debugArchive
