@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::regulatory_manager::REGION_CODE_LEN,
     async_trait::async_trait,
     eui48::MacAddress,
     fidl_fuchsia_wlan_device as fidl_device,
@@ -10,7 +11,7 @@ use {
     fidl_fuchsia_wlan_device_service as fidl_service,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_zircon,
-    log::{info, warn},
+    log::{error, info, warn},
     std::collections::{HashMap, HashSet},
     thiserror::Error,
 };
@@ -22,6 +23,8 @@ pub(crate) enum PhyManagerError {
     Unsupported,
     #[error("unable to query phy information")]
     PhyQueryFailure,
+    #[error("failed to set country for new PHY")]
+    PhySetCountryFailure,
     #[error("unable to query iface information")]
     IfaceQueryFailure,
     #[error("unable to create iface")]
@@ -89,6 +92,9 @@ pub(crate) trait PhyManagerApi {
 
     /// Logs phy add failure inspect metrics.
     fn log_phy_add_failure(&mut self);
+
+    /// Stores the current region code to be applied to newly-discovered PHYs.
+    fn save_region_code(&mut self, region_code: Option<[u8; REGION_CODE_LEN]>);
 }
 
 /// Maintains a record of all PHYs that are present and their associated interfaces.
@@ -97,6 +103,7 @@ pub(crate) struct PhyManager {
     device_service: fidl_service::DeviceServiceProxy,
     client_connections_enabled: bool,
     suggested_ap_mac: Option<MacAddress>,
+    saved_region_code: Option<[u8; REGION_CODE_LEN]>,
     _node: inspect::Node,
     phy_add_fail_count: inspect::UintProperty,
 }
@@ -126,6 +133,7 @@ impl PhyManager {
             device_service,
             client_connections_enabled: false,
             suggested_ap_mac: None,
+            saved_region_code: None,
             _node: node,
             phy_add_fail_count,
         }
@@ -193,21 +201,72 @@ impl PhyManagerApi for PhyManager {
             }
         };
 
-        if let Some(response) = query_phy_response {
-            info!("adding PHY ID #{}", phy_id);
-            let phy_id = response.info.id;
-            let mut phy_container = PhyContainer::new(response.info);
+        let response = match query_phy_response {
+            Some(response) => response,
+            None => return Ok(()),
+        };
 
-            if self.client_connections_enabled
-                && phy_container.phy_info.supported_mac_roles.contains(&MacRole::Client)
-            {
-                let iface_id =
-                    create_iface(&self.device_service, phy_id, MacRole::Client, None).await?;
-                phy_container.client_ifaces.insert(iface_id);
+        // Create a new container to store the PHY's information.
+        info!("adding PHY ID #{}", phy_id);
+        let phy_id = response.info.id;
+        let mut phy_container = PhyContainer::new(response.info);
+
+        // Attempt to set the regulatory region for the newly-discovered PHY.
+        let region_set_result = match self.saved_region_code {
+            Some(region) => {
+                match self
+                    .device_service
+                    .set_country(&mut fidl_service::SetCountryRequest { phy_id, alpha2: region })
+                    .await
+                {
+                    Ok(status) => {
+                        if fuchsia_zircon::ok(status).is_err() {
+                            error!("Received bad status when setting country code: {}", status);
+                            Err(PhyManagerError::PhySetCountryFailure)
+                        } else {
+                            Ok(())
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to set country code: {:?}", e);
+                        Err(PhyManagerError::PhySetCountryFailure)
+                    }
+                }
             }
+            None => Ok(()),
+        };
 
-            self.phys.insert(phy_id, phy_container);
+        // If setting the regulatory region fails, clear the PHY's regulatory region so that it is
+        // in WW and can continue to operate.  If this process fails, return early and do not use
+        // this PHY.
+        if region_set_result.is_err() {
+            match self
+                .device_service
+                .clear_country(&mut fidl_service::ClearCountryRequest { phy_id })
+                .await
+            {
+                Ok(status) => {
+                    if fuchsia_zircon::ok(status).is_err() {
+                        error!("Received bad status when clearing country: {}", status);
+                        return Err(PhyManagerError::PhySetCountryFailure);
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to clear set country code: {:?}", e);
+                    return Err(PhyManagerError::PhySetCountryFailure);
+                }
+            }
         }
+
+        if self.client_connections_enabled
+            && phy_container.phy_info.supported_mac_roles.contains(&MacRole::Client)
+        {
+            let iface_id =
+                create_iface(&self.device_service, phy_id, MacRole::Client, None).await?;
+            phy_container.client_ifaces.insert(iface_id);
+        }
+
+        self.phys.insert(phy_id, phy_container);
 
         Ok(())
     }
@@ -397,6 +456,10 @@ impl PhyManagerApi for PhyManager {
     fn log_phy_add_failure(&mut self) {
         self.phy_add_fail_count.add(1);
     }
+
+    fn save_region_code(&mut self, region_code: Option<[u8; REGION_CODE_LEN]>) {
+        self.saved_region_code = region_code;
+    }
 }
 
 /// Creates an interface of the requested role for the requested PHY ID.  Returns either the
@@ -456,6 +519,7 @@ mod tests {
         futures::stream::StreamExt,
         futures::task::Poll,
         pin_utils::pin_mut,
+        test_case::test_case,
         wlan_common::assert_variant,
     };
 
@@ -740,6 +804,136 @@ mod tests {
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(phy_container.client_ifaces.contains(&fake_iface_id));
+    }
+
+    /// Tests the case where a new PHY is discovered after the region code has been set.
+    #[test]
+    fn test_add_phy_after_saving_region_code() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        let fake_phy_id = 1;
+        let fake_mac_roles = Vec::new();
+        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
+
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+        phy_manager.save_region_code(Some([0, 1]));
+
+        {
+            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            send_query_phy_response(&mut exec, &mut test_values.stream, Some(phy_info));
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.stream.next()),
+                Poll::Ready(Some(Ok(
+                    fidl_service::DeviceServiceRequest::SetCountry {
+                        req: fidl_service::SetCountryRequest {
+                            phy_id: 1,
+                            alpha2: [0, 1],
+                        },
+                        responder,
+                    }
+                ))) => {
+                    responder.send(ZX_OK).expect("sending fake set country response");
+                }
+            );
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
+        }
+
+        assert!(phy_manager.phys.contains_key(&fake_phy_id));
+        assert_eq!(
+            phy_manager.phys.get(&fake_phy_id).unwrap().phy_info,
+            fake_phy_info(fake_phy_id, fake_mac_roles)
+        );
+    }
+
+    /// Tests the case where setting the region code for a new PHY fails.
+    #[test_case(true; "clear country succeeds")]
+    #[test_case(false; "clear country fails")]
+    fn test_add_phy_after_saving_region_code_fails(clear_country_succeeds: bool) {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        let fake_phy_id = 1;
+        let fake_mac_roles = Vec::new();
+        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
+
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+        phy_manager.save_region_code(Some([0, 1]));
+
+        {
+            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            send_query_phy_response(&mut exec, &mut test_values.stream, Some(phy_info));
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            // Fail to set the country code.
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.stream.next()),
+                Poll::Ready(Some(Ok(
+                    fidl_service::DeviceServiceRequest::SetCountry {
+                        req: fidl_service::SetCountryRequest {
+                            phy_id: 1,
+                            alpha2: [0, 1],
+                        },
+                        responder,
+                    }
+                ))) => {
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_ERR_NOT_SUPPORTED)
+                        .expect("sending fake set country response");
+                }
+            );
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            // Handle the clear country code request.
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.stream.next()),
+                Poll::Ready(Some(Ok(
+                    fidl_service::DeviceServiceRequest::ClearCountry {
+                        req: fidl_service::ClearCountryRequest {
+                            phy_id: 1,
+                        },
+                        responder,
+                    }
+                ))) => {
+                    let response = if clear_country_succeeds {
+                        fuchsia_zircon::sys::ZX_OK
+                    } else {
+                        fuchsia_zircon::sys::ZX_ERR_NOT_SUPPORTED
+                    };
+
+                    responder
+                        .send(response)
+                        .expect("sending fake clear country response");
+                }
+            );
+
+            if clear_country_succeeds {
+                assert_variant!(exec.run_until_stalled(&mut add_phy_fut), Poll::Ready(Ok(())));
+            } else {
+                assert_variant!(
+                    exec.run_until_stalled(&mut add_phy_fut),
+                    Poll::Ready(Err(PhyManagerError::PhySetCountryFailure))
+                );
+            }
+        }
+
+        if clear_country_succeeds {
+            assert!(phy_manager.phys.contains_key(&fake_phy_id));
+        } else {
+            assert!(!phy_manager.phys.contains_key(&fake_phy_id));
+        }
     }
 
     #[run_singlethreaded(test)]
@@ -1638,5 +1832,22 @@ mod tests {
                 phy_add_fail_count: 1u64,
             },
         });
+    }
+
+    /// Tests the initialization of the region code and the ability of the PhyManager to cache a
+    /// region update.
+    #[test]
+    fn test_save_region_code() {
+        let _exec = Executor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+
+        assert!(phy_manager.saved_region_code.is_none());
+
+        phy_manager.save_region_code(Some([0, 1]));
+        assert_eq!(phy_manager.saved_region_code, Some([0, 1]));
+
+        phy_manager.save_region_code(None);
+        assert_eq!(phy_manager.saved_region_code, None);
     }
 }

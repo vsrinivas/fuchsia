@@ -68,7 +68,8 @@ impl DeprecatedConfigurator {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::mode_management::phy_manager::PhyManagerError, async_trait::async_trait,
+        super::*, crate::mode_management::phy_manager::PhyManagerError,
+        crate::regulatory_manager::REGION_CODE_LEN, async_trait::async_trait,
         fidl::endpoints::create_proxy, fidl_fuchsia_net::MacAddress, fuchsia_async as fasync,
         futures::task::Poll, pin_utils::pin_mut, std::unimplemented, wlan_common::assert_variant,
     };
@@ -133,6 +134,10 @@ mod tests {
         }
 
         fn log_phy_add_failure(&mut self) {
+            unimplemented!();
+        }
+
+        fn save_region_code(&mut self, _region_code: Option<[u8; REGION_CODE_LEN]>) {
             unimplemented!();
         }
     }
