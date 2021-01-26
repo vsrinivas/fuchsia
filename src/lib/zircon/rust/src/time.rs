@@ -311,6 +311,11 @@ impl Time {
     pub const fn from_nanos(nanos: i64) -> Self {
         Time(nanos)
     }
+
+    /// Compute `zx::Duration` addition. Computes `self + other`, saturating if overflow occurs.
+    pub fn saturating_add(self, rhs: Duration) -> Self {
+        Time::from_nanos(rhs.into_nanos().saturating_add(self.into_nanos()))
+    }
 }
 
 /// Read the number of high-precision timer ticks since boot. These ticks may be processor cycles,
@@ -477,5 +482,21 @@ mod tests {
         let lhs = Time::from_nanos(10);
         let rhs = Time::from_nanos(30);
         assert_eq!(lhs - rhs, Duration::from_nanos(-20));
+    }
+
+    #[test]
+    fn time_saturating_add() {
+        assert_eq!(
+            Time::from_nanos(10).saturating_add(Duration::from_nanos(30)),
+            Time::from_nanos(40)
+        );
+        assert_eq!(
+            Time::from_nanos(10).saturating_add(Duration::from_nanos(sys::ZX_TIME_INFINITE)),
+            Time::INFINITE
+        );
+        assert_eq!(
+            Time::from_nanos(-10).saturating_add(Duration::from_nanos(sys::ZX_TIME_INFINITE_PAST)),
+            Time::INFINITE_PAST
+        );
     }
 }
