@@ -7,6 +7,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/pager.h>
 #include <limits.h>
+#include <zircon/threads.h>
 
 #include <algorithm>
 #include <array>
@@ -20,6 +21,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blob-layout.h"
@@ -236,7 +240,18 @@ class MockTransferBuffer : public TransferBuffer {
     do_merkle_tree_at_end_of_data_ = do_merkle_tree_at_end_of_data;
   }
 
+  // Set the callback to be run at the start of a call to |Populate()|.
+  void SetPopulateHook(std::function<void()> hook) {
+    fbl::AutoLock guard(&populate_hook_mutex_);
+    populate_hook_ = std::move(hook);
+  }
+
   zx::status<> Populate(uint64_t offset, uint64_t length, const UserPagerInfo& info) final {
+    {
+      fbl::AutoLock guard(&populate_hook_mutex_);
+      populate_hook_();
+    }
+
     if (failure_mode_ == PagerErrorStatus::kErrIO) {
       return zx::error(ZX_ERR_IO_REFUSED);
     }
@@ -288,6 +303,8 @@ class MockTransferBuffer : public TransferBuffer {
   bool do_partial_transfer_ = false;
   PagerErrorStatus failure_mode_ = PagerErrorStatus::kOK;
   bool do_merkle_tree_at_end_of_data_ = false;
+  fbl::Mutex populate_hook_mutex_;
+  std::function<void()> populate_hook_ __TA_GUARDED(populate_hook_mutex_) = []() {};
 };
 
 class BlobfsPagerTest : public testing::Test {
@@ -458,6 +475,96 @@ TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
   for (auto& thread : threads) {
     thread.join();
   }
+}
+
+// The goal here is to intentionally trigger a pager shutdown while working to supply pages.
+TEST_F(BlobfsPagerTest, SafeShutdownWhileSupplyingPages) {
+  MockBlob* blob = CreateBlob('x');
+
+  std::atomic<bool> shutdown_thread_done = false;
+  // Once the pager thread begins handler the fault, start the destructor in a second thread and
+  // give it a moment to get to the point that it is actually blocking on pager thread.
+  buffer_->SetPopulateHook([this, &shutdown_thread_done]() {
+    std::thread t([this, &shutdown_thread_done] {
+      this->ResetPager();
+      shutdown_thread_done = true;
+    });
+    t.detach();
+    // Let the shutdown thread to progress until blocked. This kind of "fails open" where if the
+    // sleep is not long enough, the test will pass but may not test what we want it to. Just
+    // yielding ensures the correct ordering about 25% of the time, this sleep gets it to virtually
+    // 100% in qemu.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+  });
+
+  // Generate a fault in the background. This thread will be blocked on the pager thread.
+  std::atomic<bool> commit_thread_done = false;
+  std::thread commit_thread = std::thread([&commit_thread_done, blob]() {
+    // Intentionally not checking the return code of this call. Though the pager thread finishes
+    // cleanly and returns a successful result, there is a race between the async_loop_shutdown
+    // detaching the port and the kernel doing an additional check to see if it is still attached.
+    // The shutdown is clean from the pager point of view, and it should be unsurprising that we can
+    // fail a page request during pager shutdown.
+    blob->vmo().op_range(ZX_VMO_OP_COMMIT, 0, kDefaultFrameSize * 2, nullptr, 0);
+    commit_thread_done = true;
+  });
+
+  // Give plenty of time for both threads to finish.
+  constexpr size_t kSleepIncrementMs = 10;
+  for (size_t total_sleep_ms = 0; total_sleep_ms < 60000; total_sleep_ms += kSleepIncrementMs) {
+    if (commit_thread_done && shutdown_thread_done) {
+      break;
+    }
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(kSleepIncrementMs)));
+  }
+  ASSERT_TRUE(commit_thread_done);
+  ASSERT_TRUE(shutdown_thread_done);
+  commit_thread.join();
+}
+
+// The goal here is to intentionally trigger a pager shutdown while working to supply pages.
+TEST_F(BlobfsPagerTest, SafeShutdownWhileSupplyingPages_ZstdChunked) {
+  MockBlob* blob = CreateBlob('x', CompressionAlgorithm::CHUNKED);
+
+  std::atomic<bool> shutdown_thread_done = false;
+  // Once the pager thread begins handler the fault, start the destructor in a second thread and
+  // give it a moment to get to the point that it is actually blocking on pager thread.
+  compressed_buffer_->SetPopulateHook([this, &shutdown_thread_done]() {
+    std::thread t([this, &shutdown_thread_done] {
+      this->ResetPager();
+      shutdown_thread_done = true;
+    });
+    t.detach();
+    // Let the shutdown thread to progress until blocked. This kind of "fails open" where if the
+    // sleep is not long enough, the test will pass but may not test what we want it to. Just
+    // yielding ensures the correct ordering about 25% of the time, this sleep gets it to virtually
+    // 100% in qemu.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+  });
+
+  // Generate a fault in the background. This thread will be blocked on the pager thread.
+  std::atomic<bool> commit_thread_done = false;
+  std::thread commit_thread = std::thread([&commit_thread_done, blob]() {
+    // Intentionally not checking the return code of this call. Though the pager thread finishes
+    // cleanly and returns a successful result, there is a race between the async_loop_shutdown
+    // detaching the port and the kernel doing an additional check to see if it is still attached.
+    // The shutdown is clean from the pager point of view, and it should be unsurprising that we can
+    // fail a page request during pager shutdown.
+    blob->vmo().op_range(ZX_VMO_OP_COMMIT, 0, kDefaultFrameSize * 2, nullptr, 0);
+    commit_thread_done = true;
+  });
+
+  // Give plenty of time for both threads to finish.
+  constexpr size_t kSleepIncrementMs = 10;
+  for (size_t total_sleep_ms = 0; total_sleep_ms < 60000; total_sleep_ms += kSleepIncrementMs) {
+    if (commit_thread_done && shutdown_thread_done) {
+      break;
+    }
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(kSleepIncrementMs)));
+  }
+  ASSERT_TRUE(commit_thread_done);
+  ASSERT_TRUE(shutdown_thread_done);
+  commit_thread.join();
 }
 
 TEST_F(BlobfsPagerTest, CommitRange_ExactLength) {
