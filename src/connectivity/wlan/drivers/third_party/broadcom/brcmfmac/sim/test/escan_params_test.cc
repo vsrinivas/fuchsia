@@ -6,6 +6,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 constexpr uint64_t kScanTxnId = 0x4a65616e6e65;
 const wlanif_scan_req kDefaultScanReq = {
@@ -52,7 +57,7 @@ void EscanArgsTest::Init() {
 
 void EscanArgsTest::RunScanTest(const wlanif_scan_req& req) {
   client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &req);
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
   ASSERT_TRUE(client_ifc_.ScanCompleted());
 }
 

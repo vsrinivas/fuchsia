@@ -55,7 +55,8 @@ TEST_F(ScanTest, PassiveDwellTime) {
   ap.EnableBeacon(kBeaconInterval);
 
   for (size_t scan_attempt = 0; scan_attempt < kTotalScanCount; scan_attempt++) {
-    SCHEDULE_CALL(kScanStartTime, &SimInterface::StartScan, &client_ifc_, scan_attempt, false);
+    env_->ScheduleNotification(
+        std::bind(&SimInterface::StartScan, &client_ifc_, scan_attempt, false), kScanStartTime);
     env_->Run(kScanMaxTime);
 
     // Check scan result code

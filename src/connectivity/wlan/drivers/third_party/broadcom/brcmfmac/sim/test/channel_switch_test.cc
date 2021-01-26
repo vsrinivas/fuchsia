@@ -63,7 +63,8 @@ void ChannelSwitchTest::Init() {
 // This function schedules a Setchannel() event for the first AP in AP list.
 void ChannelSwitchTest::ScheduleChannelSwitch(const wlan_channel_t& new_channel,
                                               zx::duration when) {
-  SCHEDULE_CALL(when, &simulation::FakeAp::SetChannel, aps_.front(), new_channel);
+  env_->ScheduleNotification(std::bind(&simulation::FakeAp::SetChannel, aps_.front(), new_channel),
+                             when);
 }
 
 TEST_F(ChannelSwitchTest, ChannelSwitch) {
@@ -183,7 +184,8 @@ TEST_F(ChannelSwitchTest, StopStillSwitch) {
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
 
   // Schedule DisableBeacon for sim-fake-ap
-  SCHEDULE_CALL(zx::msec(600), &simulation::FakeAp::DisableBeacon, aps_.front());
+  env_->ScheduleNotification(std::bind(&simulation::FakeAp::DisableBeacon, aps_.front()),
+                             zx::msec(600));
 
   env_->Run(kTestDuration);
 
@@ -203,7 +205,8 @@ TEST_F(ChannelSwitchTest, ChannelSwitchToSameChannel) {
   client_ifc_.AssociateWith(ap, zx::msec(10));
 
   // SendFakeCSABeacon() is using the ssid and bssid of the AP which client is associated to.
-  SCHEDULE_CALL(zx::msec(540), &ChannelSwitchTest::SendFakeCSABeacon, this, kDefaultChannel);
+  env_->ScheduleNotification(
+      std::bind(&ChannelSwitchTest::SendFakeCSABeacon, this, kDefaultChannel), zx::msec(540));
 
   env_->Run(kTestDuration);
 
@@ -222,12 +225,14 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
   client_ifc_.AssociateWith(ap, zx::msec(10));
 
   constexpr uint32_t kScanStartTimeMs = 20;
-  SCHEDULE_CALL(zx::msec(kScanStartTimeMs), &SimInterface::StartScan, &client_ifc_, 0, false);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, 0, false),
+                             zx::msec(kScanStartTimeMs));
 
   constexpr uint32_t kCsaBeaconDelayMs =
       kScanStartTimeMs + (SimInterface::kDefaultPassiveScanDwellTimeMs / 2);
-  SCHEDULE_CALL(zx::msec(kCsaBeaconDelayMs), &ChannelSwitchTest::SendFakeCSABeacon, this,
-                kSwitchedChannel);
+  env_->ScheduleNotification(
+      std::bind(&ChannelSwitchTest::SendFakeCSABeacon, this, kSwitchedChannel),
+      zx::msec(kCsaBeaconDelayMs));
 
   env_->Run(kTestDuration);
 

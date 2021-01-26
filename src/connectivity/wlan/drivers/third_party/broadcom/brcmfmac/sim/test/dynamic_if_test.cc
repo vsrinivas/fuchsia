@@ -492,7 +492,7 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   // Associate to FakeAp
   client_ifc_.AssociateWith(ap_, zx::msec(10));
   // Associate to SoftAP
-  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAuthAndAssocReq, this);
+  env_->ScheduleNotification(std::bind(&DynamicIfTest::TxAuthAndAssocReq, this), zx::msec(100));
 
   env_->Run(kTestDuration);
 
@@ -523,11 +523,11 @@ void DynamicIfTest::TestApStop(bool use_cdown) {
   client_ifc_.AssociateWith(ap_, zx::msec(10));
 
   // Associate to SoftAP
-  SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAuthAndAssocReq, this);
+  env_->ScheduleNotification(std::bind(&DynamicIfTest::TxAuthAndAssocReq, this), zx::msec(100));
 
   // Verify Assoc with SoftAP succeeded
-  SCHEDULE_CALL(zx::msec(150), &DynamicIfTest::VerifyAssocWithSoftAP, this);
-  SCHEDULE_CALL(zx::msec(160), &SimInterface::StopSoftAp, &softap_ifc_);
+  env_->ScheduleNotification(std::bind(&DynamicIfTest::VerifyAssocWithSoftAP, this), zx::msec(150));
+  env_->ScheduleNotification(std::bind(&SimInterface::StopSoftAp, &softap_ifc_), zx::msec(160));
 
   env_->Run(kTestDuration);
 
@@ -614,14 +614,15 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
   client_ifc_.AssociateWith(ap_, delay);
   // Start our SoftAP
   delay += zx::msec(10);
-  SCHEDULE_CALL(delay, &SimInterface::StartSoftAp, &softap_ifc_, SimInterface::kDefaultSoftApSsid,
-                kDefaultChannel, 100, 100);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartSoftAp, &softap_ifc_,
+                                       SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
+                             delay);
 
   // Wait until SIM FW sends AP Start confirmation. This is set as a
   // scheduled event to ensure test runs until AP Start confirmation is
   // received.
   delay += kStartAPConfDelay + zx::msec(10);
-  SCHEDULE_CALL(delay, &DynamicIfTest::ChannelCheck, this);
+  env_->ScheduleNotification(std::bind(&DynamicIfTest::ChannelCheck, this), delay);
   env_->Run(kTestDuration);
 
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
@@ -639,18 +640,22 @@ TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
 
   // Make firmware ignore the start AP req.
   InjectStartAPIgnore();
-  SCHEDULE_CALL(zx::msec(10), &SimInterface::StartSoftAp, &softap_ifc_,
-                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartSoftAp, &softap_ifc_,
+                                       SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
+                             zx::msec(10));
   // Make sure this extra request will not refresh the timer.
-  SCHEDULE_CALL(zx::msec(510), &SimInterface::StartSoftAp, &softap_ifc_,
-                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartSoftAp, &softap_ifc_,
+                                       SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
+                             zx::msec(510));
 
-  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::VerifyStartApTimer, this);
+  env_->ScheduleNotification(std::bind(&DynamicIfTest::VerifyStartApTimer, this), zx::msec(1011));
   // Make firmware back to normal.
-  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::DelInjectedStartAPIgnore, this);
+  env_->ScheduleNotification(std::bind(&DynamicIfTest::DelInjectedStartAPIgnore, this),
+                             zx::msec(1011));
   // Issue start AP request again.
-  SCHEDULE_CALL(zx::msec(1100), &SimInterface::StartSoftAp, &softap_ifc_,
-                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartSoftAp, &softap_ifc_,
+                                       SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
+                             zx::msec(1100));
 
   env_->Run(kTestDuration);
 
@@ -669,10 +674,12 @@ TEST_F(DynamicIfTest, RejectScanWhenApStartReqIsPending) {
   StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
 
   InjectStartAPIgnore();
-  SCHEDULE_CALL(zx::msec(30), &SimInterface::StartSoftAp, &softap_ifc_,
-                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartSoftAp, &softap_ifc_,
+                                       SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
+                             zx::msec(30));
   // The timeout of AP start is 1000 msec, so a scan request before zx::msec(1030) will be rejected.
-  SCHEDULE_CALL(zx::msec(100), &SimInterface::StartScan, &client_ifc_, kScanId, false);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false),
+                             zx::msec(100));
 
   env_->Run(kTestDuration);
   // There will be no result received from firmware, because the fake external AP's channel number

@@ -20,6 +20,11 @@
 // a destination of an Rx from the driver or a source of a Tx to the driver.
 // In the traditional sense of the meaning, both the driver and the test are clients to the ap.
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
@@ -268,7 +273,7 @@ void DataFrameTest::Init() {
 
   // Schedule a time to terminate execution. Simulation runs until no more events are scheduled,
   // and since we have a beaconing fake AP, that means forever if we don't stop it.
-  SCHEDULE_CALL(kTestDuration, &DataFrameTest::Finish, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::Finish, this), kTestDuration);
 }
 
 void DataFrameTest::Finish() {
@@ -431,15 +436,16 @@ TEST_F(DataFrameTest, TxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(zx::msec(10), &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
 
   // Simulate sending a data frame from driver to the AP
   data_context_.expected_sent_data.push_back(
       CreateEthernetFrame(kClientMacAddress, ifc_mac_, htobe16(ETH_P_IP), kSampleEthBody));
-  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, data_context_.expected_sent_data.front());
+  env_->ScheduleNotification(
+      std::bind(&DataFrameTest::Tx, this, data_context_.expected_sent_data.front()), zx::sec(1));
   recv_addr_capture_filter = ap.GetBssid();
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Verify frame was sent successfully
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
@@ -469,13 +475,13 @@ TEST_F(DataFrameTest, TxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(zx::msec(10), &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
 
   // Simulate sending a illegal ethernet frame from us to the AP
   std::vector<uint8_t> ethFrame = {0x20, 0x43};
-  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::Tx, this, ethFrame);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::Tx, this, ethFrame), zx::sec(1));
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Verify frame was rejected
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
@@ -494,15 +500,16 @@ TEST_F(DataFrameTest, TxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(zx::msec(10), &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
 
   // Simulate sending a EAPOL packet from us to the AP
   data_context_.expected_sent_data.push_back(kSampleEapol);
-  SCHEDULE_CALL(zx::sec(1), &DataFrameTest::TxEapolRequest, this, kClientMacAddress, ifc_mac_,
-                kSampleEapol);
+  env_->ScheduleNotification(
+      std::bind(&DataFrameTest::TxEapolRequest, this, kClientMacAddress, ifc_mac_, kSampleEapol),
+      zx::sec(1));
   recv_addr_capture_filter = ap.GetBssid();
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Verify response
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
@@ -529,19 +536,20 @@ TEST_F(DataFrameTest, RxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(
       CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody));
   // Ensure the data packet is sent after the client has associated
   delay += kSsidEventDelay + zx::msec(100);
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
-                data_context_.expected_received_data.back());
+  env_->ScheduleNotification(std::bind(&DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress,
+                                       data_context_.expected_received_data.back()),
+                             delay);
 
   delay += kSsidEventDelay + zx::msec(100);
   // Run
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
@@ -562,16 +570,18 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(30));
 
   // ethernet frame too small to hold ethernet header
   std::vector<uint8_t> ethFrame = {0x00, 0x45};
 
   // Want to send packet from test to driver
-  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, ethFrame);
+  env_->ScheduleNotification(
+      std::bind(&DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, ethFrame),
+      zx::sec(10));
 
   // Run
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
@@ -590,16 +600,17 @@ TEST_F(DataFrameTest, RxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(zx::msec(30), &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(30));
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
   auto frame = CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_PAE), kSampleEapol);
 
-  SCHEDULE_CALL(zx::sec(10), &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame);
+  env_->ScheduleNotification(
+      std::bind(&DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame), zx::sec(5));
 
   // Run
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
@@ -621,7 +632,7 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
@@ -629,10 +640,11 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Send the packet before the SSID event is sent from SIM FW
   delay = delay + kSsidEventDelay / 2;
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame);
+  env_->ScheduleNotification(
+      std::bind(&DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame), delay);
   assoc_check_for_eapol_rx_ = true;
   // Run
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
   EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
@@ -654,7 +666,7 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  SCHEDULE_CALL(delay, &DataFrameTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEthBody);
@@ -662,9 +674,10 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
 
   // Send the packet before the Link event is sent by SIM FW.
   delay = delay + kLinkEventDelay / 2;
-  SCHEDULE_CALL(delay, &DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame);
+  env_->ScheduleNotification(
+      std::bind(&DataFrameTest::ClientTx, this, ifc_mac_, kClientMacAddress, frame), delay);
   // Run
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver did not receive the packet
   EXPECT_EQ(non_eapol_data_count, 0U);

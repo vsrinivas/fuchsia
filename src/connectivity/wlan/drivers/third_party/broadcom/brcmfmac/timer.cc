@@ -19,8 +19,6 @@
 
 #include "debug.h"
 
-typedef void (Timer::*timer_handler)(void);
-
 Timer::Timer(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher,
              std::function<void()> callback, bool periodic)
     : task_({}),
@@ -51,11 +49,8 @@ void Timer::Start(zx_duration_t interval) {
       return;
     }
 
-    auto handler = std::make_unique<std::function<void()>>();
-    timer_handler fn = &Timer::TimerHandler;
-    *handler = std::bind(fn, this);
-
-    brcmf_bus_set_sim_timer(bus_if_, std::move(handler), interval, &event_id_);
+    brcmf_bus_set_sim_timer(bus_if_, std::bind(&Timer::SimTimerHandler, this), interval,
+                            &event_id_);
     scheduled_ = true;
   } else {
     lock_.lock();
@@ -134,7 +129,7 @@ void Timer::TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_
 }
 
 // TimerHandler for simulation test framework.
-void Timer::TimerHandler() {
+void Timer::SimTimerHandler() {
   callback_();
 
   if (type_ == BRCMF_TIMER_SINGLE_SHOT) {

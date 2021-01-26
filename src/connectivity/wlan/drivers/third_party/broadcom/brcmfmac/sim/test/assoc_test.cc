@@ -136,10 +136,10 @@ class AssocTest : public SimTest {
     std::list<wlan_assoc_result_t> expected_results;
     std::vector<uint8_t> expected_wmm_param;
 
-    // An optional function to call when we see the association request go out
-    std::optional<std::function<void()>> on_assoc_req_callback;
-    // An optional function to call when we see the authentication request go out
-    std::optional<std::function<void()>> on_auth_req_callback;
+    // An optional function to call when we see the association request go out.
+    std::function<void()> on_assoc_req_callback;
+    // An optional function to call when we see the authentication request go out.
+    std::function<void()> on_auth_req_callback;
 
     // Track number of association responses
     size_t assoc_resp_count = 0;
@@ -276,9 +276,7 @@ void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
   // If a handler has been installed, call it
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_REQ) {
     if (context_.on_assoc_req_callback) {
-      auto callback = std::make_unique<std::function<void()>>();
-      *callback = context_.on_assoc_req_callback.value();
-      env_->ScheduleNotification(std::move(callback), zx::msec(1));
+      env_->ScheduleNotification(context_.on_assoc_req_callback, zx::msec(1));
     }
   }
 
@@ -296,9 +294,7 @@ void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
     // When we receive a authentication request, try to call the callback.
     if (auth_frame->seq_num_ == 1) {
       if (context_.on_auth_req_callback) {
-        auto callback = std::make_unique<std::function<void()>>();
-        *callback = context_.on_auth_req_callback.value();
-        env_->ScheduleNotification(std::move(callback), zx::msec(1));
+        env_->ScheduleNotification(context_.on_auth_req_callback, zx::msec(1));
       }
       return;
     }
@@ -375,9 +371,9 @@ void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   context_.expected_wmm_param.clear();
 
   if (start_disassoc_) {
-    SCHEDULE_CALL(zx::msec(200), &AssocTest::StartDisassoc, this);
+    env_->ScheduleNotification(std::bind(&AssocTest::StartDisassoc, this), zx::msec(200));
   } else if (start_deauth_) {
-    SCHEDULE_CALL(zx::msec(200), &AssocTest::StartDeauth, this);
+    env_->ScheduleNotification(std::bind(&AssocTest::StartDeauth, this), zx::msec(200));
   }
 }
 
@@ -437,7 +433,7 @@ TEST_F(AssocTest, SignalReportTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -463,8 +459,8 @@ TEST_F(AssocTest, StatsQueryReqTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::msec(30), &AssocTest::SendStatsQuery, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::SendStatsQuery, this), zx::msec(30));
 
   env_->Run(kTestDuration);
 
@@ -546,8 +542,8 @@ TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   DetailedHistogramErrorInject();
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::msec(30), &AssocTest::SendStatsQuery, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::SendStatsQuery, this), zx::msec(30));
 
   env_->Run(kTestDuration);
 
@@ -656,7 +652,7 @@ TEST_F(AssocTest, NoAps) {
   context_.ssid = {.len = 6, .ssid = "TestAP"};
   context_.tx_info.channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -675,7 +671,7 @@ TEST_F(AssocTest, SimpleTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -696,7 +692,7 @@ TEST_F(AssocTest, SsidTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -726,7 +722,7 @@ TEST_F(AssocTest, WrongIds) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -751,9 +747,9 @@ TEST_F(AssocTest, RepeatedAssocTest) {
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::msec(11), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::msec(12), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(11));
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(12));
 
   env_->Run(kTestDuration);
 
@@ -772,7 +768,7 @@ TEST_F(AssocTest, ApIgnoredRequest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -795,7 +791,7 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -828,7 +824,7 @@ TEST_F(AssocTest, SimFwIgnoreAssocReq) {
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 
   AssocErrorInject();
-  SCHEDULE_CALL(zx::msec(50), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(50));
   env_->Run(kTestDuration);
 
   // We should not have received a assoc response from SIM FW
@@ -872,7 +868,7 @@ TEST_F(AssocTest, IgnoreRespMismatch) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendBadResp, this);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -934,7 +930,7 @@ TEST_F(AssocTest, IgnoreExtraResp) {
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
   context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -954,7 +950,7 @@ TEST_F(AssocTest, AssocWhileScanning) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   wlanif_scan_req_t scan_req = {
       .txn_id = 42,
@@ -985,7 +981,7 @@ TEST_F(AssocTest, AssocWithWmm) {
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendAssocRespWithWmm, this);
   context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1003,7 +999,7 @@ TEST_F(AssocTest, DisassocFromSelfTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   start_disassoc_ = true;
 
   env_->Run(kTestDuration);
@@ -1023,8 +1019,8 @@ TEST_F(AssocTest, DisassocWithoutAssocTest) {
 
   // Attempt to disassociate. In this case client is not associated. AP
   // will not transmit the disassoc request
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartDisassoc, this);
-  SCHEDULE_CALL(zx::msec(50), &AssocTest::TxFakeDisassocReq, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartDisassoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::TxFakeDisassocReq, this), zx::msec(50));
 
   env_->Run(kTestDuration);
 
@@ -1043,7 +1039,7 @@ TEST_F(AssocTest, DisassocNotSelfTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   start_disassoc_ = true;
   disassoc_self_ = false;
 
@@ -1064,7 +1060,7 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
@@ -1092,7 +1088,7 @@ TEST_F(AssocTest, LinkEventTest) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
@@ -1117,7 +1113,7 @@ TEST_F(AssocTest, deauth_from_ap) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   deauth_from_ap_ = true;
   start_deauth_ = true;
 
@@ -1143,7 +1139,7 @@ TEST_F(AssocTest, deauth_from_self) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   deauth_from_ap_ = false;
   start_deauth_ = true;
 
@@ -1170,10 +1166,10 @@ TEST_F(AssocTest, deauth_from_self_then_from_ap) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::sec(1), &AssocTest::DeauthClient, this);
-  SCHEDULE_CALL(zx::sec(2), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::sec(3), &AssocTest::DeauthFromAp, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::DeauthClient, this), zx::sec(1));
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&AssocTest::DeauthFromAp, this), zx::sec(3));
 
   env_->Run(kTestDuration);
 
@@ -1196,9 +1192,9 @@ TEST_F(AssocTest, simple_reassoc) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::sec(2), &AssocTest::DisassocFromAp, this);
-  SCHEDULE_CALL(zx::sec(3), &AssocTest::ReAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&AssocTest::ReAssoc, this), zx::sec(3));
 
   env_->Run(kTestDuration);
 
@@ -1218,11 +1214,11 @@ TEST_F(AssocTest, deauth_during_reassoc) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
-  SCHEDULE_CALL(zx::sec(2), &AssocTest::DisassocFromAp, this);
-  SCHEDULE_CALL(zx::sec(3), &AssocTest::ReAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&AssocTest::ReAssoc, this), zx::sec(3));
   // Schedule a deauth immediately, before the above assoc can complete.
-  SCHEDULE_CALL(zx::sec(3) + zx::usec(500), &AssocTest::DeauthClient, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::DeauthClient, this), zx::sec(3) + zx::usec(500));
 
   env_->Run(kTestDuration);
 
@@ -1253,7 +1249,7 @@ TEST_F(AssocTest, AssocMaxRetries) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1287,7 +1283,7 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   zx_status_t status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1315,7 +1311,7 @@ TEST_F(AssocTest, AssocNoRetries) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 

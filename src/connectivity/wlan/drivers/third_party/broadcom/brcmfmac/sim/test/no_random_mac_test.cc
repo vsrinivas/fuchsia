@@ -6,6 +6,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 // Verify that we can do an active scan even if the firmware doesn't support randomized mac
 // addresses.
@@ -23,8 +28,9 @@ TEST_F(SimTest, RandomMacNotSupported) {
   SimInterface client_ifc;
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
-  SCHEDULE_CALL(zx::sec(1), &SimInterface::StartScan, &client_ifc, kScanTxnId, true);
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kScanTxnId, true),
+                             zx::sec(1));
+  env_->Run(kSimulatedClockDuration);
 
   auto scan_result = client_ifc.ScanResultCode(kScanTxnId);
 

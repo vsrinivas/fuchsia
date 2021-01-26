@@ -152,7 +152,9 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
   StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
 
   // Request a future scan
-  SCHEDULE_CALL(kScanStartTime, &PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false);
+  env_->ScheduleNotification(
+      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
+      kScanStartTime);
 
   // The lambda arg will be run on each result, inside PassiveScanTestInterface::VerifyScanResults.
   client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) {
@@ -198,7 +200,9 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
   StartFakeApWithErrInjBeacon(kDefaultBssid, kDefaultSsid, kDefaultChannel, beacon_mutator);
 
   // Request a future scan
-  SCHEDULE_CALL(kScanStartTime, &PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false);
+  env_->ScheduleNotification(
+      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
+      kScanStartTime);
 
   client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) {
     // Verify BSSID.
@@ -241,7 +245,9 @@ TEST_F(PassiveScanTest, ScanWhenFirmwareBusy) {
   sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, BCME_BUSY);
 
   // Request a future scan
-  SCHEDULE_CALL(kScanStartTime, &PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false);
+  env_->ScheduleNotification(
+      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
+      kScanStartTime);
 
   env_->Run(kDefaultTestDuration);
 

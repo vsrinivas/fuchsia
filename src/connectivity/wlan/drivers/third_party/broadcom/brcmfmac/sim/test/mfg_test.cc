@@ -96,12 +96,13 @@ TEST_F(MfgTest, CheckConnections) {
 
   // Associate to FakeAp
   client_ifc_.AssociateWith(ap, zx::msec(10));
-  SCHEDULE_CALL(zx::msec(100), &MfgTest::DelIF, this, &client_ifc_);
-  SCHEDULE_CALL(zx::msec(200), &MfgTest::CreateIF, this, WLAN_INFO_MAC_ROLE_AP);
-  SCHEDULE_CALL(zx::msec(300), &MfgTest::StartSoftAP, this);
+  env_->ScheduleNotification(std::bind(&MfgTest::DelIF, this, &client_ifc_), zx::msec(100));
+  env_->ScheduleNotification(std::bind(&MfgTest::CreateIF, this, WLAN_INFO_MAC_ROLE_AP),
+                             zx::msec(200));
+  env_->ScheduleNotification(std::bind(&MfgTest::StartSoftAP, this), zx::msec(300));
   // Associate to SoftAP
-  SCHEDULE_CALL(zx::msec(400), &MfgTest::TxAuthAndAssocReq, this);
-  SCHEDULE_CALL(zx::msec(500), &MfgTest::DelIF, this, &softap_ifc_);
+  env_->ScheduleNotification(std::bind(&MfgTest::TxAuthAndAssocReq, this), zx::msec(400));
+  env_->ScheduleNotification(std::bind(&MfgTest::DelIF, this, &softap_ifc_), zx::msec(500));
 
   env_->Run(kTestDuration);
 

@@ -17,6 +17,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_HW_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_HW_H_
 
+#include <lib/async/dispatcher.h>
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
@@ -47,7 +48,7 @@ class SimHardware : public simulation::StationIfc {
 
   void GetRevInfo(brcmf_rev_info_le* rev_info);
 
-  void RequestCallback(std::unique_ptr<std::function<void()>> callback, zx::duration delay,
+  void RequestCallback(std::function<void()> callback, zx::duration delay,
                        uint64_t* id_out = nullptr);
   void CancelCallback(uint64_t id);
 
@@ -58,7 +59,9 @@ class SimHardware : public simulation::StationIfc {
   // Operations that are forwarded to the environment
   void Tx(const simulation::SimFrame& frame);
 
+  // Timing and scheduling from the environment.
   zx::time GetTime() { return env_->GetTime(); }
+  async_dispatcher_t* GetDispatcher() { return env_->GetDispatcher(); }
 
  private:
   bool rx_enabled_ = false;

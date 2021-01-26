@@ -106,8 +106,9 @@ TEST_F(ScanTest, ScanApStartInterference) {
   StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
   StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
 
-  SCHEDULE_CALL(zx::msec(10), &SimInterface::StartScan, &client_ifc_, kDefaultScanId, false);
-  SCHEDULE_CALL(zx::msec(200), &ScanTest::StartAp, this);
+  env_->ScheduleNotification(
+      std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanId, false), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ScanTest::StartAp, this), zx::msec(200));
 
   static constexpr zx::duration kTestDuration = zx::sec(100);
   env_->Run(kTestDuration);

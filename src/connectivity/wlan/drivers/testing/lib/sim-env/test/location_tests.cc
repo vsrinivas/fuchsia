@@ -11,6 +11,11 @@
 // Verify that signal strengths are being properly calculated and delivered by the environment
 
 namespace wlan::testing {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 using ::testing::NotNull;
 
@@ -112,7 +117,7 @@ TEST_F(LocationTest, BasicSignalStrengthTest) {
 
   simulation::SimBeaconFrame beacon_frame(kDefaultSsid, kDefaultBssid);
   env_.Tx(beacon_frame, kDefaultTxInfo, &stations_[0]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_LT(stations_[1].signal_strength, 0);
   EXPECT_LT(stations_[2].signal_strength, 0);
   EXPECT_LT(stations_[2].signal_strength, stations_[1].signal_strength);
@@ -120,7 +125,7 @@ TEST_F(LocationTest, BasicSignalStrengthTest) {
   env_.MoveStation(&stations_[0], 15, 0);
 
   env_.Tx(beacon_frame, kDefaultTxInfo, &stations_[0]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_LT(stations_[1].signal_strength, 0);
   EXPECT_LT(stations_[2].signal_strength, 0);
   EXPECT_LT(stations_[1].signal_strength, stations_[2].signal_strength);

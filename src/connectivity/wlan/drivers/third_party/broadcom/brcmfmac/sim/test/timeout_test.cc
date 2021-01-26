@@ -54,7 +54,8 @@ TEST_F(TimeoutTest, ScanTimeout) {
   sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, BCME_OK, client_ifc_.iface_id_);
 
   // Start a passive scan
-  SCHEDULE_CALL(zx::msec(10), &SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false);
+  env_->ScheduleNotification(
+      std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -98,8 +99,9 @@ TEST_F(TimeoutTest, DisassocTimeout) {
   // Ignore disassociation req in sim-fw.
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_DISASSOC, ZX_OK, BCME_OK, client_ifc_.iface_id_);
-  SCHEDULE_CALL(zx::msec(10), &SimInterface::DeauthenticateFrom, &client_ifc_, kDefaultBssid,
-                WLANIF_REASON_CODE_UNSPECIFIED);
+  env_->ScheduleNotification(std::bind(&SimInterface::DeauthenticateFrom, &client_ifc_,
+                                       kDefaultBssid, WLANIF_REASON_CODE_UNSPECIFIED),
+                             zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -121,9 +123,11 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_OK, client_ifc_.iface_id_);
   // There are three timers for them, and all have been cancelled.
   client_ifc_.AssociateWith(ap, zx::msec(10));
-  SCHEDULE_CALL(zx::sec(1), &SimInterface::DeauthenticateFrom, &client_ifc_, kDefaultBssid,
-                WLANIF_REASON_CODE_UNSPECIFIED);
-  SCHEDULE_CALL(zx::sec(3), &SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false);
+  env_->ScheduleNotification(std::bind(&SimInterface::DeauthenticateFrom, &client_ifc_,
+                                       kDefaultBssid, WLANIF_REASON_CODE_UNSPECIFIED),
+                             zx::sec(1));
+  env_->ScheduleNotification(
+      std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false), zx::sec(3));
 
   env_->Run(kTestDuration);
 

@@ -9,6 +9,11 @@ constexpr uint64_t kFirstScanId = 0x4f4a;
 constexpr uint64_t kSecondScanId =  0x414a;
 
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 // This test simply starts a scan while another is in progress. We expect that the second scan will
 // be rejected and the first scan will complete successfully.
@@ -18,10 +23,12 @@ TEST_F(SimTest, ScanWhileScanning) {
   SimInterface client_ifc;
   StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc);
 
-  SCHEDULE_CALL(zx::msec(10), &SimInterface::StartScan, &client_ifc, kFirstScanId, false);
-  SCHEDULE_CALL(zx::msec(100), &SimInterface::StartScan, &client_ifc, kSecondScanId, false);
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kFirstScanId, false),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kSecondScanId, false),
+                             zx::msec(100));
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Verify that first scan completed successfully
   auto first_result = client_ifc.ScanResultCode(kFirstScanId);

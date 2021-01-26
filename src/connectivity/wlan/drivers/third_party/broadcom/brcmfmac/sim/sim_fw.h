@@ -236,8 +236,7 @@ class SimFirmware {
   zx_status_t BusRxCtl(unsigned char* msg, uint len, int* rxlen_out);
   struct pktq* BusGetTxQueue();
   zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
-  void BusSetTimer(std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
-                   uint64_t* id_out);
+  void BusSetTimer(std::function<void()> fn, zx_duration_t delay, uint64_t* id_out);
   void BusCancelTimer(uint64_t id);
   // This function returns the wsec_key_list for an iface to outside.
   std::vector<brcmf_wsec_key_le> GetKeyList(uint16_t ifidx);

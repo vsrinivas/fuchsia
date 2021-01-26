@@ -13,7 +13,10 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "device_inspect_test.h"
+
+#include <functional>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/device_inspect_test.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -36,7 +39,7 @@ class UintPropertyTest : public DeviceInspectTestHelper {
 
   void ScheduleIncrement(zx::duration delay, uint64_t count) {
     for (uint64_t i = 0; i < count; i++) {
-      SCHEDULE_CALL(delay, &UintPropertyTest::Increment, this);
+      env_->ScheduleNotification(std::bind(&UintPropertyTest::Increment, this), delay);
     }
   }
 
@@ -125,9 +128,9 @@ TEST_F(UintPropertyTest, 24HrsCounter) {
   // Maintains count for a window of 24hours, refreshed every hour.
   EXPECT_EQ(ZX_OK, Init(ZX_HOUR(24), ZX_HOUR(1)));
 
-  // Increment count once every hour.
+  // Increment count once every hour, including the first and last.
   const uint32_t log_hours = 100;
-  for (uint32_t i = 0; i < log_hours; i++) {
+  for (uint32_t i = 0; i <= log_hours; i++) {
     ScheduleIncrement(zx::hour(i), 1);
   }
   env_->Run(zx::hour(log_hours));

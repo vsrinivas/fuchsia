@@ -10,6 +10,11 @@
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
@@ -58,7 +63,7 @@ void ClientIfc::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
 void BeaconLostTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  SCHEDULE_CALL(kTestDuration, &BeaconLostTest::Finish, this);
+  env_->ScheduleNotification(std::bind(&BeaconLostTest::Finish, this), kTestDuration);
 }
 
 void BeaconLostTest::Finish() {
@@ -87,9 +92,9 @@ TEST_F(BeaconLostTest, NoBeaconDisassocTest) {
   client_ifc_.AssociateWith(ap, zx::msec(10));
 
   // disable the beacon after association
-  SCHEDULE_CALL(zx::sec(1), &simulation::FakeAp::DisableBeacon, &ap);
+  env_->ScheduleNotification(std::bind(&simulation::FakeAp::DisableBeacon, &ap), zx::sec(1));
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
@@ -121,9 +126,9 @@ TEST_F(BeaconLostTest, BeaconTooFarDisassocTest) {
   client_ifc_.AssociateWith(ap, zx::msec(10));
 
   // Move away from the AP
-  SCHEDULE_CALL(zx::sec(1), &BeaconLostTest::MoveClient, this, 150, 0);
+  env_->ScheduleNotification(std::bind(&BeaconLostTest::MoveClient, this, 150, 0), zx::sec(1));
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
@@ -163,9 +168,9 @@ TEST_F(BeaconLostTest, WrongBeaconLossTest) {
   client_ifc_.AssociateWith(ap1, zx::msec(10));
 
   // Move away closer to the AP we are associated to. Should not impact connection.
-  SCHEDULE_CALL(zx::sec(1), &BeaconLostTest::MoveClient, this, -75, 0);
+  env_->ScheduleNotification(std::bind(&BeaconLostTest::MoveClient, this, -75, 0), zx::sec(1));
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
@@ -203,12 +208,12 @@ TEST_F(BeaconLostTest, TempBeaconLossTest) {
   client_ifc_.AssociateWith(ap1, zx::msec(10));
 
   // Move away from the AP we are associated to.
-  SCHEDULE_CALL(zx::sec(1), &BeaconLostTest::MoveClient, this, 100, 0);
+  env_->ScheduleNotification(std::bind(&BeaconLostTest::MoveClient, this, 100, 0), zx::sec(1));
 
   // A second later, move back
-  SCHEDULE_CALL(zx::sec(2), &BeaconLostTest::MoveClient, this, 0, 0);
+  env_->ScheduleNotification(std::bind(&BeaconLostTest::MoveClient, this, 0, 0), zx::sec(2));
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);

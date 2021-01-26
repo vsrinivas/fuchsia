@@ -9,6 +9,11 @@
 BRCMF_DECLARE_OVERRIDE(getentropy, 1);
 
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 // Verify that initialization fails if we aren't able to generate a random MAC address
 TEST_F(SimTest, Initialization) { ASSERT_NE(Init(), ZX_OK); }
@@ -28,8 +33,9 @@ TEST_F(SimTest, ActiveScan) {
 
   BRCMF_SET_VALUE(getentropy, 1);
 
-  SCHEDULE_CALL(zx::sec(1), &SimInterface::StartScan, &client_ifc, kScanId, true);
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kScanId, true),
+                             zx::sec(1));
+  env_->Run(kSimulatedClockDuration);
 
   // Verify that scan completed successfully
   auto scan_result = client_ifc.ScanResultCode(kScanId);

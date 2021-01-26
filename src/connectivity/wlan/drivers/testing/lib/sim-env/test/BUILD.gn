@@ -16,6 +16,8 @@ executable("event_unittests") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
+    "//zircon/system/ulib/async",
   ]
 }
 

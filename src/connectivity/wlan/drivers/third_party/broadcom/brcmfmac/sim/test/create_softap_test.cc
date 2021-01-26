@@ -13,6 +13,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
@@ -375,12 +380,13 @@ TEST_F(CreateSoftAPTest, CreateSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   zx::duration delay = zx::msec(10);
-  SCHEDULE_CALL(delay, &CreateSoftAPTest::StartSoftAP, this);
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), delay);
   delay += kStartAPConfDelay + zx::msec(10);
-  SCHEDULE_CALL(delay, &CreateSoftAPTest::StopSoftAP, this);
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StopSoftAP, this), delay);
   // Wait until SoftAP start conf is received
-  // SCHEDULE_CALL(delay, &CreateSoftAPTest::VerifyStartAPConf, this, WLAN_START_RESULT_SUCCESS);
-  env_->Run();
+  // env_->ScheduleNotification(
+  //     std::bind(&CreateSoftAPTest::VerifyStartAPConf, this, WLAN_START_RESULT_SUCCESS), delay);
+  env_->Run(kSimulatedClockDuration);
   VerifyStartAPConf(WLAN_START_RESULT_SUCCESS);
 }
 
@@ -389,8 +395,8 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   InjectStartAPError();
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::StartSoftAP, this);
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
+  env_->Run(kSimulatedClockDuration);
   VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
 }
 
@@ -426,13 +432,15 @@ TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAuth, this), zx::msec(8));
 
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(50));
+  env_->Run(kSimulatedClockDuration);
 }
 
 TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
@@ -440,16 +448,19 @@ TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
-  SCHEDULE_CALL(zx::msec(75), &CreateSoftAPTest::ClearAssocInd, this);
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAuth, this), zx::msec(8));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(50));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::ClearAssocInd, this), zx::msec(75));
   // Reassoc
-  SCHEDULE_CALL(zx::msec(100), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(150), &CreateSoftAPTest::VerifyAssoc, this);
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(100));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(150));
+  env_->Run(kSimulatedClockDuration);
 }
 
 TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
@@ -457,13 +468,16 @@ TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
-  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::TxDisassocReq, this, kFakeMac);
-  env_->Run();
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAuth, this), zx::msec(8));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(50));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxDisassocReq, this, kFakeMac),
+                             zx::msec(60));
+  env_->Run(kSimulatedClockDuration);
   // Only disassoc ind should be seen.
   EXPECT_EQ(deauth_ind_recv_, false);
   EXPECT_EQ(disassoc_ind_recv_, true);
@@ -476,13 +490,16 @@ TEST_F(CreateSoftAPTest, DisassociateClientFromSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
-  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::DeauthClient, this, kFakeMac);
-  env_->Run();
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAuth, this), zx::msec(8));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(50));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::DeauthClient, this, kFakeMac),
+                             zx::msec(60));
+  env_->Run(kSimulatedClockDuration);
   // Should have received disassoc conf.
   EXPECT_EQ(disassoc_conf_recv_, true);
   VerifyNumOfClient(0);
@@ -493,11 +510,13 @@ TEST_F(CreateSoftAPTest, AssocWithWrongAuth) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_SHARED_KEY,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(20), &CreateSoftAPTest::VerifyNotAssoc, this);
-  env_->Run();
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_SHARED_KEY, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyNotAssoc, this), zx::msec(20));
+  env_->Run(kSimulatedClockDuration);
   EXPECT_EQ(auth_resp_status_, WLAN_STATUS_CODE_REFUSED);
 }
 
@@ -506,11 +525,13 @@ TEST_F(CreateSoftAPTest, DeauthBeforeAssoc) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::VerifyAuth, this);
-  SCHEDULE_CALL(zx::msec(20), &CreateSoftAPTest::TxDeauthReq, this, kFakeMac);
-  env_->Run();
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxDeauthReq, this, kFakeMac),
+                             zx::msec(20));
+  env_->Run(kSimulatedClockDuration);
   // Only deauth ind shoulb be seen.
   EXPECT_EQ(deauth_ind_recv_, true);
   EXPECT_EQ(disassoc_ind_recv_, false);
@@ -522,13 +543,16 @@ TEST_F(CreateSoftAPTest, DeauthWhileAssociated) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(8), &CreateSoftAPTest::VerifyAuth, this);
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
-  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::TxDeauthReq, this, kFakeMac);
-  env_->Run();
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAuth, this), zx::msec(8));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(10));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(50));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxDeauthReq, this, kFakeMac),
+                             zx::msec(60));
+  env_->Run(kSimulatedClockDuration);
   // Both indication should be seen.
   EXPECT_EQ(deauth_ind_recv_, true);
   EXPECT_EQ(disassoc_ind_recv_, true);
@@ -542,18 +566,27 @@ TEST_F(CreateSoftAPTest, DeauthMultiClients) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
-  SCHEDULE_CALL(zx::msec(5), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kFakeMac);
-  SCHEDULE_CALL(zx::msec(10), &CreateSoftAPTest::TxAssocReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(15), &CreateSoftAPTest::SetExpectMacForInds, this, kSecondClientMac);
-  SCHEDULE_CALL(zx::msec(20), &CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN,
-                kSecondClientMac);
-  SCHEDULE_CALL(zx::msec(30), &CreateSoftAPTest::TxAssocReq, this, kSecondClientMac);
-  SCHEDULE_CALL(zx::msec(40), &CreateSoftAPTest::VerifyNumOfClient, this, 2);
-  SCHEDULE_CALL(zx::msec(45), &CreateSoftAPTest::SetExpectMacForInds, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::TxDeauthReq, this, kFakeMac);
-  SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::VerifyNumOfClient, this, 1);
-  env_->Run();
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
+      zx::msec(5));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
+                             zx::msec(10));
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::SetExpectMacForInds, this, kSecondClientMac), zx::msec(15));
+  env_->ScheduleNotification(
+      std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kSecondClientMac),
+      zx::msec(20));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kSecondClientMac),
+                             zx::msec(30));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyNumOfClient, this, 2),
+                             zx::msec(40));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::SetExpectMacForInds, this, kFakeMac),
+                             zx::msec(45));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxDeauthReq, this, kFakeMac),
+                             zx::msec(50));
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyNumOfClient, this, 1),
+                             zx::msec(60));
+  env_->Run(kSimulatedClockDuration);
 }
 
 }  // namespace wlan::brcmfmac

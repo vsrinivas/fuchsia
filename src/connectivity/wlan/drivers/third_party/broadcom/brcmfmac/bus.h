@@ -70,8 +70,8 @@ struct brcmf_bus_ops {
   zx_status_t (*txctl)(brcmf_bus* bus, unsigned char* msg, uint len);
   zx_status_t (*rxctl)(brcmf_bus* bus, unsigned char* msg, uint len, int* rxlen_out);
   struct pktq* (*gettxq)(brcmf_bus* bus);
-  void (*set_sim_timer)(brcmf_bus* bus, std::unique_ptr<std::function<void()>> fn,
-                        zx_duration_t delay, uint64_t* id_out);
+  void (*set_sim_timer)(brcmf_bus* bus, std::function<void()> fn, zx_duration_t delay,
+                        uint64_t* id_out);
   void (*cancel_sim_timer)(brcmf_bus* bus, uint64_t id);
 };
 
@@ -169,8 +169,7 @@ static inline zx_status_t brcmf_bus_get_wifi_metadata(struct brcmf_bus* bus, voi
 }
 
 // Bus operation for simulation test framework.
-static inline void brcmf_bus_set_sim_timer(struct brcmf_bus* bus,
-                                           std::unique_ptr<std::function<void()>> fn,
+static inline void brcmf_bus_set_sim_timer(struct brcmf_bus* bus, std::function<void()> fn,
                                            zx_duration_t delay, uint64_t* id_out) {
   return bus->ops->set_sim_timer(bus, std::move(fn), delay, id_out);
 }

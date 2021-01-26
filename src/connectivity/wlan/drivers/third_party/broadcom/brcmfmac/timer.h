@@ -48,7 +48,7 @@ class Timer {
  private:
   static void TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
   // TimerHandler for simulation test framework.
-  void TimerHandler();
+  void SimTimerHandler();
 
   async_task_t task_;
   std::function<void()> callback_;

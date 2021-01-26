@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 The Fuchsia Authors
+ * Copyright (c) 2021 The Fuchsia Authors
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,9 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "device_inspect_test.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/device_inspect_test.h"
+
+#include <functional>
 
 namespace wlan {
 namespace brcmfmac {
@@ -67,22 +69,23 @@ TEST_F(DeviceInspectTest, LogTxQfull24HrsFor10Hrs) {
   EXPECT_EQ(0u, GetTxQfull24Hrs());
   const uint32_t log_duration = 10;
 
-  // Log 1 queue full event every hour, for 'log_duration' hours.
-  for (uint32_t i = 0; i < log_duration; i++) {
-    SCHEDULE_CALL(zx::hour(i), &DeviceInspectTest::LogTxQfull, this);
+  // Log 1 queue full event every hour, including the first and last, for 'log_duration' hours.
+  for (uint32_t i = 0; i <= log_duration; i++) {
+    env_->ScheduleNotification(std::bind(&DeviceInspectTest::LogTxQfull, this), zx::hour(i));
   }
   env_->Run(zx::hour(log_duration));
 
-  EXPECT_EQ(log_duration, GetTxQfull24Hrs());
+  // Since we also log once at the beginning of the run, we will have one more count.
+  EXPECT_EQ(log_duration + 1, GetTxQfull24Hrs());
 }
 
 TEST_F(DeviceInspectTest, LogTxQfull24HrsFor100Hrs) {
   EXPECT_EQ(0u, GetTxQfull24Hrs());
   const uint32_t log_duration = 100;
 
-  // Log 1 queue full event every hour, for 'log_duration' hours.
-  for (uint32_t i = 0; i < log_duration; i++) {
-    SCHEDULE_CALL(zx::hour(i), &DeviceInspectTest::LogTxQfull, this);
+  // Log 1 queue full event every hour, including the first and last, for 'log_duration' hours.
+  for (uint32_t i = 0; i <= log_duration; i++) {
+    env_->ScheduleNotification(std::bind(&DeviceInspectTest::LogTxQfull, this), zx::hour(i));
   }
   env_->Run(zx::hour(log_duration));
 

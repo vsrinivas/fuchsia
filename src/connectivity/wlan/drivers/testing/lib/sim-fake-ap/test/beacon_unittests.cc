@@ -125,18 +125,14 @@ const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 constexpr wlan_ssid_t kErrInjBeaconSsid = {.len = 7, .ssid = "Changed"};
 
 void BeaconTest::ScheduleCall(void (BeaconTest::*fn)(), zx::duration when) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this);
-  env_.ScheduleNotification(std::move(cb_fn), when);
+  env_.ScheduleNotification(std::bind(fn, this), when);
 }
 
 void BeaconTest::ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t& channel,
                                                                   zx::duration& interval),
                                            zx::duration when, const wlan_channel_t& channel,
                                            const zx::duration& interval) {
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this, channel, interval);
-  env_.ScheduleNotification(std::move(cb_fn), when);
+  env_.ScheduleNotification(std::bind(fn, this, channel, interval), when);
 }
 
 void BeaconTest::ScheduleSetSecurityCall(
@@ -144,9 +140,7 @@ void BeaconTest::ScheduleSetSecurityCall(
     ieee80211_cipher_suite cipher) {
   simulation::FakeAp::Security sec = {.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                                       .cipher_suite = cipher};
-  auto cb_fn = std::make_unique<std::function<void()>>();
-  *cb_fn = std::bind(fn, this, sec);
-  env_.ScheduleNotification(std::move(cb_fn), when);
+  env_.ScheduleNotification(std::bind(fn, this, sec), when);
 }
 
 /*** StartStop test ***/
@@ -185,7 +179,7 @@ void BeaconTest::ValidateStartStopBeacons() {
 TEST_F(BeaconTest, StartStop) {
   ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
   ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
-  env_.Run();
+  env_.Run(kEndTime);
 
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kEndTime));
 
@@ -251,7 +245,7 @@ TEST_F(BeaconTest, Update) {
   ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
   ScheduleCall(&BeaconTest::UpdateBeaconCallback, kUpdateTime);
   ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
-  env_.Run();
+  env_.Run(kEndTime);
 
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kEndTime));
 
@@ -358,7 +352,7 @@ TEST_F(BeaconTest, ChannelSwitch) {
   ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kSwitchTime, kFirstChannelSwitched,
                             kLongCsaBeaconInterval);
   ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
-  env_.Run();
+  env_.Run(kEndTime);
 
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kEndTime));
   ValidateChannelSwitchBeacons();
@@ -416,7 +410,7 @@ TEST_F(BeaconTest, OverlapTest) {
   ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kThirdSetChannel,
                             kThirdChannelSwitched, kCsaBeaconInterval);
   ScheduleCall(&BeaconTest::StopBeaconCallback, kShortEndTime);
-  env_.Run();
+  env_.Run(kEndTime);
 
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kShortEndTime));
 
@@ -429,7 +423,7 @@ TEST_F(BeaconTest, SwitchWithoutBeaconing) {
   ScheduleCall(&BeaconTest::AssocCallback, kAssocTime);
   ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kFirstSetChannel,
                             kFirstChannelSwitched, kCsaBeaconInterval);
-  env_.Run();
+  env_.Run(kEndTime);
   // Channel will be set immediately, no event should be scheduled
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kFirstSetChannel));
   EXPECT_EQ(ap_.GetChannel().primary, kFirstChannelSwitched.primary);
@@ -443,7 +437,7 @@ TEST_F(BeaconTest, StopBeaconWhenSwitching) {
   ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kFirstSetChannel,
                             kFirstChannelSwitched, kCsaBeaconInterval);
   ScheduleCall(&BeaconTest::StopBeaconCallback, kVeryShortEndTime);
-  env_.Run();
+  env_.Run(kEndTime);
 
   // When beacon stops, everything stop immediately and channel will be updated.
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kVeryShortEndTime));
@@ -483,7 +477,7 @@ TEST_F(BeaconTest, SetSecurity) {
   ScheduleSetSecurityCall(&BeaconTest::SetSecurityCallback, zx::msec(200),
                           IEEE80211_CIPHER_SUITE_WEP_104);
   ScheduleCall(&BeaconTest::StopBeaconCallback, kSecurityEndTime);
-  env_.Run();
+  env_.Run(kEndTime);
   ValidateSetSecurity();
 }
 
@@ -517,7 +511,7 @@ TEST_F(BeaconTest, ErrInjBeacon) {
   EXPECT_TRUE(ap_.CheckIfErrInjBeaconEnabled());
   ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
   ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
-  env_.Run();
+  env_.Run(kEndTime);
 
   ValidateErrInjBeacon();
 

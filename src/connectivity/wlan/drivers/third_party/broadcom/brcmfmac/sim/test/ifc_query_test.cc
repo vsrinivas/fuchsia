@@ -6,6 +6,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 const common::MacAddr kDefaultMac({0x12, 0x34, 0x56, 0x65, 0x43, 0x21});
 
@@ -18,8 +23,9 @@ TEST_F(SimTest, ClientIfcQuery) {
             ZX_OK);
 
   wlanif_query_info_t ifc_query_result;
-  SCHEDULE_CALL(zx::sec(1), &SimInterface::Query, &client_ifc, &ifc_query_result);
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&SimInterface::Query, &client_ifc, &ifc_query_result),
+                             zx::sec(1));
+  env_->Run(kSimulatedClockDuration);
 
   // Mac address returned should match the one we specified when we created the interface
   ASSERT_EQ(MAC_ARRAY_LENGTH, common::kMacAddrLen);
@@ -60,8 +66,9 @@ TEST_F(SimTest, BadNchainIovar) {
                                        &alt_rxchain_data);
 
   wlanif_query_info_t ifc_query_result;
-  SCHEDULE_CALL(zx::sec(1), &SimInterface::Query, &client_ifc, &ifc_query_result);
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&SimInterface::Query, &client_ifc, &ifc_query_result),
+                             zx::sec(1));
+  env_->Run(kSimulatedClockDuration);
 
   // This test just verifies that we don't crash when the iovar is retrieved
 }

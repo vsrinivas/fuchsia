@@ -39,9 +39,8 @@ void FakeAp::SetChannel(const wlan_channel_t& channel) {
     beacon_state_.beacon_frame_.AddCsaIe(channel, cs_count);
     beacon_state_.channel_after_csa = channel;
 
-    auto stop_csa_beacon_handler = std::make_unique<std::function<void()>>();
-    *stop_csa_beacon_handler = std::bind(&FakeAp::HandleStopCsaBeaconNotification, this);
-    environment_->ScheduleNotification(std::move(stop_csa_beacon_handler), csa_beacon_interval_,
+    environment_->ScheduleNotification(std::bind(&FakeAp::HandleStopCsaBeaconNotification, this),
+                                       csa_beacon_interval_,
                                        &beacon_state_.channel_switch_notification_id);
     beacon_state_.is_switching_channel = true;
   } else {
@@ -88,9 +87,7 @@ bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
 }
 
 void FakeAp::ScheduleNextBeacon() {
-  auto beacon_handler = std::make_unique<std::function<void()>>();
-  *beacon_handler = std::bind(&FakeAp::HandleBeaconNotification, this);
-  environment_->ScheduleNotification(std::move(beacon_handler),
+  environment_->ScheduleNotification(std::bind(&FakeAp::HandleBeaconNotification, this),
                                      beacon_state_.beacon_frame_.interval_,
                                      &beacon_state_.beacon_notification_id);
   beacon_state_.next_beacon_time = environment_->GetTime() + beacon_state_.beacon_frame_.interval_;
@@ -175,15 +172,13 @@ uint32_t FakeAp::GetNumAssociatedClient() const {
 }
 
 void FakeAp::ScheduleAssocResp(uint16_t status, const common::MacAddr& dst) {
-  auto handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&FakeAp::HandleAssocRespNotification, this, status, dst);
-  environment_->ScheduleNotification(std::move(handler), assoc_resp_interval_);
+  environment_->ScheduleNotification(
+      std::bind(&FakeAp::HandleAssocRespNotification, this, status, dst), assoc_resp_interval_);
 }
 
 void FakeAp::ScheduleProbeResp(const common::MacAddr& dst) {
-  auto handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&FakeAp::HandleProbeRespNotification, this, dst);
-  environment_->ScheduleNotification(std::move(handler), probe_resp_interval_);
+  environment_->ScheduleNotification(std::bind(&FakeAp::HandleProbeRespNotification, this, dst),
+                                     probe_resp_interval_);
 }
 
 void FakeAp::ScheduleAuthResp(std::shared_ptr<const SimAuthFrame> auth_frame_in, uint16_t status) {
@@ -199,18 +194,16 @@ void FakeAp::ScheduleAuthResp(std::shared_ptr<const SimAuthFrame> auth_frame_in,
     auth_resp_frame.seq_num_ += 1;
   }
 
-  auto handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&FakeAp::HandleAuthRespNotification, this, auth_resp_frame);
-  environment_->ScheduleNotification(std::move(handler), auth_resp_interval_);
+  environment_->ScheduleNotification(
+      std::bind(&FakeAp::HandleAuthRespNotification, this, auth_resp_frame), auth_resp_interval_);
 }
 
 void FakeAp::ScheduleQosData(bool toDS, bool fromDS, const common::MacAddr& addr1,
                              const common::MacAddr& addr2, const common::MacAddr& addr3,
                              const std::vector<uint8_t>& payload) {
-  auto handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&FakeAp::HandleQosDataNotification, this, toDS, fromDS, addr1, addr2, addr3,
-                       payload);
-  environment_->ScheduleNotification(std::move(handler), data_forward_interval_);
+  environment_->ScheduleNotification(std::bind(&FakeAp::HandleQosDataNotification, this, toDS,
+                                               fromDS, addr1, addr2, addr3, payload),
+                                     data_forward_interval_);
 }
 
 void FakeAp::Rx(std::shared_ptr<const SimFrame> frame, std::shared_ptr<const WlanRxInfo> info) {

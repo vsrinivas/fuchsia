@@ -17,9 +17,12 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
+namespace {
 
 constexpr zx::duration kScanStartTime = zx::sec(1);
-constexpr zx::duration kDefaultTestDuration = zx::sec(10);
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 struct ApInfo {
   explicit ApInfo(simulation::Environment* env, const common::MacAddr& bssid,
@@ -253,12 +256,13 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
 
   default_scan_req_.txn_id = ++client_ifc_.scan_txn_id_;
 
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &default_scan_req_),
+                             kScanStartTime);
 
   // Schedule scan end in environment
-  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
-
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::EndSimulation, this),
+                             kSimulatedClockDuration);
+  env_->Run(kSimulatedClockDuration);
 
   VerifyScanResults();
   EXPECT_EQ(all_aps_seen_, true);
@@ -269,17 +273,19 @@ TEST_F(ActiveScanTest, ScanTwice) {
   Init();
   default_scan_req_.txn_id = ++client_ifc_.scan_txn_id_;
 
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &default_scan_req_),
+                             kScanStartTime);
 
-  env_->Run();
+  env_->Run(kSimulatedClockDuration);
 
   VerifyScanResults();
 
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &default_scan_req_),
+                             kScanStartTime);
 
-  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
-
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::EndSimulation, this),
+                             kSimulatedClockDuration);
+  env_->Run(kSimulatedClockDuration);
 
   VerifyScanResults();
   EXPECT_EQ(client_ifc_.scan_result_code_, ZX_OK);
@@ -292,10 +298,13 @@ TEST_F(ActiveScanTest, CheckNumProbeReqsSent) {
   default_scan_req_.txn_id = ++client_ifc_.scan_txn_id_;
   default_scan_req_.num_channels = 1;
 
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
-  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &default_scan_req_),
+                             kScanStartTime);
 
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::EndSimulation, this),
+                             kSimulatedClockDuration);
+  env_->Run(kSimulatedClockDuration);
+
   EXPECT_EQ(GetNumProbeReqsSeen(), (uint32_t)BRCMF_ACTIVE_SCAN_NUM_PROBES);
   EXPECT_EQ(client_ifc_.scan_result_code_, ZX_OK);
 }
@@ -345,12 +354,14 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
                                            .ssid_list = {valid_scan_ssid, invalid_scan_ssid}};
 
   // Two active scans are scheduled,
-  SCHEDULE_CALL(kFirstScanStartTime, &ActiveScanTest::StartScan, this, &req_break_ssid);
-  SCHEDULE_CALL(kSecondScanStartTime, &ActiveScanTest::StartScan, this, &req_break_ssid_list);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid),
+                             kFirstScanStartTime);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid_list),
+                             kSecondScanStartTime);
 
-  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
-
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::EndSimulation, this),
+                             kSimulatedClockDuration);
+  env_->Run(kSimulatedClockDuration);
 
   VerifyScanResults();
   EXPECT_EQ(client_ifc_.scan_result_code_, WLAN_SCAN_RESULT_INTERNAL_ERROR);
@@ -368,10 +379,12 @@ TEST_F(ActiveScanTest, ScanWhenFirmwareBusy) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, BCME_BUSY);
 
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
-  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &default_scan_req_),
+                             kScanStartTime);
 
-  env_->Run();
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::EndSimulation, this),
+                             kSimulatedClockDuration);
+  env_->Run(kSimulatedClockDuration);
 
   // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
   EXPECT_EQ(client_ifc_.scan_results_.size(), 0U);

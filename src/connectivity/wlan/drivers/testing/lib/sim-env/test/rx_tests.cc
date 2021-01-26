@@ -11,6 +11,11 @@
 // Verify that transmissions are sent to all stations in an environment except the originator.
 
 namespace wlan::testing {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 using ::testing::NotNull;
 
@@ -153,7 +158,7 @@ RxTest::~RxTest() {
 TEST_F(RxTest, BeaconTest) {
   simulation::SimBeaconFrame beacon_frame(kDefaultSsid, kDefaultBssid);
   env_.Tx(beacon_frame, kDefaultTxInfo, &stations_[0]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(stations_[0].beacon_seen_, false);
   EXPECT_EQ(stations_[1].beacon_seen_, true);
   EXPECT_EQ(stations_[2].beacon_seen_, true);
@@ -162,7 +167,7 @@ TEST_F(RxTest, BeaconTest) {
 TEST_F(RxTest, AssocReqTest) {
   simulation::SimAssocReqFrame assoc_req_frame(stations_[1].mac_addr_, kDefaultBssid, kDefaultSsid);
   env_.Tx(assoc_req_frame, kDefaultTxInfo, &stations_[1]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(stations_[0].assoc_req_seen_, true);
   EXPECT_EQ(stations_[1].assoc_req_seen_, false);
   EXPECT_EQ(stations_[2].assoc_req_seen_, true);
@@ -172,7 +177,7 @@ TEST_F(RxTest, AssocRespTest) {
   simulation::SimAssocRespFrame assoc_resp_frame(stations_[2].mac_addr_, stations_[0].mac_addr_,
                                                  kDefaultAssocStatus);
   env_.Tx(assoc_resp_frame, kDefaultTxInfo, &stations_[2]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(stations_[0].assoc_resp_seen_, true);
   EXPECT_EQ(stations_[1].assoc_resp_seen_, true);
   EXPECT_EQ(stations_[2].assoc_resp_seen_, false);
@@ -181,7 +186,7 @@ TEST_F(RxTest, AssocRespTest) {
 TEST_F(RxTest, ProbeReqTest) {
   simulation::SimProbeReqFrame probe_req_frame(stations_[1].mac_addr_);
   env_.Tx(probe_req_frame, kDefaultTxInfo, &stations_[1]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(stations_[0].probe_req_seen_, true);
   EXPECT_EQ(stations_[1].probe_req_seen_, false);
   EXPECT_EQ(stations_[2].probe_req_seen_, true);
@@ -191,7 +196,7 @@ TEST_F(RxTest, ProbeRespTest) {
   simulation::SimProbeRespFrame probe_resp_frame(stations_[2].mac_addr_, stations_[0].mac_addr_,
                                                  kDefaultSsid);
   env_.Tx(probe_resp_frame, kDefaultTxInfo, &stations_[2]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(stations_[0].probe_resp_seen_, true);
   EXPECT_EQ(stations_[1].probe_resp_seen_, true);
   EXPECT_EQ(stations_[2].probe_resp_seen_, false);
@@ -201,7 +206,7 @@ TEST_F(RxTest, DisassocReqTest) {
   simulation::SimDisassocReqFrame disassoc_req_frame(stations_[2].mac_addr_, stations_[0].mac_addr_,
                                                      kDefaultDisassocReason);
   env_.Tx(disassoc_req_frame, kDefaultTxInfo, &stations_[2]);
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(stations_[0].disassoc_req_seen_, true);
   EXPECT_EQ(stations_[1].disassoc_req_seen_, true);
   EXPECT_EQ(stations_[2].disassoc_req_seen_, false);

@@ -10,6 +10,11 @@
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::testing {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
@@ -108,9 +113,8 @@ void DataTest::FinishAssoc(common::MacAddr addr) {
 
 void DataTest::ScheduleTx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,
                           std::vector<uint8_t>& ethFrame, zx::duration delay) {
-  auto handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&DataTest::Tx, this, apAddr, srcAddr, dstAddr, ethFrame);
-  env_.ScheduleNotification(std::move(handler), delay);
+  env_.ScheduleNotification(std::bind(&DataTest::Tx, this, apAddr, srcAddr, dstAddr, ethFrame),
+                            delay);
 }
 
 void DataTest::Tx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,
@@ -134,7 +138,7 @@ TEST_F(DataTest, IgnoreWrongBssid) {
   const common::MacAddr kWrongApBssid({0x00, 0x11, 0x22, 0x33, 0x44, 0x55});
   ScheduleTx(kWrongApBssid, kSrcClientMacAddr, kDstClientMacAddr, ethFrame, zx::usec(50));
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
 
   // Verify fake ap did not deliver data frame since it could not see it
   EXPECT_EQ(sent_data_contents.size(), 0U);
@@ -152,7 +156,7 @@ TEST_F(DataTest, IgnoreNonClients) {
   // Create and send data frame
   ScheduleTx(kApBssid, kSrcClientMacAddr, kDstClientMacAddr, ethFrame, zx::usec(50));
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
 
   // Verify fake ap did not send any data frame to the environment
   EXPECT_EQ(sent_data_contents.size(), 0U);
@@ -172,7 +176,7 @@ TEST_F(DataTest, BasicUse) {
   // Create and send data frame
   ScheduleTx(kApBssid, kSrcClientMacAddr, kDstClientMacAddr, ethFrame, zx::usec(50));
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
 
   // Verify fake ap delivered appropriate data frame
   EXPECT_EQ(sent_data_contents.size(), 1U);

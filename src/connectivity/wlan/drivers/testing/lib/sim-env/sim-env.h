@@ -30,6 +30,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <lib/async/dispatcher.h>
 #include <lib/zx/time.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
@@ -37,13 +38,14 @@
 
 #include <list>
 #include <map>
+#include <mutex>
 
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/ieee80211.h>
 
-#include "sim-frame.h"
-#include "sim-sig-loss-model.h"
-#include "sim-sta-ifc.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sig-loss-model.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 
 namespace wlan::simulation {
 
@@ -52,7 +54,7 @@ namespace wlan::simulation {
 class Environment {
  public:
   Environment();
-  ~Environment() = default;
+  ~Environment();
 
   // Add a station into the environment.
   void AddStation(StationIfc* sta) { stations_.emplace(std::pair(sta, Location(0, 0))); }
@@ -71,49 +73,56 @@ class Environment {
     stations_.emplace(std::pair(sta, Location(x, y)));
   }
 
-  // Begin simulation. Function will return when there are no more events pending if the
-  // run_time_limit is default value.
-  void Run(std::optional<zx::duration> run_time_limit = std::nullopt);
+  // Begin simulation for the given duration.
+  void Run(zx::duration run_time_limit);
 
   // Send a frame into the simulated environment.
   void Tx(const SimFrame& frame, const WlanTxInfo& tx_info, StationIfc* sender);
 
-  // Ask for a future notification, time is relative to current time. If 'id' is non-null, it will
-  // be given a unique identifier for reference in future notification-related operations.
-  zx_status_t ScheduleNotification(std::unique_ptr<std::function<void()>> handler,
-                                   zx::duration delay, uint64_t* id_out = nullptr);
+  // Calculate frame transmission time.
+  zx::duration CalcTransTime(StationIfc* staTx, StationIfc* staRx);
+
+  // Schedule a future notification, at a duration `delay` past time `time_`.  Returns the ID of the
+  // notification in `id_out` iff it is non-nullptr.
+  zx_status_t ScheduleNotification(std::function<void()> handler, zx::duration delay,
+                                   uint64_t* id_out = nullptr);
 
   // Cancel a future notification, return scheduled payload for station to handle
   zx_status_t CancelNotification(uint64_t id);
 
   // Get simulation absolute time
-  zx::time GetTime() { return time_; }
+  zx::time GetTime() const;
 
-  // Calculate frame transmission time.
-  zx::duration CalcTransTime(StationIfc* staTx, StationIfc* staRx);
+  // The notification schedule/cancel API, as an async_dispatcher_t.
+  zx_status_t PostTask(async_task_t* task);
+  zx_status_t CancelTask(async_task_t* task);
+  async_dispatcher_t* GetDispatcher();
 
  private:
+  struct EnvironmentEvent {
+    explicit EnvironmentEvent(std::function<void(zx_status_t)> fn, zx::time deadline, uint64_t id)
+        : fn(std::move(fn)), deadline(deadline), id(id) {}
+
+    // The event handler to fire.  Invoked with ZX_OK when the timer fires, or ZX_ERR_CANCELED if
+    // the environment is being shut down before the event can fire.
+    std::function<void(zx_status_t)> fn;
+
+    // The absolute time at which to fire the event.
+    zx::time deadline = {};
+
+    // This event's ID.
+    uint64_t id = 0;
+  };
+
+  struct Dispatcher : public async_dispatcher_t {
+    Environment* parent = nullptr;
+  };
+
   void HandleTxNotification(StationIfc* sta, std::shared_ptr<const SimFrame> frame,
                             std::shared_ptr<const WlanRxInfo> tx_info);
 
-  void StopRunning();
-
-  static uint64_t event_count_;
-
-  struct EnvironmentEvent {
-    uint64_t id;
-    zx::time time;  // The absolute time to fire
-    std::unique_ptr<std::function<void()>> fn;
-  };
-
   // All registered stations
   std::map<StationIfc*, Location> stations_;
-
-  // Current time
-  zx::time time_;
-
-  // Future events, sorted by time
-  std::list<std::unique_ptr<EnvironmentEvent>> events_;
 
   // Signal strength loss model
   std::unique_ptr<SignalLossModel> signal_loss_model_;
@@ -121,8 +130,20 @@ class Environment {
   // Velocity of radio wave in meter/nanosecond
   static constexpr double kRadioWaveVelocity = 0.3;
 
-  // A sign to stop running the events.
-  bool stop_sign_ = false;
+  // Mutex for event-related state.
+  mutable std::mutex event_mutex_;
+
+  // Future events, sorted by time
+  std::list<EnvironmentEvent> events_;
+
+  // The next event ID to assign, starting from 1 (as 0 is invalid).
+  uint64_t event_id_ = 1;
+
+  // Current time
+  zx::time time_;
+
+  // Dispatcher instance.
+  Dispatcher dispatcher_;
 };
 
 }  // namespace wlan::simulation

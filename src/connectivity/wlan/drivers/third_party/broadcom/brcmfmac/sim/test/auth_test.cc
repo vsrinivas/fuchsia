@@ -607,7 +607,7 @@ TEST_F(AuthTest, WEP104) {
   sec_type_ = SEC_TYPE_WEP_SHARED104;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // The first SHARED KEY authentication request will fail, and switch to OPEN SYSTEM automatically.
@@ -624,7 +624,7 @@ TEST_F(AuthTest, WEP40) {
   sec_type_ = SEC_TYPE_WEP_SHARED40;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // It should be a successful shared_key authentication
@@ -641,7 +641,7 @@ TEST_F(AuthTest, WEP40ChallengeFailure) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP,
                    .expect_challenge_failure = true});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // It should be a failed shared_key authentication
@@ -661,7 +661,7 @@ TEST_F(AuthTest, WEPOPEN) {
   sec_type_ = SEC_TYPE_WEP_OPEN;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -677,7 +677,7 @@ TEST_F(AuthTest, AuthFailTest) {
                    .sec_type = simulation::SEC_PROTO_TYPE_OPEN});
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   EXPECT_NE(auth_status_, WLAN_AUTH_RESULT_SUCCESS);
@@ -690,7 +690,7 @@ TEST_F(AuthTest, WEPIgnoreTest) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -716,7 +716,7 @@ TEST_F(AuthTest, WPA1Test) {
   sec_type_ = SEC_TYPE_WPA1;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -734,7 +734,7 @@ TEST_F(AuthTest, WPA1FailTest) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -747,7 +747,7 @@ TEST_F(AuthTest, WPA2Test) {
   sec_type_ = SEC_TYPE_WPA2;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -764,7 +764,7 @@ TEST_F(AuthTest, WPA2FailTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
   SecErrorInject();
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // Make sure that OnAssocConf is called, so the check inside is called.
@@ -779,7 +779,7 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   sec_type_ = SEC_TYPE_WPA1;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -805,7 +805,7 @@ TEST_F(AuthTest, WPA3Test) {
   sec_type_ = SEC_TYPE_WPA3;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SAE,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -827,7 +827,7 @@ TEST_F(AuthTest, WPA3ApIgnoreTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SAE,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
@@ -845,7 +845,7 @@ TEST_F(AuthTest, WPA3SupplicantIgnoreTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SAE,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   sae_ignore_confirm = true;
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
@@ -877,7 +877,7 @@ TEST_F(AuthTest, WPA3FailStatusCode) {
   kDefaultBssid.CopyTo(frame.peer_sta_address);
   sae_commit_frame = &frame;
 
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
@@ -905,7 +905,7 @@ TEST_F(AuthTest, WPA3WrongBssid) {
   kWrongBssid.CopyTo(frame.peer_sta_address);
   sae_commit_frame = &frame;
 
-  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // No auth frame will be sent out.

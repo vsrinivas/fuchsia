@@ -14,6 +14,11 @@
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::testing {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 using ::testing::NotNull;
 
@@ -93,13 +98,12 @@ TEST_F(ProbeTest, DifferentChannel) {
   constexpr simulation::WlanTxInfo kWrongChannelTxInfo = {
       .channel = {.primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
 
-  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimProbeReqFrame probe_req_frame(kClientMacAddr);
-  *handler =
-      std::bind(&simulation::Environment::Tx, &env_, probe_req_frame, kWrongChannelTxInfo, this);
-  env_.ScheduleNotification(std::move(handler), zx::sec(1));
+  env_.ScheduleNotification(
+      std::bind(&simulation::Environment::Tx, &env_, probe_req_frame, kWrongChannelTxInfo, this),
+      zx::sec(1));
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(probe_resp_count_, 0U);
   EXPECT_EQ(channel_resp_list_.empty(), true);
   EXPECT_EQ(bssid_resp_list_.empty(), true);
@@ -119,20 +123,18 @@ TEST_F(ProbeTest, TwoApsBasicUse) {
   env_.MoveStation(&ap_1_, 0, 0);
   env_.MoveStation(&ap_2_, 10, 0);
 
-  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimProbeReqFrame chan1_frame(kClientMacAddr);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, chan1_frame, kAp1TxInfo, this);
-  env_.ScheduleNotification(std::move(handler), zx::usec(100));
+  env_.ScheduleNotification(
+      std::bind(&simulation::Environment::Tx, &env_, chan1_frame, kAp1TxInfo, this), zx::usec(100));
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(probe_resp_count_, 1U);
 
-  handler = std::make_unique<std::function<void()>>();
   simulation::SimProbeReqFrame chan2_frame(kClientMacAddr);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, chan2_frame, kAp2TxInfo, this);
-  env_.ScheduleNotification(std::move(handler), zx::usec(200));
+  env_.ScheduleNotification(
+      std::bind(&simulation::Environment::Tx, &env_, chan2_frame, kAp2TxInfo, this), zx::usec(200));
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
   EXPECT_EQ(probe_resp_count_, 2U);
 
   ASSERT_EQ(bssid_resp_list_.size(), (size_t)2);

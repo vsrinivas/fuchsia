@@ -447,9 +447,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
 
           BRCMF_DBG(SIM, "Auth start from C_SET_SSID");
           // Schedule AuthStart to break the call chain for SAE authentication.
-          auto callback = std::make_unique<std::function<void()>>();
-          *callback = std::bind(&SimFirmware::AuthStart, this);
-          hw_.RequestCallback(std::move(callback), zx::msec(0));
+          hw_.RequestCallback(std::bind(&SimFirmware::AuthStart, this), zx::msec(0));
         }
       }
       break;
@@ -471,9 +469,8 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
 
       // Abort the scan. If there is no scan in progress, this becomes a nop.
       if (scan_state_.state == ScanState::SCANNING) {
-        auto callback = std::make_unique<std::function<void()>>();
-        *callback = std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_ABORT);
-        hw_.RequestCallback(std::move(callback), kAbortScanDelay);
+        hw_.RequestCallback(std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_ABORT),
+                            kAbortScanDelay);
       }
       break;
     }
@@ -577,9 +574,9 @@ void SimFirmware::SendAPStartLinkEvent(uint16_t ifidx) {
 }
 
 void SimFirmware::ScheduleLinkEvent(zx::duration when, uint16_t ifidx) {
-  auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::SendAPStartLinkEvent, this, ifidx);
-  hw_.RequestCallback(std::move(callback), when);
+  hw_.RequestCallback(std::bind(&SimFirmware::SendAPStartLinkEvent, this, ifidx),
+
+                      when);
 }
 
 uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
@@ -652,8 +649,7 @@ zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
   return ZX_OK;
 }
 
-void SimFirmware::BusSetTimer(std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
-                              uint64_t* id_out) {
+void SimFirmware::BusSetTimer(std::function<void()> fn, zx_duration_t delay, uint64_t* id_out) {
   zx::duration event_delay(delay);
   hw_.RequestCallback(std::move(fn), event_delay, id_out);
 }
@@ -907,9 +903,8 @@ void SimFirmware::AuthStart() {
   common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
-  auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-  hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
+  hw_.RequestCallback(std::bind(&SimFirmware::AssocHandleFailure, this), kAuthTimeout,
+                      &auth_state_.auth_timer_id);
 
   ZX_ASSERT(auth_state_.state == AuthState::NOT_AUTHENTICATED);
   simulation::SimAuthType auth_type = simulation::AUTH_TYPE_OPEN;
@@ -1081,9 +1076,8 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
 
       // If we receive the second auth frame when we are expecting it, we send out the third one and
       // set another timer for it.
-      auto callback = std::make_unique<std::function<void()>>();
-      *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-      hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
+      hw_.RequestCallback(std::bind(&SimFirmware::AssocHandleFailure, this), kAuthTimeout,
+                          &auth_state_.auth_timer_id);
 
       auth_state_.state = AuthState::EXPECTING_FOURTH;
 
@@ -1148,9 +1142,8 @@ zx_status_t SimFirmware::RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_
   pframe_hdr->auth_algorithm_number = BRCMF_AUTH_MODE_SAE;
   memcpy(buf->data() + sizeof(wlan::Authentication), sae_payload, text_len);
 
-  auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-  hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
+  hw_.RequestCallback(std::bind(&SimFirmware::AssocHandleFailure, this), kAuthTimeout,
+                      &auth_state_.auth_timer_id);
 
   // Update state
   if (seq_num == 1)
@@ -1197,9 +1190,8 @@ zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num, uint16_t
   auth_req_frame.AddChallengeText(fbl::Span(sae_payload, text_len));
   auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
 
-  auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-  hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
+  hw_.RequestCallback(std::bind(&SimFirmware::AssocHandleFailure, this), kAuthTimeout,
+                      &auth_state_.auth_timer_id);
 
   hw_.Tx(auth_req_frame);
 
@@ -1302,9 +1294,9 @@ void SimFirmware::AssocStart() {
   BRCMF_DBG(SIM, "Assoc Start");
   common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
 
-  auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-  hw_.RequestCallback(std::move(callback), kAssocTimeout, &assoc_state_.assoc_timer_id);
+  hw_.RequestCallback(std::bind(&SimFirmware::AssocHandleFailure, this),
+
+                      kAssocTimeout, &assoc_state_.assoc_timer_id);
 
   // We can't use assoc_state_.opts->bssid directly because it may get free'd during TxAssocReq
   // handling if a response is sent.
@@ -1413,9 +1405,9 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr,
                       0, 0, assoc_state_.opts->bssid, kSsidEventDelay);
     // Set the Assoc state only after E_ASSOC is sent to the driver.
-    auto callback = std::make_unique<std::function<void()>>();
-    *callback = std::bind(&SimFirmware::SetAssocState, this, AssocState::ASSOCIATED);
-    hw_.RequestCallback(std::move(callback), kAssocEventDelay);
+    hw_.RequestCallback(std::bind(&SimFirmware::SetAssocState, this, AssocState::ASSOCIATED),
+
+                        kAssocEventDelay);
   } else {
     BRCMF_DBG(SIM, "Assoc refused, Handle failure");
     AssocHandleFailure();
@@ -2314,9 +2306,9 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
   }
   hw_.EnableRx();
 
-  auto callback = std::make_unique<std::function<void()>>();
-  *callback = std::bind(&SimFirmware::ScanContinue, this);
-  hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
+  hw_.RequestCallback(std::bind(&SimFirmware::ScanContinue, this),
+
+                      scan_state_.opts->dwell_time);
   return ZX_OK;
 }
 
@@ -2342,9 +2334,9 @@ void SimFirmware::ScanContinue() {
         scan_state_.active_scan_attempts++;
         simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
         hw_.Tx(probe_req_frame);
-        auto callback = std::make_unique<std::function<void()>>();
-        *callback = std::bind(&SimFirmware::ScanContinue, this);
-        hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
+        hw_.RequestCallback(std::bind(&SimFirmware::ScanContinue, this),
+
+                            scan_state_.opts->dwell_time);
         return;
       }
 
@@ -2362,9 +2354,9 @@ void SimFirmware::ScanContinue() {
           simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
           hw_.Tx(probe_req_frame);
         }
-        auto callback = std::make_unique<std::function<void()>>();
-        *callback = std::bind(&SimFirmware::ScanContinue, this);
-        hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
+        hw_.RequestCallback(std::bind(&SimFirmware::ScanContinue, this),
+
+                            scan_state_.opts->dwell_time);
       }
   }
 }
@@ -2611,9 +2603,8 @@ void SimFirmware::RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> da
 void SimFirmware::RestartBeaconWatchdog() {
   DisableBeaconWatchdog();
   assoc_state_.is_beacon_watchdog_active = true;
-  auto handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&SimFirmware::HandleBeaconTimeout, this);
-  hw_.RequestCallback(std::move(handler), beacon_timeout_, &assoc_state_.beacon_watchdog_id_);
+  hw_.RequestCallback(std::bind(&SimFirmware::HandleBeaconTimeout, this), beacon_timeout_,
+                      &assoc_state_.beacon_watchdog_id_);
 }
 
 void SimFirmware::DisableBeaconWatchdog() {
@@ -2725,10 +2716,10 @@ void SimFirmware::RxBeacon(const wlan_channel_t& channel,
       channel.primary = csa_ie->new_channel_number_;
     }
 
-    auto callback = std::make_unique<std::function<void()>>();
-    *callback =
-        std::bind(&SimFirmware::ConductChannelSwitch, this, channel, csa_ie->channel_switch_mode_);
-    hw_.RequestCallback(std::move(callback), SwitchDelay, &channel_switch_state_.switch_timer_id);
+    hw_.RequestCallback(
+        std::bind(&SimFirmware::ConductChannelSwitch, this, channel, csa_ie->channel_switch_mode_),
+
+        SwitchDelay, &channel_switch_state_.switch_timer_id);
   }
 }
 
@@ -2899,9 +2890,9 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
 
   if (delay && delay->get() > 0) {
     // Setup the callback and return.
-    auto callback = std::make_unique<std::function<void()>>();
-    *callback = std::bind(&brcmf_sim_rx_event, simdev_, buf);
-    hw_.RequestCallback(std::move(callback), delay.value());
+    hw_.RequestCallback(std::bind(&brcmf_sim_rx_event, simdev_, buf),
+
+                        delay.value());
     return;
   } else {
     BRCMF_DBG(SIM, "Sending Event: %d", event_type);

@@ -25,7 +25,8 @@ TEST_F(SimTest, Disassoc) {
             ZX_OK);
 
   client_ifc.AssociateWith(ap, zx::sec(1));
-  SCHEDULE_CALL(zx::sec(2), &simulation::FakeAp::DisassocSta, &ap, kStaMacAddr, kDisassocReason);
+  env_->ScheduleNotification(
+      std::bind(&simulation::FakeAp::DisassocSta, &ap, kStaMacAddr, kDisassocReason), zx::sec(2));
 
   env_->Run(kTestDuration);
 

@@ -180,13 +180,13 @@ void ArpTest::ScheduleArpFrameTx(zx::duration when, bool expect_rx) {
   std::vector<uint8_t> frame_bytes =
       CreateEthernetFrame(common::kBcastMac, kTheirMac, ETH_P_ARP,
                           reinterpret_cast<const uint8_t*>(&arp_frame), sizeof(arp_frame));
-  SCHEDULE_CALL(when, &ArpTest::Tx, this, frame_bytes);
+  env_->ScheduleNotification(std::bind(&ArpTest::Tx, this, frame_bytes), when);
 }
 
 void ArpTest::ScheduleNonArpFrameTx(zx::duration when) {
   std::vector<uint8_t> frame_bytes =
       CreateEthernetFrame(kOurMac, kTheirMac, 0, kDummyData.data(), kDummyData.size());
-  SCHEDULE_CALL(when, &ArpTest::Tx, this, frame_bytes);
+  env_->ScheduleNotification(std::bind(&ArpTest::Tx, this, frame_bytes), when);
 }
 
 // Verify that an ARP frame received by an AP interface is not offloaded, even after multicast
@@ -198,21 +198,21 @@ TEST_F(ArpTest, SoftApArpOffload) {
   sim_ifc_.StartSoftAp();
 
   // Have the test associate with the AP
-  SCHEDULE_CALL(zx::sec(1), &ArpTest::TxAuthandAssocReq, this);
-  SCHEDULE_CALL(zx::sec(2), &ArpTest::VerifyAssoc, this);
+  env_->ScheduleNotification(std::bind(&ArpTest::TxAuthandAssocReq, this), zx::sec(1));
+  env_->ScheduleNotification(std::bind(&ArpTest::VerifyAssoc, this), zx::sec(2));
 
   // Send an ARP frame that we expect to be received
   ScheduleArpFrameTx(zx::sec(3), true);
   ScheduleNonArpFrameTx(zx::sec(4));
 
-  SCHEDULE_CALL(zx::sec(5), &ArpTest::SetMulticastPromisc, this, true);
+  env_->ScheduleNotification(std::bind(&ArpTest::SetMulticastPromisc, this, true), zx::sec(5));
 
   // Send an ARP frame that we expect to be received
   ScheduleArpFrameTx(zx::sec(6), true);
   ScheduleNonArpFrameTx(zx::sec(7));
 
   // Stop AP and remove interface
-  SCHEDULE_CALL(zx::sec(8), &ArpTest::CleanupApInterface, this);
+  env_->ScheduleNotification(std::bind(&ArpTest::CleanupApInterface, this), zx::sec(8));
 
   env_->Run(kTestDuration);
 
@@ -241,7 +241,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   ScheduleArpFrameTx(zx::sec(2), false);
   ScheduleNonArpFrameTx(zx::sec(3));
 
-  SCHEDULE_CALL(zx::sec(4), &ArpTest::SetMulticastPromisc, this, true);
+  env_->ScheduleNotification(std::bind(&ArpTest::SetMulticastPromisc, this, true), zx::sec(4));
 
   // Send an ARP frame that we expect to be offloaded
   ScheduleArpFrameTx(zx::sec(5), false);

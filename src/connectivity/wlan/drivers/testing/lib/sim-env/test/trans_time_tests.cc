@@ -15,6 +15,11 @@
 #define ABSOLUTE_TIME(delay) (zx::time() + (delay))
 
 namespace wlan::testing {
+namespace {
+
+constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
+
+}  // namespace
 
 using ::testing::NotNull;
 
@@ -122,9 +127,8 @@ TransTimeTest::~TransTimeTest() {
 
 void TransTimeTest::ScheduleBeacon(zx::duration delay) {
   simulation::SimBeaconFrame beacon(kDefaultSsid, kDefaultBssid);
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&simulation::Environment::Tx, &env_, beacon, kDefaultTxInfo, this);
-  env_.ScheduleNotification(std::move(fn), delay);
+  env_.ScheduleNotification(
+      std::bind(&simulation::Environment::Tx, &env_, beacon, kDefaultTxInfo, this), delay);
 }
 
 TEST_F(TransTimeTest, BasicUse) {
@@ -137,7 +141,7 @@ TEST_F(TransTimeTest, BasicUse) {
 
   ScheduleBeacon(kFirstTransTime);
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
 
   EXPECT_EQ(stations_[0].recv_times_.size(), (size_t)1);
   EXPECT_EQ(stations_[0].recv_times_.front(), ABSOLUTE_TIME(kFirstTransTime + kTestTransTime));
@@ -162,7 +166,7 @@ TEST_F(TransTimeTest, SendBeforeReceive) {
   ScheduleBeacon(kFirstTransTime);
   ScheduleBeacon(kSecondTransTime);
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
 
   EXPECT_EQ(stations_[0].recv_times_.size(), (size_t)2);
   EXPECT_EQ(stations_[0].recv_times_.front(),
@@ -193,12 +197,11 @@ TEST_F(TransTimeTest, MoveAfterReceive) {
   ScheduleBeacon(kFirstTransTime);
   ScheduleBeacon(kSecondTransTime);
 
-  auto fn = std::make_unique<std::function<void()>>();
-  *fn = std::bind(&simulation::Environment::MoveStation, &env_, &stations_[0], 2 * kDefaultTestDis,
-                  0);
-  env_.ScheduleNotification(std::move(fn), kStationMoveTime);
+  env_.ScheduleNotification(std::bind(&simulation::Environment::MoveStation, &env_, &stations_[0],
+                                      2 * kDefaultTestDis, 0),
+                            kStationMoveTime);
 
-  env_.Run();
+  env_.Run(kSimulatedClockDuration);
 
   EXPECT_EQ(stations_[0].recv_times_.size(), (size_t)2);
   EXPECT_EQ(stations_[0].recv_times_.front(),

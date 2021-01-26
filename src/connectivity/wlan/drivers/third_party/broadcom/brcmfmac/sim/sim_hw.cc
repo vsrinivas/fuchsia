@@ -60,8 +60,8 @@ void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
   rev_info->nvramrev = 0x5b2b4;
 }
 
-void SimHardware::RequestCallback(std::unique_ptr<std::function<void()>> callback,
-                                  zx::duration delay, uint64_t* id_out) {
+void SimHardware::RequestCallback(std::function<void()> callback, zx::duration delay,
+                                  uint64_t* id_out) {
   env_->ScheduleNotification(std::move(callback), delay, id_out);
 }
 
