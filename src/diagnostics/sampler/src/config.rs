@@ -53,10 +53,10 @@ pub enum DataType {
     EventCount,
     // Maps raw Int inspect types.
     Integer,
-    // Maps cached diffs from IntHistogram inspect type.
-    IntHistogram,
     // TODO(lukenicholson): Expand sampler support for new
     // data types.
+    // Maps cached diffs from IntHistogram inspect type.
+    // IntHistogram,
     // Maps raw Double inspect types.
     // FloatCustomEvent,
     // Maps raw Uint inspect types.
