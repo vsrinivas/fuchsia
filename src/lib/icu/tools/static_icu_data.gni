@@ -66,7 +66,16 @@ template("static_icu_data") {
     icu_data_file = "//third_party/icu/common/icudtl.dat"
     tz_res_dir = "//third_party/icu/tzres/"
 
-    inputs = [ icu_data_file ]
+    inputs = [
+      icu_data_file,
+
+      # While these files aren't strictly the only files in tz_res_dir, in
+      # practice they rarely change, so it's OK to list them explicitly as
+      # inputs here.
+      "//third_party/icu/tzres/metaZones.res",
+      "//third_party/icu/tzres/timezoneTypes.res",
+      "//third_party/icu/tzres/zoneinfo64.res",
+    ]
     outputs = [ output ]
 
     args = [
@@ -75,8 +84,5 @@ template("static_icu_data") {
              command,
              "--output=" + rebase_path(output, root_build_dir),
            ] + command_args
-
-    # TODO(fxbug.dev/68307): fix underlying issue and delete the below
-    hermetic_deps = false
   }
 }
