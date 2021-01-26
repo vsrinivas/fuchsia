@@ -43,7 +43,7 @@ source_set("testing") {
   ]
 }
 
-executable("timekeeper_unittests") {
+executable("timekeeper_lib_unittests") {
   testonly = true
   sources = [
     "async_test_clock_unittest.cc",
@@ -62,12 +62,12 @@ executable("timekeeper_unittests") {
   ]
 }
 
-unittest_package("timekeeper_tests") {
-  deps = [ ":timekeeper_unittests" ]
+unittest_package("timekeeper_lib_tests") {
+  deps = [ ":timekeeper_lib_unittests" ]
 
   tests = [
     {
-      name = "timekeeper_unittests"
+      name = "timekeeper_lib_unittests"
       environments = [ emu_env ]
     },
   ]
@@ -76,5 +76,5 @@ unittest_package("timekeeper_tests") {
 group("tests") {
   testonly = true
 
-  deps = [ ":timekeeper_tests" ]
+  deps = [ ":timekeeper_lib_tests" ]
 }
