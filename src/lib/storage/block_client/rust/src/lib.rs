@@ -47,6 +47,7 @@ struct BlockFifoRequest {
     block_count: u32,
     vmo_block: u64,
     device_block: u64,
+    trace_flow_id: u64,
 }
 
 #[repr(C)]
@@ -59,6 +60,7 @@ struct BlockFifoResponse {
     count: u32,
     reserved2: u64,
     reserved3: u64,
+    reserved4: u64,
 }
 
 unsafe impl fasync::FifoEntry for BlockFifoRequest {}

@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <inttypes.h>
+#include <lib/trace/event.h>
 #include <lib/zx/fifo.h>
 #include <string.h>
 #include <unistd.h>
@@ -60,6 +61,7 @@ void Server::Enqueue(std::unique_ptr<Message> message) {
 }
 
 void Server::SendResponse(const block_fifo_response_t& response) {
+  TRACE_DURATION("storage", "SendResponse");
   for (;;) {
     zx_status_t status = fifo_.write_one(response);
     switch (status) {
@@ -268,6 +270,10 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
     uint32_t sub_txn_idx = 0;
 
     auto completer = [transaction_group](zx_status_t status, block_fifo_request_t& req) {
+      TRACE_DURATION("storage", "FinishTransactionGroup");
+      if (req.trace_flow_id) {
+        TRACE_FLOW_STEP("storage", "BlockTransaction", req.trace_flow_id);
+      }
       transaction_group->Complete(status);
     };
     while (sub_txn_idx != sub_txns) {
@@ -302,6 +308,10 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
     }
   } else {
     auto completer = [this](zx_status_t status, block_fifo_request_t& req) {
+      TRACE_DURATION("storage", "FinishTransaction");
+      if (req.trace_flow_id) {
+        TRACE_FLOW_STEP("storage", "BlockTransaction", req.trace_flow_id);
+      }
       FinishTransaction(status, req.reqid, req.group);
     };
     std::unique_ptr<Message> msg;
@@ -382,6 +392,10 @@ void Server::ProcessRequest(block_fifo_request_t* request) {
     zxlogf(WARNING, "Barriers not supported");
     FinishTransaction(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
     return;
+  }
+  TRACE_DURATION("storage", "Server::ProcessRequest", "opcode", request->opcode);
+  if (request->trace_flow_id) {
+    TRACE_FLOW_STEP("storage", "BlockTransaction", request->trace_flow_id);
   }
   switch (request->opcode & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:

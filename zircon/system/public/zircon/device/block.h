@@ -171,6 +171,7 @@ typedef struct {
   uint32_t length;
   uint64_t vmo_offset;
   uint64_t dev_offset;
+  uint64_t trace_flow_id;
 } block_fifo_request_t;
 
 typedef struct {
@@ -181,6 +182,7 @@ typedef struct {
   uint32_t count;  // The number of messages in the transaction completed by the block server.
   uint64_t reserved1;
   uint64_t reserved2;
+  uint64_t reserved3;
 } block_fifo_response_t;
 
 static_assert(sizeof(block_fifo_request_t) == sizeof(block_fifo_response_t),

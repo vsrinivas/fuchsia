@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/trace/event.h>
+
 #include <fs/transaction/legacy_transaction_handler.h>
+
+#include "trace.h"
 
 namespace fs {
 
@@ -44,7 +48,8 @@ void BlockTxn::EnqueueOperation(uint32_t op, vmoid_t id, uint64_t vmo_offset, ui
   request.length = blocks;
   request.vmo_offset = vmo_offset;
   request.dev_offset = dev_offset;
-  requests_.push_back(std::move(request));
+  request.trace_flow_id = GenerateTraceId();
+  requests_.push_back(request);
 }
 
 zx_status_t BlockTxn::Transact() {
@@ -52,6 +57,7 @@ zx_status_t BlockTxn::Transact() {
   if (requests_.is_empty()) {
     return ZX_OK;
   }
+  TRACE_DURATION("storage", "LegacyTransactionHandler::RunRequests", "num", requests_.size());
   // Convert 'filesystem block' units to 'disk block' units.
   const size_t kBlockFactor = handler_->FsBlockSize() / handler_->DeviceBlockSize();
   for (size_t i = 0; i < requests_.size(); i++) {
@@ -62,9 +68,19 @@ zx_status_t BlockTxn::Transact() {
     ZX_ASSERT_MSG(length < UINT32_MAX, "Too many blocks");
     requests_[i].length = static_cast<uint32_t>(length);
   }
-  zx_status_t status = ZX_OK;
-  if (requests_.size() != 0) {
-    status = handler_->Transaction(requests_.data(), requests_.size());
+  {
+    // This duration mainly exists to give the below TRACE_FLOW_BEGIN calls a context which ends
+    // before the actual blocking call to |Transaction|. Flow events originate from the end of the
+    // duration that they were defined in.
+    TRACE_DURATION("storage", "LegacyTransactionHandler::RunRequests::Enqueue");
+    for (const auto& request : requests_) {
+      TRACE_FLOW_BEGIN("storage", "BlockTransaction", request.trace_flow_id);
+    }
+  }
+  zx_status_t status = handler_->Transaction(requests_.data(), requests_.size());
+  TRACE_DURATION("storage", "LegacyTransactionHandler::RunRequests::Finish");
+  for (const auto& request : requests_) {
+    TRACE_FLOW_END("storage", "BlockTransaction", request.trace_flow_id);
   }
   requests_.reset();
   return status;

@@ -20,6 +20,8 @@ enum class OperationType {
   kMaxValue = kTrim,  // For FuzzedDataProvider
 };
 
+using TraceFlowId = uint64_t;
+
 // A mapping of an in-memory buffer to an on-disk location.
 //
 // All units are in filesystem-size blocks.
@@ -28,6 +30,7 @@ struct Operation {
   uint64_t vmo_offset = 0;
   uint64_t dev_offset = 0;
   uint64_t length = 0;
+  TraceFlowId trace_flow_id = 0;
 };
 
 // An operation paired with a source vmoid or a pointer to the data for host side code.

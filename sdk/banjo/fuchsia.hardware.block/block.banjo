@@ -126,6 +126,7 @@ struct BlockFifoRequest {
     uint32 length;
     uint64 vmo_offset;
     uint64 dev_offset;
+    uint64 trace_flow_id;
 };
 
 struct BlockFifoResponse {
@@ -138,6 +139,7 @@ struct BlockFifoResponse {
     uint32 count;
     uint64 reserved1;
     uint64 reserved2;
+    uint64 reserved3;
 };
 
 /// `BLOCK_OP_READ`, `BLOCK_OP_WRITE`

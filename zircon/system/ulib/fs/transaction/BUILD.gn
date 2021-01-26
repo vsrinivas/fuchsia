@@ -27,6 +27,8 @@ zx_library("transaction") {
       "buffered_operations_builder.cc",
       "device_transaction_handler.cc",
       "legacy_transaction_handler.cc",
+      "trace.cc",
+      "trace.h",
       "transaction_handler.cc",
       "writeback.cc",
     ]
@@ -42,10 +44,13 @@ zx_library("transaction") {
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/storage/operation",
+      "//zircon/system/ulib/trace",
     ]
   } else {
     sources = [
       "buffered_operations_builder.cc",
+      "trace.cc",
+      "trace.h",
       "transaction_handler.cc",
     ]
 

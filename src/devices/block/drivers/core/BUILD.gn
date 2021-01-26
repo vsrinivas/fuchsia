@@ -94,5 +94,6 @@ source_set("shared") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/storage-metrics",
+    "//zircon/system/ulib/trace",
   ]
 }

@@ -200,7 +200,8 @@ zx::status<size_t> RingBufferReservation::CopyRequests(
     out_op.op.vmo_offset = ring_buffer_offset;
     out_op.op.dev_offset = dev_offset;
     out_op.op.length = buf_len;
-    out_operations->push_back(std::move(out_op));
+    out_op.op.trace_flow_id = in_operations[i].op.trace_flow_id;
+    out_operations->push_back(out_op);
 
     ring_buffer_offset = (ring_buffer_offset + buf_len) % capacity;
     reservation_offset += buf_len;
@@ -236,7 +237,8 @@ zx::status<size_t> RingBufferReservation::CopyRequests(
       out_op.op.vmo_offset = 0;
       out_op.op.dev_offset = dev_offset;
       out_op.op.length = buf_len;
-      out_operations->push_back(std::move(out_op));
+      out_op.op.trace_flow_id = in_operations[i].op.trace_flow_id;
+      out_operations->push_back(out_op);
     }
 
     done += vmo_len;
