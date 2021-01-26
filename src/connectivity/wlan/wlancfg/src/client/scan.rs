@@ -268,7 +268,6 @@ fn insert_bss_to_network_bss_map(
                     bssid: bss.bssid,
                     rssi: bss.rssi_dbm,
                     snr_db: bss.snr_db,
-                    frequency: 0, // TODO(mnck): convert channel to freq
                     channel: bss.channel,
                     timestamp_nanos: 0, // TODO(mnck): find where this comes from
                     observed_in_passive_scan,
@@ -391,6 +390,10 @@ mod tests {
         test_case::test_case,
         wlan_common::assert_variant,
     };
+
+    const CENTER_FREQ_CHAN_1: u32 = 2412;
+    const CENTER_FREQ_CHAN_8: u32 = 2447;
+    const CENTER_FREQ_CHAN_11: u32 = 2462;
 
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
@@ -581,7 +584,6 @@ mod tests {
                     types::Bss {
                         bssid: [0, 0, 0, 0, 0, 0],
                         rssi: 0,
-                        frequency: 0,
                         timestamp_nanos: 0,
                         snr_db: 1,
                         channel: fidl_common::WlanChan {
@@ -596,7 +598,6 @@ mod tests {
                     types::Bss {
                         bssid: [7, 8, 9, 10, 11, 12],
                         rssi: 13,
-                        frequency: 0,
                         timestamp_nanos: 0,
                         snr_db: 3,
                         channel: fidl_common::WlanChan {
@@ -619,7 +620,6 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: [1, 2, 3, 4, 5, 6],
                     rssi: 7,
-                    frequency: 0,
                     timestamp_nanos: 0,
                     snr_db: 2,
                     channel: fidl_common::WlanChan {
@@ -644,14 +644,14 @@ mod tests {
                     fidl_policy::Bss {
                         bssid: Some([0, 0, 0, 0, 0, 0]),
                         rssi: Some(0),
-                        frequency: Some(0),
+                        frequency: Some(CENTER_FREQ_CHAN_1),
                         timestamp_nanos: Some(0),
                         ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
-                        frequency: Some(0),
+                        frequency: Some(CENTER_FREQ_CHAN_11),
                         timestamp_nanos: Some(0),
                         ..fidl_policy::Bss::EMPTY
                     },
@@ -667,7 +667,7 @@ mod tests {
                 entries: Some(vec![fidl_policy::Bss {
                     bssid: Some([1, 2, 3, 4, 5, 6]),
                     rssi: Some(7),
-                    frequency: Some(0),
+                    frequency: Some(CENTER_FREQ_CHAN_8),
                     timestamp_nanos: Some(0),
                     ..fidl_policy::Bss::EMPTY
                 }]),
@@ -718,7 +718,6 @@ mod tests {
                     types::Bss {
                         bssid: [0, 0, 0, 0, 0, 0],
                         rssi: 0,
-                        frequency: 0,
                         timestamp_nanos: 0,
                         snr_db: 1,
                         channel: fidl_common::WlanChan {
@@ -733,7 +732,6 @@ mod tests {
                     types::Bss {
                         bssid: [7, 8, 9, 10, 11, 12],
                         rssi: 13,
-                        frequency: 0,
                         timestamp_nanos: 0,
                         snr_db: 3,
                         channel: fidl_common::WlanChan {
@@ -756,7 +754,6 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: [9, 9, 9, 9, 9, 9],
                     rssi: 0,
-                    frequency: 0,
                     timestamp_nanos: 0,
                     snr_db: 8,
                     channel: fidl_common::WlanChan {
@@ -778,7 +775,6 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: [8, 8, 8, 8, 8, 8],
                     rssi: 7,
-                    frequency: 0,
                     timestamp_nanos: 0,
                     snr_db: 9,
                     channel: fidl_common::WlanChan {
@@ -800,7 +796,6 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: [1, 2, 3, 4, 5, 6],
                     rssi: 7,
-                    frequency: 0,
                     timestamp_nanos: 0,
                     snr_db: 2,
                     channel: fidl_common::WlanChan {
@@ -825,14 +820,14 @@ mod tests {
                     fidl_policy::Bss {
                         bssid: Some([0, 0, 0, 0, 0, 0]),
                         rssi: Some(0),
-                        frequency: Some(0),
+                        frequency: Some(CENTER_FREQ_CHAN_1),
                         timestamp_nanos: Some(0),
                         ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
-                        frequency: Some(0),
+                        frequency: Some(CENTER_FREQ_CHAN_11),
                         timestamp_nanos: Some(0),
                         ..fidl_policy::Bss::EMPTY
                     },
@@ -848,7 +843,7 @@ mod tests {
                 entries: Some(vec![fidl_policy::Bss {
                     bssid: Some([9, 9, 9, 9, 9, 9]),
                     rssi: Some(0),
-                    frequency: Some(0),
+                    frequency: Some(CENTER_FREQ_CHAN_1),
                     timestamp_nanos: Some(0),
                     ..fidl_policy::Bss::EMPTY
                 }]),
@@ -863,7 +858,7 @@ mod tests {
                 entries: Some(vec![fidl_policy::Bss {
                     bssid: Some([8, 8, 8, 8, 8, 8]),
                     rssi: Some(7),
-                    frequency: Some(0),
+                    frequency: Some(CENTER_FREQ_CHAN_8),
                     timestamp_nanos: Some(0),
                     ..fidl_policy::Bss::EMPTY
                 }]),
@@ -878,7 +873,7 @@ mod tests {
                 entries: Some(vec![fidl_policy::Bss {
                     bssid: Some([1, 2, 3, 4, 5, 6]),
                     rssi: Some(7),
-                    frequency: Some(0),
+                    frequency: Some(CENTER_FREQ_CHAN_8),
                     timestamp_nanos: Some(0),
                     ..fidl_policy::Bss::EMPTY
                 }]),
@@ -1354,7 +1349,6 @@ mod tests {
         let expected_bss = vec![types::Bss {
             bssid: [0, 0, 0, 0, 0, 0],
             rssi: 0,
-            frequency: 0,
             timestamp_nanos: 0,
             snr_db: 1,
             channel: fidl_common::WlanChan {
@@ -1409,7 +1403,6 @@ mod tests {
             types::Bss {
                 bssid: [0, 0, 0, 0, 0, 0],
                 rssi: 0,
-                frequency: 0,
                 timestamp_nanos: 0,
                 snr_db: 1,
                 channel: fidl_common::WlanChan {
@@ -1424,7 +1417,6 @@ mod tests {
             types::Bss {
                 bssid: [1, 2, 3, 4, 5, 6],
                 rssi: 101,
-                frequency: 0,
                 timestamp_nanos: 0,
                 snr_db: 101,
                 channel: fidl_common::WlanChan {
