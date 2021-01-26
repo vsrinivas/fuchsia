@@ -26,16 +26,18 @@ static constexpr zx::duration TRIM_PERIOD = zx::msec(10);
 class ThrottleOutput : public AudioOutput {
  public:
   static std::shared_ptr<AudioOutput> Create(ThreadingModel* threading_model,
-                                             DeviceRegistry* registry, LinkMatrix* link_matrix) {
-    return std::make_shared<ThrottleOutput>(threading_model, registry, link_matrix);
+                                             DeviceRegistry* registry, LinkMatrix* link_matrix,
+                                             std::shared_ptr<AudioClockManager> clock_manager) {
+    return std::make_shared<ThrottleOutput>(threading_model, registry, link_matrix, clock_manager);
   }
 
   // Establish an audio clock (clone of monotonic) and override the default reference_clock()
   // implementation that calls into the AudioDriver, because we don't have an associated driver.
-  ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix)
-      : AudioOutput("throttle", threading_model, registry, link_matrix),
-        audio_clock_(AudioClock::DeviceFixed(audio::clock::CloneOfMonotonic(),
-                                             AudioClock::kMonotonicDomain)) {
+  ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
+                 std::shared_ptr<AudioClockManager> clock_manager)
+      : AudioOutput("throttle", threading_model, registry, link_matrix, clock_manager),
+        audio_clock_(clock_manager->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
+                                                      AudioClock::kMonotonicDomain)) {
     const auto ref_now = reference_clock().Read();
     const auto fps = PipelineConfig::kDefaultMixGroupRate;
     ref_time_to_frac_presentation_frame_ =

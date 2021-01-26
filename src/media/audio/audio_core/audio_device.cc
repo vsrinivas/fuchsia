@@ -75,9 +75,11 @@ const DeviceConfig::DeviceProfile& AudioDevice::profile() const {
 
 AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
                          ThreadingModel* threading_model, DeviceRegistry* registry,
-                         LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver)
+                         LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager,
+                         std::unique_ptr<AudioDriver> driver)
     : AudioObject(type),
       name_(name),
+      clock_manager_(clock_manager),
       device_registry_(*registry),
       threading_model_(*threading_model),
       mix_domain_(threading_model->AcquireMixDomain(type == Type::Input ? "input-device"

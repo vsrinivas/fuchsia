@@ -23,8 +23,8 @@ namespace {
 class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix)
-      : AudioDevice(type, "", threading_model, registry, link_matrix,
+                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
+      : AudioDevice(type, "", threading_model, registry, link_matrix, clock_manager,
                     std::make_unique<AudioDriverV2>(this)) {}
 
   // Needed because AudioDevice is an abstract class
@@ -44,9 +44,9 @@ class AudioDeviceTest : public testing::ThreadingModelFixture {
   static constexpr uint32_t kCustomClockDomain = 42;
 
   void SetUp() override {
-    device_ =
-        std::make_shared<FakeAudioDevice>(AudioObject::Type::Input, &threading_model(),
-                                          &context().device_manager(), &context().link_matrix());
+    device_ = std::make_shared<FakeAudioDevice>(
+        AudioObject::Type::Input, &threading_model(), &context().device_manager(),
+        &context().link_matrix(), context().clock_manager());
 
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));

@@ -36,7 +36,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
  public:
   AudioDeviceManager(ThreadingModel& threading_model, std::unique_ptr<PlugDetector> plug_detector,
                      RouteGraph& route_graph, LinkMatrix& link_matrix,
-                     ProcessConfig& process_config);
+                     ProcessConfig& process_config,
+                     std::shared_ptr<AudioClockManager> clock_manager);
   ~AudioDeviceManager();
 
   fidl::InterfaceRequestHandler<fuchsia::media::AudioDeviceEnumerator> GetFidlRequestHandler() {
@@ -139,6 +140,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   std::unique_ptr<PlugDetector> plug_detector_;
   LinkMatrix& link_matrix_;
   ProcessConfig& process_config_;
+  std::shared_ptr<AudioClockManager> clock_manager_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;

@@ -18,24 +18,26 @@ constexpr zx::duration kMaxFenceDistance = kMinFenceDistance + zx::msec(20);
 // static
 std::shared_ptr<AudioInput> AudioInput::Create(const std::string& name, zx::channel channel,
                                                ThreadingModel* threading_model,
-                                               DeviceRegistry* registry, LinkMatrix* link_matrix) {
+                                               DeviceRegistry* registry, LinkMatrix* link_matrix,
+                                               std::shared_ptr<AudioClockManager> clock_manager) {
   return std::make_shared<AudioInput>(name, std::move(channel), threading_model, registry,
-                                      link_matrix);
+                                      link_matrix, clock_manager);
 }
 
 // static
 std::shared_ptr<AudioInput> AudioInput::Create(
     const std::string& name,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
-    ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix) {
+    ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
+    std::shared_ptr<AudioClockManager> clock_manager) {
   return std::make_shared<AudioInput>(name, std::move(stream_config), threading_model, registry,
-                                      link_matrix);
+                                      link_matrix, clock_manager);
 }
 
 AudioInput::AudioInput(const std::string& name, zx::channel channel,
                        ThreadingModel* threading_model, DeviceRegistry* registry,
-                       LinkMatrix* link_matrix)
-    : AudioDevice(Type::Input, name, threading_model, registry, link_matrix,
+                       LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
+    : AudioDevice(Type::Input, name, threading_model, registry, link_matrix, clock_manager,
                   std::make_unique<AudioDriverV1>(this)),
       initial_stream_channel_(std::move(channel)),
       reporter_(Reporter::Singleton().CreateInputDevice(name, mix_domain().name())) {}
@@ -43,8 +45,8 @@ AudioInput::AudioInput(const std::string& name, zx::channel channel,
 AudioInput::AudioInput(const std::string& name,
                        fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
                        ThreadingModel* threading_model, DeviceRegistry* registry,
-                       LinkMatrix* link_matrix)
-    : AudioDevice(Type::Input, name, threading_model, registry, link_matrix,
+                       LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
+    : AudioDevice(Type::Input, name, threading_model, registry, link_matrix, clock_manager,
                   std::make_unique<AudioDriverV2>(this)),
       initial_stream_channel_(stream_config.TakeChannel()),
       reporter_(Reporter::Singleton().CreateInputDevice(name, mix_domain().name())) {}

@@ -92,8 +92,8 @@ class StubDriver : public AudioDriverV1 {
 class TestAudioOutput : public AudioOutput {
  public:
   TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix)
-      : AudioOutput("", threading_model, registry, link_matrix,
+                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager)
+      : AudioOutput("", threading_model, registry, link_matrix, clock_manager,
                     std::make_unique<StubDriver>(this)) {
     SetPresentationDelay(StubDriver::kSafeWriteDelayDuration);
   }
@@ -191,8 +191,9 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
   StubDriver* stub_driver() { return static_cast<StubDriver*>(audio_output_->driver()); }
 
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
-  std::shared_ptr<TestAudioOutput> audio_output_ = std::make_shared<TestAudioOutput>(
-      &threading_model(), &context().device_manager(), &context().link_matrix());
+  std::shared_ptr<TestAudioOutput> audio_output_ =
+      std::make_shared<TestAudioOutput>(&threading_model(), &context().device_manager(),
+                                        &context().link_matrix(), context().clock_manager());
 
   std::unique_ptr<testing::FakeAudioDriverV1> remote_driver_;
 };

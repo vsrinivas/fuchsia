@@ -103,8 +103,9 @@ constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
 TEST_F(AudioRendererTest, MinLeadTimePadding) {
-  auto fake_output = testing::FakeAudioOutput::Create(
-      &threading_model(), &context().device_manager(), &context().link_matrix());
+  auto fake_output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
 
   // We must set our output's delay, before linking it, before calling SetPcmStreamType().
   fake_output->SetPresentationDelay(kMinLeadTime);
@@ -130,8 +131,9 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
 }
 
 TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
-  auto fake_output = testing::FakeAudioOutput::Create(
-      &threading_model(), &context().device_manager(), &context().link_matrix());
+  auto fake_output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
 
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDevice(fake_output.get());
@@ -166,8 +168,9 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
 }
 
 TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
-  auto fake_output = testing::FakeAudioOutput::Create(
-      &threading_model(), &context().device_manager(), &context().link_matrix());
+  auto fake_output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
 
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDevice(fake_output.get());
@@ -247,8 +250,9 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
       vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
       ZX_OK);
 
-  auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                                 &context().link_matrix());
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -269,8 +273,9 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 }
 
 TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
-  auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                                 &context().link_matrix());
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -289,8 +294,9 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
 }
 
 TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
-  auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                                 &context().link_matrix());
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 
@@ -365,8 +371,9 @@ TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
   RunLoopUntilIdle();
   ASSERT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
 
-  auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
-                                                 &context().link_matrix());
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                       &context().link_matrix(), context().clock_manager());
   context().route_graph().AddDevice(output.get());
   RunLoopUntilIdle();
 

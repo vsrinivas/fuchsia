@@ -36,7 +36,7 @@ class AudioInputTest : public testing::ThreadingModelFixture,
     ASSERT_NE(remote_driver_, nullptr);
 
     input_ = AudioInput::Create("", std::move(c2), &threading_model(), &context().device_manager(),
-                                &context().link_matrix());
+                                &context().link_matrix(), context().clock_manager());
     ASSERT_NE(input_, nullptr);
 
     ring_buffer_mapper_ = remote_driver_->CreateRingBuffer(kRingBufferSizeBytes);
@@ -132,7 +132,8 @@ class AudioInputTestDriverV2 : public testing::ThreadingModelFixture,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
     input_ = AudioInput::Create("", std::move(stream_config), &threading_model(),
-                                &context().device_manager(), &context().link_matrix());
+                                &context().device_manager(), &context().link_matrix(),
+                                context().clock_manager());
     ASSERT_NE(input_, nullptr);
 
     ring_buffer_mapper_ = remote_driver_->CreateRingBuffer(kRingBufferSizeBytes);

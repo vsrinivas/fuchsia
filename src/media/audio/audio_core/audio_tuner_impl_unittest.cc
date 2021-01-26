@@ -77,7 +77,7 @@ class TestDevice : public AudioOutput {
  public:
   TestDevice(std::unique_ptr<Context>& context)
       : AudioOutput("", &context->threading_model(), &context->device_manager(),
-                    &context->link_matrix()) {
+                    &context->link_matrix(), context->clock_manager()) {
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
     fake_driver_ = std::make_unique<testing::FakeAudioDriverV1>(

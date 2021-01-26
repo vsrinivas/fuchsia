@@ -53,6 +53,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
 
     output_ = std::make_shared<DriverOutput>("", &threading_model(), &context().device_manager(),
                                              std::move(c2), &context().link_matrix(),
+                                             context().clock_manager(),
                                              context().process_config().default_volume_curve());
     ASSERT_NE(output_, nullptr);
 
@@ -477,6 +478,7 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
     stream_config.set_channel(std::move(c2));
     output_ = std::make_shared<DriverOutput>("", &threading_model(), &context().device_manager(),
                                              std::move(stream_config), &context().link_matrix(),
+                                             context().clock_manager(),
                                              context().process_config().default_volume_curve());
     ASSERT_NE(output_, nullptr);
 

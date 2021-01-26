@@ -39,8 +39,10 @@ constexpr const char* kWavFileExtension = ".wav";
 
 DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_model,
                            DeviceRegistry* registry, zx::channel initial_stream_channel,
-                           LinkMatrix* link_matrix, VolumeCurve volume_curve)
-    : AudioOutput(name, threading_model, registry, link_matrix,
+                           LinkMatrix* link_matrix,
+                           std::shared_ptr<AudioClockManager> clock_manager,
+                           VolumeCurve volume_curve)
+    : AudioOutput(name, threading_model, registry, link_matrix, clock_manager,
                   std::make_unique<AudioDriverV1>(this)),
       initial_stream_channel_(std::move(initial_stream_channel)),
       volume_curve_(volume_curve) {}
@@ -48,8 +50,10 @@ DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_mo
 DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_model,
                            DeviceRegistry* registry,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
-                           LinkMatrix* link_matrix, VolumeCurve volume_curve)
-    : AudioOutput(name, threading_model, registry, link_matrix,
+                           LinkMatrix* link_matrix,
+                           std::shared_ptr<AudioClockManager> clock_manager,
+                           VolumeCurve volume_curve)
+    : AudioOutput(name, threading_model, registry, link_matrix, clock_manager,
                   std::make_unique<AudioDriverV2>(this)),
       initial_stream_channel_(channel.TakeChannel()),
       volume_curve_(volume_curve) {}

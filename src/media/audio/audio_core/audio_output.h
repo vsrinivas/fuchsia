@@ -11,6 +11,7 @@
 
 #include <optional>
 
+#include "src/media/audio/audio_core/audio_clock_manager.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
@@ -40,9 +41,10 @@ class AudioOutput : public AudioDevice {
 
  protected:
   AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
-              LinkMatrix* link_matrix);
+              LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager);
   AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
-              LinkMatrix* link_matrix, std::unique_ptr<AudioDriver>);
+              LinkMatrix* link_matrix, std::shared_ptr<AudioClockManager> clock_manager,
+              std::unique_ptr<AudioDriver>);
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   Reporter::OutputDevice& reporter() { return *reporter_; }

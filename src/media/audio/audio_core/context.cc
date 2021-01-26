@@ -41,7 +41,7 @@ class ContextImpl : public Context {
         route_graph_(&link_matrix_),
         clock_manager_(clock_manager),
         device_manager_(*threading_model_, std::move(plug_detector), route_graph_, link_matrix_,
-                        process_config_),
+                        process_config_, clock_manager_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
                                process_config_.default_render_usage_volumes()),
         audio_admin_(&stream_volume_manager_, threading_model_->FidlDomain().dispatcher(),
@@ -57,7 +57,8 @@ class ContextImpl : public Context {
     zx_status_t res = device_manager_.Init();
     FX_DCHECK(res == ZX_OK);
 
-    auto throttle = ThrottleOutput::Create(threading_model_.get(), &device_manager_, &link_matrix_);
+    auto throttle = ThrottleOutput::Create(threading_model_.get(), &device_manager_, &link_matrix_,
+                                           clock_manager_);
     throttle_output_ = throttle.get();
     route_graph_.SetThrottleOutput(threading_model_.get(), std::move(throttle));
   }

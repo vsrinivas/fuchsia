@@ -1174,8 +1174,8 @@ zx_status_t AudioDriverV1::OnDriverInfoFetched(uint32_t info) {
 void AudioDriverV1::SetUpClocks() {
   // If we are in the monotonic domain, or if we have problems setting up the mechanism to recover a
   // clock, just fall back to using this rate-fixed clone of CLOCK_MONOTONIC.
-  audio_clock_ =
-      AudioClock::DeviceFixed(audio::clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  audio_clock_ = owner_->clock_manager()->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
+                                                            AudioClock::kMonotonicDomain);
 
   if (clock_domain_ == AudioClock::kMonotonicDomain) {
     return;
@@ -1193,9 +1193,11 @@ void AudioDriverV1::SetUpClocks() {
   }
 
   // We privately retain this clock, adjusting its rate based on position notifications
-  recovered_clock_ = AudioClock::DeviceAdjustable(std::move(adjustable_clock), clock_domain_);
+  recovered_clock_ =
+      owner_->clock_manager()->CreateDeviceAdjustable(std::move(adjustable_clock), clock_domain_);
   // We provide this read-only clone to the rest of the system, so they can synchronize to us.
-  audio_clock_ = AudioClock::DeviceFixed(read_only_clock_result.take_value(), clock_domain_);
+  audio_clock_ = owner_->clock_manager()->CreateDeviceFixed(read_only_clock_result.take_value(),
+                                                            clock_domain_);
 }
 
 zx_status_t AudioDriverV1::SetGain(const AudioDeviceSettings::GainState& gain_state,
