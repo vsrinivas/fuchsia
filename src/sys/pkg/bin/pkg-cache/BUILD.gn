@@ -64,20 +64,14 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("component-v1") {
-  component_name = "pkg-cache"
-  manifest = "meta/pkg-cache.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("component-v2") {
+fuchsia_component("component") {
   component_name = "pkg-cache"
   manifest = "meta/pkg-cache.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("pkg-cache") {
-  deps = [ ":component-v1" ]
+  deps = [ ":component" ]
 }
 
 fuchsia_component("pkg-cache-test") {
@@ -94,10 +88,6 @@ fuchsia_component("isolated") {
   component_name = "pkg-cache-isolated"
   manifest = "meta/pkg-cache-isolated.cmx"
   deps = [ ":bin" ]
-}
-
-sysmgr_config("config") {
-  source = "sysmgr.config"
 }
 
 group("tests") {

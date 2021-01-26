@@ -47,7 +47,10 @@
         },
         {
             directory: "pkgfs",
-            rights: [ "rx*" ],
+            rights: [
+                "execute",
+                "rw*",
+            ],
             path: "/fs/pkgfs",
         },
         {

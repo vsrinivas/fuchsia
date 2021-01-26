@@ -19,6 +19,7 @@
     use: [
         { runner: "elf" },
         {
+            // TODO(fxbug.dev/68239): Add the "execute" right once possible.
             directory: "pkgfs",
             rights: [ "rw*" ],
             path: "/pkgfs",

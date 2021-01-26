@@ -303,6 +303,14 @@
             protocol: "fuchsia.ui.activity.control.Control",
             path: "/svc_for_sys/fuchsia.ui.activity.control.Control",
         },
+        {
+            protocol: "fuchsia.pkg.PackageCache",
+            path: "/svc_for_sys/fuchsia.pkg.PackageCache",
+        },
+        {
+            protocol: "fuchsia.space.Manager",
+            path: "/svc_for_sys/fuchsia.space.Manager",
+        },
 
         // From archivist
         {

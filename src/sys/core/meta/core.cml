@@ -60,6 +60,10 @@
             name: "universe-resolver",
             url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
         },
+        {
+            name: "pkg-cache",
+            url: "fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cm",
+        },
     ],
     capabilities: [
         {
@@ -125,6 +129,33 @@
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#appmgr",
             to: [ "#universe-resolver" ],
+        },
+        {
+            directory: "pkgfs",
+            from: "parent",
+            to: [ "#pkg-cache" ],
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#appmgr",
+            to: [ "#pkg-cache" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system-update-committer",
+            to: [ "#pkg-cache" ],
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.space.Manager",
+            ],
+            from: "#pkg-cache",
+            to: [ "#appmgr" ],
         },
 
         // Passing from root realm to appmgr
@@ -203,6 +234,7 @@
                 "#detect",
                 "#font_provider",
                 "#log-stats",
+                "#pkg-cache",
                 "#remote-control",
                 "#sampler",
                 "#system-update-committer",
@@ -385,6 +417,7 @@
             directory: "pkgfs",
             from: "parent",
             to: [ "#appmgr" ],
+            rights: [ "rx*" ],
         },
         {
             directory: "system",

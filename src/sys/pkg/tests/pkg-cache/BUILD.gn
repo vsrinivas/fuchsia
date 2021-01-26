@@ -93,7 +93,7 @@ fuchsia_test_package("pkg-cache-integration-tests") {
     ":test-case-realm",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
     "//src/lib/isolated_devmgr/v2_component:isolated-devmgr-component",
-    "//src/sys/pkg/bin/pkg-cache:component-v2",
+    "//src/sys/pkg/bin/pkg-cache:component",
     "//src/sys/pkg/bin/system-update-committer:component",
   ]
 }
