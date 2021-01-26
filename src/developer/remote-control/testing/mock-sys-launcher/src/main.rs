@@ -12,6 +12,7 @@ use {
     fuchsia_zircon::{self as zx},
     futures::prelude::*,
     futures::{select, StreamExt, TryStreamExt},
+    tracing::info,
 };
 
 const SPAWN_HELLO_URL: &str = "fuchsia-pkg://fuchsia.com/remote-control#meta/spawn_hello_world.cm";
@@ -21,7 +22,7 @@ const NON_EXISTENT_URL: &str = "fuchsia-pkg://fuchsia.com/remote-control#meta/no
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["mock-sys-launcher"])?;
-    log::info!("started mock sys launcher");
+    info!("started mock sys launcher");
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {

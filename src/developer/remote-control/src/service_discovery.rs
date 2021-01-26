@@ -11,6 +11,7 @@ use {
         convert_string_selector_to_regex, sanitize_string_for_selectors, WILDCARD_REGEX_EQUIVALENT,
     },
     std::path::{Component, PathBuf},
+    tracing::warn,
 };
 
 lazy_static::lazy_static! {
@@ -214,15 +215,15 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
                 io::OPEN_RIGHT_READABLE,
             ) {
                 Ok(p) => p,
-                Err(e) => {
-                    log::warn!("got error trying to read directory {:?}. Ignoring this directory. Error was: {}", path_str, e);
+                Err(err) => {
+                    warn!(directory = ?path_str, %err, "got error trying to read directory. Ignoring this directory");
                     continue;
                 }
             };
             let entries = match files_async::readdir(&proxy).await {
                 Ok(p) => p,
-                Err(e) => {
-                    log::warn!("got error trying to read entries in {:?}. Ignoring this directory. Error was: {}", path_str, e);
+                Err(err) => {
+                    warn!(directory = %path_str, %err, "got error trying to read entries. Inoring this directory");
                     continue;
                 }
             };
@@ -256,11 +257,12 @@ mod test {
         std::collections::HashSet,
         std::fs::{create_dir_all, write},
         std::path::PathBuf,
+        tracing::info,
     };
 
     fn create_files(paths: Vec<&PathBuf>) {
         for path in paths.iter() {
-            log::info!("Creating {:?}", path);
+            info!(?path, "Creating path");
             create_dir_all(&path.parent().unwrap()).unwrap();
             write(&path, "").unwrap();
         }

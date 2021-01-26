@@ -15,6 +15,7 @@ use {
     hoist::{hoist, OvernetInstance},
     remote_control::RemoteControlService,
     std::rc::Rc,
+    tracing::{error, info},
 };
 
 mod args;
@@ -57,7 +58,7 @@ async fn exec_server() -> Result<(), Error> {
 
         sc.clone().serve_stream(rcs::RemoteControlRequestStream::from_channel(chan)).map(|_| ())
     });
-    log::info!("published remote control service to overnet");
+    info!("published remote control service to overnet");
 
     join!(fidl_fut, onet_fut);
     Ok(())
@@ -72,8 +73,8 @@ async fn main() -> Result<(), Error> {
         args::Command::RemoteControl(_) => exec_server().await,
     };
 
-    if let Err(e) = res {
-        log::error!("Error: {}", e);
+    if let Err(err) = res {
+        error!(%err, "Error running command");
         std::process::exit(1);
     }
     Ok(())

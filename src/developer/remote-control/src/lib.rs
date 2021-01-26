@@ -10,6 +10,7 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     std::rc::Rc,
+    tracing::*,
 };
 
 mod service_discovery;
@@ -89,25 +90,25 @@ impl RemoteControlService {
         service_chan: zx::Channel,
         matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
     ) -> Result<rcs::ServiceMatch, rcs::ConnectError> {
-        let paths = matcher_fut.await.map_err(|e| {
-            log::warn!("error looking for matching services for selector {:?}: {}", selector, e);
+        let paths = matcher_fut.await.map_err(|err| {
+            warn!(?selector, %err, "error looking for matching services for selector");
             rcs::ConnectError::ServiceDiscoveryFailed
         })?;
         if paths.is_empty() {
             return Err(rcs::ConnectError::NoMatchingServices);
         } else if paths.len() > 1 {
             // TODO(jwing): we should be able to communicate this to the FE somehow.
-            log::warn!(
-                "Selector must match exactly one service. Provided selector matched all of the following: {:?}",
-                paths);
+            warn!(
+                ?paths,
+                "Selector must match exactly one service. Provided selector matched all of the following");
             return Err(rcs::ConnectError::MultipleMatchingServices);
         }
         let svc_match = paths.get(0).unwrap();
         let hub_path = svc_match.hub_path.to_str().unwrap();
-        log::info!("attempting to connect to '{}'", hub_path);
+        info!(hub_path, "attempting to connect");
         io_util::connect_in_namespace(hub_path, service_chan, io::OPEN_RIGHT_READABLE).map_err(
-            |e| {
-                log::error!("error connecting to selector {:?}: {}", selector, e);
+            |err| {
+                error!(?selector, %err, "error connecting to selector");
                 rcs::ConnectError::ServiceConnectFailed
             },
         )?;
@@ -133,8 +134,8 @@ impl RemoteControlService {
         selector: &Selector,
         matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
     ) -> Result<Vec<rcs::ServiceMatch>, rcs::SelectError> {
-        let paths = matcher_fut.await.map_err(|e| {
-            log::warn!("error looking for matching services for selector {:?}: {}", selector, e);
+        let paths = matcher_fut.await.map_err(|err| {
+            warn!(?selector, %err, "error looking for matching services for selector");
             rcs::SelectError::ServiceDiscoveryFailed
         })?;
 
@@ -158,8 +159,8 @@ impl RemoteControlService {
     ) -> Result<(), Error> {
         let mut ilist = match self.netstack_proxy.list_interfaces().await {
             Ok(l) => l,
-            Err(e) => {
-                log::error!("Getting interface list failed: {}", e);
+            Err(err) => {
+                error!(%err, "Getting interface list failed");
                 responder
                     .send(&mut Err(rcs::IdentifyHostError::ListInterfacesFailed))
                     .context("sending IdentifyHost error response")?;
@@ -175,16 +176,16 @@ impl RemoteControlService {
         let nodename = match self.name_provider_proxy.get_device_name().await {
             Ok(result) => match result {
                 Ok(name) => name,
-                Err(e) => {
-                    log::error!("NameProvider internal error: {}", e);
+                Err(err) => {
+                    error!(%err, "NameProvider internal error");
                     responder
                         .send(&mut Err(rcs::IdentifyHostError::GetDeviceNameFailed))
                         .context("sending GetDeviceName error response")?;
                     return Ok(());
                 }
             },
-            Err(e) => {
-                log::error!("Getting nodename failed: {}", e);
+            Err(err) => {
+                error!(%err, "Getting nodename failed");
                 responder
                     .send(&mut Err(rcs::IdentifyHostError::GetDeviceNameFailed))
                     .context("sending GetDeviceName error response")?;

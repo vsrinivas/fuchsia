@@ -23,6 +23,7 @@ use {
     std::cmp::max,
     std::convert::TryInto,
     std::sync::Arc,
+    tracing::{info, warn},
 };
 
 // This lets us mock out the ArchiveReader in tests
@@ -50,8 +51,8 @@ impl ArchiveReaderManager for ArchiveReaderManagerImpl {
     ) -> Result<(Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Error>), StreamError>
     {
         let (log_stream, err_chan) =
-            self.reader.snapshot_then_subscribe::<Logs>().map_err(|e| {
-                log::warn!("Got error creating log subscription: {}", e);
+            self.reader.snapshot_then_subscribe::<Logs>().map_err(|err| {
+                warn!(%err, "Got error creating log subscription");
                 StreamError::SetupSubscriptionFailed
             })?;
 
@@ -142,7 +143,7 @@ where
                     iterator,
                     responder,
                 } => {
-                    log::info!("Kicking off a new log stream.");
+                    info!("Kicking off a new log stream.");
 
                     if let Err(e) = self.validate_params(&parameters) {
                         responder.send(&mut Err(e))?;
@@ -166,8 +167,8 @@ where
                             match request? {
                                 ArchiveIteratorRequest::GetNext { responder } => {
                                     let logs = select! {
-                                        e = err_chan.select_next_some() => {
-                                            log::warn!("Data read error: {}", e);
+                                        err = err_chan.select_next_some() => {
+                                            warn!(%err, "Data read error");
                                             responder.send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
                                             continue;
                                         }
@@ -185,8 +186,8 @@ where
                                     let (truncated_logs, truncated_chars) =
                                         match truncate_log_msg(logs.clone()) {
                                             Ok(t) => t,
-                                            Err(e) => {
-                                                log::warn!("failed to truncate log message: {}", e);
+                                            Err(err) => {
+                                                warn!(%err, "failed to truncate log message");
                                                 responder.send(&mut Err(
                                                     ArchiveIteratorError::TruncationFailed,
                                                 ))?;
@@ -222,7 +223,7 @@ where
 
 pub async fn exec_server() -> Result<()> {
     fuchsia_syslog::init_with_tags(&["remote-diagnostics-bridge"])?;
-    log::info!("starting log-reader");
+    info!("starting log-reader");
     let service =
         Arc::new(RemoteDiagnosticsBridge::new(|p| Box::new(ArchiveReaderManagerImpl::new(p)))?);
 
