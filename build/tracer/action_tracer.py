@@ -432,6 +432,8 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--outputs", nargs="*", help="action#outputs")
     parser.add_argument("--depfile", help="action#depfile")
 
+    parser.add_argument("--failed-check-status", type=int, default=1, help="On failing tracing checks, exit with this code.  Use 0 to report findings without failing.")
+
     # Want --foo (default:True) and --no-foo (False).
     # This is ugly, trying to emulate argparse.BooleanOptionalAction,
     # which isn't available until Python 3.9.
@@ -587,7 +589,7 @@ See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
 
 """,
                 file=sys.stderr)
-            exit_code = 1
+            exit_code = args.failed_check_status
 
     if args.check_output_freshness:
         output_diagnostics = diagnose_stale_outputs(
@@ -610,7 +612,7 @@ See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op
 
 """,
                 file=sys.stderr)
-            exit_code = 1
+            exit_code = args.failed_check_status
 
     return exit_code
 
