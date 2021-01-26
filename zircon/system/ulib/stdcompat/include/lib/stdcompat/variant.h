@@ -5,6 +5,9 @@
 #ifndef LIB_STDCOMPAT_VARIANT_H_
 #define LIB_STDCOMPAT_VARIANT_H_
 
+#include <limits>
+
+#include "internal/exception.h"
 #include "utility.h"
 #include "version.h"
 
@@ -14,6 +17,7 @@
 
 namespace cpp17 {
 
+using std::bad_variant_access;
 using std::get;
 using std::holds_alternative;
 using std::monostate;
@@ -112,11 +116,22 @@ struct variant_size<const volatile T> : variant_size<T> {};
 template <typename T>
 inline constexpr size_t variant_size_v = variant_size<T>::value;
 
+inline constexpr size_t variant_npos = internal::empty_index;
+
 #else  // Provide storage for static class variable.
 
 template <typename T>
 static constexpr const size_t& variant_size_v =
     internal::inline_storage<T, size_t, variant_size<T>::value>::storage;
+
+namespace internal {
+// Unique type for providing static storage for variant npos.
+struct variant_npos_storage {};
+}  // namespace internal
+
+static constexpr auto& variant_npos =
+    internal::inline_storage<internal::variant_npos_storage, size_t,
+                             internal::empty_index>::storage;
 
 #endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
@@ -280,15 +295,6 @@ class variant
 
   template <typename T, typename = std::enable_if<not_self_type<T>::value>>
   using selected_t = alternative_t<selected_index<T>>;
-
-  [[noreturn]] static constexpr void throw_bad_variant_access(const char* reason) {
-#if __cpp_exceptions
-    throw bad_variant_access(reason);
-#else
-    (void)reason;
-    __builtin_abort();
-#endif
-  }
 
  public:
   // Default constructors.
@@ -505,11 +511,11 @@ class variant
 
  private:
   [[noreturn]] static constexpr void exception_invalid_index() {
-    throw_bad_variant_access("Invalid variant index for cpp17::get<>");
+    internal::throw_or_abort<bad_variant_access>("Invalid variant index for cpp17::get<>");
   }
 
   [[noreturn]] static constexpr void exception_invalid_type() {
-    throw_bad_variant_access("Invalid variant type for cpp17::get<>");
+    internal::throw_or_abort<bad_variant_access>("Invalid variant type for cpp17::get<>");
   }
 
   ::cpp17::internal::storage_type<Ts...> storage_;

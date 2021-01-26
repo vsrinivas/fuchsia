@@ -8,6 +8,8 @@
 #include <type_traits>
 
 #include <gtest/gtest.h>
+
+#include "test_helper.h"
 namespace {
 
 struct no_copy {
@@ -218,25 +220,25 @@ void swapping() {
 
 template <typename T>
 void get_wrong_type() {
-  ASSERT_DEATH(
+  ASSERT_THROW_OR_ABORT(
       {
         using b_type = typename T::b_type;
         typename T::variant x;
         EXPECT_EQ(0u, x.index());
-        (void)cpp17::get<b_type>(x);
+        cpp17::get<b_type>(x);
       },
-      ".*");
+      cpp17::bad_variant_access);
 }
 
 template <typename T>
 void get_wrong_index() {
-  ASSERT_DEATH(
+  ASSERT_THROW_OR_ABORT(
       {
         typename T::variant x;
         EXPECT_EQ(0u, x.index());
-        (void)cpp17::get<1>(x);
+        cpp17::get<1>(x);
       },
-      ".*");
+      cpp17::bad_variant_access);
 }
 
 // Test constexpr behavior.
