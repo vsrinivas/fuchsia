@@ -137,6 +137,7 @@ zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
 //
 // TODO(fxbug.dev/51589): Add init metrics.
 zx_status_t VnodeMinfs::InitVmo() {
+  TRACE_DURATION("minfs", "VnodeMinfs::InitVmo");
   if (vmo_.is_valid()) {
     return ZX_OK;
   }

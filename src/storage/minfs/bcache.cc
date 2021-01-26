@@ -9,6 +9,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,7 @@ std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcach
 }
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {
+  TRACE_DURATION("minfs", "Bcache::Readblk", "blk", bno);
   storage::Operation operation = {};
   operation.type = storage::OperationType::kRead;
   operation.vmo_offset = 0;
@@ -52,6 +54,7 @@ zx_status_t Bcache::Readblk(blk_t bno, void* data) {
 }
 
 zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
+  TRACE_DURATION("minfs", "Bcache::Writeblk", "blk", bno);
   storage::Operation operation = {};
   operation.type = storage::OperationType::kWrite;
   operation.vmo_offset = 0;

@@ -629,8 +629,11 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
   // Ensure file does not exist.
   zx_status_t status;
-  if ((status = ForEachDirent(&args, DirentCallbackFind)) != ZX_ERR_NOT_FOUND) {
-    return ZX_ERR_ALREADY_EXISTS;
+  {
+    TRACE_DURATION("minfs", "Directory::Create::ExistenceCheck");
+    if ((status = ForEachDirent(&args, DirentCallbackFind)) != ZX_ERR_NOT_FOUND) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
   }
 
   // Creating a directory?
@@ -638,14 +641,17 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
   // Ensure that we have enough space to write the new vnode's direntry
   // before updating any other metadata.
-  args.type = type;
-  args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-  status = ForEachDirent(&args, DirentCallbackFindSpace);
-  if (status == ZX_ERR_NOT_FOUND) {
-    return ZX_ERR_NO_SPACE;
-  }
-  if (status != ZX_OK) {
-    return status;
+  {
+    TRACE_DURATION("minfs", "Directory::Create::SpaceCheck");
+    args.type = type;
+    args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
+    status = ForEachDirent(&args, DirentCallbackFindSpace);
+    if (status == ZX_ERR_NOT_FOUND) {
+      return ZX_ERR_NO_SPACE;
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // Calculate maximum blocks to reserve for the current directory, based on the size and offset
@@ -674,6 +680,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
   // If the new node is a directory, fill it with '.' and '..'.
   if (type == kMinfsTypeDir) {
+    TRACE_DURATION("minfs", "Directory::Create::InitDir");
     char bdata[DirentSize(1) + DirentSize(2)];
     InitializeDirectory(bdata, vn->GetIno(), GetIno());
     size_t expected = DirentSize(1) + DirentSize(2);

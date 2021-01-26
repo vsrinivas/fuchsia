@@ -576,6 +576,9 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
   auto metadata_operations = transaction->RemoveMetadataOperations();
   ZX_DEBUG_ASSERT(BlockCount(metadata_operations) <= limits_.GetMaximumEntryDataBlocks());
 
+  TRACE_DURATION("minfs", "CommitTransaction", "data_ops", data_operations.size(), "metadata_ops",
+                 metadata_operations.size());
+
   // We take the pending block deallocations here and hold on to them until the transaction has
   // committed. Otherwise, it would be possible for data writes in a later transaction to make it
   // out to those blocks, but if the transaction that freed those blocks doesn't make it, we will
