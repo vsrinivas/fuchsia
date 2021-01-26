@@ -5,11 +5,9 @@
 package fidlgen
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
+	"io/ioutil"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,19 +29,19 @@ implement field, name, or type resolution and analysis.
 
 // ReadJSONIr reads a JSON IR file.
 func ReadJSONIr(filename string) (Root, error) {
-	f, err := os.Open(filename)
+	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return Root{}, fmt.Errorf("Error reading from %s: %w", filename, err)
 	}
-	return DecodeJSONIr(f)
+	return ReadJSONIrContent(bytes)
 }
 
-// DecodeJSONIr reads the JSON content from a reader.
-func DecodeJSONIr(r io.Reader) (Root, error) {
-	d := json.NewDecoder(r)
+// ReadJSONIrContent reads JSON IR content.
+func ReadJSONIrContent(bytes []byte) (Root, error) {
 	var root Root
-	if err := d.Decode(&root); err != nil {
-		return Root{}, fmt.Errorf("Error parsing JSON IR: %w", err)
+
+	if err := json.Unmarshal(bytes, &root); err != nil {
+		return root, fmt.Errorf("Error parsing JSON IR: %v", err)
 	}
 
 	// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
@@ -51,11 +49,6 @@ func DecodeJSONIr(r io.Reader) (Root, error) {
 	root.Interfaces = root.Protocols
 
 	return root, nil
-}
-
-// ReadJSONIrContent reads JSON IR content.
-func ReadJSONIrContent(b []byte) (Root, error) {
-	return DecodeJSONIr(bytes.NewReader(b))
 }
 
 type Identifier string
