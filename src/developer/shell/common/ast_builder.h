@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_CONSOLE_AST_BUILDER_H_
-#define SRC_DEVELOPER_SHELL_CONSOLE_AST_BUILDER_H_
+#ifndef SRC_DEVELOPER_SHELL_COMMON_AST_BUILDER_H_
+#define SRC_DEVELOPER_SHELL_COMMON_AST_BUILDER_H_
 
 #include <climits>
 #include <string>
@@ -23,21 +23,18 @@ class AstBuilder {
 
   // Constructs an AstBuilder. |file_id| is the id of the file (1 by default, because 0 means
   // "builtin")
-  explicit AstBuilder(uint64_t file_id = 1) : file_id_(file_id), undef_(true), next_id_(0) {}
+  explicit AstBuilder(uint64_t file_id = 1) : file_id_(file_id), next_id_(0) {}
+  AstBuilder(AstBuilder&&) = delete;
+  AstBuilder(const AstBuilder&) = delete;
 
-  AstBuilder& operator=(AstBuilder&&);
-  AstBuilder(AstBuilder&&);
+  AstBuilder& operator=(AstBuilder&&) = delete;
+  AstBuilder& operator=(const AstBuilder&) = delete;
 
-  // The undefined type.  Useful when your node isn't typed.
-  llcpp::fuchsia::shell::ShellType undef() {
-    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned_ptr(&undef_));
-  }
+  fidl::AnyAllocator& allocator() { return allocator_; }
 
   // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for sending to
   // Shell::AddNodes.
-  fidl::VectorView<llcpp::fuchsia::shell::NodeDefinition> DefsAsVectorView() {
-    return fidl::unowned_vec(nodes_);
-  }
+  fidl::VectorView<llcpp::fuchsia::shell::NodeDefinition> DefsAsVectorView();
 
   // Returns the set of nodes managed by this AstBuilder as a vector view.
   // The node id is assumed to be the individual index.
@@ -45,25 +42,6 @@ class AstBuilder {
   fidl::VectorView<llcpp::fuchsia::shell::Node> NodesAsVectorView();
 
   bool empty() const { return nodes_.empty(); }
-
-  template <class T>
-  T* ManageCopyOf(const T* value, size_t size = sizeof(T)) {
-    auto buf = bufs_.emplace_back(new char[size]).get();
-    memcpy(buf, value, size);
-    return new (buf) T(*value);
-  }
-
-  template <class T>
-  T* ManageNew() {
-    auto buf = bufs_.emplace_back(new char[sizeof(T)]).get();
-    return new (buf) T();
-  }
-
-  template <class T>
-  T* ManageNewArray(size_t size) {
-    auto buf = bufs_.emplace_back(new char[sizeof(T) * size]).get();
-    return new (buf) T[size]();
-  }
 
   // Sets the given node to be the root node for remote computation.
   void SetRoot(NodeId node_id);
@@ -110,9 +88,6 @@ class AstBuilder {
   NodePair AddField(const std::string& key, NodeId expression_node_id,
                     llcpp::fuchsia::shell::ShellType&& type);
 
-  AstBuilder& operator=(const AstBuilder&) = delete;
-  AstBuilder(const AstBuilder&) = delete;
-
   // Returns the added node_id
   NodeId AddNode(llcpp::fuchsia::shell::Node&& node, bool is_root = false);
 
@@ -126,11 +101,15 @@ class AstBuilder {
     return nullptr;
   }
 
+  llcpp::fuchsia::shell::ShellType TypeBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
+    fidl::ObjectView<llcpp::fuchsia::shell::BuiltinType> copy(allocator_, type);
+    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(copy);
+  }
+
   // The following methods generate a ShellType object for the given type.
   llcpp::fuchsia::shell::ShellType TypeUndef() {
-    fidl::aligned<bool> undef = false;
-    fidl::aligned<bool>* undef_ptr = ManageCopyOf(&undef);
-    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned_ptr(undef_ptr));
+    fidl::ObjectView<bool> undef(allocator_, false);
+    return llcpp::fuchsia::shell::ShellType::WithUndef(undef);
   }
 
   llcpp::fuchsia::shell::ShellType TypeBool() {
@@ -190,36 +169,27 @@ class AstBuilder {
   }
 
   llcpp::fuchsia::shell::ShellType TypeObject(AstBuilder::NodeId schema_node) {
-    llcpp::fuchsia::shell::NodeId* schema_ptr = ManagedNodeId(schema_node);
-    return llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(schema_ptr));
+    fidl::ObjectView<llcpp::fuchsia::shell::NodeId> copy(allocator_, schema_node);
+    return llcpp::fuchsia::shell::ShellType::WithObjectSchema(copy);
   }
 
  private:
   uint64_t file_id_;
-  fidl::aligned<bool> undef_;
   uint64_t next_id_;
-  // Replace with arena allocation.
-  std::vector<std::unique_ptr<char[]>> bufs_;
+  fidl::FidlAllocator<8192> allocator_;
   std::vector<llcpp::fuchsia::shell::NodeDefinition> nodes_;
-  std::vector<llcpp::fuchsia::shell::Node> raw_nodes_;
 
   struct FidlNodeIdPair {
-    FidlNodeIdPair(llcpp::fuchsia::shell::NodeId&& schema, llcpp::fuchsia::shell::NodeId&& value)
-        : schema_id(std::move(schema)), value_id(std::move(value)) {}
+    FidlNodeIdPair(const llcpp::fuchsia::shell::NodeId& schema,
+                   const llcpp::fuchsia::shell::NodeId& value)
+        : schema_id(schema), value_id(value) {}
     llcpp::fuchsia::shell::NodeId schema_id;
     llcpp::fuchsia::shell::NodeId value_id;
   };
-
-  llcpp::fuchsia::shell::ShellType TypeBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
-    llcpp::fuchsia::shell::BuiltinType* type_ptr = ManageCopyOf(&type);
-    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
-  }
-
-  llcpp::fuchsia::shell::NodeId* ManagedNodeId(NodeId node_id) { return ManageCopyOf(&node_id); }
 
   std::vector<std::vector<FidlNodeIdPair>> object_stack_;
 };
 
 }  // namespace shell::console
 
-#endif  // SRC_DEVELOPER_SHELL_CONSOLE_AST_BUILDER_H_
+#endif  // SRC_DEVELOPER_SHELL_COMMON_AST_BUILDER_H_

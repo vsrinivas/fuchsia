@@ -101,9 +101,7 @@ class SerializeHelper {
       case ValueType::kUndef: {
         id.value_id.file_id = -1;
         id.value_id.node_id = -1;
-        fidl::aligned<bool> undef = true;
-        auto undef_ptr = builder_.ManageCopyOf(&undef);
-        id.type = llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned_ptr(undef_ptr));
+        id.type = builder_.TypeUndef();
         break;
       }
       case ValueType::kInt8:
@@ -154,8 +152,7 @@ class SerializeHelper {
         }
         shell::console::AstBuilder::NodePair value_type = builder_.CloseObject();
         id.value_id = value_type.value_node;
-        auto type_ptr = builder_.ManageCopyOf(&value_type.schema_node);
-        id.type = llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(type_ptr));
+        id.type = builder_.TypeObject(value_type.schema_node);
         break;
       }
     }
@@ -163,8 +160,7 @@ class SerializeHelper {
   }
 
   llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
-    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_.ManageCopyOf(&type);
-    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
+    return builder_.TypeBuiltin(type);
   }
 
  private:

@@ -137,6 +137,8 @@ TEST(FidlAllocator, MixedVectorConstructed) {
 TEST(FidlAllocator, StringConstructed) {
   fidl::FidlAllocator allocator;
 
+  fidl::StringView empty_string(allocator, "");
+
   char buffer[100];
   strcpy(buffer, "hello");
   fidl::StringView hello(allocator, buffer);
@@ -164,6 +166,9 @@ TEST(FidlAllocator, StringConstructed) {
 // Tests the allocation of strings.
 TEST(FidlAllocator, StringSet) {
   fidl::FidlAllocator allocator;
+
+  fidl::StringView empty_string;
+  empty_string.Set(allocator, "");
 
   char buffer[100];
   strcpy(buffer, "hello");

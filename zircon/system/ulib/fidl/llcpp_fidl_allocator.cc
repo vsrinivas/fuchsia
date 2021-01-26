@@ -30,7 +30,7 @@ uint8_t* AnyAllocator::Allocate(size_t size, size_t count,
   // Total size needed for the allocation (the header used for the deallocation and the data).
   size_t block_size = FIDL_ALIGN(size * count);
   // Checks that the multiplication didn't overflow.
-  ZX_DEBUG_ASSERT(block_size >= size);
+  ZX_DEBUG_ASSERT((count == 0) || (block_size >= size));
   if (destructor_function != nullptr) {
     block_size += FIDL_ALIGN(sizeof(Destructor));
   }

@@ -18,7 +18,8 @@
 
 namespace shell::console {
 
-Command::Command() = default;
+// TODO: Change the file ID to something useful.
+Command::Command() : accumulated_nodes_(1) {}
 
 Command::~Command() = default;
 
@@ -140,12 +141,9 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
 
   IdAndType VisitInteger(const parser::ast::Integer& node) override {
     AstBuilder::NodeId id = builder_->AddIntegerLiteral(node.value());
-    llcpp::fuchsia::shell::BuiltinType builtin_type = llcpp::fuchsia::shell::BuiltinType::INTEGER;
-    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&builtin_type);
-    llcpp::fuchsia::shell::ShellType type =
-        llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
-
-    return {.id = id, .type = std::move(type)};
+    fidl::ObjectView<llcpp::fuchsia::shell::BuiltinType> builtin_type(
+        builder_->allocator(), llcpp::fuchsia::shell::BuiltinType::INTEGER);
+    return {.id = id, .type = llcpp::fuchsia::shell::ShellType::WithBuiltinType(builtin_type)};
   }
 
   IdAndType VisitIdentifier(const parser::ast::Identifier& node) override {
@@ -175,11 +173,9 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
 
   IdAndType VisitString(const parser::ast::String& node) override {
     AstBuilder::NodeId id = builder_->AddStringLiteral(node.value());
-    llcpp::fuchsia::shell::BuiltinType builtin_type = llcpp::fuchsia::shell::BuiltinType::STRING;
-    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&builtin_type);
-    llcpp::fuchsia::shell::ShellType type =
-        llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
-    return {.id = id, .type = std::move(type)};
+    fidl::ObjectView<llcpp::fuchsia::shell::BuiltinType> builtin_type(
+        builder_->allocator(), llcpp::fuchsia::shell::BuiltinType::STRING);
+    return {.id = id, .type = llcpp::fuchsia::shell::ShellType::WithBuiltinType(builtin_type)};
   }
 
   IdAndType VisitObject(const parser::ast::Object& node) override {
@@ -192,13 +188,10 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
     auto result = builder_->CloseObject();
     AstBuilder::NodeId id = result.value_node;
 
-    llcpp::fuchsia::shell::NodeId shell_id;
-    shell_id = result.schema_node;
-    llcpp::fuchsia::shell::NodeId* id_ptr = builder_->ManageCopyOf(&shell_id);
-    llcpp::fuchsia::shell::ShellType type =
-        llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(id_ptr));
+    fidl::ObjectView<llcpp::fuchsia::shell::NodeId> shell_id(builder_->allocator(),
+                                                             result.schema_node);
 
-    return {.id = id, .type = std::move(type)};
+    return {.id = id, .type = llcpp::fuchsia::shell::ShellType::WithObjectSchema(shell_id)};
   }
 
   IdAndType VisitField(const parser::ast::Field& node) override {
@@ -230,12 +223,9 @@ bool Command::Parse(const std::string& line) {
   auto program = node->AsProgram();
   FX_DCHECK(program) << "Parse did not yield a program node!";
 
-  // TODO: Change the file ID to something useful.
-  AstBuilder builder(1);
-  NodeASTVisitor visitor(&builder);
+  NodeASTVisitor visitor(&accumulated_nodes_);
   IdAndType value = program->Visit(&visitor);
-  builder.SetRoot(value.id);
-  accumulated_nodes_ = std::move(builder);
+  accumulated_nodes_.SetRoot(value.id);
 
   return true;
 }

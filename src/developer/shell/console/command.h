@@ -23,8 +23,8 @@ class Command {
   Command(const Command&) = delete;
   Command& operator=(const Command&) = delete;
 
-  Command(Command&&) = default;
-  Command& operator=(Command&&) = default;
+  Command(Command&&) = delete;
+  Command& operator=(Command&&) = delete;
 
   bool Parse(const std::string& line);
 
