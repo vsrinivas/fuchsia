@@ -9,6 +9,7 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
+#include <fbl/macros.h>
 
 namespace board_msm8998 {
 

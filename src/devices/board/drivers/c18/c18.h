@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
+#include <fbl/macros.h>
 
 namespace board_c18 {
 

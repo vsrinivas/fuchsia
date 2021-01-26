@@ -6,6 +6,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
+#include <fbl/macros.h>
 #include <soc/mt8183/mt8183-hw.h>
 
 #include "c18.h"
