@@ -50,7 +50,7 @@ the transition to the new architecture is complete.
 - [Component URLs][doc-component-urls] are URLs that identify components.
 - [Components vs. processes](components_vs_processes.md): how the concepts differ
 
-## testing
+## Testing
 - [Test components][test-components]:
   defining components that implement tests and running them.
 - [Test Runner Framework][trf]:
