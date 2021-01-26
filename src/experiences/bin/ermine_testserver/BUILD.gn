@@ -1,0 +1,51 @@
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/dart/test.gni")
+import("//src/sys/build/components.gni")
+
+dart_library("lib") {
+  package_name = "ermine_testserver"
+  source_dir = "lib"
+  sources = [
+    "main.dart",
+    "src/file_group.dart",
+  ]
+  deps = [
+    "//src/experiences/bin/simple_browser_localhost:simple_browser_localhost",
+    dart_package_label.fuchsia_logger,
+  ]
+}
+
+resource("navigation_files") {
+  sources = [
+    "public/navigation/index.html",
+    "public/navigation/next.html",
+    "public/navigation/popup.html",
+    "public/navigation/style.css",
+  ]
+  outputs = [ "data/navigation/{{source_file_part}}" ]
+}
+
+dart_component("component") {
+  component_name = "ermine_testserver"
+  manifest = "meta/ermine_testserver.cmx"
+  main_package = "ermine_testserver"
+  deps = [
+    ":lib",
+    ":navigation_files",
+  ]
+}
+
+fuchsia_package("ermine_testserver") {
+  deps = [ ":component" ]
+}
+
+dart_test("ermine_testserver_unittests") {
+  sources = [ "file_group_test.dart" ]
+
+  deps = [
+    ":lib",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}

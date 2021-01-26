@@ -1,0 +1,11 @@
+{
+    "program": {
+        "data": "data/ermine_testserver"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+        ]
+    }
+}
