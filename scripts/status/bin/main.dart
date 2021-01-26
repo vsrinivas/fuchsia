@@ -22,7 +22,7 @@ class StatusCmd {
 
   void _aggregate(List<Item> data) {
     for (Item item in data) {
-      String categoryName = item.categoryType.toString();
+      String categoryName = item.categoryType.toString().split('.')[1];
       Category category = aggregatedInfo[categoryName];
       if (category == null) {
         category = Category(item.categoryType);
