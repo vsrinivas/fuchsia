@@ -169,6 +169,11 @@ zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, s
   if (status != ZX_OK) {
     return status;
   }
+  // Pre-populate the page tables so there's no need for kernel page faults.
+  status = host_mapping->MapRange(0, mapping_len, true);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   *guest_ptr = GuestPtr(ktl::move(host_mapping), guest_paddr - begin);
   return ZX_OK;
