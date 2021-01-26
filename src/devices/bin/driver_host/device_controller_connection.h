@@ -8,6 +8,7 @@
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include <fbl/ref_ptr.h>
@@ -65,6 +66,11 @@ class DeviceControllerConnection
             OpenCompleter::Sync& _completer) override;
 
   // All methods below are intentionally unimplemented.
+  void AddInotifyFilter(::llcpp::fuchsia::io2::InotifyWatchMask filters, ::fidl::StringView path,
+                        uint32_t watch_descriptor, ::zx::socket socket,
+                        ::zx::channel controller,
+                        AddInotifyFilterCompleter::Sync& _completer) override {}
+
   void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& _completer) override {}
   void Close(CloseCompleter::Sync& _completer) override {}
   void Describe(DescribeCompleter::Sync& _completer) override {}

@@ -19,6 +19,7 @@
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
+namespace fio2 = ::llcpp::fuchsia::io2;
 
 class TestServer final : public fio::Directory::Interface {
  public:
@@ -53,6 +54,12 @@ class TestServer final : public fio::Directory::Interface {
 
   void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object,
             OpenCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void AddInotifyFilter(fio2::InotifyWatchMask filters, ::fidl::StringView path,
+                        uint32_t watch_descriptor, ::zx::socket socket, ::zx::channel controller,
+                        AddInotifyFilterCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

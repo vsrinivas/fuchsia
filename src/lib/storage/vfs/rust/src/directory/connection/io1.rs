@@ -155,6 +155,20 @@ pub(in crate::directory) enum BaseDirectoryRequest {
         #[allow(unused)]
         control_handle: DirectoryControlHandle,
     },
+    AddInotifyFilter {
+        #[allow(unused)]
+        filters: fidl_fuchsia_io2::InotifyWatchMask,
+        #[allow(unused)]
+        path: String,
+        #[allow(unused)]
+        watch_descriptor: u32,
+        #[allow(unused)]
+        socket: fidl::Socket,
+        #[allow(unused)]
+        controller: ServerEnd<fidl_fuchsia_io2::InotifierMarker>,
+        #[allow(unused)]
+        control_handle: DirectoryControlHandle,
+    },
     ReadDirents {
         max_bytes: u64,
         responder: DirectoryReadDirentsResponder,
@@ -227,6 +241,21 @@ impl From<DirectoryRequest> for DirectoryRequestType {
             DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
                 Base(Open { flags, mode, path, object, control_handle })
             }
+            DirectoryRequest::AddInotifyFilter {
+                filters,
+                path,
+                watch_descriptor,
+                socket,
+                controller,
+                control_handle,
+            } => Base(AddInotifyFilter {
+                filters,
+                path,
+                watch_descriptor,
+                socket,
+                controller,
+                control_handle,
+            }),
             DirectoryRequest::Unlink { path, responder } => Derived(Unlink { path, responder }),
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 Base(ReadDirents { max_bytes, responder })
@@ -342,6 +371,7 @@ where
             BaseDirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 self.handle_open(flags, mode, path, object);
             }
+            BaseDirectoryRequest::AddInotifyFilter { .. } => {}
             BaseDirectoryRequest::ReadDirents { max_bytes, responder } => {
                 self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)

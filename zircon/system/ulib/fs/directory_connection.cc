@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zircon-internal/debug.h>

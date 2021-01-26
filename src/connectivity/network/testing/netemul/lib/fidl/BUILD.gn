@@ -57,5 +57,8 @@ fidl("sandbox") {
 fidl("devmgr") {
   name = "fuchsia.netemul.devmgr"
   sources = [ "devmgr.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.io" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io2",
+  ]
 }

@@ -15,6 +15,7 @@ isolated_devmgr_component("wlan-devmgr") {
     "--wait_for=test/wlantapctl",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/wlan/drivers/wlan:wlan_driver",
     "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",

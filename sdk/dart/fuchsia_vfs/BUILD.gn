@@ -31,6 +31,7 @@ dart_library("fuchsia_vfs") {
 
   deps = [
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io2",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/quiver",
     dart_package_label.zircon,

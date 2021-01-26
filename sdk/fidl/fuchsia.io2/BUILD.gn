@@ -18,6 +18,7 @@ fidl("fuchsia.io2") {
     "directory-watcher.fidl",
     "directory.fidl",
     "file.fidl",
+    "inotify.fidl",
     "io2.fidl",
     "locking.fidl",
     "memory.fidl",

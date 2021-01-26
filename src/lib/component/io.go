@@ -21,6 +21,7 @@ import (
 	"unsafe"
 
 	fidlio "fidl/fuchsia/io"
+	fidlio2 "fidl/fuchsia/io2"
 	"fidl/fuchsia/mem"
 )
 
@@ -245,6 +246,10 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path 
 	}
 
 	return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotFound}, dirState)
+}
+
+func (dirState *directoryState) AddInotifyFilter(ctx fidl.Context, filters fidlio2.InotifyWatchMask, path string, wd uint32, socket zx.Socket, req fidlio2.InotifierWithCtxInterfaceRequest) error {
+	return nil
 }
 
 func (dirState *directoryState) Unlink(_ fidl.Context, path string) (int32, error) {

@@ -48,6 +48,7 @@ source_set("common") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",
     "//src/devices/lib/log",

@@ -42,6 +42,38 @@ protocol Directory {
          ConnectionOptions options,
          zx.handle:CHANNEL object_request);
 
+    /// Adds a new inotify filter for an object relative to this directory object.
+    ///
+    /// + 'filters` is a mask of different inotify events that need to be watched by the server
+    ///   for a specific file/directory.
+    ///
+    /// + `path` may contain multiple segments, separated by "/" characters,
+    ///   and should never be empty; i.e., "" is an invalid path. Paths should not contain
+    ///   a leading "/".
+    ///
+    /// +`watch_descriptor` is client assigned value to identify a filter.
+    ///   Server shouldn't trust the client-assigned watch_descriptor. They should just send it
+    ///   back to the client in the socket.
+    ///   This value is not used by server, but it is returned back as part of InotifyEvent,
+    ///   to help the client correlate filters with events on these filters.
+    ///
+    /// + `socket` is shared between different filter objects i.e every new filter will
+    ///   have a different server end of the socket and there will be a single client end per
+    ///   inotify instance on inotify init.
+    ///
+    /// + `controller` is the server end of a channel and is per entry in the vnode so that
+    ///   we can remove the specific inotify filter when the controller is closed by the server
+    ///   or the client.
+    ///   controller helps to implement the "removeWatch" functionality of inotify.
+    ///   Additionally we send error back through |controller| as an event.
+    ///
+    ///   Errors are presented as an epitaph on the `controller` channel.
+    /// * error `ZX_ERR_ACCESS_DENIED` if the requested rights exceeds
+    ///   what is allowed.
+    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
+    AddInotifyFilter(InotifyWatchMask filters, Path path, uint32 watch_descriptor,
+                     zx.handle:SOCKET socket, request<Inotifier> controller);
+
     /// Removes a child node from the this directory's list of entries.
     ///
     /// Note: this does not guarantee that the underlying object is destroyed.

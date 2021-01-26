@@ -9,8 +9,6 @@
 #error "Fuchsia-only header"
 #endif
 
-#include <fuchsia/io/llcpp/fidl.h>
-
 #include <fs/internal/connection.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
@@ -61,6 +59,10 @@ class DirectoryConnection final : public Connection,
             LinkCompleter::Sync& completer) final;
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCompleter::Sync& completer) final;
+  void AddInotifyFilter(llcpp::fuchsia::io2::InotifyWatchMask filters, fidl::StringView path,
+                        uint32_t watch_descriptor, zx::socket socket,
+                        fidl::ServerEnd<llcpp::fuchsia::io2::Inotifier> controller,
+                        AddInotifyFilterCompleter::Sync& completer) final {}
 
   //
   // |fuchsia.io/DirectoryAdmin| operations.

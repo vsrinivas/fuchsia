@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_io/fidl_async.dart';
+import 'package:fidl_fuchsia_io2/fidl_async.dart' as io2_fidl;
 import 'package:quiver/collection.dart';
 import 'package:zircon/zircon.dart';
 
@@ -394,6 +395,16 @@ class _DirConnection extends Directory {
   @override
   Future<int> link(String src, Handle dstParentToken, String dst) async {
     return ZX.ERR_NOT_SUPPORTED;
+  }
+
+  @override
+  Future<void> addInotifyFilter(
+      io2_fidl.InotifyWatchMask filters,
+      String path,
+      int wd,
+      Socket socket,
+      fidl.InterfaceRequest<io2_fidl.Inotifier> req) async {
+    return;
   }
 
   @override

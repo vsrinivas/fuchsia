@@ -34,6 +34,7 @@ fidl_c_header("fuchsia-io2") {
     "../../../sdk/fidl/fuchsia.io2/directory-watcher.fidl",
     "../../../sdk/fidl/fuchsia.io2/directory.fidl",
     "../../../sdk/fidl/fuchsia.io2/file.fidl",
+    "../../../sdk/fidl/fuchsia.io2/inotify.fidl",
     "../../../sdk/fidl/fuchsia.io2/io2.fidl",
     "../../../sdk/fidl/fuchsia.io2/locking.fidl",
     "../../../sdk/fidl/fuchsia.io2/memory.fidl",

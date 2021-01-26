@@ -196,6 +196,10 @@ func (d *directoryWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAtt
 	return int32(errorToZx(d.dir.Touch(t, t))), nil
 }
 
+func (d *directoryWrapper) AddInotifyFilter(_ fidl.Context, filters io2.InotifyWatchMask, path string, wd uint32, socket zx.Socket, req io2.InotifierWithCtxInterfaceRequest) error {
+	return nil
+}
+
 func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path string, node io.NodeWithCtxInterfaceRequest) error {
 	flags := openFlagsFromFIDL(inFlags, inMode)
 	if flags.Path() {

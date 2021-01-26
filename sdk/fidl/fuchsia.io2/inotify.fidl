@@ -1,0 +1,70 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+/// Inotifier implements the linux Inotify functionality.
+/// It provides a mechanism for monitoring filesystem
+/// events.  Inotify can be used to monitor individual files, or to
+/// monitor directories.  When a directory is monitored, inotify will
+/// return events for the directory itself, and for files inside the
+/// directory.
+protocol Inotifier {
+};
+
+/// Used by InotifyAddWatch to indicate the server the events to be watched on.
+/// Also used by [`fuchsia.io2/Node.Inotify`] to indicate the types of events
+/// that occured on server side, to be notified to clients. See InotifyEvent.
+enum InotifyWatchMask : uint32 {
+    // Events to watch in inotify
+    ACCESS = 0x00000001; // File was accessed.
+    MODIFY = 0x00000002; // File was modified.
+    ATTRIB = 0x00000004; // Metadata was changed.
+    CLOSE_WRITE = 0x00000008; // Writeable file was closed.
+    CLOSE_NOWRITE = 0x00000010; // Unwriteable file closed.
+    OPEN = 0x00000020; // File was opened.
+    MOVED_FROM = 0x00000040; // File was moved from some location.
+    MOVED_TO = 0x00000080; // File was moved to some location.
+    CREATE = 0x00000100; // Subfile was created.
+    DELETE = 0x00000200; // Subfile was deleted.
+    DELETE_SELF = 0x00000400;	// Self was deleted.
+    MOVE_SELF = 0x00000800; // Self was moved.
+    UNMOUNT = 0x00002000; // Backing fs was unmounted.
+    Q_OVERFLOW = 0x00004000; // Event queued overflowed.
+    IGNORED = 0x00008000; // File was ignored.
+
+    // Helper events
+    CLOSE = 0x00000018; //( CLOSE_WRITE |  CLOSE_NOWRITE);
+    MOVE = 0x000000C0; //( MOVED_FROM |  MOVED_TO);
+
+    // Special flags
+    ONLYDIR = 0x01000000; // only watch the path if it is a directory.
+    DONT_FOLLOW =	0x02000000; // don't follow a sym link.
+    EXCL_UNLINK =	0x04000000; // exclude events on unlinked objects.
+    MASK_CREATE =	0x10000000; // only create watches.
+    MASK_ADD = 0x20000000; // add to the mask of an already existing watch.
+    ISDIRECTORY = 0x40000000; // event occurred against dir.
+    ONESHOT = 0x80000000; // only send event once.
+};
+
+// Events returned from [`Inotifier.GetNext`].
+struct InotifyEvent {
+    // Watch descriptor for the file/directory. watch_descriptor identifies the watch for which
+    // this event occurs. It is one of the watch descriptors (channel/connection to the
+    // file/directory) returned by a previous call to Directory.AddInotifyFilter
+    uint32 watch_descriptor;
+
+    // Mask describing event.
+    InotifyWatchMask mask;
+
+    // Unique cookie associating related events like rename.
+    uint32 cookie;
+
+    // Size of filename.
+    uint32 len;
+
+    // filename of file inside a directory being watched. Will be null for event occuring
+    // for the directory itself.
+    Path filename;
+};

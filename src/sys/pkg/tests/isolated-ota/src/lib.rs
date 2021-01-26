@@ -556,6 +556,7 @@ async fn serve_failing_blobfs(
                     object.close_with_epitaph(zx::Status::IO).context("failing open")?;
                 }
             }
+            DirectoryAdminRequest::AddInotifyFilter { .. } => {}
             DirectoryAdminRequest::Unlink { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing unlink")?
             }
