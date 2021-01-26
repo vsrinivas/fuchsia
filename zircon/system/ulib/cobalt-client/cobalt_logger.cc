@@ -6,6 +6,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/channel.h>
@@ -98,6 +99,26 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
 
   auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(
       zx::unowned_channel(logger_), std::move(event));
+  if (log_result.status() == ZX_ERR_PEER_CLOSED) {
+    Reset();
+  }
+  return log_result.status() == ZX_OK && log_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
+}
+
+bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::Type value) {
+  if (!TryObtainLogger()) {
+    return false;
+  }
+
+  auto event = MetricIntoToCobaltEvent(metric_info);
+  event.payload.set_memory_bytes_used(fidl::unowned_ptr(&value));
+
+  // Cobalt 1.0 does not support integer. The closest to integer is memory
+  // usage. So, we use MemoryUsage until we have a better support for integer(in
+  // version 1.1).
+  auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogMemoryUsage(
+      zx::unowned_channel(logger_), event.metric_id, event.event_codes[0],
+      fidl::unowned_str(event.component), value);
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }

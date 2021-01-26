@@ -7,7 +7,11 @@
 #include <lib/sync/completion.h>
 #include <zircon/errors.h>
 
+#include <sstream>
+
 #include <block-client/cpp/fake-device.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
+#include <fs/metrics/events.h>
 #include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
 
@@ -350,6 +354,296 @@ TEST_F(FsckAtEndOfEveryTransactionTest, FsckAtEndOfEveryTransaction) {
 }
 
 #endif  // !defined(NDEBUG)
+
+void VnodeSync(fs::Vnode* vnode) {
+  // It's difficult to get a precise hook into the period between when data has been written and
+  // when it has been flushed to disk.  The journal will delay flushing metadata, so the following
+  // should test sync being called before metadata has been flushed, and then again afterwards.
+  for (int i = 0; i < 2; ++i) {
+    sync_completion_t sync;
+    vnode->Sync([&](zx_status_t status) {
+      EXPECT_EQ(ZX_OK, status);
+      sync_completion_signal(&sync);
+    });
+    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  }
+}
+
+std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t size,
+                                     BlobLayoutFormat layout) {
+  // Create fragmentation by creating blobs and deleting a few.
+  std::unique_ptr<BlobInfo> info;
+  GenerateRandomBlob("", size, layout, &info);
+  memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
+
+  fbl::RefPtr<fs::Vnode> file;
+  EXPECT_EQ(root->Create(info->path, 0, &file), ZX_OK);
+
+  size_t out_actual = 0;
+  EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+
+  EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
+  EXPECT_EQ(info->size_data, out_actual);
+
+  VnodeSync(file.get());
+  file->Close();
+  return info;
+}
+
+bool CheckMap(const std::string& str, const std::map<size_t, uint64_t>& found,
+              const std::map<size_t, uint64_t>& expected) {
+  auto result =
+      found.size() == expected.size() && std::equal(found.begin(), found.end(), expected.begin());
+  if (!result) {
+    std::stringstream expected_str, found_str;
+    for (const auto& p : found) {
+      found_str << str << " [" << p.first << "] = " << p.second << '\n';
+    }
+    for (const auto& p : expected) {
+      expected_str << str << " [" << p.first << "] = " << p.second << '\n';
+    }
+    std::cout << "Expected " << expected_str.str() + "\nFound " + found_str.str() + "\n";
+  }
+  return result;
+}
+
+// In this test we try to simulate fragmentation and test fragmentation metrics. We create
+// fragmentation by first creating few blobs, deleting a subset of those blobs and then finally
+// creating a huge blob that occupies all the blocks freed by blob deletion. We measure/verify
+// metrics at each stage.
+// This test has an understanding about block allocation policy.
+TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
+  struct Stats {
+    int64_t total_nodes = 0;
+    int64_t blobs_in_use = 0;
+    int64_t extent_containers_in_use = 0;
+    std::map<size_t, uint64_t> extents_per_blob;
+    std::map<size_t, uint64_t> free_fragments;
+    std::map<size_t, uint64_t> in_use_fragments;
+  };
+
+  // We have to do things this way because InMemoryLogger is not thread-safe.
+  class Logger : public cobalt_client::InMemoryLogger {
+   public:
+    void Wait() { sync_completion_wait(&sync_, ZX_TIME_INFINITE); }
+
+    void Signal() {
+      // Wake up only when all six types of fragmentaion metrics have been logged.
+      // This is sensitive to number of metrics logged. Though, in this test case we are interested
+      // in only 6 different types of the metrics, it can happen that a metrics might get logged
+      // twice and thus making the count == 6. The test will break if we start logging this metrics
+      // more often and/or from different context.
+      if (log_count_ >= 6) {
+        log_count_ -= 6;
+        sync_completion_signal(&sync_);
+      }
+    }
+
+    void ResetSignal() { sync_completion_reset(&sync_); }
+
+    void UpdateMetrics(Blobfs* fs) {
+      ResetSignal();
+      fs->UpdateFragmentationMetrics();
+      Wait();
+    }
+
+    bool LogInteger(const cobalt_client::MetricOptions& metric_info, int64_t value) override {
+      if (!InMemoryLogger::LogInteger(metric_info, value)) {
+        return false;
+      }
+
+      auto id = static_cast<fs_metrics::Event>(metric_info.metric_id);
+      switch (id) {
+        case fs_metrics::Event::kFragmentationTotalNodes: {
+          if (value != 0)
+            found_.total_nodes = value;
+          ++log_count_;
+          break;
+        }
+        case fs_metrics::Event::kFragmentationInodesInUse: {
+          if (value != 0)
+            found_.blobs_in_use = value;
+          ++log_count_;
+          break;
+        }
+        case fs_metrics::Event::kFragmentationExtentContainersInUse: {
+          if (value != 0)
+            found_.extent_containers_in_use = value;
+          ++log_count_;
+          break;
+        }
+        default:
+          break;
+      }
+      Signal();
+      return true;
+    }
+
+    bool Log(const cobalt_client::MetricOptions& metric_info, const HistogramBucket* buckets,
+             size_t num_buckets) override {
+      if (!InMemoryLogger::Log(metric_info, buckets, num_buckets)) {
+        return false;
+      }
+      if (num_buckets == 0) {
+        Signal();
+        return true;
+      }
+
+      auto id = static_cast<fs_metrics::Event>(metric_info.metric_id);
+      std::map<size_t, uint64_t>* map = nullptr;
+      switch (id) {
+        case fs_metrics::Event::kFragmentationExtentsPerFile: {
+          map = &found_.extents_per_blob;
+          break;
+        }
+        case fs_metrics::Event::kFragmentationInUseFragments: {
+          map = &found_.in_use_fragments;
+          break;
+        }
+        case fs_metrics::Event::kFragmentationFreeFragments: {
+          map = &found_.free_fragments;
+          break;
+        }
+        default:
+          break;
+      }
+
+      if (map == nullptr) {
+        return true;
+      }
+      map->clear();
+      for (size_t i = 0; i < num_buckets; i++) {
+        if (buckets[i].count > 0)
+          (*map)[i] = buckets[i].count;
+      }
+      ++log_count_;
+      Signal();
+      return true;
+    }
+
+    const Stats& GetStats() const { return found_; }
+
+   private:
+    Stats found_;
+    sync_completion_t sync_;
+
+    // We might get called for logging other blobfs metrics. But in this test we care about only
+    // fragmentation metrics. So |log_count_| keeps track of how many times fragmentaion metrics
+    // have been logged.
+    // See: Signal().
+    uint64_t log_count_ = 0;
+  };
+
+  std::unique_ptr<Logger> logger = std::make_unique<Logger>();
+  auto* logger_ptr = logger.get();
+  MountOptions mount_options{.metrics = true, .collector_factory = [&logger] {
+                               return std::make_unique<cobalt_client::Collector>(std::move(logger));
+                             }};
+
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  std::unique_ptr<Blobfs> fs;
+  auto device = MockBlockDevice::CreateAndFormat(
+      {
+          .blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd,
+          .oldest_revision = kBlobfsCurrentRevision,
+      },
+      kNumBlocks);
+  ASSERT_TRUE(device);
+  loop.StartThread();
+  ASSERT_EQ(
+      Blobfs::Create(loop.dispatcher(), std::move(device), mount_options, zx::resource(), &fs),
+      ZX_OK);
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  Stats expected;
+  expected.total_nodes = static_cast<int64_t>(fs->Info().inode_count);
+  expected.free_fragments[5] = 2;
+  logger_ptr->UpdateMetrics(fs.get());
+  auto found = logger_ptr->GetStats();
+  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+  ASSERT_EQ(found.total_nodes, expected.total_nodes);
+  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_EQ(fs->OpenRootNode(&root), ZX_OK);
+  std::vector<std::unique_ptr<BlobInfo>> infos;
+  constexpr int kSmallBlobCount = 10;
+  infos.reserve(kSmallBlobCount);
+  // We create 10 blobs that occupy 1 block each. After these creation, data block bitmap should
+  // look like (first 10 bits set and all other bits unset.)
+  // 111111111100000000....
+  for (int i = 0; i < kSmallBlobCount; i++) {
+    infos.push_back(CreateBlob(root, 8192, GetBlobLayoutFormat(fs->Info())));
+  }
+
+  expected.blobs_in_use = kSmallBlobCount;
+  expected.extents_per_blob[1] = kSmallBlobCount;
+  expected.in_use_fragments[1] = kSmallBlobCount;
+  expected.free_fragments[5] = 1;
+  logger_ptr->UpdateMetrics(fs.get());
+  found = logger_ptr->GetStats();
+  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+  ASSERT_EQ(found.total_nodes, expected.total_nodes);
+  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+
+  // Delete few blobs. Notice the pattern we delete. With these deletions free(0) and used(1)
+  // block bitmap will look as follows 1010100111000000... This creates 4 free fragments. 6 used
+  // fragments.
+  constexpr uint64_t kBlobsDeleted = 4;
+  ASSERT_EQ(root->Unlink(infos[1]->path, false), ZX_OK);
+  ASSERT_EQ(root->Unlink(infos[3]->path, false), ZX_OK);
+  ASSERT_EQ(root->Unlink(infos[5]->path, false), ZX_OK);
+  ASSERT_EQ(root->Unlink(infos[6]->path, false), ZX_OK);
+  VnodeSync(root.get());
+
+  expected.blobs_in_use = kSmallBlobCount - kBlobsDeleted;
+  expected.free_fragments[1] = 3;
+  expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted;
+  expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted;
+  logger_ptr->UpdateMetrics(fs.get());
+  found = logger_ptr->GetStats();
+  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+  ASSERT_EQ(found.total_nodes, expected.total_nodes);
+  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+
+  // Create a huge(10 blocks) blob that potentially fills atleast three free fragments that we
+  // created above.
+  auto info = CreateBlob(root, 20 * 8192, GetBlobLayoutFormat(fs->Info()));
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root->Lookup(info->path, &file), ZX_OK);
+  fs::VnodeAttributes attributes;
+  file->GetAttributes(&attributes);
+  uint64_t blocks = attributes.storage_size / 8192;
+
+  // For some reason, if it turns out that the random data is highly compressible then our math
+  // belows blows up. Assert that is not the case.
+  ASSERT_GT(blocks, kBlobsDeleted);
+
+  expected.blobs_in_use += 1;
+  expected.extent_containers_in_use = 1;
+  expected.free_fragments.erase(1);
+  expected.free_fragments[5] = 1;
+  expected.extents_per_blob[1] = expected.extents_per_blob[1] + 1;
+  expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted + 3;
+  expected.in_use_fragments[2] = 1;
+  logger_ptr->UpdateMetrics(fs.get());
+  found = logger_ptr->GetStats();
+  ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
+  ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
+  ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
+  ASSERT_EQ(found.total_nodes, expected.total_nodes);
+  ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
+  ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+}
 
 }  // namespace
 }  // namespace blobfs

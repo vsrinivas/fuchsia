@@ -26,6 +26,7 @@
 #include <bitmap/raw-bitmap.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
+#include <cobalt-client/cpp/collector.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -199,9 +200,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override;
 
   // Corruption notifier related.
-  const BlobCorruptionNotifier* GetCorruptBlobNotifier(void) {
-    return blob_corruption_notifier_.get();
-  }
+  const BlobCorruptionNotifier* GetCorruptBlobNotifier() { return blob_corruption_notifier_.get(); }
   void SetCorruptBlobHandler(zx::channel blobfs_handler) {
     blob_corruption_notifier_->SetCorruptBlobHandler(std::move(blobfs_handler));
   }
@@ -213,6 +212,10 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   };
 
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
+
+  // Updates fragmentation metrics in cobalt. This is called only twice per mount session - once
+  // during mount and once during unmount.
+  zx_status_t UpdateFragmentationMetrics();
 
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
@@ -226,7 +229,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
-         std::optional<CachePolicy> pager_backed_cache_policy);
+         std::optional<CachePolicy> pager_backed_cache_policy,
+         std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory);
 
   static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
@@ -285,7 +289,17 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Migrate blobs to a later format.
   zx_status_t Migrate();
 
-  static std::shared_ptr<BlobfsMetrics> CreateMetrics();
+  // Walks all the extents of a given inode and updates |extents_per_blob| and |used_fragments|
+  // metrics.
+  zx_status_t ComputeBlobLevelFragmentation(Inode& inode);
+
+  // Returns fragmentation details for the filesystem.
+  // This fuunction is not a thread safe function nor it is performanct as it ends up scanning
+  // all of inodes, extents and data bitmap. So use it carefully.
+  void ComputeFragmentationMetrics();
+
+  static std::shared_ptr<BlobfsMetrics> CreateMetrics(
+      std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory);
 
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;
@@ -314,7 +328,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // by inspecting its koid.
   uint64_t fs_id_legacy_ = 0;
 
-  std::shared_ptr<BlobfsMetrics> metrics_ = Blobfs::CreateMetrics();
+  std::shared_ptr<BlobfsMetrics> metrics_;
 
   std::unique_ptr<pager::UserPager> pager_;
   std::optional<CachePolicy> pager_backed_cache_policy_;

@@ -50,8 +50,15 @@ enum class Event : uint32_t {
   // Oldest version
   kVersion = 28,
 
+  kFragmentationTotalNodes = 29,
+  kFragmentationInodesInUse = 30,
+  kFragmentationExtentContainersInUse = 31,
+  kFragmentationExtentsPerFile = 32,
+  kFragmentationInUseFragments = 33,
+  kFragmentationFreeFragments = 34,
+
   // This is an event used to identify last or invalid event.
-  kInvalidEvent = 29,
+  kInvalidEvent = 32,
 };
 
 enum class Component {

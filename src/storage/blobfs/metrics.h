@@ -39,8 +39,11 @@ struct BlobPageInFrequencies {
 // This class is not thread-safe except for the read_metrics() and verification_metrics() accessors.
 class BlobfsMetrics : public fs::MetricsTrait {
  public:
-  explicit BlobfsMetrics(bool should_record_page_in = false);
-  ~BlobfsMetrics();
+  explicit BlobfsMetrics(
+      bool should_record_page_in,
+      const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory = {},
+      zx::duration cobalt_flush_timer = zx::sec(5));
+  ~BlobfsMetrics() override;
 
   // Print information about metrics to stdout.
   //
@@ -187,12 +190,13 @@ class BlobfsMetrics : public fs::MetricsTrait {
   fs_metrics::Histograms histograms_ = fs_metrics::Histograms(&root_);
 
   // Cobalt metrics.
-  fs_metrics::Metrics cobalt_metrics_ =
-      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(fs_metrics::kCobaltProjectId),
-                          fs_metrics::Component::kBlobfs, fs_metrics::CompressionSource::kBlobfs);
+  fs_metrics::Metrics cobalt_metrics_;
 
   // Loop for flushing the collector periodically.
   async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  // Time between each Cobalt flush.
+  zx::duration cobalt_flush_timer_ = zx::sec(5);
 };
 
 }  // namespace blobfs

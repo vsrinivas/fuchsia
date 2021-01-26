@@ -38,6 +38,8 @@ class InMemoryLogger : public internal::Logger {
   // Adds the count and the required info to a buffer.
   bool Log(const MetricOptions& metric_info, int64_t count) override;
 
+  bool LogInteger(const MetricOptions& metric_info, int64_t bytes) override;
+
   const MetricMap<Counter::Count>& counters() const { return persisted_counters_; }
 
   const MetricMap<HistogramStorage>& histograms() const { return persisted_histograms_; }

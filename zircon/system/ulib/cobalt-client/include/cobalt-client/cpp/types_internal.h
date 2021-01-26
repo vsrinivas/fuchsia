@@ -36,6 +36,9 @@ class Logger {
 
   // Adds the count and the required info to a buffer.
   virtual bool Log(const MetricOptions& remote_info, int64_t count) = 0;
+
+  // Set the interger to new value |value|.
+  virtual bool LogInteger(const MetricOptions& remote_info, int64_t value) = 0;
 };
 
 // Flush Interface for the |Collector| to flush.

@@ -147,7 +147,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(
       dispatcher, std::move(device), superblock, options.writability, options.compression_settings,
-      std::move(vmex_resource), options.pager_backed_cache_policy));
+      std::move(vmex_resource), options.pager_backed_cache_policy, options.collector_factory));
   fs->block_info_ = block_info;
 
   auto fs_ptr = fs.get();
@@ -354,6 +354,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   if (zx_status_t status = fs->Migrate(); status != ZX_OK) {
     return status;
   }
+
+  fs->UpdateFragmentationMetrics();
 
   // Here we deliberately use a '/' separator rather than '.' to avoid looking like a conventional
   // version number, since they are not --- format version and revision can increment independently.
@@ -788,13 +790,15 @@ void Blobfs::Sync(SyncCallback cb) {
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
-               std::optional<CachePolicy> pager_backed_cache_policy)
+               std::optional<CachePolicy> pager_backed_cache_policy,
+               std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory)
     : info_(*info),
       dispatcher_(dispatcher),
       block_device_(std::move(device)),
       writability_(writable),
       write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)),
+      metrics_(CreateMetrics(std::move(collector_factory))),
       pager_backed_cache_policy_(pager_backed_cache_policy) {}
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {
@@ -840,6 +844,12 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   fs::WriteTxn sync_txn(this);
   sync_txn.EnqueueFlush();
   sync_txn.Transact();
+
+  // If we have not initialized allocator, skip updating fragmentation metrics as it depends on
+  // in-memoery inode table.
+  if (GetAllocator() != nullptr) {
+    UpdateFragmentationMetrics();
+  }
 
   BlockDetachVmo(std::move(info_vmoid_));
 
@@ -897,6 +907,82 @@ zx_status_t Blobfs::InitializeVnodes() {
     return ZX_ERR_IO_OVERRUN;
   }
 
+  return ZX_OK;
+}
+
+zx_status_t Blobfs::ComputeBlobLevelFragmentation(Inode& inode) {
+  auto blob_fragmentaion = &metrics_->cobalt_metrics().FragmentationMetrics().extents_per_file;
+  auto used_fragmentaion = &metrics_->cobalt_metrics().FragmentationMetrics().in_use_fragments;
+  if (inode.extent_count == 0) {
+    return ZX_OK;
+  }
+  blob_fragmentaion->Add(inode.extent_count);
+
+  for (ExtentCountType i = 0; i < std::min<uint32_t>(kInlineMaxExtents, inode.extent_count); ++i) {
+    used_fragmentaion->Add(inode.extents[i].Length());
+  }
+
+  AllocatedNodeIterator extents_iter(GetNodeFinder(), &inode);
+  while (!extents_iter.Done()) {
+    zx::status<ExtentContainer*> container_or = extents_iter.Next();
+    if (container_or.is_error()) {
+      return container_or.error_value();
+    }
+    auto container = container_or.value();
+    for (ExtentCountType i = 0; i < container->extent_count; ++i) {
+      used_fragmentaion->Add(container->extents[i].Length());
+    }
+  }
+  return ZX_OK;
+}
+
+void Blobfs::ComputeFragmentationMetrics() {
+  uint64_t extent_containers_in_use = 0;
+  uint64_t blobs_in_use = 0;
+  for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {
+    auto inode = GetNode(node_index);
+    if (!inode->header.IsAllocated()) {
+      continue;
+    }
+
+    if (inode->header.IsExtentContainer()) {
+      ++extent_containers_in_use;
+      continue;
+    }
+
+    ++blobs_in_use;
+    if (ComputeBlobLevelFragmentation(*inode.value()) != ZX_OK) {
+      // We print error and continue.
+      FX_LOGS(ERROR) << "Failed getting fragmentaion metrics for blob:" << node_index;
+    }
+  }
+
+  uint64_t free_run = 0;
+  for (uint64_t i = 0; i < Info().data_block_count; ++i) {
+    if (allocator_->IsBlockAllocated(i).value()) {
+      // This is the end of free fragment. Count it.
+      if (free_run != 0) {
+        metrics_->cobalt_metrics().FragmentationMetrics().free_fragments.Add(free_run);
+        free_run = 0;
+      }
+      continue;
+    }
+    ++free_run;
+  }
+
+  // If this is the end of last free fragment, count it.
+  if (free_run != 0) {
+    metrics_->cobalt_metrics().FragmentationMetrics().free_fragments.Add(free_run);
+  }
+
+  metrics_->cobalt_metrics().FragmentationMetrics().total_nodes.Set(Info().inode_count);
+  metrics_->cobalt_metrics().FragmentationMetrics().inodes_in_use.Set(blobs_in_use);
+  metrics_->cobalt_metrics().FragmentationMetrics().extent_containers_in_use.Set(
+      extent_containers_in_use);
+}
+
+zx_status_t Blobfs::UpdateFragmentationMetrics() {
+  ComputeFragmentationMetrics();
   return ZX_OK;
 }
 
@@ -1020,17 +1106,18 @@ zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& o
   return TransactionManager::RunRequests(operations);
 }
 
-std::shared_ptr<BlobfsMetrics> Blobfs::CreateMetrics() {
+std::shared_ptr<BlobfsMetrics> Blobfs::CreateMetrics(
+    std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory) {
   bool enable_page_in_metrics = false;
 #ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
   enable_page_in_metrics = true;
 #endif
-  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics);
+  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics, collector_factory);
 }
 
 zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
-  // If the filesystem is writable, it's possible that we just wrote a backup superblock, so issue a
-  // sync just in case.
+  // If the filesystem is writable, it's possible that we just wrote a backup superblock, so issue
+  // a sync just in case.
   if (writability_ == Writability::Writable) {
     sync_completion_t sync;
     Sync([&](zx_status_t status) { sync_completion_signal(&sync); });

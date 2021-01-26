@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_MOUNT_H_
-#define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_MOUNT_H_
+#ifndef SRC_STORAGE_BLOBFS_MOUNT_H_
+#define SRC_STORAGE_BLOBFS_MOUNT_H_
 
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
@@ -11,10 +11,12 @@
 
 #include <optional>
 
+#include <block-client/cpp/block-device.h>
+#include <cobalt-client/cpp/collector.h>
+#include <fbl/function.h>
+
 #include "src/storage/blobfs/cache-policy.h"
 #include "src/storage/blobfs/compression-settings.h"
-#include <block-client/cpp/block-device.h>
-#include <fbl/function.h>
 
 namespace blobfs {
 
@@ -60,6 +62,9 @@ struct MountOptions {
 #ifndef NDEBUG
   bool fsck_at_end_of_every_transaction = false;
 #endif
+
+  // Custom function to help install custom logger. Used during unit testing.
+  std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory;
 };
 
 // Begins serving requests to the filesystem by parsing the on-disk format using |device|. If
@@ -81,4 +86,4 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& optio
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_MOUNT_H_
+#endif  // SRC_STORAGE_BLOBFS_MOUNT_H_

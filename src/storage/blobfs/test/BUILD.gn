@@ -99,6 +99,7 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/id_allocator",

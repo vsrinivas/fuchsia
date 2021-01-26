@@ -98,6 +98,9 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   // Provides a read-only view into the node map.
   const zx::vmo& GetNodeMapVmo() const;
 
+  // Returns true if the block is allocated. If the block_number is invalid, returns error.
+  zx::status<bool> IsBlockAllocated(uint64_t block_number) const;
+
   // Reserves space for blocks in memory. Does not update disk.
   //
   // On success, appends the (possibly non-contiguous) region of allocated

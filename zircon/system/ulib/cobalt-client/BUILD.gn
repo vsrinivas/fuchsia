@@ -55,11 +55,13 @@ source_set("cobalt-metrics") {
     "include/cobalt-client/cpp/counter_internal.h",
     "include/cobalt-client/cpp/histogram.h",
     "include/cobalt-client/cpp/histogram_internal.h",
+    "include/cobalt-client/cpp/integer.h",
     "include/cobalt-client/cpp/metric_options.h",
   ]
   sources = [
     "counter.cc",
     "histogram.cc",
+    "integer.cc",
   ]
   public_deps = [
     ":cobalt-collector",

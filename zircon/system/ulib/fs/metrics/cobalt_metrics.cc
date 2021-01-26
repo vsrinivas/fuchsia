@@ -139,6 +139,33 @@ FsCommonMetrics::FsCommonMetrics(cobalt_client::Collector* collector, Component 
       MakeHistogramOptions(micro_base, Event::kJournalWriterWriteInfoBlock,
                            FsCommonCobalt::EventCode::kUnknown),
       collector);
+
+  fragmentation_metrics.extents_per_file.Initialize(
+      MakeHistogramOptions(nano_base, Event::kFragmentationExtentsPerFile,
+                           FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  fragmentation_metrics.in_use_fragments.Initialize(
+      MakeHistogramOptions(nano_base, Event::kFragmentationInUseFragments,
+                           FsCommonCobalt::EventCode::kUnknown),
+      collector);
+  fragmentation_metrics.free_fragments.Initialize(
+      MakeHistogramOptions(nano_base, Event::kFragmentationFreeFragments,
+                           FsCommonCobalt::EventCode::kUnknown),
+      collector);
+
+  cobalt_client::MetricOptions options = {
+      .component = std::string(component_name),
+      .metric_id = static_cast<uint32_t>(Event::kFragmentationTotalNodes),
+      .metric_dimensions = 0,
+      .event_codes = {0},
+  };
+  fragmentation_metrics.total_nodes.Initialize(options, collector);
+
+  options.metric_id = static_cast<uint32_t>(Event::kFragmentationInodesInUse);
+  fragmentation_metrics.inodes_in_use.Initialize(options, collector);
+
+  options.metric_id = static_cast<uint32_t>(Event::kFragmentationExtentContainersInUse);
+  fragmentation_metrics.extent_containers_in_use.Initialize(options, collector);
 }
 
 CompressionFormatMetrics::CompressionFormatMetrics(

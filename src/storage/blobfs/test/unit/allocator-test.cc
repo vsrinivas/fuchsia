@@ -256,6 +256,24 @@ TEST(AllocatorTest, InterleavedReservation) {
   ASSERT_EQ(2ul, extents.size());
 }
 
+TEST(AllocatorTest, IsBlockAllocated) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(4, 4, &space_manager, &allocator);
+
+  // Allocate a single extent of one block.
+  fbl::Vector<ReservedExtent> prefix_extents;
+  ASSERT_EQ(allocator->ReserveBlocks(1, &prefix_extents), ZX_OK);
+  ASSERT_EQ(1ul, prefix_extents.size());
+  allocator->MarkBlocksAllocated(prefix_extents[0]);
+
+  auto extent = prefix_extents[0].extent();
+  ASSERT_TRUE(allocator->IsBlockAllocated(extent.Start()).value());
+  prefix_extents.reset();
+  allocator->FreeBlocks(extent);
+  ASSERT_FALSE(allocator->IsBlockAllocated(extent.Start()).value());
+}
+
 // Create a highly fragmented allocation pool, by allocating every other block,
 // and observe that even in the presence of fragmentation we may still acquire
 // 100% space utilization.
@@ -267,8 +285,8 @@ void RunFragmentationTest(bool keep_even) {
 
   // Allocate kBlockCount extents of length one.
   fbl::Vector<ReservedExtent> fragmentation_extents[kBlockCount];
-  for (uint64_t i = 0; i < kBlockCount; i++) {
-    ASSERT_EQ(allocator->ReserveBlocks(1, &fragmentation_extents[i]), ZX_OK);
+  for (auto& fragmentation_extent : fragmentation_extents) {
+    ASSERT_EQ(allocator->ReserveBlocks(1, &fragmentation_extent), ZX_OK);
   }
 
   // At this point, there shouldn't be a single block of space left.
@@ -298,8 +316,8 @@ void RunFragmentationTest(bool keep_even) {
   // After the big extent is reserved (or committed), however, we cannot reserve
   // anything more.
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extents));
-  for (uint64_t i = 0; i < big_extent.size(); i++) {
-    allocator->MarkBlocksAllocated(big_extent[i]);
+  for (auto& i : big_extent) {
+    allocator->MarkBlocksAllocated(i);
   }
   big_extent.reset();
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extents));

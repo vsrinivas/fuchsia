@@ -54,6 +54,9 @@ class CobaltLogger final : public Logger {
   // Returns true if the counter was persisted.
   bool Log(const MetricOptions& metric_info, int64_t count) final;
 
+  // Logs integer/memory-usage metrics. Returns true if |bytes| was persisted.
+  bool LogInteger(const MetricOptions& metric_info, int64_t bytes) final;
+
  protected:
   // Returns true if |logger_| is able to  provide a logging service instance for |options_|.
   bool TryObtainLogger();

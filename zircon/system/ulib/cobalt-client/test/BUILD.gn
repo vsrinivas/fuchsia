@@ -38,6 +38,7 @@ source_set("metrics-test") {
   sources = [
     "counter_test.cc",
     "histogram_test.cc",
+    "integer_test.cc",
     "metric_options_test.cc",
   ]
   include_dirs = [ "../include/" ]

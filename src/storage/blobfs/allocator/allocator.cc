@@ -102,6 +102,13 @@ const zx::vmo& Allocator::GetBlockMapVmo() const { return block_map_.StorageUnsa
 
 const zx::vmo& Allocator::GetNodeMapVmo() const { return node_map_.vmo(); }
 
+zx::status<bool> Allocator::IsBlockAllocated(uint64_t block_number) const {
+  if (block_number >= block_map_.size()) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+  return zx::ok(block_map_.GetOne(block_number));
+}
+
 zx_status_t Allocator::ReserveBlocks(uint64_t num_blocks,
                                      fbl::Vector<ReservedExtent>* out_extents) {
   zx_status_t status;

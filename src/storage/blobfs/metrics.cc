@@ -17,16 +17,15 @@
 
 #include <string>
 
+#include <cobalt-client/cpp/collector.h>
 #include <fbl/algorithm.h>
+#include <fs/metrics/cobalt_metrics.h>
 #include <fs/metrics/events.h>
 #include <fs/service.h>
 #include <fs/vnode.h>
 
 namespace blobfs {
 namespace {
-
-// Time between each Cobalt flush.
-constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 
 size_t TicksToMs(const zx::ticks& ticks) { return fzl::TicksToNs(ticks) / zx::msec(1); }
 
@@ -52,8 +51,16 @@ fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
 
 }  // namespace
 
-BlobfsMetrics::BlobfsMetrics(bool should_record_page_in)
-    : should_record_page_in(should_record_page_in) {
+BlobfsMetrics::BlobfsMetrics(
+    bool should_record_page_in,
+    const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory,
+    zx::duration cobalt_flush_timer)
+    : should_record_page_in(should_record_page_in),
+      cobalt_metrics_(collector_factory ? collector_factory()
+                                        : std::make_unique<cobalt_client::Collector>(
+                                              fs_metrics::kCobaltProjectId),
+                      fs_metrics::Component::kBlobfs, fs_metrics::CompressionSource::kBlobfs),
+      cobalt_flush_timer_(cobalt_flush_timer) {
   // Add a node that allows querying the size of the Inspect VMO at runtime
   root_.CreateLazyNode(
       "inspect_vmo_stats",
@@ -109,9 +116,10 @@ void BlobfsMetrics::Dump() {
   FX_LOGS(INFO) << "Allocation Info:";
   FX_LOGS(INFO) << "  Allocated " << blobs_created_ << " blobs (" << blobs_created_total_size_ / mb
                 << " MB)";
-  if (Collecting())
+  if (Collecting()) {
     FX_LOGS(INFO) << "  Total allocation time is " << TicksToMs(total_allocation_time_ticks_)
                   << " ms";
+  }
 
   FX_LOGS(INFO) << "Write Info:";
   FX_LOGS(INFO) << "  Wrote " << data_bytes_written_ / mb << " MB of data and "
@@ -157,7 +165,7 @@ void BlobfsMetrics::ScheduleMetricFlush() {
         cobalt_metrics_.Flush();
         ScheduleMetricFlush();
       },
-      kCobaltFlushTimer);
+      cobalt_flush_timer_);
 }
 
 inspect::Inspector BlobfsMetrics::CreateInspector() {
