@@ -7,8 +7,11 @@
 #include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
-#include <fbl/vector.h>
+#include <fbl/array.h>
+#include <fbl/span.h>
 #include <soc/aml-common/aml-spi.h>
+
+#include "src/lib/vmo_store/vmo_store.h"
 
 namespace spi {
 
@@ -24,29 +27,58 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  uint32_t SpiImplGetChipSelectCount() { return static_cast<uint32_t>(gpio_.size()); }
+  uint32_t SpiImplGetChipSelectCount() { return static_cast<uint32_t>(chips_.size()); }
   zx_status_t SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
                               uint8_t* out_rxdata, size_t rxdata_size, size_t* out_rxdata_actual);
 
-  zx_status_t SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                 uint64_t size);
-  zx_status_t SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo);
+  zx_status_t SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
+                                 uint64_t offset, uint64_t size);
+  zx_status_t SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo);
   zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                  uint64_t size);
   zx_status_t SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                 uint64_t size);
-  zx_status_t SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
+  zx_status_t SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id, uint64_t tx_offset,
                                  uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size);
 
  private:
-  explicit AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio)
-      : DeviceType(device), mmio_(std::move(mmio)) {}
+  struct OwnedVmoInfo {
+    uint64_t offset;
+    uint64_t size;
+  };
 
-  zx_status_t GpioInit(amlspi_cs_map_t* map, ddk::CompositeProtocolClient& composite);
+  using SpiVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
+
+  struct ChipInfo {
+    ChipInfo()
+        : registered_vmos(vmo_store::Options{
+              .map = {{
+                  .vm_option = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                  .vmar = {nullptr},
+              }},
+              .pin = {},
+          }) {}
+    ~ChipInfo() = default;
+
+    ddk::GpioProtocolClient gpio;
+    SpiVmoStore registered_vmos;
+  };
+
+  AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio, fbl::Array<ChipInfo> chips)
+      : DeviceType(device), mmio_(std::move(mmio)), chips_(std::move(chips)) {}
+
+  static fbl::Array<ChipInfo> InitChips(amlspi_cs_map_t* map,
+                                        ddk::CompositeProtocolClient& composite);
   void DumpState();
 
-  fbl::Vector<ddk::GpioProtocolClient> gpio_;
+  // Checks size against the registered VMO size and returns a Span with offset applied. Returns a
+  // Span with data set to nullptr if vmo_id wasn't found. Returns a Span with size set to zero if
+  // offset and/or size are invalid.
+  fbl::Span<uint8_t> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                uint64_t size);
+
   ddk::MmioBuffer mmio_;
+  fbl::Array<ChipInfo> chips_;
 };
 
 }  // namespace spi

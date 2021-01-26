@@ -44,7 +44,7 @@ class FakeDdkSpi : public fake_ddk::Bind,
         mmio_mapper_.CreateAndMap(0x100, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &mmio_));
   }
 
-  ~FakeDdkSpi() {
+  ~FakeDdkSpi() override {
     // Call DdkRelease on any children that haven't been removed yet.
     for (ChildDevice& child : children_) {
       child.device->DdkRelease();
@@ -214,6 +214,17 @@ zx_status_t PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio, std::optional<M
 
 namespace spi {
 
+zx_koid_t GetVmoKoid(const zx::vmo& vmo) {
+  zx_info_handle_basic_t info = {};
+  size_t actual = 0;
+  size_t available = 0;
+  zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &actual, &available);
+  if (status != ZX_OK || actual < 1) {
+    return ZX_KOID_INVALID;
+  }
+  return info.koid;
+}
+
 TEST(AmlSpiTest, DdkLifecycle) {
   FakeDdkSpi bind;
 
@@ -266,6 +277,195 @@ TEST(AmlSpiTest, Exchange) {
   EXPECT_EQ(rx_actual, sizeof(rxbuf));
   EXPECT_BYTES_EQ(rxbuf, kExpectedRxData, rx_actual);
   EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+
+  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+}
+
+TEST(AmlSpiTest, RegisterVmo) {
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 2);
+  AmlSpi& spi1 = *bind.children()[1].device;
+
+  zx::vmo test_vmo;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
+
+  const zx_koid_t test_vmo_koid = GetVmoKoid(test_vmo);
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE));
+  }
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_NOT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE));
+  }
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(spi1.SpiImplUnregisterVmo(0, 1, &vmo));
+    EXPECT_EQ(test_vmo_koid, GetVmoKoid(vmo));
+  }
+
+  {
+    zx::vmo vmo;
+    EXPECT_NOT_OK(spi1.SpiImplUnregisterVmo(0, 1, &vmo));
+  }
+}
+
+TEST(AmlSpiTest, Transmit) {
+  constexpr uint8_t kTxData[] = {0xa5, 0xa5, 0xa5, 0xa5, 0xa5, 0xa5, 0xa5, 0xa5};
+
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 2);
+  AmlSpi& spi1 = *bind.children()[1].device;
+
+  zx::vmo test_vmo;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256));
+  }
+
+  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  EXPECT_OK(test_vmo.write(kTxData, 512, sizeof(kTxData)));
+
+  EXPECT_OK(spi1.SpiImplTransmitVmo(0, 1, 256, sizeof(kTxData)));
+
+  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+
+  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+}
+
+TEST(AmlSpiTest, ReceiveVmo) {
+  constexpr uint8_t kExpectedRxData[] = {0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78};
+
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 2);
+  AmlSpi& spi1 = *bind.children()[1].device;
+
+  zx::vmo test_vmo;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256));
+  }
+
+  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+
+  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = kExpectedRxData[0];
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  EXPECT_OK(spi1.SpiImplReceiveVmo(0, 1, 512, sizeof(kExpectedRxData)));
+
+  uint8_t rx_buffer[sizeof(kExpectedRxData)];
+  EXPECT_OK(test_vmo.read(rx_buffer, 768, sizeof(rx_buffer)));
+  EXPECT_BYTES_EQ(rx_buffer, kExpectedRxData, sizeof(rx_buffer));
+
+  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+}
+
+TEST(AmlSpiTest, ExchangeVmo) {
+  constexpr uint8_t kTxData[] = {0xef, 0xef, 0xef, 0xef, 0xef, 0xef, 0xef, 0xef};
+  constexpr uint8_t kExpectedRxData[] = {0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78};
+
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 2);
+  AmlSpi& spi1 = *bind.children()[1].device;
+
+  zx::vmo test_vmo;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 256, PAGE_SIZE - 256));
+  }
+
+  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+
+  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = kExpectedRxData[0];
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  EXPECT_OK(test_vmo.write(kTxData, 512, sizeof(kTxData)));
+
+  EXPECT_OK(spi1.SpiImplExchangeVmo(0, 1, 256, 1, 512, sizeof(kTxData)));
+
+  uint8_t rx_buffer[sizeof(kExpectedRxData)];
+  EXPECT_OK(test_vmo.read(rx_buffer, 768, sizeof(rx_buffer)));
+  EXPECT_BYTES_EQ(rx_buffer, kExpectedRxData, sizeof(rx_buffer));
+
+  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+
+  ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
+}
+
+TEST(AmlSpiTest, TransfersOutOfRange) {
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 2);
+  AmlSpi& spi0 = *bind.children()[0].device;
+
+  zx::vmo test_vmo;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &test_vmo));
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo));
+    EXPECT_OK(spi0.SpiImplRegisterVmo(1, 1, std::move(vmo), PAGE_SIZE - 4, 4));
+  }
+
+  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  EXPECT_OK(spi0.SpiImplExchangeVmo(1, 1, 0, 1, 2, 2));
+  EXPECT_NOT_OK(spi0.SpiImplExchangeVmo(1, 1, 0, 1, 3, 2));
+  EXPECT_NOT_OK(spi0.SpiImplExchangeVmo(1, 1, 3, 1, 0, 2));
+  EXPECT_NOT_OK(spi0.SpiImplExchangeVmo(1, 1, 0, 1, 2, 3));
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  EXPECT_OK(spi0.SpiImplTransmitVmo(1, 1, 0, 4));
+  EXPECT_NOT_OK(spi0.SpiImplTransmitVmo(1, 1, 0, 5));
+  EXPECT_NOT_OK(spi0.SpiImplTransmitVmo(1, 1, 3, 2));
+  EXPECT_NOT_OK(spi0.SpiImplTransmitVmo(1, 1, 4, 1));
+  EXPECT_NOT_OK(spi0.SpiImplTransmitVmo(1, 1, 5, 1));
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+  EXPECT_OK(spi0.SpiImplReceiveVmo(1, 1, 0, 4));
+
+  bind.gpio().ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+  EXPECT_OK(spi0.SpiImplReceiveVmo(1, 1, 3, 1));
+
+  EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 3, 2));
+  EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 4, 1));
+  EXPECT_NOT_OK(spi0.SpiImplReceiveVmo(1, 1, 5, 1));
 
   ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
 }

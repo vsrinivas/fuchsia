@@ -11,6 +11,8 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -55,6 +57,21 @@ void AmlSpi::DumpState() {
 
 #undef dump_reg
 
+fbl::Span<uint8_t> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
+                                      uint64_t size) {
+  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
+      chips_[chip_select].registered_vmos.GetVmo(vmo_id);
+  if (!vmo_info) {
+    return fbl::Span<uint8_t>();
+  }
+
+  if (offset + size > vmo_info->meta().size) {
+    return fbl::Span<uint8_t>(vmo_info->data().data(), 0UL);
+  }
+
+  return vmo_info->data().subspan(vmo_info->meta().offset + offset);
+}
+
 zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,
                                     uint8_t* out_rxdata, size_t rxdata_size,
                                     size_t* out_rxdata_actual) {
@@ -85,7 +102,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   const uint8_t* tx = txdata;
   uint8_t* rx = out_rxdata;
 
-  gpio_[cs].Write(0);
+  chips_[cs].gpio.Write(0);
 
   while (exchange_size) {
     uint32_t burst_size = (uint32_t)std::min(kBurstMax, exchange_size);
@@ -122,55 +139,131 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     exchange_size -= burst_size;
   }
 
-  gpio_[cs].Write(1);
+  chips_[cs].gpio.Write(1);
 
-  if (rx) {
+  if (rx && out_rxdata_actual) {
     *out_rxdata_actual = rxdata_size;
   }
 
   return ZX_OK;
 }
 
-// TODO(67570)
-zx_status_t AmlSpi::SpiImplRegisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                       uint64_t size) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t AmlSpi::SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
+                                       uint64_t offset, uint64_t size) {
+  if (chip_select >= SpiImplGetChipSelectCount()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  vmo_store::StoredVmo<OwnedVmoInfo> stored_vmo(std::move(vmo), OwnedVmoInfo{
+                                                                    .offset = offset,
+                                                                    .size = size,
+                                                                });
+  return chips_[chip_select].registered_vmos.RegisterWithKey(vmo_id, std::move(stored_vmo));
 }
 
-zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t cs, uint32_t vmo_id, zx::vmo* out_vmo) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo) {
+  if (chip_select >= SpiImplGetChipSelectCount()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
+      chips_[chip_select].registered_vmos.GetVmo(vmo_id);
+  if (!vmo_info) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx_status_t status = vmo_info->vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, out_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto result = chips_[chip_select].registered_vmos.Unregister(vmo_id);
+  if (result.is_error()) {
+    return result.error();
+  }
+
+  *out_vmo = result.take_value();
+  return ZX_OK;
 }
 
 zx_status_t AmlSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                        uint64_t size) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (chip_select >= SpiImplGetChipSelectCount()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fbl::Span<const uint8_t> buffer = GetVmoSpan(chip_select, vmo_id, offset, size);
+  if (!buffer.data()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (buffer.empty()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return SpiImplExchange(chip_select, buffer.data(), size, nullptr, 0, nullptr);
 }
 
 zx_status_t AmlSpi::SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                       uint64_t size) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (chip_select >= SpiImplGetChipSelectCount()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fbl::Span<uint8_t> buffer = GetVmoSpan(chip_select, vmo_id, offset, size);
+  if (!buffer.data()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (buffer.empty()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return SpiImplExchange(chip_select, nullptr, 0, buffer.data(), size, nullptr);
 }
 
-zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
+zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id, uint64_t tx_offset,
                                        uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (chip_select >= SpiImplGetChipSelectCount()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fbl::Span<uint8_t> tx_buffer = GetVmoSpan(chip_select, tx_vmo_id, tx_offset, size);
+  if (!tx_buffer.data()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (tx_buffer.empty()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fbl::Span<uint8_t> rx_buffer = GetVmoSpan(chip_select, rx_vmo_id, rx_offset, size);
+  if (!rx_buffer.data()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (rx_buffer.empty()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return SpiImplExchange(chip_select, tx_buffer.data(), size, rx_buffer.data(), size, nullptr);
 }
 
-zx_status_t AmlSpi::GpioInit(amlspi_cs_map_t* map, ddk::CompositeProtocolClient& composite) {
+fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map,
+                                               ddk::CompositeProtocolClient& composite) {
+  fbl::Array<ChipInfo> chips(new ChipInfo[map->cs_count], map->cs_count);
+  if (!chips) {
+    return chips;
+  }
+
   for (uint32_t i = 0; i < map->cs_count; i++) {
     uint32_t index = map->cs[i];
     char fragment_name[32] = {};
     snprintf(fragment_name, 32, "gpio-cs-%d", index);
-    ddk::GpioProtocolClient gpio(composite, fragment_name);
-    if (!gpio.is_valid()) {
+    chips[i].gpio = ddk::GpioProtocolClient(composite, fragment_name);
+    if (!chips[i].gpio.is_valid()) {
       zxlogf(ERROR, "%s: failed to acquire gpio for SS%d", __func__, i);
-      return ZX_ERR_NO_RESOURCES;
+      return fbl::Array<ChipInfo>();
     }
-
-    gpio_.push_back(gpio);
   }
 
-  return ZX_OK;
+  return chips;
 }
 
 zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
@@ -217,17 +310,15 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
       return status;
     }
 
-    fbl::AllocChecker ac;
-    auto* spi = new (&ac) AmlSpi(device, *std::move(mmio));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+    fbl::Array<ChipInfo> chips = InitChips(&gpio_map[i], composite);
+    if (!chips || chips.size() == 0) {
+      return ZX_ERR_NO_RESOURCES;
     }
 
-    auto cleanup = fbl::MakeAutoCall([&spi]() { spi->DdkRelease(); });
-
-    status = spi->GpioInit(&gpio_map[i], composite);
-    if (status != ZX_OK) {
-      return status;
+    fbl::AllocChecker ac;
+    std::unique_ptr<AmlSpi> spi(new (&ac) AmlSpi(device, *std::move(mmio), std::move(chips)));
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
     }
 
     char devname[32];
@@ -245,7 +336,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
       return status;
     }
 
-    cleanup.cancel();
+    __UNUSED auto* _ = spi.release();
   }
 
   return ZX_OK;

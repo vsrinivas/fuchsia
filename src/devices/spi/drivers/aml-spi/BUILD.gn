@@ -30,8 +30,10 @@ group("common") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/lib/vmo_store",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fzl",
   ]
 }
 
@@ -46,7 +48,6 @@ test("aml-spi-test-bin") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fzl",
   ]
 }
 
