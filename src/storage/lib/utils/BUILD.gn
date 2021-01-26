@@ -14,3 +14,17 @@ source_set("topological_path") {
     "//zircon/system/ulib/fdio-caller",
   ]
 }
+
+source_set("use_debug_log") {
+  sources = [
+    "use_debug_log.cc",
+    "use_debug_log.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/syslog",
+  ]
+}

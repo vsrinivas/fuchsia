@@ -36,6 +36,7 @@
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/mount.h"
+#include "src/storage/lib/utils/use_debug_log.h"
 
 namespace {
 
@@ -302,6 +303,9 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
 }  // namespace
 
 int main(int argc, char** argv) {
+  // TODO(fxbug.dev/66476)
+  storage::UseDebugLog("blobfs");
+
   CommandFunction func = nullptr;
   auto options_or = ProcessArgs(argc, argv, &func);
   if (options_or.is_error()) {

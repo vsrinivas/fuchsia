@@ -43,6 +43,7 @@
 #include "fs-manager.h"
 #include "metrics.h"
 #include "src/storage/fshost/deprecated-loader-service.h"
+#include "src/storage/lib/utils/use_debug_log.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -173,61 +174,6 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
   return ZX_OK;
 }
 
-zx_status_t LogToDebugLog(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient log_client) {
-  auto result = log_client.Get();
-  if (result.status() != ZX_OK) {
-    return result.status();
-  }
-  char process_name[ZX_MAX_NAME_LEN] = {};
-  zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
-  const char* tag = process_name;
-  fx_logger_config_t logger_config{
-      .min_severity = fx_logger_get_min_severity(fx_log_get_logger()),
-      .console_fd = -1,
-      .log_service_channel = ZX_HANDLE_INVALID,
-      .tags = &tag,
-      .num_tags = 1,
-  };
-  zx_status_t status = fdio_fd_create(result.Unwrap()->log.release(), &logger_config.console_fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fx_log_reconfigure(&logger_config);
-}
-
-zx::status<llcpp::fuchsia::boot::WriteOnlyLog::SyncClient> ConnectToWriteLog() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  status = fdio_service_connect("/svc/fuchsia.boot.WriteOnlyLog", remote.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  return zx::ok(llcpp::fuchsia::boot::WriteOnlyLog::SyncClient(std::move(local)));
-}
-
-// Opens handle to log write service and reconfigures syslog to use that
-// handle for logging. This is a short term fix for a bug where in on a
-// board with userdebug build, no logs show up on serial.
-// TODO(fxbug.dev/66476)
-void UseDebugLog() {
-  auto log_client_or = ConnectToWriteLog();
-  if (log_client_or.is_error()) {
-    std::cerr << "fshost: failed to get write log: "
-              << zx_status_get_string(log_client_or.error_value()) << std::endl;
-    return;
-  }
-
-  if (auto status = LogToDebugLog(std::move(log_client_or.value())); status != ZX_OK) {
-    std::cerr << "fshost: Failed to reconfigure logger to use debuglog: "
-              << zx_status_get_string(status) << std::endl;
-    return;
-  }
-}
-
 Config GetConfig(const FshostBootArgs& boot_args) {
   std::ifstream file("/pkg/config/fshost");
   Config::Options options;
@@ -281,7 +227,7 @@ int Main(bool disable_block_watcher) {
   Config config = GetConfig(*boot_args);
 
   if (!config.is_set(Config::kUseSyslog))
-    UseDebugLog();
+    storage::UseDebugLog("fshost");
 
   FX_LOGS(INFO) << "Config: " << config;
 

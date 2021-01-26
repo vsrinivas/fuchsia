@@ -14,6 +14,7 @@ executable("blobfs") {
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/storage/blobfs",
+    "//src/storage/lib/utils:use_debug_log",
     "//third_party/boringssl",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",

@@ -31,6 +31,7 @@
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
 
+#include "src/storage/lib/utils/use_debug_log.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
 
@@ -157,6 +158,8 @@ int CreateBcacheUpdatingOptions(std::unique_ptr<block_client::RemoteBlockDevice>
 }  // namespace
 
 int main(int argc, char** argv) {
+  // TODO(fxbug.dev/66476)
+  storage::UseDebugLog("minfs");
   minfs::MountOptions options;
 
   const std::vector<Command> commands = {
