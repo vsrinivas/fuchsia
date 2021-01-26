@@ -1,0 +1,16 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.clockimpl.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Success"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "BadProtocol"
+    }
+]

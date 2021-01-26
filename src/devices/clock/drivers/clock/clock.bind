@@ -1,0 +1,8 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.clockimpl;
+
+// The device must implement the clock impl protocol.
+fuchsia.BIND_PROTOCOL == fuchsia.clockimpl.BIND_PROTOCOL.DEVICE;

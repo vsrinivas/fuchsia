@@ -8,13 +8,14 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/clock.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+
+#include "src/devices/clock/drivers/clock/clock-bind.h"
 
 zx_status_t ClockDevice::ClockEnable() { return clock_.Enable(id_); }
 
@@ -117,5 +118,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace
 
-ZIRCON_DRIVER_BEGIN(clock, driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK_IMPL), ZIRCON_DRIVER_END(clock)
+ZIRCON_DRIVER(clock, driver_ops, "zircon", "0.1");

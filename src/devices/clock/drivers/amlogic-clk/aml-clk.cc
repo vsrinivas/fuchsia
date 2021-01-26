@@ -18,14 +18,13 @@
 #include <hwreg/bitfields.h>
 #include <soc/aml-meson/aml-clk-common.h>
 
-#include "src/devices/clock/drivers/amlogic-clk/aml-clk-bind.h"
-
 #include "aml-axg-blocks.h"
 #include "aml-fclk.h"
 #include "aml-g12a-blocks.h"
 #include "aml-g12b-blocks.h"
 #include "aml-gxl-blocks.h"
 #include "aml-sm1-blocks.h"
+#include "src/devices/clock/drivers/amlogic-clk/aml-clk-bind.h"
 
 namespace amlogic_clock {
 
