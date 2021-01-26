@@ -14,6 +14,7 @@
 
 namespace cpp17 {
 
+using std::bad_optional_access;
 using std::make_optional;
 using std::nullopt;
 using std::nullopt_t;
@@ -28,6 +29,7 @@ using std::optional;
 #include <new>
 
 #include "internal/constructors.h"
+#include "internal/exception.h"
 #include "internal/storage.h"
 #include "internal/utility.h"
 #include "type_traits.h"
@@ -100,17 +102,6 @@ class optional : private ::cpp17::internal::modulate_copy_and_move<T> {
 
   template <typename... Args>
   using emplace_constructible = std::enable_if_t<std::is_constructible<T, Args...>::value, T&>;
-
-  [[noreturn]] static constexpr void throw_bad_optional_access(const char* reason) {
-#if __cpp_exceptions >= 199711L
-    throw bad_optional_access(reason);
-#else
-    // C++14 has no portable version of unused, this will silence unused variable warnings when
-    // compiling without exceptions.
-    (void)reason;
-    __builtin_abort();
-#endif
-  }
 
  public:
   using value_type = T;
@@ -185,30 +176,26 @@ class optional : private ::cpp17::internal::modulate_copy_and_move<T> {
   constexpr T& value() & {
     if (has_value()) {
       return storage_.get(type_tag{});
-    } else {
-      throw_bad_optional_access("Accessed value of empty optional!");
     }
+    internal::throw_or_abort<bad_optional_access>("Accessed value of empty optional!");
   }
   constexpr const T& value() const& {
     if (has_value()) {
       return storage_.get(type_tag{});
-    } else {
-      throw_bad_optional_access("Accessed value of empty optional!");
     }
+    internal::throw_or_abort<bad_optional_access>("Accessed value of empty optional!");
   }
   constexpr T&& value() && {
     if (has_value()) {
       return std::move(storage_.get(type_tag{}));
-    } else {
-      throw_bad_optional_access("Accessed value of empty optional!");
     }
+    internal::throw_or_abort<bad_optional_access>("Accessed value of empty optional!");
   }
   constexpr const T&& value() const&& {
     if (has_value()) {
       return std::move(storage_.get(type_tag{}));
-    } else {
-      throw_bad_optional_access("Accessed value of empty optional!");
     }
+    internal::throw_or_abort<bad_optional_access>("Accessed value of empty optional!");
   }
 
   template <typename U>

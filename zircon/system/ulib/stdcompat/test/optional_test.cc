@@ -11,6 +11,8 @@
 
 #include <gtest/gtest.h>
 
+#include "test_helper.h"
+
 namespace {
 
 template <bool define_assignment_operators>
@@ -616,6 +618,45 @@ TEST(OptionalTest, SwappingWithAssignmentOperators) { swapping<slot<true>>(); }
 TEST(OptionalTest, DestructorCalledWhenNotEmpty) {
   balance<slot<false>>();
   balance<slot<true>>();
+}
+
+// When exceptions are disabled, this defaults to __builtin_abort.
+TEST(OptionalTest, MutableRefValueAccessorWhenEmptyIsBadOptionalAccess) {
+  ASSERT_THROW_OR_ABORT(
+      {
+        cpp17::optional<int> empty_optional;
+        int& j [[gnu::unused]] = empty_optional.value();
+      },
+      cpp17::bad_optional_access);
+}
+
+TEST(OptionalTest, ConstRefValueAccessorWhenEmptyIsBadOptionalAccess2) {
+  ASSERT_THROW_OR_ABORT(
+      {
+        cpp17::optional<int> empty_optional;
+        const int& j [[gnu::unused]] = empty_optional.value();
+      },
+      cpp17::bad_optional_access);
+}
+
+TEST(OptionalTest, MutableRValueValueAccessorWhenEmptyIsBadOptionalAccess3) {
+  ASSERT_THROW_OR_ABORT(
+      {
+        cpp17::optional<int> empty_optional;
+        int j [[gnu::unused]] = std::move(empty_optional).value();
+      },
+      cpp17::bad_optional_access);
+}
+
+[[gnu::unused]] int get_value(const std::optional<int>&& a) { return a.value(); }
+
+TEST(OptionalTest, ConstRvalueValueAccessorWhenEmptyIsBadOptionalAccess4) {
+  ASSERT_THROW_OR_ABORT(
+      {
+        cpp17::optional<int> empty_optional;
+        const int b [[gnu::unused]] = get_value(empty_optional);
+      },
+      cpp17::bad_optional_access);
 }
 
 #if __cpp_lib_optional >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
