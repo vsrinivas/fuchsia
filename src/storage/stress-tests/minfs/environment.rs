@@ -86,11 +86,11 @@ impl Environment<MinfsInstance> for MinfsEnvironment {
 
         let file_actor = {
             let rng = SmallRng::from_seed(rng.gen());
-            FileActor::new(rng)
+            FileActor::new(rng, "home1".to_string())
         };
         let deletion_actor = {
             let rng = SmallRng::from_seed(rng.gen());
-            DeletionActor::new(rng)
+            DeletionActor::new(rng, "home1".to_string())
         };
 
         let mut actors = vec![

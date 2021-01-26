@@ -4,9 +4,9 @@
 
 use {
     fidl_fuchsia_io::{DirectoryProxy, FileProxy, SeekOrigin, CLONE_FLAG_SAME_RIGHTS},
-    files_async::readdir,
     fuchsia_zircon::Status,
     io_util::{directory::*, file::*, node::OpenError},
+    log::debug,
     std::path::Path,
 };
 
@@ -17,12 +17,15 @@ pub struct Directory {
 }
 
 impl Directory {
-    // Create a Directory object from a path in the namespace
+    // Opens a path in the namespace as a Directory.
     pub fn from_namespace(path: impl AsRef<Path>, flags: u32) -> Result<Directory, Status> {
         let path = path.as_ref().to_str().unwrap();
         match io_util::directory::open_in_namespace(path, flags) {
             Ok(proxy) => Ok(Directory { proxy }),
-            Err(OpenError::OpenError(s)) => Err(s),
+            Err(OpenError::OpenError(s)) => {
+                debug!("from_namespace {} failed: {}", path, s);
+                Err(s)
+            }
             Err(OpenError::SendOpenRequest(e)) => {
                 if e.is_closed() {
                     Err(Status::PEER_CLOSED)
@@ -36,11 +39,14 @@ impl Directory {
         }
     }
 
-    // Open a file in the parent dir with the given |filename|.
-    pub async fn open_file(&self, filename: &str, flags: u32) -> Result<File, Status> {
-        match open_file(&self.proxy, filename, flags).await {
-            Ok(proxy) => Ok(File { proxy }),
-            Err(OpenError::OpenError(s)) => Err(s),
+    // Open a directory in the parent dir with the given |filename|.
+    pub async fn open_directory(&self, filename: &str, flags: u32) -> Result<Directory, Status> {
+        match io_util::directory::open_directory(&self.proxy, filename, flags).await {
+            Ok(proxy) => Ok(Directory { proxy }),
+            Err(OpenError::OpenError(s)) => {
+                debug!("open_directory({},{}) failed: {}", filename, flags, s);
+                Err(s)
+            }
             Err(OpenError::SendOpenRequest(e)) => {
                 if e.is_closed() {
                     Err(Status::PEER_CLOSED)
@@ -50,6 +56,46 @@ impl Directory {
             }
             Err(OpenError::OnOpenEventStreamClosed) => Err(Status::PEER_CLOSED),
             Err(e) => panic!("Unexpected error during open: {}", e),
+        }
+    }
+
+    // Open a file in the parent dir with the given |filename|.
+    pub async fn open_file(&self, filename: &str, flags: u32) -> Result<File, Status> {
+        match io_util::directory::open_file(&self.proxy, filename, flags).await {
+            Ok(proxy) => Ok(File { proxy }),
+            Err(OpenError::OpenError(s)) => {
+                debug!("open_file({},{}) failed: {}", filename, flags, s);
+                Err(s)
+            }
+            Err(OpenError::SendOpenRequest(e)) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during open: {}", e);
+                }
+            }
+            Err(OpenError::OnOpenEventStreamClosed) => Err(Status::PEER_CLOSED),
+            Err(e) => panic!("Unexpected error during open: {}", e),
+        }
+    }
+
+    // Creates a directory named |filename| within this directory.
+    pub async fn create_directory(&self, filename: &str, flags: u32) -> Result<Directory, Status> {
+        match io_util::directory::create_directory(&self.proxy, filename, flags).await {
+            Ok(proxy) => Ok(Directory { proxy }),
+            Err(OpenError::OpenError(s)) => {
+                debug!("create_directory({},{}) failed: {}", filename, flags, s);
+                Err(s)
+            }
+            Err(OpenError::SendOpenRequest(e)) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during create: {}", e);
+                }
+            }
+            Err(OpenError::OnOpenEventStreamClosed) => Err(Status::PEER_CLOSED),
+            Err(e) => panic!("Unexpected error during create: {}", e),
         }
     }
 
@@ -67,9 +113,42 @@ impl Directory {
         }
     }
 
+    // Renames |src_name| inside the directory to be |dst_name| within |dst_parent|.
+    // Neither |src_name| nor |dst_name| may contain '/' except at the end of either string.
+    pub async fn rename(
+        &self,
+        src_name: &str,
+        dst_parent: &Directory,
+        dst_name: &str,
+    ) -> Result<(), Status> {
+        let dst_token = match dst_parent.proxy.get_token().await {
+            Ok((_raw_status_code, Some(handle))) => Ok(handle),
+            Ok((_raw_status_code, None)) => {
+                panic!("No handle");
+            }
+            Err(e) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during rename: {}", e);
+                }
+            }
+        }?;
+        match self.proxy.rename(src_name, dst_token, dst_name).await {
+            Ok(raw_status_code) => Status::ok(raw_status_code),
+            Err(e) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during rename: {}", e);
+                }
+            }
+        }
+    }
+
     // Return a list of filenames in the directory
     pub async fn entries(&self) -> Result<Vec<String>, Status> {
-        match readdir(&self.proxy).await {
+        match files_async::readdir(&self.proxy).await {
             Ok(entries) => Ok(entries.iter().map(|entry| entry.name.clone()).collect()),
             Err(files_async::Error::Fidl(_, e)) => {
                 if e.is_closed() {

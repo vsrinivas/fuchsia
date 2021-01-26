@@ -26,11 +26,13 @@ enum MinfsOperation {
 // minfs as a true POSIX filesystem.
 pub struct FileActor {
     rng: SmallRng,
+    // Which directory to operate out of.
+    home_dir: String,
 }
 
 impl FileActor {
-    pub fn new(rng: SmallRng) -> Self {
-        Self { rng }
+    pub fn new(rng: SmallRng, home_dir: String) -> Self {
+        Self { rng, home_dir }
     }
 
     // Creates reasonable-sized files to fill a percentage of the free space
@@ -44,8 +46,8 @@ impl FileActor {
 
         // Start filling the space with files
         for _ in 0..num_files_to_create {
-            // Create a file whose uncompressed size is reasonable, or exactly the requested size
-            // if the requested size is too small.
+            // Create a file whose size is reasonable, or exactly the requested size if the
+            // requested size is too small.
             let filename = format!("file_{}", self.rng.gen::<u128>());
 
             let data =
@@ -53,7 +55,8 @@ impl FileActor {
             let bytes = data.generate_bytes();
 
             let file = instance
-                .root_dir
+                .open_dir(&self.home_dir)
+                .await?
                 .open_file(
                     &filename,
                     OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_WRITABLE,
