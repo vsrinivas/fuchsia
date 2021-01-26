@@ -6,8 +6,9 @@ use archivist_lib::{
     configs::parse_config,
     logs::message::{fx_log_packet_t, METADATA_SIZE},
 };
+use diagnostics_data::{Data, LogError, Logs, Severity};
 use diagnostics_hierarchy::{trie::TrieIterableNode, DiagnosticsHierarchy};
-use diagnostics_reader::{ArchiveReader, Inspect};
+use diagnostics_reader::{ArchiveReader, Inspect, Subscription};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::LogSinkMarker;
@@ -15,7 +16,7 @@ use fidl_fuchsia_sys::{ComponentControllerEvent::OnTerminated, LauncherProxy};
 use fidl_test_logs_budget::{
     SocketPuppetControllerRequest, SocketPuppetControllerRequestStream, SocketPuppetProxy,
 };
-use fuchsia_async::{Task, Timer};
+use fuchsia_async::Task;
 use fuchsia_component::{
     client::{launch, launch_with_options, App, LaunchOptions},
     server::ServiceFs,
@@ -26,7 +27,7 @@ use futures::{
     StreamExt,
 };
 use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
-use std::{collections::BTreeMap, ops::Deref, time::Duration};
+use std::{collections::BTreeMap, ops::Deref};
 use tracing::{debug, info};
 
 const ARCHIVIST_URL: &str =
@@ -45,27 +46,28 @@ async fn main() {
     let mut env = PuppetEnv::create().await;
 
     info!("check that archivist log state is clean");
-    env.until_archivist_state_matches_expected().await;
+    env.assert_archivist_state_matches_expected().await;
 
-    let puppets = [
-        env.launch_puppet(0).await,
-        env.launch_puppet(1).await,
-        env.launch_puppet(2).await,
-        env.launch_puppet(3).await,
-        env.launch_puppet(4).await,
-    ];
-    env.validate(&puppets).await;
+    for i in 0..5 {
+        env.launch_puppet(i).await;
+    }
+    env.validate().await;
 }
 
 struct PuppetEnv {
     launcher: LauncherProxy,
     controllers: Receiver<SocketPuppetControllerRequestStream>,
-    archivist: App,
+    _archivist: App,
     messages_allowed_in_cache: usize,
     messages_sent: Vec<MessageReceipt>,
     launched_monikers: Vec<String>,
+    running_puppets: Vec<Puppet>,
+    inspect_reader: ArchiveReader,
+    log_reader: ArchiveReader,
+    log_subscription: Subscription<Logs>,
     rng: StdRng,
     _serve_fs: Task<()>,
+    _log_errors: Task<()>,
 }
 
 impl PuppetEnv {
@@ -97,39 +99,53 @@ impl PuppetEnv {
         };
 
         info!("starting our archivist");
-        let archivist =
+        let _archivist =
             launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, options).unwrap();
         let config = parse_config("/pkg/data/embedding-config.json").unwrap();
 
-        let mut archivist_events = archivist.controller().take_event_stream();
+        let mut archivist_events = _archivist.controller().take_event_stream();
         if let OnTerminated { .. } = archivist_events.next().await.unwrap().unwrap() {
             panic!("archivist terminated early");
         }
 
         let messages_allowed_in_cache = config.logs.max_cached_original_bytes / TEST_PACKET_LEN;
 
+        let archive = || _archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
+        let inspect_reader = ArchiveReader::new()
+            .with_archive(archive())
+            .with_minimum_schema_count(1) // we only request inspect from our archivist
+            .add_selector("archivist-with-small-caches.cmx:root/logs_buffer")
+            .add_selector("archivist-with-small-caches.cmx:root/sources");
+        let log_reader = ArchiveReader::new()
+            .with_archive(archive())
+            .with_minimum_schema_count(0) // we want this to return even when no log messages
+            .retry_if_empty(false);
+        let (log_subscription, mut errors) = log_reader.snapshot_then_subscribe::<Logs>().unwrap();
+
+        let _log_errors = Task::spawn(async move {
+            if let Some(error) = errors.next().await {
+                panic!("{:#?}", error);
+            }
+        });
+
         Self {
             launcher,
             controllers,
-            archivist,
+            _archivist,
             messages_allowed_in_cache,
             messages_sent: vec![],
             launched_monikers: vec![],
+            running_puppets: vec![],
+            inspect_reader,
+            log_reader,
+            log_subscription,
             rng: StdRng::seed_from_u64(0xA455),
             _serve_fs,
+            _log_errors,
         }
     }
 
-    fn reader(&self) -> ArchiveReader {
-        let archive = self.archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
-        ArchiveReader::new()
-            .with_archive(archive)
-            .with_minimum_schema_count(1)
-            .add_selector("archivist-with-small-caches.cmx:root/logs_buffer")
-            .add_selector("archivist-with-small-caches.cmx:root/sources")
-    }
-
-    async fn launch_puppet(&mut self, id: usize) -> Puppet {
+    async fn launch_puppet(&mut self, id: usize) {
         let url =
             format!("fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket-puppet{}.cmx", id);
         info!(%url, "launching puppet");
@@ -165,9 +181,7 @@ impl PuppetEnv {
 
         info!("observe the puppet appears in archivist's inspect output");
         self.launched_monikers.push(puppet.moniker.clone());
-        self.until_archivist_state_matches_expected().await;
-
-        puppet
+        self.running_puppets.push(puppet);
     }
 
     fn current_expected_sources(&self) -> BTreeMap<String, Count> {
@@ -189,32 +203,53 @@ impl PuppetEnv {
         expected_sources
     }
 
-    async fn until_archivist_state_matches_expected(&self) {
+    async fn assert_archivist_state_matches_expected(&self) {
+        // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
+        let results =
+            self.inspect_reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
+        let payload = results.payload.as_ref().unwrap();
         let expected_sources = self.current_expected_sources();
+        let observed_sources = get_log_counts_by_moniker(&payload);
+        assert_eq!(observed_sources, expected_sources);
 
-        let reader = self.reader();
-        loop {
-            // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
-            let results = reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
-            let payload = results.payload.as_ref().unwrap();
-            let observed_sources = get_log_counts_by_moniker(&payload);
-            if observed_sources == expected_sources {
-                break;
-            } else {
-                debug!("archivist state did not match expected, sleeping");
-                debug!("sources observed={:?} expected={:?}", observed_sources, expected_sources);
-                Timer::new(Duration::from_millis(100)).await;
-            }
+        let expected_logs = self
+            .messages_sent
+            .iter()
+            .rev() // we want the newest messages
+            .take(self.messages_allowed_in_cache)
+            .rev(); // but in the order they were sent
+        let mut observed_logs = self.log_reader.snapshot::<Logs>().await.unwrap().into_iter();
+
+        let overall_number_dropped: u64 = expected_sources.values().map(|c| c.dropped as u64).sum();
+        if overall_number_dropped > 0 {
+            // the first message is always a warning that logs were dropped
+            let dropped_logs_warning = observed_logs.next().unwrap();
+            assert_eq!(
+                dropped_logs_warning.metadata.errors,
+                Some(vec![LogError::DroppedLogs { count: overall_number_dropped }])
+            );
+            assert_eq!(dropped_logs_warning.metadata.severity, Severity::Warn);
+        }
+
+        for (expected, observed) in expected_logs.zip(observed_logs) {
+            assert_eq!(expected, &observed);
         }
     }
 
-    async fn validate(mut self, puppets: &[Puppet]) {
+    async fn validate(mut self) {
+        // we want to spend most of this test's effort exercising the behavior of dropping messages
+        let overall_messages_to_log = self.messages_allowed_in_cache * 15;
+
         info!("having the puppets log packets until overflow");
-        for _ in 0..self.messages_allowed_in_cache * 30 {
-            let puppet = puppets.choose(&mut self.rng).unwrap();
+        for _ in 0..overall_messages_to_log {
+            let puppet = self.running_puppets.choose(&mut self.rng).unwrap();
             let receipt = puppet.emit_packet().await;
+
+            let next_message = self.log_subscription.next().await.unwrap();
+            assert_eq!(receipt, next_message);
+
             self.messages_sent.push(receipt);
-            self.until_archivist_state_matches_expected().await;
+            self.assert_archivist_state_matches_expected().await;
         }
         info!("test complete!");
     }
@@ -229,11 +264,13 @@ struct Puppet {
 
 impl Puppet {
     async fn emit_packet(&self) -> MessageReceipt {
+        let timestamp = zx::Time::get_monotonic().into_nanos();
         let mut packet: fx_log_packet_t = Default::default();
         packet.metadata.severity = fuchsia_syslog::levels::INFO;
+        packet.metadata.time = timestamp;
         packet.fill_data(1..(TEST_PACKET_LEN - METADATA_SIZE), b'A' as _);
         self.proxy.emit_packet(packet.as_bytes()).await.unwrap();
-        MessageReceipt { moniker: self.moniker.clone() }
+        MessageReceipt { timestamp, moniker: self.moniker.clone() }
     }
 }
 
@@ -266,6 +303,18 @@ fn get_log_counts_by_moniker(root: &DiagnosticsHierarchy) -> BTreeMap<String, Co
 }
 
 /// A value indicating a message was sent by a particular puppet.
+#[derive(Clone, Debug, PartialEq)]
 struct MessageReceipt {
     moniker: String,
+    timestamp: i64,
+}
+
+impl PartialEq<Data<Logs>> for MessageReceipt {
+    fn eq(&self, other: &Data<Logs>) -> bool {
+        // we launch `socket_puppet0.cmx` and store that moniker, but the moniker we get back from
+        // archivist looks like `socket_puppet0.cmx:12345`, so we do a prefix match instead of
+        // full string equality
+        other.moniker.starts_with(&self.moniker)
+            && *other.metadata.timestamp as i64 == self.timestamp
+    }
 }
