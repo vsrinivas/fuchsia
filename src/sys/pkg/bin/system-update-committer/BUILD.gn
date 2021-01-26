@@ -32,6 +32,8 @@ rustc_library("lib") {
     "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/mock-verifier:lib",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:proptest-derive",
   ]
 
   source_root = "src/main.rs"

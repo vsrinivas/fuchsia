@@ -10,13 +10,18 @@ use {
     thiserror::Error,
 };
 
+#[cfg(test)]
+use proptest_derive::Arbitrary;
+
 /// Static service configuration options.
 #[derive(Debug, Default, PartialEq, Eq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct Config {
     blobfs: Mode,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[cfg_attr(test, derive(Arbitrary))]
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
     Ignore,
@@ -34,6 +39,11 @@ impl Config {
     #[allow(dead_code)]
     pub fn blobfs(&self) -> &Mode {
         &self.blobfs
+    }
+
+    #[cfg(test)]
+    pub fn builder() -> tests::ConfigBuilder {
+        tests::ConfigBuilder
     }
 
     pub fn load_from_config_data_or_default() -> Config {
@@ -72,8 +82,25 @@ enum ConfigLoadError {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+
     use {super::*, matches::assert_matches, serde_json::json};
+
+    pub struct ConfigBuilder;
+    impl ConfigBuilder {
+        pub fn blobfs(self, mode: Mode) -> ConfigBuilderWithBlobfs {
+            ConfigBuilderWithBlobfs { blobfs: mode }
+        }
+    }
+
+    pub struct ConfigBuilderWithBlobfs {
+        blobfs: Mode,
+    }
+    impl ConfigBuilderWithBlobfs {
+        pub fn build(self) -> Config {
+            Config { blobfs: self.blobfs }
+        }
+    }
 
     fn verify_load(input: serde_json::Value, expected: Config) {
         assert_eq!(
@@ -91,7 +118,7 @@ mod tests {
                 json!({
                     "blobfs": name,
                 }),
-                Config { blobfs: val.clone() },
+                Config::builder().blobfs(val.clone()).build(),
             );
         }
     }
