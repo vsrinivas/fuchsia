@@ -309,7 +309,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "class/bt-hci/000",
       "sys/platform/05:00:2/aml-i2c",
       "mali/aml-gpu",
-      "sys/platform/05:00:21/nelson-usb-phy",
+      "sys/platform/05:0a:21/nelson-usb-phy",
       "nelson-audio-i2s-out",
       "sys/platform/05:05:13/nelson-audio-pdm-in",
       "sys/platform/00:00:29",  // registers device
