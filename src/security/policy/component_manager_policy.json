@@ -9,7 +9,26 @@
                 "/bootstrap/power_manager",
                 "/bootstrap/shutdown_shim",
             ],
-        }
+        },
+        capability_policy: [
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.boot.RootResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/console",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/driver_manager",
+                    "/bootstrap/netsvc",
+                    "/bootstrap/svchost",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+        ]
     }
 }
 
