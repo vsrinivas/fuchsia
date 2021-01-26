@@ -11,12 +11,13 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-clk.h>
+
+#include "src/devices/clock/drivers/mtk-clk/mtk-clk-bind.h"
 
 namespace clk {
 
@@ -370,8 +371,4 @@ static constexpr zx_driver_ops_t mtk_clk_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(mtk_clk, mtk_clk_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_CLK),
-ZIRCON_DRIVER_END(mtk_clk)
+ZIRCON_DRIVER(mtk_clk, mtk_clk_driver_ops, "zircon", "0.1");

@@ -10,6 +10,7 @@ group("tests") {
     "as370-clk:tests",
     "clock:tests",
     "msm8x53-clk:tests",
+    "mtk-clk:tests",
     "vs680-clk:tests",
   ]
 }
