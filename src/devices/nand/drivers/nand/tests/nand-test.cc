@@ -58,9 +58,10 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
     return result_;
   }
 
-  zx_status_t RawNandReadPageHwecc(uint32_t nandpage, void* out_data_buffer, size_t data_size,
-                                   size_t* out_data_actual, void* out_oob_buffer, size_t oob_size,
-                                   size_t* out_oob_actual, uint32_t* out_ecc_correct) {
+  zx_status_t RawNandReadPageHwecc(uint32_t nandpage, uint8_t* out_data_buffer, size_t data_size,
+                                   size_t* out_data_actual, uint8_t* out_oob_buffer,
+                                   size_t oob_size, size_t* out_oob_actual,
+                                   uint32_t* out_ecc_correct) {
     if (nandpage > info_.pages_per_block * info_.num_blocks) {
       result_ = ZX_ERR_IO;
     }
@@ -75,8 +76,8 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
     return result_;
   }
 
-  zx_status_t RawNandWritePageHwecc(const void* data_buffer, size_t data_size,
-                                    const void* oob_buffer, size_t oob_size, uint32_t nandpage) {
+  zx_status_t RawNandWritePageHwecc(const uint8_t* data_buffer, size_t data_size,
+                                    const uint8_t* oob_buffer, size_t oob_size, uint32_t nandpage) {
     if (nandpage > info_.pages_per_block * info_.num_blocks) {
       result_ = ZX_ERR_IO;
     }

@@ -410,8 +410,9 @@ TEST(AmlRawnand, ReadPage) {
   size_t data_bytes_read = 0;
   size_t oob_bytes_read = 0;
   uint32_t ecc_correct = -1;
-  ASSERT_OK(nand->RawNandReadPageHwecc(5, &data[0], kTestNandWriteSize, &data_bytes_read, &oob[0],
-                                       kDefaultNumUserBytes, &oob_bytes_read, &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
+                                       &oob_bytes_read, &ecc_correct));
 
   EXPECT_EQ(kTestNandWriteSize, data_bytes_read);
   EXPECT_EQ(kDefaultNumUserBytes, oob_bytes_read);
@@ -434,8 +435,8 @@ TEST(AmlRawnand, ReadPageDataOnly) {
   std::vector<uint8_t> data(kTestNandWriteSize);
   size_t data_bytes_read = 0;
   uint32_t ecc_correct = -1;
-  ASSERT_OK(nand->RawNandReadPageHwecc(5, &data[0], kTestNandWriteSize, &data_bytes_read, nullptr,
-                                       0, nullptr, &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       nullptr, 0, nullptr, &ecc_correct));
 
   EXPECT_EQ(kTestNandWriteSize, data_bytes_read);
   EXPECT_EQ(0, ecc_correct);
@@ -455,7 +456,8 @@ TEST(AmlRawnand, ReadPageOobOnly) {
   std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);
   size_t oob_bytes_read = 0;
   uint32_t ecc_correct = -1;
-  ASSERT_OK(nand->RawNandReadPageHwecc(5, nullptr, 0, nullptr, &oob[0], kDefaultNumUserBytes,
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, nullptr, 0, nullptr,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
                                        &oob_bytes_read, &ecc_correct));
 
   EXPECT_EQ(kDefaultNumUserBytes, oob_bytes_read);
@@ -476,8 +478,9 @@ TEST(AmlRawnand, WritePage) {
   oob[kDefaultNumEccPages - 1] = 0xAABB;
   // We have to write to a page index outside of BL2 because all BL2 pages
   // require special OOB values.
-  ASSERT_OK(nand->RawNandWritePageHwecc(&data[0], kTestNandWriteSize, &oob[0], kDefaultNumUserBytes,
-                                        kFirstNonBl2Page));
+  ASSERT_OK(nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize,
+                                        reinterpret_cast<uint8_t*>(oob.data()),
+                                        kDefaultNumUserBytes, kFirstNonBl2Page));
 
   const NandPage& page = nand->GetFakePage(kFirstNonBl2Page);
   EXPECT_EQ(0x11, page.data[0]);
@@ -494,7 +497,7 @@ TEST(AmlRawnand, WritePageDataOnly) {
   data[0] = 0x11;
   data[kTestNandWriteSize - 1] = 0x22;
   ASSERT_OK(
-      nand->RawNandWritePageHwecc(&data[0], kTestNandWriteSize, nullptr, 0, kFirstNonBl2Page));
+      nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize, nullptr, 0, kFirstNonBl2Page));
 
   const NandPage& page = nand->GetFakePage(kFirstNonBl2Page);
   EXPECT_EQ(0x11, page.data[0]);
@@ -508,8 +511,8 @@ TEST(AmlRawnand, WritePageOobOnly) {
   std::vector<uint16_t> oob(kDefaultNumEccPages);
   oob[0] = 0x5566;
   oob[kDefaultNumEccPages - 1] = 0xAABB;
-  ASSERT_OK(
-      nand->RawNandWritePageHwecc(nullptr, 0, &oob[0], kDefaultNumUserBytes, kFirstNonBl2Page));
+  ASSERT_OK(nand->RawNandWritePageHwecc(nullptr, 0, reinterpret_cast<uint8_t*>(oob.data()),
+                                        kDefaultNumUserBytes, kFirstNonBl2Page));
 
   const NandPage& page = nand->GetFakePage(kFirstNonBl2Page);
   EXPECT_EQ(0x5566, page.info[0].info_bytes);
@@ -523,7 +526,8 @@ TEST(AmlRawnand, WritePageShortOob) {
   std::vector<uint16_t> oob(kDefaultNumEccPages);
   oob[0] = 0x1234;
   oob[1] = 0x5678;
-  ASSERT_OK(nand->RawNandWritePageHwecc(nullptr, 0, &oob[0], 2, kFirstNonBl2Page));
+  ASSERT_OK(nand->RawNandWritePageHwecc(nullptr, 0, reinterpret_cast<uint8_t*>(oob.data()), 2,
+                                        kFirstNonBl2Page));
 
   // The driver should pad with zeros since we only told it to use 2 OOB bytes.
   const NandPage& page = nand->GetFakePage(kFirstNonBl2Page);
@@ -539,7 +543,8 @@ TEST(AmlRawnand, WritePageShortOobOddBytes) {
   std::vector<uint16_t> oob(kDefaultNumEccPages);
   oob[0] = 0x1234;
   oob[1] = 0x5678;
-  ASSERT_OK(nand->RawNandWritePageHwecc(nullptr, 0, &oob[0], 3, kFirstNonBl2Page));
+  ASSERT_OK(nand->RawNandWritePageHwecc(nullptr, 0, reinterpret_cast<uint8_t*>(oob.data()), 3,
+                                        kFirstNonBl2Page));
 
   // The driver should pad with zeros since we only told it to use 3 OOB bytes.
   const NandPage& page = nand->GetFakePage(kFirstNonBl2Page);
@@ -554,7 +559,8 @@ TEST(AmlRawnand, WritePageShortOobZeroBytes) {
 
   std::vector<uint16_t> oob(kDefaultNumEccPages);
   oob[0] = 0x1234;
-  ASSERT_OK(nand->RawNandWritePageHwecc(nullptr, 0, &oob[0], 0, kFirstNonBl2Page));
+  ASSERT_OK(nand->RawNandWritePageHwecc(nullptr, 0, reinterpret_cast<uint8_t*>(oob.data()), 0,
+                                        kFirstNonBl2Page));
 
   // The driver should pad with zeros since we told it to use 0 OOB bytes.
   const NandPage& page = nand->GetFakePage(kFirstNonBl2Page);
@@ -570,7 +576,7 @@ TEST(AmlRawnand, WriteBl2Page) {
   std::vector<uint8_t> data(kTestNandWriteSize);
   data[0] = 0x11;
   data[kTestNandWriteSize - 1] = 0x22;
-  ASSERT_OK(nand->RawNandWritePageHwecc(&data[0], kTestNandWriteSize, nullptr, 0, page_index));
+  ASSERT_OK(nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize, nullptr, 0, page_index));
 
   const NandPage& page = nand->GetFakePage(page_index);
   EXPECT_EQ(0x11, page.data[0]);
@@ -593,7 +599,8 @@ TEST(AmlRawnand, WriteBl2PageInvalidOobError) {
 
   // The driver should refuse to write custom OOB bytes to BL2 pages.
   for (uint32_t page_index : {0u, kNumBl2Pages / 2, kNumBl2Pages - 1}) {
-    ASSERT_EQ(nand->RawNandWritePageHwecc(&data[0], kTestNandWriteSize, &oob[0],
+    ASSERT_EQ(nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize,
+                                          reinterpret_cast<uint8_t*>(oob.data()),
                                           kDefaultNumUserBytes, page_index),
               ZX_ERR_INVALID_ARGS);
 
@@ -613,7 +620,7 @@ TEST(AmlRawnand, WritePage0Command) {
   nand->ExpectReadWriteCommand(kPage0WriteCommand, 0);
 
   std::vector<uint8_t> data(kTestNandWriteSize);
-  ASSERT_OK(nand->RawNandWritePageHwecc(&data[0], kTestNandWriteSize, nullptr, 0, 0));
+  ASSERT_OK(nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize, nullptr, 0, 0));
 }
 
 TEST(AmlRawnand, ReadPage0Command) {
@@ -627,8 +634,8 @@ TEST(AmlRawnand, ReadPage0Command) {
   std::vector<uint8_t> data(kTestNandWriteSize);
   size_t data_bytes_read = 0;
   uint32_t ecc_correct = -1;
-  ASSERT_OK(nand->RawNandReadPageHwecc(0, &data[0], kTestNandWriteSize, &data_bytes_read, nullptr,
-                                       0, nullptr, &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(0, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       nullptr, 0, nullptr, &ecc_correct));
 }
 
 TEST(AmlRawnand, WriteBl2Command) {
@@ -639,7 +646,7 @@ TEST(AmlRawnand, WriteBl2Command) {
   nand->ExpectReadWriteCommand(kDefaultWriteCommand, FakeAmlRawNand::kNoRandomSeed);
 
   std::vector<uint8_t> data(kTestNandWriteSize);
-  ASSERT_OK(nand->RawNandWritePageHwecc(&data[0], kTestNandWriteSize, nullptr, 0, 1));
+  ASSERT_OK(nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize, nullptr, 0, 1));
 }
 
 TEST(AmlRawnand, ReadBl2Command) {
@@ -653,8 +660,8 @@ TEST(AmlRawnand, ReadBl2Command) {
   std::vector<uint8_t> data(kTestNandWriteSize);
   size_t data_bytes_read = 0;
   uint32_t ecc_correct = -1;
-  ASSERT_OK(nand->RawNandReadPageHwecc(1, &data[0], kTestNandWriteSize, &data_bytes_read, nullptr,
-                                       0, nullptr, &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(1, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       nullptr, 0, nullptr, &ecc_correct));
 }
 
 TEST(AmlRawnand, WriteCommand) {
@@ -666,7 +673,7 @@ TEST(AmlRawnand, WriteCommand) {
 
   std::vector<uint8_t> data(kTestNandWriteSize);
   ASSERT_OK(
-      nand->RawNandWritePageHwecc(&data[0], kTestNandWriteSize, nullptr, 0, kFirstNonBl2Page));
+      nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize, nullptr, 0, kFirstNonBl2Page));
 }
 
 TEST(AmlRawnand, ReadCommand) {
@@ -680,7 +687,7 @@ TEST(AmlRawnand, ReadCommand) {
   std::vector<uint8_t> data(kTestNandWriteSize);
   size_t data_bytes_read = 0;
   uint32_t ecc_correct = -1;
-  ASSERT_OK(nand->RawNandReadPageHwecc(kFirstNonBl2Page, &data[0], kTestNandWriteSize,
+  ASSERT_OK(nand->RawNandReadPageHwecc(kFirstNonBl2Page, data.data(), kTestNandWriteSize,
                                        &data_bytes_read, nullptr, 0, nullptr, &ecc_correct));
 }
 

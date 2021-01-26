@@ -430,9 +430,9 @@ zx_status_t CadenceHpnfc::DoGenericCommand(uint32_t instruction, uint8_t* out_da
   return ZX_OK;
 }
 
-zx_status_t CadenceHpnfc::RawNandReadPageHwecc(uint32_t nandpage, void* out_data_buffer,
+zx_status_t CadenceHpnfc::RawNandReadPageHwecc(uint32_t nandpage, uint8_t* out_data_buffer,
                                                size_t data_size, size_t* out_data_actual,
-                                               void* out_oob_buffer, size_t oob_size,
+                                               uint8_t* out_oob_buffer, size_t oob_size,
                                                size_t* out_oob_actual, uint32_t* out_ecc_correct) {
   if (data_size < nand_info_.page_size || oob_size < nand_info_.oob_size) {
     return ZX_ERR_INVALID_ARGS;
@@ -489,8 +489,8 @@ zx_status_t CadenceHpnfc::RawNandReadPageHwecc(uint32_t nandpage, void* out_data
   return ZX_OK;
 }
 
-zx_status_t CadenceHpnfc::RawNandWritePageHwecc(const void* data_buffer, size_t data_size,
-                                                const void* oob_buffer, size_t oob_size,
+zx_status_t CadenceHpnfc::RawNandWritePageHwecc(const uint8_t* data_buffer, size_t data_size,
+                                                const uint8_t* oob_buffer, size_t oob_size,
                                                 uint32_t nandpage) {
   if (data_size < nand_info_.page_size || oob_size < nand_info_.oob_size) {
     return ZX_ERR_INVALID_ARGS;

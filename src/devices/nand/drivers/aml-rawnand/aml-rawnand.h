@@ -100,10 +100,10 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 
   zx_status_t Bind();
   zx_status_t Init();
-  zx_status_t RawNandReadPageHwecc(uint32_t nand_page, void* data, size_t data_size,
-                                   size_t* data_actual, void* oob, size_t oob_size,
+  zx_status_t RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, size_t data_size,
+                                   size_t* data_actual, uint8_t* oob, size_t oob_size,
                                    size_t* oob_actual, uint32_t* ecc_correct);
-  zx_status_t RawNandWritePageHwecc(const void* data, size_t data_size, const void* oob,
+  zx_status_t RawNandWritePageHwecc(const uint8_t* data, size_t data_size, const uint8_t* oob,
                                     size_t oob_size, uint32_t nand_page);
   zx_status_t RawNandEraseBlock(uint32_t nand_page);
   zx_status_t RawNandGetNandInfo(nand_info_t* nand_info);
@@ -199,7 +199,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   void AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t RHOH_min);
   zx_status_t AmlGetFlashType();
   void AmlSetEncryption();
-  zx_status_t AmlReadPage0(void* data, size_t data_size, void* oob, size_t oob_size,
+  zx_status_t AmlReadPage0(uint8_t* data, size_t data_size, uint8_t* oob, size_t oob_size,
                            uint32_t nand_page, uint32_t* ecc_correct, int retries);
   // Reads one of the page0 pages, and use the result to init
   // ECC algorithm and rand-mode.

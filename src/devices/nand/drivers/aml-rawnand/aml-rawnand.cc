@@ -509,8 +509,8 @@ constexpr bool PageRequiresMagicOob(uint32_t nand_page) {
 
 }  // namespace
 
-zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, size_t data_size,
-                                             size_t* data_actual, void* oob, size_t oob_size,
+zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, size_t data_size,
+                                             size_t* data_actual, uint8_t* oob, size_t oob_size,
                                              size_t* oob_actual, uint32_t* ecc_correct) {
   zx_status_t status;
   uint32_t ecc_pagesize = 0;  // Initialize to silence compiler.
@@ -585,8 +585,9 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
 
 // TODO : Right now, the driver uses a buffer for DMA, which
 // is not needed. We should initiate DMA to/from pages passed in.
-zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size, const void* oob,
-                                              size_t oob_size, uint32_t nand_page) {
+zx_status_t AmlRawNand::RawNandWritePageHwecc(const uint8_t* data, size_t data_size,
+                                              const uint8_t* oob, size_t oob_size,
+                                              uint32_t nand_page) {
   zx_status_t status;
   uint32_t ecc_pagesize = 0;  // Initialize to silence compiler.
   uint32_t ecc_pages;
@@ -772,7 +773,7 @@ zx_status_t AmlRawNand::RawNandGetNandInfo(nand_info_t* nand_info) {
 
 void AmlRawNand::AmlSetEncryption() { mmio_nandreg_.SetBits32((1 << 17), P_NAND_CFG); }
 
-zx_status_t AmlRawNand::AmlReadPage0(void* data, size_t data_size, void* oob, size_t oob_size,
+zx_status_t AmlRawNand::AmlReadPage0(uint8_t* data, size_t data_size, uint8_t* oob, size_t oob_size,
                                      uint32_t nand_page, uint32_t* ecc_correct, int retries) {
   zx_status_t status;
 
@@ -791,8 +792,8 @@ zx_status_t AmlRawNand::AmlNandInitFromPage0() {
   NandPage0* page0;
   uint32_t ecc_correct;
 
-  std::unique_ptr<char[]> buffer(new char[writesize_]);
-  char* data = buffer.get();
+  std::unique_ptr<uint8_t[]> buffer(new uint8_t[writesize_]);
+  uint8_t* data = buffer.get();
   // There are 8 copies of page0 spaced apart by 128 pages
   // starting at Page 0. Read the first we can.
   for (uint32_t i = 0; i < 8; i++) {

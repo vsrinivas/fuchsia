@@ -33,7 +33,7 @@ constexpr size_t kNandReadRetries = 3;
 
 }  // namespace
 
-zx_status_t NandDevice::ReadPage(void* data, void* oob, uint32_t nand_page,
+zx_status_t NandDevice::ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page,
                                  uint32_t* corrected_bits, size_t retries) {
   zx_status_t status = ZX_ERR_INTERNAL;
 

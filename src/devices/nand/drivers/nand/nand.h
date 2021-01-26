@@ -60,7 +60,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   // ecc_correct : Number of ecc corrected bitflips (< 0 indicates
   // ecc could not correct all bitflips - caller needs to check that).
   // retries : Retry logic may not be needed.
-  zx_status_t ReadPage(void* data, void* oob, uint32_t nand_page, uint32_t* corrected_bits,
+  zx_status_t ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page, uint32_t* corrected_bits,
                        size_t retries);
 
   zx_status_t EraseOp(nand_operation_t* nand_op);
