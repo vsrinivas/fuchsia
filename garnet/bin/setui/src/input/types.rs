@@ -40,18 +40,18 @@ impl From<SettingInfo> for FidlInputSettings {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct InputInfo {
-    pub microphone: Microphone,
     pub input_device_state: InputState,
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct InputInfoSources {
-    pub sw_microphone: Microphone,
-    pub hw_microphone: Microphone,
     pub input_device_state: InputState,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+// DO NOT USE - this type is deprecated and will be replaced by
+// the use of InputDevice.
 pub struct Microphone {
     pub muted: bool,
 }

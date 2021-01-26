@@ -23,11 +23,61 @@ use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+pub const DEFAULT_MIC_NAME: &str = "microphone";
+
 impl DeviceStorageCompatible for InputInfoSources {
     const KEY: &'static str = "input_info";
 
     fn default_value() -> Self {
-        InputInfoSources {
+        InputInfoSources { input_device_state: InputState::new() }
+    }
+
+    fn deserialize_from(value: &String) -> Self {
+        Self::extract(&value)
+            .unwrap_or_else(|_| Self::from(InputInfoSourcesV2::deserialize_from(&value)))
+    }
+}
+
+impl From<InputInfoSourcesV2> for InputInfoSources {
+    fn from(v2: InputInfoSourcesV2) -> Self {
+        let mut input_state = v2.input_device_state;
+
+        // Convert the old states into an input device.
+        input_state.set_source_state(
+            InputDeviceType::MICROPHONE,
+            DEFAULT_MIC_NAME.to_string(),
+            DeviceStateSource::HARDWARE,
+            if v2.hw_microphone.muted { DeviceState::MUTED } else { DeviceState::AVAILABLE },
+        );
+        input_state.set_source_state(
+            InputDeviceType::MICROPHONE,
+            DEFAULT_MIC_NAME.to_string(),
+            DeviceStateSource::SOFTWARE,
+            if v2.sw_microphone.muted { DeviceState::MUTED } else { DeviceState::AVAILABLE },
+        );
+
+        InputInfoSources { input_device_state: input_state }
+    }
+}
+
+impl Into<SettingInfo> for InputInfoSources {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Input(InputInfo { input_device_state: self.input_device_state })
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct InputInfoSourcesV2 {
+    hw_microphone: Microphone,
+    sw_microphone: Microphone,
+    input_device_state: InputState,
+}
+
+impl DeviceStorageCompatible for InputInfoSourcesV2 {
+    const KEY: &'static str = "input_info_sources_v2";
+
+    fn default_value() -> Self {
+        InputInfoSourcesV2 {
             hw_microphone: Microphone { muted: false },
             sw_microphone: Microphone { muted: false },
             input_device_state: InputState::new(),
@@ -40,22 +90,13 @@ impl DeviceStorageCompatible for InputInfoSources {
     }
 }
 
-impl From<InputInfoSourcesV1> for InputInfoSources {
+impl From<InputInfoSourcesV1> for InputInfoSourcesV2 {
     fn from(v1: InputInfoSourcesV1) -> Self {
-        InputInfoSources {
+        InputInfoSourcesV2 {
             hw_microphone: v1.hw_microphone,
             sw_microphone: v1.sw_microphone,
             input_device_state: InputState::new(),
         }
-    }
-}
-
-impl Into<SettingInfo> for InputInfoSources {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Input(InputInfo {
-            microphone: Microphone { muted: self.hw_microphone.muted || self.sw_microphone.muted },
-            input_device_state: self.input_device_state,
-        })
     }
 }
 
@@ -91,12 +132,6 @@ struct InputControllerInner {
     /// Client to communicate with persistent store and notify on.
     client: ClientProxy<InputInfoSources>,
 
-    /// Local tracking of the hardware mic state.
-    hardware_mic_muted: bool,
-
-    /// Local tracking of the software mic state.
-    software_mic_muted: bool,
-
     /// Local tracking of the input device states.
     input_device_state: InputState,
 
@@ -122,28 +157,26 @@ impl InputControllerInner {
 
     /// Gets the input state.
     async fn get_info(&mut self) -> Result<InputInfo, ControllerError> {
-        let mic_muted = self.hardware_mic_muted || self.software_mic_muted;
-        Ok(InputInfo {
-            microphone: Microphone { muted: mic_muted },
-            input_device_state: self.input_device_state.clone(),
-        })
+        Ok(InputInfo { input_device_state: self.input_device_state.clone() })
     }
 
     /// Restores the input state.
     // TODO(fxbug.dev/57917): After config is implemented, this should return a ControllerStateResult.
     async fn restore(&mut self) {
         let input_info = self.get_stored_info().await;
-        self.hardware_mic_muted = input_info.hw_microphone.muted;
-        self.software_mic_muted = input_info.sw_microphone.muted;
         self.input_device_state = input_info.input_device_state;
     }
 
     /// Sets the software mic state to `muted`.
+    // TODO(fxb/65686): remove when FIDL is changed.
     async fn set_sw_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
         let mut input_info = self.get_stored_info().await;
-        input_info.sw_microphone.muted = muted;
-
-        self.software_mic_muted = muted;
+        input_info.input_device_state.set_source_state(
+            InputDeviceType::MICROPHONE,
+            DEFAULT_MIC_NAME.to_string(),
+            DeviceStateSource::SOFTWARE,
+            if muted { DeviceState::MUTED } else { DeviceState::AVAILABLE },
+        );
 
         // Store the newly set value.
         write(&self.client, input_info, false).await.into_handler_result()
@@ -184,12 +217,6 @@ impl InputControllerInner {
             ));
         }
         let mut hw_state = hw_state_res.unwrap().clone();
-
-        // TODO(fxbug.dev/65686): remove once clients are ported over.
-        let mut hw_mic = input_info.hw_microphone;
-        hw_mic.muted = muted;
-        self.hardware_mic_muted = muted;
-        input_info.hw_microphone = hw_mic;
 
         if muted {
             // Unset available and set muted.
@@ -254,8 +281,6 @@ impl InputController {
         Ok(Self {
             inner: Arc::new(Mutex::new(InputControllerInner {
                 client: client.clone(),
-                hardware_mic_muted: false,
-                software_mic_muted: false,
                 input_device_state: InputState::new(),
                 input_device_config: input_device_config,
             })),
@@ -297,6 +322,7 @@ impl controller::Handle for InputController {
                 self.inner.lock().await.restore().await;
                 Some(Ok(None))
             }
+            // TODO(fxb/65686): remove when FIDL is changed.
             Request::SetMicMute(muted) => {
                 Some(self.inner.lock().await.set_sw_mic_mute(muted).await)
             }
@@ -346,8 +372,83 @@ fn test_input_migration_v1_to_current() {
 
     let serialized_v1 = v1.serialize_to();
     let current = InputInfoSources::deserialize_from(&serialized_v1);
+    let mut expected_input_state = InputState::new();
+    expected_input_state.set_source_state(
+        InputDeviceType::MICROPHONE,
+        DEFAULT_MIC_NAME.to_string(),
+        DeviceStateSource::SOFTWARE,
+        DeviceState::MUTED,
+    );
+    expected_input_state.set_source_state(
+        InputDeviceType::MICROPHONE,
+        DEFAULT_MIC_NAME.to_string(),
+        DeviceStateSource::HARDWARE,
+        DeviceState::AVAILABLE,
+    );
+    assert_eq!(current.input_device_state, expected_input_state);
+}
 
-    assert_eq!(current.hw_microphone, Microphone { muted: false });
-    assert_eq!(current.sw_microphone, MUTED_MIC);
-    assert_eq!(current.input_device_state, InputState::new());
+#[test]
+fn test_input_migration_v1_to_v2() {
+    const MUTED_MIC: Microphone = Microphone { muted: true };
+    let mut v1 = InputInfoSourcesV1::default_value();
+    v1.sw_microphone = MUTED_MIC;
+
+    let serialized_v1 = v1.serialize_to();
+    let v2 = InputInfoSourcesV2::deserialize_from(&serialized_v1);
+
+    assert_eq!(v2.hw_microphone, Microphone { muted: false });
+    assert_eq!(v2.sw_microphone, MUTED_MIC);
+    assert_eq!(v2.input_device_state, InputState::new());
+}
+
+#[test]
+fn test_input_migration_v2_to_current() {
+    const DEFAULT_CAMERA_NAME: &str = "camera";
+    const MUTED_MIC: Microphone = Microphone { muted: true };
+    let mut v2 = InputInfoSourcesV2::default_value();
+    v2.input_device_state.set_source_state(
+        InputDeviceType::CAMERA,
+        DEFAULT_CAMERA_NAME.to_string(),
+        DeviceStateSource::SOFTWARE,
+        DeviceState::AVAILABLE,
+    );
+    v2.input_device_state.set_source_state(
+        InputDeviceType::CAMERA,
+        DEFAULT_CAMERA_NAME.to_string(),
+        DeviceStateSource::HARDWARE,
+        DeviceState::MUTED,
+    );
+    v2.sw_microphone = MUTED_MIC;
+
+    let serialized_v2 = v2.serialize_to();
+    let current = InputInfoSources::deserialize_from(&serialized_v2);
+    let mut expected_input_state = InputState::new();
+
+    expected_input_state.set_source_state(
+        InputDeviceType::MICROPHONE,
+        DEFAULT_MIC_NAME.to_string(),
+        DeviceStateSource::SOFTWARE,
+        DeviceState::MUTED,
+    );
+    expected_input_state.set_source_state(
+        InputDeviceType::MICROPHONE,
+        DEFAULT_MIC_NAME.to_string(),
+        DeviceStateSource::HARDWARE,
+        DeviceState::AVAILABLE,
+    );
+    expected_input_state.set_source_state(
+        InputDeviceType::CAMERA,
+        DEFAULT_CAMERA_NAME.to_string(),
+        DeviceStateSource::SOFTWARE,
+        DeviceState::AVAILABLE,
+    );
+    expected_input_state.set_source_state(
+        InputDeviceType::CAMERA,
+        DEFAULT_CAMERA_NAME.to_string(),
+        DeviceStateSource::HARDWARE,
+        DeviceState::MUTED,
+    );
+
+    assert_eq!(current.input_device_state, expected_input_state);
 }

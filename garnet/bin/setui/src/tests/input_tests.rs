@@ -12,7 +12,7 @@ use {
     crate::input::monitor_media_buttons,
     crate::input::types::{
         DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputInfoSources,
-        InputState, Microphone,
+        InputState,
     },
     crate::service_context::ServiceContext,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
@@ -45,8 +45,6 @@ const ENV_NAME: &str = "settings_service_input_test_environment";
 
 fn create_default_input_info() -> InputInfoSources {
     InputInfoSources {
-        hw_microphone: Microphone { muted: false },
-        sw_microphone: Microphone { muted: false },
         input_device_state: InputState {
             input_categories: HashMap::<InputDeviceType, InputCategory>::new(),
         },
@@ -297,11 +295,6 @@ async fn test_set_watch_mic_mute() {
 
     // SW unmuted, HW unmuted.
     switch_hardware_mic_mute(&env, false).await;
-
-    // TODO(fxb/66313): We make a watch call here in order to force the previous
-    // operation (button change) through the setting service. The correct fix
-    // is to have an executor that we can loop until idle instead.
-    let _ = input_proxy.watch().await.expect("watch completed");
     get_and_check_mic_mute(&input_proxy, false).await;
 }
 
@@ -428,7 +421,6 @@ async fn test_restore() {
     let store = env.store.clone();
     {
         let mut stored_info = create_default_input_info().clone();
-        stored_info.sw_microphone.muted = true;
         stored_info.input_device_state = default_mic_cam_config_cam_disabled().into();
         assert!(store.lock().await.write(&stored_info, false).await.is_ok());
     }
@@ -467,8 +459,6 @@ async fn test_persisted_values_applied_at_start() {
     let store = env.store.clone();
 
     let mut test_input_info = InputInfoSources {
-        hw_microphone: Microphone { muted: false },
-        sw_microphone: Microphone { muted: true },
         input_device_state: InputState {
             input_categories: HashMap::<InputDeviceType, InputCategory>::new(),
         },

@@ -8,6 +8,7 @@ use {
     crate::fidl_process_custom,
     crate::fidl_processor::settings::RequestContext,
     crate::handler::base::Request,
+    crate::input::input_controller::DEFAULT_MIC_NAME,
     crate::input::types::{DeviceState, DeviceStateSource, InputDevice, InputDeviceType},
     crate::request_respond,
     crate::switchboard::base::FidlResponseErrorLogger,
@@ -29,8 +30,12 @@ impl From<SettingInfo> for InputDeviceSettings {
     fn from(response: SettingInfo) -> Self {
         if let SettingInfo::Input(info) = response {
             let mut input_settings = InputDeviceSettings::EMPTY;
+            let mic_state = info
+                .input_device_state
+                .get_state(InputDeviceType::MICROPHONE, DEFAULT_MIC_NAME.to_string());
+            let mic_muted = mic_state.unwrap_or(DeviceState::new()).has_state(DeviceState::MUTED);
 
-            let microphone = Microphone { muted: Some(info.microphone.muted), ..Microphone::EMPTY };
+            let microphone = Microphone { muted: Some(mic_muted), ..Microphone::EMPTY };
 
             input_settings.microphone = Some(microphone);
             input_settings
