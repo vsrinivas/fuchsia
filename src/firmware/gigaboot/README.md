@@ -28,6 +28,17 @@ during boot, or by invoking `dm reboot-bootloader` from Fuchsia.
 Gigaboot implements the fastboot over UDP protocol described
 [here](https://android.googlesource.com/platform/system/core/+/HEAD/fastboot/README.md).
 
+Example usage:
+```
+# Replace the IP with your device's IP, which is printed to serial and the
+# display on boot.
+fastboot -s udp:fe80::aaaa:bbbb:cccc:dddd getvar all
+
+# Depending on your host network setup, you may need to specify a particular
+# network interface as well.
+fastboot -s udp:fe80::aaaa:bbbb:cccc:dddd%enx123 getvar all
+```
+
 ### Supported Commands
 
 | Command | Description |
