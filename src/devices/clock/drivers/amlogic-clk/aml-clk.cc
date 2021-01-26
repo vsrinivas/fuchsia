@@ -9,7 +9,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -18,6 +17,8 @@
 #include <fbl/auto_lock.h>
 #include <hwreg/bitfields.h>
 #include <soc/aml-meson/aml-clk-common.h>
+
+#include "src/devices/clock/drivers/amlogic-clk/aml-clk-bind.h"
 
 #include "aml-axg-blocks.h"
 #include "aml-fclk.h"
@@ -918,13 +919,4 @@ static constexpr zx_driver_ops_t aml_clk_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_clk, aml_clk_driver_ops, "zircon", "0.1", 7)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    // we support multiple SOC variants.
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_AXG_CLK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GXL_CLK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12A_CLK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12B_CLK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SM1_CLK),
-ZIRCON_DRIVER_END(aml_clk)
+ZIRCON_DRIVER(aml_clk, aml_clk_driver_ops, "zircon", "0.1");

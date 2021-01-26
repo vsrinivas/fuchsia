@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.platform;
+using amlogic.platform;
+
+// Parent must publish the platform device protocol.
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+
+// Vendor must be AMLogic.
+fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+
+// Driver must be some AMLogic Clock.
+accept fuchsia.BIND_PLATFORM_DEV_DID {
+  amlogic.platform.BIND_PLATFORM_DEV_DID.AXG_CLK,
+  amlogic.platform.BIND_PLATFORM_DEV_DID.GXL_CLK,
+  amlogic.platform.BIND_PLATFORM_DEV_DID.G12A_CLK,
+  amlogic.platform.BIND_PLATFORM_DEV_DID.G12B_CLK,
+  amlogic.platform.BIND_PLATFORM_DEV_DID.SM1_CLK,
+}
