@@ -14,6 +14,7 @@ use {
         tree_assertion,
     },
     fuchsia_pkg_testing::{serve::handler as uri_handler, PackageBuilder, RepositoryBuilder},
+    futures::FutureExt as _,
     lib::MountsBuilder,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
@@ -229,25 +230,37 @@ async fn package_and_blob_queues() {
         .unwrap()
         .unwrap();
 
-    let resolve_fut = env.resolve_package("fuchsia-pkg://original.example.com/just_meta_far");
+    let resolve_fut =
+        env.resolve_package("fuchsia-pkg://original.example.com/just_meta_far").boxed_local();
     let unblocker = unblocking_closure_receiver.await.unwrap();
 
-    env.wait_for_pkg_resolver_inspect_state(tree_assertion!(
-        root: contains {
-            blob_fetcher: contains {
-                queue: contains {
-                    pkg.meta_far_merkle_root().to_string() => contains {
-                        attempts: {
-                            "2": contains {
-                                state: "read http body"
+    let inspect_state_fut = env
+        .wait_for_pkg_resolver_inspect_state(tree_assertion!(
+            root: contains {
+                blob_fetcher: contains {
+                    queue: contains {
+                        pkg.meta_far_merkle_root().to_string() => contains {
+                            attempts: {
+                                "2": contains {
+                                    state: "read http body"
+                                }
                             }
                         }
                     }
                 }
             }
+        ))
+        .boxed_local();
+
+    // The resolve should not fail, but if it does because of a bug somewhere, awaiting the
+    // inspect future would probably hang, and we want the test to fail instead of hang so that
+    // the test stdout is printed.
+    let resolve_fut = match futures::future::select(resolve_fut, inspect_state_fut).await {
+        futures::future::Either::Left((resolve_res, _)) => {
+            panic!("the resolve should not have completed: {:?}", resolve_res);
         }
-    ))
-    .await;
+        futures::future::Either::Right(((), resolve_fut)) => resolve_fut,
+    };
 
     assert_inspect_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
