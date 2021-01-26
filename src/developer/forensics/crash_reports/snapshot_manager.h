@@ -42,7 +42,9 @@ class SnapshotManager {
                   timekeeper::Clock* clock, zx::duration shared_request_window,
                   StorageSize max_annotations_size, StorageSize max_archives_size);
 
-  // Returns a promise of a snapshot uuid. No uuid will be returned if |timeout| expires.
+  // Returns a promise of a snapshot uuid for a snapshot that contains the most up-to-date system
+  // data (a new snapshot will be created if all existing snapshots contain data that is
+  // out-of-date). No uuid will be returned if |timeout| expires.
   ::fit::promise<SnapshotUuid> GetSnapshotUuid(zx::duration timeout);
 
   // Returns the snapshot for |uuid|, if one exists. If no snapshot exists for |uuid| a snapshot
