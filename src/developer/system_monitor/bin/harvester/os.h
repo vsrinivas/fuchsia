@@ -36,9 +36,13 @@ class OS {
         parent, children_kind, nullptr, 0, nullptr, &num_children);
 
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
-                     << kind_name << ", ...) failed: "
-                     << zx_status_get_string(status) << " (" << status << ")";
+      // ZX_ERR_BAD_STATE is returned when a process is already destroyed. This
+      // is not exceptional; pass through the error code but don't spam logs.
+      if (status != ZX_ERR_BAD_STATE) {
+        FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
+                       << kind_name << ", ...) failed: "
+                       << zx_status_get_string(status) << " (" << status << ")";
+      }
       return status;
     }
 
@@ -53,9 +57,13 @@ class OS {
                      children.capacity() * sizeof(T), &actual, &available);
 
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
-                     << kind_name << ", ...) failed: "
-                     << zx_status_get_string(status) << " (" << status << ")";
+      // ZX_ERR_BAD_STATE is returned when a process is already destroyed. This
+      // is not exceptional; pass through the error code but don't spam logs.
+      if (status != ZX_ERR_BAD_STATE) {
+        FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
+                       << kind_name << ", ...) failed: "
+                       << zx_status_get_string(status) << " (" << status << ")";
+      }
       // On error, empty children so we don't pass through invalid information.
       children.clear();
       return status;
