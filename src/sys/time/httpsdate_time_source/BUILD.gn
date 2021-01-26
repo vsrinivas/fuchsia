@@ -13,6 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/rust",
@@ -20,6 +21,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/time/lib/httpdate-hyper",

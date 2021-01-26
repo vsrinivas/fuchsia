@@ -13,11 +13,12 @@ use crate::diagnostics::{CobaltDiagnostics, CompositeDiagnostics, InspectDiagnos
 use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
 use crate::sampler::HttpsSamplerImpl;
 use anyhow::{Context, Error};
+use fidl_fuchsia_net_interfaces::StateMarker;
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
-use futures::{future::join3, StreamExt, TryFutureExt};
+use futures::{future::join3, FutureExt, StreamExt, TryFutureExt};
 use log::warn;
 use push_source::PushSource;
 
@@ -49,8 +50,17 @@ async fn main() -> Result<(), Error> {
 
     let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?);
 
-    let update_algorithm = HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler);
-    let push_source = PushSource::new(update_algorithm, Status::Ok)?;
+    let interface_state_service = fuchsia_component::client::connect_to_service::<StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
+    let internet_reachable = fidl_fuchsia_net_interfaces_ext::wait_for_reachability(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state_service)
+            .context("failed to create network interface event stream")?,
+    )
+    .map(|r| r.context("reachability status stream error"));
+
+    let update_algorithm =
+        HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler, internet_reachable);
+    let push_source = PushSource::new(update_algorithm, Status::Initializing)?;
     let update_fut = push_source.poll_updates();
 
     fs.take_and_serve_directory_handle()?;

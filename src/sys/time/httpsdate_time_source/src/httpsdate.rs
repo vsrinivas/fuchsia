@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use fidl_fuchsia_time_external::{Properties, Status};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc::Sender, SinkExt};
+use futures::{channel::mpsc::Sender, lock::Mutex, Future, SinkExt};
 use httpdate_hyper::HttpsDateError;
 use log::{error, info, warn};
 use push_source::{Update, UpdateAlgorithm};
@@ -41,20 +41,28 @@ impl RetryStrategy {
 
 /// An |UpdateAlgorithm| that uses an `HttpsSampler` to obtain time samples at a schedule
 /// dictated by a specified retry strategy.
-pub struct HttpsDateUpdateAlgorithm<S: HttpsSampler + Send + Sync, D: Diagnostics> {
+pub struct HttpsDateUpdateAlgorithm<
+    S: HttpsSampler + Send + Sync,
+    D: Diagnostics,
+    N: Future<Output = Result<(), Error>> + Send,
+> {
     /// Strategy defining how long to wait after successes and failures.
     retry_strategy: RetryStrategy,
     /// Sampler used to produce samples.
     sampler: S,
     /// Object managing diagnostics output.
     diagnostics: D,
+    /// Future that completes when the network is available. A 'None' value indicates the network
+    /// check has previously completed.
+    network_available_fut: Mutex<Option<N>>,
 }
 
 #[async_trait]
-impl<S, D> UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D>
+impl<S, D, N> UpdateAlgorithm for HttpsDateUpdateAlgorithm<S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
+    N: Future<Output = Result<(), Error>> + Send,
 {
     async fn update_device_properties(&self, _properties: Properties) {
         // since our samples are polled independently for now, we don't need to use
@@ -62,7 +70,21 @@ where
     }
 
     async fn generate_updates(&self, mut sink: Sender<Update>) -> Result<(), Error> {
-        // TODO(fxbug.dev/59972): wait for network to be available before polling.
+        let mut network_available_lock = self.network_available_fut.lock().await;
+        if let Some(fut) = network_available_lock.take() {
+            info!("Waiting for network to become available.");
+            match fut.await {
+                Ok(()) => {
+                    info!("Network check completed.");
+                    sink.send(Status::Ok.into()).await?;
+                }
+                Err(e) => {
+                    warn!("Network check failed, polling for time anyway: {:?}", e);
+                    sink.send(Status::Network.into()).await?;
+                }
+            }
+        }
+        drop(network_available_lock);
 
         // randomize poll timings somewhat so polls across devices will not be synchronized
         let random_factor = 1f32
@@ -92,13 +114,24 @@ where
     }
 }
 
-impl<S, D> HttpsDateUpdateAlgorithm<S, D>
+impl<S, D, N> HttpsDateUpdateAlgorithm<S, D, N>
 where
     S: HttpsSampler + Send + Sync,
     D: Diagnostics,
+    N: Future<Output = Result<(), Error>> + Send,
 {
-    pub fn new(retry_strategy: RetryStrategy, diagnostics: D, sampler: S) -> Self {
-        Self { retry_strategy, sampler, diagnostics }
+    pub fn new(
+        retry_strategy: RetryStrategy,
+        diagnostics: D,
+        sampler: S,
+        network_available_fut: N,
+    ) -> Self {
+        Self {
+            retry_strategy,
+            sampler,
+            diagnostics,
+            network_available_fut: Mutex::new(Some(network_available_fut)),
+        }
     }
 
     /// Repeatedly poll for a time until one sample is successfully retrieved. Pushes updates to
@@ -170,8 +203,9 @@ mod test {
     use crate::datatypes::{HttpsSample, Poll};
     use crate::diagnostics::FakeDiagnostics;
     use crate::sampler::FakeSampler;
+    use anyhow::format_err;
     use fidl_fuchsia_time_external::TimeSample;
-    use futures::{channel::mpsc::channel, stream::StreamExt, task::Poll as FPoll};
+    use futures::{channel::mpsc::channel, future::ready, stream::StreamExt, task::Poll as FPoll};
     use lazy_static::lazy_static;
     use matches::assert_matches;
     use std::sync::Arc;
@@ -248,11 +282,19 @@ mod test {
             FakeSampler::with_responses(vec![Ok(TEST_SAMPLE_1.clone()), Ok(TEST_SAMPLE_2.clone())]);
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let update_algorithm =
-            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, diagnostics, sampler);
+            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, diagnostics, sampler, ready(Ok(())));
         let (sender, mut receiver) = channel(0);
         let mut update_fut = update_algorithm.generate_updates(sender);
 
-        // After running to a stall, only the first update is available
+        // After running to a stall, the network check complete update is available
+        assert!(executor.run_until_stalled(&mut update_fut).is_pending());
+        assert_eq!(
+            executor.run_until_stalled(&mut receiver.next()),
+            FPoll::Ready(Some(Status::Ok.into()))
+        );
+        assert!(executor.run_until_stalled(&mut receiver.next()).is_pending());
+
+        // After running to a stall again, the first update is available
         assert!(executor.run_until_stalled(&mut update_fut).is_pending());
         assert_eq!(
             executor.run_until_stalled(&mut receiver.next()),
@@ -274,8 +316,12 @@ mod test {
         let (sampler, response_complete_fut) =
             FakeSampler::with_responses(expected_samples.iter().map(|sample| Ok(sample.clone())));
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, Arc::clone(&diagnostics), sampler);
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            Arc::clone(&diagnostics),
+            sampler,
+            ready(Ok(())),
+        );
 
         let (sender, receiver) = channel(0);
         let _update_task =
@@ -312,17 +358,25 @@ mod test {
         ];
         let (sampler, response_complete_fut) = FakeSampler::with_responses(injected_responses);
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::new(TEST_RETRY_STRATEGY, Arc::clone(&diagnostics), sampler);
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            Arc::clone(&diagnostics),
+            sampler,
+            ready(Ok(())),
+        );
 
         let (sender, receiver) = channel(0);
         let _update_task =
             fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
-        // Each status should be reported.
-        let expected_status_updates: Vec<Update> =
-            vec![Status::Network.into(), Status::Protocol.into(), Status::Ok.into()];
+        // The initial OK from the network check, and each injected status should be reported.
+        let expected_status_updates: Vec<Update> = vec![
+            Status::Ok.into(),
+            Status::Network.into(),
+            Status::Protocol.into(),
+            Status::Ok.into(),
+        ];
         let received_status_updates =
             updates.iter().filter(|updates| updates.is_status()).cloned().collect::<Vec<_>>();
         assert_eq!(expected_status_updates, received_status_updates);
@@ -346,6 +400,37 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_poll_even_if_network_check_fails() {
+        let injected_responses = vec![Ok(TEST_SAMPLE_1.clone())];
+        let (sampler, response_complete_fut) = FakeSampler::with_responses(injected_responses);
+        let diagnostics = Arc::new(FakeDiagnostics::new());
+        let update_algorithm = HttpsDateUpdateAlgorithm::new(
+            TEST_RETRY_STRATEGY,
+            Arc::clone(&diagnostics),
+            sampler,
+            ready(Err(format_err!("network check error"))),
+        );
+
+        let (sender, receiver) = channel(0);
+        let _update_task =
+            fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
+        let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
+
+        // The initial error from the network check, and OK for the sample should be reported.
+        let expected_status_updates: Vec<Update> = vec![Status::Network.into(), Status::Ok.into()];
+        let received_status_updates =
+            updates.iter().filter(|updates| updates.is_status()).cloned().collect::<Vec<_>>();
+        assert_eq!(expected_status_updates, received_status_updates);
+
+        // Last update should be the new sample.
+        let last_update = updates.iter().last().unwrap();
+        match last_update {
+            Update::Sample(sample) => assert_eq!(*sample, to_fidl_time_sample(&*TEST_SAMPLE_1)),
+            Update::Status(_) => panic!("Expected a sample but got an update"),
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_phases() {
         let expected_num_samples = 1 /*initial*/ + CONVERGE_SAMPLES + 1 /*maintain*/;
         let expected_samples = vec![TEST_SAMPLE_1.clone(); expected_num_samples];
@@ -358,6 +443,7 @@ mod test {
             TEST_RETRY_STRATEGY,
             Arc::clone(&diagnostics),
             Arc::clone(&sampler),
+            ready(Ok(())),
         );
 
         let (sender, receiver) = channel(0);

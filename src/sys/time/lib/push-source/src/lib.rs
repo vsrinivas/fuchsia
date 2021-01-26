@@ -11,8 +11,7 @@ use fidl_fuchsia_time_external::{
     Properties, PushSourceRequest, PushSourceRequestStream, PushSourceWatchSampleResponder,
     PushSourceWatchStatusResponder, Status, TimeSample,
 };
-use fuchsia_async as fasync;
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc::{channel, Receiver, Sender},
     lock::Mutex,
@@ -53,9 +52,6 @@ impl Update {
     }
 }
 
-// Internally sent flag indicating the network is available.
-const NETWORK_AVAILABLE_SIGNAL: zx::Signals = zx::Signals::USER_0;
-
 /// An |UpdateAlgorithm| asynchronously produces Updates.
 #[async_trait]
 pub trait UpdateAlgorithm {
@@ -76,29 +72,17 @@ pub struct PushSource<UA: UpdateAlgorithm> {
     internal: Mutex<PushSourceInternal>,
     /// The algorithm used to obtain new updates.
     update_algorithm: UA,
-    /// An Event used to asynchronously signal that network is available.
-    network_available_event: zx::Event,
 }
 
 impl<UA: UpdateAlgorithm> PushSource<UA> {
     /// Create a new |PushSource| that polls |update_algorithm| for time updates and starts in the
     /// |initial_status| status.
     pub fn new(update_algorithm: UA, initial_status: Status) -> Result<Self, Error> {
-        let network_available_event = zx::Event::create()?;
-        Ok(Self {
-            internal: Mutex::new(PushSourceInternal::new(initial_status)),
-            update_algorithm,
-            network_available_event,
-        })
+        Ok(Self { internal: Mutex::new(PushSourceInternal::new(initial_status)), update_algorithm })
     }
 
     /// Polls updates received on |update_algorithm| and pushes them to bound clients.
     pub async fn poll_updates(&self) -> Result<(), Error> {
-        // Wait for timekeeper to signal network availability.
-        // TODO(fxbug.dev/59972) - move the network check to httpsdate and remove network concerns
-        // from push_source.
-        fasync::OnSignals::new(&self.network_available_event, NETWORK_AVAILABLE_SIGNAL).await?;
-
         // Updates should be processed immediately so add no extra buffer space.
         let (sender, mut receiver) = channel(0);
         let updater_fut = self.update_algorithm.generate_updates(sender);
@@ -118,13 +102,6 @@ impl<UA: UpdateAlgorithm> PushSource<UA> {
     ) -> Result<(), Error> {
         let client_context = self.internal.lock().await.register_client();
         while let Some(request) = request_stream.try_next().await? {
-            // Timekeeper currently checks for network availability and makes a first fidl request
-            // when the network becomes available. Propagate the signal so that polling for updates
-            // begins.
-            // TODO(fxbug.dev/59972) - move network availability check to time source.
-            self.network_available_event
-                .signal_handle(zx::Signals::NONE, NETWORK_AVAILABLE_SIGNAL)?;
-
             client_context.lock().await.handle_request(request, &self.update_algorithm).await?;
         }
         Ok(())
@@ -263,16 +240,6 @@ impl TestUpdateAlgorithm {
             sender,
         )
     }
-
-    #[cfg(test)]
-    async fn assert_generate_updates_invoked(&self) {
-        assert!(self.receiver.lock().await.is_none())
-    }
-
-    #[cfg(test)]
-    async fn assert_generate_updates_not_invoked(&self) {
-        assert!(self.receiver.lock().await.is_some())
-    }
 }
 
 #[async_trait]
@@ -294,7 +261,7 @@ mod test {
     use fidl::{endpoints::create_proxy_and_stream, Error as FidlError};
     use fidl_fuchsia_time_external::{PushSourceMarker, PushSourceProxy};
     use fuchsia_async as fasync;
-    use futures::{future::join, FutureExt, SinkExt};
+    use futures::{FutureExt, SinkExt};
     use matches::assert_matches;
 
     struct TestHarness {
@@ -346,37 +313,6 @@ mod test {
     // focus primarily on behavior specific to PushSource and ensuring multiple clients are
     // supported.
 
-    #[test]
-    fn test_updates_not_polled_until_network_available() {
-        // TODO(fxbug.dev/59972) - remove this once the availability hack is removed
-        let mut executor = fasync::Executor::new().unwrap();
-        let (update_algorithm, _update_sender) = TestUpdateAlgorithm::new();
-        let test_source = PushSource::new(update_algorithm, Status::Ok).unwrap();
-        let (proxy, stream) = create_proxy_and_stream::<PushSourceMarker>().unwrap();
-        let fidl_fut = test_source.handle_requests_for_stream(stream);
-        let update_fut = test_source.poll_updates();
-        let mut service_fut = join(update_fut, fidl_fut).boxed();
-
-        // After running server side futures to a stall, generate_updates should not
-        // have been called
-        assert!(executor.run_until_stalled(&mut service_fut).is_pending());
-        assert!(executor
-            .run_until_stalled(
-                &mut test_source.update_algorithm.assert_generate_updates_not_invoked().boxed()
-            )
-            .is_ready());
-
-        // After a fidl request has been made, generate_updates should be invoked.
-        let mut request_fut = proxy.watch_sample();
-        assert!(executor.run_until_stalled(&mut request_fut).is_pending());
-        assert!(executor.run_until_stalled(&mut service_fut).is_pending());
-        assert!(executor
-            .run_until_stalled(
-                &mut test_source.update_algorithm.assert_generate_updates_invoked().boxed()
-            )
-            .is_ready());
-    }
-
     #[fasync::run_until_stalled(test)]
     async fn test_watch_sample_closes_on_multiple_watches() {
         let mut harness = TestHarness::new();
@@ -387,11 +323,11 @@ mod test {
         // Calling again while second watch is active should close the channel.
         assert_matches!(
             proxy.watch_sample().await.unwrap_err(),
-            FidlError::ClientChannelClosed{status: zx::Status::BAD_STATE, .. }
+            FidlError::ClientChannelClosed { status: zx::Status::BAD_STATE, .. }
         );
         assert_matches!(
             first_watch_fut.await.unwrap_err(),
-            FidlError::ClientChannelClosed{status: zx::Status::BAD_STATE, .. }
+            FidlError::ClientChannelClosed { status: zx::Status::BAD_STATE, .. }
         );
     }
 
@@ -407,11 +343,11 @@ mod test {
         // Calling again while second watch is active should close the channel.
         assert_matches!(
             proxy.watch_status().await.unwrap_err(),
-            FidlError::ClientChannelClosed{status: zx::Status::BAD_STATE, .. }
+            FidlError::ClientChannelClosed { status: zx::Status::BAD_STATE, .. }
         );
         assert_matches!(
             second_watch_fut.await.unwrap_err(),
-            FidlError::ClientChannelClosed{status: zx::Status::BAD_STATE, .. }
+            FidlError::ClientChannelClosed { status: zx::Status::BAD_STATE, .. }
         );
     }
 
