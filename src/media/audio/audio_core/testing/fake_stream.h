@@ -30,7 +30,7 @@ class FakeStream : public ReadableStream {
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return audio_clock_; }
+  AudioClock& reference_clock() override { return *audio_clock_; }
   std::optional<Buffer> ReadLock(Fixed frame, size_t frame_count) override;
   void Trim(Fixed frame) override {}
 
@@ -42,7 +42,7 @@ class FakeStream : public ReadableStream {
   float gain_db_ = Gain::kUnityGainDb;
   std::unique_ptr<uint8_t[]> buffer_;
 
-  AudioClock audio_clock_;
+  std::unique_ptr<AudioClock> audio_clock_;
 };
 
 }  // namespace media::audio::testing

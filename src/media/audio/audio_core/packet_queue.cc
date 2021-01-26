@@ -37,11 +37,11 @@ static constexpr uint16_t kUnderflowWarningInterval = 100;
 
 }  // namespace
 
-PacketQueue::PacketQueue(Format format, AudioClock audio_clock)
+PacketQueue::PacketQueue(Format format, std::unique_ptr<AudioClock> audio_clock)
     : PacketQueue(format, nullptr, std::move(audio_clock)) {}
 
 PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function,
-                         AudioClock audio_clock)
+                         std::unique_ptr<AudioClock> audio_clock)
     : ReadableStream(std::move(format)),
       timeline_function_(std::move(timeline_function)),
       audio_clock_(std::move(audio_clock)) {}

@@ -98,15 +98,15 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
 
     auto pipeline_config = PipelineConfig(root);
     return std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                kDefaultTransform, device_clock_);
+                                                kDefaultTransform, *device_clock_);
   }
 
   int64_t duration_to_frames(zx::duration delta) {
     return kDefaultFormat.frames_per_ns().Scale(delta.to_nsecs());
   }
-  AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
-                                                  testing::PacketFactory& factory);
-  AudioClock CreateClientClock() {
+  std::unique_ptr<AudioClock> SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
+                                                                   testing::PacketFactory& factory);
+  std::unique_ptr<AudioClock> CreateClientClock() {
     return context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic());
   }
 
@@ -137,11 +137,11 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void TestOutputPipelineTrim(ClockMode clock_mode);
   void TestDifferentMixRates(ClockMode clock_mode);
 
-  AudioClock device_clock_ = context().clock_manager()->CreateDeviceFixed(
+  std::unique_ptr<AudioClock> device_clock_ = context().clock_manager()->CreateDeviceFixed(
       clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 };
 
-AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
+std::unique_ptr<AudioClock> OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
     zx::duration clock_offset, testing::PacketFactory& factory) {
   auto custom_clock_result =
       clock::testing::CreateCustomClock({.start_val = zx::clock::get_monotonic() + clock_offset});
@@ -297,7 +297,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, device_clock_);
+                                                       kDefaultTransform, *device_clock_);
 
   // Add an input into our pipeline so that we have some frames to mix.
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
@@ -305,7 +305,7 @@ TEST_F(OutputPipelineTest, Loopback) {
 
   // Present frames ahead of now to stay ahead of the safe_write_frame.
   auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
-  auto ref_start = device_clock_.Read() + scheduling_delay;
+  auto ref_start = device_clock_->Read() + scheduling_delay;
   auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
@@ -392,7 +392,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, device_clock_);
+                                                       kDefaultTransform, *device_clock_);
 
   // Add an input into our pipeline so that we have some frames to mix.
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
@@ -400,7 +400,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
 
   // Present frames ahead of now to stay ahead of the safe_write_frame.
   auto scheduling_delay = zx::msec(25);  // need at least 25ms for sanitizer builds
-  auto ref_start = device_clock_.Read() + scheduling_delay;
+  auto ref_start = device_clock_->Read() + scheduling_delay;
   auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
@@ -480,7 +480,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, device_clock_);
+                                                       kDefaultTransform, *device_clock_);
 
   // Add an input into our pipeline so that we have some frames to mix.
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
@@ -559,7 +559,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline =
       std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128, kDefaultTransform,
-                                           device_clock_, Mixer::Resampler::SampleAndHold);
+                                           *device_clock_, Mixer::Resampler::SampleAndHold);
 
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
@@ -640,8 +640,8 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
 
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 480,
-                                                       kDefaultTransform, device_clock_, resampler);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(
+      pipeline_config, volume_curve, 480, kDefaultTransform, *device_clock_, resampler);
 
   pipeline->AddInput(stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), std::nullopt,
                      resampler);
@@ -732,7 +732,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, device_clock_);
+                                                       kDefaultTransform, *device_clock_);
 
   // Verify the pipeline format includes the rechannel effect.
   EXPECT_EQ(4u, pipeline->format().channels());
@@ -794,7 +794,7 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   clock::testing::VerifyReadOnlyRights(readonly_clock);
 
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
-                                                       kDefaultTransform, device_clock_);
+                                                       kDefaultTransform, *device_clock_);
 
   audio_clock_helper::VerifyReadOnlyRights(pipeline->reference_clock());
   audio_clock_helper::VerifyAdvances(pipeline->reference_clock());

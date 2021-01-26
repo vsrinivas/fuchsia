@@ -128,8 +128,8 @@ class MixStageClockTest : public testing::ThreadingModelFixture {
   std::shared_ptr<MixStage> mix_stage_;
   std::shared_ptr<Mixer> mixer_;
 
-  std::optional<AudioClock> client_clock_;
-  std::optional<AudioClock> device_clock_;
+  std::unique_ptr<AudioClock> client_clock_;
+  std::unique_ptr<AudioClock> device_clock_;
 
   bool wait_for_mixes_;  // Does this sync mode require MONOTONIC time to pass between mixes.
 
@@ -187,7 +187,7 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
 
     device_clock_ = context().clock_manager()->CreateDeviceFixed(clock::CloneOfMonotonic(),
                                                                  AudioClock::kMonotonicDomain);
-    audio_clock_helper::VerifyAdvances(device_clock_.value());
+    audio_clock_helper::VerifyAdvances(*device_clock_);
 
     zx::time source_start = zx::clock::get_monotonic();
     clock::testing::ClockProperties clock_props;
@@ -204,7 +204,7 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
 
     auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
     client_clock_ = context().clock_manager()->CreateClientFixed(std::move(raw_clock));
-    audio_clock_helper::VerifyAdvances(client_clock_.value());
+    audio_clock_helper::VerifyAdvances(*client_clock_);
   }
 };
 
@@ -247,7 +247,7 @@ class AdjustableClockTest : public MixStageClockTest,
 
     client_clock_ =
         context().clock_manager()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic());
-    audio_clock_helper::VerifyAdvances(client_clock_.value());
+    audio_clock_helper::VerifyAdvances(*client_clock_);
 
     auto device_start = zx::clock::get_monotonic();
     clock::testing::ClockProperties clock_props;
@@ -265,7 +265,7 @@ class AdjustableClockTest : public MixStageClockTest,
     auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
     device_clock_ =
         context().clock_manager()->CreateDeviceFixed(std::move(raw_clock), kNonMonotonicDomain);
-    audio_clock_helper::VerifyAdvances(device_clock_.value());
+    audio_clock_helper::VerifyAdvances(*device_clock_);
   }
 };
 
@@ -306,16 +306,16 @@ void MixStageClockTest::ConnectStages() {
     // Create a PacketQueue with the client timeline and clock, as the source.
     // Pass the device timeline and clock to a mix stage, as the destination.
     packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, client_ref_to_fixed_,
-                                                 std::move(client_clock_.value()));
+                                                 std::move(client_clock_));
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix, device_ref_to_fixed_,
-                                            device_clock_.value());
+                                            *device_clock_);
   } else {
     // Create a PacketQueue with the device timeline and clock, as the source.
     // Pass the client timeline and clock to a mix stage, as the destination.
     packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, device_ref_to_fixed_,
-                                                 std::move(device_clock_.value()));
+                                                 std::move(device_clock_));
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix, client_ref_to_fixed_,
-                                            client_clock_.value());
+                                            *client_clock_);
   }
 
   // Connect packet queue to mix stage.

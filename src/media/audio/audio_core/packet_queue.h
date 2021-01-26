@@ -26,10 +26,10 @@ class PacketQueue : public ReadableStream {
  public:
   // Because PacketQueue is the one Stream object that might outlive its creator, it owns its
   // AudioClock rather than storing a reference to the caller's AudioClock.
-  PacketQueue(Format format, AudioClock audio_clock);
+  PacketQueue(Format format, std::unique_ptr<AudioClock> audio_clock);
   PacketQueue(Format format,
               fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-              AudioClock audio_clock);
+              std::unique_ptr<AudioClock> audio_clock);
   ~PacketQueue();
 
   bool empty() const {
@@ -53,7 +53,7 @@ class PacketQueue : public ReadableStream {
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return audio_clock_; }
+  AudioClock& reference_clock() override { return *audio_clock_; }
   std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, size_t frame_count) override;
   void Trim(Fixed frame) override;
   void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
@@ -79,7 +79,7 @@ class PacketQueue : public ReadableStream {
   std::atomic<uint16_t> partial_underflow_count_ = {0};
   fit::function<void(zx::time, zx::time)> underflow_reporter_;
 
-  AudioClock audio_clock_;
+  std::unique_ptr<AudioClock> audio_clock_;
 };
 
 }  // namespace media::audio

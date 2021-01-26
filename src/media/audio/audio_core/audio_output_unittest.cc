@@ -46,7 +46,7 @@ class TestOutputPipeline : public OutputPipeline {
         .generation = 1,
     };
   }
-  AudioClock& reference_clock() override { return audio_clock_; }
+  AudioClock& reference_clock() override { return *audio_clock_; }
 
   // |media::audio::OutputPipeline|
   std::shared_ptr<ReadableStream> loopback() const override { return nullptr; }
@@ -65,7 +65,7 @@ class TestOutputPipeline : public OutputPipeline {
  private:
   std::deque<ReadableStream::Buffer> buffers_;
 
-  AudioClock audio_clock_;
+  std::unique_ptr<AudioClock> audio_clock_;
 };
 
 class StubDriver : public AudioDriverV1 {

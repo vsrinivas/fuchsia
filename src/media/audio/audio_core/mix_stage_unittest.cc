@@ -43,7 +43,7 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
   void SetUp() {
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline_function_,
-                                            device_clock_);
+                                            *device_clock_);
   }
 
   int64_t duration_to_frames(zx::duration delta) {
@@ -64,8 +64,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
-  AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
-                                                  testing::PacketFactory& factory);
+  std::unique_ptr<AudioClock> SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
+                                                                   testing::PacketFactory& factory);
   void TestMixStageTrim(ClockMode clock_mode);
   void TestMixStageUniformFormats(ClockMode clock_mode);
   void TestMixStageSingleInput(ClockMode clock_mode);
@@ -84,7 +84,7 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<MixStage> mix_stage_;
 
-  AudioClock device_clock_ = context().clock_manager()->CreateDeviceFixed(
+  std::unique_ptr<AudioClock> device_clock_ = context().clock_manager()->CreateDeviceFixed(
       clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 };
 
@@ -115,11 +115,11 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
   auto adjustable_device_clock = context().clock_manager()->CreateDeviceAdjustable(
       clock::AdjustableCloneOfMonotonic(), AudioClock::kMonotonicDomain + 1);
   auto adjustable_device_mix_stage = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames,
-                                                                timeline, adjustable_device_clock);
+                                                                timeline, *adjustable_device_clock);
   auto fixed_device_clock = context().clock_manager()->CreateDeviceFixed(
       clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
   auto fixed_device_mix_stage =
-      std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, fixed_device_clock);
+      std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, *fixed_device_clock);
 
   auto adjustable_client_same_rate = std::make_shared<PacketQueue>(
       kSameFrameRate, tl_same,
@@ -182,8 +182,8 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
 // TODO(fxbug.dev/50004): Add tests to verify we can read from other mix stages with unaligned
 // frames.
 
-AudioClock MixStageTest::SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
-                                                              testing::PacketFactory& factory) {
+std::unique_ptr<AudioClock> MixStageTest::SetPacketFactoryWithOffsetAudioClock(
+    zx::duration clock_offset, testing::PacketFactory& factory) {
   auto custom_clock =
       clock::testing::CreateCustomClock({.start_val = zx::clock::get_monotonic() + clock_offset})
           .take_value();
@@ -394,7 +394,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // Create a new RingBuffer and add it to our mix stage.
   int64_t safe_write_frame = 0;
   auto ring_buffer_endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-      kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames,
+      kDefaultFormat, timeline_function_, *device_clock_, kRingSizeFrames,
       [&safe_write_frame] { return safe_write_frame; });
 
   // We explictly request a SincSampler here to get a non-trivial filter width.
@@ -616,7 +616,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
                                                  [&packet_released] { packet_released = true; }));
   auto mix_stage =
-      std::make_shared<MixStage>(kDefaultFormat, 480, timeline_function_, device_clock_);
+      std::make_shared<MixStage>(kDefaultFormat, 480, timeline_function_, *device_clock_);
   mix_stage->AddInput(stream);
 
   // After mixing half the packet, the packet should not be released.

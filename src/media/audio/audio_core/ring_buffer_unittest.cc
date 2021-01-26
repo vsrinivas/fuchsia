@@ -41,7 +41,7 @@ class InputRingBufferTest : public ::testing::Test {
   }
 
   ReadableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
-  AudioClock& reference_clock() { return audio_clock_; }
+  AudioClock& reference_clock() { return *audio_clock_; }
 
   // Advance to the given time.
   void Advance(zx::time ref_time) {
@@ -52,8 +52,8 @@ class InputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<ReadableRingBuffer> ring_buffer_;
 
-  AudioClock audio_clock_ =
-      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  std::unique_ptr<AudioClock> audio_clock_ = std::make_unique<AudioClock>(
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain));
 
   int64_t safe_read_frame_ = -1;
 };
@@ -74,7 +74,7 @@ class OutputRingBufferTest : public ::testing::Test {
   }
 
   WritableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
-  AudioClock& reference_clock() { return audio_clock_; }
+  AudioClock& reference_clock() { return *audio_clock_; }
 
   // Advance to the given time.
   void Advance(zx::time ref_time) {
@@ -85,8 +85,8 @@ class OutputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<WritableRingBuffer> ring_buffer_;
 
-  AudioClock audio_clock_ =
-      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  std::unique_ptr<AudioClock> audio_clock_ = std::make_unique<AudioClock>(
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain));
   int64_t safe_write_frame_ = 0;
 };
 

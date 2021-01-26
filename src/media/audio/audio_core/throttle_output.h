@@ -62,7 +62,7 @@ class ThrottleOutput : public AudioOutput {
 
   ~ThrottleOutput() override = default;
 
-  AudioClock& reference_clock() override { return audio_clock_; }
+  AudioClock& reference_clock() override { return *audio_clock_; }
 
  protected:
   // AudioOutput Implementation
@@ -133,7 +133,7 @@ class ThrottleOutput : public AudioOutput {
   bool uninitialized_ = true;
   TimelineFunction ref_time_to_frac_presentation_frame_;
   TimelineFunction ref_time_to_frac_safe_read_or_write_frame_;
-  AudioClock audio_clock_;
+  std::unique_ptr<AudioClock> audio_clock_;
 };
 
 }  // namespace media::audio

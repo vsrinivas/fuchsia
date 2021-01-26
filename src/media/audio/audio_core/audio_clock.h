@@ -100,11 +100,11 @@ class AudioClock {
   zx::time Read() const;
 
   // We synchronize audio clocks so that positions (not just rates) align, reconciling differences
-  // using feedback controls. Given position error at a monotonic time, we tune src_pos_error to 0.
+  // using feedback controls. Given position error at monotonic_time, we tune source_pos_error to 0.
   //
   // The return value is the PPM value of any micro-SRC that should subsequently be applied.
   static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
-                                   zx::time monotonic_time, zx::duration src_pos_error);
+                                   zx::time monotonic_time, zx::duration source_pos_error);
   // For debugging purposes, dump the sync mode and current clock/micro-src rates.
   static void DisplaySyncInfo(AudioClock& source_clock, AudioClock& dest_clock);
 
@@ -112,7 +112,7 @@ class AudioClock {
   void ResetRateAdjustment(zx::time reset_time);
 
   // Directly incorporate a position error when recovering a device clock.
-  int32_t TuneForError(zx::time monotonic_time, zx::duration src_pos_error);
+  int32_t TuneForError(zx::time monotonic_time, zx::duration source_pos_error);
 
  private:
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);

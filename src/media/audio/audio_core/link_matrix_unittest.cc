@@ -298,7 +298,7 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
                          .frames_per_second = 48000,
                      })
           .take_value(),
-      AudioClock::ClientFixed(clock::CloneOfMonotonic()));
+      std::make_unique<AudioClock>(AudioClock::ClientFixed(clock::CloneOfMonotonic())));
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());
@@ -324,7 +324,7 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
                          .frames_per_second = 48000,
                      })
           .take_value(),
-      AudioClock::ClientFixed(clock::CloneOfMonotonic()));
+      std::make_unique<AudioClock>(AudioClock::ClientFixed(clock::CloneOfMonotonic())));
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());

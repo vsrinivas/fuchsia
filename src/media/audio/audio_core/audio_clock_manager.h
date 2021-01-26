@@ -21,17 +21,17 @@ namespace media::audio {
 
 class AudioClockManager {
  public:
-  AudioClock CreateClientAdjustable(zx::clock clock) {
-    return AudioClock::ClientAdjustable(std::move(clock));
+  std::unique_ptr<AudioClock> CreateClientAdjustable(zx::clock clock) {
+    return std::make_unique<AudioClock>(AudioClock::ClientAdjustable(std::move(clock)));
   }
-  AudioClock CreateClientFixed(zx::clock clock) {
-    return AudioClock::ClientFixed(std::move(clock));
+  std::unique_ptr<AudioClock> CreateClientFixed(zx::clock clock) {
+    return std::make_unique<AudioClock>(AudioClock::ClientFixed(std::move(clock)));
   }
-  AudioClock CreateDeviceAdjustable(zx::clock clock, uint32_t domain) {
-    return AudioClock::DeviceAdjustable(std::move(clock), domain);
+  std::unique_ptr<AudioClock> CreateDeviceAdjustable(zx::clock clock, uint32_t domain) {
+    return std::make_unique<AudioClock>(AudioClock::DeviceAdjustable(std::move(clock), domain));
   }
-  AudioClock CreateDeviceFixed(zx::clock clock, uint32_t domain) {
-    return AudioClock::DeviceFixed(std::move(clock), domain);
+  std::unique_ptr<AudioClock> CreateDeviceFixed(zx::clock clock, uint32_t domain) {
+    return std::make_unique<AudioClock>(AudioClock::DeviceFixed(std::move(clock), domain));
   }
 };
 

@@ -169,7 +169,7 @@ class AudioDriverV1 : public AudioDriver {
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
 
-  AudioClock& reference_clock() override { return audio_clock_.value(); }
+  AudioClock& reference_clock() override { return *audio_clock_; }
 
  private:
   friend class AudioDevice;
@@ -345,8 +345,8 @@ class AudioDriverV1 : public AudioDriver {
   zx::time driver_last_timeout_ = zx::time::infinite();
 
   uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
-  std::optional<AudioClock> audio_clock_;
-  std::optional<AudioClock> recovered_clock_;
+  std::unique_ptr<AudioClock> audio_clock_;
+  std::unique_ptr<AudioClock> recovered_clock_;
 
   // Counter of received position notifications since START.
   uint64_t position_notification_count_ = 0;
@@ -409,7 +409,7 @@ class AudioDriverV2 : public AudioDriver {
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
 
-  AudioClock& reference_clock() override { return audio_clock_.value(); }
+  AudioClock& reference_clock() override { return *audio_clock_; }
 
  private:
   static constexpr uint32_t kDriverInfoHasUniqueId = (1u << 0);
@@ -544,8 +544,8 @@ class AudioDriverV2 : public AudioDriver {
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_fidl_;
 
   uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
-  std::optional<AudioClock> audio_clock_;
-  std::optional<AudioClock> recovered_clock_;
+  std::unique_ptr<AudioClock> audio_clock_;
+  std::unique_ptr<AudioClock> recovered_clock_;
 
   // Counter of received position notifications since START.
   uint64_t position_notification_count_ FXL_GUARDED_BY(owner_->mix_domain().token()) = 0;

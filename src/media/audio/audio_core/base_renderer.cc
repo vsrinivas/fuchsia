@@ -74,7 +74,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
 
-  std::optional<AudioClock> clock_for_packet_queue;
+  std::unique_ptr<AudioClock> clock_for_packet_queue;
   if (client_allows_clock_adjustment_ && !adjustable_clock_is_allocated_) {
     // Retain WRITE, mark AudioClock adjustable, and note that an adjustable clock has been
     // provided.
@@ -96,7 +96,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
   }
 
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
-                                             std::move(clock_for_packet_queue.value()));
+                                             std::move(clock_for_packet_queue));
 
   queue->SetUnderflowReporter([this](zx::time start_time, zx::time stop_time) {
     reporter_->Underflow(start_time, stop_time);
