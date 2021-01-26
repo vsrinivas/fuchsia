@@ -8,19 +8,23 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
+#include <zircon/utc.h>
 
 #include <string>
 
 #include "dockyard_proxy.h"
 #include "dockyard_proxy_grpc.h"
 #include "dockyard_proxy_local.h"
+#include "fuchsia_clock.h"
 #include "harvester.h"
 #include "info_resource.h"
 #include "os.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 int main(int argc, char** argv) {
   constexpr int EXIT_CODE_OK = 0;
@@ -66,6 +70,34 @@ int main(int argc, char** argv) {
     run_loop_once = true;
   }
 
+  // Note: Neither of the following loops are "fast" or "slow" on their own.
+  //       It's just a matter of what we choose to run on them.
+  // Create a separate loop for quick calls (don't run long running functions on
+  // this loop).
+  // The "slow" loop is used for potentially long running calls.
+  async::Loop slow_calls_loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::Loop fast_calls_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  // The loop that runs quick calls is in a separate thread.
+  zx_status_t status = fast_calls_loop.StartThread("fast-calls-thread");
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "fast_calls_loop.StartThread failed " << status;
+    exit(EXIT_CODE_GENERAL_ERROR);
+  }
+  async::Loop trace_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  status = trace_loop.StartThread("trace-thread");
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "trace-thread.StartThread failed " << status;
+    exit(EXIT_CODE_GENERAL_ERROR);
+  }
+  FX_LOGS(INFO) << "main thread " << pthread_self();
+
+  async_dispatcher_t* fast_dispatcher = fast_calls_loop.dispatcher();
+
+  std::unique_ptr<harvester::FuchsiaClock> clock =
+      std::make_unique<harvester::FuchsiaClock>(
+          fast_dispatcher, std::make_unique<timekeeper::SystemClock>(),
+          zx::unowned_clock(zx_utc_reference_get()));
+
   // Set up.
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy;
   if (use_grpc) {
@@ -79,9 +111,10 @@ int main(int argc, char** argv) {
 
     // TODO(fxbug.dev/32): This channel isn't authenticated
     // (InsecureChannelCredentials()).
-    dockyard_proxy =
-        std::make_unique<harvester::DockyardProxyGrpc>(grpc::CreateChannel(
-            positional_args[0], grpc::InsecureChannelCredentials()));
+    dockyard_proxy = std::make_unique<harvester::DockyardProxyGrpc>(
+        grpc::CreateChannel(positional_args[0],
+                            grpc::InsecureChannelCredentials()),
+        std::move(clock));
 
     if (!dockyard_proxy) {
       FX_LOGS(ERROR) << "unable to create dockyard_proxy";
@@ -104,30 +137,10 @@ int main(int argc, char** argv) {
 
   std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
 
-  // Note: Neither of the following loops are "fast" or "slow" on their own.
-  //       It's just a matter of what we choose to run on them.
-  // Create a separate loop for quick calls (don't run long running functions on
-  // this loop).
-  // The "slow" loop is used for potentially long running calls.
-  async::Loop slow_calls_loop(&kAsyncLoopConfigAttachToCurrentThread);
-  async::Loop fast_calls_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  // The loop that runs quick calls is in a separate thread.
-  zx_status_t status = fast_calls_loop.StartThread("fast-calls-thread");
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "fast_calls_loop.StartThread failed " << status;
-    exit(EXIT_CODE_GENERAL_ERROR);
-  }
-  async::Loop trace_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  status = trace_loop.StartThread("trace-thread");
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "trace-thread.StartThread failed " << status;
-    exit(EXIT_CODE_GENERAL_ERROR);
-  }
-  FX_LOGS(INFO) << "main thread " << pthread_self();
   harvester::Harvester harvester(info_resource, std::move(dockyard_proxy),
                                  std::move(os));
   harvester.GatherDeviceProperties();
-  harvester.GatherFastData(fast_calls_loop.dispatcher());
+  harvester.GatherFastData(fast_dispatcher);
   harvester.GatherSlowData(slow_calls_loop.dispatcher());
   harvester.GatherLogs();
   // Best practice across Fuchsia codebase is to always start the trace provider

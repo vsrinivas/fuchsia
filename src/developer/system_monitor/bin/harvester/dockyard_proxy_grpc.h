@@ -5,7 +5,10 @@
 #ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_GRPC_H_
 #define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_GRPC_H_
 
+#include <optional>
+
 #include "dockyard_proxy.h"
+#include "fuchsia_clock.h"
 #include "src/developer/system_monitor/lib/dockyard/dockyard.h"
 #include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
 
@@ -25,17 +28,21 @@ void BuildSampleListById(SampleListById* by_id,
                          const SampleList& sample_list);
 
 dockyard_proto::LogBatch BuildLogBatch(
-    const std::vector<const std::string>& batch, uint64_t monotonic_time, uint64_t time);
+    const std::vector<const std::string>& batch, uint64_t monotonic_time,
+    std::optional<zx_time_t> time);
 }  // namespace internal
 
 class DockyardProxyGrpc : public DockyardProxy {
  public:
-  DockyardProxyGrpc(std::shared_ptr<grpc::Channel> channel)
-      : stub_(dockyard_proto::Dockyard::NewStub(channel)) {}
+  DockyardProxyGrpc(std::shared_ptr<grpc::Channel> channel,
+                    std::unique_ptr<FuchsiaClock> clock)
+      : stub_(dockyard_proto::Dockyard::NewStub(channel)),
+        clock_(std::move(clock)) {}
 
   explicit DockyardProxyGrpc(
-      std::unique_ptr<dockyard_proto::Dockyard::StubInterface> stub)
-      : stub_(std::move(stub)) {}
+      std::unique_ptr<dockyard_proto::Dockyard::StubInterface> stub,
+      std::unique_ptr<FuchsiaClock> clock)
+      : stub_(std::move(stub)), clock_(std::move(clock)) {}
 
   // |DockyardProxy|.
   DockyardProxyStatus Init() override;
@@ -67,6 +74,7 @@ class DockyardProxyGrpc : public DockyardProxy {
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::StubInterface> stub_;
+  std::unique_ptr<harvester::FuchsiaClock> clock_;
 
   // The dockyard_path_to_id_ may be accessed by multiple threads.
   std::mutex dockyard_path_to_id_mutex_;
@@ -78,20 +86,21 @@ class DockyardProxyGrpc : public DockyardProxy {
   // Actually send data to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendInspectJson().
-  grpc::Status SendInspectJsonById(uint64_t time,
+  grpc::Status SendInspectJsonById(std::optional<zx_time_t> time,
                                    dockyard::DockyardId dockyard_id,
                                    const std::string& json);
 
   // Actually send a single sample to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendSample().
-  grpc::Status SendSampleById(uint64_t time, dockyard::DockyardId dockyard_id,
-                              uint64_t value);
+  grpc::Status SendSampleById(std::optional<zx_time_t> time,
+                              dockyard::DockyardId dockyard_id, uint64_t value);
 
   // Actually send a list of samples with the same timestamp to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendSampleList().
-  grpc::Status SendSampleListById(uint64_t time, const SampleListById& list);
+  grpc::Status SendSampleListById(std::optional<zx_time_t> time,
+                                  const SampleListById& list);
 
   // Get the ID from the local cache or from the remote Dockyard if it's not in
   // the cache.
@@ -101,6 +110,8 @@ class DockyardProxyGrpc : public DockyardProxy {
   grpc::Status GetDockyardIdsForPaths(
       std::vector<dockyard::DockyardId>* dockyard_id,
       const std::vector<const std::string*>& dockyard_path);
+
+  grpc::Status SendUtcClockStarted();
 };
 
 }  // namespace harvester

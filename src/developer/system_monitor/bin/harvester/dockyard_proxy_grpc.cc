@@ -7,9 +7,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
+#include <zircon/time.h>
 
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "build_info.h"
@@ -48,13 +50,16 @@ void BuildSampleListById(SampleListById* by_id,
 }
 
 dockyard_proto::LogBatch BuildLogBatch(
-    const std::vector<const std::string>& batch, uint64_t monotonic_time, uint64_t time) {
+    const std::vector<const std::string>& batch, uint64_t monotonic_time,
+    std::optional<zx_time_t> time) {
   dockyard_proto::LogBatch logs;
   for (const auto& json : batch) {
     auto log = logs.add_log_json();
     log->set_json(json);
   }
-  logs.set_time(time);
+  if (time.has_value()) {
+    logs.set_time(time.value());
+  }
   logs.set_monotonic_time(monotonic_time);
   return logs;
 }
@@ -62,14 +67,22 @@ dockyard_proto::LogBatch BuildLogBatch(
 }  // namespace internal
 
 DockyardProxyStatus DockyardProxyGrpc::Init() {
+  clock_->WaitForStart([this](zx_status_t status) {
+    if (status == ZX_OK) {
+      SendUtcClockStarted();
+    } else {
+      FX_LOGS(ERROR) << "Waiting for clock failed with status " << status;
+    }
+  });
+
   dockyard_proto::InitRequest request;
   request.set_device_name("TODO SET DEVICE NAME");
   request.set_version(dockyard::DOCKYARD_VERSION);
-  auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
-  request.set_device_time_ns(nanoseconds);
+
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
+  if (nanoseconds.has_value()) {
+    request.set_device_time_ns(nanoseconds.value());
+  }
 
   BuildInfoValue version = GetFuchsiaBuildVersion();
   if (version.HasValue()) {
@@ -93,20 +106,15 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
 DockyardProxyStatus DockyardProxyGrpc::SendLogs(
     const std::vector<const std::string>& batch) {
   uint64_t monotonic_time = zx::clock::get_monotonic().get();
-
-  // TODO(fxbug.dev/65180): Add a check for ZX_CLOCK_STARTED.
-  auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
 
   // Data we are sending to the server.
   dockyard_proto::LogBatch logs =
       internal::BuildLogBatch(batch, monotonic_time, nanoseconds);
 
   grpc::ClientContext context;
-  std::shared_ptr<grpc::ClientReaderWriterInterface<dockyard_proto::LogBatch,
-                                           dockyard_proto::EmptyMessage>>
+  std::shared_ptr<grpc::ClientReaderWriterInterface<
+      dockyard_proto::LogBatch, dockyard_proto::EmptyMessage>>
       stream(stub_->SendLogs(&context));
 
   stream->Write(logs);
@@ -116,10 +124,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendLogs(
 
 DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(
     const std::string& dockyard_path, const std::string& json) {
-  auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
   dockyard::DockyardId dockyard_id;
   grpc::Status status = GetDockyardIdForPath(&dockyard_id, dockyard_path);
   if (status.ok()) {
@@ -131,12 +136,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(
 
 DockyardProxyStatus DockyardProxyGrpc::SendSample(
     const std::string& dockyard_path, uint64_t value) {
-  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
-  // using high_resolution_clock.
-  auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
   dockyard::DockyardId dockyard_id;
   grpc::Status status = GetDockyardIdForPath(&dockyard_id, dockyard_path);
   if (status.ok()) {
@@ -147,13 +147,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendSample(
 }
 
 DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList& list) {
-  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
-  // using high_resolution_clock.
-  auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
-
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
   std::vector<const std::string*> dockyard_strings(list.size());
   internal::ExtractPathsFromSampleList(&dockyard_strings, list);
 
@@ -167,13 +161,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList& list) {
 
 DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
     const StringSampleList& list) {
-  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
-  // using high_resolution_clock.
-  auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
-
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
   std::vector<const std::string*> dockyard_strings;
   for (const auto& element : list) {
     // Both the key (first) and value (second) are strings. Get IDs for each.
@@ -196,13 +184,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
 
 DockyardProxyStatus DockyardProxyGrpc::SendSamples(
     const SampleList& int_samples, const StringSampleList& string_samples) {
-  // TODO(fxbug.dev/35): system_clock might be at usec resolution. Consider
-  // using high_resolution_clock.
-  auto now = std::chrono::system_clock::now();
-  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             now.time_since_epoch())
-                             .count();
-
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
   std::vector<const std::string*> dockyard_strings;
   for (const auto& element : int_samples) {
     dockyard_strings.emplace_back(&element.first);
@@ -231,11 +213,34 @@ DockyardProxyStatus DockyardProxyGrpc::SendSamples(
   return ToDockyardProxyStatus(SendSampleListById(nanoseconds, by_id));
 }
 
+grpc::Status DockyardProxyGrpc::SendUtcClockStarted() {
+  dockyard_proto::UtcClockStartedRequest request;
+  std::optional<zx_time_t> nanoseconds = clock_->nanoseconds();
+  if (nanoseconds.has_value()) {
+    request.set_device_time_ns(nanoseconds.value());
+  } else {
+    FX_LOGS(ERROR) << "We got a clock started message but the time is still "
+                      "not available.";
+  }
+
+  dockyard_proto::UtcClockStartedReply reply;
+  grpc::ClientContext context;
+  grpc::Status status = stub_->UtcClockStarted(&context, request, &reply);
+  if (!status.ok()) {
+    FX_LOGS(ERROR) << status.error_code() << ": " << status.error_message();
+    FX_LOGS(ERROR) << "Unable to send UtcClockStarted to dockyard.";
+  }
+  return status;
+}
+
 grpc::Status DockyardProxyGrpc::SendInspectJsonById(
-    uint64_t time, dockyard::DockyardId dockyard_id, const std::string& json) {
+    std::optional<zx_time_t> time, dockyard::DockyardId dockyard_id,
+    const std::string& json) {
   // Data we are sending to the server.
   dockyard_proto::InspectJson inspect;
-  inspect.set_time(time);
+  if (time.has_value()) {
+    inspect.set_time(time.value());
+  }
   inspect.set_dockyard_id(dockyard_id);
   inspect.set_json(json);
 
@@ -249,12 +254,14 @@ grpc::Status DockyardProxyGrpc::SendInspectJsonById(
   return stream->Finish();
 }
 
-grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time,
+grpc::Status DockyardProxyGrpc::SendSampleById(std::optional<zx_time_t> time,
                                                dockyard::DockyardId dockyard_id,
                                                uint64_t value) {
   // Data we are sending to the server.
   dockyard_proto::RawSample sample;
-  sample.set_time(time);
+  if (time.has_value()) {
+    sample.set_time(time.value());
+  }
   sample.mutable_sample()->set_key(dockyard_id);
   sample.mutable_sample()->set_value(value);
 
@@ -268,11 +275,13 @@ grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time,
   return stream->Finish();
 }
 
-grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time,
-                                                   const SampleListById& list) {
+grpc::Status DockyardProxyGrpc::SendSampleListById(
+    std::optional<zx_time_t> time, const SampleListById& list) {
   // Data we are sending to the server.
   dockyard_proto::RawSamples samples;
-  samples.set_time(time);
+  if (time.has_value()) {
+    samples.set_time(time.value());
+  }
   for (const auto& iter : list) {
     auto sample = samples.add_sample();
     sample->set_key(iter.first);

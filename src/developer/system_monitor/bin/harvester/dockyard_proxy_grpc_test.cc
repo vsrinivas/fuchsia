@@ -4,7 +4,9 @@
 
 #include "dockyard_proxy_grpc.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 
 #include <utility>
 
@@ -13,19 +15,21 @@
 
 #include "mock_dockyard_stub.h"
 #include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/lib/timekeeper/test_clock.h"
 
-class DockyardProxyGrpcTest : public ::testing::Test {
+class DockyardProxyGrpcTest : public gtest::TestLoopFixture {
  public:
-  void SetUp() {}
-};
+  void SetUp() {
+    zx_clock_create_args_v1_t clock_args{.backstop_time = 0};
+    FX_CHECK(
+        zx::clock::create(ZX_CLOCK_ARGS_VERSION(1) | ZX_CLOCK_OPT_AUTO_START,
+                          &clock_args, &clock_handle_) == ZX_OK);
+  }
 
-uint64_t getUtcTime() {
-  // TODO(fxbug.dev/65180): Add a check for ZX_CLOCK_STARTED.
-  auto now = std::chrono::system_clock::now();
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(
-             now.time_since_epoch())
-      .count();
-}
+ protected:
+  zx::clock clock_handle_;
+};
 
 uint64_t getMonotonicTime() { return zx::clock::get_monotonic().get(); }
 
@@ -60,20 +64,20 @@ TEST_F(DockyardProxyGrpcTest, BuildSampleListById) {
   EXPECT_EQ(out[2], std::make_pair(13UL, 42UL));
 }
 
-TEST(DockyardClientTest, SendLogTest) {
+TEST_F(DockyardProxyGrpcTest, SendLogTest) {
   const std::string logs1 = "[{hello: world}, {foo: bar}]";
   const std::string logs2 = "[{hello: world}, {foo: bar}]";
   std::vector<const std::string> batch = {logs1, logs1};
 
-  uint64_t startTime = getUtcTime();
   uint64_t startMono = getMonotonicTime();
 
   std::unique_ptr<MockDockyardStub> mock_stub =
       std::make_unique<MockDockyardStub>();
 
   auto mock_reader_writer =
-      new grpc::testing::MockClientReaderWriter<LogBatch, EmptyMessage>();
-  LogBatch logs;
+      new grpc::testing::MockClientReaderWriter<dockyard_proto::LogBatch,
+                                                EmptyMessage>();
+  dockyard_proto::LogBatch logs;
 
   EXPECT_CALL(*mock_stub, SendLogsRaw(_)).WillOnce(Return(mock_reader_writer));
   EXPECT_CALL(*mock_reader_writer, Write(_, _))
@@ -83,15 +87,29 @@ TEST(DockyardClientTest, SendLogTest) {
   EXPECT_CALL(*mock_reader_writer, Finish())
       .WillOnce(Return(::grpc::Status::OK));
 
-  harvester::DockyardProxyGrpc dockyard_proxy(std::move(mock_stub));
+  std::unique_ptr<timekeeper::TestClock> test_clock =
+      std::make_unique<timekeeper::TestClock>();
+  constexpr zx::time_utc log_time(
+      (zx::hour(9) + zx::min(31) + zx::sec(42)).get());
+  test_clock->Set(log_time);
+
+  std::unique_ptr<harvester::FuchsiaClock> clock =
+      std::make_unique<harvester::FuchsiaClock>(
+          dispatcher(), std::move(test_clock),
+          zx::unowned_clock(clock_handle_.get_handle()));
+  clock->WaitForStart([](zx_status_t status) {});
+
+  harvester::DockyardProxyGrpc dockyard_proxy(std::move(mock_stub),
+                                              std::move(clock));
   dockyard_proxy.SendLogs(batch);
 
   auto log_json = logs.log_json();
   for (auto i = 0; i < log_json.size(); i++) {
     EXPECT_EQ(log_json[i].json(), batch[i]);
   }
-  EXPECT_THAT(logs.time(), AllOf(Gt(startTime), Lt(getUtcTime())));
-  EXPECT_THAT(logs.monotonic_time(), AllOf(Gt(startMono), Lt(getMonotonicTime())));
+  EXPECT_EQ(logs.time(), (uint64_t)log_time.get());
+  EXPECT_THAT(logs.monotonic_time(),
+              AllOf(Gt(startMono), Lt(getMonotonicTime())));
 }
 
 TEST_F(DockyardProxyGrpcTest, BuildLogBatch) {
@@ -110,4 +128,31 @@ TEST_F(DockyardProxyGrpcTest, BuildLogBatch) {
   }
   EXPECT_EQ(result.monotonic_time(), monotonic_time);
   EXPECT_EQ(result.time(), time);
+}
+
+TEST_F(DockyardProxyGrpcTest, SendUtcClockStartedTest) {
+  std::unique_ptr<MockDockyardStub> mock_stub =
+      std::make_unique<MockDockyardStub>();
+
+  dockyard_proto::UtcClockStartedRequest request;
+
+  EXPECT_CALL(*mock_stub, UtcClockStarted(_, _, _))
+      .Times(1)
+      .WillOnce(DoAll(SaveArg<1>(&request), Return(::grpc::Status::OK)));
+  std::unique_ptr<timekeeper::TestClock> test_clock =
+      std::make_unique<timekeeper::TestClock>();
+  constexpr zx::time_utc start_time(
+      (zx::hour(9) + zx::min(31) + zx::sec(42)).get());
+  test_clock->Set(start_time);
+
+  std::unique_ptr<harvester::FuchsiaClock> clock =
+      std::make_unique<harvester::FuchsiaClock>(
+          dispatcher(), std::move(test_clock),
+          zx::unowned_clock(clock_handle_.get_handle()));
+
+  harvester::DockyardProxyGrpc dockyard_proxy(std::move(mock_stub),
+                                              std::move(clock));
+  dockyard_proxy.Init();
+
+  EXPECT_EQ(request.device_time_ns(), (uint64_t)start_time.get());
 }

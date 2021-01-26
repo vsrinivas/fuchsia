@@ -25,6 +25,9 @@ service Dockyard {
 
   // Sends a list of samples.
   rpc SendSamples(stream RawSamples) returns (stream EmptyMessage) {}
+
+  // Informs Dockyard that the UTC clock has started.
+  rpc UtcClockStarted(UtcClockStartedRequest) returns (UtcClockStartedReply) {}
 }
 
 // Introduction from the Harvester to the Dockyard.
@@ -113,3 +116,12 @@ message LogBatch {
   // List of LogJson in this batch.
   repeated LogJson log_json = 3;
 }
+
+// Tells Dockyard that the UTC clock has started and what the current time is.
+message UtcClockStartedRequest {
+  // Current time on the device, in nanoseconds.
+  uint64 device_time_ns = 1;
+}
+
+// Response to a UtcClockStartedRequest which is defined for potential future use.
+message UtcClockStartedReply {}

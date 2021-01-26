@@ -92,6 +92,28 @@ class MockDockyardStub : public dockyard_proto::Dockyard::StubInterface {
       PrepareAsyncSendSamplesRaw,
       (::grpc::ClientContext*, ::grpc::CompletionQueue*), (override));
 
+  MOCK_METHOD(::grpc::Status, UtcClockStarted,
+              (::grpc::ClientContext * context,
+               const ::dockyard_proto::UtcClockStartedRequest& request,
+               ::dockyard_proto::UtcClockStartedReply* response),
+              (override));
+
+  MOCK_METHOD((::grpc::ClientAsyncResponseReaderInterface<
+                  ::dockyard_proto::UtcClockStartedReply>*),
+              AsyncUtcClockStartedRaw,
+              (::grpc::ClientContext * context,
+               const ::dockyard_proto::UtcClockStartedRequest& request,
+               ::grpc::CompletionQueue* cq),
+              (override));
+
+  MOCK_METHOD((::grpc::ClientAsyncResponseReaderInterface<
+                  ::dockyard_proto::UtcClockStartedReply>*),
+              PrepareAsyncUtcClockStartedRaw,
+              (::grpc::ClientContext * context,
+               const ::dockyard_proto::UtcClockStartedRequest& request,
+               ::grpc::CompletionQueue* cq),
+              (override));
+
  private:
   MOCK_METHOD(
       ::grpc::ClientAsyncResponseReaderInterface<::dockyard_proto::InitReply>*,
