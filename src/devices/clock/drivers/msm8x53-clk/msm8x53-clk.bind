@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.platform;
+using fuchsia.qualcomm.platform;
+
+// Parent must publish the platform device protocol.
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+
+// Vendor must be Qualcomm.
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_VID.QUALCOMM;
+
+// Driver must be some Qualcomm Clock.
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_DID.CLOCK;

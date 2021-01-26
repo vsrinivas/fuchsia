@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+
+bind_rules("msm8x53-clk-bind") {
+  rules = "msm8x53-clk.bind"
+  output = "msm8x53-clk-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.qualcomm.platform",
+  ]
+}
 
 group("tests") {
   testonly = true
@@ -19,6 +30,7 @@ driver_module("msm8x53-clk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "msm8x53-clk.cc" ]
   deps = [
+    ":msm8x53-clk-bind",
     "//sdk/banjo/fuchsia.hardware.clock",
     "//sdk/banjo/fuchsia.hardware.clockimpl",
     "//sdk/banjo/fuchsia.hardware.gpio",
@@ -52,6 +64,7 @@ test("msm8x53-clk-test-bin") {
     "msm8x53-clk.cc",
   ]
   deps = [
+    ":msm8x53-clk-bind",
     "//sdk/banjo/fuchsia.hardware.clock",
     "//sdk/banjo/fuchsia.hardware.clockimpl",
     "//sdk/banjo/fuchsia.hardware.gpio",
@@ -81,5 +94,8 @@ test("msm8x53-clk-test-bin") {
 }
 
 fuchsia_unittest_package("msm8x53-clk-test") {
-  deps = [ ":msm8x53-clk-test-bin" ]
+  deps = [
+    ":msm8x53-clk-bind_test",
+    ":msm8x53-clk-test-bin",
+  ]
 }

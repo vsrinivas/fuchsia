@@ -17,5 +17,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   GPIO = 0x01,
   PIL = 0x02,
   SDC1 = 0x03,
+  CLOCK = 0x04,
   POWER = 0x05,
 };

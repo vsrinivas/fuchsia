@@ -11,7 +11,6 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -19,6 +18,8 @@
 #include <hwreg/bitfields.h>
 
 #include "msm8x53-clk-regs.h"
+
+#include "src/devices/clock/drivers/msm8x53-clk/msm8x53-clk-bind.h"
 
 namespace clk {
 
@@ -489,8 +490,4 @@ static constexpr zx_driver_ops_t msm8x53_clk_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(msm8x53_clk, msm8x53_clk_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QUALCOMM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QUALCOMM_CLOCK),
-ZIRCON_DRIVER_END(msm8x53_clk)
+ZIRCON_DRIVER(msm8x53_clk, msm8x53_clk_driver_ops, "zircon", "0.1");
