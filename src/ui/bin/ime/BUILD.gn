@@ -183,7 +183,36 @@ rustc_test("ime_service_integration_test") {
   ]
   source_root = "tests/ime_service.rs"
 
-  sources = [ "tests/ime_service.rs" ]
+  sources = [
+    "tests/ime_service.rs",
+    "tests/test_helpers.rs",
+  ]
+}
+
+rustc_test("legacy_ime_integration_test") {
+  edition = "2018"
+
+  deps = [
+    ":bin",
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/ui/input-synthesis",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+  ]
+  source_root = "tests/legacy_ime.rs"
+
+  sources = [
+    "tests/legacy_ime.rs",
+    "tests/test_helpers.rs",
+  ]
 }
 
 test_package("keyboard_test") {
@@ -192,6 +221,7 @@ test_package("keyboard_test") {
     ":ime_service_integration_test",
     ":keyboard3_integration_test",
     ":keyboard_test_bin",
+    ":legacy_ime_integration_test",
     "//src/ui/bin/default_hardware_ime:bin",
   ]
 
@@ -206,6 +236,10 @@ test_package("keyboard_test") {
     },
     {
       name = "ime_service_integration_test"
+      environments = basic_envs
+    },
+    {
+      name = "legacy_ime_integration_test"
       environments = basic_envs
     },
   ]

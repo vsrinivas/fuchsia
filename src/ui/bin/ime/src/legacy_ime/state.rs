@@ -4,16 +4,19 @@
 
 //! This module contains an implementation of `ImeState`, the internal state object of `LegacyIme`.
 
+use {
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_input as uii, fidl_fuchsia_ui_text as txt,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    std::{
+        char,
+        collections::{HashMap, HashSet},
+        ops::Range,
+    },
+    text::text_field_state::TextFieldState,
+};
+
 use super::position;
-use crate::ime_service::ImeService;
-use crate::index_convert as idx;
-use fidl_fuchsia_ui_input as uii;
-use fidl_fuchsia_ui_text as txt;
-use fuchsia_syslog::{fx_log_err, fx_log_warn};
-use std::char;
-use std::collections::HashMap;
-use std::ops::Range;
-use text::text_field_state::TextFieldState;
+use crate::{ime_service::ImeService, index_convert as idx};
 
 /// The internal state of the IME, held within `LegacyIme` inside `Arc<Mutex<ImeState>>`, so it can
 /// be accessed from multiple message handler async tasks. Methods that aren't message handlers
@@ -29,6 +32,9 @@ pub struct ImeState {
 
     pub action: uii::InputMethodAction,
     pub ime_service: ImeService,
+
+    /// Currently pressed keys.
+    pub keys_pressed: HashSet<input::Key>,
 
     /// We expose a TextField interface to an input method. There are also legacy
     /// input methods that just send key events through inject_input — in this case,

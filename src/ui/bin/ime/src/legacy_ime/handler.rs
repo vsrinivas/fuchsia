@@ -4,23 +4,26 @@
 
 //! This module contains an implementation of `LegacyIme` itself.
 
-use super::state::{get_point, get_range, ImeState};
+use {
+    anyhow::{Context as _, Error},
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_ui_input::{self as uii, InputMethodEditorRequest as ImeReq},
+    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_text as txt,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    futures::{lock::Mutex, prelude::*},
+    std::{
+        collections::{HashMap, HashSet},
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
+};
+
 use super::{
+    state::{get_point, get_range, ImeState},
     HID_USAGE_KEY_BACKSPACE, HID_USAGE_KEY_DELETE, HID_USAGE_KEY_ENTER, HID_USAGE_KEY_LEFT,
     HID_USAGE_KEY_RIGHT,
 };
-use crate::ime_service::ImeService;
-use crate::index_convert as idx;
-use anyhow::Context as _;
-use fidl::endpoints::RequestStream;
-use fidl_fuchsia_ui_input as uii;
-use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
-use fidl_fuchsia_ui_text as txt;
-use fuchsia_syslog::{fx_log_err, fx_log_warn};
-use futures::lock::Mutex;
-use futures::prelude::*;
-use std::collections::HashMap;
-use std::sync::{Arc, Weak};
+use crate::{ime_service::ImeService, index_convert as idx, keyboard::events};
 
 /// An input method provides edits and cursor updates to a text field. This Legacy Input Method
 /// provides edits to a text field over the legacy pair of interfaces `InputMethodEditor` and
@@ -52,6 +55,7 @@ impl LegacyIme {
             revision: 0,
             next_text_point_id: 0,
             text_points: HashMap::new(),
+            keys_pressed: HashSet::new(),
             input_method: None,
             transaction_changes: Vec::new(),
             transaction_revision: None,
@@ -258,7 +262,7 @@ impl LegacyIme {
                 state.keyboard_type = keyboard_type;
             }
             ImeReq::SetState { state, .. } => {
-                self.set_state(idx::text_state_codeunit_to_byte(state)).await;
+                self.set_state(state).await;
             }
             ImeReq::InjectInput { event, .. } => {
                 let keyboard_event = match event {
@@ -267,7 +271,10 @@ impl LegacyIme {
                 };
                 self.inject_input(keyboard_event).await;
             }
-            ImeReq::DispatchKey3 { responder, .. } => {
+            ImeReq::DispatchKey3 { event, responder, .. } => {
+                self.inject_input3(event)
+                    .await
+                    .unwrap_or_else(|e| fx_log_warn!("error injecting input: {:?}", e));
                 responder.send(false).unwrap_or_else(|e| {
                     fx_log_warn!("error sending response for DispatchKey3: {:?}", e)
                 });
@@ -307,6 +314,7 @@ impl LegacyIme {
     /// `InputMethodEditorClient`. This method can handle arrow keys to move selections, even with
     /// modifier keys implemented correctly. However, it does *not* send the actual key event to the
     /// client; for that, you should simultaneously call `forward_event()`.
+    /// Deprecated: use inject_input3 instead.
     pub async fn inject_input(&self, keyboard_event: uii::KeyboardEvent) {
         let mut state = self.0.lock().await;
 
@@ -315,7 +323,7 @@ impl LegacyIme {
         {
             if keyboard_event.code_point != 0 {
                 state.type_keycode(keyboard_event.code_point);
-                state.increment_revision(true)
+                state.increment_revision(true);
             } else {
                 match keyboard_event.hid_usage {
                     HID_USAGE_KEY_BACKSPACE => {
@@ -344,6 +352,44 @@ impl LegacyIme {
                         state.increment_revision(true);
                     }
                 }
+            }
+        }
+    }
+
+    /// Uses `ImeState`'s internal latin input method implementation to determine the edit
+    /// corresponding to `key_event`, and sends this as a state update to
+    /// `InputMethodEditorClient`. This method can handle arrow keys to move selections, even with
+    /// modifier keys implemented correctly. However, it does *not* send the actual key event to the
+    /// client; for that, you should simultaneously call `forward_event()`.
+    async fn inject_input3(&self, event: ui_input3::KeyEvent) -> Result<(), Error> {
+        let key_event = {
+            let state = self.0.lock().await;
+            events::KeyEvent::new(&event, state.keys_pressed.clone())
+                .context("error converting key")?
+        };
+        let keyboard_event: uii::KeyboardEvent =
+            key_event.try_into().context("error converting key event to keyboard event")?;
+        self.inject_input(keyboard_event).await;
+        self.update_keys_pressed(&event).await;
+        Ok(())
+    }
+
+    /// Updates currently pressed keys.
+    async fn update_keys_pressed(&self, event: &ui_input3::KeyEvent) {
+        let (type_, key) = match (event.type_, event.key) {
+            (Some(t), Some(k)) => (t, k),
+            _ => {
+                fx_log_warn!("Expected populated type and key, got {:?}", (event.type_, event.key));
+                return;
+            }
+        };
+        let keys_pressed = &mut self.0.lock().await.keys_pressed;
+        match type_ {
+            ui_input3::KeyEventType::Sync | ui_input3::KeyEventType::Pressed => {
+                keys_pressed.insert(key);
+            }
+            ui_input3::KeyEventType::Cancel | ui_input3::KeyEventType::Released => {
+                keys_pressed.remove(&key);
             }
         }
     }

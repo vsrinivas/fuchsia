@@ -15,4 +15,4 @@ pub const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;
 pub const HID_USAGE_KEY_RIGHT: u32 = 0x4f;
 pub const HID_USAGE_KEY_LEFT: u32 = 0x50;
 pub const HID_USAGE_KEY_ENTER: u32 = 0x28;
-pub const HID_USAGE_KEY_DELETE: u32 = 0x2e;
+pub const HID_USAGE_KEY_DELETE: u32 = 0x4c;
