@@ -21,23 +21,28 @@ use fuchsia_async::Task;
 use futures::{channel::mpsc, prelude::*};
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 pub struct LogsArtifactsContainer {
     /// The source of logs in this container.
     pub identity: Arc<ComponentIdentity>,
-
-    /// Current interest for this component.
-    interest: Mutex<Interest>,
-
-    /// Control handles for connected clients.
-    control_handles: Mutex<Vec<LogSinkControlHandle>>,
 
     /// Inspect instrumentation.
     pub stats: Arc<LogStreamStats>,
 
     /// Buffer for all log messages.
     buffer: Arc<Mutex<AccountedBuffer<Message>>>,
+
+    /// Mutable state for the container.
+    state: Mutex<ContainerState>,
+}
+
+struct ContainerState {
+    /// Current interest for this component.
+    interest: Interest,
+
+    /// Control handles for connected clients.
+    control_handles: Vec<LogSinkControlHandle>,
 }
 
 impl LogsArtifactsContainer {
@@ -50,8 +55,10 @@ impl LogsArtifactsContainer {
         let new = Self {
             buffer,
             identity,
-            control_handles: Mutex::new(vec![]),
-            interest: Mutex::new(Interest::EMPTY),
+            state: Mutex::new(ContainerState {
+                control_handles: vec![],
+                interest: Interest::EMPTY,
+            }),
             stats: Arc::new(stats),
         };
 
@@ -61,21 +68,35 @@ impl LogsArtifactsContainer {
         new
     }
 
-    /// Handle `LogSink` protocol on `stream`. This function does not return until the channel is
-    /// closed. Each socket received from the `LogSink` client is drained by a `Task` which is sent
-    /// on `sender`. The `Task`s do not complete until their sockets have been closed.
+    /// Handle `LogSink` protocol on `stream`. Each socket received from the `LogSink` client is
+    /// drained by a `Task` which is sent on `sender`. The `Task`s do not complete until their
+    /// sockets have been closed.
     ///
     /// Sends an `OnRegisterInterest` message right away so producers know someone is listening.
     /// We send `Interest::EMPTY` unless a different interest has previously been specified for
     /// this component.
-    pub async fn handle_log_sink(
+    pub fn handle_log_sink(
+        self: &Arc<Self>,
+        stream: LogSinkRequestStream,
+        sender: mpsc::UnboundedSender<Task<()>>,
+    ) {
+        let task = Task::spawn(self.clone().actually_handle_log_sink(stream, sender.clone()));
+        sender.unbounded_send(task).expect("channel is live for whole program");
+    }
+
+    /// This function does not return until the channel is closed.
+    async fn actually_handle_log_sink(
         self: Arc<Self>,
         mut stream: LogSinkRequestStream,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) {
-        let control = stream.control_handle();
-        control.send_on_register_interest(self.interest.lock().clone()).ok();
-        self.control_handles.lock().push(control);
+        debug!(%self.identity, "Draining LogSink channel.");
+        {
+            let control = stream.control_handle();
+            let mut state = self.state.lock();
+            control.send_on_register_interest(state.interest.clone()).ok();
+            state.control_handles.push(control);
+        }
 
         macro_rules! handle_socket {
             ($ctor:ident($socket:ident, $control_handle:ident)) => {{
@@ -100,9 +121,10 @@ impl LogsArtifactsContainer {
                 Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
                     handle_socket! {new_structured(socket, control_handle)};
                 }
-                Err(e) => error!(?self.identity, %e, "error handling log sink"),
+                Err(e) => error!(%self.identity, %e, "error handling log sink"),
             }
         }
+        debug!(%self.identity, "LogSink channel closed.");
     }
 
     /// Drain a `LogMessageSocket` which wraps a socket from a component
@@ -111,18 +133,20 @@ impl LogsArtifactsContainer {
     where
         E: Encoding + Unpin,
     {
+        debug!(%self.identity, "Draining messages from a socket.");
         loop {
             match log_stream.next().await {
                 Ok(message) => {
                     self.ingest_message(message);
                 }
-                Err(StreamError::Closed) => return,
+                Err(StreamError::Closed) => break,
                 Err(e) => {
-                    warn!(source = %self.identity.relative_moniker.join("/"), %e, "closing socket");
-                    return;
+                    warn!(source = %self.identity, %e, "closing socket");
+                    break;
                 }
             }
         }
+        debug!(%self.identity, "Socket closed.");
     }
 
     /// Updates log stats in inspect and push the message onto the container's buffer.
@@ -151,12 +175,13 @@ impl LogsArtifactsContainer {
             }
         }
 
-        let mut current_interest = self.interest.lock();
-        if *current_interest != new_interest {
-            self.control_handles
-                .lock()
+        let mut state = self.state.lock();
+        if state.interest != new_interest {
+            debug!(%self.identity, ?new_interest, "Updating interest.");
+            state
+                .control_handles
                 .retain(|handle| handle.send_on_register_interest(new_interest.clone()).is_ok());
-            *current_interest = new_interest;
+            state.interest = new_interest;
         }
     }
 }

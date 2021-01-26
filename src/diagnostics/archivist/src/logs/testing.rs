@@ -287,8 +287,7 @@ impl LogReader for DefaultLogReader {
         let (log_sink_proxy, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
         let container = self.log_manager.write().get_log_container((*self.identity).clone());
-        let task = Task::spawn(container.handle_log_sink(log_sink_stream, log_sender.clone()));
-        log_sender.unbounded_send(task).unwrap();
+        container.handle_log_sink(log_sink_stream, log_sender);
         log_sink_proxy
     }
 }
@@ -339,8 +338,7 @@ impl EventStreamLogReader {
                 other => unreachable!("should never see {:?} here", other),
             };
         let container = log_manager.write().get_log_container(metadata.identity);
-        let task = Task::spawn(container.handle_log_sink(requests, sender.clone()));
-        sender.unbounded_send(task).expect("channel is alive for whole program");
+        container.handle_log_sink(requests, sender);
     }
 }
 

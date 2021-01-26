@@ -646,10 +646,7 @@ impl Archivist {
                 let locked_state = self.state.lock();
                 let data_repo = &locked_state.diagnostics_repo;
                 let container = data_repo.write().get_log_container(event.metadata.identity);
-                let task = fasync::Task::spawn(
-                    container.handle_log_sink(event.requests, self.log_sender.clone()),
-                );
-                self.log_sender.unbounded_send(task).expect("channel is alive for whole program");
+                container.handle_log_sink(event.requests, self.log_sender.clone());
                 Ok(())
             }
         }
