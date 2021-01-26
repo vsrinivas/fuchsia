@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/zx/clock.h>
 
 #include <unordered_set>
-#include <lib/zx/clock.h>
 
 #include "latency.h"
 #include "packet_loss.h"
@@ -13,9 +13,6 @@
 
 namespace netemul {
 namespace testing {
-
-uint8_t gNextRandomNumber = 0;
-uint8_t TestRNG() { return gNextRandomNumber; }
 
 class ControlledRand {
  public:
@@ -44,15 +41,22 @@ class InterceptorsTest : public gtest::RealLoopFixture {
   }
 };
 
-TEST_F(InterceptorsTest, PacketLossRealRand) {
+TEST_F(InterceptorsTest, PacketLossSeededRand) {
+  std::seed_seq seed{1, 2, 3, 4};
+  std::default_random_engine eng{seed};
+  std::uniform_int_distribution<uint8_t> dist(0, 99);
+
+  auto rng = [&dist, &eng]() { return dist(eng); };
+
   int half_loss_count = 0;
   interceptor::PacketLoss half_loss(
-      50, [&half_loss_count](InterceptPacket packet) { half_loss_count++; });
+      rng, 50, [&half_loss_count](InterceptPacket packet) { half_loss_count++; });
   int full_loss_count = 0;
   interceptor::PacketLoss full_loss(
-      100, [&full_loss_count](InterceptPacket packet) { full_loss_count++; });
+      rng, 100, [&full_loss_count](InterceptPacket packet) { full_loss_count++; });
   int no_loss_count = 0;
-  interceptor::PacketLoss no_loss(0, [&no_loss_count](InterceptPacket packet) { no_loss_count++; });
+  interceptor::PacketLoss no_loss(rng, 0,
+                                  [&no_loss_count](InterceptPacket packet) { no_loss_count++; });
 
   for (int i = 0; i < 500; i++) {
     half_loss.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(i)));
@@ -66,29 +70,31 @@ TEST_F(InterceptorsTest, PacketLossRealRand) {
   EXPECT_EQ(no_loss_count, 500);
 
   std::cout << half_loss_count << " packets passed at 50% loss" << std::endl;
-  // expect that something around 250 packets should pass at 50% loss
-  // give it wiggle room to prevent test being flaky
+  // Expect that something around 250 packets should pass at 50% loss.
+  // Don't encode the exact value to avoid the change detector on seed or rng
+  // algorithm changes.
   EXPECT_TRUE(half_loss_count > 200 && half_loss_count < 300);
 }
 
 TEST_F(InterceptorsTest, PacketLossControlledRand) {
+  uint8_t nxt;
   int pass_count = 0;
-  interceptor::PacketLoss<TestRNG> loss(50,
-                                        [&pass_count](InterceptPacket packet) { pass_count++; });
+  interceptor::PacketLoss loss([&nxt]() { return nxt; }, 50,
+                               [&pass_count](InterceptPacket packet) { pass_count++; });
 
-  gNextRandomNumber = 99;
+  nxt = 99;
   loss.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(1)));
   EXPECT_EQ(pass_count, 1);
 
-  gNextRandomNumber = 0;
+  nxt = 0;
   loss.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(1)));
   EXPECT_EQ(pass_count, 1);
 
-  gNextRandomNumber = 50;
+  nxt = 50;
   loss.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(1)));
   EXPECT_EQ(pass_count, 2);
 
-  gNextRandomNumber = 49;
+  nxt = 49;
   loss.Intercept(MakeSingleBytePacket(static_cast<uint8_t>(1)));
   EXPECT_EQ(pass_count, 2);
 }

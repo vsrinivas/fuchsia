@@ -15,25 +15,24 @@
 namespace netemul {
 namespace interceptor {
 
-inline uint8_t PacketLossDefaultRNG() {
-  std::random_device dev;
-  std::uniform_int_distribution<uint8_t> dist(0, 99);
-  return dist(dev);
-}
-
 // PacketLoss emulation interceptor.
-// RNG template parameter must be a function that returns a number
-// between 0 and 99 (inclusive).
-template <uint8_t RNG() = PacketLossDefaultRNG>
 class PacketLoss : public Interceptor {
  public:
-  PacketLoss(uint8_t loss_rate, ForwardPacketCallback callback)
-      : Interceptor(std::move(callback)), loss_rate_(loss_rate) {
+  // Creates a packet loss interceptor with the provided loss rate.
+  //
+  // |rng| must be a function that returns a random number in the range [0, 99].
+  //
+  // |loss_rate| is the rate of dropped packets, must be in the range [0, 100].
+  PacketLoss(fit::function<uint8_t()> rng, uint8_t loss_rate, ForwardPacketCallback callback)
+      : Interceptor(std::move(callback)), rng_(std::move(rng)), loss_rate_(loss_rate) {
     ZX_ASSERT(loss_rate <= 100);
   }
 
+  PacketLoss(uint8_t loss_rate, ForwardPacketCallback callback)
+      : PacketLoss(DefaultRNG(), loss_rate, std::move(callback)) {}
+
   void Intercept(InterceptPacket packet) override {
-    auto rnd = RNG();
+    uint8_t rnd = rng_();
     ZX_ASSERT(rnd < 100);
     // pass packet if random passes loss rate,
     // otherwise just lose the packet.
@@ -44,7 +43,16 @@ class PacketLoss : public Interceptor {
 
   std::vector<InterceptPacket> Flush() override { return std::vector<InterceptPacket>(); }
 
+  static fit::function<uint8_t()> DefaultRNG() {
+    std::uniform_int_distribution<uint8_t> dist(0, 99);
+    return fit::function<uint8_t()>([dist]() mutable {
+      std::random_device r;
+      return dist(r);
+    });
+  }
+
  private:
+  fit::function<uint8_t()> rng_;
   uint8_t loss_rate_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PacketLoss);
