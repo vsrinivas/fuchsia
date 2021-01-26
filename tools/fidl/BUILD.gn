@@ -37,6 +37,7 @@ group("tests") {
     "gidl:tests",
     "lib/fidlgen:tests",
     "lib/fidlgen_cpp:tests",
+    "lib/fidlgen_testing:tests",
     "measure-tape:tests",
   ]
 }

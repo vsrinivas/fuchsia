@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_testing"
 )
 
 func TestDerivesToString(t *testing.T) {
@@ -486,5 +487,32 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 	}
 	if diff := cmp.Diff(expected, out); diff != "" {
 		t.Errorf("expected != actual (-want +got)\n%s", diff)
+	}
+}
+
+func TestDerivesCalculation(t *testing.T) {
+	cases := []struct {
+		fidl     string
+		expected string
+	}{
+		{
+			fidl:     `struct MyStruct { string field; };`,
+			expected: "#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]",
+		},
+		{
+			fidl:     `struct MyStruct { float32 field; };`,
+			expected: "#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]",
+		},
+		{
+			fidl:     `resource struct MyStruct {};`,
+			expected: "#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes)]",
+		},
+	}
+	for _, ex := range cases {
+		root := Compile(fidl_testing.EndToEndTest{T: t}.Single(`library example; ` + ex.fidl))
+		actual := root.Structs[0].Derives.String()
+		if ex.expected != actual {
+			t.Errorf("%s: expected %s, found %s", ex.fidl, ex.expected, actual)
+		}
 	}
 }

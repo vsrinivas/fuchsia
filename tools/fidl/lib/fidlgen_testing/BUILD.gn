@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("fidlgen_testing") {
+  sources = [
+    "endtoendtest.go",
+    "endtoendtest_test.go",
+  ]
+  deps = [ "//tools/fidl/lib/fidlgen" ]
+}
+
+if (is_host) {
+  fidlc_target = "//zircon/tools/fidl:fidlc($host_toolchain)"
+
+  go_test("fidlgen_testing_lib_test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_testing" ]
+
+    fidlc_binary = get_label_info(fidlc_target, "root_out_dir") + "/fidlc"
+    args = [
+      "--fidlc",
+      rebase_path(fidlc_binary, root_build_dir),
+    ]
+
+    deps = [ ":fidlgen_testing" ]
+    non_go_deps = [ ":copy_fidlc" ]
+  }
+
+  host_test_data("copy_fidlc") {
+    sources = [ get_label_info(fidlc_target, "root_out_dir") + "/fidlc" ]
+    deps = [ fidlc_target ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fidlgen_testing_lib_test($host_toolchain)" ]
+}
