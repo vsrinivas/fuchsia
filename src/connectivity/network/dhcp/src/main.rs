@@ -143,14 +143,14 @@ async fn main() -> Result<(), Error> {
 trait SocketServerDispatcher: ServerDispatcher {
     type Socket;
 
-    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error>;
+    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> std::io::Result<Self::Socket>;
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError>;
 }
 
 impl SocketServerDispatcher for Server<Stash> {
     type Socket = UdpSocket;
 
-    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error> {
+    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
         let socket = socket2::Socket::new(
             socket2::Domain::ipv4(),
             socket2::Type::dgram(),
@@ -173,11 +173,7 @@ impl SocketServerDispatcher for Server<Stash> {
                 )
             } == -1
             {
-                return Err(anyhow::format_err!(
-                    "setsockopt(SO_BINDTODEVICE) failed for {}: {}",
-                    name,
-                    std::io::Error::last_os_error()
-                ));
+                return Err(std::io::Error::last_os_error());
             }
         }
         let () = socket.set_broadcast(true)?;
@@ -254,7 +250,16 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
         let (abort_handle, abort_registration) = futures::future::AbortHandle::new_pair();
 
         let sockets = create_sockets_from_params::<S>(params).map_err(|e| {
-            log::error!("Failed to create server sockets: {}", e);
+            let () = match e.raw_os_error() {
+                // A short-lived SoftAP interface may be, and frequently is, torn down prior to the
+                // full instantiation of its associated dhcpd component. Consequently, binding to
+                // the SoftAP interface name will fail with ENODEV. However, such a failure is
+                // normal and expected under those circumstances.
+                Some(libc::ENODEV) => {
+                    log::warn!("Failed to create server sockets: {}", e)
+                }
+                _ => log::error!("Failed to create server sockets: {}", e),
+            };
             fuchsia_zircon::Status::IO
         })?;
         if sockets.is_empty() {
@@ -287,9 +292,9 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
 
 fn create_sockets_from_params<S: SocketServerDispatcher>(
     params: &configuration::ServerParameters,
-) -> Result<Vec<S::Socket>, Error> {
+) -> std::io::Result<Vec<S::Socket>> {
     Ok(if params.bound_device_names.len() > 0 {
-        params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, Result<_, Error>>(
+        params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, std::io::Result<_>>(
             Vec::new(),
             |mut acc, name| {
                 let sock = S::create_socket(Some(name), Ipv4Addr::UNSPECIFIED)?;
@@ -572,7 +577,7 @@ mod tests {
     impl SocketServerDispatcher for CannedDispatcher {
         type Socket = CannedSocket;
 
-        fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error> {
+        fn create_socket(name: Option<&str>, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
             Ok(CannedSocket { name: name.map(|s| s.to_string()), src })
         }
 
