@@ -550,20 +550,9 @@ foreach(_target_type,
         }
       }
 
-      # If the action has inputs/outputs that are not explicitly stated then it will
-      # fail verification against the trace.
-      # Actions that are known non-hermetic should set `hermetic_deps = false`.
-      # TODO(rudymathu): At some point, we may want to restrict usage of
-      # non-hermetic actions, which we can do by depending on a target with
-      # explicit visibility.
-      hermetic_deps = true
-      if (defined(invoker.hermetic_deps)) {
-        hermetic_deps = invoker.hermetic_deps
-      }
-
       # TODO(shayba): fix response file issue (see below)
-      should_trace = hermetic_deps && build_should_trace_actions &&
-                     !defined(response_file_contents)
+      should_trace =
+          build_should_trace_actions && !defined(response_file_contents)
       metadata = {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
@@ -574,10 +563,39 @@ foreach(_target_type,
         }
       }
 
+      if (defined(invoker.hermetic_deps)) {
+        hermetic_deps = invoker.hermetic_deps
+      }
+      if (defined(invoker.all_outputs_fresh)) {
+        all_outputs_fresh = invoker.all_outputs_fresh
+      }
+
       if (!should_trace) {
         script = _invoker_script
         args = _invoker_args
       } else {
+        # If the action has inputs/outputs that are not explicitly stated then
+        # it will fail verification against the trace.
+        # Actions that are known non-hermetic should set `hermetic_deps = false`.
+        #
+        # TODO(rudymathu): At some point, we may want to restrict usage of
+        # non-hermetic actions, which we can do by depending on a target with
+        # explicit visibility.
+        if (!defined(hermetic_deps)) {
+          hermetic_deps = true
+        }
+
+        # If the action didn't write or touch all of its declared outputs, it
+        # should be marked with `all_outputs_fresh = false`.
+        #
+        # TODO(jayzhuang): Default to `true` and mark all violations. Although
+        # we are still determining whether these should be allow-listed like
+        # `hermetic_deps` above because "skipping writing an output file if it
+        # didn't change" is a common pattern.
+        if (!defined(all_outputs_fresh)) {
+          all_outputs_fresh = false
+        }
+
         script = python_exe_src
 
         inputs += [
@@ -604,6 +622,14 @@ foreach(_target_type,
           args += [ rebase_path(
                   "${target_gen_dir}/${target_name}_{{source_name_part}}_trace.txt",
                   root_build_dir) ]
+        }
+
+        if (!hermetic_deps) {
+          args += [ "--no-check-access-permissions" ]
+        }
+
+        if (!all_outputs_fresh) {
+          args += [ "--no-check-output-freshness" ]
         }
 
         if (defined(sources)) {
