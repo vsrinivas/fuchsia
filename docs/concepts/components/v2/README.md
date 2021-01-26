@@ -51,6 +51,7 @@ the transition to the new architecture is complete.
 - [Components vs. processes](components_vs_processes.md): how the concepts differ
 
 ## Testing
+
 - [Test components][test-components]:
   defining components that implement tests and running them.
 - [Test Runner Framework][trf]:
@@ -73,6 +74,6 @@ the transition to the new architecture is complete.
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v1]: /docs/glossary.md#components-v1
 [glossary-components-v2]: /docs/glossary.md#components-v2
-[test-components]: /docs/concepts/testing/v2_test_component.md
-[trf]: /docs/concepts/testing/test_runner_framework.md
-[integration-testing]: /docs/concepts/testing/v2_integration_testing.md
+[test-components]: /docs/concepts/testing/v2/v2_test_component.md
+[trf]: /docs/concepts/testing/v2/test_runner_framework.md
+[integration-testing]: /docs/concepts/testing/v2/v2_integration_testing.md

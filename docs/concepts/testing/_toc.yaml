@@ -14,12 +14,7 @@ toc:
     path: /docs/concepts/testing/testing_isolated_cache_storage.md
 - title: "Testing with Components v2"
   section:
-  - title: "Test components"
-    path: /docs/concepts/testing/v2_test_component.md
-  - title: "Test Runner Framework"
-    path: /docs/concepts/testing/test_runner_framework.md
-  - title: "Complex topologies and testing"
-    path: /docs/concepts/testing/v2_integration_testing.md
+  - include: /docs/concepts/testing/v2/_toc.yaml
 - title: "Test environments"
   path: /docs/concepts/testing/environments.md
 - title: "Scripting Layer for Fuchsia (SL4F)"

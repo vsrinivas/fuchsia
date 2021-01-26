@@ -185,7 +185,7 @@ Components in the test realm may play various roles in the test, as follows:
 [cf]: /docs/concepts/components/v2/
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
-[integration-testing]: /docs/concepts/testing/v2_integration_testing.md
+[integration-testing]: /docs/concepts/testing/v2/v2_integration_testing.md
 [manifests-offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
