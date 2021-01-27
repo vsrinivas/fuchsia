@@ -38,6 +38,11 @@
             path: "/dev",
         },
         {
+            directory: "hub",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+        {
             directory: "install",
             rights: [ "rw*" ],
             path: "/install",
