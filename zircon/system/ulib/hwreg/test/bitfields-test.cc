@@ -273,6 +273,59 @@ TEST(SubFieldTestCase, ConstFields) {
   EXPECT_EQ(reg.enum_field(), GloballyScopedSubfieldTest::Enum::kB);
 }
 
+TEST(SubFieldTestCase, UnshifedFields) {
+  struct TestReg16 {
+    uint16_t data;
+
+    DEF_UNSHIFTED_SUBFIELD(data, 15, 12, field1);
+    DEF_UNSHIFTED_SUBFIELD(data, 11, 8, field2);
+    DEF_UNSHIFTED_SUBFIELD(data, 7, 4, field3);
+    DEF_UNSHIFTED_SUBFIELD(data, 3, 0, field4);
+  };
+
+  // Tests simple field isolation
+  {
+    auto test_reg = TestReg16{.data = 0xffff};
+    EXPECT_EQ(0xf000, test_reg.field1());
+    EXPECT_EQ(0x0f00, test_reg.field2());
+    EXPECT_EQ(0x00f0, test_reg.field3());
+    EXPECT_EQ(0x000f, test_reg.field4());
+  }
+
+  // Test assignment
+  {
+    auto test_reg = TestReg16{.data = 0x0};
+    EXPECT_EQ(test_reg.field1(), 0u);
+    EXPECT_EQ(test_reg.field2(), 0u);
+    EXPECT_EQ(test_reg.field3(), 0u);
+    EXPECT_EQ(test_reg.field4(), 0u);
+
+    test_reg.set_field1(0xf000);
+    EXPECT_EQ(test_reg.field1(), 0xf000);
+    EXPECT_EQ(test_reg.field2(), 0u);
+    EXPECT_EQ(test_reg.field3(), 0u);
+    EXPECT_EQ(test_reg.field4(), 0u);
+
+    test_reg.set_field2(0xf00);
+    EXPECT_EQ(test_reg.field1(), 0xf000);
+    EXPECT_EQ(test_reg.field2(), 0xf00);
+    EXPECT_EQ(test_reg.field3(), 0u);
+    EXPECT_EQ(test_reg.field4(), 0u);
+
+    test_reg.set_field3(0xf0);
+    EXPECT_EQ(test_reg.field1(), 0xf000);
+    EXPECT_EQ(test_reg.field2(), 0xf00);
+    EXPECT_EQ(test_reg.field3(), 0xf0);
+    EXPECT_EQ(test_reg.field4(), 0u);
+
+    test_reg.set_field4(0xf);
+    EXPECT_EQ(test_reg.field1(), 0xf000);
+    EXPECT_EQ(test_reg.field2(), 0xf00);
+    EXPECT_EQ(test_reg.field3(), 0xf0);
+    EXPECT_EQ(test_reg.field4(), 0xf);
+  }
+}
+
 TEST(RegisterTestCase, Rsvdz) {
   class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
    public:
