@@ -182,5 +182,13 @@ TEST(VmoBufferTest, Zero) {
   }
 }
 
+TEST(VmoBufferTest, TooManyBlocks) {
+  MockVmoidRegistry registry;
+  VmoBuffer buffer;
+  EXPECT_EQ(
+      buffer.Initialize(&registry, std::numeric_limits<size_t>::max(), kBlockSize, kGoldenLabel),
+      ZX_ERR_INVALID_ARGS);
+}
+
 }  // namespace
 }  // namespace storage

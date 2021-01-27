@@ -10,6 +10,8 @@
 
 #include <utility>
 
+#include <safemath/checked_math.h>
+
 namespace storage {
 
 VmoBuffer::VmoBuffer(VmoBuffer&& other)
@@ -53,7 +55,10 @@ zx_status_t VmoBuffer::Initialize(storage::VmoidRegistry* vmoid_registry, size_t
                                   uint32_t block_size, const char* label) {
   ZX_DEBUG_ASSERT(!vmoid_.IsAttached());
   fzl::OwnedVmoMapper mapper;
-  zx_status_t status = mapper.CreateAndMap(blocks * block_size, label);
+  auto size = safemath::CheckMul(uint64_t{blocks}, block_size);
+  if (!size.IsValid())
+    return ZX_ERR_INVALID_ARGS;
+  zx_status_t status = mapper.CreateAndMap(size.ValueOrDie(), label);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "VmoBuffer: Failed to create vmo " << label << ": "
                    << zx_status_get_string(status);
