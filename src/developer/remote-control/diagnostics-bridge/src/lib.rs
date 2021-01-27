@@ -68,8 +68,7 @@ pub trait ArchiveReaderManager {
                             }
                         };
 
-                        let (truncated_logs, truncated_chars) = match truncate_log_msg(logs.clone())
-                        {
+                        let (truncated_logs, truncated_chars) = match truncate_log_msg(logs) {
                             Ok(t) => t,
                             Err(err) => {
                                 warn!(%err, "failed to truncate log message");
@@ -139,14 +138,14 @@ fn truncate_log_msg(mut logs: LogsData) -> Result<(LogsData, u32)> {
     logs.payload = logs.payload.map(|p| {
         let props = p
             .properties
-            .iter()
+            .into_iter()
             .map(|prop| {
                 if *prop.key() == LogsField::Msg {
                     let new_msg = truncate_to_char_boundary(&msg, MAX_DATAGRAM_LEN_BYTES as usize);
                     return LogsProperty::String(LogsField::Msg, new_msg.to_string());
                 }
 
-                prop.clone()
+                prop
             })
             .collect();
         LogsHierarchy::new(p.name, props, p.children)
