@@ -87,7 +87,7 @@ class PointerInjector {
     final events = <Event>[];
 
     if (viewport != null) {
-      final timestamp = DateTime.now().microsecondsSinceEpoch;
+      final timestamp = DateTime.now().microsecondsSinceEpoch * 1000;
       final injectorEvent = Event(
         timestamp: timestamp,
         data: Data.withViewport(
@@ -118,7 +118,7 @@ class PointerInjector {
         positionInViewport: Float32List.fromList([x, y]),
       );
       final injectorEvent = Event(
-        timestamp: pointer.timeStamp.inMicroseconds,
+        timestamp: pointer.timeStamp.inMicroseconds * 1000,
         data: Data.withPointerSample(sample),
         traceFlowId: pointer.pointer,
       );
