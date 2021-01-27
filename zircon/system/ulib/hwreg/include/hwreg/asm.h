@@ -13,6 +13,15 @@
 
 namespace hwreg {
 
+// A `RegisterBase` "PrinterState" parameter that permits the generation of
+// assembly constants from the fields of derived, register classes (see below).
+//
+// We define an alias for clarity in contexts in which enabling "print"ing
+// would not seem relevant to these ends.
+//
+// TODO(fxbug.dev/68404): Use at your own risk.
+using EnableAsmGeneration = EnablePrinter;
+
 // This can be used in fluid style to define macros directly for constants,
 // or to define macros derived from an hwreg::RegisterBase subclass, e.g.:
 // ```
@@ -36,6 +45,7 @@ class AsmHeader {
 
   // Emit a macro for each field in the register, plus a macro for the mask
   // of reserved-zero bits and a macro for the mask of unknown bits.
+  // T is required to inherit from a `RegisterBase` with `EnableAsmGeneration`.
   template <typename T>
   AsmHeader& Register(std::string_view prefix) {
     T{}.ForEachField(

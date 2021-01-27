@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <hwreg/asm.h>
 #include <hwreg/bitfields.h>
 
 namespace arch {
@@ -76,13 +77,12 @@ struct CpuidIoValue {
 };
 
 // CpuidIoValueBase is a convenience type for defining both a CPUID value type
-// as well as the associated register type.
-//
-// Assembly macro generation requires the use of `hwreg::EnablePrinter`; to
-// make such use-cases more conveniently accessible - and since the code-gen
-// cost here is rather minimal - we generally use the feature  below.
-template <typename ValueType, uint32_t Leaf, uint32_t Subleaf, CpuidIo::Register OutputRegister>
-struct CpuidIoValueBase : public hwreg::RegisterBase<ValueType, uint32_t, hwreg::EnablePrinter>,
+// as well as the associated register type. hwreg::EnableAsmGeneration may be
+// provided for generation of assembly constants representing the fields; see
+// <hwreg/asm.h> for more details and heed the provisos there.
+template <typename ValueType, uint32_t Leaf, uint32_t Subleaf, CpuidIo::Register OutputRegister,
+          typename AsmGeneration = void>
+struct CpuidIoValueBase : public hwreg::RegisterBase<ValueType, uint32_t, AsmGeneration>,
                           public CpuidIoValue<ValueType, Leaf, Subleaf, OutputRegister> {};
 
 enum class Vendor {
@@ -222,7 +222,8 @@ struct CpuidProcessorInfo : public CpuidIoValueBase<CpuidProcessorInfo, 0x1, 0x0
 
 // [intel/vol2]: Table 3-10.  Feature Information Returned in the ECX Register.
 // [amd/vol3]: E.3.2, CPUID Fn0000_0001_ECX Feature Identifiers.
-struct CpuidFeatureFlagsC : public CpuidIoValueBase<CpuidFeatureFlagsC, 0x1, 0x0, CpuidIo::kEcx> {
+struct CpuidFeatureFlagsC : public CpuidIoValueBase<CpuidFeatureFlagsC, 0x1, 0x0, CpuidIo::kEcx,
+                                                    hwreg::EnableAsmGeneration> {
   // AMD documented "RAZ. Reserved for use by hypervisor to indicate guest
   // status."; Intel documents "Not Used. Always returns 0.".
   DEF_BIT(31, hypervisor);
@@ -261,7 +262,8 @@ struct CpuidFeatureFlagsC : public CpuidIoValueBase<CpuidFeatureFlagsC, 0x1, 0x0
 
 // [intel/vol2]: Table 3-11.  More on Feature Information Returned in the EDX Register.
 // [amd/vol3]: E.3.6  Function 7h—Structured Extended Feature Identifiers.
-struct CpuidFeatureFlagsD : public CpuidIoValueBase<CpuidFeatureFlagsD, 0x1, 0x0, CpuidIo::kEdx> {
+struct CpuidFeatureFlagsD : public CpuidIoValueBase<CpuidFeatureFlagsD, 0x1, 0x0, CpuidIo::kEdx,
+                                                    hwreg::EnableAsmGeneration> {
   DEF_BIT(31, pbe);
   // Bit 30 is reserved.
   DEF_BIT(29, tm);
@@ -312,8 +314,7 @@ enum class X86CacheType : uint8_t {
 
 std::string_view ToString(X86CacheType type);
 
-struct CpuidCacheTopologyA
-    : public hwreg::RegisterBase<CpuidCacheTopologyA, uint32_t, hwreg::EnablePrinter> {
+struct CpuidCacheTopologyA : public hwreg::RegisterBase<CpuidCacheTopologyA, uint32_t> {
   DEF_FIELD(31, 26, max_cores);  // Reserved on AMD.
   DEF_FIELD(25, 14, max_sharing_logical_processors);
   // Bits [13:10] are reserved.
@@ -323,20 +324,17 @@ struct CpuidCacheTopologyA
   DEF_ENUM_FIELD(X86CacheType, 4, 0, cache_type);
 };
 
-struct CpuidCacheTopologyB
-    : public hwreg::RegisterBase<CpuidCacheTopologyB, uint32_t, hwreg::EnablePrinter> {
+struct CpuidCacheTopologyB : public hwreg::RegisterBase<CpuidCacheTopologyB, uint32_t> {
   DEF_FIELD(31, 22, ways);
   DEF_FIELD(21, 12, physical_line_partitions);
   DEF_FIELD(11, 0, system_coherency_line_size);
 };
 
-struct CpuidCacheTopologyC
-    : public hwreg::RegisterBase<CpuidCacheTopologyC, uint32_t, hwreg::EnablePrinter> {
+struct CpuidCacheTopologyC : public hwreg::RegisterBase<CpuidCacheTopologyC, uint32_t> {
   DEF_FIELD(31, 0, sets);
 };
 
-struct CpuidCacheTopologyD
-    : public hwreg::RegisterBase<CpuidCacheTopologyD, uint32_t, hwreg::EnablePrinter> {
+struct CpuidCacheTopologyD : public hwreg::RegisterBase<CpuidCacheTopologyD, uint32_t> {
   // Bits [31:3] are reserved.
   DEF_BIT(2, complex_cache_indexing);
   DEF_BIT(1, inclusive);
@@ -398,7 +396,8 @@ struct CpuidMonitorMwaitD : public CpuidIoValueBase<CpuidMonitorMwaitD, 0x5, 0x0
 
 // [amd/vol3]: E.3.6, CPUID Fn0000_0007_EBX_x0 Structured Extended Feature Identifiers (ECX=0).
 struct CpuidExtendedFeatureFlagsB
-    : public CpuidIoValueBase<CpuidExtendedFeatureFlagsB, 0x7, 0x0, CpuidIo::kEbx> {
+    : public CpuidIoValueBase<CpuidExtendedFeatureFlagsB, 0x7, 0x0, CpuidIo::kEbx,
+                              hwreg::EnableAsmGeneration> {
   DEF_BIT(31, avx512vl);
   DEF_BIT(30, avx512bw);
   DEF_BIT(29, sha);
@@ -474,20 +473,17 @@ struct CpuidPerformanceMonitoringD
 // [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
 //---------------------------------------------------------------------------//
 
-struct CpuidTopologyEnumerationA
-    : public hwreg::RegisterBase<CpuidTopologyEnumerationA, uint32_t, hwreg::EnablePrinter> {
+struct CpuidTopologyEnumerationA : public hwreg::RegisterBase<CpuidTopologyEnumerationA, uint32_t> {
   // Bits [31:5] are reserved
   DEF_FIELD(4, 0, next_level_apic_id_shift);
 };
 
-struct CpuidTopologyEnumerationB
-    : public hwreg::RegisterBase<CpuidTopologyEnumerationB, uint32_t, hwreg::EnablePrinter> {
+struct CpuidTopologyEnumerationB : public hwreg::RegisterBase<CpuidTopologyEnumerationB, uint32_t> {
   // Bits [31:16] are reserved
   DEF_FIELD(15, 0, num_logical_processors);
 };
 
-struct CpuidTopologyEnumerationC
-    : public hwreg::RegisterBase<CpuidTopologyEnumerationC, uint32_t, hwreg::EnablePrinter> {
+struct CpuidTopologyEnumerationC : public hwreg::RegisterBase<CpuidTopologyEnumerationC, uint32_t> {
   enum class TopologyLevelType : uint8_t {
     kInvalid = 0,
     kSmt = 1,
@@ -502,8 +498,7 @@ struct CpuidTopologyEnumerationC
   DEF_FIELD(7, 0, level_number);
 };
 
-struct CpuidTopologyEnumerationD
-    : public hwreg::RegisterBase<CpuidTopologyEnumerationD, uint32_t, hwreg::EnablePrinter> {
+struct CpuidTopologyEnumerationD : public hwreg::RegisterBase<CpuidTopologyEnumerationD, uint32_t> {
   DEF_FIELD(31, 0, x2apic_id);
 };
 
@@ -659,6 +654,8 @@ struct CpuidMaximumExtendedLeaf
 // namespace these features under "AMD", as it was pragmatically following
 // AMD's lead, and as Intel has already nabbed the more appropriate name of
 // "extended features" - this being the extended leaf range - with leaf 0x7.
+//
+// TODO(fxbug.dev/68404): Pass hwreg::EnableAsmGeneration when safe to do so.
 struct CpuidAmdFeatureFlagsC
     : public CpuidIoValueBase<CpuidAmdFeatureFlagsC, 0x8000'0001, 0x0, CpuidIo::kEcx> {
   // Bits [31:28] are reserved.
@@ -799,8 +796,7 @@ class ProcessorName {
 // [amd/vol3]: E.4.4  Function 8000_0005h — L1 Cache and TLB Information.
 //---------------------------------------------------------------------------//
 
-struct CpuidL1CacheInformation
-    : public hwreg::RegisterBase<CpuidL1CacheInformation, uint32_t, hwreg::EnablePrinter> {
+struct CpuidL1CacheInformation : public hwreg::RegisterBase<CpuidL1CacheInformation, uint32_t> {
   // The value of the associativity field representing full associativity.
   static constexpr uint8_t kFullyAssociative = 0xff;
 

@@ -44,6 +44,8 @@ int TestMain(void*, arch::EarlyTicks) {
   arch::BootCpuid<arch::CpuidFeatureFlagsC>().ForEachField(print_feature);
   arch::BootCpuid<arch::CpuidFeatureFlagsD>().ForEachField(print_feature);
   arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().ForEachField(print_feature);
+  // TODO(fxbug.dev/68404): Print when we can afford to.
+  // arch::BootCpuid<arch::CpuidAmdFeatureFlagsC>().ForEachField(print_feature);
 #endif
 
   return 0;

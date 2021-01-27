@@ -157,7 +157,8 @@ class RegisterBase {
   // Printed fields will look like: "field_name[26:8]: 0x00123 (291)"
   // The undefined bits message will look like: "unknown set bits: 0x00301000"
   //
-  // WARNING: This will substantially increase code size at the call site.
+  // WARNING: This will substantially increase code size and stack usage at the
+  // call site. fxbug.dev/68404 tracks investigation to improve this.
   //
   // Example use:
   // reg.Print([](const char* arg) { printf("%s\n", arg); });

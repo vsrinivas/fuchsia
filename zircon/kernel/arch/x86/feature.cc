@@ -419,6 +419,8 @@ void x86_feature_debug(void) {
   io.Read<arch::CpuidFeatureFlagsC>().ForEachField(print_feature);
   io.Read<arch::CpuidFeatureFlagsD>().ForEachField(print_feature);
   io.Read<arch::CpuidExtendedFeatureFlagsB>().ForEachField(print_feature);
+  // TODO(fxbug.dev/68404): Print when we can afford to.
+  // io.Read<arch::CpuidAmdFeatureFlagsC>().ForEachField(print_feature);
   printf("\n");
 
   // Print synthetic 'features'/properties.
