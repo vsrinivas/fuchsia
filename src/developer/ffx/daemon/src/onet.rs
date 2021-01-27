@@ -27,15 +27,11 @@ fn async_from_sync<S: IntoRawFd>(sync: S) -> async_std::fs::File {
     unsafe { async_std::fs::File::from_raw_fd(sync.into_raw_fd()) }
 }
 
-type TaskHandle = Task<Result<()>>;
-
 struct HostPipeChild {
     inner: Child,
     // These are wrapped in Option so drop(&mut self) can consume them
     cancel_tx: Option<oneshot::Sender<()>>,
-    writer_handle: Option<TaskHandle>,
-    reader_handle: Option<TaskHandle>,
-    logger_handle: Option<TaskHandle>,
+    task: Option<Task<()>>,
 }
 
 async fn latency_sensitive_copy(
@@ -62,6 +58,7 @@ impl HostPipeChild {
             .stderr(Stdio::piped())
             .spawn()
             .context("running target overnet pipe")?;
+
         let (mut pipe_rx, mut pipe_tx) = futures::AsyncReadExt::split(
             overnet_pipe(&*ascendd).context("creating local overnet pipe")?,
         );
@@ -69,42 +66,46 @@ impl HostPipeChild {
 
         let stdout_pipe =
             inner.stdout.take().ok_or(anyhow!("unable to get stdout from target pipe"))?;
-        let writer_handle = Task::spawn(async move {
-            latency_sensitive_copy(&mut async_from_sync(stdout_pipe), &mut pipe_tx).await?;
-            log::info!("exiting onet pipe writer task (client -> ascendd)");
-            Ok(())
-        });
+        let writer = async move {
+            match latency_sensitive_copy(&mut async_from_sync(stdout_pipe), &mut pipe_tx).await {
+                Ok(()) => log::info!("exiting onet pipe writer task (client -> ascendd)"),
+                Err(e) => log::info!("exiting onet pipe writer (client -> ascendd) due to {:?}", e),
+            }
+        };
 
         let stdin_pipe =
             inner.stdin.take().ok_or(anyhow!("unable to get stdin from target pipe"))?;
-        let reader_handle = Task::spawn(async move {
+        let reader = async move {
             let mut stdin_pipe = async_from_sync(stdin_pipe);
             let mut cancel_rx = cancel_rx.fuse();
             futures::select! {
-                copy_res = latency_sensitive_copy(&mut pipe_rx, &mut stdin_pipe).fuse() => copy_res?,
+                copy_res = latency_sensitive_copy(&mut pipe_rx, &mut stdin_pipe).fuse() => match copy_res {
+                    Ok(()) => log::info!("exiting onet pipe reader task (ascendd -> client)"),
+                    Err(e) => log::info!("exiting onet pipe reader task (ascendd -> client) due to {:?}", e),
+                },
                 _ = cancel_rx => (),
             };
-            log::info!("exiting onet pipe reader task (ascendd -> client)");
-            Ok(())
-        });
+        };
 
         let stderr_pipe =
             inner.stderr.take().ok_or(anyhow!("unable to stderr from target pipe"))?;
-        let logger_handle = Task::spawn(async move {
+        let logger = async move {
             let stderr_pipe = async_from_sync(stderr_pipe);
             let mut stderr_lines = async_std::io::BufReader::new(stderr_pipe).lines();
-            while let Some(line) = stderr_lines.next().await {
-                log::info!("SSH stderr: {}", line?);
+            while let Some(result) = stderr_lines.next().await {
+                match result {
+                    Ok(line) => log::info!("SSH stderr: {}", line),
+                    Err(e) => log::info!("SSH stderr read failure: {:?}", e),
+                }
             }
-            Ok(())
-        });
+        };
 
         Ok(HostPipeChild {
             inner,
             cancel_tx: Some(cancel_tx),
-            writer_handle: Some(writer_handle),
-            reader_handle: Some(reader_handle),
-            logger_handle: Some(logger_handle),
+            task: Some(Task::spawn(async move {
+                futures::join!(reader, writer, logger);
+            })),
         })
     }
 
@@ -122,19 +123,30 @@ impl Drop for HostPipeChild {
         // Ignores whether the receiver has been closed, this is just to
         // un-stick it from an attempt at reading from Ascendd.
         self.cancel_tx.take().map(|c| c.send(()));
-        let _ = self.kill().map_err(|e| log::warn!("failed to kill HostPipeChild: {:?}", e));
-        let _ = self.wait().map_err(|e| log::warn!("failed to clean up HostPipeChild: {:?}", e));
 
-        let reader_result = self.reader_handle.take().map(|rh| futures::executor::block_on(rh));
-        let writer_result = self.writer_handle.take().map(|wh| futures::executor::block_on(wh));
-        let logger_result = self.logger_handle.take().map(|lh| futures::executor::block_on(lh));
+        match self.inner.try_wait() {
+            Ok(Some(result)) => {
+                log::info!("HostPipeChild exited with {}", result);
+            }
+            Ok(None) => {
+                let _ =
+                    self.kill().map_err(|e| log::warn!("failed to kill HostPipeChild: {:?}", e));
+                let _ = self
+                    .wait()
+                    .map_err(|e| log::warn!("failed to clean up HostPipeChild: {:?}", e));
+            }
+            Err(e) => {
+                log::warn!("failed to soft-wait HostPipeChild: {:?}", e);
+                // defensive kill & wait, both may fail.
+                let _ =
+                    self.kill().map_err(|e| log::warn!("failed to kill HostPipeChild: {:?}", e));
+                let _ = self
+                    .wait()
+                    .map_err(|e| log::warn!("failed to clean up HostPipeChild: {:?}", e));
+            }
+        };
 
-        log::trace!(
-            "Dropped HostPipeChild. Writer result: '{:?}'; reader result: '{:?}'; logger result: '{:?}'",
-            writer_result,
-            reader_result,
-            logger_result,
-        );
+        self.task.take().map(|t| fuchsia_async::futures::executor::block_on(t));
     }
 }
 
@@ -219,20 +231,12 @@ mod test {
         /// spin until they receive a message to stop.
         pub fn fake_new(child: Child) -> Self {
             let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
-            let (other_cancel_tx, other_cancel_rx) = oneshot::channel::<()>();
             Self {
                 inner: child,
                 cancel_tx: Some(cancel_tx),
-                writer_handle: Some(Task::spawn(async move {
-                    cancel_rx.await.context("host-pipe fake test writer")?;
-                    other_cancel_tx.send(()).unwrap();
-                    Ok(())
+                task: Some(Task::spawn(async move {
+                    cancel_rx.await.expect("host-pipe fake test writer");
                 })),
-                reader_handle: Some(Task::spawn(async move {
-                    other_cancel_rx.await.context("host-pipe fake test writer")?;
-                    Ok(())
-                })),
-                logger_handle: Some(Task::spawn(async { Ok(()) })),
             }
         }
     }
