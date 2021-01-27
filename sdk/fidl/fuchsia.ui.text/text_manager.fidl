@@ -5,6 +5,7 @@
 library fuchsia.ui.text;
 
 using fuchsia.ui.input;
+using fuchsia.ui.input3;
 
 /// A service provided to keyboard apps that allows them to access a TextField
 /// interface for the currently focused text field. Requests to this TextField
@@ -25,5 +26,13 @@ protocol TextInputContext {
     /// TextManager. The keyboard may translate it into an edit on the focused
     /// text field if it so desires. It's expected that this interface will change
     /// as the routing for keyboard events and keymaps evolves.
+    /// Deprecated: `OnKey3Event` should be used instead.
     -> OnInputEvent(fuchsia.ui.input.InputEvent event);
+
+    /// This event fires any time a physical keyboard event is sent to the
+    /// TextManager. The keyboard may translate it into an edit on the focused
+    /// text field if it so desires. It's expected that this interface will change
+    /// as the routing for keyboard events and keymaps evolves.
+    [Transitional]
+    -> OnKey3Event(fuchsia.ui.input3.KeyEvent event);
 };

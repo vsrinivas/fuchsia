@@ -353,6 +353,9 @@ async fn serve_textfield(ime: DefaultHardwareIme) -> Result<(), Error> {
                     fx_log_err!("DefaultHardwareIme received a non-keyboard event");
                 }
             },
+            Ok(txt::TextInputContextEvent::OnKey3Event { .. }) => {
+                unimplemented!();
+            }
             Err(e) => {
                 fx_log_err!(
                     "DefaultHardwareIme received an error from a TextInputContext: {:#?}",
