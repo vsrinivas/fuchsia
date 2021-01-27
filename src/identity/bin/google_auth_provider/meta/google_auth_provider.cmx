@@ -1,28 +1,16 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_view.shard.cmx"
     ],
     "program": {
         "binary": "bin/google_auth_provider"
     },
     "sandbox": {
         "services": [
-            "fuchsia.accessibility.semantics.SemanticsManager",
-            "fuchsia.device.NameProvider",
-            "fuchsia.fonts.Provider",
-            "fuchsia.intl.PropertyProvider",
-            "fuchsia.memorypressure.Provider",
-            "fuchsia.net.NameLookup",
-            "fuchsia.net.http.Loader",
-            "fuchsia.net.interfaces.State",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.process.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.input.ImeVisibilityService",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.web.ContextProvider"
+            "fuchsia.net.http.Loader"
         ]
     }
 }

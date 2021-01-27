@@ -28,36 +28,26 @@
     },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_feature_hardware_video_decoder.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_feature_vulkan.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_view.shard.cmx",
         "src/lib/vulkan/test-application-container.shard.cmx"
     ],
     "program": {
-        "binary": "test/web_runner_pixel_tests"
+        "binary": "bin/web_runner_pixel_tests_bin"
     },
     "sandbox": {
         "features": [
             "shell-commands"
         ],
         "services": [
-            "fuchsia.accessibility.semantics.SemanticsManager",
-            "fuchsia.device.NameProvider",
-            "fuchsia.fonts.Provider",
-            "fuchsia.intl.PropertyProvider",
-            "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.memorypressure.Provider",
-            "fuchsia.net.interfaces.State",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.pointerinjector.Registry",
-            "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.web.ContextProvider"
+            "fuchsia.ui.policy.Presenter"
         ]
     }
 }

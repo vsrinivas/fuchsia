@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("unit") {
   testonly = true
@@ -14,6 +14,12 @@ group("integration") {
   testonly = true
   public_deps = [
     ":semantics-integration-tests",
+    "//src/ui/a11y/bin/demo:a11y-demo",
+  ]
+
+  data_deps = [
+    "//garnet/packages/prod:scenic",
+    "//src/chromium",
     "//src/ui/a11y/bin/demo:a11y-demo",
   ]
 }
@@ -58,46 +64,54 @@ executable("semantics_tests") {
   include_dirs = [ "//third_party/glm" ]
 }
 
-test_package("semantics-integration-tests") {
-  deps = [
+fuchsia_component("flutter_semantics_tests") {
+  testonly = true
+  deps = [ ":flutter_semantics_tests_bin" ]
+  manifest = "meta/flutter_semantics_tests.cmx"
+}
+
+fuchsia_component("web_semantics_tests") {
+  testonly = true
+  deps = [ ":web_semantics_tests_bin" ]
+  manifest = "meta/web_semantics_tests.cmx"
+}
+
+resource("big_list") {
+  sources = [ "testdata/big_list.html" ]
+  outputs = [ "data/big_list.html" ]
+}
+
+resource("dynamic_button") {
+  sources = [ "testdata/dynamic_button.html" ]
+  outputs = [ "data/dynamic_button.html" ]
+}
+
+resource("static") {
+  sources = [ "testdata/static.html" ]
+  outputs = [ "data/static.html" ]
+}
+
+fuchsia_test_package("semantics-integration-tests") {
+  test_components = [
     ":flutter_semantics_tests",
     ":web_semantics_tests",
   ]
 
-  tests = [
-    {
-      name = "flutter_semantics_tests"
-      environments = [ nuc_env ]
-    },
-    {
-      name = "web_semantics_tests"
-      environments = [ nuc_env ]
-    },
+  deps = [
+    ":big_list",
+    ":dynamic_button",
+    ":static",
   ]
 
-  data_deps = [
-    "//garnet/packages/prod:scenic",
-    "//src/chromium",
-    "//src/ui/a11y/bin/demo:a11y-demo",
-  ]
-
-  resources = [
-    {
-      path = rebase_path("testdata/big_list.html")
-      dest = "big_list.html"
-    },
-    {
-      path = rebase_path("testdata/dynamic_button.html")
-      dest = "dynamic_button.html"
-    },
-    {
-      path = rebase_path("testdata/static.html")
-      dest = "static.html"
-    },
-  ]
+  test_specs = {
+    # fxbug.dev/33778
+    # environments = basic_envs
+    # This does not seem to flake on NUCs.
+    environments = [ nuc_env ]
+  }
 }
 
-executable("flutter_semantics_tests") {
+executable("flutter_semantics_tests_bin") {
   testonly = true
 
   sources = [ "flutter_semantics_tests.cc" ]
@@ -112,12 +126,15 @@ executable("flutter_semantics_tests") {
   ]
 }
 
-executable("web_semantics_tests") {
+executable("web_semantics_tests_bin") {
   testonly = true
   sources = [ "web_semantics_tests.cc" ]
   deps = [
     ":semantics_integration_test_fixture",
     "//sdk/lib/syslog/cpp",
+    "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
+    "//src/chromium/web_engine/meta/shards:web_engine_feature_vulkan",
+    "//src/chromium/web_engine/meta/shards:web_engine_view",
     "//src/chromium/web_runner_tests:mock_server",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

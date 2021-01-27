@@ -1,0 +1,14 @@
+{
+    "sandbox": {
+        "services": [
+            "fuchsia.device.NameProvider",
+            "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.memorypressure.Provider",
+            "fuchsia.process.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.web.ContextProvider"
+        ]
+    }
+}

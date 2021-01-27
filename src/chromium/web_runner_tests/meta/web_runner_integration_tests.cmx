@@ -19,24 +19,16 @@
     },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
         "src/lib/vulkan/test-application-container.shard.cmx"
     ],
     "program": {
-        "binary": "test/web_runner_integration_tests"
+        "binary": "bin/web_runner_integration_tests_bin"
     },
     "sandbox": {
         "services": [
-            "fuchsia.device.NameProvider",
-            "fuchsia.fonts.Provider",
-            "fuchsia.intl.PropertyProvider",
-            "fuchsia.memorypressure.Provider",
-            "fuchsia.net.interfaces.State",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.web.ContextProvider"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

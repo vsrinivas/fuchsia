@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//tools/cmc/build/expect_includes.gni")
+
+expect_includes("web_engine_base") {
+  includes = [ "web_engine_base.shard.cmx" ]
+}
+
+expect_includes("web_engine_view") {
+  deps = [ ":web_engine_base" ]
+  includes = [ "web_engine_view.shard.cmx" ]
+}
+
+expect_includes("web_engine_feature_network") {
+  deps = [ ":web_engine_base" ]
+  includes = [ "web_engine_feature_network.shard.cmx" ]
+}
+
+expect_includes("web_engine_feature_vulkan") {
+  deps = [ ":web_engine_base" ]
+  includes = [ "web_engine_feature_vulkan.shard.cmx" ]
+}
+
+expect_includes("web_engine_feature_hardware_video_decoder") {
+  deps = [ ":web_engine_feature_vulkan" ]
+  includes = [ "web_engine_feature_hardware_video_decoder.shard.cmx" ]
+}

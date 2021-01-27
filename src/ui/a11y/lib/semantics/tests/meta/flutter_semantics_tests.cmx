@@ -22,7 +22,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/flutter_semantics_tests"
+        "binary": "bin/flutter_semantics_tests_bin"
     },
     "sandbox": {
         "services": [

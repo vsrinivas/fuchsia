@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("web_context") {
   testonly = true
@@ -57,7 +57,7 @@ source_set("mock_server") {
   ]
 }
 
-executable("web_runner_integration_tests") {
+executable("web_runner_integration_tests_bin") {
   testonly = true
 
   sources = [ "web_runner_integration_tests.cc" ]
@@ -69,6 +69,7 @@ executable("web_runner_integration_tests") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
+    "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -78,7 +79,7 @@ executable("web_runner_integration_tests") {
   data_deps = [ "//src/fonts:downstream_test_deps($default_toolchain)" ]
 }
 
-executable("web_runner_pixel_tests") {
+executable("web_runner_pixel_tests_bin") {
   testonly = true
 
   sources = [ "web_runner_pixel_tests.cc" ]
@@ -95,6 +96,9 @@ executable("web_runner_pixel_tests") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/chromium/web_engine/meta/shards:web_engine_feature_hardware_video_decoder",
+    "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
+    "//src/chromium/web_engine/meta/shards:web_engine_view",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -107,10 +111,36 @@ executable("web_runner_pixel_tests") {
   data_deps = [ "//src/fonts:downstream_test_deps($default_toolchain)" ]
 }
 
-test_package("web_runner_tests") {
-  deps = [
+fuchsia_component("web_runner_integration_tests") {
+  testonly = true
+  deps = [ ":web_runner_integration_tests_bin" ]
+  manifest = "meta/web_runner_integration_tests.cmx"
+}
+
+fuchsia_component("web_runner_pixel_tests") {
+  testonly = true
+  deps = [ ":web_runner_pixel_tests_bin" ]
+  manifest = "meta/web_runner_pixel_tests.cmx"
+}
+
+resource("resources") {
+  sources = [
+    "//garnet/test_data/media/third_party/chromium_media_test_data/blackwhite_yuv420p.webm",
+    "data/dynamic.html",
+    "data/static.html",
+    "data/video.html",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_test_package("web_runner_tests") {
+  test_components = [
     ":web_runner_integration_tests",
     ":web_runner_pixel_tests",
+  ]
+
+  deps = [
+    ":resources",
 
     # Provides a fake implementation for `fuchsia.intl.ProfileProvider`.  This
     # just declares that the binary needs to be compiled, but doesn't actually
@@ -118,42 +148,12 @@ test_package("web_runner_tests") {
     "//garnet/examples/intl/manager:intl_property_manager",
   ]
 
-  tests = [
-    {
-      name = "web_runner_integration_tests"
-      manifest = rebase_path("meta/web_runner_integration_tests.cmx")
-
-      # fxbug.dev/33778
-      # environments = basic_envs
-      # This does not seem to flake on NUCs.
-      environments = [ nuc_env ]
-    },
-    {
-      name = "web_runner_pixel_tests"
-      manifest = rebase_path("meta/web_runner_pixel_tests.cmx")
-      environments = [ nuc_env ]
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("data/dynamic.html")
-      dest = "dynamic.html"
-    },
-    {
-      path = rebase_path("data/static.html")
-      dest = "static.html"
-    },
-    {
-      path = rebase_path("data/video.html")
-      dest = "video.html"
-    },
-    {
-      path = rebase_path(
-              "//garnet/test_data/media/third_party/chromium_media_test_data/blackwhite_yuv420p.webm")
-      dest = "blackwhite_yuv420p.webm"
-    },
-  ]
+  test_specs = {
+    # fxbug.dev/33778
+    # environments = basic_envs
+    # This does not seem to flake on NUCs.
+    environments = [ nuc_env ]
+  }
 }
 
 group("tests") {

@@ -1,0 +1,7 @@
+{
+    "sandbox": {
+        "services": [
+            "fuchsia.mediacodec.CodecFactory"
+        ]
+    }
+}

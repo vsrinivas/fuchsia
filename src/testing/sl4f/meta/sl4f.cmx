@@ -1,6 +1,8 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx"
     ],
     "program": {
         "binary": "bin/sl4f"
@@ -45,7 +47,6 @@
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
             "fuchsia.feedback.DataProvider",
-            "fuchsia.fonts.Provider",
             "fuchsia.hardware.cpu.ctrl.Ctrl",
             "fuchsia.hardware.gpio.Gpio",
             "fuchsia.hardware.i2c",
@@ -57,23 +58,16 @@
             "fuchsia.hwinfo.Product",
             "fuchsia.input.injection.InputDeviceRegistry",
             "fuchsia.input.report.InputDevice",
-            "fuchsia.intl.PropertyProvider",
             "fuchsia.kernel.Stats",
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             "fuchsia.location.position.EmergencyProvider",
             "fuchsia.logger.Log",
             "fuchsia.lowpan.device.Lookup",
-            "fuchsia.memorypressure.Provider",
-            "fuchsia.net.NameLookup",
-            "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
-            "fuchsia.netstack.Netstack",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.RepositoryManager",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",
-            "fuchsia.process.Launcher",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.settings.Audio",
             "fuchsia.settings.Display",
@@ -81,7 +75,6 @@
             "fuchsia.settings.Setup",
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.test.manager.Harness",
             "fuchsia.testing.sl4f.FacadeProvider",
             "fuchsia.thermal.test.TemperatureLogger",
@@ -98,7 +91,6 @@
             "fuchsia.virtualaudio.Output",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.weave.Stack",
-            "fuchsia.web.ContextProvider",
             "fuchsia.wlan.device.Phy",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.policy.AccessPointListener",
