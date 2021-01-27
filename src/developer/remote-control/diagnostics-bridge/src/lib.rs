@@ -6,9 +6,11 @@ use {
     anyhow::{anyhow, Context as _, Error, Result},
     diagnostics_data::{Logs, LogsData, LogsField, LogsHierarchy, LogsProperty},
     diagnostics_reader::ArchiveReader,
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, BridgeStreamParameters,
-        RemoteDiagnosticsBridgeRequest, RemoteDiagnosticsBridgeRequestStream, StreamError,
+        ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
+        BridgeStreamParameters, RemoteDiagnosticsBridgeRequest,
+        RemoteDiagnosticsBridgeRequestStream, StreamError,
     },
     fidl_fuchsia_diagnostics::{DataType, StreamMode},
     fidl_fuchsia_logger::MAX_DATAGRAM_LEN_BYTES,
@@ -31,6 +33,65 @@ pub trait ArchiveReaderManager {
     fn start_log_stream(
         &mut self,
     ) -> Result<(Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Error>), StreamError>;
+
+    /// Provides an implementation of an ArchiveIterator server. Intended to be used by clients who
+    /// wish to spawn an ArchiveIterator server given an implementation of `start_log_stream`..
+    fn spawn_iterator_server(
+        &mut self,
+        iterator: ServerEnd<ArchiveIteratorMarker>,
+    ) -> Result<fasync::Task<Result<(), Error>>, StreamError> {
+        let stream_result = match self.start_log_stream() {
+            Ok(r) => r,
+            Err(e) => return Err(e),
+        };
+        let task = fasync::Task::spawn(async move {
+            let mut iter_stream = iterator.into_stream()?;
+            let (mut log_stream, mut err_chan) = stream_result;
+
+            while let Some(request) = iter_stream.next().await {
+                match request? {
+                    ArchiveIteratorRequest::GetNext { responder } => {
+                        let logs = select! {
+                            err = err_chan.select_next_some() => {
+                                warn!(%err, "Data read error");
+                                responder.send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
+                                continue;
+                            }
+
+                            log = log_stream.select_next_some() => {
+                                log
+                            }
+
+                            complete => {
+                                responder.send(&mut Ok(vec![]))?;
+                                break;
+                            }
+                        };
+
+                        let (truncated_logs, truncated_chars) = match truncate_log_msg(logs.clone())
+                        {
+                            Ok(t) => t,
+                            Err(err) => {
+                                warn!(%err, "failed to truncate log message");
+                                responder.send(&mut Err(ArchiveIteratorError::TruncationFailed))?;
+                                continue;
+                            }
+                        };
+
+                        let response = vec![ArchiveIteratorEntry {
+                            data: Some(serde_json::to_string(&truncated_logs)?),
+                            truncated_chars: Some(truncated_chars),
+                            ..ArchiveIteratorEntry::EMPTY
+                        }];
+                        responder.send(&mut Ok(response))?;
+                    }
+                }
+            }
+
+            Ok::<(), Error>(())
+        });
+        Ok(task)
+    }
 }
 
 struct ArchiveReaderManagerImpl {
@@ -151,66 +212,15 @@ where
                     }
 
                     let mut reader = (self.archive_accessor)(parameters);
-                    let stream_result = match reader.start_log_stream() {
-                        Ok(r) => r,
+                    match reader.spawn_iterator_server(iterator) {
+                        Ok(task) => {
+                            responder.send(&mut Ok(()))?;
+                            task.await?;
+                        }
                         Err(e) => {
                             responder.send(&mut Err(e))?;
-                            continue;
                         }
-                    };
-
-                    let task = fasync::Task::spawn(async move {
-                        let mut iter_stream = iterator.into_stream()?;
-                        let (mut log_stream, mut err_chan) = stream_result;
-
-                        while let Some(request) = iter_stream.next().await {
-                            match request? {
-                                ArchiveIteratorRequest::GetNext { responder } => {
-                                    let logs = select! {
-                                        err = err_chan.select_next_some() => {
-                                            warn!(%err, "Data read error");
-                                            responder.send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
-                                            continue;
-                                        }
-
-                                        log = log_stream.select_next_some() => {
-                                            log
-                                        }
-
-                                        complete => {
-                                            responder.send(&mut Ok(vec![]))?;
-                                            break;
-                                        }
-                                    };
-
-                                    let (truncated_logs, truncated_chars) =
-                                        match truncate_log_msg(logs.clone()) {
-                                            Ok(t) => t,
-                                            Err(err) => {
-                                                warn!(%err, "failed to truncate log message");
-                                                responder.send(&mut Err(
-                                                    ArchiveIteratorError::TruncationFailed,
-                                                ))?;
-                                                continue;
-                                            }
-                                        };
-
-                                    let response = vec![ArchiveIteratorEntry {
-                                        data: Some(serde_json::to_string(&truncated_logs)?),
-                                        truncated_chars: Some(truncated_chars),
-                                        ..ArchiveIteratorEntry::EMPTY
-                                    }];
-                                    responder.send(&mut Ok(response))?;
-                                }
-                            }
-                        }
-
-                        Ok::<(), Error>(())
-                    });
-
-                    responder.send(&mut Ok(()))?;
-
-                    task.await?;
+                    }
                 }
                 RemoteDiagnosticsBridgeRequest::Hello { responder } => {
                     responder.send()?;
