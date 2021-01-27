@@ -95,12 +95,11 @@ fit::result<inspect::Hierarchy> FdioTest::TakeSnapshot() {
   return hierarchy_or_error;
 }
 
-void FdioTest::GetUintMetricFromHierarchy(const inspect::Hierarchy* hierarchy,
-                                          std::vector<std::string> path, std::string property,
-                                          uint64_t* value) {
+void FdioTest::GetUintMetricFromHierarchy(const inspect::Hierarchy& hierarchy,
+                                          const std::vector<std::string>& path,
+                                          const std::string& property, uint64_t* value) {
   ASSERT_NE(value, nullptr);
-  ASSERT_NE(hierarchy, nullptr);
-  const inspect::Hierarchy* direct_parent = hierarchy->GetByPath(path);
+  const inspect::Hierarchy* direct_parent = hierarchy.GetByPath(path);
   ASSERT_NE(direct_parent, nullptr);
 
   const inspect::UintPropertyValue* property_node =
@@ -110,10 +109,11 @@ void FdioTest::GetUintMetricFromHierarchy(const inspect::Hierarchy* hierarchy,
   *value = property_node->value();
 }
 
-void FdioTest::GetUintMetric(std::vector<std::string> path, std::string property, uint64_t* value) {
+void FdioTest::GetUintMetric(const std::vector<std::string>& path, const std::string& property,
+                             uint64_t* value) {
   fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
   ASSERT_TRUE(hierarchy_or_error.is_ok());
-  GetUintMetricFromHierarchy(&(hierarchy_or_error.value()), path, property, value);
+  GetUintMetricFromHierarchy(hierarchy_or_error.value(), path, property, value);
 }
 
 }  // namespace blobfs

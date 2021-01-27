@@ -34,8 +34,7 @@ uint64_t GetSucceededFlushCalls(block_client::FakeBlockDevice* device) {
 // Verifies that fdio "fsync" calls actually sync blobfs files to the block device and verifies
 // behavior for different lifecycles of creating a file.
 TEST_F(SyncFdioTest, Sync) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob("", 64, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
 
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
   int file = openat(root_fd(), info->path, O_RDWR | O_CREAT);
@@ -83,8 +82,7 @@ TEST(SyncNandTest, Sync) {
   options.device_block_count = 0;  // Uses VMO size.
   options.device_block_size = 8192;
 
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob("", 64, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
 
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
   auto snapshot = std::make_unique<uint8_t[]>(kVmoSize);

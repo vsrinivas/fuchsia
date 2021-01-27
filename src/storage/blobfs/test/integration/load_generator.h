@@ -23,7 +23,7 @@ struct BlobFile {
       : info(std::move(i)), writes_remaining(writes_remaining) {
     bytes_remaining = info->size_data;
   }
-  BlobFile() {}
+  BlobFile() = default;
 
   std::unique_ptr<BlobInfo> info;
   fbl::unique_fd fd;
@@ -39,7 +39,7 @@ class BlobList {
  public:
   explicit BlobList(const char* mount_path) : mount_path_(mount_path) {}
 
-  // Cycles through |num_opertaions| filesystem operations. |rand_state| should
+  // Cycles through |num_operations| filesystem operations. |rand_state| should
   // be initialized to the desired seed for the random operations (and data).
   void GenerateLoad(uint32_t num_operations, unsigned int* rand_state);
 

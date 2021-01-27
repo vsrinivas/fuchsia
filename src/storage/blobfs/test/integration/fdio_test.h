@@ -50,13 +50,14 @@ class FdioTest : public testing::Test {
 
   // Takes an inspect snapshot `hierarchy` and navigates through the nodes using
   // the `path` given and fetches the `property` there to be stored in `value`.
-  static void GetUintMetricFromHierarchy(const inspect::Hierarchy* hierarchy,
-                                         std::vector<std::string> path, std::string property,
-                                         uint64_t* value);
+  static void GetUintMetricFromHierarchy(const inspect::Hierarchy& hierarchy,
+                                         const std::vector<std::string>& path,
+                                         const std::string& property, uint64_t* value);
 
   // Strings together `TakeSnapshot` and `GetUintMetricFromHierarchy` to fetch a
   // single value from a fresh snapshot.
-  void GetUintMetric(std::vector<std::string> path, std::string property, uint64_t* value);
+  void GetUintMetric(const std::vector<std::string>& path, const std::string& property,
+                     uint64_t* value);
 
   virtual uint64_t GetOldestRevision() const { return kBlobfsCurrentRevision; }
 

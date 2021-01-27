@@ -28,6 +28,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -40,6 +41,7 @@
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
 #include "src/storage/fvm/format.h"
@@ -50,8 +52,9 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 using BlobfsIntegrationTest = ParameterizedBlobfsTest;
+using ::testing::UnitTest;
 
-void VerifyCorruptedBlob(int fd, const char* data, size_t size_data) {
+void VerifyCorruptedBlob(int fd, const uint8_t* data, size_t size_data) {
   // Verify the contents of the Blob
   fbl::Array<char> buf(new char[size_data], size_data);
 
@@ -111,11 +114,10 @@ TEST_P(BlobfsIntegrationTest, Trivial) {}
 
 TEST_P(BlobfsIntegrationTest, Basics) {
   for (unsigned int i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
     ASSERT_EQ(close(fd.release()), 0);
 
     // We can re-open and verify the Blob as read-only
@@ -170,12 +172,11 @@ TEST_P(BlobfsIntegrationTest, DISABLED_CorruptBlobNotify) {
   ASSERT_EQ(status, ZX_OK);
 
   // Create a blob, corrupt it and then attempt to read it.
-  std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob(fs().mount_path(), 1 << 5, &info);
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 5);
   // Flip a random bit of the data
   size_t rand_index = rand() % info->size_data;
-  char old_val = info->data.get()[rand_index];
-  while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
+  uint8_t old_val = info->data.get()[rand_index];
+  while ((info->data.get()[rand_index] = static_cast<uint8_t>(rand())) == old_val) {
   }
 
   ASSERT_NO_FATAL_FAILURE(ReadBlobCorrupted(info.get()));
@@ -186,8 +187,7 @@ TEST_P(BlobfsIntegrationTest, DISABLED_CorruptBlobNotify) {
 }
 
 TEST_P(BlobfsIntegrationTest, UnallocatedBlob) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 10, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 10);
 
   // We can create a blob with a name.
   ASSERT_TRUE(fbl::unique_fd(open(info->path, O_CREAT | O_EXCL | O_RDWR)));
@@ -203,8 +203,7 @@ TEST_P(BlobfsIntegrationTest, UnallocatedBlob) {
 }
 
 TEST_P(BlobfsIntegrationTest, NullBlobCreateUnlink) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 0, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 0);
 
   fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
   ASSERT_TRUE(fd);
@@ -236,8 +235,7 @@ TEST_P(BlobfsIntegrationTest, NullBlobCreateUnlink) {
 }
 
 TEST_P(BlobfsIntegrationTest, NullBlobCreateRemount) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 0, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 0);
 
   // Create the null blob.
   fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
@@ -253,9 +251,7 @@ TEST_P(BlobfsIntegrationTest, NullBlobCreateRemount) {
 }
 
 TEST_P(BlobfsIntegrationTest, ExclusiveCreate) {
-  std::unique_ptr<BlobInfo> info;
-
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 17, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
   fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -269,23 +265,21 @@ TEST_P(BlobfsIntegrationTest, ExclusiveCreate) {
 
 TEST_P(BlobfsIntegrationTest, CompressibleBlob) {
   for (size_t i = 10; i < 22; i++) {
-    std::unique_ptr<BlobInfo> info;
-
     // Create blobs which are trivially compressible.
-    ASSERT_NO_FATAL_FAILURE(GenerateBlob(
-        [](char* data, size_t length) {
+    std::unique_ptr<BlobInfo> info = GenerateBlob(
+        [](uint8_t* data, size_t length) {
           size_t i = 0;
           while (i < length) {
             size_t j = (rand() % (length - i)) + 1;
-            memset(data, (char)j, j);
+            memset(data, static_cast<uint8_t>(j), j);
             data += j;
             i += j;
           }
         },
-        fs().mount_path(), 1 << i, &info));
+        fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
     // We can re-open and verify the Blob as read-only.
     fd.reset(open(info->path, O_RDONLY));
@@ -305,11 +299,10 @@ TEST_P(BlobfsIntegrationTest, CompressibleBlob) {
 
 TEST_P(BlobfsIntegrationTest, Mmap) {
   for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
     fd.reset(open(info->path, O_RDONLY));
     ASSERT_TRUE(fd) << "Failed to-reopen blob";
 
@@ -323,11 +316,10 @@ TEST_P(BlobfsIntegrationTest, Mmap) {
 
 TEST_P(BlobfsIntegrationTest, MmapUseAfterClose) {
   for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
     fd.reset(open(info->path, O_RDONLY));
     ASSERT_TRUE(fd) << "Failed to-reopen blob";
 
@@ -371,9 +363,9 @@ TEST_P(BlobfsIntegrationTest, ReadDirectory) {
 
   // Fill a directory with entries.
   for (size_t i = 0; i < kMaxEntries; i++) {
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), kBlobSize, &info[i]));
+    info[i] = GenerateRandomBlob(fs().mount_path(), kBlobSize);
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info[i].get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info[i], &fd));
   }
 
   // Check that we see the expected number of entries
@@ -497,12 +489,13 @@ TEST_F(BlobfsWithFvmTest, QueryInfo) {
   size_t total_bytes = 0;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), 0, 0));
   for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
+    std::unique_ptr<MerkleTreeInfo> merkle_tree =
+        CreateMerkleTree(info->data.get(), info->size_data, /*use_compact_format=*/true);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
-    total_bytes += fbl::round_up(info->size_merkle + info->size_data, kBlobfsBlockSize);
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
+    total_bytes += fbl::round_up(merkle_tree->merkle_tree_size + info->size_data, kBlobfsBlockSize);
   }
 
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), 6, total_bytes));
@@ -539,12 +532,13 @@ TEST_P(BlobfsIntegrationTest, GetAllocatedRegions) {
   }
 
   for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
+    std::unique_ptr<MerkleTreeInfo> merkle_tree =
+        CreateMerkleTree(info->data.get(), info->size_data, /*use_compact_format=*/true);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
-    total_bytes += fbl::round_up(info->size_merkle + info->size_data, kBlobfsBlockSize);
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
+    total_bytes += fbl::round_up(merkle_tree->merkle_tree_size + info->size_data, kBlobfsBlockSize);
   }
   ASSERT_NO_FATAL_FAILURE(GetAllocations(fs(), &vmo, &count));
 
@@ -558,11 +552,10 @@ TEST_P(BlobfsIntegrationTest, GetAllocatedRegions) {
 
 TEST_P(BlobfsIntegrationTest, UseAfterUnlink) {
   for (size_t i = 0; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
     // We should be able to unlink the blob.
     ASSERT_EQ(0, unlink(info->path));
@@ -579,11 +572,10 @@ TEST_P(BlobfsIntegrationTest, UseAfterUnlink) {
 TEST_P(BlobfsIntegrationTest, WriteAfterRead) {
   // srand(zxtest::Runner::GetInstance()->random_seed());
   for (size_t i = 0; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
     // After blob generation, writes should be rejected.
     ASSERT_LT(write(fd.get(), info->data.get(), 1), 0)
@@ -601,9 +593,8 @@ TEST_P(BlobfsIntegrationTest, WriteAfterRead) {
 }
 
 TEST_P(BlobfsIntegrationTest, WriteAfterUnlink) {
-  std::unique_ptr<BlobInfo> info;
   size_t size = 1 << 20;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), size, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), size);
 
   // Partially write out first blob.
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
@@ -619,11 +610,10 @@ TEST_P(BlobfsIntegrationTest, WriteAfterUnlink) {
 
 TEST_P(BlobfsIntegrationTest, ReadTooLarge) {
   for (size_t i = 0; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
     std::unique_ptr<char[]> buffer(new char[info->size_data]);
 
@@ -657,8 +647,7 @@ TEST_P(BlobfsIntegrationTest, BadCreation) {
   fd.reset(open(name.c_str(), O_CREAT | O_RDWR));
   ASSERT_FALSE(fd) << "Only acceptable pathnames are 32 hex-encoded bytes";
 
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 15, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 15);
 
   fd.reset(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd) << "Failed to create blob";
@@ -690,7 +679,7 @@ TEST_P(BlobfsIntegrationTest, BadCreation) {
 }
 
 // Attempts to read the contents of the Blob.
-void VerifyCompromised(int fd, const char* data, size_t size_data) {
+void VerifyCompromised(int fd, const uint8_t* data, size_t size_data) {
   std::unique_ptr<char[]> buf(new char[size_data]);
 
   ASSERT_EQ(0, lseek(fd, 0, SEEK_SET));
@@ -712,9 +701,8 @@ void MakeBlobCompromised(BlobInfo* info) {
 
 TEST_P(BlobfsIntegrationTest, CorruptBlob) {
   // srand(zxtest::Runner::GetInstance()->random_seed());
-  std::unique_ptr<BlobInfo> info;
   for (size_t i = 1; i < 18; i++) {
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
     info->size_data -= (rand() % info->size_data) + 1;
     if (info->size_data == 0) {
       info->size_data = 1;
@@ -723,11 +711,11 @@ TEST_P(BlobfsIntegrationTest, CorruptBlob) {
   }
 
   for (size_t i = 0; i < 18; i++) {
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
     // Flip a random bit of the data.
     size_t rand_index = rand() % info->size_data;
-    char old_val = info->data.get()[rand_index];
-    while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
+    uint8_t old_val = info->data.get()[rand_index];
+    while ((info->data.get()[rand_index] = static_cast<uint8_t>(rand())) == old_val) {
     }
     ASSERT_NO_FATAL_FAILURE(MakeBlobCompromised(info.get()));
   }
@@ -735,9 +723,8 @@ TEST_P(BlobfsIntegrationTest, CorruptBlob) {
 
 TEST_P(BlobfsIntegrationTest, CorruptDigest) {
   // srand(zxtest::Runner::GetInstance()->random_seed());
-  std::unique_ptr<BlobInfo> info;
   for (size_t i = 1; i < 18; i++) {
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     char hexdigits[17] = "0123456789abcdef";
     size_t idx = strlen(info->path) - 1 - (rand() % digest::kSha256HexLength);
@@ -750,11 +737,11 @@ TEST_P(BlobfsIntegrationTest, CorruptDigest) {
   }
 
   for (size_t i = 0; i < 18; i++) {
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
     // Flip a random bit of the data.
     size_t rand_index = rand() % info->size_data;
-    char old_val = info->data.get()[rand_index];
-    while ((info->data.get()[rand_index] = static_cast<char>(rand())) == old_val) {
+    uint8_t old_val = info->data.get()[rand_index];
+    while ((info->data.get()[rand_index] = static_cast<uint8_t>(rand())) == old_val) {
     }
     ASSERT_NO_FATAL_FAILURE(MakeBlobCompromised(info.get()));
   }
@@ -765,20 +752,18 @@ TEST_P(BlobfsIntegrationTest, EdgeAllocation) {
   for (size_t i = 1; i < 16; i++) {
     // -1, 0, +1 offsets...
     for (size_t j = -1; j < 2; j++) {
-      std::unique_ptr<BlobInfo> info;
-      ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), (1 << i) + j, &info));
+      std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), (1 << i) + j);
       fbl::unique_fd fd;
-      ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+      ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
       ASSERT_EQ(0, unlink(info->path));
     }
   }
 }
 
 TEST_P(BlobfsIntegrationTest, UmountWithOpenFile) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 16, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 16);
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
   // Intentionally don't close the file descriptor: Unmount anyway.
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
@@ -798,10 +783,9 @@ TEST_P(BlobfsIntegrationTest, UmountWithOpenFile) {
 }
 
 TEST_P(BlobfsIntegrationTest, UmountWithMappedFile) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 16, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 16);
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
   void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, nullptr);
@@ -819,10 +803,9 @@ TEST_P(BlobfsIntegrationTest, UmountWithMappedFile) {
 }
 
 TEST_P(BlobfsIntegrationTest, UmountWithOpenMappedFile) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 16, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 16);
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
   void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
   ASSERT_NE(addr, nullptr);
@@ -845,11 +828,10 @@ TEST_P(BlobfsIntegrationTest, UmountWithOpenMappedFile) {
 
 TEST_P(BlobfsIntegrationTest, CreateUmountRemountSmall) {
   for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
 
     fd.reset();
     EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
@@ -870,9 +852,7 @@ bool IsReadable(int fd) {
 
 // Tests that we cannot read from the Blob until it has been fully written.
 TEST_P(BlobfsIntegrationTest, EarlyRead) {
-  std::unique_ptr<BlobInfo> info;
-
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 17, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
   fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -924,9 +904,7 @@ void CheckReadable(fbl::unique_fd fd, std::atomic<bool>* result) {
 
 // Tests that poll() can tell, at some point, when it's ok to read.
 TEST_P(BlobfsIntegrationTest, WaitForRead) {
-  std::unique_ptr<BlobInfo> info;
-
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 17, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
   fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -935,7 +913,7 @@ TEST_P(BlobfsIntegrationTest, WaitForRead) {
     std::atomic<bool> result;
     std::thread waiter_thread(CheckReadable, std::move(fd), &result);
 
-    MakeBlob(info.get(), &fd);
+    MakeBlob(*info, &fd);
 
     waiter_thread.join();
     ASSERT_TRUE(result.load()) << "Background operation failed";
@@ -951,8 +929,7 @@ TEST_P(BlobfsIntegrationTest, WaitForRead) {
 // Tests that seeks during writing are ignored.
 TEST_P(BlobfsIntegrationTest, WriteSeekIgnored) {
   // srand(zxtest::Runner::GetInstance()->random_seed());
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 17, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd) << "Failed to create blob";
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
@@ -975,8 +952,7 @@ void UnlinkAndRecreate(const char* path, fbl::unique_fd* fd) {
 
 // Try unlinking while creating a blob.
 TEST_P(BlobfsIntegrationTest, RestartCreation) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 17, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
 
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd) << "Failed to create blob";
@@ -998,10 +974,9 @@ TEST_P(BlobfsIntegrationTest, RestartCreation) {
 // Attempt using invalid operations.
 TEST_P(BlobfsIntegrationTest, InvalidOperations) {
   // First off, make a valid blob.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 12, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 12);
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
   ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
 
   // Try some unsupported operations.
@@ -1031,8 +1006,7 @@ TEST_P(BlobfsIntegrationTest, RootDirectory) {
   fbl::unique_fd dirfd(open(name.c_str(), O_RDONLY));
   ASSERT_TRUE(dirfd) << "Cannot open root directory";
 
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 12, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 12);
 
   // Test operations which should ONLY operate on Blobs.
   ASSERT_LT(ftruncate(dirfd.get(), info->size_data), 0);
@@ -1046,11 +1020,9 @@ TEST_P(BlobfsIntegrationTest, RootDirectory) {
 }
 
 TEST_P(BlobfsIntegrationTest, PartialWrite) {
-  std::unique_ptr<BlobInfo> info_complete;
-  std::unique_ptr<BlobInfo> info_partial;
   size_t size = 1 << 20;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), size, &info_complete));
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), size, &info_partial));
+  std::unique_ptr<BlobInfo> info_complete = GenerateRandomBlob(fs().mount_path(), size);
+  std::unique_ptr<BlobInfo> info_partial = GenerateRandomBlob(fs().mount_path(), size);
 
   // Partially write out first blob.
   fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
@@ -1061,15 +1033,13 @@ TEST_P(BlobfsIntegrationTest, PartialWrite) {
 
   // Completely write out second blob.
   fbl::unique_fd fd_complete;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info_complete.get(), &fd_complete));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info_complete, &fd_complete));
 }
 
 TEST_P(BlobfsIntegrationTest, PartialWriteSleepyDisk) {
-  std::unique_ptr<BlobInfo> info_complete;
-  std::unique_ptr<BlobInfo> info_partial;
   size_t size = 1 << 20;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), size, &info_complete));
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), size, &info_partial));
+  std::unique_ptr<BlobInfo> info_complete = GenerateRandomBlob(fs().mount_path(), size);
+  std::unique_ptr<BlobInfo> info_partial = GenerateRandomBlob(fs().mount_path(), size);
 
   // Partially write out first blob.
   fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
@@ -1080,7 +1050,7 @@ TEST_P(BlobfsIntegrationTest, PartialWriteSleepyDisk) {
 
   // Completely write out second blob.
   fbl::unique_fd fd_complete;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info_complete.get(), &fd_complete));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info_complete, &fd_complete));
 
   ASSERT_EQ(0, syncfs(fd_complete.get()));
   ASSERT_EQ(fs().GetRamDisk()->SleepAfter(0).status_value(), ZX_OK);
@@ -1099,8 +1069,7 @@ TEST_P(BlobfsIntegrationTest, PartialWriteSleepyDisk) {
 }
 
 TEST_P(BlobfsIntegrationTest, MultipleWrites) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 16, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 16);
 
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd);
@@ -1155,10 +1124,9 @@ TEST_P(BlobfsIntegrationTest, QueryDevicePath) {
 
 TEST_P(BlobfsIntegrationTest, ReadOnly) {
   // Mount the filesystem as read-write. We can create new blobs.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 10, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 10);
   fbl::unique_fd blob_fd;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &blob_fd));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &blob_fd));
   ASSERT_NO_FATAL_FAILURE(VerifyContents(blob_fd.get(), info->data.get(), info->size_data));
   blob_fd.reset();
 
@@ -1173,7 +1141,7 @@ TEST_P(BlobfsIntegrationTest, ReadOnly) {
   ASSERT_NO_FATAL_FAILURE(VerifyContents(blob_fd.get(), info->data.get(), info->size_data));
 
   // We cannot create new blobs
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 10, &info));
+  info = GenerateRandomBlob(fs().mount_path(), 1 << 10);
   blob_fd.reset(open(info->path, O_CREAT | O_RDWR));
   ASSERT_FALSE(blob_fd);
 }
@@ -1205,13 +1173,12 @@ uint64_t BlobfsBlockToFvmSlice(fs_test::TestFilesystem& fs, uint64_t block) {
 // a blob whose uncompressed data is larger than available free space.
 // The test is expected to fail when compression is turned off.
 TEST_P(BlobfsIntegrationTest, BlobLargerThanAvailableSpaceTest) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateBlob(
-      [](char* data, size_t length) { memset(data, '\0', length); }, fs().mount_path(),
-      fs().options().device_block_count * fs().options().device_block_size + 1, &info));
+  std::unique_ptr<BlobInfo> info = GenerateBlob(
+      [](uint8_t* data, size_t length) { memset(data, '\0', length); }, fs().mount_path(),
+      fs().options().device_block_count * fs().options().device_block_size + 1);
 
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd))
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd))
       << "Test is expected to fail when compression is turned off";
 
   // We can re-open and verify the Blob as read-only.
@@ -1261,11 +1228,10 @@ TEST_F(BlobfsWithFvmTest, ResizePartition) {
 
   size_t required = fs().options().fvm_slice_size / kBlobfsInodeSize + 2;
   for (size_t i = 0; i < required; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), kBlobfsInodeSize, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), kBlobfsInodeSize);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
   }
 
   // Remount partition.
@@ -1326,8 +1292,7 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
 TEST_P(BlobfsIntegrationTest, FailedWrite) {
   const uint32_t pages_per_block = kBlobfsBlockSize / fs().options().device_block_size;
 
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), kBlobfsBlockSize, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), kBlobfsBlockSize);
 
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd) << "Failed to create blob";
@@ -1361,7 +1326,7 @@ TEST_P(BlobfsIntegrationTest, FailedWrite) {
   // syncfs will return a failed response.
   ASSERT_LT(syncfs(fd.get()), 0);
 
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), kBlobfsBlockSize, &info));
+  info = GenerateRandomBlob(fs().mount_path(), kBlobfsBlockSize);
   fd.reset(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd) << "Failed to create blob";
 
@@ -1384,7 +1349,7 @@ void CloneThread(CloneThreadArgs* args) {
   while (!args->done) {
     fbl::unique_fd fd(open(args->info->path, O_RDONLY));
     ASSERT_TRUE(fd);
-    void* addr = mmap(NULL, args->info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+    void* addr = mmap(nullptr, args->info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
     ASSERT_NE(addr, MAP_FAILED) << "Could not mmap blob";
     // Explicitly close |fd| before unmapping.
     fd.reset();
@@ -1401,12 +1366,11 @@ void CloneThread(CloneThreadArgs* args) {
 // blob from being discarded while there are active clones).
 // See fxbug.dev/53882 for background on this test case.
 TEST_P(BlobfsIntegrationTest, VmoCloneWatchingTest) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateBlob(CharFill<'A'>, fs().mount_path(), 4096, &info));
+  std::unique_ptr<BlobInfo> info = GenerateBlob(CharFill<'A'>, fs().mount_path(), 4096);
 
   {
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
   }
 
   struct CloneThreadArgs thread_args {
@@ -1418,7 +1382,7 @@ TEST_P(BlobfsIntegrationTest, VmoCloneWatchingTest) {
   for (int i = 0; i < kIterations; ++i) {
     fbl::unique_fd fd(open(info->path, O_RDONLY));
     ASSERT_TRUE(fd);
-    void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+    void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
     ASSERT_NE(addr, MAP_FAILED) << "Could not mmap blob";
     fd.reset();
 
@@ -1448,11 +1412,11 @@ class BlobfsMetricIntegrationTest : public FdioTest {
     ASSERT_TRUE(hierarchy_or_error.is_ok());
     inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
     *total_read_bytes = 0;
-    for (const std::string algorithm : algorithms) {
-      for (const std::string stat : read_methods) {
+    for (const std::string& algorithm : algorithms) {
+      for (const std::string& stat : read_methods) {
         uint64_t read_bytes;
         ASSERT_NO_FATAL_FAILURE(
-            GetUintMetricFromHierarchy(&hierarchy, {stat, algorithm}, "read_bytes", &read_bytes));
+            GetUintMetricFromHierarchy(hierarchy, {stat, algorithm}, "read_bytes", &read_bytes));
         *total_read_bytes += read_bytes;
       }
     }
@@ -1466,8 +1430,7 @@ TEST_F(BlobfsMetricIntegrationTest, CreateAndRead) {
 
   // Create a new blob with random contents on the mounted filesystem. This is
   // both random and small enough that it should not get compressed.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(".", 1 << 10, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 10);
   {
     fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd.is_valid());

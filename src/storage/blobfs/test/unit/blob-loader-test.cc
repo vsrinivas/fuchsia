@@ -99,8 +99,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     EXPECT_EQ(fs_->OpenRootNode(&root), ZX_OK);
     fs::Vnode* root_node = root.get();
 
-    std::unique_ptr<BlobInfo> info;
-    GenerateRealisticBlob("", sz, blob_layout_format_, &info);
+    std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", sz);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
@@ -144,19 +143,23 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
   void CheckMerkleTreeContents(const fzl::OwnedVmoMapper& merkle, const BlobInfo& info) {
+    std::unique_ptr<MerkleTreeInfo> merkle_tree = CreateMerkleTree(
+        info.data.get(), info.size_data, ShouldUseCompactMerkleTreeFormat(blob_layout_format_));
     ASSERT_TRUE(merkle.vmo().is_valid());
-    ASSERT_GE(merkle.size(), info.size_merkle);
+    ASSERT_GE(merkle.size(), merkle_tree->merkle_tree_size);
     switch (blob_layout_format_) {
       case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
         // In the padded layout the Merkle starts at the start of the vmo.
-        EXPECT_EQ(memcmp(merkle.start(), info.merkle.get(), info.size_merkle), 0);
+        EXPECT_EQ(
+            memcmp(merkle.start(), merkle_tree->merkle_tree.get(), merkle_tree->merkle_tree_size),
+            0);
         break;
       case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
         // In the compact layout the Merkle tree is aligned to end at the end of the vmo.
-        EXPECT_EQ(
-            memcmp(static_cast<const uint8_t*>(merkle.start()) + (merkle.size() - info.size_merkle),
-                   info.merkle.get(), info.size_merkle),
-            0);
+        EXPECT_EQ(memcmp(static_cast<const uint8_t*>(merkle.start()) +
+                             (merkle.size() - merkle_tree->merkle_tree_size),
+                         merkle_tree->merkle_tree.get(), merkle_tree->merkle_tree_size),
+                  0);
         break;
     }
   }
@@ -168,7 +171,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   BlobLayoutFormat blob_layout_format_;
 };
 
-// A seperate parameterized test fixture that will only be run with compression algorithms that
+// A separate parameterized test fixture that will only be run with compression algorithms that
 // support paging.
 using BlobLoaderPagedTest = BlobLoaderTest;
 
@@ -184,7 +187,7 @@ TEST_P(BlobLoaderTest, NullBlob) {
   EXPECT_EQ(data.size(), 0ul);
 
   EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(info->size_merkle, 0ul);
+  EXPECT_EQ(merkle.size(), 0ul);
 }
 
 TEST_P(BlobLoaderTest, SmallBlob) {
@@ -202,7 +205,7 @@ TEST_P(BlobLoaderTest, SmallBlob) {
   EXPECT_EQ(memcmp(data.start(), info->data.get(), info->size_data), 0);
 
   EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(info->size_merkle, 0ul);
+  EXPECT_EQ(merkle.size(), 0ul);
 }
 
 TEST_P(BlobLoaderPagedTest, SmallBlob) {
@@ -225,7 +228,7 @@ TEST_P(BlobLoaderPagedTest, SmallBlob) {
   EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
 
   EXPECT_FALSE(merkle.vmo().is_valid());
-  EXPECT_EQ(info->size_merkle, 0ul);
+  EXPECT_EQ(merkle.size(), 0ul);
 }
 
 TEST_P(BlobLoaderTest, LargeBlob) {

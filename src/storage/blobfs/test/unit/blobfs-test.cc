@@ -214,8 +214,7 @@ TEST_F(BlobfsTest, TrimsData) {
   ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
   fs::Vnode* root_node = root.get();
 
-  std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob("", 1024, GetBlobLayoutFormat(fs_->Info()), &info);
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 1024);
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
@@ -295,9 +294,8 @@ TEST_F(BlobfsTestWithLargeDevice, WritingBlobLargerThanWritebackCapacitySucceeds
   ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
   fs::Vnode* root_node = root.get();
 
-  std::unique_ptr<BlobInfo> info;
-  GenerateRealisticBlob("", (fs_->WriteBufferBlockCount() + 1) * kBlobfsBlockSize,
-                        GetBlobLayoutFormat(fs_->Info()), &info);
+  std::unique_ptr<BlobInfo> info =
+      GenerateRealisticBlob("", (fs_->WriteBufferBlockCount() + 1) * kBlobfsBlockSize);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root_node->Create(info->path + 1, 0, &file), ZX_OK);
   auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
@@ -339,8 +337,7 @@ TEST_F(FsckAtEndOfEveryTransactionTest, FsckAtEndOfEveryTransaction) {
   ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
   fs::Vnode* root_node = root.get();
 
-  std::unique_ptr<BlobInfo> info;
-  GenerateRealisticBlob("", 500123, GetBlobLayoutFormat(fs_->Info()), &info);
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 500123);
   {
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root_node->Create(info->path + 1, 0, &file), ZX_OK);
@@ -369,11 +366,9 @@ void VnodeSync(fs::Vnode* vnode) {
   }
 }
 
-std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t size,
-                                     BlobLayoutFormat layout) {
+std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t size) {
   // Create fragmentation by creating blobs and deleting a few.
-  std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob("", size, layout, &info);
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", size);
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
@@ -576,7 +571,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
   // look like (first 10 bits set and all other bits unset.)
   // 111111111100000000....
   for (int i = 0; i < kSmallBlobCount; i++) {
-    infos.push_back(CreateBlob(root, 8192, GetBlobLayoutFormat(fs->Info())));
+    infos.push_back(CreateBlob(root, 8192));
   }
 
   expected.blobs_in_use = kSmallBlobCount;
@@ -617,7 +612,7 @@ TEST(BlobfsFragmentaionTest, FragmentationMetrics) {
 
   // Create a huge(10 blocks) blob that potentially fills atleast three free fragments that we
   // created above.
-  auto info = CreateBlob(root, 20 * 8192, GetBlobLayoutFormat(fs->Info()));
+  auto info = CreateBlob(root, 20 * 8192);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Lookup(info->path, &file), ZX_OK);
   fs::VnodeAttributes attributes;

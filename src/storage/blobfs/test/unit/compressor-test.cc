@@ -420,13 +420,12 @@ class BlobfsTestFixture : public testing::Test {
   }
 
   fbl::RefPtr<fs::Vnode> AddBlobToBlobfs(size_t data_size, DataType type) {
-    std::unique_ptr<BlobInfo> blob_info;
-    GenerateBlob(
-        [type](char* data, size_t length) {
+    std::unique_ptr<BlobInfo> blob_info = GenerateBlob(
+        [type](uint8_t* data, size_t length) {
           auto generated_data = GenerateInput(type, 0, length);
           memcpy(data, generated_data.get(), length);
         },
-        "", data_size, GetBlobLayoutFormat(blobfs_->Info()), &blob_info);
+        "", data_size);
 
     fbl::RefPtr<fs::Vnode> file;
     zx_status_t status = root_->Create(blob_info->path + 1, 0, &file);

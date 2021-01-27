@@ -23,8 +23,6 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
-
 class LargeBlobTest : public BlobfsFixedDiskSizeTest {
  public:
   LargeBlobTest() : BlobfsFixedDiskSizeTest(GetDiskSize()) {}
@@ -47,12 +45,11 @@ class LargeBlobTest : public BlobfsFixedDiskSizeTest {
 
 TEST_F(LargeBlobTest, UseSecondBitmap) {
   // Create (and delete) a blob large enough to overflow into the second bitmap block.
-  std::unique_ptr<BlobInfo> info;
   size_t blob_size = ((GetDataBlockCount() / 2) + 1) * kBlobfsBlockSize;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), blob_size, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), blob_size);
 
   fbl::unique_fd fd;
-  ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
   ASSERT_EQ(syncfs(fd.get()), 0);
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(unlink(info->path), 0);

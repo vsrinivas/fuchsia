@@ -84,8 +84,7 @@ TEST_F(OutgoingMountTest, OutgoingDirectoryDataRootCanHaveBlobsCreated) {
 // creation then it does not support VMO_FLAG_EXEC to obtain executable VMOs from blobs.
 TEST_F(DataMountTest, CannotLoadBlobsExecutable) {
   // Create a new blob with random contents on the mounted filesystem.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(".", 1 << 16, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 16);
 
   fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd.is_valid());

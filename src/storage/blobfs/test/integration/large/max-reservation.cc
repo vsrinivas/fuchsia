@@ -22,8 +22,7 @@ TEST_F(BlobfsTest, MaxReservation) {
   // Refer to fxbug.dev/54001 for the bug that lead to this test.
   size_t count = 0;
   for (uint64_t i = 0; i < kBlobfsDefaultInodeCount; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 64, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 64);
 
     // Write the blob
     {

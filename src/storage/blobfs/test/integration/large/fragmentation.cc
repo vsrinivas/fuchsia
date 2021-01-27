@@ -44,9 +44,8 @@ TEST_P(FragmentationTest, Fragmentation) {
   size_t large_blob_storage_space_usage = 0;
   size_t count = 0;
   while (true) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(
-        GenerateRandomBlob(fs().mount_path(), do_small_blob ? kSmallSize : kLargeSize, &info));
+    std::unique_ptr<BlobInfo> info =
+        GenerateRandomBlob(fs().mount_path(), do_small_blob ? kSmallSize : kLargeSize);
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd) << "Failed to create blob";
     if (capture_large_blob_storage_space_usage && !do_small_blob) {
@@ -81,8 +80,7 @@ TEST_P(FragmentationTest, Fragmentation) {
 
   // We have filled up the disk with both small and large blobs.
   // Observe that we cannot add another large blob.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), kLargeSize, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), kLargeSize);
 
   // ... and we don't have space (as we try allocating).
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));

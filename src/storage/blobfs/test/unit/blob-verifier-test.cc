@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/blob-verifier.h"
 
+#include <memory>
 #include <random>
 
 #include <digest/merkle-tree.h>
@@ -22,7 +23,7 @@ class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
 
   void SetUp() override { srand(testing::UnitTest::GetInstance()->random_seed()); }
 
-  static zx::status<MerkleTreeInfo> GenerateTree(const uint8_t* data, size_t len) {
+  static std::unique_ptr<MerkleTreeInfo> GenerateTree(const uint8_t* data, size_t len) {
     return CreateMerkleTree(data, len, ShouldUseCompactMerkleTreeFormat(GetParam()));
   }
 
@@ -32,13 +33,12 @@ class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
 
 void FillWithRandom(uint8_t* buf, size_t len) {
   for (unsigned i = 0; i < len; ++i) {
-    buf[i] = (uint8_t)rand();
+    buf[i] = static_cast<uint8_t>(rand());
   }
 }
 
 TEST_P(BlobVerifierTest, CreateAndVerify_NullBlob) {
   auto merkle_tree = GenerateTree(nullptr, 0);
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(merkle_tree->root), Metrics(), 0ul, nullptr,
@@ -53,7 +53,6 @@ TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob) {
   FillWithRandom(buf, sizeof(buf));
 
   auto merkle_tree = GenerateTree(buf, sizeof(buf));
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_EQ(BlobVerifier::CreateWithoutTree(std::move(merkle_tree->root), Metrics(), sizeof(buf),
@@ -76,7 +75,6 @@ TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob_DataCorrupted) {
   FillWithRandom(buf, sizeof(buf));
 
   auto merkle_tree = GenerateTree(buf, sizeof(buf));
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   // Invert one character
   buf[42] = ~(buf[42]);
@@ -96,7 +94,6 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob) {
   FillWithRandom(buf.get(), sz);
 
   auto merkle_tree = GenerateTree(buf.get(), sz);
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_EQ(
@@ -127,7 +124,6 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
   FillWithRandom(buf.get(), sz);
 
   auto merkle_tree = GenerateTree(buf.get(), sz);
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   // Invert a char in the first block. All other blocks are still valid.
   buf.get()[42] = ~(buf.get()[42]);
@@ -155,7 +151,6 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
   FillWithRandom(buf.get(), sz);
 
   auto merkle_tree = GenerateTree(buf.get(), sz);
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   // Invert a char in the tree.
   merkle_tree->merkle_tree.get()[0] = ~(merkle_tree->merkle_tree.get()[0]);
@@ -184,7 +179,6 @@ TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyToFail) {
   memset(&buf[kBlobSize], 0, kBlobfsBlockSize - kBlobSize);
 
   auto merkle_tree = GenerateTree(buf, kBlobSize);
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
   EXPECT_EQ(BlobVerifier::CreateWithoutTree(std::move(merkle_tree->root), Metrics(), kBlobSize,
@@ -203,7 +197,6 @@ TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
   FillWithRandom(buf.data(), kBlobSize);
 
   auto merkle_tree = GenerateTree(buf.data(), kBlobSize);
-  ASSERT_EQ(merkle_tree.status_value(), ZX_OK);
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_EQ(BlobVerifier::Create(std::move(merkle_tree->root), Metrics(),

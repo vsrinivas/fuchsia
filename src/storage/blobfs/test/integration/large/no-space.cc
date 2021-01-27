@@ -31,8 +31,7 @@ TEST_P(NoSpaceTest, NoSpace) {
   // Keep generating blobs until we run out of space.
   size_t count = 0;
   while (true) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 17, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
 
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd) << "Failed to create blob";

@@ -90,12 +90,13 @@ TEST_F(QueryServiceTest, QueryInfo) {
   size_t total_bytes = 0;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(0, 0));
   for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << i, &info));
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << i);
+    std::unique_ptr<MerkleTreeInfo> merkle_tree =
+        CreateMerkleTree(info->data.get(), info->size_data, /*use_compact_format=*/true);
 
     fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURE(MakeBlob(info.get(), &fd));
-    total_bytes += fbl::round_up(info->size_merkle + info->size_data, kBlobfsBlockSize);
+    ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
+    total_bytes += fbl::round_up(merkle_tree->merkle_tree_size + info->size_data, kBlobfsBlockSize);
   }
 
   ASSERT_NO_FATAL_FAILURE(QueryInfo(6, total_bytes));

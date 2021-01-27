@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 
 #include <condition_variable>
+#include <memory>
 
 #include <block-client/cpp/fake-device.h>
 #include <digest/digest.h>
@@ -91,8 +92,7 @@ TEST_P(BlobTest, TruncateWouldOverflow) {
 TEST_P(BlobTest, SyncBehavior) {
   auto root = OpenRoot();
 
-  std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob("", 64, GetBlobLayoutFormat(fs_->Info()), &info);
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
@@ -135,11 +135,10 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
                            zx::resource(), &fs_),
             ZX_OK);
 
-  std::unique_ptr<BlobInfo> info;
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
   uint64_t block;
   {
     auto root = OpenRoot();
-    GenerateRandomBlob("", 64, GetBlobLayoutFormat(fs_->Info()), &info);
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
     size_t out_actual = 0;
@@ -205,11 +204,10 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
 
 TEST_P(BlobTestWithOldRevision, ReadWriteAllCompressionFormats) {
   auto root = OpenRoot();
-  std::unique_ptr<BlobInfo> info;
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
 
   // Write the blob
   {
-    GenerateRealisticBlob("", 1 << 16, GetBlobLayoutFormat(fs_->Info()), &info);
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
     size_t out_actual = 0;
@@ -254,15 +252,16 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
                            zx::resource(), &fs_),
             ZX_OK);
 
-  std::unique_ptr<BlobInfo> info;
+  // Create a blob where the Merkle tree in the compact layout fits perfectly into the space
+  // remaining at the end of the blob.
+  ASSERT_EQ(fs_->Info().block_size, digest::kDefaultNodeSize);
+  std::unique_ptr<BlobInfo> info =
+      GenerateRealisticBlob("", (digest::kDefaultNodeSize - digest::kSha256Length) * 3);
   {
-    // Create a blob where the Merkle tree in the compact layout fits perfectly into the space
-    // remaining at the end of the blob.
-    ASSERT_EQ(fs_->Info().block_size, digest::kDefaultNodeSize);
-    GenerateRealisticBlob("", (digest::kDefaultNodeSize - digest::kSha256Length) * 3,
-                          GetBlobLayoutFormat(fs_->Info()), &info);
     if (GetBlobLayoutFormat(fs_->Info()) == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
-      EXPECT_EQ(info->size_data + info->size_merkle, digest::kDefaultNodeSize * 3);
+      std::unique_ptr<MerkleTreeInfo> merkle_tree =
+          CreateMerkleTree(info->data.get(), info->size_data, /*use_compact_format=*/true);
+      EXPECT_EQ(info->size_data + merkle_tree->merkle_tree_size, digest::kDefaultNodeSize * 3);
     }
     fbl::RefPtr<fs::Vnode> file;
     auto root = OpenRoot();
@@ -292,8 +291,7 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
 }
 
 TEST_P(BlobTest, WriteErrorsAreFused) {
-  std::unique_ptr<BlobInfo> info;
-  GenerateRandomBlob("", kBlockSize * kNumBlocks, GetBlobLayoutFormat(fs_->Info()), &info);
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", kBlockSize * kNumBlocks);
   auto root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
@@ -308,11 +306,10 @@ using BlobMigrationTest = BlobTestWithOldRevision;
 
 TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
   auto root = OpenRoot();
-  std::unique_ptr<BlobInfo> info;
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 300 * 1024);
 
   // Write the blob
   {
-    GenerateRandomBlob("", 300 * 1024, GetBlobLayoutFormat(fs_->Info()), &info);
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
     auto blob = fbl::RefPtr<Blob>::Downcast(file);
@@ -346,11 +343,10 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
 
 TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
   auto root = OpenRoot();
-  std::unique_ptr<BlobInfo> info;
+  // Create a blob that takes up half the disk.
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", kNumBlocks * kBlockSize / 2);
 
-  // Write a blob that takes up half the disk.
   {
-    GenerateRandomBlob("", kNumBlocks * kBlockSize / 2, GetBlobLayoutFormat(fs_->Info()), &info);
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
     auto blob = fbl::RefPtr<Blob>::Downcast(file);

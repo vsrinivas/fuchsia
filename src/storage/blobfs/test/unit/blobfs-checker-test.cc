@@ -65,8 +65,7 @@ class BlobfsCheckerTest : public testing::Test {
   // of the provided Vnode. Optionally returns the block the blob starts at if block_out is
   // provided, and the size of the blob if size_out is provided.
   void AddRandomBlob(fs::Vnode* node, uint64_t* block_out = nullptr, uint64_t* size_out = nullptr) {
-    std::unique_ptr<BlobInfo> info;
-    GenerateRandomBlob("", 1024, GetBlobLayoutFormat(fs_->Info()), &info);
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 1024);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
@@ -138,7 +137,7 @@ class BlobfsCheckerTest : public testing::Test {
 
 class BlobfsCheckerPagedTest : public BlobfsCheckerTest {
  public:
-  void SetUp() {
+  void SetUp() override {
     enable_paging = true;
     BlobfsCheckerTest::SetUp();
   }

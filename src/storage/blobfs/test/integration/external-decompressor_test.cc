@@ -64,7 +64,7 @@ TEST(ExternalDecompressorSetUpTest, DecompressedVmoMissingWrite) {
             compressed_vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & (~ZX_RIGHT_WRITE), &decompressed_vmo));
 
   zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
-      ExternalDecompressorClient::Create(std::move(decompressed_vmo), std::move(compressed_vmo));
+      ExternalDecompressorClient::Create(decompressed_vmo, compressed_vmo);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, client_or.status_value());
 }
 
@@ -76,7 +76,7 @@ TEST(ExternalDecompressorSetUpTest, CompressedVmoMissingDuplicate) {
                                               &compressed_vmo));
 
   zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
-      ExternalDecompressorClient::Create(std::move(decompressed_vmo), std::move(compressed_vmo));
+      ExternalDecompressorClient::Create(decompressed_vmo, compressed_vmo);
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, client_or.status_value());
 }
 
@@ -99,8 +99,7 @@ class ExternalDecompressorTest : public ::testing::Test {
     ASSERT_EQ(ZX_OK, decompressed_mapper_.Map(std::move(decompressed_vmo), kMapSize));
 
     zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
-        ExternalDecompressorClient::Create(std::move(remote_decompressed_vmo),
-                                           std::move(remote_compressed_vmo));
+        ExternalDecompressorClient::Create(remote_decompressed_vmo, remote_compressed_vmo);
     ASSERT_EQ(ZX_OK, client_or.status_value());
     client_ = std::move(client_or.value());
   }
@@ -188,9 +187,7 @@ class ExternalDecompressorE2ePagedTest : public FdioTest {
 
 TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
   // Create a new blob on the mounted filesystem.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(
-      GenerateRealisticBlob(".", kDataSize, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob(".", kDataSize);
   {
     fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd.is_valid());
@@ -216,9 +213,7 @@ TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
 }
 
 TEST_F(ExternalDecompressorE2ePagedTest, MultiframeDecompression) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(
-      GenerateRealisticBlob(".", kDataSize, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob(".", kDataSize);
   {
     fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd.is_valid());
@@ -274,9 +269,7 @@ class ExternalDecompressorE2eUnpagedTest : public FdioTest {
 
 TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {
   // Create a new blob on the mounted filesystem.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(
-      GenerateRealisticBlob(".", kDataSize, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob(".", kDataSize);
   {
     fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd.is_valid());

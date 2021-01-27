@@ -13,7 +13,7 @@
 namespace blobfs {
 
 // Make sure we do not exceed maximum fd count.
-static_assert(FDIO_MAX_FD >= 256, "");
+static_assert(FDIO_MAX_FD >= 256);
 constexpr uint32_t kMaxBlobs = FDIO_MAX_FD - 32;
 
 enum class BlobList::QueueId : uint32_t { kCreated = 0, kTruncated, kWritten };
@@ -93,9 +93,8 @@ void BlobList::CloseFilesFromQueue(QueueId queue) {
 }
 
 void BlobList::CreateBlob(unsigned int* rand_state, size_t num_writes) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(
-      GenerateRandomBlob(mount_path_, 1 + (rand_r(rand_state) % (1 << 16)), &info));
+  std::unique_ptr<BlobInfo> info =
+      GenerateRandomBlob(mount_path_, 1 + (rand_r(rand_state) % (1 << 16)));
 
   BlobFile file(std::move(info), num_writes);
 

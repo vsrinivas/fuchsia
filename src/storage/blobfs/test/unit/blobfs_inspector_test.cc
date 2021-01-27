@@ -97,7 +97,7 @@ class ArrayBufferFactory : public disk_inspector::BufferFactory {
   uint32_t block_size_;
 };
 
-// Initialize a FakeTrnasactionHandler backed by a buffer representing a
+// Initialize a FakeTransactionHandler backed by a buffer representing a
 // a fresh Blobfs partition and journal entries.
 void CreateFakeBlobfsHandler(std::unique_ptr<FakeTransactionHandler>* handler) {
   auto device = std::make_unique<storage::ArrayBuffer>(kBlockCount, kBlobfsBlockSize);
@@ -246,7 +246,7 @@ TEST(BlobfsInspector, InspectJournalSuperblock) {
 
   auto result = inspector->InspectJournalSuperblock();
   ASSERT_TRUE(result.is_ok());
-  fs::JournalInfo journal_info = std::move(result.value());
+  fs::JournalInfo journal_info = result.value();
 
   EXPECT_EQ(fs::kJournalMagic, journal_info.magic);
   EXPECT_EQ(0u, journal_info.start_block);
@@ -466,7 +466,7 @@ TEST(BlobfsInspector, WriteJournalSuperblock) {
   // Make sure superblock original values are correct.
   auto inspect_result = inspector->InspectJournalSuperblock();
   ASSERT_TRUE(inspect_result.is_ok());
-  fs::JournalInfo journal_info = std::move(inspect_result.value());
+  fs::JournalInfo journal_info = inspect_result.value();
   ASSERT_EQ(fs::kJournalMagic, journal_info.magic);
   ASSERT_EQ(0ul, journal_info.start_block);
 
@@ -479,7 +479,7 @@ TEST(BlobfsInspector, WriteJournalSuperblock) {
   // Re-inspect that values have changed.
   inspect_result = inspector->InspectJournalSuperblock();
   ASSERT_TRUE(inspect_result.is_ok());
-  journal_info = std::move(inspect_result.value());
+  journal_info = inspect_result.value();
   ASSERT_EQ(magic, journal_info.magic);
   ASSERT_EQ(start_block, journal_info.start_block);
 }

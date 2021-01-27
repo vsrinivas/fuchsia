@@ -56,8 +56,7 @@ class ExecutableMountTest : public FdioTest {
 // fdio_get_vmo_exec exercises.
 TEST_F(ExecutableMountTest, CanLoadBlobsExecutable) {
   // Create a new blob with random contents on the mounted filesystem.
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(".", 1 << 16, &info));
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 16);
 
   fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd.is_valid());
