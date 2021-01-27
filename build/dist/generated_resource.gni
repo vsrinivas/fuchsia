@@ -35,19 +35,22 @@ template("generated_resource") {
 
     # Add metadata to add that file to a filesystem image.
     metadata = {
-      # Used by the distribution_manifest template.
+      # Used by the distribution_manifest() template.
       distribution_entries_barrier = []
       distribution_entries = []
 
-      migrated_zbi_barrier = []
+      # Used by zbi() template.
+      zbi_input_barrier = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
 
+      # Stop *_manifest() and zbi_test() from picking up files or
+      # zbi_input() items from the deps, but let them reach the data_deps.
       if (defined(data_deps)) {
         distribution_entries_barrier += data_deps
-        migrated_zbi_barrier += data_deps
+        zbi_input_barrier += data_deps
       }
 
       distribution_entries += [

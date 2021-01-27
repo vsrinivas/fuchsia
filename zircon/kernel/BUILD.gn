@@ -542,10 +542,10 @@ if (is_kernel) {
         },
       ]
 
-      # This metadata makes the kernel act as a zbi_input() target so it can
-      # be a dependency of a zbi() target to get into the image.
-      migrated_zbi_barrier = []
-      migrated_zbi_input_args = [
+      # Used by the zbi() template. This metadata makes the kernel act as a zbi_input()
+      # target so it can be a dependency of a zbi() target to get into the image.
+      zbi_input_barrier = []
+      zbi_input_args = [
         "--type=container",
         output_path,
       ]

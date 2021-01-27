@@ -76,8 +76,8 @@ template("zbi_input") {
                            ])
 
     metadata = {
-      migrated_zbi_barrier = []
-      migrated_zbi_input_args = []
+      zbi_input_barrier = []
+      zbi_input_args = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
@@ -86,14 +86,14 @@ template("zbi_input") {
       # When a zbi() target depends on this zbi_input() target, it includes
       # other zbi_input() targets in this target's deps, but not data_deps.
       if (defined(invoker.deps)) {
-        migrated_zbi_barrier += invoker.deps
+        zbi_input_barrier += invoker.deps
       }
 
       # An explicit type applies only to $sources and $args.
       if (defined(invoker.type) && invoker.type != "") {
-        migrated_zbi_input_args += [ "--type=${invoker.type}" ]
+        zbi_input_args += [ "--type=${invoker.type}" ]
       } else if (defined(invoker.args) || defined(invoker.sources)) {
-        migrated_zbi_input_args += [
+        zbi_input_args += [
           # The implicit type is always --files, and needs to be reset in
           # case the previous `zbi_input_args` list collected left a
           # different `--type=...` as the last state.
@@ -108,17 +108,17 @@ template("zbi_input") {
       # Explicit $args come first, for e.g. "-u" or "-g" to affect inputs.
       # $args may also contain "--entry=..." payloads directly.
       if (defined(invoker.args)) {
-        migrated_zbi_input_args += invoker.args
+        zbi_input_args += invoker.args
       }
 
       if (defined(invoker.sources)) {
-        migrated_zbi_input_args += rebase_path(invoker.sources, root_build_dir)
+        zbi_input_args += rebase_path(invoker.sources, root_build_dir)
       }
 
       # Always include the manifest generated from the deps here.  The
       # presence of the fini_manifest() target will prevent zbi()
       # from collecting entries that are redundant with this manifest.
-      migrated_zbi_input_args += [
+      zbi_input_args += [
         "--prefix=$prefix",
         "--files",
         rebase_path(manifest_file, root_build_dir),

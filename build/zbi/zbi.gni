@@ -70,11 +70,21 @@ template("zbi") {
                            ])
   }
 
+  # Collect metadata corresponding to additional command-line arguments
+  # passed to the `zbi` host tool, describing inputs to be assembled into
+  # the final ZBI image. The schema for the metadata is:
+  #
+  #   zbi_input_args: a list of strings, each one corresponding to a
+  #     command-line argument.
+  #
+  #   zbi_input_barrier: usual GN metadata collection walk key, used to
+  #     restrict collection to specific target dependencies when needed.
+  #
   generated_file(rsp_target) {
     forward_variables_from(invoker, [ "testonly" ])
     deps = [ ":$input_target" ]
-    data_keys = [ "migrated_zbi_input_args" ]
-    walk_keys = [ "migrated_zbi_barrier" ]
+    data_keys = [ "zbi_input_args" ]
+    walk_keys = [ "zbi_input_barrier" ]
     output_conversion = "list lines"
     outputs = [ rsp_file ]
   }

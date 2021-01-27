@@ -56,15 +56,16 @@ template("zbi_executable") {
     }
 
     metadata = {
-      migrated_zbi_input_args = []
+      zbi_input_args = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
 
-      # This metadata makes the kernel act as a zbi_input() target so it can
-      # be a dependency of a zbi() target to get into the image.
-      migrated_zbi_input_args += [
+      # Used by zbi() template. This metadata makes the kernel act as a
+      # zbi_input() target so it can be a dependency of a zbi() target to get
+      # into the image.
+      zbi_input_args += [
         "--type=container",
         rebase_path(output_file, root_build_dir),
       ]
