@@ -102,6 +102,7 @@ rustc_library("lib") {
     "src/lib.rs",
     "src/lifecycle/container.rs",
     "src/lifecycle/mod.rs",
+    "src/logs/budget.rs",
     "src/logs/buffer.rs",
     "src/logs/buffer/arc_list.rs",
     "src/logs/container.rs",

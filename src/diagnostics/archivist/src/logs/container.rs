@@ -5,7 +5,8 @@
 use crate::{
     container::ComponentIdentity,
     logs::{
-        buffer::AccountedBuffer,
+        budget::BudgetHandle,
+        buffer::ArcList,
         error::StreamError,
         socket::{Encoding, LogMessageSocket},
         stats::LogStreamStats,
@@ -30,8 +31,11 @@ pub struct LogsArtifactsContainer {
     /// Inspect instrumentation.
     pub stats: Arc<LogStreamStats>,
 
+    /// Handle to the overall budget for log retention.
+    budget: BudgetHandle,
+
     /// Buffer for all log messages.
-    buffer: Arc<Mutex<AccountedBuffer<Message>>>,
+    buffer: ArcList<Message>,
 
     /// Mutable state for the container.
     state: Mutex<ContainerState>,
@@ -50,9 +54,11 @@ impl LogsArtifactsContainer {
         identity: Arc<ComponentIdentity>,
         interest_selectors: &[LogInterestSelector],
         stats: LogStreamStats,
-        buffer: Arc<Mutex<AccountedBuffer<Message>>>,
+        buffer: ArcList<Message>,
+        budget: BudgetHandle,
     ) -> Self {
         let new = Self {
+            budget,
             buffer,
             identity,
             state: Mutex::new(ContainerState {
@@ -151,8 +157,9 @@ impl LogsArtifactsContainer {
 
     /// Updates log stats in inspect and push the message onto the container's buffer.
     pub fn ingest_message(&self, message: Message) {
+        self.budget.allocate(message.metadata.size_bytes);
         self.stats.ingest_message(&message);
-        self.buffer.lock().push(message);
+        self.buffer.push_back(message);
     }
 
     /// Set the `Interest` for this component, calling `LogSink/OnRegisterInterest` with all

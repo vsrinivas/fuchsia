@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use super::{buffer::Accounted, message::Message};
+use super::message::Message;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
@@ -100,7 +100,7 @@ impl Listener {
         let mut batch_size = 0;
         let mut filtered_batch = vec![];
         for msg in messages {
-            let size = msg.bytes_used();
+            let size = msg.metadata.size_bytes;
             if self.filter.should_send(&msg) {
                 if batch_size + size > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
                     self.send_filtered_logs(&mut filtered_batch).await;

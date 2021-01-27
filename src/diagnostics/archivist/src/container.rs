@@ -10,8 +10,8 @@ use {
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
         logs::{
-            buffer::AccountedBuffer, container::LogsArtifactsContainer, stats::LogStreamStats,
-            Message,
+            budget::BudgetManager, buffer::ArcList, container::LogsArtifactsContainer,
+            stats::LogStreamStats, Message,
         },
     },
     diagnostics_data as schema,
@@ -22,7 +22,6 @@ use {
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
-    parking_lot::Mutex,
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -148,7 +147,8 @@ impl ComponentDiagnostics {
     pub fn logs(
         &mut self,
         // TODO(fxbug.dev/47611) remove this and construct a local buffer in this function
-        buffer: &Arc<Mutex<AccountedBuffer<Message>>>,
+        buffer: &ArcList<Message>,
+        budget: &BudgetManager,
         interest_selectors: &[LogInterestSelector],
     ) -> Arc<LogsArtifactsContainer> {
         if let Some(logs) = &self.logs {
@@ -162,6 +162,7 @@ impl ComponentDiagnostics {
                 interest_selectors,
                 stats,
                 buffer.clone(),
+                budget.handle(),
             ));
             self.logs = Some(container.clone());
             container

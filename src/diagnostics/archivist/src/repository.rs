@@ -9,7 +9,8 @@ use {
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
-            buffer::{AccountedBuffer, LazyItem},
+            budget::BudgetManager,
+            buffer::{ArcList, LazyItem},
             container::LogsArtifactsContainer,
             debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
             error::LogsError,
@@ -24,13 +25,11 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_logger::{LogInterestSelector, LogMarker, LogRequest, LogRequestStream},
     fuchsia_async::Task,
-    fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::WithInspect,
-    fuchsia_zircon as zx,
+    fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,
     io_util,
-    parking_lot::{Mutex, RwLock},
+    parking_lot::RwLock,
     selectors,
     std::collections::HashMap,
     std::sync::Arc,
@@ -54,18 +53,20 @@ impl std::ops::Deref for DataRepo {
 #[cfg(test)]
 impl Default for DataRepo {
     fn default() -> Self {
-        DataRepo {
-            inner: DataRepoState::new(
-                crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
-                &Default::default(),
-            ),
-        }
+        let buffer = ArcList::default();
+        let budget =
+            BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES, &buffer);
+        DataRepo { inner: DataRepoState::new(buffer, &budget, &Default::default()) }
     }
 }
 
 impl DataRepo {
-    pub fn new(logs_capacity: usize, parent: &fuchsia_inspect::Node) -> Self {
-        DataRepo { inner: DataRepoState::new(logs_capacity, parent) }
+    pub fn new(
+        logs_buffer: ArcList<Message>,
+        logs_budget: &BudgetManager,
+        parent: &fuchsia_inspect::Node,
+    ) -> Self {
+        DataRepo { inner: DataRepoState::new(logs_buffer, logs_budget, parent) }
     }
 
     /// Drain the kernel's debug log. The returned future completes once
@@ -166,7 +167,7 @@ impl DataRepo {
     }
 
     pub fn cursor(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
-        self.read().logs_buffer.lock().cursor(mode).map(|item| match item {
+        self.read().logs_buffer.cursor(mode).map(|item| match item {
             LazyItem::Next(m) => m,
             LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
         })
@@ -175,7 +176,7 @@ impl DataRepo {
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
     pub fn terminate_logs(&self) {
-        self.read().logs_buffer.lock().terminate();
+        self.read().logs_buffer.terminate();
     }
 }
 
@@ -183,20 +184,22 @@ pub struct DataRepoState {
     pub data_directories: trie::Trie<String, ComponentDiagnostics>,
     inspect_node: inspect::Node,
     logs_interest: Vec<LogInterestSelector>,
-    logs_buffer: Arc<Mutex<AccountedBuffer<Message>>>,
+    logs_budget: BudgetManager,
+    logs_buffer: ArcList<Message>,
 }
 
 impl DataRepoState {
-    fn new(logs_capacity: usize, parent: &fuchsia_inspect::Node) -> Arc<RwLock<Self>> {
+    fn new(
+        logs_buffer: ArcList<Message>,
+        logs_budget: &BudgetManager,
+        parent: &fuchsia_inspect::Node,
+    ) -> Arc<RwLock<Self>> {
         Arc::new(RwLock::new(Self {
             inspect_node: parent.create_child("sources"),
             data_directories: trie::Trie::new(),
             logs_interest: vec![],
-            logs_buffer: Arc::new(Mutex::new(
-                AccountedBuffer::new(logs_capacity)
-                    .with_inspect(parent, "logs_buffer")
-                    .expect("failed to attach inspect"),
-            )),
+            logs_budget: logs_budget.clone(),
+            logs_buffer,
         }))
     }
 
@@ -285,7 +288,8 @@ impl DataRepoState {
             () => {{
                 let mut to_insert =
                     ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node);
-                let logs = to_insert.logs(&self.logs_buffer, &self.logs_interest);
+                let logs =
+                    to_insert.logs(&self.logs_buffer, &self.logs_budget, &self.logs_interest);
                 self.data_directories.insert(trie_key, to_insert);
                 logs
             }};
@@ -294,7 +298,9 @@ impl DataRepoState {
         match self.data_directories.get_mut(trie_key.clone()) {
             Some(component) => match &mut component.get_values_mut()[..] {
                 [] => insert_component!(),
-                [existing] => existing.logs(&self.logs_buffer, &self.logs_interest),
+                [existing] => {
+                    existing.logs(&self.logs_buffer, &self.logs_budget, &self.logs_interest)
+                }
                 _ => unreachable!("invariant: each trie node has 0-1 entries"),
             },
             None => insert_component!(),

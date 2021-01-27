@@ -17,7 +17,9 @@ use {
                 EventSource,
             },
         },
-        logs::{redact::Redactor, socket::LogMessageSocket},
+        logs::{
+            budget::BudgetManager, buffer::ArcList, redact::Redactor, socket::LogMessageSocket,
+        },
         pipeline::Pipeline,
         repository::DataRepo,
     },
@@ -141,10 +143,12 @@ impl ArchivistBuilder {
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
 
-        let diagnostics_repo = DataRepo::new(
+        let logs_buffer = ArcList::default();
+        let logs_budget = BudgetManager::new(
             archivist_configuration.logs.max_cached_original_bytes,
-            diagnostics::root(),
+            &logs_buffer,
         );
+        let diagnostics_repo = DataRepo::new(logs_buffer, &logs_budget, diagnostics::root());
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
@@ -562,10 +566,7 @@ impl Archivist {
                 diagnostics_ready_data.metadata.timestamp.clone(),
             )
             .unwrap_or_else(|e| {
-                warn!(
-                    component = ?identity, ?e,
-                    "Failed to add inspect artifacts to repository"
-                );
+                warn!(%identity, ?e, "Failed to add inspect artifacts to repository");
             });
 
         // Let each pipeline know that a new component arrived, and allow the pipeline
@@ -574,10 +575,7 @@ impl Archivist {
         for pipeline in &locked_state.diagnostics_pipelines {
             pipeline.write().add_inspect_artifacts(&identity.relative_moniker).unwrap_or_else(
                 |e| {
-                    warn!(
-                        component = ?identity, ?e,
-                        "Failed to add inspect artifacts to pipeline wrapper"
-                    );
+                    warn!(%identity, ?e, "Failed to add inspect artifacts to pipeline wrapper");
                 },
             );
         }
@@ -595,7 +593,7 @@ impl Archivist {
             event_timestamp,
             component_start_time,
         ) {
-            error!(?identity, ?e, "Failed to add new component to repository");
+            error!(%identity, ?e, "Failed to add new component to repository");
         }
     }
 
@@ -613,13 +611,13 @@ impl Archivist {
         match event {
             ComponentEvent::Start(start) => {
                 let archived_metadata = start.metadata.clone();
-                debug!(identity = ?start.metadata.identity, "Adding new component.");
+                debug!(identity = %start.metadata.identity, "Adding new component.");
                 self.add_new_component(start.metadata.identity, start.metadata.timestamp, None);
                 self.archive_event("START", archived_metadata).await
             }
             ComponentEvent::Running(running) => {
                 let archived_metadata = running.metadata.clone();
-                debug!(identity = ?running.metadata.identity, "Component is running.");
+                debug!(identity = %running.metadata.identity, "Component is running.");
                 self.add_new_component(
                     running.metadata.identity,
                     running.metadata.timestamp,
@@ -630,13 +628,13 @@ impl Archivist {
             ComponentEvent::Stop(stop) => {
                 // TODO(fxbug.dev/53939): Get inspect data from repository before removing
                 // for post-mortem inspection.
-                debug!("Component stopped. id={:?}", &stop.metadata.identity);
+                debug!(identity = %stop.metadata.identity, "Component stopped.");
                 self.remove_from_inspect_repo(&stop.metadata.identity);
                 self.archive_event("STOP", stop.metadata).await
             }
             ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
                 debug!(
-                    identity = ?diagnostics_ready.metadata.identity,
+                    identity = %diagnostics_ready.metadata.identity,
                     "Diagnostics directory is ready.",
                 );
                 self.populate_inspect_repo(diagnostics_ready).await;

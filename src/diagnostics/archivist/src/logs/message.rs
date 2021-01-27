@@ -4,7 +4,7 @@
 use crate::{
     container::ComponentIdentity,
     events::types::ComponentIdentifier,
-    logs::{buffer::Accounted, error::StreamError, stats::LogStreamStats},
+    logs::{error::StreamError, stats::LogStreamStats},
 };
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{LogError, Timestamp};
@@ -74,12 +74,6 @@ impl MessageId {
         static NEXT_MESSAGE_ID: AtomicU64 = AtomicU64::new(0);
 
         MessageId(NEXT_MESSAGE_ID.fetch_add(1, Ordering::Relaxed))
-    }
-}
-
-impl Accounted for Message {
-    fn bytes_used(&self) -> usize {
-        self.metadata.size_bytes
     }
 }
 
