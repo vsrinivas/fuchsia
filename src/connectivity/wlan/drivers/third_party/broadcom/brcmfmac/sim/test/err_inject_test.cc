@@ -1,11 +1,19 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <zircon/errors.h>
+
+#include <array>
+#include <vector>
+
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
 

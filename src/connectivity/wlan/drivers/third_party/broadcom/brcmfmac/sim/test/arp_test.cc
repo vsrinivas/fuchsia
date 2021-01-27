@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include <arpa/inet.h>
+#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <zircon/errors.h>
 
 #include <gtest/gtest.h>
 
@@ -12,6 +15,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
 
@@ -140,7 +144,7 @@ void ArpTest::TxAuthandAssocReq() {
   const common::MacAddr mac(kTheirMac);
   simulation::WlanTxInfo tx_info = {.channel = SimInterface::kDefaultSoftApChannel};
   simulation::SimAuthFrame auth_req_frame(mac, kOurMac, 1, simulation::AUTH_TYPE_OPEN,
-                                          WLAN_STATUS_CODE_SUCCESS);
+                                          ::fuchsia::wlan::ieee80211::StatusCode::SUCCESS);
   env_->Tx(auth_req_frame, tx_info, this);
   simulation::SimAssocReqFrame assoc_req_frame(mac, kOurMac, SimInterface::kDefaultSoftApSsid);
   env_->Tx(assoc_req_frame, tx_info, this);

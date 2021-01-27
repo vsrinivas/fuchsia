@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/errors.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
-#include "fuchsia/wlan/mlme/cpp/fidl.h"
-#include "fuchsia/wlan/stats/cpp/fidl.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
@@ -18,9 +18,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/drivers/wlanif/convert.h"
-#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
+
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 using ::testing::IsEmpty;
 using ::testing::NotNull;
@@ -167,7 +169,7 @@ class AssocTest : public SimTest {
     wlan_channel_t channel;
     common::MacAddr src;
     common::MacAddr dst;
-    uint16_t status;
+    wlan_ieee80211::StatusCode status;
   };
 
   // This is the interface we will use for our single client interface
@@ -181,7 +183,7 @@ class AssocTest : public SimTest {
 
   // All of the association responses seen in the environment
   std::list<AssocRespInfo> assoc_responses_;
-  std::list<uint16_t> auth_resp_status_list_;
+  std::list<wlan_ieee80211::StatusCode> auth_resp_status_list_;
 
   // Trigger to start disassociation. If set to true, disassociation is started
   // soon after association completes.
@@ -740,9 +742,8 @@ TEST_F(AssocTest, RepeatedAssocTest) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  // The associations at 11ms and 12ms should be immediately rejected (because there is already
-  // an association in progress), and eventually the association that was in progress should
-  // succeed
+  // The associations at 11ms and 12ms should be immediately refused (because there is already an
+  // association in progress), and eventually the association that was in progress should succeed.
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.expected_results.push_back(WLAN_ASSOC_RESULT_SUCCESS);
@@ -779,7 +780,7 @@ TEST_F(AssocTest, ApIgnoredRequest) {
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 
-// Verify that if an AP rejects an association request we return a failure
+// Verify that if an AP refuses an association request we return a failure
 TEST_F(AssocTest, ApRejectedRequest) {
   // Create our device instance
   Init();
@@ -801,9 +802,9 @@ TEST_F(AssocTest, ApRejectedRequest) {
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, kMaxAssocRetries);
-  // We should have gotten a rejection from the fake AP
+  // We should have gotten a refusal from the fake AP
   EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(auth_resp_status_list_.front(), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
   EXPECT_EQ(assoc_responses_.size(), 0U);
 
   // Make sure we got our response from the driver
@@ -839,14 +840,15 @@ void AssocTest::SendBadResp() {
   // Send a response from the wrong bss
   common::MacAddr wrong_src(context_.bssid);
   wrong_src.byte[ETH_ALEN - 1]++;
-  simulation::SimAssocRespFrame wrong_bss_frame(wrong_src, my_mac, WLAN_ASSOC_RESULT_SUCCESS);
+  simulation::SimAssocRespFrame wrong_bss_frame(wrong_src, my_mac,
+                                                wlan_ieee80211::StatusCode::SUCCESS);
   env_->Tx(wrong_bss_frame, context_.tx_info, this);
 
   // Send a response to a different STA
   common::MacAddr wrong_dst(my_mac);
   wrong_dst.byte[ETH_ALEN - 1]++;
   simulation::SimAssocRespFrame wrong_dst_frame(context_.bssid, wrong_dst,
-                                                WLAN_ASSOC_RESULT_SUCCESS);
+                                                wlan_ieee80211::StatusCode::SUCCESS);
   env_->Tx(wrong_dst_frame, context_.tx_info, this);
 }
 
@@ -883,7 +885,7 @@ void AssocTest::SendMultipleResp() {
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
   simulation::SimAssocRespFrame multiple_resp_frame(context_.bssid, my_mac,
-                                                    WLAN_ASSOC_RESULT_SUCCESS);
+                                                    wlan_ieee80211::StatusCode::SUCCESS);
   for (unsigned i = 0; i < kRespCount; i++) {
     env_->Tx(multiple_resp_frame, context_.tx_info, this);
   }
@@ -896,7 +898,8 @@ void AssocTest::SendAssocRespWithWmm() {
   zx_status_t status = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_buf, ETH_ALEN, nullptr);
   EXPECT_EQ(status, ZX_OK);
   common::MacAddr my_mac(mac_buf);
-  simulation::SimAssocRespFrame assoc_resp_frame(context_.bssid, my_mac, WLAN_ASSOC_RESULT_SUCCESS);
+  simulation::SimAssocRespFrame assoc_resp_frame(context_.bssid, my_mac,
+                                                 wlan_ieee80211::StatusCode::SUCCESS);
 
   uint8_t raw_ies[] = {
       // WMM param
@@ -917,7 +920,7 @@ void AssocTest::SendOpenAuthResp() {
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
   simulation::SimAuthFrame auth_resp(context_.bssid, my_mac, 2, simulation::AUTH_TYPE_OPEN,
-                                     WLAN_AUTH_RESULT_SUCCESS);
+                                     wlan_ieee80211::StatusCode::SUCCESS);
   env_->Tx(auth_resp, context_.tx_info, this);
 }
 
@@ -1257,9 +1260,9 @@ TEST_F(AssocTest, AssocMaxRetries) {
   status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
-  // Should have received as many rejections as the configured # of retries.
+  // Should have received as many refusals as the configured # of retries.
   EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(auth_resp_status_list_.front(), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
   EXPECT_EQ(assoc_responses_.size(), 0U);
 
   // Make sure we got our response from the driver
@@ -1319,9 +1322,9 @@ TEST_F(AssocTest, AssocNoRetries) {
   status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
-  // We should have gotten a rejection from the fake AP
+  // We should have gotten a refusal from the fake AP
   EXPECT_EQ(auth_resp_status_list_.size(), 1U);
-  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(auth_resp_status_list_.front(), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);

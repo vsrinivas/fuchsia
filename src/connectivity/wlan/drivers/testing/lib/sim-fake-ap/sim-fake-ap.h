@@ -5,8 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_FAKE_AP_SIM_FAKE_AP_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_FAKE_AP_SIM_FAKE_AP_H_
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <lib/zx/time.h>
+#include <netinet/if_ether.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <array>
 #include <functional>
@@ -14,11 +17,9 @@
 
 #include <wlan/protocol/ieee80211.h>
 
-#include "netinet/if_ether.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
-#include "zircon/types.h"
 
 namespace wlan::simulation {
 
@@ -123,9 +124,10 @@ class FakeAp : public StationIfc {
   void RxDataFrame(std::shared_ptr<const SimDataFrame> data_frame);
 
   void ScheduleNextBeacon();
-  void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);
+  void ScheduleAssocResp(::fuchsia::wlan::ieee80211::StatusCode status, const common::MacAddr& dst);
   void ScheduleProbeResp(const common::MacAddr& dst);
-  void ScheduleAuthResp(std::shared_ptr<const SimAuthFrame> auth_frame_in, uint16_t status);
+  void ScheduleAuthResp(std::shared_ptr<const SimAuthFrame> auth_frame_in,
+                        ::fuchsia::wlan::ieee80211::StatusCode status);
   void ScheduleQosData(bool toDS, bool fromDS, const common::MacAddr& addr1,
                        const common::MacAddr& addr2, const common::MacAddr& addr3,
                        const std::vector<uint8_t>& payload);
@@ -133,7 +135,8 @@ class FakeAp : public StationIfc {
   // Event handlers
   void HandleBeaconNotification();
   void HandleStopCsaBeaconNotification();
-  void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
+  void HandleAssocRespNotification(::fuchsia::wlan::ieee80211::StatusCode status,
+                                   common::MacAddr dst);
   void HandleProbeRespNotification(common::MacAddr dst);
   void HandleAuthRespNotification(SimAuthFrame auth_resp_frame);
   void HandleQosDataNotification(bool toDS, bool fromDS, const common::MacAddr& addr1,

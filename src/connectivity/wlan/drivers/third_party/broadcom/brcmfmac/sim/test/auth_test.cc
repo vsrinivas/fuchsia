@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <zircon/errors.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
@@ -11,7 +12,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
-#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
 
@@ -90,11 +91,12 @@ class AuthTest : public SimTest {
   enum SaeAuthState { COMMIT, CONFIRM, DONE };
 
   struct AuthFrameContent {
-    AuthFrameContent(uint16_t seq_num, simulation::SimAuthType type, uint16_t status)
+    AuthFrameContent(uint16_t seq_num, simulation::SimAuthType type,
+                     wlan_ieee80211::StatusCode status)
         : seq_num_(seq_num), type_(type), status_(status) {}
     uint16_t seq_num_;
     simulation::SimAuthType type_;
-    uint16_t status_;
+    wlan_ieee80211::StatusCode status_;
   };
 
   void Init();
@@ -122,9 +124,9 @@ class AuthTest : public SimTest {
 
   simulation::FakeAp ap_;
 
-  uint8_t join_status_ = WLAN_JOIN_RESULT_SUCCESS;
-  uint8_t auth_status_ = WLAN_AUTH_RESULT_SUCCESS;
-  uint8_t assoc_status_ = WLAN_ASSOC_RESULT_SUCCESS;
+  wlan_join_result_t join_status_ = WLAN_JOIN_RESULT_SUCCESS;
+  wlan_auth_result_t auth_status_ = WLAN_AUTH_RESULT_SUCCESS;
+  wlan_assoc_result_t assoc_status_ = WLAN_ASSOC_RESULT_SUCCESS;
   std::list<AuthFrameContent> rx_auth_frames_;
   std::list<AuthFrameContent> expect_auth_frames_;
 
@@ -507,7 +509,6 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
 
 void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   assoc_status_ = resp->result_code;
-
   if (assoc_status_ != WLAN_ASSOC_RESULT_SUCCESS) {
     return;
   }
@@ -612,10 +613,14 @@ TEST_F(AuthTest, WEP104) {
   env_->Run(kTestDuration);
   // The first SHARED KEY authentication request will fail, and switch to OPEN SYSTEM automatically.
   // OPEN SYSTEM authentication will succeed.
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_REFUSED);
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
 }
 
@@ -628,10 +633,14 @@ TEST_F(AuthTest, WEP40) {
 
   env_->Run(kTestDuration);
   // It should be a successful shared_key authentication
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(3, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(4, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(3, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(4, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
 }
 
@@ -645,11 +654,14 @@ TEST_F(AuthTest, WEP40ChallengeFailure) {
 
   env_->Run(kTestDuration);
   // It should be a failed shared_key authentication
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(3, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(3, simulation::AUTH_TYPE_SHARED_KEY,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   expect_auth_frames_.emplace_back(4, simulation::AUTH_TYPE_SHARED_KEY,
-                                   WLAN_STATUS_CODE_CHALLENGE_FAILURE);
+                                   wlan_ieee80211::StatusCode::CHALLENGE_FAILURE);
   VerifyAuthFrames();
 
   // Assoc should have failed
@@ -665,8 +677,10 @@ TEST_F(AuthTest, WEPOPEN) {
 
   env_->Run(kTestDuration);
 
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
 }
 
@@ -705,7 +719,8 @@ TEST_F(AuthTest, WEPIgnoreTest) {
   EXPECT_EQ(status, ZX_OK);
 
   for (uint32_t i = 0; i < max_retries + 1; i++) {
-    expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+    expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN,
+                                     wlan_ieee80211::StatusCode::SUCCESS);
   }
   VerifyAuthFrames();
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
@@ -720,8 +735,10 @@ TEST_F(AuthTest, WPA1Test) {
 
   env_->Run(kTestDuration);
 
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
@@ -751,8 +768,10 @@ TEST_F(AuthTest, WPA2Test) {
 
   env_->Run(kTestDuration);
 
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
@@ -791,8 +810,10 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   EXPECT_EQ(status, ZX_OK);
 
   for (uint32_t i = 0; i < max_retries + 1; i++) {
-    expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
-    expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_REFUSED);
+    expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN,
+                                     wlan_ieee80211::StatusCode::SUCCESS);
+    expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN,
+                                     wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
   }
 
   VerifyAuthFrames();
@@ -809,10 +830,14 @@ TEST_F(AuthTest, WPA3Test) {
 
   env_->Run(kTestDuration);
 
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
 
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
@@ -831,7 +856,8 @@ TEST_F(AuthTest, WPA3ApIgnoreTest) {
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   EXPECT_EQ(sae_auth_state_, COMMIT);
@@ -849,10 +875,14 @@ TEST_F(AuthTest, WPA3SupplicantIgnoreTest) {
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
-  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
 
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
@@ -881,7 +911,8 @@ TEST_F(AuthTest, WPA3FailStatusCode) {
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE, WLAN_AUTH_RESULT_REFUSED);
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
+                                   wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
   VerifyAuthFrames();
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   EXPECT_EQ(sae_auth_state_, COMMIT);

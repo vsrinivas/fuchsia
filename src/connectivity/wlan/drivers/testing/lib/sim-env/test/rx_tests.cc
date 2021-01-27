@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -23,7 +25,8 @@ constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
-constexpr uint16_t kDefaultAssocStatus = 42;
+constexpr auto kDefaultAssocStatus =
+    ::fuchsia::wlan::ieee80211::StatusCode::STATUS_INVALID_PAIRWISE_CIPHER;
 constexpr uint16_t kDefaultDisassocReason = 5;
 
 void checkChannel(const wlan_channel_t& channel) {

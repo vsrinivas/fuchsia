@@ -394,10 +394,12 @@ class SimFirmware {
   void StopSoftAP(uint16_t ifidx);
 
   // Update the SAE status when firmware receives an auth frame from remote stations.
-  zx_status_t RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+  zx_status_t RemoteUpdateExternalSaeStatus(uint16_t seq_num,
+                                            ::fuchsia::wlan::ieee80211::StatusCode status_code,
                                             const uint8_t* sae_payload, size_t text_len);
   // Update the SAE status when firmware receives an auth frame from the driver.
-  zx_status_t LocalUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+  zx_status_t LocalUpdateExternalSaeStatus(uint16_t seq_num,
+                                           ::fuchsia::wlan::ieee80211::StatusCode status_code,
                                            const uint8_t* sae_payload, size_t text_len);
 
   // Allocate a buffer for an event (brcmf_event)

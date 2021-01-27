@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <zircon/errors.h>
+
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
@@ -11,6 +17,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
 namespace {
@@ -51,7 +58,7 @@ class CreateSoftAPTest : public SimTest {
   void SetExpectMacForInds(common::MacAddr set_mac);
 
   // Status field in the last received authentication frame.
-  uint16_t auth_resp_status_;
+  ::fuchsia::wlan::ieee80211::StatusCode auth_resp_status_;
 
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
@@ -299,7 +306,7 @@ void CreateSoftAPTest::TxAuthReq(simulation::SimAuthType auth_type, common::MacA
   common::MacAddr soft_ap_mac;
   softap_ifc_.GetMacAddr(&soft_ap_mac);
   simulation::SimAuthFrame auth_req_frame(client_mac, soft_ap_mac, 1, auth_type,
-                                          WLAN_STATUS_CODE_SUCCESS);
+                                          ::fuchsia::wlan::ieee80211::StatusCode::SUCCESS);
   env_->Tx(auth_req_frame, tx_info_, this);
 }
 
@@ -517,7 +524,7 @@ TEST_F(CreateSoftAPTest, AssocWithWrongAuth) {
                              zx::msec(10));
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyNotAssoc, this), zx::msec(20));
   env_->Run(kSimulatedClockDuration);
-  EXPECT_EQ(auth_resp_status_, WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(auth_resp_status_, ::fuchsia::wlan::ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 }
 
 TEST_F(CreateSoftAPTest, DeauthBeforeAssoc) {

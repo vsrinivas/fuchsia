@@ -2,14 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <zircon/errors.h>
+
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
-#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
 
@@ -122,7 +127,7 @@ void DynamicIfTest::TxAuthAndAssocReq() {
   wlan_ssid_t ssid = {.len = 6, .ssid = "Sim_AP"};
   // Pass the auth stop for softAP iface before assoc.
   simulation::SimAuthFrame auth_req_frame(kFakeMac, soft_ap_mac, 1, simulation::AUTH_TYPE_OPEN,
-                                          WLAN_STATUS_CODE_SUCCESS);
+                                          ::fuchsia::wlan::ieee80211::StatusCode::SUCCESS);
   env_->Tx(auth_req_frame, kDefaultTxInfo, this);
   simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, ssid);
   env_->Tx(assoc_req_frame, kDefaultTxInfo, this);
@@ -205,15 +210,15 @@ TEST_F(DynamicIfTest, CreateApWithSameMacAsClient) {
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
-// Ensure AP uses auto-gen MAC address when MAC address is not specified in the
-// StartInterface request.
+// Ensure AP uses auto-gen MAC address when MAC address is not specified in the StartInterface
+// request.
 TEST_F(DynamicIfTest, CreateApWithNoMACAddress) {
   Init();
   brcmf_simdev* sim = device_->GetSim();
 
   // Get the expected auto-gen MAC addr that AP will use when no MAC addr is passed.
-  // Note, since the default MAC addr of client iface is same as the AP iface, we use
-  // that to figure out the auto-gen MAC addr.
+  // Note, since the default MAC addr of client iface is same as the AP iface, we use that to figure
+  // out the auto-gen MAC addr.
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
   wlan::common::MacAddr expected_mac_addr;
   EXPECT_EQ(brcmf_gen_ap_macaddr(ifp, expected_mac_addr), ZX_OK);
@@ -618,9 +623,8 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
                                        SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
                              delay);
 
-  // Wait until SIM FW sends AP Start confirmation. This is set as a
-  // scheduled event to ensure test runs until AP Start confirmation is
-  // received.
+  // Wait until SIM FW sends AP Start confirmation. This is set as a scheduled event to ensure test
+  // runs until AP Start confirmation is received.
   delay += kStartAPConfDelay + zx::msec(10);
   env_->ScheduleNotification(std::bind(&DynamicIfTest::ChannelCheck, this), delay);
   env_->Run(kTestDuration);

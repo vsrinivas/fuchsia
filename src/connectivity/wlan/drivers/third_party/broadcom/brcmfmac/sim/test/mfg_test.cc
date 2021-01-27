@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
-#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::brcmfmac {
 
@@ -60,7 +60,7 @@ void MfgTest::TxAuthAndAssocReq() {
   wlan_ssid_t ssid = {.len = 6, .ssid = "Sim_AP"};
   // Pass the auth stop for softAP iface before assoc.
   simulation::SimAuthFrame auth_req_frame(kFakeMac, soft_ap_mac, 1, simulation::AUTH_TYPE_OPEN,
-                                          WLAN_STATUS_CODE_SUCCESS);
+                                          ::fuchsia::wlan::ieee80211::StatusCode::SUCCESS);
   env_->Tx(auth_req_frame, kDefaultTxInfo, this);
   simulation::SimAssocReqFrame assoc_req_frame(kFakeMac, soft_ap_mac, ssid);
   env_->Tx(assoc_req_frame, kDefaultTxInfo, this);

@@ -36,7 +36,6 @@
 #include <wifi/wifi-config.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/phy.h>
-#include <wlan/common/status_code.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
@@ -4937,17 +4936,14 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
 // Handler for AUTH event (client only)
 static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                             void* data) {
-  BRCMF_DBG_EVENT(ifp, e, "%s", [](uint32_t reason) {
-    return wlan_status_code_str(static_cast<wlan_status_code_t>(reason));
-  });
+  BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return static_cast<int>(reason); });
 
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
 
   if (e->status != BRCMF_E_STATUS_SUCCESS) {
-    BRCMF_INFO("Auth Failure auth %s status %s reason %s flags 0x%x",
+    BRCMF_INFO("Auth Failure auth %s status %s reason %d flags 0x%x",
                brcmf_fweh_get_auth_type_str(e->auth_type),
-               brcmf_fweh_get_event_status_str(e->status),
-               wlan_status_code_str(static_cast<wlan_status_code_t>(e->reason)), e->flags);
+               brcmf_fweh_get_event_status_str(e->status), static_cast<int>(e->reason), e->flags);
     // It appears FW continues to be busy with authentication when this event is received
     // specifically with WEP. Attempt to shutdown the IF.
     bcme_status_t fwerr = BCME_OK;

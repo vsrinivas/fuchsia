@@ -5,14 +5,16 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_FRAME_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_FRAME_H_
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/types.h>
 
 #include <list>
 #include <memory>
 #include <optional>
 
-#include "fbl/span.h"
-#include "sim-sta-ifc.h"
+#include <fbl/span.h>
+
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/mac_frame.h"
 
 namespace wlan::simulation {
@@ -200,7 +202,7 @@ class SimAssocReqFrame : public SimManagementFrame {
  public:
   SimAssocReqFrame() = default;
   explicit SimAssocReqFrame(const common::MacAddr& src, const common::MacAddr bssid,
-                            const wlan_ssid_t ssid)
+                            const wlan_ssid_t& ssid)
       : SimManagementFrame(src, {}), bssid_(bssid), ssid_(ssid){};
 
   SimAssocReqFrame(const SimAssocReqFrame& assoc_req);
@@ -219,7 +221,7 @@ class SimAssocRespFrame : public SimManagementFrame {
  public:
   SimAssocRespFrame() = default;
   explicit SimAssocRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
-                             const uint16_t status)
+                             ::fuchsia::wlan::ieee80211::StatusCode status)
       : SimManagementFrame(src, dst), status_(status){};
 
   SimAssocRespFrame(const SimAssocRespFrame& assoc_resp);
@@ -230,7 +232,7 @@ class SimAssocRespFrame : public SimManagementFrame {
 
   SimFrame* CopyFrame() const override;
 
-  uint16_t status_;
+  ::fuchsia::wlan::ieee80211::StatusCode status_;
   wlan::CapabilityInfo capability_info_;
 };
 
@@ -238,7 +240,7 @@ class SimDisassocReqFrame : public SimManagementFrame {
  public:
   SimDisassocReqFrame() = default;
   explicit SimDisassocReqFrame(const common::MacAddr& src, const common::MacAddr& dst,
-                               const uint16_t reason)
+                               uint16_t reason)
       : SimManagementFrame(src, dst), reason_(reason){};
 
   SimDisassocReqFrame(const SimDisassocReqFrame& disassoc_req);
@@ -257,7 +259,7 @@ class SimAuthFrame : public SimManagementFrame {
  public:
   SimAuthFrame() = default;
   explicit SimAuthFrame(const common::MacAddr& src, const common::MacAddr& dst, uint16_t seq,
-                        SimAuthType auth_type, uint16_t status)
+                        SimAuthType auth_type, ::fuchsia::wlan::ieee80211::StatusCode status)
       : SimManagementFrame(src, dst), seq_num_(seq), auth_type_(auth_type), status_(status){};
 
   SimAuthFrame(const SimAuthFrame& auth);
@@ -271,7 +273,7 @@ class SimAuthFrame : public SimManagementFrame {
 
   uint16_t seq_num_;
   SimAuthType auth_type_;
-  uint16_t status_;
+  ::fuchsia::wlan::ieee80211::StatusCode status_;
 
   // Payload for authentication frame, especially being used for SAE process for now.
   std::vector<uint8_t> payload_;

@@ -10,7 +10,7 @@ namespace brcmfmac {
 
 StubDevice::StubDevice() : Device(nullptr){};
 
-StubDevice::~StubDevice() { DisableDispatcher(); }
+StubDevice::~StubDevice() { Stop(); }
 
 // static
 zx_status_t StubDevice::Create(std::unique_ptr<StubDevice>* out_stub_device) {

@@ -13,15 +13,12 @@
 #include <cstdint>
 #include <type_traits>
 
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <fbl/algorithm.h>
 #include <fbl/span.h>
 #include <wlan/common/action_frame.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/common/reason_code.h>
-#include <wlan/common/status_code.h>
 
 namespace wlan {
 

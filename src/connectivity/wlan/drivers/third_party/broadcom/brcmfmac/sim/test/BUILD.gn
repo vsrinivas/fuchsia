@@ -18,13 +18,14 @@ source_set("sim_test") {
   testonly = true
   sources = [ "sim_test.cc" ]
   public = [ "sim_test.h" ]
-  deps = [ "//zircon/system/public" ]
   public_deps = [
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim:sim",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -34,12 +35,17 @@ executable("active_scan_test") {
   sources = [ "active_scan_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//zircon/system/public",
   ]
 }
 
@@ -49,6 +55,8 @@ executable("arp_test") {
   sources = [ "arp_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -56,6 +64,7 @@ executable("arp_test") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -65,16 +74,18 @@ executable("assoc_test") {
   sources = [ "assoc_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/wlanif:lib_source",
     "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/devices/lib/broadcom",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/system/public",
   ]
 }
 
@@ -84,14 +95,14 @@ executable("auth_test") {
   sources = [ "auth_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -101,10 +112,10 @@ executable("bad_entropy_test") {
   sources = [ "bad_entropy_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -114,12 +125,13 @@ executable("beacon_lost_test") {
   sources = [ "beacon_lost_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -129,13 +141,10 @@ executable("bootloader_mac_addr_test") {
   sources = [ "bootloader_mac_addr_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -145,10 +154,10 @@ executable("call_after_del_iface_test") {
   sources = [ "call_after_del_iface_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -158,10 +167,14 @@ executable("cc_test") {
   sources = [ "cc_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -171,13 +184,12 @@ executable("channel_switch_test") {
   sources = [ "channel_switch_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -187,13 +199,17 @@ executable("create_softap_test") {
   sources = [ "create_softap_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -203,13 +219,14 @@ executable("data_frame_test") {
   sources = [ "data_frame_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -219,10 +236,13 @@ executable("disassoc_test") {
   sources = [ "disassoc_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -232,12 +252,16 @@ executable("dynamic_if_test") {
   sources = [ "dynamic_if_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -247,10 +271,13 @@ executable("err_inject_test") {
   sources = [ "err_inject_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 
   # TODO(fxbug.dev/62982): fix stack-use-after-return and delete
@@ -263,10 +290,12 @@ executable("escan_params_test") {
   sources = [ "escan_params_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -276,12 +305,17 @@ executable("firmware_config_test") {
   sources = [ "firmware_config_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim:sim",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -304,10 +338,12 @@ executable("ifc_query_test") {
   sources = [ "ifc_query_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -317,13 +353,15 @@ executable("iovar_test") {
   sources = [ "iovar_test.cc" ]
   deps = [
     ":sim_test",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim:sim",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -332,11 +370,15 @@ executable("lifecycle_test") {
   testonly = true
   sources = [ "lifecycle_test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim:sim",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 
@@ -367,7 +409,9 @@ executable("mfg_test") {
   ]
   public = [ "sim_test.h" ]
   deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
@@ -400,6 +444,7 @@ executable("passive_scan_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -494,13 +539,14 @@ executable("timeout_test") {
   sources = [ "timeout_test.cc" ]
   deps = [
     ":sim_test",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/fuchsia.hardware.wlan.info",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/devices/lib/broadcom",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
   ]
 }
 

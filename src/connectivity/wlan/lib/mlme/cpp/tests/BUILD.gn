@@ -43,7 +43,10 @@ source_set("test_main") {
     "//src/lib/timekeeper:testing",
   ]
 
-  deps = [ "//third_party/googletest:gtest" ]
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//third_party/googletest:gtest",
+  ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
@@ -57,6 +60,7 @@ executable("ap_mlme_tests") {
 
   deps = [
     ":test_main",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",

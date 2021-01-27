@@ -2,26 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "wlan/mlme/ap/ap_mlme.h"
+
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <vector>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
-#include <wlan/mlme/ap/ap_mlme.h>
-#include <wlan/mlme/mac_frame.h>
-#include <wlan/mlme/packet.h>
-#include <wlan/mlme/service.h>
-#include <wlan/mlme/timer.h>
 
-#include "mock_device.h"
-#include "test_bss.h"
-#include "test_utils.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/mac_frame.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/packet.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/service.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/timer.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/tests/mock_device.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/tests/test_bss.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/tests/test_utils.h"
 
 namespace wlan {
 
 namespace {
 
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 constexpr uint8_t kTestPayload[] = "Hello Fuchsia";
@@ -162,7 +165,8 @@ struct Context {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
     EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
-    EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_SUCCESS);
+    EXPECT_EQ(static_cast<wlan_ieee80211::StatusCode>(frame.body()->status_code),
+              wlan_ieee80211::StatusCode::SUCCESS);
   }
 
   void AssertAssocFrame(WlanPacket pkt) {
@@ -170,7 +174,8 @@ struct Context {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_SUCCESS);
+    EXPECT_EQ(static_cast<wlan_ieee80211::StatusCode>(frame.body()->status_code),
+              wlan_ieee80211::StatusCode::SUCCESS);
     EXPECT_EQ(frame.body()->aid, kAid);
   }
 
@@ -286,7 +291,8 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
   EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
   EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
   EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
-  EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(static_cast<wlan_ieee80211::StatusCode>(frame.body()->status_code),
+            wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 }
 
 TEST_F(ApInfraBssTest, Authenticate_Timeout) {
@@ -451,7 +457,8 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
   EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
   EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
   EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-  EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_REFUSED_CAPABILITIES_MISMATCH);
+  EXPECT_EQ(static_cast<wlan_ieee80211::StatusCode>(frame.body()->status_code),
+            wlan_ieee80211::StatusCode::REFUSED_CAPABILITIES_MISMATCH);
   EXPECT_EQ(frame.body()->aid, 0);
 
   device.wlan_queue.clear();

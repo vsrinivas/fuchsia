@@ -8,6 +8,7 @@
 #include <memory>
 #include <utility>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -18,6 +19,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
 

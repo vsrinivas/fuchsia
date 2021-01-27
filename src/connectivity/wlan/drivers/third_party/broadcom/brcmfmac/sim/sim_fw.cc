@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
@@ -46,6 +47,8 @@
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 
 namespace wlan::brcmfmac {
+
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 #define SIM_FW_CHK_CMD_LEN(dcmd_len, exp_len) \
   (((dcmd_len) < (exp_len)) ? ZX_ERR_INVALID_ARGS : ZX_OK)
@@ -773,14 +776,22 @@ void SimFirmware::HandleAssocReq(std::shared_ptr<const simulation::SimAssocReqFr
       client->state = Client::ASSOCIATED;
     }
     simulation::SimAssocRespFrame assoc_resp_frame(frame->bssid_, frame->src_addr_,
-                                                   WLAN_ASSOC_RESULT_SUCCESS);
+                                                   wlan_ieee80211::StatusCode::SUCCESS);
     hw_.Tx(assoc_resp_frame);
     BRCMF_DBG(SIM, "Assoc done Num Clients : %lu",
               iface_tbl_[softap_ifidx_.value()].ap_config.clients.size());
   } else {
     // Client cannot start association before getting authenticated.
-    simulation::SimAssocRespFrame assoc_resp_frame(frame->bssid_, frame->src_addr_,
-                                                   WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
+    // IEEE 802.11-2016 11.3.6.3 specifies that the SME issues a NOT_AUTHENTICATED in the
+    // MLME-AUTHENTICATE.response message here.  Unfortunately, NOT_AUTHENTICATED is in the
+    // ReasonCode namespace, and the generated MAC frame requires a StatusCode for the association
+    // response frame.  This is a known fault in 802.11-2016, that may be fixed in the next
+    // revision.  Fortunately for us, the NOT_AUTHENTICATED value of 9 in the ReasonCode namespace
+    // falls in a reserved-unused value in the StatusCode namespace, so we will just return the
+    // casted value as (presumably) existing APs may err in doing.
+    simulation::SimAssocRespFrame assoc_resp_frame(
+        frame->bssid_, frame->src_addr_,
+        static_cast<wlan_ieee80211::StatusCode>(wlan_ieee80211::ReasonCode::NOT_AUTHENTICATED));
     hw_.Tx(assoc_resp_frame);
     BRCMF_DBG(SIM, "Assoc fail, should be authenticated first.");
   }
@@ -923,7 +934,8 @@ void SimFirmware::AuthStart() {
       ZX_ASSERT_MSG(false, "Auth type not supported.");
   }
 
-  simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, auth_type, WLAN_AUTH_RESULT_SUCCESS);
+  simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, auth_type,
+                                          wlan_ieee80211::StatusCode::SUCCESS);
 
   if (iface_tbl_[kClientIfidx].wsec == WEP_ENABLED) {
     ZX_ASSERT(iface_tbl_[kClientIfidx].wpa_auth == WPA_AUTH_DISABLED);
@@ -1001,9 +1013,9 @@ void SimFirmware::HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> 
   if (frame->auth_type_ != simulation::AUTH_TYPE_OPEN) {
     BRCMF_DBG(SIM, "SoftAP iface only support OPEN mode for authentication now.");
     // Send authentication response back
-    simulation::SimAuthFrame auth_resp_frame(iface_tbl_[softap_ifidx_.value()].mac_addr,
-                                             frame->src_addr_, 2, frame->auth_type_,
-                                             WLAN_STATUS_CODE_REFUSED);
+    simulation::SimAuthFrame auth_resp_frame(
+        iface_tbl_[softap_ifidx_.value()].mac_addr, frame->src_addr_, 2, frame->auth_type_,
+        wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
     hw_.Tx(auth_resp_frame);
     return;
   }
@@ -1015,7 +1027,7 @@ void SimFirmware::HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> 
   // Send authentication response back
   simulation::SimAuthFrame auth_resp_frame(iface_tbl_[softap_ifidx_.value()].mac_addr,
                                            frame->src_addr_, 2, simulation::AUTH_TYPE_OPEN,
-                                           WLAN_STATUS_CODE_SUCCESS);
+                                           wlan_ieee80211::StatusCode::SUCCESS);
   hw_.Tx(auth_resp_frame);
   // AUTH_IND is a simple event with the source mac address included
   SendEventToDriver(0, nullptr, BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, softap_ifidx_.value(),
@@ -1049,7 +1061,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
   if (iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_OPEN) {
     ZX_ASSERT(auth_state_.state == AuthState::EXPECTING_SECOND);
     ZX_ASSERT(frame->seq_num_ == 2);
-    if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
+    if (frame->status_ == wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED) {
       BRCMF_DBG(SIM, "Auth refused, Handle failure");
       AssocHandleFailure();
       return;
@@ -1063,7 +1075,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
     // When iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_AUTO
     if (auth_state_.state == AuthState::EXPECTING_SECOND && frame->seq_num_ == 2) {
       // Retry with AUTH_TYPE_OPEN_SYSTEM when refused in AUTH_TYPE_SHARED_KEY mode
-      if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
+      if (frame->status_ == wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED) {
         auth_state_.state = AuthState::NOT_AUTHENTICATED;
         iface_tbl_[kClientIfidx].auth_type = BRCMF_AUTH_MODE_OPEN;
         BRCMF_DBG(SIM, "Auth shared refused...try with OPEN");
@@ -1072,7 +1084,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
       }
 
       // Challenge failure should not occur until the fourth frame.
-      ZX_ASSERT(frame->status_ != WLAN_STATUS_CODE_CHALLENGE_FAILURE);
+      ZX_ASSERT(frame->status_ != wlan_ieee80211::StatusCode::CHALLENGE_FAILURE);
 
       // If we receive the second auth frame when we are expecting it, we send out the third one and
       // set another timer for it.
@@ -1085,17 +1097,17 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
       common::MacAddr bssid(assoc_state_.opts->bssid);
       simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, frame->seq_num_ + 1,
                                               simulation::AUTH_TYPE_SHARED_KEY,
-                                              WLAN_AUTH_RESULT_SUCCESS);
+                                              wlan_ieee80211::StatusCode::SUCCESS);
       auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
       hw_.Tx(auth_req_frame);
     } else if (auth_state_.state == AuthState::EXPECTING_FOURTH && frame->seq_num_ == 4) {
-      if (frame->status_ == WLAN_STATUS_CODE_CHALLENGE_FAILURE) {
+      if (frame->status_ == wlan_ieee80211::StatusCode::CHALLENGE_FAILURE) {
         assoc_state_.state = AssocState::AUTHENTICATION_CHALLENGE_FAILURE;
         auth_state_.state = AuthState::NOT_AUTHENTICATED;
         BRCMF_DBG(SIM, "Auth shared challenge failure, Handle failure");
         SendEventToDriver(0, nullptr, BRCMF_E_AUTH, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr,
                           0,  // TODO: determine what the flags should be
-                          frame->status_, frame->src_addr_);
+                          static_cast<uint16_t>(frame->status_), frame->src_addr_);
         AssocHandleFailure();
         return;
       }
@@ -1110,7 +1122,8 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
   }
 }
 
-zx_status_t SimFirmware::RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+zx_status_t SimFirmware::RemoteUpdateExternalSaeStatus(uint16_t seq_num,
+                                                       wlan_ieee80211::StatusCode status_code,
                                                        const uint8_t* sae_payload,
                                                        size_t text_len) {
   ZX_ASSERT(sae_payload != nullptr);
@@ -1156,7 +1169,8 @@ zx_status_t SimFirmware::RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num,
+                                                      wlan_ieee80211::StatusCode status_code,
                                                       const uint8_t* sae_payload, size_t text_len) {
   ZX_ASSERT(sae_payload != nullptr);
   if (seq_num != 1 && seq_num != 2) {
@@ -1168,7 +1182,7 @@ zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num, uint16_t
   common::MacAddr bssid(assoc_state_.opts->bssid);
   // Create a template auth_req_frame, might be modified later.
   simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, simulation::AUTH_TYPE_SAE,
-                                          WLAN_AUTH_RESULT_SUCCESS);
+                                          wlan_ieee80211::StatusCode::SUCCESS);
 
   if (seq_num == 1 && auth_state_.state != AuthState::EXPECTING_EXTERNAL_COMMIT) {
     BRCMF_ERR("Unexpected COMMIT auth frame from external supplicant. seq_num: %u, state: %u",
@@ -1370,7 +1384,7 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
   }
   // Response received, cancel timer
   hw_.CancelCallback(assoc_state_.assoc_timer_id);
-  if (frame->status_ == WLAN_ASSOC_RESULT_SUCCESS) {
+  if (frame->status_ == wlan_ieee80211::StatusCode::SUCCESS) {
     // IEEE Std 802.11-2016, 9.4.1.4 to determine bss type
     bool capIbss = frame->capability_info_.ibss();
     bool capEss = frame->capability_info_.ess();
@@ -1949,7 +1963,8 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
         size_t sae_payload_length =
             cmd->length - offsetof(struct brcmf_sae_auth_frame, sae_payload);
         if ((status = LocalUpdateExternalSaeStatus(
-                 sae_frame->auth_hdr.auth_txn_seq_number, sae_frame->auth_hdr.status_code,
+                 sae_frame->auth_hdr.auth_txn_seq_number,
+                 static_cast<wlan_ieee80211::StatusCode>(sae_frame->auth_hdr.status_code),
                  sae_frame->sae_payload, sae_payload_length)) != ZX_OK) {
           BRCMF_ERR("Update SAE status failed with auth frame from external supllicant.");
           return ZX_ERR_BAD_STATE;

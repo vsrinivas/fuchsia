@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+
 #include <cstring>
 #include <functional>
 #include <list>
@@ -280,7 +282,8 @@ constexpr zx::duration kVeryShortEndTime = zx::msec(100);
 
 void BeaconTest::AssocCallback() {
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kDefaultBssid, 1,
-                                          simulation::AUTH_TYPE_OPEN, WLAN_STATUS_CODE_SUCCESS);
+                                          simulation::AUTH_TYPE_OPEN,
+                                          ::fuchsia::wlan::ieee80211::StatusCode::SUCCESS);
   env_.Tx(auth_req_frame, kDefaultTxInfo, this);
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kDefaultBssid, kDefaultSsid);
   env_.Tx(assoc_req_frame, kDefaultTxInfo, this);

@@ -2,28 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_bss.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/tests/test_bss.h"
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <memory>
 
 #include <gtest/gtest.h>
-#include <wlan/common/buffer_writer.h>
-#include <wlan/common/channel.h>
-#include <wlan/common/write_element.h>
-#include <wlan/mlme/mac_frame.h>
-#include <wlan/mlme/packet.h>
-#include <wlan/mlme/ps_cfg.h>
-#include <wlan/mlme/rates_elements.h>
-#include <wlan/mlme/service.h>
 
-#include "mock_device.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/buffer_writer.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/channel.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/write_element.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/mac_frame.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/packet.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/ps_cfg.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/rates_elements.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/service.h"
+#include "src/connectivity/wlan/lib/mlme/cpp/tests/mock_device.h"
 
 namespace wlan {
 
 namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
@@ -376,7 +378,7 @@ std::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
   auto auth = w.Write<Authentication>();
   auth->auth_algorithm_number = auth_algo;
   auth->auth_txn_seq_number = 2;
-  auth->status_code = WLAN_STATUS_CODE_SUCCESS;
+  auth->status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS);
 
   packet->set_len(w.WrittenBytes());
 
@@ -401,7 +403,8 @@ std::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
   mgmt_hdr->addr2 = client_addr;
   mgmt_hdr->addr3 = bssid;
 
-  w.Write<Deauthentication>()->reason_code = WLAN_REASON_CODE_LEAVING_NETWORK_DEAUTH;
+  w.Write<Deauthentication>()->reason_code =
+      static_cast<uint16_t>(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
 
   packet->set_len(w.WrittenBytes());
 
@@ -478,7 +481,7 @@ std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ct
   cap.set_short_preamble(1);
   cap.set_ess(1);
   assoc->cap = cap;
-  assoc->status_code = WLAN_STATUS_CODE_SUCCESS;
+  assoc->status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS);
 
   BufferWriter elem_w(w.RemainingBuffer());
   if (ap_assoc_ctx.has_ht_cap) {
@@ -517,7 +520,8 @@ std::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
   mgmt_hdr->addr2 = client_addr;
   mgmt_hdr->addr3 = bssid;
 
-  w.Write<Disassociation>()->reason_code = WLAN_REASON_CODE_LEAVING_NETWORK_DISASSOC;
+  w.Write<Disassociation>()->reason_code =
+      static_cast<uint16_t>(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
 
   packet->set_len(w.WrittenBytes());
 

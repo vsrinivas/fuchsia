@@ -84,8 +84,8 @@ static void brcmf_sim_probe(struct brcmf_bus* bus) {
 }
 
 zx_status_t brcmf_sim_alloc(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
-                               ::wlan::simulation::FakeDevMgr* dev_mgr,
-                               ::wlan::simulation::Environment* env) {
+                            ::wlan::simulation::FakeDevMgr* dev_mgr,
+                            ::wlan::simulation::Environment* env) {
   auto simdev = new brcmf_simdev();
   auto bus_if = std::make_unique<brcmf_bus>();
 

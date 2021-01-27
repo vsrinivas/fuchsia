@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
-#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::testing {
 namespace {
@@ -102,7 +103,7 @@ void DataTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 // AUTHENTICATED in AP.
 void DataTest::FinishAuth(common::MacAddr addr) {
   simulation::SimAuthFrame auth_req_frame(addr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
-                                          WLAN_STATUS_CODE_SUCCESS);
+                                          ::fuchsia::wlan::ieee80211::StatusCode::SUCCESS);
   env_.Tx(auth_req_frame, kDefaultTxInfo, this);
 }
 
