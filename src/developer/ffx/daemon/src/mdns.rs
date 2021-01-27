@@ -11,10 +11,9 @@ use {
     crate::target::*,
     ::mdns::protocol as dns,
     anyhow::{Context as _, Result},
+    async_std::net::UdpSocket,
     async_std::sync::Mutex,
-    async_std::task::JoinHandle,
-    async_std::{net::UdpSocket, task},
-    fuchsia_async::Timer,
+    fuchsia_async::{Task, Timer},
     futures::FutureExt,
     packet::{InnerPacketBuilder, ParseBuffer},
     std::collections::HashMap,
@@ -31,15 +30,14 @@ const MDNS_MCAST_V6: Ipv6Addr = Ipv6Addr::new(0xff02, 0, 0, 0, 0, 0, 0, 0x00fb);
 const MDNS_PORT: u16 = 5353;
 
 pub struct MdnsTargetFinder {
-    socket_tasks: Arc<Mutex<HashMap<IpAddr, JoinHandle<()>>>>,
-    interface_discovery_task: Option<JoinHandle<()>>,
+    socket_tasks: Arc<Mutex<HashMap<IpAddr, Task<()>>>>,
     config: TargetFinderConfig,
 }
 
 // interface_discovery iterates over all multicast interfaces and adds them to
 // the socket_tasks if there is not already a task for that interface.
 async fn interface_discovery(
-    socket_tasks: Arc<Mutex<HashMap<IpAddr, JoinHandle<()>>>>,
+    socket_tasks: Arc<Mutex<HashMap<IpAddr, Task<()>>>>,
     e: events::Queue<events::DaemonEvent>,
     discovery_interval: Duration,
     query_interval: Duration,
@@ -71,7 +69,7 @@ async fn interface_discovery(
                 Ok(sock) => {
                     let sock = Arc::new(sock);
                     v4_listen_socket = Arc::downgrade(&sock);
-                    task::spawn(recv_loop(sock, e.clone()));
+                    Task::spawn(recv_loop(sock, e.clone())).detach();
                     should_log_v4_listen_error = true;
                 }
                 Err(err) => {
@@ -93,7 +91,7 @@ async fn interface_discovery(
                 Ok(sock) => {
                     let sock = Arc::new(sock);
                     v6_listen_socket = Arc::downgrade(&sock);
-                    task::spawn(recv_loop(sock, e.clone()));
+                    Task::spawn(recv_loop(sock, e.clone())).detach();
                     should_log_v6_listen_error = true;
                 }
                 Err(err) => {
@@ -161,7 +159,7 @@ async fn interface_discovery(
                 if sock.is_some() {
                     socket_tasks.lock().await.insert(
                         addr.ip().clone(),
-                        task::spawn(query_recv_loop(
+                        Task::spawn(query_recv_loop(
                             Arc::new(sock.unwrap()),
                             e.clone(),
                             query_interval,
@@ -280,7 +278,7 @@ async fn query_recv_loop(
     sock: Arc<UdpSocket>,
     e: events::Queue<events::DaemonEvent>,
     interval: Duration,
-    tasks: Arc<Mutex<HashMap<IpAddr, JoinHandle<()>>>>,
+    tasks: Arc<Mutex<HashMap<IpAddr, Task<()>>>>,
 ) {
     let mut recv = recv_loop(sock.clone(), e).boxed().fuse();
     let mut query = query_loop(sock.clone(), interval).boxed().fuse();
@@ -310,21 +308,18 @@ async fn query_recv_loop(
 // TODO(fxbug.dev/44855): This needs to be e2e tested.
 impl TargetFinder for MdnsTargetFinder {
     fn new(config: &TargetFinderConfig) -> Result<Self> {
-        Ok(Self {
-            socket_tasks: Arc::new(Mutex::new(HashMap::new())),
-            config: config.clone(),
-            interface_discovery_task: None,
-        })
+        Ok(Self { socket_tasks: Arc::new(Mutex::new(HashMap::new())), config: config.clone() })
     }
 
     fn start(&mut self, e: events::Queue<events::DaemonEvent>) -> Result<()> {
-        self.interface_discovery_task = Some(task::spawn(interface_discovery(
+        Task::spawn(interface_discovery(
             self.socket_tasks.clone(),
             e.clone(),
             self.config.interface_discovery_interval,
             self.config.broadcast_interval,
             self.config.mdns_ttl,
-        )));
+        ))
+        .detach();
 
         Ok(())
     }
