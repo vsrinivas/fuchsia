@@ -94,7 +94,7 @@ class EnginePixelTest : public EngineTestBase {
   // display controllers are the AMLOGIC devices, and so we hardcode some of those AMLOGIC
   // assumptions here, such as making the pixel format for the capture image BGR24, as that
   // is the only capture format that AMLOGIC supports.
-  fuchsia::sysmem::BufferCollectionSyncPtr SetupCapture(
+  fit::result<fuchsia::sysmem::BufferCollectionSyncPtr, zx_status_t> SetupCapture(
       sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::BufferCollectionInfo_2* collection_info, uint64_t* image_id) {
     auto display = display_manager_->default_display();
@@ -104,7 +104,10 @@ class EnginePixelTest : public EngineTestBase {
 
     // This should only be running on devices with capture support.
     bool capture_supported = scenic_impl::IsCaptureSupported(*display_controller.get());
-    EXPECT_TRUE(capture_supported);
+    if (!capture_supported) {
+      FX_LOGS(WARNING) << "Capture is not supported on this device. Test skipped.";
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
+    }
 
     // Set up buffer collection and image for recording a snapshot.
     fuchsia::hardware::display::ImageConfig image_config = {
@@ -173,7 +176,7 @@ class EnginePixelTest : public EngineTestBase {
     *image_id = scenic_impl::ImportImageForCapture(*display_controller.get(), image_config,
                                                    collection_id, 0);
 
-    return collection;
+    return fit::ok(std::move(collection));
   }
 
   // Sets up the buffer collection information for collections that will be imported
@@ -344,7 +347,14 @@ TEST_F(EnginePixelTest, FullscreenRectangleTest) {
   // Set up buffer collection and image for display_controller capture.
   uint64_t capture_image_id;
   fuchsia::sysmem::BufferCollectionInfo_2 capture_info;
-  auto capture_collection = SetupCapture(kCaptureCollectionId, &capture_info, &capture_image_id);
+  auto capture_collection_result =
+      SetupCapture(kCaptureCollectionId, &capture_info, &capture_image_id);
+  if (capture_collection_result.is_error() &&
+      capture_collection_result.error() == ZX_ERR_NOT_SUPPORTED) {
+    GTEST_SKIP();
+  }
+  EXPECT_TRUE(capture_collection_result.is_ok());
+  auto capture_collection = std::move(capture_collection_result.value());
 
   // Setup the collection for the texture. Due to display controller limitations, the size of
   // the texture needs to match the size of the rect. So since we have a fullscreen rect, we
@@ -419,7 +429,14 @@ VK_TEST_F(EnginePixelTest, SoftwareRenderingTest) {
   // Set up buffer collection and image for display_controller capture.
   uint64_t capture_image_id;
   fuchsia::sysmem::BufferCollectionInfo_2 capture_info;
-  auto capture_collection = SetupCapture(kCaptureCollectionId, &capture_info, &capture_image_id);
+  auto capture_collection_result =
+      SetupCapture(kCaptureCollectionId, &capture_info, &capture_image_id);
+  if (capture_collection_result.is_error() &&
+      capture_collection_result.error() == ZX_ERR_NOT_SUPPORTED) {
+    GTEST_SKIP();
+  }
+  EXPECT_TRUE(capture_collection_result.is_ok());
+  auto capture_collection = std::move(capture_collection_result.value());
 
   // Setup the collection for the textures. Since we're rendering in software, we don't have to
   // deal with display limitations.
