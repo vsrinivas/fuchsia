@@ -91,6 +91,34 @@
             {
                 source_moniker: "<component_manager>",
                 source: "component",
+                source_name: "fuchsia.kernel.RootJob",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/driver_manager",
+                    "/bootstrap/netsvc",
+                    "/bootstrap/svchost",
+                    "/core",
+                    "/core/appmgr",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.RootJobForInspect",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/console-launcher",
+                    "/bootstrap/netsvc",
+                    "/core",
+                    "/core/appmgr",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
                 source_name: "fuchsia.kernel.MmioResource",
                 capability: "protocol",
                 target_monikers: [
