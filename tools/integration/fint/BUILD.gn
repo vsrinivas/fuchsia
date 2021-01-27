@@ -1,0 +1,133 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/golden_file.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+go_library("proto_lib") {
+  source_dir = "proto"
+  sources = [
+    "context.pb.go",
+    "set_artifacts.pb.go",
+    "static.pb.go",
+  ]
+  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+}
+
+go_library("filetype_lib") {
+  sources = [
+    "filetype/filetype.go",
+    "filetype/filetype_test.go",
+  ]
+}
+
+go_test("filetype_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint/filetype" ]
+  deps = [ ":filetype_lib" ]
+}
+
+go_library("fint_lib") {
+  sources = [
+    "common.go",
+    "set.go",
+    "set_test.go",
+    "should_build.go",
+    "should_build_test.go",
+  ]
+
+  deps = [
+    ":filetype_lib",
+    ":proto_lib",
+    "//third_party/golibs:github.com/golang/protobuf",
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//tools/lib/color",
+    "//tools/lib/command",
+    "//tools/lib/jsonutil",
+    "//tools/lib/logger",
+    "//tools/lib/osmisc",
+    "//tools/lib/runner",
+  ]
+}
+
+# This target encompasses all generated proto files, and is intended for use by
+# the update.sh script to avoid needing to specify all the protos again there.
+group("protos") {
+  deps = [
+    ":context",
+    ":set_artifacts",
+    ":static",
+  ]
+}
+
+go_test("fint_lib_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint" ]
+  deps = [ ":fint_lib" ]
+}
+
+proto_library("context") {
+  sources = [ "proto/context.proto" ]
+  generate_cc = false
+  generate_go = true
+  generate_python = false
+}
+
+proto_library("static") {
+  sources = [ "proto/static.proto" ]
+  generate_cc = false
+  generate_descriptor_set = true
+  generate_go = true
+  generate_python = false
+}
+
+proto_library("set_artifacts") {
+  sources = [ "proto/set_artifacts.proto" ]
+  generate_cc = false
+  generate_go = true
+  generate_python = false
+}
+
+golden_file("context_pb_go_diff") {
+  current = "${root_gen_dir}/go-proto-gen/src/tools/integration/fint/proto/context.pb.go"
+  golden = "proto/context.pb.go"
+  deps = [ ":context" ]
+  warn_on_changes = false
+}
+
+golden_file("static_pb_go_diff") {
+  current = "${root_gen_dir}/go-proto-gen/src/tools/integration/fint/proto/static.pb.go"
+  golden = "proto/static.pb.go"
+  deps = [ ":static" ]
+  warn_on_changes = false
+}
+
+golden_file("set_artifacts_pb_go_diff") {
+  current = "${root_gen_dir}/go-proto-gen/src/tools/integration/fint/proto/set_artifacts.pb.go"
+  golden = "proto/set_artifacts.pb.go"
+  deps = [ ":set_artifacts" ]
+  warn_on_changes = false
+}
+
+golden_file("static_desc_pb_diff") {
+  current = "${target_out_dir}/static.desc.pb"
+  golden = "proto/static.desc.pb"
+  deps = [ ":static" ]
+  warn_on_changes = false
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    # The diff rules aren't really tests, but we want to ensure they're run in CQ.
+    ":context_pb_go_diff",
+    ":filetype_tests",
+    ":fint_lib_tests",
+    ":set_artifacts_pb_go_diff",
+    ":static_desc_pb_diff",
+    ":static_pb_go_diff",
+  ]
+}

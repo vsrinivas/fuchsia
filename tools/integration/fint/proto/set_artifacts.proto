@@ -6,7 +6,7 @@ syntax = "proto3";
 
 package fint;
 
-option go_package = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto";
+option go_package = "go.fuchsia.dev/fuchsia/tools/integration/fint/proto";
 
 // SetArtifacts contains information about the manifests and other metadata
 // produced by `fint set`.

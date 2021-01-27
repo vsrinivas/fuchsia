@@ -6,7 +6,7 @@ syntax = "proto3";
 
 package fint;
 
-option go_package = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto";
+option go_package = "go.fuchsia.dev/fuchsia/tools/integration/fint/proto";
 
 // Static contains all of the non-dynamic configuration values for building
 // Fuchsia. These values are "static" in the sense that they don't vary

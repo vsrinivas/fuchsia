@@ -6,7 +6,7 @@ package main
 
 import (
 	"github.com/golang/protobuf/proto"
-	fintpb "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto"
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 )
 
 func parseStatic(text string) (*fintpb.Static, error) {

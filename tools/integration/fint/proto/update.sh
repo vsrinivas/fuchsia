@@ -12,12 +12,12 @@ set -o errexit
 set -o pipefail
 
 # cd to fuchsia checkout root.
-cd "$( dirname "${BASH_SOURCE[0]}" )/../../../../.."
+cd "$( dirname "${BASH_SOURCE[0]}" )/../../../.."
 
-scripts/fx set core.x64 --with //tools/integration/cmd/fint:protos
-scripts/fx ninja -C out/default tools/integration/cmd/fint:protos
+scripts/fx set core.x64 --with //tools/integration/fint:protos
+scripts/fx ninja -C out/default tools/integration/fint:protos
 
-cp out/default/gen/go-proto-gen/src/tools/integration/cmd/fint/proto/*.pb.go \
-  tools/integration/cmd/fint/proto/
-cp out/default/obj/tools/integration/cmd/fint/*.desc.pb \
-  tools/integration/cmd/fint/proto/
+cp out/default/gen/go-proto-gen/src/tools/integration/fint/proto/*.pb.go \
+  tools/integration/fint/proto/
+cp out/default/obj/tools/integration/fint/*.desc.pb \
+  tools/integration/fint/proto/

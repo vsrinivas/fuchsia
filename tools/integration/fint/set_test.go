@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package fint
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	fintpb "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint/proto"
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 

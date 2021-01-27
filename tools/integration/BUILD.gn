@@ -16,6 +16,7 @@ group("tests") {
 
   deps = [
     "//tools/integration/cmd/fint:tests",
+    "//tools/integration/fint:tests",
     "//tools/integration/testsharder:testsharder_tests",
   ]
 }
