@@ -71,9 +71,8 @@ async fn main_inner_async() -> Result<(), Error> {
     let (p_internal, p_external) = zx::EventPair::create().context("while creating EventPairs")?;
 
     // Keep a copy of the internal pair so that external consumers don't observe EVENTPAIR_CLOSED.
-    let _p_internal_clone = p_internal
-        .duplicate_handle(zx::Rights::SIGNAL_PEER | zx::Rights::SIGNAL)
-        .context("while duplicating p_internal")?;
+    let _p_internal_clone =
+        p_internal.duplicate_handle(zx::Rights::NONE).context("while duplicating p_internal")?;
 
     let (unblocker, blocker) = oneshot::channel();
 
