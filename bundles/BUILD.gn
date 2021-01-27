@@ -67,7 +67,6 @@ group("tools-system") {
 }
 
 group("build_infra") {
-  testonly = true
   public_deps = [ "//tools:build_infra" ]
 }
 

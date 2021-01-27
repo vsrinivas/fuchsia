@@ -38,8 +38,6 @@ group("tools") {
 
 # Tools that are used by the infrastructure for building.
 group("build_infra") {
-  testonly = true
-
   public_deps = [
     "//tools/artifactory($host_toolchain)",
     "//tools/blobstats($host_toolchain)",
