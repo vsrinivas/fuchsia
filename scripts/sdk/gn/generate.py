@@ -53,6 +53,11 @@ EXTRA_COPY = [
         src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
         base=os.path.join(FUCHSIA_ROOT, 'tools'),
         dest='bin'),
+    # {fuchsia}/scripts/start-unsecure-internet.sh -> {out}/bin/start-unsecure-internet.sh
+    CopyArgs(
+        src=os.path.join(FUCHSIA_ROOT, 'scripts', 'start-unsecure-internet.sh'),
+        base=os.path.join(FUCHSIA_ROOT, 'scripts'),
+        dest='bin'),
     # {fuchsia}/tools/devshell/lib/emu-ifup-macos.sh -> {out}/bin/devshell/lib/emu-ifup-macos.sh
     CopyArgs(
         src=os.path.join(

@@ -191,6 +191,61 @@ INPUT
   gn-test-check-mock-partial --unknown-arg2-to-qemu
 }
 
+TEST_femu_unsecure_internet() {
+  # Most of the commands used go through a sudo wrapper
+  cat >"${PATH_DIR_FOR_TEST}/ip.mock_side_effects" <<INPUT
+echo "qemu: tap persist user 238107"
+INPUT
+  cat >"${PATH_DIR_FOR_TEST}/sudo.mock_side_effects" <<INPUT
+echo "\$@"
+INPUT
+  cat >"${PATH_DIR_FOR_TEST}/hostname.mock_side_effects" <<INPUT
+echo "test.nongoogle.com"
+INPUT
+  cat >"${PATH_DIR_FOR_TEST}/lsb_release.mock_side_effects" <<INPUT
+echo "unknown"
+INPUT
+
+  if is-mac; then
+      # The upscript doesn't support OSX, so need to expect it will fail so the test suite passes
+      BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
+  else
+      # Run the upscript with a fake qemu network interface argument
+      BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
+
+      source "${PATH_DIR_FOR_TEST}/ip.mock_state"
+      gn-test-check-mock-partial --oneline address show to 172.16.243.1
+      # There are a lot of commands executed, only test for the last one. Note that the
+      # number of tests can vary per-machine, and there are many sudo commands, so we
+      # can't look for a specific version and need to look at the last output file.
+      LAST_SUDO_MOCK_STATE="$(ls -1 ${PATH_DIR_FOR_TEST}/sudo.mock_state.* | sort -V | tail -1)"
+      source "${LAST_SUDO_MOCK_STATE}"
+      gn-test-check-mock-partial iptables -A POSTROUTING
+  fi
+}
+
+# Check that hostname checks work properly
+TEST_femu_unsecure_internet_fail_hostname() {
+  cat >"${PATH_DIR_FOR_TEST}/hostname.mock_side_effects" <<INPUT
+echo "test.domain.google.com"
+INPUT
+  cat >"${PATH_DIR_FOR_TEST}/lsb_release.mock_side_effects" <<INPUT
+echo "unknown"
+INPUT
+  BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
+}
+
+# Check that rodete checks work properly
+TEST_femu_unsecure_internet_fail_hostname() {
+  cat >"${PATH_DIR_FOR_TEST}/hostname.mock_side_effects" <<INPUT
+echo "test.non-google.com"
+INPUT
+  cat >"${PATH_DIR_FOR_TEST}/lsb_release.mock_side_effects" <<INPUT
+echo "rodete"
+INPUT
+  BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
+}
+
 # Verifies that fx emu starts up grpcwebproxy correctly
 TEST_femu_grpcwebproxy() {
 
@@ -351,6 +406,7 @@ BT_FILE_DEPS=(
   tools/devshell/emu
   tools/devshell/lib/fvm.sh
   tools/devshell/lib/emu-ifup-macos.sh
+  scripts/start-unsecure-internet.sh
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
@@ -371,6 +427,8 @@ BT_MOCKED_TOOLS=(
   _isolated_path_for/ip
   _isolated_path_for/fakekill
   _isolated_path_for/sudo
+  _isolated_path_for/hostname
+  _isolated_path_for/lsb_release
   # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
   _isolated_path_for/stty
 )
@@ -428,6 +486,7 @@ BT_INIT_TEMP_DIR() {
 
   # Stage the files we copy from the fx emu implementation, replicating behavior of generate.py
   cp -r "${BT_TEMP_DIR}/tools/devshell" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/"
+  cp -r "${BT_TEMP_DIR}/scripts/start-unsecure-internet.sh" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/"
 }
 
 BT_RUN_TESTS "$@"

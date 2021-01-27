@@ -9,6 +9,7 @@
         "bin/devshell/emu",
         "bin/devshell/lib/image_build_vars.sh",
         "bin/devshell/lib/fvm.sh",
+        "bin/start-unsecure-internet.sh",
         "bin/devshell/lib/emu-ifup-macos.sh"
     ],
     "name": "femu",

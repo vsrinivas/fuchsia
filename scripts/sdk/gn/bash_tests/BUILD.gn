@@ -86,6 +86,11 @@ host_script_test_data("gn_sdk_bash_tests") {
       ]
     },
     {
+      source_base_dir = "//scripts"
+      target_base_dir = "scripts"
+      files = [ "//scripts/start-unsecure-internet.sh" ]
+    },
+    {
       source_base_dir = "//tools/devshell"
       target_base_dir = "tools/devshell"
       files = [
