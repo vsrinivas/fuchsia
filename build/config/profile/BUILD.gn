@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/profile/config.gni")
 import("//build/toolchain/variant.gni")
 
 variant("profile") {
@@ -9,6 +10,11 @@ variant("profile") {
     "-fprofile-instr-generate",
     "-fcoverage-mapping",
   ]
+
+  if (profile_list != "") {
+    common_flags +=
+        [ "-fprofile-list=" + rebase_path(profile_list, "", root_build_dir) ]
+  }
 
   is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
               toolchain_variant.tags
