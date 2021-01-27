@@ -62,11 +62,6 @@ extern inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list, 
 // region of memory derived from those modules.
 void inspector_print_markup_context(FILE* f, zx_handle_t process);
 
-// Print |dso_list| to |f|.
-// The format of the output is verify specific: It is read by
-// zircon/scripts/symbolize in order to add source location to the output.
-extern void inspector_dso_print_list(FILE* f, inspector_dsoinfo_t* dso_list);
-
 // Try to find the copy of |dso| that contains debug information.
 // On success returns ZX_OK with the path of the file stored in
 // |out_debug_file|. On failure returns an error code.

@@ -233,9 +233,7 @@ __EXPORT void inspector_print_stack_trace(FILE* out, zx_handle_t process, zx_han
   // frame pointers are present.
   const bool use_libunwind = true;
 
-  // TODO (jakehehrlich): Remove old dso format.
   inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
-  inspector_dso_print_list(out, dso_list);
   inspector_print_markup_context(out, process);
 
   inspector::decoded_registers decoded = inspector::decode_registers(regs);

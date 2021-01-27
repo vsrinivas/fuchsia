@@ -111,7 +111,6 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* t
     continue;
 #endif
 
-    inspector_dso_print_list(output, dso.info);
     fprintf(output, "arch: %s\n", arch);
     inspector_print_backtrace(output, process->get(), entry.thread.get(), dso.info, pc, sp, fp,
                               true);

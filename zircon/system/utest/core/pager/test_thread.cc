@@ -135,7 +135,6 @@ void TestThread::PrintDebugInfo(const zx_exception_report_t& report) {
   fp = regs.r[29];
 #endif
   inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(zx_process_self());
-  inspector_dso_print_list(stdout, dso_list);
   inspector_print_backtrace(stdout, zx_process_self(), zx_thread_.get(), dso_list, pc, sp, fp,
                             true);
 }

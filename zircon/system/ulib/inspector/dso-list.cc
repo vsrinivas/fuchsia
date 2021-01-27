@@ -175,12 +175,6 @@ __EXPORT void inspector_print_markup_context(FILE* f, zx_handle_t process) {
       });
 }
 
-__EXPORT void inspector_dso_print_list(FILE* f, inspector_dsoinfo_t* dso_list) {
-  for (inspector_dsoinfo_t* dso = dso_list; dso != nullptr; dso = dso->next) {
-    fprintf(f, "dso: id=%s base=%p name=%s\n", dso->buildid, (void*)dso->base, dso->name);
-  }
-}
-
 __EXPORT zx_status_t inspector_dso_find_debug_file(inspector_dsoinfo_t* dso,
                                                    const char** out_debug_file) {
   // Have we already tried?
