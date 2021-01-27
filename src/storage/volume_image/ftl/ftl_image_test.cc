@@ -95,7 +95,7 @@ class FakeReader final : public Reader {
 
   explicit FakeReader(uint32_t block_size) : block_size_(block_size) {}
 
-  uint64_t GetMaximumOffset() const override { return 0; }
+  uint64_t length() const override { return 0; }
 
   // On success data backing this writer is updated at [|offset|, |offset| +
   // |buffer.size()|] to |buffer|.
@@ -680,7 +680,7 @@ TEST(FtlImageTest, FtlImageWriteWithBiggerSizeThanMappingAndNoFillingHasNoEffect
 
 class ZeroReader final : public Reader {
  public:
-  uint64_t GetMaximumOffset() const override { return 0; }
+  uint64_t length() const override { return std::numeric_limits<uint64_t>::max(); }
 
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     std::fill(buffer.begin(), buffer.end(), 0);

@@ -5,8 +5,10 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 
+#include <lib/fit/optional.h>
 #include <lib/fit/result.h>
 
+#include <limits>
 #include <string>
 
 #include <fbl/span.h>
@@ -22,7 +24,8 @@ class Reader {
  public:
   virtual ~Reader() = default;
 
-  virtual uint64_t GetMaximumOffset() const = 0;
+  // Returns the number of bytes readable from this reader.
+  virtual uint64_t length() const = 0;
 
   // On success data at [|offset|, |offset| + |buffer.size()|] are read into
   // |buffer|.

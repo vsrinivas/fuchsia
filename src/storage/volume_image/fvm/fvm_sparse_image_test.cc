@@ -253,7 +253,7 @@ class FakeReader : public Reader {
       fit::function<fit::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> filler)
       : filler_(std::move(filler)) {}
 
-  uint64_t GetMaximumOffset() const override { return 0; }
+  uint64_t length() const override { return 0; }
 
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     return filler_(offset, buffer);
@@ -355,11 +355,11 @@ std::vector<FvmSparsePartitionEntry> GetExpectedPartitionEntries(const FvmDescri
 // structures and aligning them.  Things might have been a little easier if fvm::SparseImage was a
 // multiple of 8 bytes since it would have meant that fvm::PartitionDescriptor was 8 byte aligned
 // when it immediately follows the header, but we are where we are.
-template<typename T>
+template <typename T>
 struct Aligner {
   struct alignas(8) Aligned : T {};
 
-  Aligned operator ()(const T& in) {
+  Aligned operator()(const T& in) {
     Aligned out;
     memcpy(&out, &in, sizeof(T));
     return out;
@@ -368,23 +368,30 @@ struct Aligner {
 
 auto HeaderEq(const fvm::SparseImage& expected_header) {
   using Header = fvm::SparseImage;
-  return testing::ResultOf(Aligner<Header>(), testing::AllOf(
-      testing::Field(&Header::header_length, testing::Eq(expected_header.header_length)),
-      testing::Field(&Header::flags, testing::Eq(expected_header.flags)),
-      testing::Field(&Header::magic, testing::Eq(expected_header.magic)),
-      testing::Field(&Header::partition_count, testing::Eq(expected_header.partition_count)),
-      testing::Field(&Header::slice_size, testing::Eq(expected_header.slice_size)),
-      testing::Field(&Header::maximum_disk_size, testing::Eq(expected_header.maximum_disk_size)),
-      testing::Field(&Header::version, testing::Eq(expected_header.version))));
+  return testing::ResultOf(
+      Aligner<Header>(),
+      testing::AllOf(
+          testing::Field(&Header::header_length, testing::Eq(expected_header.header_length)),
+          testing::Field(&Header::flags, testing::Eq(expected_header.flags)),
+          testing::Field(&Header::magic, testing::Eq(expected_header.magic)),
+          testing::Field(&Header::partition_count, testing::Eq(expected_header.partition_count)),
+          testing::Field(&Header::slice_size, testing::Eq(expected_header.slice_size)),
+          testing::Field(&Header::maximum_disk_size,
+                         testing::Eq(expected_header.maximum_disk_size)),
+          testing::Field(&Header::version, testing::Eq(expected_header.version))));
 }
 
 auto PartitionDescriptorEq(const fvm::PartitionDescriptor& expected_descriptor) {
   using fvm::PartitionDescriptor;
-  return testing::ResultOf(Aligner<PartitionDescriptor>(), testing::AllOf(
-      testing::Field(&PartitionDescriptor::magic, testing::Eq(expected_descriptor.magic)),
-      testing::Field(&PartitionDescriptor::flags, testing::Eq(expected_descriptor.flags)),
-      testing::Field(&PartitionDescriptor::name, testing::ElementsAreArray(expected_descriptor.name)),
-      testing::Field(&PartitionDescriptor::type, testing::ElementsAreArray(expected_descriptor.type))));
+  return testing::ResultOf(
+      Aligner<PartitionDescriptor>(),
+      testing::AllOf(
+          testing::Field(&PartitionDescriptor::magic, testing::Eq(expected_descriptor.magic)),
+          testing::Field(&PartitionDescriptor::flags, testing::Eq(expected_descriptor.flags)),
+          testing::Field(&PartitionDescriptor::name,
+                         testing::ElementsAreArray(expected_descriptor.name)),
+          testing::Field(&PartitionDescriptor::type,
+                         testing::ElementsAreArray(expected_descriptor.type))));
 }
 
 auto PartitionDescriptorMatchesEntry(const FvmSparsePartitionEntry& expected_descriptor) {
@@ -393,11 +400,16 @@ auto PartitionDescriptorMatchesEntry(const FvmSparsePartitionEntry& expected_des
 
 [[maybe_unused]] auto ExtentDescriptorEq(const fvm::ExtentDescriptor& expected_descriptor) {
   using fvm::ExtentDescriptor;
-  return testing::ResultOf(Aligner<ExtentDescriptor>(), testing::AllOf(
-      testing::Field(&ExtentDescriptor::magic, testing::Eq(expected_descriptor.magic)),
-      testing::Field(&ExtentDescriptor::slice_start, testing::Eq(expected_descriptor.slice_start)),
-      testing::Field(&ExtentDescriptor::slice_count, testing::Eq(expected_descriptor.slice_count)),
-      testing::Field(&ExtentDescriptor::extent_length, testing::Eq(expected_descriptor.extent_length))));
+  return testing::ResultOf(
+      Aligner<ExtentDescriptor>(),
+      testing::AllOf(
+          testing::Field(&ExtentDescriptor::magic, testing::Eq(expected_descriptor.magic)),
+          testing::Field(&ExtentDescriptor::slice_start,
+                         testing::Eq(expected_descriptor.slice_start)),
+          testing::Field(&ExtentDescriptor::slice_count,
+                         testing::Eq(expected_descriptor.slice_count)),
+          testing::Field(&ExtentDescriptor::extent_length,
+                         testing::Eq(expected_descriptor.extent_length))));
 }
 
 MATCHER(ExtentDescriptorsAreEq, "Compares to Extent Descriptors") {
@@ -617,7 +629,7 @@ class BufferReader final : public Reader {
     assert(image_buffer_.data() != nullptr);
   }
 
-  uint64_t GetMaximumOffset() const final { return std::numeric_limits<uint64_t>::max(); }
+  uint64_t length() const final { return std::numeric_limits<uint64_t>::max(); }
 
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     // if no overlap zero the buffer.

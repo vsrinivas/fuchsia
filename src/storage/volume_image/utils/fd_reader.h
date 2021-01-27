@@ -17,7 +17,7 @@
 
 namespace storage::volume_image {
 
-// Reader implementation that interacts reads from a file descriptor.
+// Reader implementation that reads from a file descriptor with a fixed number of bytes.
 class FdReader final : public Reader {
  public:
   // On success returns a |FdReader| from a file descriptor pointing to |path|, and whose name is
@@ -25,13 +25,17 @@ class FdReader final : public Reader {
   static fit::result<FdReader, std::string> Create(std::string_view path);
 
   explicit FdReader(fbl::unique_fd fd) : FdReader(std::move(fd), std::string_view()) {}
-  FdReader(fbl::unique_fd fd, std::string_view name);
+  FdReader(fbl::unique_fd fd, std::string_view name)
+      : fd_(std::move(fd)), name_(name), length_(std::numeric_limits<uint64_t>::max()) {}
+  FdReader(fbl::unique_fd fd, std::string_view name, uint64_t length)
+      : fd_(std::move(fd)), name_(name), length_(length) {}
   FdReader(const FdReader&) = delete;
   FdReader(FdReader&&) = default;
   FdReader& operator=(const FdReader&) = delete;
   FdReader& operator=(FdReader&&) = default;
 
-  uint64_t GetMaximumOffset() const override { return maximum_offset_; }
+  // Returns the number of bytes readable from this reader.
+  uint64_t length() const override { return length_; }
 
   // On success data at [|offset|, |offset| + |buffer.size()|] are read into
   // |buffer|.
@@ -47,7 +51,7 @@ class FdReader final : public Reader {
 
   // Stores a unique name for the resource represented by |fd_|, for properly reporting errors.
   std::string name_;
-  uint64_t maximum_offset_ = 0;
+  uint64_t length_ = 0;
 };
 
 }  // namespace storage::volume_image

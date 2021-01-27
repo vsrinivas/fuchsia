@@ -594,7 +594,7 @@ int main(int argc, char** argv) {
     auto partitions = partitions_or.take_value();
 
     int expected_data_length = 0;
-    int total_size = sparse_image_reader_or.value().GetMaximumOffset();
+    int total_size = sparse_image_reader_or.value().length();
     for (const auto& partition : partitions) {
       for (const auto& extent : partition.extents) {
         expected_data_length += extent.extent_length;
@@ -634,7 +634,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "%s\n", reader_or.error().c_str());
         return -1;
       }
-      total_size = reader_or.value().GetMaximumOffset() - header.header_length;
+      total_size = reader_or.value().length() - header.header_length;
     }
 
     if (expected_data_length > total_size) {

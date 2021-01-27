@@ -52,12 +52,11 @@ class DecompressionHelper {
           return fit::error("no progress with decompressor");
         }
         making_progress = false;
-        if (compressed_buffer_.size() < kBufferSize &&
-            compressed_offset_ < base_reader_.GetMaximumOffset()) {
+        if (compressed_buffer_.size() < kBufferSize && compressed_offset_ < base_reader_.length()) {
           // Fill the compressed buffer.
           size_t current_size = compressed_buffer_.size();
           size_t len = static_cast<size_t>(std::min<uint64_t>(
-              kBufferSize - current_size, base_reader_.GetMaximumOffset() - compressed_offset_));
+              kBufferSize - current_size, base_reader_.length() - compressed_offset_));
           compressed_buffer_.resize(current_size + len);
           auto result = base_reader_.Read(
               compressed_offset_, fbl::Span<uint8_t>(&compressed_buffer_[current_size], len));
@@ -117,7 +116,7 @@ class SparseImageReader : public Reader {
   SparseImageReader(Reader& base_reader, uint64_t data_offset, fvm::Metadata&& metadata)
       : decompression_helper_(base_reader, data_offset), metadata_(std::move(metadata)) {}
 
-  uint64_t GetMaximumOffset() const override { return kMetadataOffset + metadata_.Get()->size(); }
+  uint64_t length() const override { return kMetadataOffset + metadata_.Get()->size(); }
 
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const override {
     if (IsMetadata(offset)) {
@@ -220,7 +219,7 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
 
   // Remember the first offset where data starts.
   const uint64_t data_start = offset;
-  if (base_reader.GetMaximumOffset() <= data_start) {
+  if (base_reader.length() <= data_start) {
     return fit::error("bad maximum offset from base reader");
   }
 

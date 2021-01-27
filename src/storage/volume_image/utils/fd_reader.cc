@@ -16,13 +16,6 @@
 
 namespace storage::volume_image {
 
-FdReader::FdReader(fbl::unique_fd fd, std::string_view name) : fd_(std::move(fd)), name_(name) {
-  struct stat stat_buf;
-  if (fstat(fd_.get(), &stat_buf) == 0) {
-    maximum_offset_ = stat_buf.st_size;
-  }
-}
-
 fit::result<FdReader, std::string> FdReader::Create(std::string_view path) {
   if (path.empty()) {
     return fit::error("Cannot obtain file descriptor from empty path.");
@@ -35,7 +28,13 @@ fit::result<FdReader, std::string> FdReader::Create(std::string_view path) {
     error.append(pathname).append(". More specifically ").append(strerror(errno));
     return fit::error(error);
   }
-  return fit::ok(FdReader(std::move(fd), path));
+  struct stat file_stats = {};
+  if (fstat(fd.get(), &file_stats) != 0) {
+    return fit::error("Failed to obtain size for file descriptor at " + std::string(path) +
+                      ". More specifically: " + strerror(errno));
+  }
+
+  return fit::ok(FdReader(std::move(fd), path, file_stats.st_size));
 }
 
 fit::result<void, std::string> FdReader::Read(uint64_t offset, fbl::Span<uint8_t> buffer) const {
