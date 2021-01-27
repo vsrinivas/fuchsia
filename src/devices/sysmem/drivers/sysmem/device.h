@@ -79,6 +79,7 @@ class Device final : public DdkDeviceType,
   [[nodiscard]] zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size,
                                               zx::vmo* vmo_out) override;
   void CheckForUnbind() override;
+  inspect::Node* heap_node() override { return &heaps_; }
 
   [[nodiscard]] zx_status_t Connect(zx_handle_t allocator_request);
 

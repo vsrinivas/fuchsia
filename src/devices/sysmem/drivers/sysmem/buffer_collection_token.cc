@@ -39,6 +39,12 @@ BindingHandle<BufferCollectionToken> BufferCollectionToken::Create(
 }
 
 void BufferCollectionToken::Bind(zx::channel channel) {
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status == ZX_OK) {
+    node_.CreateUint("channel_koid", info.koid, &properties_);
+  }
   auto res = fidl::BindServer(
       parent_device_->dispatcher(), std::move(channel), this,
       fidl::OnUnboundFn<BufferCollectionToken>(

@@ -54,7 +54,8 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   // Ensure NUL-terminated.
   child_name_[sizeof(child_name_) - 1] = 0;
   node_ = parent_node->CreateChild(allocation_name);
-  size_property_ = node_.CreateUint("size", size);
+  node_.CreateUint("size", size, &properties_);
+  node_.CreateUint("id", id(), &properties_);
   high_water_mark_property_ = node_.CreateUint("high_water_mark", 0);
   free_at_high_water_mark_property_ = node_.CreateUint("free_at_high_water_mark", size);
   used_size_property_ = node_.CreateUint("used_size", 0);

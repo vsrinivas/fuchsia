@@ -8,6 +8,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
@@ -21,6 +22,7 @@ class MemoryAllocator {
   // enables a fake in tests where we don't have a real zx::bti etc.
   class Owner {
    public:
+    virtual inspect::Node* heap_node() = 0;
     virtual const zx::bti& bti() = 0;
     virtual zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) = 0;
     // Should be called after every delete that makes the allocator empty.
@@ -83,10 +85,14 @@ class MemoryAllocator {
   // Allocators must be empty before they're deleted.
   virtual bool is_empty() = 0;
 
+  uint64_t id() const { return id_; }
+
  public:
   std::map<intptr_t, fit::callback<void()>> destroy_callbacks_;
 
  private:
+  // This is a unique ID for the allocator on this system.
+  uint64_t id_{};
   llcpp::fuchsia::sysmem2::HeapProperties heap_properties_;
 };
 

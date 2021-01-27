@@ -6,10 +6,15 @@
 
 #include <zircon/assert.h>
 
+#include <atomic>
+
 namespace sysmem_driver {
 
 MemoryAllocator::MemoryAllocator(llcpp::fuchsia::sysmem2::HeapProperties properties)
-    : heap_properties_(std::move(properties)) {}
+    : heap_properties_(std::move(properties)) {
+  static std::atomic_uint64_t id;
+  id_ = id++;
+}
 
 MemoryAllocator::~MemoryAllocator() {
   for (auto& it : destroy_callbacks_) {

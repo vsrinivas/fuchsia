@@ -1982,6 +1982,10 @@ LogicalBufferCollection::Allocate() {
     }
   }
 
+  node_.CreateUint("allocator_id", allocator->id(), &vmo_properties_);
+  node_.CreateUint("size_bytes", min_size_bytes, &vmo_properties_);
+  node_.CreateUint("heap", static_cast<uint64_t>(buffer_settings.heap()), &vmo_properties_);
+
   // Now that min_size_bytes accounts for any ImageFormatConstraints, we can just allocate
   // min_size_bytes buffers.
   //

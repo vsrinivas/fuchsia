@@ -19,7 +19,12 @@ namespace {
 
 class FakeOwner : public MemoryAllocator::Owner {
  public:
-  FakeOwner() { EXPECT_OK(fake_bti_create(bti_.reset_and_get_address())); }
+  explicit FakeOwner(inspect::Node* heap_node)
+      : heap_node_(heap_node)
+
+  {
+    EXPECT_OK(fake_bti_create(bti_.reset_and_get_address()));
+  }
 
   ~FakeOwner() {}
 
@@ -27,8 +32,10 @@ class FakeOwner : public MemoryAllocator::Owner {
   zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override {
     return zx::vmo::create(size, 0u, vmo_out);
   }
+  inspect::Node* heap_node() override { return heap_node_; }
 
  private:
+  inspect::Node* heap_node_;
   zx::bti bti_;
 };
 
@@ -47,8 +54,8 @@ class ContiguousPooledSystem : public zxtest::Test {
   static constexpr uint32_t kVmoCount = 1024;
   static constexpr char kVmoName[] = "test-pool";
 
-  FakeOwner fake_owner_;
   inspect::Inspector inspector_;
+  FakeOwner fake_owner_{&inspector_.GetRoot()};
   ContiguousPooledMemoryAllocator allocator_;
 };
 

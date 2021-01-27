@@ -93,6 +93,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   uint64_t max_free_size_at_high_water_mark_{};
 
   inspect::Node node_;
+  inspect::ValueList properties_;
   inspect::UintProperty size_property_;
   inspect::UintProperty high_water_mark_property_;
   inspect::UintProperty used_size_property_;

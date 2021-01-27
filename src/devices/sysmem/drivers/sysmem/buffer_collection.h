@@ -29,6 +29,8 @@ class BufferCollection
  public:
   ~BufferCollection();
 
+  void Bind(zx::channel server_request);
+
   //
   // fuchsia.sysmem.BufferCollection interface methods
   //
@@ -165,6 +167,7 @@ class BufferCollection
   inspect::Node node_;
   inspect::UintProperty debug_id_property_;
   inspect::StringProperty debug_name_property_;
+  inspect::ValueList properties_;
 };
 
 }  // namespace sysmem_driver

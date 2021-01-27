@@ -26,6 +26,7 @@
 
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
+#include <fbl/string_printf.h>
 
 #include "allocator.h"
 #include "buffer_collection_token.h"
@@ -83,12 +84,15 @@ llcpp::fuchsia::sysmem2::HeapProperties BuildHeapPropertiesWithCoherencyDomainSu
 
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
-  SystemRamMemoryAllocator()
+  SystemRamMemoryAllocator(Owner* parent_device)
       : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(
             true /*cpu*/, true /*ram*/, true /*inaccessible*/,
             // Zircon guarantees created VMO are filled with 0; sysmem doesn't
             // need to clear it once again.
-            false /*need_clear*/)) {}
+            false /*need_clear*/)) {
+    node_ = parent_device->heap_node()->CreateChild("SysmemRamMemoryAllocator");
+    node_.CreateUint("id", id(), &properties_);
+  }
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
@@ -115,6 +119,10 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
   // allocator since the VMOs independently track what pages they're using.  So this allocator can
   // always claim is_empty() true.
   bool is_empty() override { return true; }
+
+ private:
+  inspect::Node node_;
+  inspect::ValueList properties_;
 };
 
 class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
@@ -125,7 +133,10 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
             // Zircon guarantees contagious VMO created are filled with 0;
             // sysmem doesn't need to clear it once again.
             false /*need_clear*/)),
-        parent_device_(parent_device) {}
+        parent_device_(parent_device) {
+    node_ = parent_device_->heap_node()->CreateChild("ContiguousSystemRamMemoryAllocator");
+    node_.CreateUint("id", id(), &properties_);
+  }
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
@@ -176,6 +187,8 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
 
  private:
   Owner* const parent_device_;
+  inspect::Node node_;
+  inspect::ValueList properties_;
 };
 
 class ExternalMemoryAllocator : public MemoryAllocator {
@@ -187,7 +200,11 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       : MemoryAllocator(std::move(properties)),
         owner_(owner),
         heap_(std::move(heap)),
-        wait_for_close_(std::move(wait_for_close)) {}
+        wait_for_close_(std::move(wait_for_close)) {
+    node_ = owner->heap_node()->CreateChild(
+        fbl::StringPrintf("ExternalMemoryAllocator-%ld", id()).c_str());
+    node_.CreateUint("id", id(), &properties_);
+  }
 
   ~ExternalMemoryAllocator() { ZX_DEBUG_ASSERT(is_empty()); }
 
@@ -258,6 +275,9 @@ class ExternalMemoryAllocator : public MemoryAllocator {
 
   // From parent vmo handle to ID.
   std::map<zx_handle_t, uint64_t> allocations_;
+
+  inspect::Node node_;
+  inspect::ValueList properties_;
 };
 
 fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
@@ -402,7 +422,7 @@ zx_status_t Device::Bind() {
   contiguous_memory_size = AlignUp(contiguous_memory_size, static_cast<int64_t>(ZX_PAGE_SIZE));
 
   allocators_[llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM] =
-      std::make_unique<SystemRamMemoryAllocator>();
+      std::make_unique<SystemRamMemoryAllocator>(this);
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {

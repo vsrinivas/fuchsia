@@ -80,6 +80,16 @@ BufferCollection::~BufferCollection() {
   (void)binding_.Close();
 }
 
+void BufferCollection::Bind(zx::channel server_request) {
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      server_request.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status == ZX_OK) {
+    node_.CreateUint("channel_koid", info.koid, &properties_);
+  }
+  FidlServer::Bind(std::move(server_request));
+}
+
 zx_status_t BufferCollection::SetEventSink(zx_handle_t buffer_collection_events_client_param) {
   zx::channel buffer_collection_events_client(buffer_collection_events_client_param);
   if (is_done_) {
