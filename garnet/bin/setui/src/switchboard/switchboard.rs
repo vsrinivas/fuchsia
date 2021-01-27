@@ -364,7 +364,7 @@ impl Switchboard {
         request: Request,
         reply_client: switchboard::message::MessageClient,
     ) -> Result<(), Error> {
-        let messenger = self.core_messenger.clone();
+        let core_messenger = self.core_messenger.clone();
         let action_id = self.get_next_action_id();
 
         self.record_request(setting_type.clone(), request.clone());
@@ -381,7 +381,7 @@ impl Switchboard {
             Entry::Occupied(occupied) => occupied.get().clone(),
         };
 
-        let mut receptor = messenger
+        let mut receptor = core_messenger
             .message(
                 core::Payload::Action(SettingAction {
                     id: action_id,
