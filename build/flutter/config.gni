@@ -19,6 +19,17 @@ declare_args() {
     flutter_default_build_cfg = flutter_debug_build_cfg
   } else {
     # Non-product AOT
-    flutter_default_build_cfg = flutter_profile_build_cfg
+    # flutter_default_build_cfg = flutter_profile_build_cfg
+    # TODO(fxbug.dev/67583) Disabling aot builds until this crash
+    # is resolved. This is not the flutter_debug_build_cfg because it
+    # does not enable asserts.
+    flutter_default_build_cfg = {
+      runtime_meta = "//build/flutter/meta/jit_runtime"
+      runner_dep = "//src/flutter:flutter_jit_runner"
+      platform_name = "flutter_runner"
+      is_aot = false
+      is_product = false
+      enable_asserts = false
+    }
   }
 }
