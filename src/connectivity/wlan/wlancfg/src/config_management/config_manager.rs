@@ -290,6 +290,7 @@ impl SavedNetworksManager {
     }
 
     /// Clear the in memory storage and the persistent storage. Also clear the legacy storage.
+    #[cfg(test)]
     pub async fn clear(&self) -> Result<(), anyhow::Error> {
         self.saved_networks.lock().await.clear();
         self.stash.lock().await.clear().await?;

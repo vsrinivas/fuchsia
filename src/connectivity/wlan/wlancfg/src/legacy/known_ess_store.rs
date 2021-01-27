@@ -106,6 +106,7 @@ impl KnownEssStore {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn clear(&self) -> Result<(), anyhow::Error> {
         let mut guard = self.ess_by_ssid.lock();
         guard.clear();

@@ -91,98 +91,10 @@ fn extract_current_ap(status: &fidl_sme::ClientStatusResponse) -> Option<Box<dep
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::{
-            access_point::{state_machine as ap_fsm, types as ap_types},
-            client::types as client_types,
-            legacy::Iface,
-            mode_management::iface_manager_api::IfaceManagerApi,
-        },
-        anyhow::Error,
-        async_trait::async_trait,
-        fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
-        fuchsia_async as fasync,
-        futures::{channel::oneshot, lock::Mutex, task::Poll},
-        pin_utils::pin_mut,
-        std::sync::Arc,
-        wlan_common::assert_variant,
+        super::*, crate::legacy::Iface, fidl::endpoints::create_proxy,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, futures::task::Poll,
+        pin_utils::pin_mut, wlan_common::assert_variant,
     };
-
-    struct FakeIfaceManager {}
-
-    #[async_trait]
-    impl IfaceManagerApi for FakeIfaceManager {
-        async fn disconnect(
-            &mut self,
-            _network_id: ap_types::NetworkIdentifier,
-            _reason: client_types::DisconnectReason,
-        ) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn connect(
-            &mut self,
-            _connect_req: client_types::ConnectRequest,
-        ) -> Result<oneshot::Receiver<()>, Error> {
-            unimplemented!()
-        }
-
-        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn has_idle_client(&mut self) -> Result<bool, Error> {
-            unimplemented!()
-        }
-
-        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn scan(
-            &mut self,
-            _scan_request: fidl_sme::ScanRequest,
-        ) -> Result<fidl_sme::ScanTransactionProxy, Error> {
-            unimplemented!()
-        }
-
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
-            unimplemented!()
-        }
-
-        async fn stop_client_connections(
-            &mut self,
-            _reason: client_types::DisconnectReason,
-        ) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn start_client_connections(&mut self) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn start_ap(
-            &mut self,
-            _config: ap_fsm::ApConfig,
-        ) -> Result<oneshot::Receiver<()>, Error> {
-            unimplemented!()
-        }
-
-        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn stop_all_aps(&mut self) -> Result<(), Error> {
-            unimplemented!()
-        }
-    }
 
     struct TestValues {
         iface: IfaceRef,
@@ -192,11 +104,8 @@ mod tests {
     fn test_setup() -> TestValues {
         let (sme, server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create ClientSmeProxy");
-        let (service, _) = create_proxy::<wlan_service::DeviceServiceMarker>()
-            .expect("failed to create DeviceServiceProxy");
 
-        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager {}));
-        let iface = Iface { service, iface_manager, sme, iface_id: 0 };
+        let iface = Iface { sme, iface_id: 0 };
         let iface_ref = IfaceRef::new();
         iface_ref.set_if_empty(iface);
 
