@@ -34,6 +34,7 @@ do
   zx="--omit-zx"
   with_c=true
   with_cpp=true
+  with_cpp_mock=false
   with_rust=true
 
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
@@ -51,6 +52,13 @@ do
     || [ "$filename" = "example-8" ] || [ "$filename" = "point" ] \
     || [ "$filename" = "tables" ]; then
     with_cpp=false
+  fi
+
+  if [ "$filename" = "pass-callback" ] || [ "$filename" = "protocol-array" ] \
+    || [ "$filename" = "protocol-base" ] || [ "$filename" = "protocol-handle" ] \
+    || [ "$filename" = "protocol-other-types" ] || [ "$filename" = "primitive" ] \
+    || [ "$filename" = "protocol-vector" ]; then
+    with_cpp_mock=true
   fi
 
   if [ "$filename" = "rust-derive" ]; then
@@ -75,6 +83,9 @@ do
   if [ $with_cpp = true ]; then
     $BANJO_BIN --backend cpp $zx --output "$CPP_FILES/$filename.h" $dependencies --files $f
     $BANJO_BIN --backend cpp_i $zx --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
+  fi
+  if [ $with_cpp_mock = true ]; then
+    $BANJO_BIN --backend cpp_mock $zx --output "$CPP_FILES/mock-$filename.h" $dependencies --files $f
   fi
   if [ $with_rust = true ]; then
     $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
