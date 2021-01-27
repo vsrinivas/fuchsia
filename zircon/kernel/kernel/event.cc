@@ -52,26 +52,22 @@ Event::~Event() {
 
 zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interruptible,
                               uint signal_mask) {
-  zx_status_t ret = ZX_OK;
-
   DEBUG_ASSERT(magic_ == kMagic);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
-  if (result_.load(ktl::memory_order_relaxed) != kNotSignalled) {
-    ret = result_.load(ktl::memory_order_relaxed);
-
-    /* signaled, we're going to fall through */
-    if (flags_ & Event::AUTOUNSIGNAL) {
-      /* autounsignal flag lets one thread fall through before unsignaling */
-      result_.store(kNotSignalled, ktl::memory_order_relaxed);
-    }
-  } else {
+  zx_status_t ret = result_.load(ktl::memory_order_relaxed);
+  if (ret == kNotSignalled) {
     /* unsignaled, block here */
-    ret = wait_.BlockEtc(deadline, signal_mask, ResourceOwnership::Normal, interruptible);
+    return wait_.BlockEtc(deadline, signal_mask, ResourceOwnership::Normal, interruptible);
   }
 
+  /* signaled, we're going to fall through */
+  if (flags_ & Event::AUTOUNSIGNAL) {
+    /* autounsignal flag lets one thread fall through before unsignaling */
+    result_.store(kNotSignalled, ktl::memory_order_relaxed);
+  }
   return ret;
 }
 
