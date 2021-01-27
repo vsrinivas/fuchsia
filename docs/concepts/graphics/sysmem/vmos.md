@@ -141,59 +141,71 @@ Sysmem supplies [Inspect][inspect] hierarchy to report its memory usage to
 snapshots and other client applications. Here's a simple example hierarchy:
 
 ```
-  root:
-    sysmem:
-      collections:
-        logical-collection-0:
-          min_coded_height = 1024
-          min_coded_width = 600
-          name = vc-framebuffer
-          pixel_format = 101
-          pixel_format_modifier = 0
-          vmo_count = 1
-          collection-5:
-            debug_id = 5449
-            debug_name = driver_host:pdev:00:00:1e
-          collection-6:
-            debug_id = 5449
-            debug_name = driver_host:pdev:00:00:1e
-          collection-at-allocation-7:
-            debug_id = 19908
-            debug_name = virtual-console.cm
-            min_buffer_count = 1
-          collection-at-allocation-8:
-            debug_id = 5449
-            debug_name = driver_host:pdev:00:00:1e
-          collection-at-allocation-9:
-            debug_id = 5449
-            debug_name = driver_host:pdev:00:00:1e
-          vmo-20165:
-            koid = 20165
-      heaps:
-        SysmemContiguousPool:
-          allocations_failed = 0
-          allocations_failed_fragmentation = 0
-          free_at_high_water_mark = 37552128
-          high_water_mark = 2490368
-          is_ready = true
-          last_allocation_failed_timestamp_ns = 0
-          max_free_at_high_water = 37552128
-          size = 40042496
-          used_size = 2490368
-          vmo-20165:
-            koid = 20165
-            size = 2490368
+  root:
+    sysmem:
+      collections:
+        logical-collection-0:
+          allocator_id = 1
+          heap = 0
+          min_coded_height = 1024
+          min_coded_width = 600
+          name = vc-framebuffer
+          pixel_format = 101
+          pixel_format_modifier = 0
+          size_bytes = 2490368
+          vmo_count = 1
+          collection-5:
+            channel_koid = 20048
+            debug_id = 5498
+            debug_name = driver_host:pdev:00:00:1e
+          collection-6:
+            channel_koid = 20050
+            debug_id = 5498
+            debug_name = driver_host:pdev:00:00:1e
+          collection-at-allocation-7:
+            debug_id = 19829
+            debug_name = virtual-console.cm
+            min_buffer_count = 1
+          collection-at-allocation-8:
+            debug_id = 5498
+            debug_name = driver_host:pdev:00:00:1e
+          collection-at-allocation-9:
+            debug_id = 5498
+            debug_name = driver_host:pdev:00:00:1e
+          vmo-20085:
+            koid = 20085
+      heaps:
+        SysmemContiguousPool:
+          allocations_failed = 0
+          allocations_failed_fragmentation = 0
+          free_at_high_water_mark = 37498880
+          high_water_mark = 2490368
+          id = 1
+          is_ready = true
+          last_allocation_failed_timestamp_ns = 0
+          max_free_at_high_water = 37498880
+          size = 39989248
+          used_size = 2490368
+          vmo-20085:
+            koid = 20085
+            size = 2490368
+        SysmemRamMemoryAllocator:
+          id = 0
 ```
 Sysmem reports its view of memory through an inspect hierarchy in the
 `/dev/diagnostics/class/sysmem/000.inspect` file. Each logical-collection
-represents a set of identical buffers allocated by a set of clients. Those
-logical-collections contain lists of koids of live middle VMOs in that
+shown represents a set of identical buffers allocated by a set of clients.
+Those logical-collections contain lists of koids of live middle VMOs in that
 collection. koids are unique for the lifetime of the system and can be used
 to uniquely identify sysmem VMOs in memgraph output.
 
-Some (but not all) heaps also have inspect nodes. These can include the size
-and koids of all child VMOs, as well as information about how full the heap
-is and whether it has failed any allocations.
+All heaps also have inspect nodes. These can include the size and koids of
+all child VMOs, as well as information about how full the heap is and whether
+it has failed any allocations. Some heaps only a name and id properties and
+not information about the VMOs allocated from them.
+
+The `allocator_id` of a logical-collection matches the `id` of the heap used
+to allocate its memory.
 
 The inspect data is limited because sysmem doesn't have a view into other
 processes in the system. For example, it doesn't know which other processes
@@ -205,9 +217,10 @@ the name the client sets is correct.
 
 However, there are some pieces of information that can only be determined
 from the inspect data. For example, a client process can hold onto a channel
-to a BufferCollection without holding onto any handles to the VMOs and only
+to a BufferCollection without holding on to any handles to the VMOs. Only
 sysmem knows the mapping between BufferCollection channels and VMOs inside
-its process.
+its process. The `channel_koid` property provides information on the server
+koid of the channel.
 
 ### ZX_INFO_PROCESS_VMOs
 This syscall is used by the `memgraph` and `mem` tools. It can determine what
@@ -243,6 +256,10 @@ is the source of truth for which processes hold references to VMOs. This would
 require iterating through logical-buffer-collection entries and listing their
 koids, then looking through `ZX_INFO_PROCESS_VMOS` to find their sizes and
 what processes reference their children.
+
+A utility can snapshot `ZX_INFO_HANDLE_TABLE` for every process. Then it can
+look up the koid in `channel_koid` using that table to determine which
+process is retaining that BufferCollection.
 
 There are some circumstances where memory can't be accounted correctly. The
 main problem is that handles held in channel messages aren't reported
