@@ -400,6 +400,17 @@ The `environments` section declares environments as described in
             instance.
     -   `as` _(option)_: An explicit name for the runner as it will be known in
         this environment. If omitted, defaults to `runner`.
+-   `resolvers`: The resolvers registered in the environment. An array of objects
+    with the following properties:
+    -   `resolver`: The [name](#capability-names) of a resolver capability, whose
+        source is specified in `from`.
+    -   `from`: The source of the resolver capability, one of:
+        -   `parent`: The component's parent.
+        -   `self`: This component.
+        -   `#<child-name>`: A [reference](#references) to a child component
+            instance.
+    -   `scheme`: The URL scheme for which the resolver should handle resolution.
+
 
 Example:
 
@@ -412,6 +423,13 @@ environments: [
             {
                 runner: "gtest-runner",
                 from: "#gtest",
+            },
+        ],
+        resolvers: [
+            {
+                resolver: "universe-resolver",
+                from: "parent",
+                scheme: "fuchsia-pkg",
             },
         ],
     },
@@ -430,6 +448,7 @@ here.
 -   [`directory`](#capability-directory)
 -   [`storage`](#capability-storage)
 -   [`runner`](#capability-runner)
+-   [`resolver`](#capability-resolver)
 
 #### protocol {#capability-protocol}
 
@@ -473,8 +492,16 @@ A definition of a [runner capability][doc-runners].
 
 -   `runner`: The [name](#capability-names) for this runner capability.
 -   `path`: The path in the component's outgoing directory from which the
-    `fuchsia.sys2.ComponentRunner` protocol is served.
+    `fuchsia.component.runner.ComponentRunner` protocol is served.
 -   `from`: Must be set, but ignored ([fxb/52195](https://fxbug.dev/52195)).
+
+#### resolver {#capability-resolver}
+
+A definition of a [resolver capability][doc-resolvers].
+
+-   `resolver`: The [name](#capability-names) for this resolver capability.
+-   `path`: The path in the component's outgoing directory from
+    which the `fuchsia.sys2.ComponentResolver` protocol is served.
 
 ### use {#use}
 
@@ -533,6 +560,7 @@ explained in [Routing terminology](#routing-terminology).
         an array of names to protocol capabilities.
     -   `directory`: The [name](#capability-names) of a directory capability.
     -   `runner`: The [name](#capability-names) of a runner capability.
+    -   `resolver`: The [name](#capability-names) of a resolver capability.
 -   `from`: The source of the capability, one of:
     -   `self`: This component. Requires a corresponding
         [`capability`](#capabilities) declaration.
@@ -569,6 +597,10 @@ expose: [
         from: "#web_runner",
         as: "web",
     },
+    {
+        resolver: "universe-resolver",
+        from: "#universe_resolver",
+    },
 ],
 ```
 
@@ -585,6 +617,7 @@ explained in [Routing terminology](#routing-terminology).
     -   `directory`: The [name](#capability-names) of a directory capability.
     -   `storage`: The [name](#capability-names) of a storage capability.
     -   `runner`: The [name](#capability-names) of a runner capability.
+    -   `resolver`: The [name](#capability-names) of a resolver capability.
 -   `from`: The source of the capability, one of:
     -   `parent`: The component's parent. This source can be used for all
         capability types.
@@ -648,6 +681,11 @@ offer: [
     },
     {
         runner: "web",
+        from: "parent",
+        to: [ "#user-shell" ],
+    },
+    {
+        resolver: "universe-resolver",
         from: "parent",
         to: [ "#user-shell" ],
     },
