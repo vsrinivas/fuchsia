@@ -19,10 +19,12 @@ namespace {
 
 zx_status_t Reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   auto connection = FidlConnection::FromTxn(txn);
-  auto header = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  // TODO(fxbug.dev/66977) Support the iovec mode.
+  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+  auto header = reinterpret_cast<fidl_message_header_t*>(msg->byte.bytes);
   header->txid = connection->Txid();
-  return zx_channel_write_etc(connection->Channel(), 0, msg->bytes, msg->num_bytes, msg->handles,
-                              msg->num_handles);
+  return zx_channel_write_etc(connection->Channel(), 0, msg->byte.bytes, msg->byte.num_bytes,
+                              msg->byte.handles, msg->byte.num_handles);
 }
 
 // Don't actually send anything on a channel when completing this operation.

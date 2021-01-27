@@ -792,10 +792,14 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
       SetNodeInfoAsDirectory(&msg.primary.node_info);
 
       fidl_outgoing_msg_t raw_msg = {
-          .bytes = reinterpret_cast<uint8_t*>(&msg),
-          .handles = nullptr,
-          .num_bytes = sizeof(msg),
-          .num_handles = 0,
+          .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+          .byte =
+              {
+                  .bytes = reinterpret_cast<uint8_t*>(&msg),
+                  .handles = nullptr,
+                  .num_bytes = sizeof(msg),
+                  .num_handles = 0,
+              },
       };
       return txn->reply(txn, &raw_msg);
     }

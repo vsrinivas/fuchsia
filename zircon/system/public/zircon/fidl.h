@@ -376,8 +376,18 @@ typedef struct fidl_message_header {
 
 #define FIDL_TXID_NO_RESPONSE 0ul
 
-// An outgoing FIDL message.
-typedef struct fidl_outgoing_msg {
+// fidl_iovec_substition_t represents a pointer-width value substitution.
+// The operation *ptr = value can be performed to overwrite the current value
+// at a location with the original value.
+typedef struct fidl_iovec_substitution {
+  void** ptr;
+  void* value;
+} fidl_iovec_substitution_t;
+
+// An outgoing FIDL message represented with contiguous bytes.
+//
+// See fidl_outgoing_msg_iovec_t for a represention using iovec.
+typedef struct fidl_outgoing_msg_byte {
   // The bytes of the message.
   //
   // The bytes of the message might be in the encoded or decoded form.
@@ -397,6 +407,44 @@ typedef struct fidl_outgoing_msg {
 
   // The number of handles in |handles|.
   uint32_t num_handles;
+} fidl_outgoing_msg_byte_t;
+
+// An outgoing FIDL message represented with iovec.
+//
+// See fidl_outgoing_msg_byte_t for a represention using bytes.
+typedef struct fidl_outgoing_msg_iovec {
+  // The output iovecs of the message.
+  //
+  // See |num_iovecs| for the number of iovecs in the message.
+  zx_channel_iovec_t* iovecs;
+
+  // The total number of iovecs in |iovecs|.
+  uint32_t num_iovecs;
+
+  // The output handles of the message.
+  //
+  // See |num_handles| for the number of handles in the message.
+  zx_handle_disposition_t* handles;
+
+  // The number of handles in |handles|.
+  uint32_t num_handles;
+} fidl_outgoing_msg_iovec_t;
+
+typedef uint8_t fidl_outgoing_msg_type;
+
+#define FIDL_OUTGOING_MSG_TYPE_BYTE ((fidl_outgoing_msg_type)1)
+#define FIDL_OUTGOING_MSG_TYPE_IOVEC ((fidl_outgoing_msg_type)2)
+
+// An outgoing FIDL message, in either byte or iovec form.
+typedef struct fidl_outgoing_msg {
+  // Type of the outgoing message.
+  fidl_outgoing_msg_type type;
+
+  // Selection of the outgoing message body.
+  union {
+    fidl_outgoing_msg_byte_t byte;
+    fidl_outgoing_msg_iovec_t iovec;
+  };
 } fidl_outgoing_msg_t;
 
 // An incoming FIDL message.
@@ -458,14 +506,6 @@ typedef struct fidl_epitaph {
 enum {
   kFidlOrdinalEpitaph = 0xFFFFFFFFFFFFFFFF,
 };
-
-// fidl_iovec_substition represents a pointer-width value substitution.
-// The operation *ptr = value can be performed to overwrite the current value
-// at a location with the original value.
-typedef struct fidl_iovec_substitution {
-  void** ptr;
-  void* value;
-} fidl_iovec_substitution_t;
 
 // Assumptions.
 

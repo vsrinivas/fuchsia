@@ -29,14 +29,18 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   fidl_connection_t* conn = (fidl_connection_t*)txn;
   if (conn->txid == 0u)
     return ZX_ERR_BAD_STATE;
-  if (msg->num_bytes < sizeof(fidl_message_header_t))
+  // TODO(fxbug.dev/66977) Support the iovec mode.
+  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+  if (msg->byte.num_bytes < sizeof(fidl_message_header_t))
     return ZX_ERR_INVALID_ARGS;
-  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
+  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
   hdr->txid = conn->txid;
   conn->txid = 0u;
-  fidl_trace(WillCChannelWrite, NULL /* type */, msg->bytes, msg->num_bytes, msg->num_handles);
-  const zx_status_t status = zx_channel_write_etc(conn->channel, 0, msg->bytes, msg->num_bytes,
-                                                  msg->handles, msg->num_handles);
+  fidl_trace(WillCChannelWrite, NULL /* type */, msg->byte.bytes, msg->byte.num_bytes,
+             msg->byte.num_handles);
+  const zx_status_t status =
+      zx_channel_write_etc(conn->channel, 0, msg->byte.bytes, msg->byte.num_bytes,
+                           msg->byte.handles, msg->byte.num_handles);
   fidl_trace(DidCChannelWrite);
   return status;
 }

@@ -6,6 +6,7 @@
 #include <lib/fidl/coding.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
@@ -57,15 +58,16 @@ typedef struct ldsvc_connection {
 } ldsvc_connection_t;
 
 static zx_status_t ldsvc_server_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
+  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
   ldsvc_connection_t* conn = (ldsvc_connection_t*)txn;
-  if (msg->num_bytes < sizeof(fidl_message_header_t))
+  if (msg->byte.num_bytes < sizeof(fidl_message_header_t))
     return ZX_ERR_INVALID_ARGS;
-  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
+  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
   hdr->txid = conn->txid;
   conn->txid = 0;
   ++conn->reply_count;
-  return zx_channel_write_etc(conn->channel, 0, msg->bytes, msg->num_bytes, msg->handles,
-                              msg->num_handles);
+  return zx_channel_write_etc(conn->channel, 0, msg->byte.bytes, msg->byte.num_bytes,
+                              msg->byte.handles, msg->byte.num_handles);
 }
 
 static void ldsvc_server(zx_handle_t channel_handle) {
@@ -231,7 +233,8 @@ TEST(LdsvcTests, ldmsg_functions_are_consistent) {
 }
 
 static zx_status_t validate_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
-  EXPECT_EQ(msg->num_bytes, ldmsg_rsp_get_size((ldmsg_rsp_t*)msg->bytes), "");
+  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+  EXPECT_EQ(msg->byte.num_bytes, ldmsg_rsp_get_size((ldmsg_rsp_t*)msg->byte.bytes), "");
   return ZX_OK;
 }
 

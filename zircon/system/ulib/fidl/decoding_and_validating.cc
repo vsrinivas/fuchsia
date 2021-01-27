@@ -565,7 +565,7 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
   return validator.status();
 }
 
-zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_t* msg,
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_byte_t* msg,
                               const char** out_error_msg) {
   return fidl_validate(type, msg->bytes, msg->num_bytes, msg->num_handles, out_error_msg);
 }

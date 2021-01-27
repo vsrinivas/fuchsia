@@ -44,7 +44,7 @@ zx_status_t fidl_encode_iovec_etc(const fidl_type_t* type, void* object, zx_chan
                                   uint32_t max_handles, uint32_t* out_actual_iovecs,
                                   uint32_t* out_actual_subs, uint32_t* out_actual_handles,
                                   const char** out_error_msg);
-zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_t* msg,
+zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg);
 
 // fidl_linearize_and_encode converts an object and its children to a FIDL wire-format
@@ -117,7 +117,7 @@ zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
 // The |bytes| are not modified.
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
                           uint32_t num_handles, const char** out_error_msg);
-zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_t* msg,
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_byte_t* msg,
                               const char** out_error_msg);
 
 // Validates a FIDL string, and verifies that it is a well-formed UTF-8 code

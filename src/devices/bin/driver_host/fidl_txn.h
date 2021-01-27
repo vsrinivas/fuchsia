@@ -77,9 +77,12 @@ class FidlTxn {
   FidlTxn(FidlTxn&&) = delete;
 
   zx_status_t Reply(const fidl_outgoing_msg_t* msg) {
-    auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
+    // TODO(fxbug.dev/66977) Support the iovec mode.
+    ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+    auto hdr = static_cast<fidl_message_header_t*>(msg->byte.bytes);
     hdr->txid = txid_;
-    return channel_->write_etc(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
+    return channel_->write_etc(0, msg->byte.bytes, msg->byte.num_bytes, msg->byte.handles,
+                               msg->byte.num_handles);
   }
 
   static zx_status_t FidlReply(fidl_txn_t* reply, const fidl_outgoing_msg_t* msg) {

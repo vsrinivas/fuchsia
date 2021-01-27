@@ -1529,5 +1529,20 @@ TEST(Primitives, validate_primitives_struct) {
   EXPECT_NULL(error);
 }
 
+TEST(Msg, ValidateBytesMsg) {
+  SampleNullableXUnionStruct message = {};
+
+  const char* error = nullptr;
+  fidl_outgoing_msg_byte_t msg = {
+      .bytes = &message,
+      .handles = nullptr,
+      .num_bytes = sizeof(message),
+      .num_handles = 0,
+  };
+  auto status = fidl_validate_msg(&fidl_test_coding_SampleNullableXUnionStructTable, &msg, &error);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error, "%s", error);
+}
+
 }  // namespace
 }  // namespace fidl

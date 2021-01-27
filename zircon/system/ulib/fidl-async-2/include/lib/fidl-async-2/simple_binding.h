@@ -351,8 +351,10 @@ class SimpleBinding {
     zx_status_t FidlReplyCooked(const fidl_outgoing_msg_t* msg) {
       // Client code must not pass in nullptr.
       ZX_DEBUG_ASSERT(msg);
+      // TODO(fxbug.dev/66977) Support the iovec mode.
+      ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
       // Client code must be sending a message that isn't broken.
-      ZX_DEBUG_ASSERT(msg->num_bytes >= sizeof(fidl_message_header_t));
+      ZX_DEBUG_ASSERT(msg->byte.num_bytes >= sizeof(fidl_message_header_t));
       // To complete a Txn, the Txn must be recognized first.  This helps
       // ensure that all handlers that take a fidl_txn_t remember to
       // recognize their Txn.
@@ -370,7 +372,8 @@ class SimpleBinding {
       // This method ensures that the handles sent in here are closed
       // unless successfully transferred into the channel.
       auto close_handles = fit::defer([msg] {
-        zx_status_t close_status = FidlHandleDispositionCloseMany(msg->handles, msg->num_handles);
+        zx_status_t close_status =
+            FidlHandleDispositionCloseMany(msg->byte.handles, msg->byte.num_handles);
         ZX_DEBUG_ASSERT(close_status == ZX_OK);
       });
 
@@ -384,8 +387,8 @@ class SimpleBinding {
 
       // The caller should ensure this is true.  It's a bug in the caller
       // if not.
-      ZX_DEBUG_ASSERT(msg->num_bytes >= sizeof(fidl_message_header_t));
-      fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
+      ZX_DEBUG_ASSERT(msg->byte.num_bytes >= sizeof(fidl_message_header_t));
+      fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
       // The caller shouldn't attempt to fill out the txid, as the txid is
       // private to Txn.
       ZX_DEBUG_ASSERT(hdr->txid == 0u);
@@ -399,8 +402,8 @@ class SimpleBinding {
       // will transfer them on success.  So this method shouldn't close
       // the handles.
       close_handles.cancel();
-      return zx_channel_write_etc(binding_->channel(), 0, msg->bytes, msg->num_bytes, msg->handles,
-                                  msg->num_handles);
+      return zx_channel_write_etc(binding_->channel(), 0, msg->byte.bytes, msg->byte.num_bytes,
+                                  msg->byte.handles, msg->byte.num_handles);
       // ~self_delete
     }
 

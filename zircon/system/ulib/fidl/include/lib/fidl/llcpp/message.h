@@ -40,8 +40,8 @@ class OutgoingMessage final : public ::fidl::Result {
   explicit OutgoingMessage(const fidl_outgoing_msg_t* msg)
       : ::fidl::Result(ZX_OK, nullptr),
         message_(*msg),
-        byte_capacity_(msg->num_bytes),
-        handle_capacity_(msg->num_handles) {}
+        byte_capacity_(msg->byte.num_bytes),
+        handle_capacity_(msg->byte.num_handles) {}
   // Copy and move is disabled for the sake of avoiding double handle close.
   // It is possible to implement the move operations with correct semantics if they are
   // ever needed.
@@ -51,10 +51,10 @@ class OutgoingMessage final : public ::fidl::Result {
   OutgoingMessage& operator=(OutgoingMessage&&) = delete;
   ~OutgoingMessage();
 
-  uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.bytes); }
-  zx_handle_disposition_t* handles() const { return message_.handles; }
-  uint32_t byte_actual() const { return message_.num_bytes; }
-  uint32_t handle_actual() const { return message_.num_handles; }
+  uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.byte.bytes); }
+  zx_handle_disposition_t* handles() const { return message_.byte.handles; }
+  uint32_t byte_actual() const { return message_.byte.num_bytes; }
+  uint32_t handle_actual() const { return message_.byte.num_handles; }
   uint32_t byte_capacity() const { return byte_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
   fidl_outgoing_msg_t* message() { return &message_; }
@@ -62,7 +62,7 @@ class OutgoingMessage final : public ::fidl::Result {
 
   // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
   // when interfacing with low-level channel operations which consume the handles.
-  void ReleaseHandles() { message_.num_handles = 0; }
+  void ReleaseHandles() { message_.byte.num_handles = 0; }
 
   // Linearizes and encodes a message. |data| is a pointer to a buffer which holds the source
   // message body which type is defined by |FidlType|.

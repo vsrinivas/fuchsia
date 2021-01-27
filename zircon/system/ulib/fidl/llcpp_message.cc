@@ -20,10 +20,13 @@ OutgoingMessage::OutgoingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_
                                  zx_handle_disposition_t* handles, uint32_t handle_capacity,
                                  uint32_t handle_actual)
     : ::fidl::Result(ZX_OK, nullptr),
-      message_{.bytes = bytes,
-               .handles = handles,
-               .num_bytes = byte_actual,
-               .num_handles = handle_actual},
+      message_{
+          .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+          .byte = {.bytes = bytes,
+                   .handles = handles,
+                   .num_bytes = byte_actual,
+                   .num_handles = handle_actual},
+      },
       byte_capacity_(byte_capacity),
       handle_capacity_(handle_capacity) {
   if (byte_capacity < byte_actual) {
@@ -46,11 +49,11 @@ void OutgoingMessage::LinearizeAndEncode(const fidl_type_t* message_type, void* 
     uint32_t num_bytes_actual;
     uint32_t num_handles_actual;
     status_ = fidl_linearize_and_encode_etc(message_type, data, bytes(), byte_capacity(),
-                                            message_.handles, handle_capacity(), &num_bytes_actual,
-                                            &num_handles_actual, &error_);
+                                            message_.byte.handles, handle_capacity(),
+                                            &num_bytes_actual, &num_handles_actual, &error_);
     if (status_ == ZX_OK) {
-      message_.num_bytes = num_bytes_actual;
-      message_.num_handles = num_handles_actual;
+      message_.byte.num_bytes = num_bytes_actual;
+      message_.byte.num_handles = num_handles_actual;
     }
   }
 }
@@ -144,11 +147,12 @@ void IncomingMessage::Decode(const fidl_type_t* message_type) {
 zx_status_t OutgoingToIncomingMessage(const fidl_outgoing_msg_t* input,
                                       zx_handle_info_t* handle_buf, uint32_t handle_buf_count,
                                       fidl_incoming_msg_t* output) {
-  if (input->num_handles > handle_buf_count) {
+  ZX_DEBUG_ASSERT(input->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+  if (input->byte.num_handles > handle_buf_count) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  for (size_t i = 0; i < input->num_handles; i++) {
-    zx_handle_disposition_t hd = input->handles[i];
+  for (size_t i = 0; i < input->byte.num_handles; i++) {
+    zx_handle_disposition_t hd = input->byte.handles[i];
     if (hd.operation != ZX_HANDLE_OP_MOVE) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -176,10 +180,10 @@ zx_status_t OutgoingToIncomingMessage(const fidl_outgoing_msg_t* input,
 #endif
   }
   *output = fidl_incoming_msg_t{
-      .bytes = input->bytes,
+      .bytes = input->byte.bytes,
       .handles = handle_buf,
-      .num_bytes = input->num_bytes,
-      .num_handles = input->num_handles,
+      .num_bytes = input->byte.num_bytes,
+      .num_handles = input->byte.num_handles,
   };
   return ZX_OK;
 }

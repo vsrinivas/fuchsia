@@ -344,9 +344,12 @@ static zx_status_t tap_device_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* 
 }
 
 zx_status_t TapDevice::Reply(zx_txid_t txid, const fidl_outgoing_msg_t* msg) {
-  auto header = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  // TODO(fxbug.dev/66977) Support the iovec mode.
+  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+  auto header = reinterpret_cast<fidl_message_header_t*>(msg->byte.bytes);
   header->txid = txid;
-  return channel_.write_etc(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
+  return channel_.write_etc(0, msg->byte.bytes, msg->byte.num_bytes, msg->byte.handles,
+                            msg->byte.num_handles);
 }
 
 int TapDevice::Thread() {

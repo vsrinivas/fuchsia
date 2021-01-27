@@ -1562,16 +1562,19 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
       handle_value = "_handles";
     }
     file_ << kIndent << "fidl_outgoing_msg_t _msg = {\n";
-    file_ << kIndent << kIndent << ".bytes = _wr_bytes,\n";
-    file_ << kIndent << kIndent << ".handles = " << handle_value << ",\n";
-    file_ << kIndent << kIndent << ".num_bytes = _wr_num_bytes,\n";
-    file_ << kIndent << kIndent << ".num_handles = " << hcount << ",\n";
+    file_ << kIndent << kIndent << ".type = FIDL_OUTGOING_MSG_TYPE_BYTE,\n";
+    file_ << kIndent << kIndent << ".byte = {\n";
+    file_ << kIndent << kIndent << kIndent << ".bytes = _wr_bytes,\n";
+    file_ << kIndent << kIndent << kIndent << ".handles = " << handle_value << ",\n";
+    file_ << kIndent << kIndent << kIndent << ".num_bytes = _wr_num_bytes,\n";
+    file_ << kIndent << kIndent << kIndent << ".num_handles = " << hcount << ",\n";
+    file_ << kIndent << kIndent << "},\n";
     file_ << kIndent << "};\n";
     bool has_padding = method_info.response->typeshape.HasPadding();
     bool encode_response = (hcount > 0) || CountSecondaryObjects(response) > 0 || has_padding;
     if (encode_response) {
       file_ << kIndent << "zx_status_t _status = fidl_encode_msg(&"
-            << method_info.response->coded_name << ", &_msg, &_msg.num_handles, NULL);\n";
+            << method_info.response->coded_name << ", &_msg.byte, &_msg.byte.num_handles, NULL);\n";
       file_ << kIndent << "if (_status != ZX_OK)\n";
       file_ << kIndent << kIndent << "return _status;\n";
     } else {

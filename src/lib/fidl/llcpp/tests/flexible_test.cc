@@ -54,10 +54,14 @@ class RewriteTransaction : public fidl::Transaction {
     zx_handle_disposition_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
     reinterpret_cast<fidl_message_header_t*>(&real_msg_bytes[0])->txid = txid_;
     fidl_outgoing_msg_t real_msg = {
-        .bytes = &real_msg_bytes[0],
-        .handles = &real_msg_handles[0],
-        .num_bytes = 0u,
-        .num_handles = 0u,
+        .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+        .byte =
+            {
+                .bytes = &real_msg_bytes[0],
+                .handles = &real_msg_handles[0],
+                .num_bytes = 0u,
+                .num_handles = 0u,
+            },
     };
 
     // Determine if |indicator_msg| has a xunion or a table, by inspecting the first few bytes.
@@ -86,8 +90,9 @@ class RewriteTransaction : public fidl::Transaction {
             .num_handles = kUnknownHandles,
             .presence = FIDL_ALLOC_PRESENT,
         };
-        real_msg.num_bytes = envelope_payload_offset + kUnknownBytes;
-        real_msg.num_handles = kUnknownHandles;
+        ZX_ASSERT(real_msg.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+        real_msg.byte.num_bytes = envelope_payload_offset + kUnknownBytes;
+        real_msg.byte.num_handles = kUnknownHandles;
         memset(&real_msg_bytes[envelope_payload_offset], 0xAA, kUnknownBytes);
       } else {
         // The |want_more_than_4_handles_at_ordinal_4| field was set.
@@ -107,8 +112,9 @@ class RewriteTransaction : public fidl::Transaction {
             .num_handles = kUnknownHandles,
             .presence = FIDL_ALLOC_PRESENT,
         };
-        real_msg.num_bytes = envelope_payload_offset + kUnknownBytes;
-        real_msg.num_handles = kUnknownHandles;
+        ZX_ASSERT(real_msg.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+        real_msg.byte.num_bytes = envelope_payload_offset + kUnknownBytes;
+        real_msg.byte.num_handles = kUnknownHandles;
         memset(&real_msg_bytes[envelope_payload_offset], 0xBB, kUnknownBytes);
       }
     } else {
@@ -135,9 +141,10 @@ class RewriteTransaction : public fidl::Transaction {
               .num_handles = kUnknownHandles,
               .presence = FIDL_ALLOC_PRESENT,
           };
-          real_msg.num_bytes =
+          ZX_ASSERT(real_msg.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+          real_msg.byte.num_bytes =
               sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
-          real_msg.num_handles = kUnknownHandles;
+          real_msg.byte.num_handles = kUnknownHandles;
           memset(&real_msg_bytes[sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t)], 0xAA,
                  kUnknownBytes);
           break;
@@ -154,9 +161,10 @@ class RewriteTransaction : public fidl::Transaction {
               .num_handles = kUnknownHandles,
               .presence = FIDL_ALLOC_PRESENT,
           };
-          real_msg.num_bytes =
+          ZX_ASSERT(real_msg.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+          real_msg.byte.num_bytes =
               sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
-          real_msg.num_handles = kUnknownHandles;
+          real_msg.byte.num_handles = kUnknownHandles;
           memset(&real_msg_bytes[sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t)], 0xBB,
                  kUnknownBytes);
           break;
@@ -165,8 +173,9 @@ class RewriteTransaction : public fidl::Transaction {
           ZX_ASSERT_MSG(false, "Cannot reach here");
       }
     }
-    zx_status_t status = channel_->write_etc(0, real_msg.bytes, real_msg.num_bytes,
-                                             real_msg.handles, real_msg.num_handles);
+    ZX_ASSERT(real_msg.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+    zx_status_t status = channel_->write_etc(0, real_msg.byte.bytes, real_msg.byte.num_bytes,
+                                             real_msg.byte.handles, real_msg.byte.num_handles);
     ZX_ASSERT(status == ZX_OK);
     return ZX_OK;
   }

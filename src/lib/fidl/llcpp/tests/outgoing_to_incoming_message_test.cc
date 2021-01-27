@@ -9,10 +9,14 @@
 
 TEST(OutgoingToIncomingMessage, TooManyHandles) {
   fidl_outgoing_msg_t input = {
-      .bytes = nullptr,
-      .handles = nullptr,
-      .num_bytes = 0,
-      .num_handles = 2,
+      .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+      .byte =
+          {
+              .bytes = nullptr,
+              .handles = nullptr,
+              .num_bytes = 0,
+              .num_handles = 2,
+          },
   };
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, fidl::OutgoingToIncomingMessage(&input, nullptr, 1, nullptr));
 }
@@ -30,10 +34,14 @@ TEST(OutgoingToIncomingMessage, Fuchsia) {
       .result = ZX_OK,
   }};
   fidl_outgoing_msg_t input = {
-      .bytes = bytes,
-      .handles = hd,
-      .num_bytes = 16,
-      .num_handles = 1,
+      .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+      .byte =
+          {
+              .bytes = bytes,
+              .handles = hd,
+              .num_bytes = 16,
+              .num_handles = 1,
+          },
   };
   zx_handle_info_t hi[1];
   fidl_incoming_msg_t output;

@@ -125,11 +125,12 @@ typedef struct my_connection {
 } my_connection_t;
 
 static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
+  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
   my_connection_t* my_txn = (my_connection_t*)txn;
-  EXPECT_EQ(sizeof(fidl_test_echo_EchoEchoResponse), msg->num_bytes, "");
-  EXPECT_EQ(0u, msg->num_handles, "");
+  EXPECT_EQ(sizeof(fidl_test_echo_EchoEchoResponse), msg->byte.num_bytes, "");
+  EXPECT_EQ(0u, msg->byte.num_handles, "");
 
-  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
+  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
   EXPECT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial, "");
   ++my_txn->count;
   return ZX_OK;
