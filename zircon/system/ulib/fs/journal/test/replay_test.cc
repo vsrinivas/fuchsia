@@ -929,5 +929,12 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
                            .error_value());
 }
 
+TEST_F(ReplayJournalTest, BadJournalLength) {
+  MockTransactionHandler transaction_handler({}, 0);
+  EXPECT_EQ(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, 0, kBlockSize)
+                .error_value(),
+            ZX_ERR_INVALID_ARGS);
+}
+
 }  // namespace
 }  // namespace fs

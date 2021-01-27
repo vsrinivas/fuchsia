@@ -155,6 +155,9 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
                                             storage::VmoidRegistry* registry,
                                             uint64_t journal_start, uint64_t journal_length,
                                             uint32_t block_size) {
+  if (journal_length <= kJournalMetadataBlocks)
+    return zx::error(ZX_ERR_INVALID_ARGS);
+
   const uint64_t journal_entry_start = journal_start + kJournalMetadataBlocks;
   const uint64_t journal_entry_blocks = journal_length - kJournalMetadataBlocks;
   FX_LOGST(DEBUG, "journal") << "replay: Initializing journal superblock";
