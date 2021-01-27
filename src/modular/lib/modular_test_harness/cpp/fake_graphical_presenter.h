@@ -135,7 +135,7 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
   fit::function<void(std::vector<fuchsia::element::Annotation> annotations_to_set,
                      std::vector<fuchsia::element::AnnotationKey> annotations_to_delete)>
       on_update_annotations_;
-  fit::function<void()> on_dismiss_;
+  fit::function<void()> on_dismiss_ = [&]() { CloseAllViewControllers(); };
 };
 
 }  // namespace modular_testing

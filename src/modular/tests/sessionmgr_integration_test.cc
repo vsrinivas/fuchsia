@@ -249,7 +249,10 @@ TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {
       [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
   bool called_dismiss = false;
-  fake_graphical_presenter_->set_on_dismiss([&] { called_dismiss = true; });
+  fake_graphical_presenter_->set_on_dismiss([&] {
+    called_dismiss = true;
+    fake_graphical_presenter_->CloseAllViewControllers();
+  });
 
   // Create the story
   fuchsia::modular::StoryPuppetMasterPtr story_master;

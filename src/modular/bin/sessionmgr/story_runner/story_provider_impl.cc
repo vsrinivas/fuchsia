@@ -463,29 +463,44 @@ void StoryProviderImpl::PresentView(std::string story_id,
   }
 
   fuchsia::element::ViewControllerPtr view_controller;
-  view_controller.set_error_handler(
-      [weak_this = weak_factory_.GetWeakPtr(), story_id](zx_status_t status) {
-        if (!weak_this) {
-          return;
-        }
+  view_controller.set_error_handler([weak_this = weak_factory_.GetWeakPtr(),
+                                     story_id](zx_status_t status) {
+    if (!weak_this) {
+      return;
+    }
 
-        FX_PLOGS(ERROR, status) << "ViewController connection closed.";
+    auto finish_dismiss = [weak_this, story_id]() {
+      for (auto& callback : weak_this->dismiss_callbacks_[story_id]) {
+        callback();
+      }
 
-        weak_this->operation_queue_.Add(std::make_unique<StopStoryCall>(
-            story_id, /*skip_notifying_sessionshell=*/false, &weak_this->story_runtime_containers_,
-            [weak_this, story_id] {
-              // Delete the story
-              weak_this->session_storage_->DeleteStory(story_id);
+      // Remove view controllers from the map
+      weak_this->view_controllers_.erase(story_id);
+      weak_this->dismiss_callbacks_.erase(story_id);
+    };
 
-              for (auto& callback : weak_this->dismiss_callbacks_[story_id]) {
-                callback();
-              }
+    // Check if the story is already deleted, stopped, or stopping.
+    // If it is, DismissView was previously called and the client closed ViewController
+    // in response, and there's no need to stop the story again.
+    auto it = weak_this->story_runtime_containers_.find(story_id);
+    if (it == weak_this->story_runtime_containers_.end() ||
+        it->second.controller_impl->runtime_state() == fuchsia::modular::StoryState::STOPPED ||
+        it->second.controller_impl->runtime_state() == fuchsia::modular::StoryState::STOPPING) {
+      finish_dismiss();
+    } else {
+      // Otherwise, the client closed the ViewController while the story was running,
+      // so treat is as a request to stop the story.
+      FX_PLOGS(WARNING, status) << "ViewController connection closed, stopping story: " << story_id;
 
-              // Remove view controllers from the map
-              weak_this->view_controllers_.erase(story_id);
-              weak_this->dismiss_callbacks_.erase(story_id);
-            }));
-      });
+      weak_this->operation_queue_.Add(std::make_unique<StopStoryCall>(
+          story_id, /*skip_notifying_sessionshell=*/false, &weak_this->story_runtime_containers_,
+          [weak_this, story_id, finish_dismiss = std::move(finish_dismiss)] {
+            // Delete the story
+            weak_this->session_storage_->DeleteStory(story_id);
+            finish_dismiss();
+          }));
+    }
+  });
 
   graphical_presenter->PresentView(
       std::move(view_spec), view_controller.NewRequest(),
@@ -521,12 +536,31 @@ void StoryProviderImpl::DismissView(std::string story_id, fit::function<void()> 
       << "The session shell component keep alive a fuchsia.element.GraphicalPresenter service for "
          "sessionmgr to function.";
 
-  auto it = view_controllers_.find(story_id);
-  FX_CHECK(it != view_controllers_.end()) << "No story with id: " << story_id << " found.";
+  auto controllers_it = view_controllers_.find(story_id);
+  FX_CHECK(controllers_it != view_controllers_.end())
+      << "No story with id: " << story_id << " found.";
+
+  for (auto it = view_controllers_[story_id].begin(); it != view_controllers_[story_id].end();) {
+    // Notify the ViewController to Dismiss the view, if it's connected, or erase the
+    // ViewController if it isn't.
+    if (auto& view_controller = *it) {
+      view_controller->Dismiss();
+      ++it;
+    } else {
+      it = view_controllers_[story_id].erase(it);
+    }
+  }
 
   dismiss_callbacks_[story_id].push_back(std::move(done));
-  for (fuchsia::element::ViewControllerPtr& view_controller : view_controllers_[story_id]) {
-    view_controller->Dismiss();
+
+  // If all ViewControllers have been deleted because they are disconnected, clean up.
+  if (controllers_it->second.empty()) {
+    for (auto& callback : dismiss_callbacks_[story_id]) {
+      callback();
+    }
+
+    view_controllers_.erase(story_id);
+    dismiss_callbacks_.erase(story_id);
   }
 }
 
