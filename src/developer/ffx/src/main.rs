@@ -200,10 +200,8 @@ async fn run() -> Result<()> {
     show_analytics_notice(notice_writer);
 
     let analytics_start = Instant::now();
-    // Spawn analytics as "blocking", even though it is not - it is
-    // desirable for analytics submission to execute in parallel with
-    // the command execution.
-    let analytics_task = fuchsia_async::Task::blocking(async {
+
+    let analytics_task = fuchsia_async::Task::spawn(async {
         let args: Vec<String> = std::env::args().collect();
         // drop arg[0]: executable with hard path
         // TODO do we want to break out subcommands for analytics?
