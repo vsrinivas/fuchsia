@@ -10,23 +10,21 @@
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/apic.h>
 #include <lib/acpi_lite/numa.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/system-topology.h>
 #include <pow2.h>
 #include <stdio.h>
 #include <trace.h>
 
-#include <algorithm>
-
 #include <fbl/alloc_checker.h>
 #include <kernel/topology.h>
+#include <ktl/optional.h>
 #include <ktl/unique_ptr.h>
 #include <platform/pc/acpi.h>
 
 #define LOCAL_TRACE 0
 
 namespace {
-
-using cpu_id::Topology;
 
 // TODO(edcoyne): move to fbl::Vector::resize().
 template <typename T>
@@ -204,86 +202,16 @@ class Package {
   fbl::Vector<ktl::unique_ptr<Die>> dies_;
 };
 
-class ApicDecoder {
- public:
-  ApicDecoder(uint8_t smt, uint8_t core, uint8_t die, uint8_t cache)
-      : smt_bits_(smt), core_bits_(core), die_bits_(die), cache_shift_(cache) {}
-
-  static ktl::optional<ApicDecoder> From(const cpu_id::CpuId& cpuid) {
-    uint8_t smt_bits = 0, core_bits = 0, die_bits = 0, cache_shift = 0;
-
-    const auto topology = cpuid.ReadTopology();
-    const auto cache = topology.highest_level_cache();
-    cache_shift = cache.shift_width;
-    dprintf(INFO, "Top cache level: %u shift: %u size: %#lx\n", cache.level, cache.shift_width,
-            cache.size_bytes);
-
-    const auto levels_opt = topology.levels();
-    if (!levels_opt) {
-      dprintf(INFO, "ERROR: Unable to determine topology from cpuid. Falling back to flat!\n");
-    }
-
-    // If cpuid failed to provide levels fallback to one that just treats
-    // every core as separate.
-    const auto& levels =
-        levels_opt ? *levels_opt
-                   : cpu_id::Topology::Levels{
-                         .levels = {{.type = cpu_id::Topology::LevelType::CORE, .id_bits = 31}},
-                         .level_count = 1};
-
-    for (int i = 0; i < levels.level_count; i++) {
-      const auto& level = levels.levels[i];
-      switch (level.type) {
-        case Topology::LevelType::SMT:
-          smt_bits = level.id_bits;
-          break;
-        case Topology::LevelType::CORE:
-          core_bits = level.id_bits;
-          break;
-        case Topology::LevelType::DIE:
-          die_bits = level.id_bits;
-          break;
-        default:
-          break;
-      }
-    }
-    LTRACEF("smt_bits: %u core_bits: %u die_bits: %u cache_shift: %u \n", smt_bits, core_bits,
-            die_bits, cache_shift);
-    return {ApicDecoder(smt_bits, core_bits, die_bits, cache_shift)};
-  }
-
-  uint32_t smt_id(uint32_t apic_id) const { return apic_id & ToMask(smt_bits_); }
-
-  uint32_t core_id(uint32_t apic_id) const { return (apic_id >> smt_bits_) & ToMask(core_bits_); }
-
-  uint32_t die_id(uint32_t apic_id) const {
-    return (apic_id >> (smt_bits_ + core_bits_)) & ToMask(die_bits_);
-  }
-
-  uint32_t package_id(uint32_t apic_id) const {
-    return apic_id >> (smt_bits_ + core_bits_ + die_bits_);
-  }
-
-  uint32_t cache_id(uint32_t apic_id) const {
-    return (cache_shift_ == 0) ? 0 : (apic_id >> cache_shift_);
-  }
-
-  bool has_cache_info() const { return cache_shift_ > 0; }
-
- private:
-  uint32_t ToMask(uint8_t width) const { return valpow2<uint32_t>(width) - 1; }
-
-  const uint8_t smt_bits_;
-  const uint8_t core_bits_;
-  const uint8_t die_bits_;
-  const uint8_t cache_shift_;
-};
-
 class PackageList {
  public:
-  PackageList(const cpu_id::CpuId& cpuid, const ApicDecoder& decoder) : decoder_(decoder) {
-    // APIC of this processor, we will ensure it has logical_id 0;
-    primary_apic_id_ = cpuid.ReadProcessorId().local_apic_id();
+  PackageList(const arch::ApicIdDecoder& decoder, uint32_t primary_apic_id,
+              ktl::optional<size_t> last_level_cache_id_shift)
+      : decoder_(decoder),
+        last_level_cache_id_shift_(last_level_cache_id_shift),
+        primary_apic_id_(primary_apic_id) {
+    if (!last_level_cache_id_shift.has_value()) {
+      dprintf(CRITICAL, "WARNING: could not determine LLC share ID shift\n");
+    }
   }
 
   zx_status_t Add(const acpi_lite::AcpiMadtLocalApicEntry& entry) {
@@ -294,7 +222,10 @@ class PackageList {
     const uint32_t die_id = decoder_.die_id(apic_id);
     const uint32_t core_id = decoder_.core_id(apic_id);
     const uint32_t smt_id = decoder_.smt_id(apic_id);
-    const uint32_t cache_id = decoder_.cache_id(apic_id);
+    const ktl::optional<uint32_t> cache_id =
+        last_level_cache_id_shift_.has_value()
+            ? ktl::make_optional(apic_id >> *last_level_cache_id_shift_)
+            : ktl::nullopt;
 
     if (pkg_id >= packages_.size()) {
       zx_status_t status = GrowVector(pkg_id + 1, &packages_);
@@ -318,8 +249,8 @@ class PackageList {
     }
 
     SharedCache* cache = nullptr;
-    if (decoder_.has_cache_info()) {
-      zx_status_t status = die->GetCache(cache_id, &cache);
+    if (cache_id.has_value()) {
+      zx_status_t status = die->GetCache(*cache_id, &cache);
       if (status != ZX_OK) {
         return status;
       }
@@ -337,8 +268,8 @@ class PackageList {
 
     dprintf(INFO, "APIC: %#4x | Logical: %2u | Package: %2u | Die: %2u | Core: %2u | Thread: %2u |",
             apic_id, logical_id, pkg_id, die_id, core_id, smt_id);
-    if (decoder_.has_cache_info()) {
-      dprintf(INFO, " LLC: %2u |", cache_id);
+    if (cache_id.has_value()) {
+      dprintf(INFO, " LLC: %2u |", *cache_id);
     } else {
       dprintf(INFO, " LLC: %2s |", "?");
     }
@@ -350,16 +281,20 @@ class PackageList {
 
  private:
   fbl::Vector<ktl::unique_ptr<Package>> packages_;
-  uint32_t primary_apic_id_;
-  const ApicDecoder& decoder_;
+  const arch::ApicIdDecoder& decoder_;
+  const ktl::optional<size_t> last_level_cache_id_shift_;
+  // APIC ID of this processor, we will ensure it has logical_id 0;
+  const uint32_t primary_apic_id_;
   uint16_t next_logical_id_ = 1;
 };
 
-zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const acpi_lite::AcpiParserInterface& parser,
-                         const ApicDecoder& decoder,
+zx_status_t GenerateTree(const arch::ApicIdDecoder& decoder,    //
+                         uint32_t primary_apic_id,              //
+                         const arch::CpuCacheInfo& cache_info,  //
+                         const acpi_lite::AcpiParserInterface& parser,
                          fbl::Vector<ktl::unique_ptr<Package>>* packages) {
-  // Get a list of all the APIC IDs in the system.
-  PackageList pkg_list(cpuid, decoder);
+  PackageList pkg_list(decoder, primary_apic_id,
+                       cache_info.empty() ? std::nullopt : cache_info.back().share_id_shift);
   zx_status_t status = acpi_lite::EnumerateProcessorLocalApics(
       parser,
       [&pkg_list](const acpi_lite::AcpiMadtLocalApicEntry& value) { return pkg_list.Add(value); });
@@ -372,7 +307,7 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const acpi_lite::AcpiParser
 }
 
 zx_status_t AttachNumaInformation(const acpi_lite::AcpiParserInterface& parser,
-                                  const ApicDecoder& decoder,
+                                  const arch::ApicIdDecoder& decoder,
                                   fbl::Vector<ktl::unique_ptr<Package>>* packages) {
   return acpi_lite::EnumerateCpuNumaPairs(
       parser, [&decoder, packages](const acpi_lite::AcpiNumaDomain& domain, uint32_t apic_id) {
@@ -513,7 +448,7 @@ static constexpr zbi_topology_node_t kFallbackTopology = {
 zx_status_t GenerateAndInitSystemTopology(const acpi_lite::AcpiParserInterface& parser) {
   fbl::Vector<zbi_topology_node_t> topology;
 
-  const auto status = x86::GenerateFlatTopology(cpu_id::CpuId(), parser, &topology);
+  const auto status = x86::GenerateFlatTopology(arch::BootCpuidIo{}, parser, &topology);
   if (status != ZX_OK) {
     dprintf(CRITICAL, "ERROR: failed to generate flat topology from cpuid and acpi data! : %d\n",
             status);
@@ -525,19 +460,15 @@ zx_status_t GenerateAndInitSystemTopology(const acpi_lite::AcpiParserInterface& 
 
 }  // namespace
 
-namespace x86 {
+namespace x86::internal {
 
-zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid,
+zx_status_t GenerateFlatTopology(const arch::ApicIdDecoder& decoder,  //
+                                 uint32_t primary_apic_id,            //
+                                 const arch::CpuCacheInfo& cache_info,
                                  const acpi_lite::AcpiParserInterface& parser,
                                  fbl::Vector<zbi_topology_node_t>* topology) {
-  const auto decoder_opt = ApicDecoder::From(cpuid);
-  if (!decoder_opt) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  const auto& decoder = *decoder_opt;
   fbl::Vector<ktl::unique_ptr<Package>> pkgs;
-  auto status = GenerateTree(cpuid, parser, decoder, &pkgs);
+  auto status = GenerateTree(decoder, primary_apic_id, cache_info, parser, &pkgs);
   if (status != ZX_OK) {
     return status;
   }
@@ -554,7 +485,7 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid,
   return FlattenTree(pkgs, topology);
 }
 
-}  // namespace x86
+}  // namespace x86::internal
 
 void topology_init() {
   auto status = GenerateAndInitSystemTopology(GlobalAcpiLiteParser());

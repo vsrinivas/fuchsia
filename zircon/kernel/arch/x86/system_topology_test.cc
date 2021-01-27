@@ -6,16 +6,10 @@
 
 #include "arch/x86/system_topology.h"
 
-#include <lib/system-topology.h>
 #include <lib/acpi_lite/testing/test_data.h>
+#include <lib/arch/testing/x86/fake-cpuid.h>
+#include <lib/system-topology.h>
 #include <lib/unittest/unittest.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <initializer_list>
-
-#include <arch/x86/cpuid_test_data.h>
 
 using system_topology::Graph;
 
@@ -25,9 +19,9 @@ namespace {
 bool test_cpus_z840() {
   BEGIN_TEST;
 
+  arch::testing::FakeCpuidIo io(arch::testing::X86Microprocessor::kIntelXeonE5_2690_V4);
   fbl::Vector<zbi_topology_node_t> flat_topology;
-  auto status = x86::GenerateFlatTopology(cpu_id::kCpuIdXeon2690v4,
-                                          acpi_lite::testing::Z840AcpiParser(), &flat_topology);
+  auto status = x86::GenerateFlatTopology(io, acpi_lite::testing::Z840AcpiParser(), &flat_topology);
   ASSERT_EQ(ZX_OK, status);
 
   int numa_count = 0;
@@ -82,9 +76,10 @@ bool test_cpus_z840() {
 bool test_cpus_2970wx_x399() {
   BEGIN_TEST;
 
+  arch::testing::FakeCpuidIo io(arch::testing::X86Microprocessor::kAmdRyzenThreadripper2970wx);
   fbl::Vector<zbi_topology_node_t> flat_topology;
-  auto status = x86::GenerateFlatTopology(
-      cpu_id::kCpuIdThreadRipper2970wx, acpi_lite::testing::Sys2970wxAcpiParser(), &flat_topology);
+  auto status =
+      x86::GenerateFlatTopology(io, acpi_lite::testing::Sys2970wxAcpiParser(), &flat_topology);
   ASSERT_EQ(ZX_OK, status);
 
   int numa_count = 0;
@@ -137,30 +132,14 @@ bool test_cpus_2970wx_x399() {
 bool test_cpus_fallback() {
   BEGIN_TEST;
 
-  // The minimal cpuid data set to fallthrough our level parsing.
-  // The number of processors is pulled from acpi so combining these gets us a
-  // bad-cpuid but good acpi condition we are seeing on some hypervisors.
-  const cpu_id::TestDataSet fallback_cpuid_data = {
-      .features = {},
-      .missing_features = {},
-      .leaf0 = {},
-      .leaf1 = {},
-      .leaf4 = {},
-      .leaf6 = {},
-      .leaf7 = {},
-      .leafB = {},
-      .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0}},
-      .leaf8_1 = {},
-      .leaf8_7 = {},
-      .leaf8_8 = {},
-      .leaf8_1D = {},
-      .leaf8_1E = {},
-  };
-
+  // With an 'empty' CPUID data set (representing a pathological case) we would
+  // expect enumeration to fall back to maximally flat description of one
+  // thread to one core to one package, multiplied by the number of processors
+  // enumerated by ACPI.
+  arch::testing::FakeCpuidIo io;
   fbl::Vector<zbi_topology_node_t> flat_topology;
   auto status =
-      x86::GenerateFlatTopology(cpu_id::FakeCpuId(fallback_cpuid_data),
-                                acpi_lite::testing::PixelbookEveAcpiParser(), &flat_topology);
+      x86::GenerateFlatTopology(io, acpi_lite::testing::PixelbookEveAcpiParser(), &flat_topology);
   ASSERT_EQ(ZX_OK, status);
 
   int numa_count = 0;
@@ -188,7 +167,7 @@ bool test_cpus_fallback() {
   }
 
   EXPECT_EQ(0, numa_count);
-  EXPECT_EQ(1, die_count);
+  EXPECT_EQ(4, die_count);
   EXPECT_EQ(0, cache_count);
   EXPECT_EQ(4, core_count);
   EXPECT_EQ(4, thread_count);

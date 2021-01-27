@@ -127,6 +127,8 @@ class CpuCacheInfo {
 
   size_t size() const { return size_; }
 
+  bool empty() const { return size_ == 0; }
+
   // Returns information on the last-level cache.
   const CpuCacheLevelInfo& back() const {
     ZX_DEBUG_ASSERT(size_ > 0);
