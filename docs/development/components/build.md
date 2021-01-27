@@ -376,7 +376,7 @@ fuchsia_component("my-test-component") {
 }
 
 fuchsia_test("my-test-component-test") {
-  package = "//bar:fuchsia_package"
+  package = "//bar:my-test-package"
   component = ":my-test-component"
 }
 
