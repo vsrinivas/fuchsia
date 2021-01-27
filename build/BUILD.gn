@@ -214,7 +214,6 @@ group("deprecated_package") {
     "//sdk/lib/virtualization/*",
     "//src/bringup/bin/pwrbtn-monitor/test/*",
     "//src/camera/*",
-    "//src/camera/bin/camera-gym/*",
     "//src/camera/bin/device/*",
     "//src/camera/bin/device_watcher/*",
     "//src/camera/bin/factory/*",

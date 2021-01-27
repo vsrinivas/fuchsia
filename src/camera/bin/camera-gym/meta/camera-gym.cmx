@@ -3,10 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "args": [
-            "--manual"
-        ],
-        "binary": "bin/camera-gym"
+        "binary": "bin/camera_gym_bin"
     },
     "sandbox": {
         "services": [

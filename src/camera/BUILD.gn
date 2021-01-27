@@ -62,6 +62,7 @@ group("tests") {
   deps = [
     ":camera_tests",
     "bin",
+    "bin:tests",
     "drivers:bind_tests",
     "lib:tests",
   ]

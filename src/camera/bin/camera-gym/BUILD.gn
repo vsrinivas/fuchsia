@@ -3,16 +3,26 @@
 # found in the LICENSE file.
 
 import("//build/cipd.gni")
-import("//build/package.gni")
 import("//src/camera/bin/camera-gym/assets/convert_image.gni")
 import("//src/camera/debug.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   camera_gym_configuration_cycle_time_ms = 10000
   camera_gym_enable_root_presenter = false
 }
 
-name = "camera-gym"
+group("camera-gym") {
+  public_deps = [
+    ":camera_gym_pkg",
+    "fidl:controller",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":camera_gym_test" ]
+}
 
 source_set("lib") {
   sources = [
@@ -50,7 +60,7 @@ source_set("lib") {
 
   defines = [
     camera_debug_define,
-    "CONFIGURATION_CYCLE_TIME_MS=(${camera_gym_configuration_cycle_time_ms})",
+    "CONFIGURATION_CYCLE_TIME_MS=($camera_gym_configuration_cycle_time_ms)",
   ]
 
   if (camera_gym_enable_root_presenter) {
@@ -60,16 +70,12 @@ source_set("lib") {
   }
 }
 
-executable("bin") {
-  output_name = "camera-gym"
-
+executable("camera_gym_bin") {
   sources = [ "main.cc" ]
-
   deps = [
     ":lib",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
   defines = [ camera_debug_define ]
 }
 
@@ -78,7 +84,13 @@ convert_image("mute_icon") {
   output = "$target_out_dir/mute.bin"
 }
 
-converted_stream_title_files = []
+resource("mute_resource") {
+  sources = get_target_outputs(":mute_icon")
+  outputs = [ "data/mute.bin" ]
+  deps = [ ":mute_icon" ]
+}
+
+converted_resources = []
 
 if (internal_access) {
   stream_title_files = [
@@ -92,59 +104,65 @@ if (internal_access) {
   ]
   foreach(file, stream_title_files) {
     convert_image(file) {
-      input = "//prebuilt/camera/camera_gym_assets/${file}"
+      input = "//prebuilt/camera/camera_gym_assets/$file"
       output = "$target_out_dir/${file}"
     }
-    converted_stream_title_files += [ file ]
+    resource("${file}_resource") {
+      sources = get_target_outputs(":$file")
+      outputs = [ "data/$file" ]
+      deps = [ ":$file" ]
+    }
+    converted_resources += [ ":${file}_resource" ]
   }
 }
 
-package("camera-gym-pkg") {
-  deps = [
-    ":bin",
-    ":mute_icon",
-  ]
+group("converted_stream_title_files") {
+  deps = converted_resources
+}
 
-  package_name = "camera-gym"
-
-  binaries = [
-    {
-      name = name
-    },
-  ]
-
-  resources = [
-    {
-      path = "$target_out_dir/mute.bin"
-      dest = "mute.bin"
-    },
-  ]
-
-  foreach(file, converted_stream_title_files) {
-    deps += [ ":${file}" ]
-    resources += [
-      {
-        path = "$target_out_dir/${file}"
-        dest = file
-      },
+template("camera_gym_component") {
+  fuchsia_component("camera_gym_$target_name") {
+    forward_variables_from(invoker,
+                           [
+                             "component_name",
+                             "manifest",
+                           ])
+    deps = [
+      ":camera_gym_bin",
+      ":converted_stream_title_files",
+      ":mute_resource",
     ]
   }
+}
 
-  meta = [
-    {
-      path = "camera-gym.cmx"
-      dest = "camera-gym.cmx"
-    },
-    {
-      path = "camera-gym-manual.cmx"
-      dest = "camera-gym-manual.cmx"
-    },
+camera_gym_component("auto") {
+  component_name = "camera-gym"
+  manifest = "meta/camera-gym.cmx"
+}
+
+camera_gym_component("manual") {
+  component_name = "camera-gym-manual"
+  manifest = "meta/camera-gym-manual.cmx"
+}
+
+fuchsia_package("camera_gym_pkg") {
+  package_name = "camera-gym"
+  deps = [
+    ":camera_gym_auto",
+    ":camera_gym_manual",
   ]
 }
 
-group("camera-gym") {
-  public_deps = [
-    ":camera-gym-pkg",
-    "fidl:controller",
+executable("camera_gym_test_bin") {
+  testonly = true
+  sources = [ "camera_gym_test.cc" ]
+  deps = [
+    "//src/camera/bin/camera-gym:lib",
+    "//src/lib/fxl/test:gtest_main",
   ]
+}
+
+fuchsia_unittest_package("camera_gym_test") {
+  manifest = "meta/camera_gym_test.cmx"
+  deps = [ ":camera_gym_test_bin" ]
 }

@@ -11,3 +11,8 @@ group("bin") {
     "factory_cli:camera-factory-cli",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "camera-gym:tests" ]
+}

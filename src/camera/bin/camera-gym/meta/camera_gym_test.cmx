@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/camera_gym_test"
+        "binary": "bin/camera_gym_test_bin"
     },
     "sandbox": {
         "services": [
