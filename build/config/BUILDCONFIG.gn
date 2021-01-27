@@ -624,6 +624,10 @@ foreach(_target_type,
                   root_build_dir) ]
         }
 
+        # Fail the action when tracing detects an issue.
+        # When benchmarking tracing overhead, ignore trace errors by setting this to 0.
+        args += [ "--failed-check-status=1" ]
+
         if (!hermetic_deps) {
           args += [ "--no-check-access-permissions" ]
         }
