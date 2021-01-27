@@ -5,12 +5,6 @@ use std::time::Duration;
 
 pub(crate) const DAEMON: &str = "daemon";
 
-#[cfg(not(test))]
-pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd";
-
-#[cfg(test)]
-pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd_for_testing_only";
-
 pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 20;
 
 // How many seconds to give before dropping an MDNS target and marking it
@@ -30,17 +24,28 @@ pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
 pub(crate) const SSH_PRIV: &str = "ssh.priv";
 pub(crate) const SSH_PORT: &str = "ssh.port";
 pub(crate) const OVERNET_MAX_RETRY_COUNT: &str = "overnet.max_retry_count";
-#[cfg(not(test))]
-pub(crate) const OVERNET_SOCKET: &str = "overnet.socket";
 
 #[cfg(not(test))]
 pub async fn get_socket() -> String {
+    const OVERNET_SOCKET: &str = "overnet.socket";
+    const DEFAULT_SOCKET: &str = "/tmp/ascendd";
     ffx_config::get(OVERNET_SOCKET).await.unwrap_or(DEFAULT_SOCKET.to_string())
 }
 
 #[cfg(test)]
 pub async fn get_socket() -> String {
-    DEFAULT_SOCKET.to_string()
+    std::thread_local! {
+        static DEFAULT_SOCKET: String = {
+            tempfile::Builder::new()
+                .prefix("ascendd_for_test")
+                .suffix(".sock")
+                .tempfile().unwrap()
+                .path()
+                .file_name().and_then(std::ffi::OsStr::to_str).unwrap().to_string()
+        };
+    }
+
+    DEFAULT_SOCKET.with(|k| k.clone())
 }
 
 pub(crate) const CURRENT_EXE_HASH: &str = "current.hash";
