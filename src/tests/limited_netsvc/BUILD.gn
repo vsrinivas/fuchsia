@@ -36,13 +36,6 @@ if (is_linux) {
     "netruncmd",
   ]
 
-  # Recompute the value of host_out_dir when is_host is true. That is because host_toolchain
-  # always include a variant suffix in this case (e.g. 'host_x64-asan'), while host_out_dir
-  # will always correspond to the base host toolchain output directory.
-  if (is_host) {
-    host_out_dir = get_label_info("//anything($host_toolchain)", "root_out_dir")
-  }
-
   host_test_data("copy_netsvc_tools") {
     visibility = [ ":*" ]
     sources = []
@@ -50,7 +43,7 @@ if (is_linux) {
     deps = []
 
     foreach(tool, net_tools) {
-      sources += [ "$host_out_dir/$tool" ]
+      sources += [ "$root_out_dir/$tool" ]
       deps += [ "//tools/netprotocol:$tool($host_toolchain)" ]
     }
   }
@@ -58,7 +51,7 @@ if (is_linux) {
   host_test_data("copy_loglistener") {
     visibility = [ ":*" ]
 
-    sources = [ "$host_out_dir/loglistener" ]
+    sources = [ "$root_out_dir/loglistener" ]
 
     outputs = [ "$root_out_dir/test_data/limited_netsvc/loglistener" ]
 

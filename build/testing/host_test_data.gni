@@ -42,6 +42,14 @@ template("host_test_data") {
         deps = []
       }
       deps += [ ":$metadata_target_name" ]
+
+      # If we are in the context of a variant, also perform the copy for the
+      # base toolchain, as we want both the variant-selected and normal
+      # versions of the associated test to have its test data available at the
+      # prescribed relative paths.
+      if (current_toolchain != toolchain_variant.base) {
+        deps += [ ":$main_target_name(${toolchain_variant.base})" ]
+      }
     }
     test_data = get_target_outputs(":$main_target_name")
   } else {
