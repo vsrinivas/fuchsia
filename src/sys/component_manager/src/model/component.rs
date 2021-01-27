@@ -12,6 +12,7 @@ use {
                 StopAction,
             },
             binding,
+            component_id_index::ComponentInstanceId,
             context::{ModelContext, WeakModelContext},
             environment::Environment,
             error::ModelError,
@@ -662,6 +663,12 @@ impl ComponentInstance {
         }
         Ok(Arc::clone(self))
     }
+
+    pub fn instance_id(self: &Arc<Self>) -> Option<ComponentInstanceId> {
+        self.try_get_context()
+            .map(|ctx| ctx.component_id_index().look_up_moniker(&self.abs_moniker).cloned())
+            .unwrap_or(None)
+    }
 }
 
 impl std::fmt::Debug for ComponentInstance {
@@ -1240,13 +1247,14 @@ pub mod tests {
             rights,
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
-                routing_test_helpers::RoutingTest,
+                routing_test_helpers::{RoutingTest, RoutingTestBuilder},
                 test_helpers::{
-                    self, component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder,
-                    ComponentInfo,
+                    self, component_decl_with_test_runner, make_index_file, ActionsTest,
+                    ComponentDeclBuilder, ComponentInfo,
                 },
             },
         },
+        component_id_index::gen_instance_id,
         fidl::endpoints,
         fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, AsHandleRef, Koid},
@@ -1915,6 +1923,46 @@ pub mod tests {
             .unwrap()
             .event;
         assert_eq!(parent_stop.target_moniker, a_moniker.clone());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn realm_instance_id() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", component_decl_with_test_runner()),
+        ];
+
+        let instance_id = Some(gen_instance_id(&mut rand::thread_rng()));
+        let component_id_index_path = make_index_file(component_id_index::Index {
+            instances: vec![component_id_index::InstanceIdEntry {
+                instance_id: instance_id.clone(),
+                appmgr_moniker: None,
+                moniker: Some(AbsoluteMoniker::root()),
+            }],
+            ..component_id_index::Index::default()
+        })
+        .unwrap();
+        let test = RoutingTestBuilder::new("root", components)
+            .set_component_id_index_path(
+                component_id_index_path.path().to_str().unwrap().to_string(),
+            )
+            .build()
+            .await;
+
+        let root_realm =
+            test.model.bind(&AbsoluteMoniker::root(), &BindReason::Root).await.unwrap();
+        assert_eq!(instance_id, root_realm.instance_id());
+
+        let a_realm = test
+            .model
+            .bind(
+                &AbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
+                &BindReason::Root,
+            )
+            .await
+            .unwrap();
+        assert_eq!(None, a_realm.instance_id());
     }
 
     async fn wait_until_event_get_timestamp(

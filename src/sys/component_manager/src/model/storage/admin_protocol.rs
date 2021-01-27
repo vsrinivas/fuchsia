@@ -32,6 +32,7 @@ use {
     futures::TryStreamExt,
     lazy_static::lazy_static,
     log::*,
+    moniker::AbsoluteMoniker,
     moniker::ExtendedMoniker,
     std::{
         convert::TryInto,
@@ -179,7 +180,8 @@ impl StorageAdmin {
         let capability = ComponentCapability::Storage(storage_decl.clone());
         let cap_state = CapabilityState::new(&capability);
         let storage_capability_source_info =
-            routing::route_storage_backing_directory(storage_decl, component, cap_state).await?;
+            routing::route_storage_backing_directory(storage_decl, component.clone(), cap_state)
+                .await?;
 
         let mut stream = ServerEnd::<fsys::StorageAdminMarker>::new(server_end)
             .into_stream()
@@ -194,9 +196,19 @@ impl StorageAdmin {
                     object,
                     control_handle: _,
                 } => {
+                    let relative_moniker = relative_moniker.as_str().try_into()?;
+                    let abs_moniker =
+                        AbsoluteMoniker::from_relative(&component.abs_moniker, &relative_moniker)?;
+                    let instance_id = component
+                        .try_get_context()?
+                        .component_id_index()
+                        .look_up_moniker(&abs_moniker)
+                        .cloned();
+
                     let dir_proxy = storage::open_isolated_storage(
                         storage_capability_source_info.clone(),
-                        relative_moniker.as_str().try_into()?,
+                        relative_moniker,
+                        instance_id.as_ref(),
                         mode,
                         &BindReason::AccessCapability {
                             target: ExtendedMoniker::ComponentInstance(storage_moniker.clone()),
@@ -216,9 +228,19 @@ impl StorageAdmin {
                             Err(fcomponent::Error::InvalidArguments)
                         }
                         Ok(relative_moniker) => {
+                            let abs_moniker = AbsoluteMoniker::from_relative(
+                                &component.abs_moniker,
+                                &relative_moniker,
+                            )?;
+                            let instance_id = component
+                                .try_get_context()?
+                                .component_id_index()
+                                .look_up_moniker(&abs_moniker)
+                                .cloned();
                             let res = storage::delete_isolated_storage(
                                 storage_capability_source_info.clone(),
                                 relative_moniker,
+                                instance_id.as_ref(),
                             )
                             .await;
                             match res {

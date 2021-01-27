@@ -368,6 +368,7 @@ pub async fn route_and_open_storage_capability<'a>(
     let storage_dir_proxy = storage::open_isolated_storage(
         storage_source_info,
         relative_moniker,
+        target.instance_id().as_ref(),
         open_mode,
         bind_reason,
     )
@@ -401,9 +402,13 @@ pub(super) async fn route_and_delete_storage<'a>(
 ) -> Result<(), ModelError> {
     let (storage_source_info, relative_moniker) =
         route_storage_capability(use_decl, target).await?;
-    storage::delete_isolated_storage(storage_source_info, relative_moniker)
-        .await
-        .map_err(|e| ModelError::from(e))?;
+    storage::delete_isolated_storage(
+        storage_source_info,
+        relative_moniker,
+        target.instance_id().as_ref(),
+    )
+    .await
+    .map_err(|e| ModelError::from(e))?;
     Ok(())
 }
 

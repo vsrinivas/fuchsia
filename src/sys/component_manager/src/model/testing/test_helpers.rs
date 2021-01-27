@@ -21,9 +21,10 @@ use {
     },
     cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
     cm_types::Url,
+    fidl::encoding::encode_persistent,
     fidl::endpoints::{self, Proxy, ServerEnd},
-    fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_data as fdata,
+    fidl_fidl_examples_echo as echo, fidl_fuchsia_component_internal as fcomponent_internal,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -34,9 +35,12 @@ use {
     futures::{channel::mpsc::Receiver, StreamExt, TryStreamExt},
     moniker::{AbsoluteMoniker, PartialMoniker},
     std::collections::HashSet,
+    std::convert::TryFrom,
     std::default::Default,
+    std::io::Write,
     std::path::Path,
     std::sync::Arc,
+    tempfile::NamedTempFile,
     vfs::directory::entry::DirectoryEntry,
 };
 
@@ -656,6 +660,15 @@ pub async fn wait_for_runner_request(
     let fcrunner::ComponentRunnerRequest::Start { start_info, .. } =
         recv.next().await.expect("Channel closed before request was received.");
     start_info
+}
+
+/// Makes a temporary component ID index file with contents from the given `index`.
+pub fn make_index_file(index: component_id_index::Index) -> anyhow::Result<NamedTempFile> {
+    let mut tmp_file = NamedTempFile::new()?;
+    tmp_file.write_all(
+        encode_persistent(&mut fcomponent_internal::ComponentIdIndex::try_from(index)?)?.as_ref(),
+    )?;
+    Ok(tmp_file)
 }
 
 /// Contains test model and ancillary objects.

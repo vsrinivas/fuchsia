@@ -11,6 +11,7 @@ use {
         },
     },
     cm_rust::*,
+    component_id_index::gen_instance_id,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
     std::{collections::HashSet, convert::TryInto, fs, path::PathBuf},
@@ -840,26 +841,46 @@ async fn use_in_collection_from_parent() {
     .await;
     // Confirm storage directory exists for component in collection
     assert_eq!(
-        test.list_directory_in_storage(Some("data"), RelativeMoniker::new(vec![], vec![]), "")
-            .await,
+        test.list_directory_in_storage(
+            Some("data"),
+            RelativeMoniker::new(vec![], vec![]),
+            None,
+            ""
+        )
+        .await,
         vec!["coll:c:1".to_string()],
     );
     assert_eq!(
-        test.list_directory_in_storage(Some("cache"), RelativeMoniker::new(vec![], vec![]), "")
-            .await,
+        test.list_directory_in_storage(
+            Some("cache"),
+            RelativeMoniker::new(vec![], vec![]),
+            None,
+            ""
+        )
+        .await,
         vec!["coll:c:1".to_string()],
     );
     test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c").await;
 
     // Confirm storage no longer exists.
     assert_eq!(
-        test.list_directory_in_storage(Some("data"), RelativeMoniker::new(vec![], vec![]), "")
-            .await,
+        test.list_directory_in_storage(
+            Some("data"),
+            RelativeMoniker::new(vec![], vec![]),
+            None,
+            ""
+        )
+        .await,
         Vec::<String>::new(),
     );
     assert_eq!(
-        test.list_directory_in_storage(Some("cache"), RelativeMoniker::new(vec![], vec![]), "")
-            .await,
+        test.list_directory_in_storage(
+            Some("cache"),
+            RelativeMoniker::new(vec![], vec![]),
+            None,
+            ""
+        )
+        .await,
         Vec::<String>::new(),
     );
 }
@@ -997,6 +1018,7 @@ async fn use_in_collection_from_grandparent() {
         test.list_directory_in_storage(
             Some("data"),
             RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            None,
             "children",
         )
         .await,
@@ -1006,6 +1028,7 @@ async fn use_in_collection_from_grandparent() {
         test.list_directory_in_storage(
             Some("cache"),
             RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            None,
             "children",
         )
         .await,
@@ -1018,6 +1041,7 @@ async fn use_in_collection_from_grandparent() {
         test.list_directory_in_storage(
             Some("data"),
             RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            None,
             "children"
         )
         .await,
@@ -1027,6 +1051,7 @@ async fn use_in_collection_from_grandparent() {
         test.list_directory_in_storage(
             Some("cache"),
             RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            None,
             "children"
         )
         .await,
@@ -1499,4 +1524,122 @@ async fn storage_dir_from_cm_namespace_prevented_by_policy() {
         },
     )
     .await;
+}
+
+///   component manager's namespace
+///    |
+///    a
+///    |
+///    b
+///    |
+///    c
+///
+/// Instance IDs defined only for `b` in the component ID index.
+/// Check that the correct storge layout is used when a component has an instance ID.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn instance_id_from_index() {
+    let b_instance_id = Some(gen_instance_id(&mut rand::thread_rng()));
+    let component_id_index_path = make_index_file(component_id_index::Index {
+        instances: vec![component_id_index::InstanceIdEntry {
+            instance_id: b_instance_id.clone(),
+            appmgr_moniker: None,
+            moniker: Some(AbsoluteMoniker::parse_string_without_instances("/b").unwrap()),
+        }],
+        ..component_id_index::Index::default()
+    })
+    .unwrap();
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(
+                    DirectoryDeclBuilder::new("data")
+                        .path("/data")
+                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .build(),
+                )
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferStorageSource::Self_,
+                    target: OfferTarget::Child("b".to_string()),
+                    source_name: "cache".into(),
+                    target_name: "cache".into(),
+                }))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
+                    name: "cache".into(),
+                    backing_dir: "data".try_into().unwrap(),
+                    source: StorageDirectorySource::Self_,
+                    subdir: None,
+                })
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "cache".into(),
+                    target_path: "/storage".try_into().unwrap(),
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferStorageSource::Parent,
+                    target: OfferTarget::Child("c".to_string()),
+                    source_name: "cache".into(),
+                    target_name: "cache".into(),
+                }))
+                .add_lazy_child("c")
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl {
+                    source_name: "cache".into(),
+                    target_path: "/storage".try_into().unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("a", components)
+        .set_component_id_index_path(component_id_index_path.path().to_str().unwrap().to_string())
+        .build()
+        .await;
+
+    // instance `b` uses instance-id based paths.
+    test.check_use(
+        AbsoluteMoniker::parse_string_without_instances("/b").unwrap(),
+        CheckUse::Storage {
+            path: "/storage".try_into().unwrap(),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+    assert!(test.list_directory(".").await.contains(b_instance_id.as_ref().unwrap()));
+
+    // instance `c` uses moniker-based paths.
+    let storage_relation = RelativeMoniker::new(vec![], vec!["b:0".into(), "c:0".into()]);
+    test.check_use(
+        AbsoluteMoniker::parse_string_without_instances("/b/c").unwrap(),
+        CheckUse::Storage {
+            path: "/storage".try_into().unwrap(),
+            storage_relation: Some(storage_relation.clone()),
+            from_cm_namespace: false,
+            storage_subdir: None,
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    let expected_storage_path =
+        capability_util::generate_storage_path(None, &storage_relation, None)
+            .to_str()
+            .unwrap()
+            .to_string();
+    assert!(list_directory_recursive(&test.test_dir_proxy)
+        .await
+        .iter()
+        .find(|&name| name.starts_with(&expected_storage_path))
+        .is_some());
 }

@@ -79,21 +79,8 @@ impl ComponentIdIndex {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use anyhow::Result;
-    use fidl::encoding::encode_persistent;
+    use crate::model::testing::test_helpers::make_index_file;
     use fuchsia_async as fasync;
-    use std::convert::TryFrom;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
-
-    fn make_index_file(index: component_id_index::Index) -> Result<NamedTempFile> {
-        let mut tmp_file = NamedTempFile::new()?;
-        tmp_file.write_all(
-            encode_persistent(&mut fcomponent_internal::ComponentIdIndex::try_from(index)?)?
-                .as_ref(),
-        )?;
-        Ok(tmp_file)
-    }
 
     #[fasync::run_singlethreaded(test)]
     async fn look_up_moniker_no_exists() {
