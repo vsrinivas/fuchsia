@@ -83,8 +83,8 @@ func NewLicense(path string, config *Config) (*License, error) {
 	// But first, trim whitespace away so we don't include unnecessary
 	// comment syntax.
 	regex = strings.Trim(regex, "\n ")
-	regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
-	regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
+	regex = strings.ReplaceAll(regex, "\n", `([\s\\#\*\/]|\^L)*`)
+	regex = strings.ReplaceAll(regex, " ", `([\s\\#\*\/]|\^L)*`)
 
 	re, err := regexp.Compile(regex)
 	if err != nil {
@@ -94,7 +94,7 @@ func NewLicense(path string, config *Config) (*License, error) {
 	return &License{
 		pattern:         re,
 		Category:        filepath.Base(path),
-		ValidType:       !contains(config.ProhibitedLicenseTypes, filepath.Base(path)),
+		ValidType:       !(contains(config.ProhibitedLicenseTypes, filepath.Base(path)) || contains(config.ProhibitedLicenseTypes, filepath.Dir(path))),
 		matches:         map[string]*Match{},
 		AllowedDirs:     config.LicenseAllowList[filepath.Base(path)],
 		BadLicenseUsage: []string{},

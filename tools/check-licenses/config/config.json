@@ -96,7 +96,8 @@
     "txt"
   ],
   "maxReadSize": 6144,
-  "prohibitedLicenseTypes" :[
+  "prohibitedLicenseTypes": [
+    "allowlist_only",
     "gcc",
     "gnu",
     "redhat"
