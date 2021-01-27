@@ -14,32 +14,45 @@
 #
 # - Naming convention:
 #
-#   If the library's target name is the same as the directory that defines
-#   it (e.g. //some/dir/foo:foo), use //some/dir/foo:headers as the label
-#   for the headers target as in:
+#   A very common naming convention is to use "foo-headers" to name the
+#   library_headers() target used by library "foo".
 #
-#      # in //some/dir/foo/BUILD.gn
-#      library_headers("headers") { ... }
+#   Alternatively, the Zircon artifacts have been using a slightly different
+#   convention used to shorten references to the target's name, i.e.:
 #
-#      source_set("foo") { ... }
+#   - If the library's target name is the same as the directory that defines
+#     it (e.g. //some/dir/foo:foo), use //some/dir/foo:headers as the label
+#     for the headers target as in:
 #
-#   If this is not the case (e.g. //some/dir/foo:bar), then use the
-#   //some/dir/foo:bar.headers label instead, as in:
+#        # in //some/dir/foo/BUILD.gn
+#        library_headers("headers") { ... }
+#
+#        source_set("foo") { ... }
+#
+#     This allows references to look like //some/dir/foo:headers.
+#
+#   - If this is not the case (e.g. //some/dir/foo:bar), then use the
+#     //some/dir/foo:bar.headers label instead, as in:
 #
 #     # In //some/dir/foo/BUILD.gn
 #     library_headers("bar.headers")
 #
 #     static_library("bar") { ... }
 #
-#   In rare cases, when the target is the only thing defined by the BUILD.gn
+#   In the case where the target is the only thing defined by the BUILD.gn
 #   file, it is ok to use //some/dir/foo:foo as its label, as in:
 #
 #     library_headers("foo") { ... }
 #
+#   But try to limit this to cases where it is certain that no library with
+#   the same name will be created in the future, to avoid updating all
+#   dependents when renaming the target from "foo" to "foo-headers" if that
+#   happens.
+#
 # - Header location:
 #
 #   By default, the template assumes all paths listed in the `headers` argument
-#   are relative to an `include` directory of the current BUILD.gn directory.
+#   are relative to an `include` subdirectory of the current BUILD.gn directory.
 #   This can be overriden by defining the `include_dir` argument to a different
 #   value. For example, if all headers and sources are in the same directory
 #   as the BUILD.gn file, one can use:
@@ -126,7 +139,12 @@ template("library_headers") {
     }
 
     # source_set() already has a set of default configs that is set
-    # in //build/config/BUILDCONFIG.gn
+    # in //build/config/BUILDCONFIG.gn. Hence there is no need for:
+    #
+    #   if (!defined(configs)) {
+    #     configs = []
+    #   }
+    #
     if (defined(invoker.configs)) {
       configs += invoker.configs
     }
