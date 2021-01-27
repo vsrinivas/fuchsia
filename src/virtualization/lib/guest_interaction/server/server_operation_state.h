@@ -173,6 +173,7 @@ class PutCallData final : public CallData {
   // or the client has sent a final empty byte
   void TryWrite();
   void SendFinalStatus(OperationStatus status);
+  void Finish();
 
   // gRPC async boilerplate
   GuestInteractionService::AsyncService* service_;
@@ -190,6 +191,10 @@ class PutCallData final : public CallData {
 
 template <class T>
 void PutCallData<T>::Proceed(bool ok) {
+  if (!ok && status_ != TRANSFER) {
+    Finish();
+    return;
+  }
   switch (status_) {
     case CREATE:
       status_ = INITIATE_TRANSFER;
@@ -209,12 +214,17 @@ void PutCallData<T>::Proceed(bool ok) {
       TryWrite();
       return;
     case FINISH:
-      if (fd_ > 0) {
-        platform_interface_.CloseFile(fd_);
-      }
-      delete this;
+      Finish();
       return;
   }
+}
+
+template <class T>
+void PutCallData<T>::Finish() {
+  if (fd_ > 0) {
+    platform_interface_.CloseFile(fd_);
+  }
+  delete this;
 }
 
 template <class T>
@@ -255,6 +265,7 @@ void PutCallData<T>::TryWrite() {
   if (platform_interface_.WriteFile(fd_, new_request_.data().c_str(),
                                     new_request_.data().length()) < 0) {
     SendFinalStatus(OperationStatus::SERVER_FILE_WRITE_FAILURE);
+    return;
   }
   reader_.Read(&new_request_, this);
 }
@@ -360,7 +371,7 @@ class ExecCallData final : public CallData {
   std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> stream_;
   ExecRequest exec_request_;
 
-  enum CallStatus { INITIATE_READ, FORK, FINISH_IN_ERROR };
+  enum class CallStatus { INITIATE_READ, FORK, FINISH_IN_ERROR };
   CallStatus status_;
 };
 
@@ -508,7 +519,7 @@ std::string ExecWriteCallData<T>::DrainFd(int32_t fd) {
 template <class T>
 ExecCallData<T>::ExecCallData(GuestInteractionService::AsyncService* service,
                               grpc::ServerCompletionQueue* cq)
-    : service_(service), cq_(cq), status_(INITIATE_READ) {
+    : service_(service), cq_(cq), status_(CallStatus::INITIATE_READ) {
   // The ServerContext provides connection metadata to the streaming
   // reader/writer.  No context actually needs to be preserved, but
   // ExecCallData is just the entry point to the exec process.  Once the
@@ -525,92 +536,100 @@ ExecCallData<T>::ExecCallData(GuestInteractionService::AsyncService* service,
 // first command, fork and hand off control to a dedicated reader/writer.
 template <class T>
 void ExecCallData<T>::Proceed(bool ok) {
-  if (status_ == INITIATE_READ) {
-    new ExecCallData(service_, cq_);
-    stream_->Read(&exec_request_, this);
-    status_ = FORK;
-  } else if (status_ != FORK) {
-    GPR_ASSERT(status_ == FINISH_IN_ERROR);
-    delete this;
-    return;
-  } else {
-    // Generate string forms of the argv and environment variables
-    std::vector<std::string> args = platform_interface_.ParseCommand(exec_request_.argv());
-    std::vector<std::string> env = CreateEnv(exec_request_);
-
-    // Repackage the string representations as C-strings
-    std::vector<char*> exec_args;
-    for (const std::string& arg : args) {
-      exec_args.push_back(const_cast<char*>(arg.c_str()));
-    }
-    exec_args.push_back(nullptr);
-
-    std::vector<char*> exec_env;
-    for (const std::string& env_pair : env) {
-      exec_env.push_back(const_cast<char*>(env_pair.c_str()));
-    }
-    exec_env.push_back(nullptr);
-
-    // Create the arguments to exec from the C-string vectors
-    char** args_ptr;
-    if (args.empty()) {
-      ExecResponse exec_response;
-      exec_response.clear_std_out();
-      exec_response.clear_std_err();
-      exec_response.clear_ret_code();
-      exec_response.set_status(OperationStatus::SERVER_EXEC_COMMAND_PARSE_FAILURE);
-
-      stream_->WriteAndFinish(exec_response, grpc::WriteOptions(), grpc::Status::OK, this);
-      status_ = FINISH_IN_ERROR;
-
-      return;
-    }
-
-    args_ptr = exec_args.data();
-
-    char** env_ptr;
-    if (exec_env.empty()) {
-      env_ptr = nullptr;
-    } else {
-      env_ptr = exec_env.data();
-    }
-
-    // File descriptors to be populated when exec-ing
-    int32_t std_in;
-    int32_t std_out;
-    int32_t std_err;
-
-    // fork and exec
-    int32_t child_pid = platform_interface_.Exec(args_ptr, env_ptr, &std_in, &std_out, &std_err);
-
-    if (child_pid < 0) {
-      ExecResponse exec_response;
-      exec_response.clear_std_out();
-      exec_response.clear_std_err();
-      exec_response.clear_ret_code();
-      exec_response.set_status(OperationStatus::SERVER_EXEC_FORK_FAILURE);
-
-      stream_->WriteAndFinish(exec_response, grpc::WriteOptions(), grpc::Status::OK, this);
-
-      platform_interface_.CloseFile(std_in);
-      platform_interface_.CloseFile(std_out);
-      platform_interface_.CloseFile(std_err);
-      status_ = FINISH_IN_ERROR;
-      return;
-    }
-    // Set read FD's to nonblocking mode.
-    platform_interface_.SetFileNonblocking(std_out);
-    platform_interface_.SetFileNonblocking(std_err);
-
-    // If the client specified any stdin, write that into the stdin FD.
-    platform_interface_.WriteFile(std_in, exec_request_.std_in().c_str(),
-                                  exec_request_.std_in().size());
-
-    new ExecReadCallData<T>(ctx_, stream_, child_pid, std_in);
-    new ExecWriteCallData<T>(ctx_, stream_, child_pid, std_out, std_err);
+  // State machine doesn't expect a not ok command queue event on this tag.
+  // Get rid of resource if that happens.
+  if (!ok) {
     delete this;
     return;
   }
+  switch (status_) {
+    case CallStatus::INITIATE_READ:
+      new ExecCallData(service_, cq_);
+      stream_->Read(&exec_request_, this);
+      status_ = CallStatus::FORK;
+      return;
+    case CallStatus::FINISH_IN_ERROR:
+      delete this;
+      return;
+    case CallStatus::FORK:
+      break;
+  }
+
+  // Generate string forms of the argv and environment variables
+  std::vector<std::string> args = platform_interface_.ParseCommand(exec_request_.argv());
+  std::vector<std::string> env = CreateEnv(exec_request_);
+
+  // Repackage the string representations as C-strings
+  std::vector<char*> exec_args;
+  for (const std::string& arg : args) {
+    exec_args.push_back(const_cast<char*>(arg.c_str()));
+  }
+  exec_args.push_back(nullptr);
+
+  std::vector<char*> exec_env;
+  for (const std::string& env_pair : env) {
+    exec_env.push_back(const_cast<char*>(env_pair.c_str()));
+  }
+  exec_env.push_back(nullptr);
+
+  // Create the arguments to exec from the C-string vectors
+  char** args_ptr;
+  if (args.empty()) {
+    ExecResponse exec_response;
+    exec_response.clear_std_out();
+    exec_response.clear_std_err();
+    exec_response.clear_ret_code();
+    exec_response.set_status(OperationStatus::SERVER_EXEC_COMMAND_PARSE_FAILURE);
+
+    stream_->WriteAndFinish(exec_response, grpc::WriteOptions(), grpc::Status::OK, this);
+    status_ = CallStatus::FINISH_IN_ERROR;
+
+    return;
+  }
+
+  args_ptr = exec_args.data();
+
+  char** env_ptr;
+  if (exec_env.empty()) {
+    env_ptr = nullptr;
+  } else {
+    env_ptr = exec_env.data();
+  }
+
+  // File descriptors to be populated when exec-ing
+  int32_t std_in;
+  int32_t std_out;
+  int32_t std_err;
+
+  // fork and exec
+  int32_t child_pid = platform_interface_.Exec(args_ptr, env_ptr, &std_in, &std_out, &std_err);
+
+  if (child_pid < 0) {
+    ExecResponse exec_response;
+    exec_response.clear_std_out();
+    exec_response.clear_std_err();
+    exec_response.clear_ret_code();
+    exec_response.set_status(OperationStatus::SERVER_EXEC_FORK_FAILURE);
+
+    stream_->WriteAndFinish(exec_response, grpc::WriteOptions(), grpc::Status::OK, this);
+
+    platform_interface_.CloseFile(std_in);
+    platform_interface_.CloseFile(std_out);
+    platform_interface_.CloseFile(std_err);
+    status_ = CallStatus::FINISH_IN_ERROR;
+    return;
+  }
+  // Set read FD's to nonblocking mode.
+  platform_interface_.SetFileNonblocking(std_out);
+  platform_interface_.SetFileNonblocking(std_err);
+
+  // If the client specified any stdin, write that into the stdin FD.
+  platform_interface_.WriteFile(std_in, exec_request_.std_in().c_str(),
+                                exec_request_.std_in().size());
+
+  new ExecReadCallData<T>(ctx_, stream_, child_pid, std_in);
+  new ExecWriteCallData<T>(ctx_, stream_, child_pid, std_out, std_err);
+  delete this;
 }
 
 template <class T>

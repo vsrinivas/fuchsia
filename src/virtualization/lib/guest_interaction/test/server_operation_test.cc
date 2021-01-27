@@ -21,11 +21,6 @@
 // 5. The file the server is reading from goes into a bad state.
 
 TEST_F(AsyncEndToEndTest, ServerMissingFile) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check if the requested file exists will return false.
   GetCallData<FakePlatform>* server_call_data =
       new GetCallData<FakePlatform>(service_.get(), server_cq_.get());
@@ -33,47 +28,44 @@ TEST_F(AsyncEndToEndTest, ServerMissingFile) {
   server_call_data->platform_interface_.SetFileExistsReturn(false);
 
   // Create components required to perform a client Get request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   GetResponse get_response;
   GetRequest get_request;
   get_request.set_source("/some/bogus/path");
 
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader_ =
-      stub_->AsyncGet(&client_ctx_, get_request, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
+      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
-  client_cq_->Next(&tag, &cq_status);
-  reader_->Read(&get_response, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request and reply that the
   // requested file does not exist.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should get the server's message and then wait for the server to
   // call Finish.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   op_status = get_response.status();
   ASSERT_EQ(op_status, OperationStatus::SERVER_MISSING_FILE_FAILURE);
-  reader_->Finish(&grpc_status, nullptr);
+  reader->Finish(&grpc_status, reader.get());
 
   // Server finishes.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerFileOpenFailure) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check if the requested file exists will return false.
   GetCallData<FakePlatform>* server_call_data =
       new GetCallData<FakePlatform>(service_.get(), server_cq_.get());
@@ -82,47 +74,44 @@ TEST_F(AsyncEndToEndTest, ServerFileOpenFailure) {
   server_call_data->platform_interface_.SetOpenFileReturn(-1);
 
   // Create components required to perform a client Get request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   GetResponse get_response;
   GetRequest get_request;
   get_request.set_source("/file/with/permissions/issues");
 
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader_ =
-      stub_->AsyncGet(&client_ctx_, get_request, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
+      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
-  client_cq_->Next(&tag, &cq_status);
-  reader_->Read(&get_response, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request and reply that the
   // requested file does not exist.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should get the server's message and then wait for the server to
   // call Finish.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   op_status = get_response.status();
   ASSERT_EQ(op_status, OperationStatus::SERVER_FILE_READ_FAILURE);
-  reader_->Finish(&grpc_status, nullptr);
+  reader->Finish(&grpc_status, reader.get());
 
   // Server finishes.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerUnfragmentedRead) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server will be told that the file exists and that it was able to open
   // open it.  It will be notified that the file is not bad, and EOF will be
   // false the first time and then true the second.  The call to read from the
@@ -135,61 +124,57 @@ TEST_F(AsyncEndToEndTest, ServerUnfragmentedRead) {
   server_call_data->platform_interface_.SetReadFileContents("test");
 
   // Create components required to perform a client Get request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   GetResponse get_response;
   GetRequest get_request;
   get_request.set_source("/some/test/file");
 
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader_ =
-      stub_->AsyncGet(&client_ctx_, get_request, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
+      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
-  client_cq_->Next(&tag, &cq_status);
-  reader_->Read(&get_response, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request, open the file, and
   // send back the first chunk of contents.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should get the server's message and then wait for more data.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   ASSERT_STREQ(get_response.data().c_str(), "test");
   op_status = get_response.status();
-  reader_->Read(&get_response, nullptr);
+  reader->Read(&get_response, reader.get());
 
   // The server should hit EOF and send an empty chunk of data back to the
   // client.
   server_call_data->platform_interface_.SetReadFileContents("");
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   op_status = get_response.status();
-  reader_->Read(&get_response, nullptr);
+  reader->Read(&get_response, reader.get());
 
   // The server should then call Finish.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // The client read should fail and then it should finish.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_FALSE(cq_status);
-  reader_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), false);
+  reader->Finish(&grpc_status, reader.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerFragmentedRead) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server will be told that the file exists and that it was able to open
   // open it.  It will be notified that the file is not bad, and EOF will be
   // false the first time and then true the second.  The call to read from the
@@ -202,70 +187,66 @@ TEST_F(AsyncEndToEndTest, ServerFragmentedRead) {
   server_call_data->platform_interface_.SetReadFileContents("test");
 
   // Create components required to perform a client Get request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   GetResponse get_response;
   GetRequest get_request;
   get_request.set_source("/some/test/file");
 
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader_ =
-      stub_->AsyncGet(&client_ctx_, get_request, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
+      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out, and then request to read from the server.
-  client_cq_->Next(&tag, &cq_status);
-  reader_->Read(&get_response, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request, open the file, and
   // send back the first chunk of contents.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should get the server's message and then wait for more data.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   ASSERT_EQ(get_response.data(), std::string("test"));
   op_status = get_response.status();
-  reader_->Read(&get_response, nullptr);
+  reader->Read(&get_response, reader.get());
 
   // Repeat the process.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   ASSERT_EQ(get_response.data(), std::string("test"));
   op_status = get_response.status();
-  reader_->Read(&get_response, nullptr);
+  reader->Read(&get_response, reader.get());
 
   // The server should hit EOF and send an empty chunk of data back to the
   // client.
   server_call_data->platform_interface_.SetReadFileContents("");
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   op_status = get_response.status();
-  reader_->Read(&get_response, nullptr);
+  reader->Read(&get_response, reader.get());
 
   // The server should then call Finish.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // The client read should fail and then it should finish.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_FALSE(cq_status);
-  reader_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), false);
+  reader->Finish(&grpc_status, reader.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerBadFile) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server will be told that the file exists and that it was able to open
   // open it.  When the server goes to read from the file, it will be informed
   // that the file is bad.
@@ -277,44 +258,45 @@ TEST_F(AsyncEndToEndTest, ServerBadFile) {
   server_call_data->platform_interface_.SetReadFileReturn(-1);
 
   // Create components required to perform a client Get request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   GetResponse get_response;
   GetRequest get_request;
   get_request.set_source("/some/test/file");
 
-  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader_ =
-      stub_->AsyncGet(&client_ctx_, get_request, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncReader<GetResponse>> reader =
+      stub_->AsyncGet(&client_ctx, get_request, client_cq_.get(), &client_ctx);
 
   // Wait for the request to go out and then request to read from the server.
-  client_cq_->Next(&tag, &cq_status);
-  reader_->Read(&get_response, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  reader->Read(&get_response, reader.get());
 
   // Server CompletionQueue should get the client request, open the file, and
   // send back a response indicating the read failed.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should get the server's message and then wait for more data.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
   op_status = get_response.status();
-  reader_->Read(&get_response, nullptr);
+  reader->Read(&get_response, reader.get());
 
   // The server should finish.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // The client will get back a bad status and finish.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_FALSE(cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), false);
   op_status = get_response.status();
   ASSERT_EQ(op_status, OperationStatus::SERVER_FILE_READ_FAILURE);
-  reader_->Finish(&grpc_status, nullptr);
+  reader->Finish(&grpc_status, reader.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_GRPC_CQ_NEXT(client_cq_, reader.get(), true);
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 // Server Put State Machine Test
@@ -327,11 +309,6 @@ TEST_F(AsyncEndToEndTest, ServerBadFile) {
 // 6. Client sends multiple file fragments.
 
 TEST_F(AsyncEndToEndTest, ServerPutDestinationIsDirectory) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check the destination will indicate that it is a
   // directory.
   PutCallData<FakePlatform>* server_call_data =
@@ -340,7 +317,7 @@ TEST_F(AsyncEndToEndTest, ServerPutDestinationIsDirectory) {
   server_call_data->platform_interface_.SetDirectoryExistsReturn(true);
 
   // Create components required to perform a client Put request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   PutRequest put_request;
@@ -348,42 +325,41 @@ TEST_F(AsyncEndToEndTest, ServerPutDestinationIsDirectory) {
   put_request.set_destination("/some/directory");
   put_request.clear_data();
 
-  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer_ =
-      stub_->AsyncPut(&client_ctx_, &put_response, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer =
+      stub_->AsyncPut(&client_ctx, &put_response, client_cq_.get(), &client_ctx);
 
   // Server should get initial client connection and begin reading.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Wait for the request to go out, and then try to write more data to the
   // server.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Write(put_request, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  writer->Write(put_request, writer.get());
 
   // Server CompletionQueue should get the client request and reply that the
   // requested file cannot be created.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client will write the entire file even if the server is not listening.
   // Call Finish to collect the final status.
   // Bug: https://github.com/grpc/grpc/issues/14812
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->Finish(&grpc_status, writer.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
   op_status = put_response.status();
+
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+
   ASSERT_EQ(op_status, OperationStatus::SERVER_CREATE_FILE_FAILURE);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerPutCreateDirectoryFailure) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check the destination will indicate that it is a
   // directory.
   PutCallData<FakePlatform>* server_call_data =
@@ -393,7 +369,7 @@ TEST_F(AsyncEndToEndTest, ServerPutCreateDirectoryFailure) {
   server_call_data->platform_interface_.SetCreateDirectoryReturn(false);
 
   // Create components required to perform a client Put request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   PutRequest put_request;
@@ -401,41 +377,40 @@ TEST_F(AsyncEndToEndTest, ServerPutCreateDirectoryFailure) {
   put_request.set_destination("/privilege/issues");
   put_request.clear_data();
 
-  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer_ =
-      stub_->AsyncPut(&client_ctx_, &put_response, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer =
+      stub_->AsyncPut(&client_ctx, &put_response, client_cq_.get(), &client_ctx);
 
   // Server CompletionQueue will notify that there is a new client stub.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Wait for the request to go out, and then try to write more data to the
   // server.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Write(put_request, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  writer->Write(put_request, writer.get());
 
   // Server CompletionQueue should get the client request and reply that the
   // requested file cannot be created.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should call finish to get final status messages for the transfer
   // and gRPC channel.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->Finish(&grpc_status, writer.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
   op_status = put_response.status();
+
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+
   ASSERT_EQ(op_status, OperationStatus::SERVER_CREATE_FILE_FAILURE);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerPutCreateFileFailure) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check the destination will indicate that it is a
   // directory.
   PutCallData<FakePlatform>* server_call_data =
@@ -446,7 +421,7 @@ TEST_F(AsyncEndToEndTest, ServerPutCreateFileFailure) {
   server_call_data->platform_interface_.SetOpenFileReturn(-1);
 
   // Create components required to perform a client Put request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   PutRequest put_request;
@@ -454,41 +429,40 @@ TEST_F(AsyncEndToEndTest, ServerPutCreateFileFailure) {
   put_request.set_destination("/privilege/issues");
   put_request.clear_data();
 
-  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer_ =
-      stub_->AsyncPut(&client_ctx_, &put_response, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer =
+      stub_->AsyncPut(&client_ctx, &put_response, client_cq_.get(), &client_ctx);
 
   // Server CompletionQueue should notify that there is a new stub.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Wait for the request to go out, and then try to write more data to the
   // server.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Write(put_request, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  writer->Write(put_request, writer.get());
 
   // Server CompletionQueue should get the client request and reply that the
   // requested file cannot be created.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should call finish to get final status messages for the transfer
   // and gRPC channel.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->Finish(&grpc_status, writer.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
   op_status = put_response.status();
+
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+
   ASSERT_EQ(op_status, OperationStatus::SERVER_FILE_WRITE_FAILURE);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerPutWriteFileFailure) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check the destination will indicate that it is a
   // directory.
   PutCallData<FakePlatform>* server_call_data =
@@ -500,7 +474,7 @@ TEST_F(AsyncEndToEndTest, ServerPutWriteFileFailure) {
   server_call_data->platform_interface_.SetWriteFileReturn(-1);
 
   // Create components required to perform a client Put request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   PutRequest put_request;
@@ -508,41 +482,40 @@ TEST_F(AsyncEndToEndTest, ServerPutWriteFileFailure) {
   put_request.set_destination("/write/fail/path");
   put_request.clear_data();
 
-  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer_ =
-      stub_->AsyncPut(&client_ctx_, &put_response, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer =
+      stub_->AsyncPut(&client_ctx, &put_response, client_cq_.get(), &client_ctx);
 
   // Server CompletionQueue should notify that there is a new stub.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Wait for the request to go out, and then try to write more data to the
   // server.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Write(put_request, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  writer->Write(put_request, writer.get());
 
   // Server CompletionQueue should get the client request and reply that the
   // requested file cannot be written.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should get the server's message and then call finish to get final
   // status messages for the transfer and gRPC channel.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->Finish(&grpc_status, writer.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
   op_status = put_response.status();
+
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+
   ASSERT_EQ(op_status, OperationStatus::SERVER_FILE_WRITE_FAILURE);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerPutOneFragment) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check the destination will indicate that it is a
   // directory.
   PutCallData<FakePlatform>* server_call_data =
@@ -555,7 +528,7 @@ TEST_F(AsyncEndToEndTest, ServerPutOneFragment) {
   server_call_data->platform_interface_.SetCloseFileReturn(0);
 
   // Create components required to perform a client Put request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   PutRequest put_request;
@@ -563,51 +536,49 @@ TEST_F(AsyncEndToEndTest, ServerPutOneFragment) {
   put_request.set_destination("/destination/file");
   put_request.clear_data();
 
-  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer_ =
-      stub_->AsyncPut(&client_ctx_, &put_response, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer =
+      stub_->AsyncPut(&client_ctx, &put_response, client_cq_.get(), &client_ctx);
 
   // Server CompletionQueue should notify that there is a new stub.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Wait for the request to go out, and then try to write a fragment to the
   // server.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Write(put_request, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  writer->Write(put_request, writer.get());
 
   // Server CompletionQueue should get the client request, write out the
   // contents, and wait for more data.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should call WritesDone to indicate that the transfer is complete.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->WritesDone(nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->WritesDone(writer.get());
 
   // Server should get the final message from the client and report status
   // information.
-  server_cq_->Next(&tag, &cq_status);
-  ASSERT_FALSE(cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, false);
+  server_call_data->Proceed(false);
 
   // Client should get the server's message and then call finish to get final
   // status messages for the transfer and gRPC channel.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->Finish(&grpc_status, writer.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
   op_status = put_response.status();
+
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+
   ASSERT_EQ(op_status, OperationStatus::OK);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, ServerPutMultipleFragments) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to check the destination will indicate that it is a
   // directory.
   PutCallData<FakePlatform>* server_call_data =
@@ -620,7 +591,7 @@ TEST_F(AsyncEndToEndTest, ServerPutMultipleFragments) {
   server_call_data->platform_interface_.SetCloseFileReturn(0);
 
   // Create components required to perform a client Put request.
-  grpc::ClientContext client_ctx_;
+  grpc::ClientContext client_ctx;
   grpc::Status grpc_status;
   OperationStatus op_status;
   PutRequest put_request;
@@ -628,51 +599,55 @@ TEST_F(AsyncEndToEndTest, ServerPutMultipleFragments) {
   put_request.set_destination("/destination/file");
   put_request.clear_data();
 
-  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer_ =
-      stub_->AsyncPut(&client_ctx_, &put_response, client_cq_.get(), nullptr);
+  std::unique_ptr<grpc::ClientAsyncWriter<PutRequest>> writer =
+      stub_->AsyncPut(&client_ctx, &put_response, client_cq_.get(), &client_ctx);
 
   // Server CompletionQueue gets new client stub.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Wait for the request to go out, and then try to write a fragment to the
   // server.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Write(put_request, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &client_ctx, true);
+  writer->Write(put_request, writer.get());
 
   // Server CompletionQueue should get the client request, write out the
   // contents, and wait for more data.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Write a second fragment to the server.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Write(put_request, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->Write(put_request, writer.get());
 
   // Server processes the second fragment.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should get the server's message and then call WritesDone to
   // indicate that the transfer is complete.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->WritesDone(nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->WritesDone(writer.get());
 
   // Server should get the final message from the client and report status
   // information.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, false);
+  server_call_data->Proceed(false);
 
   // Client should get the server's message and then call finish to get final
   // status information.
-  client_cq_->Next(&tag, &cq_status);
-  writer_->Finish(&grpc_status, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
+  writer->Finish(&grpc_status, writer.get());
 
   // Client gets final status from server.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, writer.get(), true);
   op_status = put_response.status();
+
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+
   ASSERT_EQ(op_status, OperationStatus::OK);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 // Server Exec State Machine Test Cases
@@ -683,11 +658,6 @@ TEST_F(AsyncEndToEndTest, ServerPutMultipleFragments) {
 // 5. Exec Write sends stdin/stderr to client until subprocess exits.
 
 TEST_F(AsyncEndToEndTest, Server_Exec_ForkFail) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // The server's call to Exec should fail.
   ExecCallData<FakePlatform>* server_call_data =
       new ExecCallData<FakePlatform>(service_.get(), server_cq_.get());
@@ -697,7 +667,7 @@ TEST_F(AsyncEndToEndTest, Server_Exec_ForkFail) {
   std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
   std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
 
-  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), cli_ctx.get());
 
   // Queue up a read to be populated eventually when the server finishes.  Use
   // the address of the exec response so we can enforce that the read operation
@@ -707,63 +677,61 @@ TEST_F(AsyncEndToEndTest, Server_Exec_ForkFail) {
 
   // Server should get the new stub request and issue a read.
   server_call_data->platform_interface_.SetParseCommandReturn({"echo", "hello"});
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client should be notified that its stub has been created.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, cli_ctx.get(), true);
 
   ExecRequest exec_request;
   exec_request.clear_argv();
   exec_request.clear_env_vars();
   exec_request.clear_std_in();
-  cli_rw->Write(exec_request, nullptr);
+  cli_rw->Write(exec_request, &exec_request);
 
   // Server should get the write first
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Flush the write operation completion notification.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
 
   // Ensure that the client queue has a new entry and that it is the response
   // to the read request.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_EQ(tag, &exec_response);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_response, true);
 
   // The client calls Finish to get final status.
   grpc::Status grpc_status;
-  cli_rw->Finish(&grpc_status, nullptr);
+  cli_rw->Finish(&grpc_status, cli_rw.get());
 
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, cli_rw.get(), true);
 
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
+
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
   ASSERT_EQ(exec_response.status(), OperationStatus::SERVER_EXEC_FORK_FAILURE);
 }
 
 TEST_F(AsyncEndToEndTest, Server_ExecRead_StdinEof) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // Exec service boilerplate.
   std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
   std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
       std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
 
-  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(),
+                        srv_ctx.get());
 
   // Client creates a new stub.
   std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
   std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
 
-  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), cli_ctx.get());
 
   // The read side of the server exec routine should see that the subprocess
   // is still alive, but should fail to write to its stdin and then delete
   // itself.
-  server_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, srv_ctx.get(), true);
 
   ExecReadCallData<FakePlatform>* server_call_data =
       new ExecReadCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0);
@@ -771,49 +739,45 @@ TEST_F(AsyncEndToEndTest, Server_ExecRead_StdinEof) {
   server_call_data->platform_interface_.SetWriteFileReturn(-1);
 
   // Client sends something to subprocess stdin.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, cli_ctx.get(), true);
 
   ExecRequest exec_request;
   exec_request.clear_argv();
   exec_request.clear_env_vars();
   exec_request.clear_std_in();
 
-  cli_rw->Write(exec_request, nullptr);
-  client_cq_->Next(&tag, &cq_status);
+  cli_rw->Write(exec_request, &exec_request);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
 
   // The server will get the request, attempt to write to the subprocess stdin,
   // fail, and delete itself.  The only indication of the failure will be that
   // the reference count to the ServerAsyncReaderWriter decrements.
   uint32_t initial_use_count = srv_rw.use_count();
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
   uint32_t final_use_count = srv_rw.use_count();
 
   ASSERT_LT(final_use_count, initial_use_count);
 }
 
 TEST_F(AsyncEndToEndTest, Server_ExecRead_ClientDone) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // Exec service boilerplate.
   std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
   std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
       std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
 
-  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(),
+                        srv_ctx.get());
 
   // Client creates a new stub.
   std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
   std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
 
-  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), cli_ctx.get());
 
   // The read side of the server exec routine should see that the subprocess
   // is still alive and succeed in writing to it.
-  server_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, srv_ctx.get(), true);
 
   ExecReadCallData<FakePlatform>* server_call_data =
       new ExecReadCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0);
@@ -821,31 +785,32 @@ TEST_F(AsyncEndToEndTest, Server_ExecRead_ClientDone) {
   server_call_data->platform_interface_.SetWriteFileReturn(1);
 
   // Client sends something to subprocess stdin.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, cli_ctx.get(), true);
 
   ExecRequest exec_request;
   exec_request.clear_argv();
   exec_request.clear_env_vars();
   exec_request.clear_std_in();
 
-  cli_rw->Write(exec_request, nullptr);
+  cli_rw->Write(exec_request, &exec_request);
 
   // Server writes it into the subprocess.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // Client indicates that it is done writing.
-  client_cq_->Next(&tag, &cq_status);
-  cli_rw->WritesDone(nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
+  cli_rw->WritesDone(&exec_request);
 
   // The server will get a false status from the completion queue and delete
   // itself.  The only indication of the failure will be that the reference
   // count to the ServerAsyncReaderWriter decrements.
   uint32_t initial_use_count = srv_rw.use_count();
 
-  server_cq_->Next(&tag, &cq_status);
-  ASSERT_FALSE(cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, false);
+  server_call_data->Proceed(false);
+
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
 
   uint32_t final_use_count = srv_rw.use_count();
 
@@ -853,117 +818,108 @@ TEST_F(AsyncEndToEndTest, Server_ExecRead_ClientDone) {
 }
 
 TEST_F(AsyncEndToEndTest, Server_ExecRead_SubprocessExits) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // Exec service boilerplate.
   std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
   std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
       std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
 
-  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(),
+                        srv_ctx.get());
 
   // Client creates a new stub.
   std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
   std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
 
-  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), cli_ctx.get());
 
   // The read side of the server exec routine should see that the subprocess
   // has exited.
-  server_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, srv_ctx.get(), true);
 
   ExecReadCallData<FakePlatform>* server_call_data =
       new ExecReadCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0);
   server_call_data->platform_interface_.SetKillPidReturn(-1);
 
   // Client sends something to subprocess stdin.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, cli_ctx.get(), true);
 
   ExecRequest exec_request;
   exec_request.clear_argv();
   exec_request.clear_env_vars();
   exec_request.clear_std_in();
 
-  cli_rw->Write(exec_request, nullptr);
+  cli_rw->Write(exec_request, &exec_request);
 
   // The server will get the request, realize the subprocess has exited, and
   // delete itself.  The only indication of the failure will be that the
   // reference count to the ServerAsyncReaderWriter decrements.
   uint32_t initial_use_count = srv_rw.use_count();
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
   uint32_t final_use_count = srv_rw.use_count();
 
   ASSERT_LT(final_use_count, initial_use_count);
 
   // Issue a finish on behalf of the server.
-  srv_rw->Finish(grpc::Status::OK, nullptr);
-  server_cq_->Next(&tag, &cq_status);
+  srv_rw->Finish(grpc::Status::OK, srv_rw.get());
+  ASSERT_GRPC_CQ_NEXT(server_cq_, srv_rw.get(), true);
 
   // Cleanup the client reader-writer.
-  client_cq_->Next(&tag, &cq_status);
-  cli_rw->WritesDone(nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
+  cli_rw->WritesDone(&exec_request);
 
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
   grpc::Status grpc_status;
-  cli_rw->Finish(&grpc_status, nullptr);
+  cli_rw->Finish(&grpc_status, &exec_request);
 
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
 
 TEST_F(AsyncEndToEndTest, Server_ExecWrite_WriteUntilChildExits) {
-  ResetStub();
-  // Accounting bits for managing CompletionQueue state.
-  void* tag;
-  bool cq_status;
-
   // Exec service boilerplate.
   std::shared_ptr<grpc::ServerContext> srv_ctx = std::make_shared<grpc::ServerContext>();
   std::shared_ptr<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>> srv_rw =
       std::make_shared<grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest>>(srv_ctx.get());
 
-  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(), this);
+  service_->RequestExec(srv_ctx.get(), srv_rw.get(), server_cq_.get(), server_cq_.get(),
+                        srv_ctx.get());
 
   // Client creates a new stub.
   std::unique_ptr<grpc::ClientContext> cli_ctx = std::make_unique<grpc::ClientContext>();
   std::unique_ptr<grpc::ClientAsyncReaderWriter<ExecRequest, ExecResponse>> cli_rw;
 
-  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), nullptr);
+  cli_rw = stub_->AsyncExec(cli_ctx.get(), client_cq_.get(), cli_ctx.get());
 
   // The write side of the server exec routine will poll the child pid and see
   // that it has exited.
-  server_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, srv_ctx.get(), true);
 
   ExecWriteCallData<FakePlatform>* server_call_data =
       new ExecWriteCallData<FakePlatform>(srv_ctx, srv_rw, 0, 0, 0);
 
   // Client reads from the server.
-  client_cq_->Next(&tag, &cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, cli_ctx.get(), true);
 
   ExecResponse exec_response;
-  cli_rw->Read(&exec_response, nullptr);
+  cli_rw->Read(&exec_response, &exec_response);
 
   // The server will finish and delete itself.
-  server_cq_->Next(&tag, &cq_status);
-  server_call_data->Proceed(cq_status);
+  ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
+  server_call_data->Proceed(true);
 
   // The client will get the initial server write and issue another read.
-  client_cq_->Next(&tag, &cq_status);
-  cli_rw->Read(&exec_response, nullptr);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_response, true);
+  cli_rw->Read(&exec_response, &exec_response);
 
   // The client should see that the server has finished and request the finish
   // status.
-  client_cq_->Next(&tag, &cq_status);
-  ASSERT_FALSE(cq_status);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_response, false);
 
   grpc::Status grpc_status;
 
-  cli_rw->Finish(&grpc_status, nullptr);
-  client_cq_->Next(&tag, &cq_status);
+  cli_rw->Finish(&grpc_status, &exec_response);
+  ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_response, true);
 
-  ASSERT_TRUE(grpc_status.ok());
+  ASSERT_TRUE(grpc_status.ok()) << grpc_status.error_message();
 }
