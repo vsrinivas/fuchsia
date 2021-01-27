@@ -26,7 +26,7 @@ use {
         select,
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
-    log::{debug, error, info, warn},
+    log::{debug, error, info},
     std::sync::Arc,
     void::ResultVoidErrExt,
     wlan_common::RadioConfig,
@@ -150,7 +150,7 @@ pub async fn serve(
     select! {
         state_machine = state_machine.fuse() => {
             match state_machine.void_unwrap_err() {
-                ExitReason(Err(e)) => warn!("Client state machine for iface #{} terminated with an error: {:?}",
+                ExitReason(Err(e)) => error!("Client state machine for iface #{} terminated with an error: {:?}",
                     iface_id, e),
                 ExitReason(Ok(_)) => info!("Client state machine for iface #{} exited gracefully",
                     iface_id,),
