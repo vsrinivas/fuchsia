@@ -30,6 +30,7 @@ source_set("sysmem_common_srcs") {
     "contiguous_pooled_memory_allocator.cc",
     "device.cc",
     "driver.cc",
+    "external_memory_allocator.cc",
     "koid_util.cc",
     "logging.cc",
     "logical_buffer_collection.cc",
