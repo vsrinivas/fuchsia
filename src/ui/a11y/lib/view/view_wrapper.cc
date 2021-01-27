@@ -115,9 +115,17 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
       break;
     }
 
-    auto parent_node = tree_weak_ptr->GetParentNode(current_node_id);
-    FX_DCHECK(parent_node);
-    current_node_id = parent_node->node_id();
+    // If |current_node| has an offset container specified, then its transform
+    // puts local coordinates into the coordinate space of the offset container
+    // node, NOT the parent of |current_node|. If no offset container is
+    // specified, then we assume the transform is relative to the parent.
+    if (current_node->has_container_id()) {
+      current_node_id = current_node->container_id();
+    } else {
+      auto parent_node = tree_weak_ptr->GetParentNode(current_node_id);
+      FX_DCHECK(parent_node);
+      current_node_id = parent_node->node_id();
+    }
   }
 
   auto bounding_box = annotated_node->location();

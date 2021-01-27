@@ -235,5 +235,92 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   EXPECT_FALSE(updated_highlight_bounding_box.has_value());
 }
 
+TEST_F(ViewWrapperTest, HighlightWithTransformAndOffsetContainers) {
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+
+  // Create test nodes.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(0u, "test_label_0", {4u});
+    node.set_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  // This node's transform will be ignored since its child specifies another
+  // node as its container.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(4u, "test_label_4", {1u});
+    node.set_transform({7, 0, 0, 0, 0, 7, 0, 0, 0, 0, 7, 0, 10, 10, 10, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(1u, "test_label_1", {2u});
+    node.set_transform({2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 1, 1, 1, 1});
+    node.set_location(std::move(bounding_box));
+    node.set_container_id(0u);
+    node_updates.emplace_back(std::move(node));
+  }
+
+  // This node's transform will be ignored since its child specifies another
+  // node as its container.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(2u, "test_label_2", {3u});
+    node.set_transform({20, 0, 0, 0, 0, 20, 0, 0, 0, 0, 20, 0, 5, 10, 15, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 2.0, .y = 3.0, .z = 4.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(3u, "test_label_3", {});
+    node.set_transform({5, 0, 0, 0, 0, 5, 0, 0, 0, 0, 5, 0, 10, 20, 30, 1});
+    node.set_location(std::move(bounding_box));
+    node.set_container_id(1u);
+    node_updates.emplace_back(std::move(node));
+  }
+
+  auto tree_ptr = tree_service_->Get();
+  ASSERT_TRUE(tree_ptr);
+
+  ASSERT_TRUE(tree_ptr->Update(std::move(node_updates)));
+  RunLoopUntilIdle();
+
+  // Highlight node 2.
+  view_wrapper_->HighlightNode(3u);
+
+  // Verify that annotation view received bounding_box (defined above) as parameter to
+  // DrawHighlight().
+  const auto& highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+  EXPECT_TRUE(highlight_bounding_box.has_value());
+  EXPECT_EQ(highlight_bounding_box->min.x, 2.0f);
+  EXPECT_EQ(highlight_bounding_box->min.y, 3.0f);
+  EXPECT_EQ(highlight_bounding_box->min.z, 4.0f);
+  EXPECT_EQ(highlight_bounding_box->max.x, 4.0f);
+  EXPECT_EQ(highlight_bounding_box->max.y, 5.0f);
+  EXPECT_EQ(highlight_bounding_box->max.z, 6.0f);
+
+  const auto& highlight_translation = annotation_view_->GetTranslationVector();
+  EXPECT_TRUE(highlight_translation.has_value());
+  EXPECT_EQ((*highlight_translation)[0], 260.0f);
+  EXPECT_EQ((*highlight_translation)[1], 670.0f);
+  EXPECT_EQ((*highlight_translation)[2], 1280.0f);
+
+  const auto& highlight_scale = annotation_view_->GetScaleVector();
+  EXPECT_TRUE(highlight_scale.has_value());
+  EXPECT_EQ((*highlight_scale)[0], 100.0f);
+  EXPECT_EQ((*highlight_scale)[1], 150.0f);
+}
+
 }  // namespace
 }  // namespace accessibility_test
