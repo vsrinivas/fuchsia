@@ -27,7 +27,7 @@ fn async_from_sync<S: IntoRawFd>(sync: S) -> async_std::fs::File {
     unsafe { async_std::fs::File::from_raw_fd(sync.into_raw_fd()) }
 }
 
-type TaskHandle = async_std::task::JoinHandle<Result<()>>;
+type TaskHandle = Task<Result<()>>;
 
 struct HostPipeChild {
     inner: Child,
@@ -69,7 +69,7 @@ impl HostPipeChild {
 
         let stdout_pipe =
             inner.stdout.take().ok_or(anyhow!("unable to get stdout from target pipe"))?;
-        let writer_handle = async_std::task::spawn(async move {
+        let writer_handle = Task::spawn(async move {
             latency_sensitive_copy(&mut async_from_sync(stdout_pipe), &mut pipe_tx).await?;
             log::info!("exiting onet pipe writer task (client -> ascendd)");
             Ok(())
@@ -77,7 +77,7 @@ impl HostPipeChild {
 
         let stdin_pipe =
             inner.stdin.take().ok_or(anyhow!("unable to get stdin from target pipe"))?;
-        let reader_handle = async_std::task::spawn(async move {
+        let reader_handle = Task::spawn(async move {
             let mut stdin_pipe = async_from_sync(stdin_pipe);
             let mut cancel_rx = cancel_rx.fuse();
             futures::select! {
@@ -90,7 +90,7 @@ impl HostPipeChild {
 
         let stderr_pipe =
             inner.stderr.take().ok_or(anyhow!("unable to stderr from target pipe"))?;
-        let logger_handle = async_std::task::spawn(async move {
+        let logger_handle = Task::spawn(async move {
             let stderr_pipe = async_from_sync(stderr_pipe);
             let mut stderr_lines = async_std::io::BufReader::new(stderr_pipe).lines();
             while let Some(line) = stderr_lines.next().await {
@@ -225,16 +225,16 @@ mod test {
             Self {
                 inner: child,
                 cancel_tx: Some(cancel_tx),
-                writer_handle: Some(async_std::task::spawn(async move {
+                writer_handle: Some(Task::spawn(async move {
                     cancel_rx.await.context("host-pipe fake test writer")?;
                     other_cancel_tx.send(()).unwrap();
                     Ok(())
                 })),
-                reader_handle: Some(async_std::task::spawn(async move {
+                reader_handle: Some(Task::spawn(async move {
                     other_cancel_rx.await.context("host-pipe fake test writer")?;
                     Ok(())
                 })),
-                logger_handle: Some(async_std::task::spawn(async { Ok(()) })),
+                logger_handle: Some(Task::spawn(async { Ok(()) })),
             }
         }
     }
