@@ -702,6 +702,29 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     }
 
     /// Creates a new environment that only has access to the services provided through this
+    /// `ServiceFs` and the enclosing environment's `Loader` service, appending a few random
+    /// bytes to the given `environment_label_prefix` to ensure this environment has a unique
+    /// name. Uses the provided environment `options`.
+    ///
+    /// Note that the resulting `NestedEnvironment` must be kept alive for the environment to
+    /// continue to exist. Once dropped, the environment and all components launched within it
+    /// will be destroyed.
+    pub fn create_salted_nested_environment_with_options<O>(
+        &mut self,
+        environment_label_prefix: &str,
+        options: EnvironmentOptions,
+    ) -> Result<NestedEnvironment, Error>
+    where
+        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
+        ServiceObjTy: ServiceObjTrait<Output = O>,
+    {
+        let mut salt = [0; 4];
+        fuchsia_zircon::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        let environment_label = format!("{}_{}", environment_label_prefix, hex::encode(&salt));
+        self.create_nested_environment_with_options(&environment_label, options)
+    }
+
+    /// Creates a new environment that only has access to the services provided through this
     /// `ServiceFs` and the enclosing environment's `Loader` service.
     ///
     /// Note that the resulting `NestedEnvironment` must be kept alive for the environment to
