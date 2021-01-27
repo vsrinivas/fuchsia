@@ -5,6 +5,7 @@
 #include "src/devices/block/drivers/zxcrypt/worker.h"
 
 #include <inttypes.h>
+#include <lib/trace/event.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/port.h>
 #include <stddef.h>
@@ -101,6 +102,8 @@ zx_status_t Worker::Run() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    TRACE_DURATION("zxcrypt", "zxcrypt::Worker::Dispatch");
+
     // Dispatch block request
     block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[1]);
     switch (block->command & BLOCK_OP_MASK) {
@@ -134,6 +137,8 @@ zx_status_t Worker::EncryptWrite(block_op_t* block) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  TRACE_DURATION("zxcrypt", "zxcrypt::Worker::EncryptWrite", "len", length);
+
   // Copy and encrypt the plaintext
   if ((rc = zx_vmo_read(extra->vmo, extra->data, offset_vmo, length)) != ZX_OK) {
     zxlogf(ERROR, "zx_vmo_read() failed: %s", zx_status_get_string(rc));
@@ -163,6 +168,8 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   uint32_t aligned_length = length;
+
+  TRACE_DURATION("zxcrypt", "zxcrypt::Worker::DecryptRead", "len", length);
 
   if (ZX_ROUNDDOWN(offset_vmo, ZX_PAGE_SIZE) != offset_vmo) {
     // Ensure the range inside the VMO we map is page aligned so that requests smaller than a page

@@ -43,6 +43,7 @@ driver_module("zxcrypt") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace:trace-driver",
     "//zircon/system/ulib/zircon-crypto:zircon-crypto-static",
   ]
 
