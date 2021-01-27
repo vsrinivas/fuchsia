@@ -20,7 +20,7 @@ mod tun;
 
 #[cfg(test)]
 #[macro_export]
-macro_rules! traceln (($($args:tt)*) => { fuchsia_syslog::macros::fx_log_info!($($args)*); }; );
+macro_rules! traceln (($($args:tt)*) => { fuchsia_syslog::macros::fx_log_trace!($($args)*); }; );
 
 #[cfg(not(test))]
 #[macro_export]
