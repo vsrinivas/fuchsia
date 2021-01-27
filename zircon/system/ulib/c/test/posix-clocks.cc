@@ -86,9 +86,10 @@ class UtcFixture : public zxtest::Test {
       // tests will need to be updated to expect the behavior we choose to
       // implement in the case where a runtime is not provided a UTC reference
       // at startup.
-      zx::time_utc ret;
-      zx::clock::get(&ret);
-      return ret.get();
+      zx_time_t ret;
+      zx_status_t res = zx_clock_get(ZX_CLOCK_UTC, &ret);
+      ZX_ASSERT(res == ZX_OK);
+      return ret;
     } else {
       // This should never fail.  If it does, it is an indication of
       // panic-worthy corruption in our test environment.

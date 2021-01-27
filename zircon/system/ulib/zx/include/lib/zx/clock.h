@@ -87,11 +87,6 @@ class clock final : public object<clock> {
     return zx_clock_update(value_, options, &args.args_);
   }
 
-  template <zx_clock_t kClockId>
-  static zx_status_t get(basic_time<kClockId>* result) {
-    return zx_clock_get(kClockId, result->get_address());
-  }
-
   static time get_monotonic() { return time(zx_clock_get_monotonic()); }
 };
 
