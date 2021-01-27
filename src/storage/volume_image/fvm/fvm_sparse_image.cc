@@ -389,4 +389,65 @@ CompressionOptions FvmSparseImageGetCompressionOptions(const fvm::SparseImage& h
   return options;
 }
 
+fit::result<fvm::Header, std::string> FvmSparseImageConvertToFvmHeader(
+    const fvm::SparseImage& sparse_header, uint64_t slice_count,
+    const std::optional<FvmOptions>& options) {
+  // Generate the appropiate FVM header.
+
+  std::optional<uint64_t> max_volume_size;
+  std::optional<uint64_t> target_volume_size;
+
+  if (sparse_header.maximum_disk_size > 0) {
+    max_volume_size = sparse_header.maximum_disk_size;
+  }
+
+  if (options.has_value()) {
+    if (options->max_volume_size.has_value()) {
+      max_volume_size = options->max_volume_size;
+    }
+    if (options->target_volume_size.has_value()) {
+      target_volume_size = options->target_volume_size;
+    }
+  }
+
+  fvm::Header header =
+      fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slice_count, sparse_header.slice_size);
+
+  // Fit to the provided slices.
+  if (!target_volume_size.has_value() && !max_volume_size.has_value()) {
+    return fit::ok(header);
+  }
+  if (max_volume_size.has_value() && max_volume_size.value() > 0) {
+    if (max_volume_size.value() < header.fvm_partition_size) {
+      return fit::error("|max_volume_size|(" + std::to_string(max_volume_size.value()) +
+                        ") is smaller than the required space(" +
+                        std::to_string(header.fvm_partition_size) + ") for " +
+                        std::to_string(slice_count) + " slices of size(" +
+                        std::to_string(sparse_header.slice_size) + ").");
+    }
+    header = fvm::Header::FromGrowableDiskSize(
+        fvm::kMaxUsablePartitions, target_volume_size.value_or(header.fvm_partition_size),
+        max_volume_size.value(), sparse_header.slice_size);
+
+    // When the metadata is big enough, there wont be space for the slices, this will update the
+    // minimum partition size to match that of a minimum number of slices, when there is no targeted
+    // volume size.
+    if (header.pslice_count == 0 && !target_volume_size.has_value()) {
+      header.SetSliceCount(slice_count);
+    }
+  } else {
+    header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions,
+                                       target_volume_size.value_or(header.fvm_partition_size),
+                                       sparse_header.slice_size);
+  }
+  if (slice_count > header.GetAllocationTableUsedEntryCount()) {
+    return fit::error("Fvm Sparse Image Reader found " + std::to_string(slice_count) +
+                      " slices, but |max_volume_size|(" +
+                      std::to_string(max_volume_size.value_or(0)) + ") with expected volume size(" +
+                      std::to_string(header.fvm_partition_size) + ") allows " +
+                      std::to_string(header.GetAllocationTableUsedEntryCount()) + " slices");
+  }
+
+  return fit::ok(header);
+}
 }  // namespace storage::volume_image

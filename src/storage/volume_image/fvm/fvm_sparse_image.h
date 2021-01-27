@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 
+#include <cstdint>
+
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/volume_image/address_descriptor.h"
@@ -63,10 +65,27 @@ fit::result<fvm::SparseImage, std::string> FvmSparseImageGetHeader(uint64_t offs
                                                                    const Reader& reader);
 
 // On success, returns the valid collection of |FvmSparsePartitionEntry| as described by |header|
-// and contained in |reader| as described in |offset|. That is, the partition descriptors start
+// and contained in |reader| as starting at |offset|. That is, the partition descriptors start
 // at |offset| in |reader|.
 fit::result<std::vector<FvmSparsePartitionEntry>, std::string> FvmSparseImageGetPartitions(
     uint64_t offset, const Reader& reader, const fvm::SparseImage& header);
+
+// Returns a non sparse |fvm::Header| from a sparse |header| with supported |options| overriden,
+// and with a known number of initial slices.
+//
+// Supported options can be supplied for overriding those stored in the original header.
+// Supported options:
+//   - |max_volume_size|
+//   - |target_volume_size
+fit::result<fvm::Header, std::string> FvmSparseImageConvertToFvmHeader(
+    const fvm::SparseImage& sparse_header, uint64_t slice_count,
+    const std::optional<FvmOptions>& options);
+
+// Overload with no options by default.
+inline fit::result<fvm::Header, std::string> FvmSparseImageConvertToFvmHeader(
+    const fvm::SparseImage& sparse_header, uint64_t slice_count) {
+  return FvmSparseImageConvertToFvmHeader(sparse_header, slice_count, std::nullopt);
+}
 
 }  // namespace storage::volume_image
 

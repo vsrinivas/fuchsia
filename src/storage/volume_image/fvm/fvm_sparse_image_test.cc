@@ -17,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/fvm/sparse_reader.h"
 #include "src/storage/volume_image/address_descriptor.h"
@@ -835,6 +836,7 @@ fvm::SparseImage GetHeader() {
   header.flags = fvm::kSparseFlagLz4;
   header.partition_count = 2;
   header.slice_size = 8192;
+  header.maximum_disk_size = 0;
 
   return header;
 }
@@ -1108,6 +1110,200 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseCompressedSerializedData) {
       EXPECT_THAT(read_content, testing::ElementsAreArray(original_content));
     }
   }
+}
+
+auto FvmHeaderEq(const fvm::Header& expected_header) {
+  using Header = fvm::Header;
+  return testing::AllOf(
+      testing::Field(&Header::magic, testing::Eq(expected_header.magic)),
+      testing::Field(&Header::allocation_table_size,
+                     testing::Eq(expected_header.allocation_table_size)),
+      testing::Field(&Header::fvm_partition_size, testing::Eq(expected_header.fvm_partition_size)),
+      testing::Field(&Header::oldest_revision, testing::Eq(expected_header.oldest_revision)),
+      testing::Field(&Header::slice_size, testing::Eq(expected_header.slice_size)),
+      testing::Field(&Header::vpartition_table_size,
+                     testing::Eq(expected_header.vpartition_table_size)),
+      testing::Field(&Header::hash, testing::ElementsAreArray(expected_header.hash)),
+      testing::Field(&Header::pslice_count, testing::Eq(expected_header.pslice_count)),
+      testing::Field(&Header::generation, testing::Eq(expected_header.generation)));
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithNulloptIsOk) {
+  constexpr uint64_t kMinSliceCount = 20;
+  fvm::SparseImage sparse_header = GetHeader();
+  auto expected_header = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, kMinSliceCount,
+                                                     sparse_header.slice_size);
+
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, std::nullopt);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  EXPECT_THAT(header, FvmHeaderEq(expected_header)) << "Expected header: \n"
+                                                    << expected_header.ToString() << "\n"
+                                                    << "Header :\n"
+                                                    << header.ToString();
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderOverloadIsOk) {
+  constexpr uint64_t kMinSliceCount = 20;
+  fvm::SparseImage sparse_header = GetHeader();
+  auto expected_header = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, kMinSliceCount,
+                                                     sparse_header.slice_size);
+
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  EXPECT_THAT(header, FvmHeaderEq(expected_header)) << "Expected header: \n"
+                                                    << expected_header.ToString() << "\n"
+                                                    << "Header :\n"
+                                                    << header.ToString();
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetDiskIsOk) {
+  constexpr uint64_t kMinSliceCount = 20;
+  constexpr uint64_t kTargetVolumeSize = 20ull << 32;
+
+  FvmOptions options;
+  options.target_volume_size = kTargetVolumeSize;
+
+  fvm::SparseImage sparse_header = GetHeader();
+  auto expected_header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kTargetVolumeSize,
+                                                   sparse_header.slice_size);
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  EXPECT_THAT(header, FvmHeaderEq(expected_header)) << "Expected header: \n"
+                                                    << expected_header.ToString() << "\n"
+                                                    << "Header :\n"
+                                                    << header.ToString();
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTooSmallTargetDiskIsError) {
+  constexpr uint64_t kMinSliceCount = 16;
+  constexpr uint64_t kTargetVolumeSize = 16ull << 20;
+
+  FvmOptions options;
+  options.target_volume_size = kTargetVolumeSize;
+
+  fvm::SparseImage sparse_header = GetHeader();
+  sparse_header.slice_size = 1ull << 20;
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  ASSERT_TRUE(header_or.is_error());
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetAndMaxVolumeSizeIsOk) {
+  constexpr uint64_t kMinSliceCount = 20;
+  constexpr uint64_t kTargetVolumeSize = 20ull << 32;
+  constexpr uint64_t kMaxVolumeSize = 40ull << 32;
+
+  FvmOptions options;
+  options.target_volume_size = kTargetVolumeSize;
+  options.max_volume_size = kMaxVolumeSize;
+
+  fvm::SparseImage sparse_header = GetHeader();
+  auto expected_header = fvm::Header::FromGrowableDiskSize(
+      fvm::kMaxUsablePartitions, kTargetVolumeSize, kMaxVolumeSize, sparse_header.slice_size);
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  EXPECT_THAT(header, FvmHeaderEq(expected_header)) << "Expected header: \n"
+                                                    << expected_header.ToString() << "\n"
+                                                    << "Header :\n"
+                                                    << header.ToString();
+}
+
+TEST(FvmSparseImageTest,
+     FvmSparseImageConvertToFvmHeaderWithTargetAndMaxVolumeOnSparseHeaderSizeIsOk) {
+  constexpr uint64_t kMinSliceCount = 20;
+  constexpr uint64_t kTargetVolumeSize = 20ull << 32;
+  constexpr uint64_t kMaxVolumeSize = 40ull << 32;
+
+  FvmOptions options;
+  options.target_volume_size = kTargetVolumeSize;
+
+  fvm::SparseImage sparse_header = GetHeader();
+  sparse_header.maximum_disk_size = kMaxVolumeSize;
+  auto expected_header = fvm::Header::FromGrowableDiskSize(
+      fvm::kMaxUsablePartitions, kTargetVolumeSize, kMaxVolumeSize, sparse_header.slice_size);
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  EXPECT_THAT(header, FvmHeaderEq(expected_header)) << "Expected header: \n"
+                                                    << expected_header.ToString() << "\n"
+                                                    << "Header :\n"
+                                                    << header.ToString();
+}
+
+TEST(FvmSparseImageTest,
+     FvmSparseImageConvertToFvmHeaderWithHMaxVolumeSizeInOptionsOverridesOneInsSparseHeader) {
+  constexpr uint64_t kMinSliceCount = 20;
+  constexpr uint64_t kTargetVolumeSize = 20ull << 32;
+  constexpr uint64_t kMaxVolumeSize = 40ull << 32;
+
+  FvmOptions options;
+  options.target_volume_size = kTargetVolumeSize;
+  options.max_volume_size = kMaxVolumeSize;
+
+  fvm::SparseImage sparse_header = GetHeader();
+  sparse_header.maximum_disk_size = kTargetVolumeSize;
+  auto expected_header = fvm::Header::FromGrowableDiskSize(
+      fvm::kMaxUsablePartitions, kTargetVolumeSize, kMaxVolumeSize, sparse_header.slice_size);
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  EXPECT_THAT(header, FvmHeaderEq(expected_header)) << "Expected header: \n"
+                                                    << expected_header.ToString() << "\n"
+                                                    << "Header :\n"
+                                                    << header.ToString();
+}
+
+TEST(
+    FvmSparseImageTest,
+    FvmSparseImageConvertToFvmHeaderWithHMaxVolumeSizeAndNoTargetVolumeSizeDefaultsToMinSliceCountSize) {
+  constexpr uint64_t kMinSliceCount = 20;
+  constexpr uint64_t kMaxVolumeSize = 40ull << 32;
+
+  FvmOptions options;
+  options.max_volume_size = kMaxVolumeSize;
+
+  fvm::SparseImage sparse_header = GetHeader();
+
+  // This accounts for 20 slices without reserved metadata, and is an initial fvm_partition_size.
+  uint64_t expected_volume_size =
+      fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, kMinSliceCount,
+                                  sparse_header.slice_size)
+          .fvm_partition_size;
+  auto expected_header = fvm::Header::FromGrowableDiskSize(
+      fvm::kMaxUsablePartitions, expected_volume_size, kMaxVolumeSize, sparse_header.slice_size);
+  expected_header.SetSliceCount(kMinSliceCount);
+
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  ASSERT_TRUE(header_or.is_ok()) << header_or.error();
+  auto header = header_or.take_value();
+
+  EXPECT_THAT(header, FvmHeaderEq(expected_header)) << "Expected header: \n"
+                                                    << expected_header.ToString() << "\n"
+                                                    << "Header :\n"
+                                                    << header.ToString();
+}
+
+TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithMaxVolumeSizeTooSmallIsError) {
+  constexpr uint64_t kMinSliceCount = 20;
+  constexpr uint64_t kMaxVolumeSize = 20 << 20;
+
+  FvmOptions options;
+  options.max_volume_size = kMaxVolumeSize;
+
+  fvm::SparseImage sparse_header = GetHeader();
+  // Emough space for 20 slices, but no metadata.
+  sparse_header.slice_size = 1 << 20;
+  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  ASSERT_TRUE(header_or.is_error());
 }
 
 }  // namespace
