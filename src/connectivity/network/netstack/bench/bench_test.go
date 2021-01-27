@@ -102,10 +102,12 @@ func BenchmarkWritePacket(b *testing.B) {
 			}
 
 			for size := 2048; ; size = size >> 1 {
-				payload := tcpip.SlicePayload(make([]byte, size))
+				payload := make([]byte, size)
+				var r bytes.Reader
 				b.Run(fmt.Sprintf("len(payload)=%d", size), func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
-						if _, err := ep.Write(payload, tcpip.WriteOptions{}); err != nil {
+						r.Reset(payload)
+						if _, err := ep.Write(&r, tcpip.WriteOptions{}); err != nil {
 							b.Fatal(err)
 						}
 					}

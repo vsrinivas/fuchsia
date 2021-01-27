@@ -81,32 +81,33 @@ var _ tcpip.Payloader = (*socketReader)(nil)
 type socketReader struct {
 	socket    zx.Socket
 	lastError error
-	lastWrite int
+	lastRead  int
 }
 
-func (*socketReader) FullPayload() ([]byte, *tcpip.Error) {
-	panic("FullPayload not available for socketIOAdapter")
+func (r *socketReader) Read(p []byte) (int, error) {
+	n, err := r.socket.Read(p, 0)
+	if err == nil && n != len(p) {
+		err = &zx.Error{Status: zx.ErrShouldWait}
+	}
+	r.lastError = err
+	r.lastRead = n
+	return n, err
 }
 
-func (r *socketReader) Payload(size int) ([]byte, *tcpip.Error) {
-	var sockInfo zx.InfoSocket
-	if err := r.socket.Handle().GetInfo(zx.ObjectInfoSocket, unsafe.Pointer(&sockInfo), uint(unsafe.Sizeof(sockInfo))); err != nil {
-		r.lastError = err
-		r.lastWrite = 0
-		return nil, tcpip.ErrBadBuffer
+func (r *socketReader) Len() int {
+	n, err := func() (int, error) {
+		var info zx.InfoSocket
+		if err := r.socket.Handle().GetInfo(zx.ObjectInfoSocket, unsafe.Pointer(&info), uint(unsafe.Sizeof(info))); err != nil {
+			return 0, err
+		}
+		return info.RXBufAvailable, nil
+	}()
+	if err == nil && n == 0 {
+		err = &zx.Error{Status: zx.ErrShouldWait}
 	}
-	// Limit how many bytes we'll read to what's available on the socket in order
-	// to limit memory consumption since the returned slice will sit on the tx
-	// buffer of the TCP socket.
-	if sockInfo.RXBufAvailable < size {
-		size = sockInfo.RXBufAvailable
-	}
-	v := make([]byte, size)
-	r.lastWrite, r.lastError = r.socket.Read(v, 0)
-	if r.lastError != nil {
-		return nil, tcpip.ErrBadBuffer
-	}
-	return v[:r.lastWrite], nil
+	r.lastError = err
+	r.lastRead = n
+	return n
 }
 
 type hardError struct {
@@ -806,7 +807,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 	}
 	for {
 		reader.lastError = nil
-		reader.lastWrite = 0
+		reader.lastRead = 0
 
 		// Acquire hard error lock across ep calls to avoid races and store the
 		// hard error deterministically.
@@ -818,15 +819,37 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 		})
 		hardError := eps.hardError.storeAndRetrieveLocked(err)
 		eps.hardError.mu.Unlock()
-		if n != int64(reader.lastWrite) {
-			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.lastWrite))
+		if n != int64(reader.lastRead) {
+			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.lastRead))
 		}
 		// TODO(https://fxbug.dev/35006): Handle all transport write errors.
 		switch err {
-		case tcpip.ErrBadBuffer:
-			err := reader.lastError
-			if err, ok := err.(*zx.Error); ok {
+		case nil, tcpip.ErrBadBuffer:
+			switch err := reader.lastError.(type) {
+			case nil:
+				continue
+			case *zx.Error:
 				switch err.Status {
+				case zx.ErrShouldWait:
+					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+					if err != nil {
+						panic(err)
+					}
+					switch {
+					case obs&zx.SignalSocketReadable != 0:
+						// The client might have written some data into the socket. Always
+						// continue to the loop below and try to read even if the signals
+						// show the client has closed the socket.
+						continue
+					case obs&localSignalClosing != 0:
+						// We're shutting down.
+						return
+					case obs&zx.SignalSocketPeerWriteDisabled != 0:
+						// Fallthrough.
+					default:
+						panic(fmt.Sprintf("impossible signals observed: %b/%b", obs, sigs))
+					}
+					fallthrough
 				case zx.ErrBadState:
 					// Reading has been disabled for this socket endpoint.
 					if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil {
@@ -837,24 +860,6 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 						}
 					}
 					return
-				case zx.ErrShouldWait:
-					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
-					if err != nil {
-						panic(err)
-					}
-					switch {
-					case obs&zx.SignalSocketPeerWriteDisabled != 0:
-						// The next Read will return zx.ErrBadState.
-						continue
-					case obs&zx.SignalSocketReadable != 0:
-						// The client might have written some data into the socket. Always
-						// continue to the loop below and try to read even if the signals
-						// show the client has closed the socket.
-						continue
-					case obs&localSignalClosing != 0:
-						// We're shutting down.
-						return
-					}
 				}
 			}
 			panic(err)
@@ -862,7 +867,6 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			// Write never returns ErrNotConnected except for endpoints that were
 			// never connected. Such endpoints should never reach this loop.
 			panic(fmt.Sprintf("connected endpoint returned %s", err))
-		case nil:
 		case tcpip.ErrWouldBlock:
 			// NB: we can't select on closing here because the client may have
 			// written some data into the buffer and then immediately closed the
@@ -990,8 +994,26 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 		case tcpip.ErrBadBuffer:
 			switch err := writer.lastError.(type) {
 			case nil:
+				continue
 			case *zx.Error:
 				switch err.Status {
+				case zx.ErrShouldWait:
+					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
+					if err != nil {
+						panic(err)
+					}
+					switch {
+					case obs&zx.SignalSocketWritable != 0:
+						continue
+					case obs&localSignalClosing != 0:
+						// We're shutting down.
+						return
+					case obs&zx.SignalSocketWriteDisabled != 0:
+						// Fallthrough.
+					default:
+						panic(fmt.Sprintf("impossible signals observed: %b/%b", obs, sigs))
+					}
+					fallthrough
 				case zx.ErrBadState:
 					// Writing has been disabled for this socket endpoint.
 					if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
@@ -1007,25 +1029,9 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 						_ = syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint; ep info: %#v", eps, eps.endpoint.ep.Info())
 					}
 					return
-				case zx.ErrShouldWait:
-					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
-					if err != nil {
-						panic(err)
-					}
-					switch {
-					case obs&zx.SignalSocketWriteDisabled != 0:
-						// The next Write will return zx.ErrBadState.
-						continue
-					case obs&zx.SignalSocketWritable != 0:
-						continue
-					case obs&localSignalClosing != 0:
-						// We're shutting down.
-						return
-					}
 				}
-			default:
-				panic(err)
 			}
+			panic(err)
 		default:
 			_ = syslog.Errorf("Endpoint.Read(): %s", err)
 		}
@@ -1166,7 +1172,9 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 	}
 	// TODO(https://fxbug.dev/21106): do something with control.
 	_ = control
-	n, err := s.ep.Write(tcpip.SlicePayload(data), writeOpts)
+	var r bytes.Reader
+	r.Reset(data)
+	n, err := s.ep.Write(&r, writeOpts)
 	if err != nil {
 		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}

@@ -101,7 +101,9 @@ func (c *epConn) Read() (buffer.View, tcpip.FullAddress, error) {
 }
 
 func (c *epConn) Write(b []byte, addr *tcpip.FullAddress) error {
-	if _, err := c.ep.Write(tcpip.SlicePayload(b), tcpip.WriteOptions{To: addr}); err != nil {
+	var r bytes.Reader
+	r.Reset(b)
+	if _, err := c.ep.Write(&r, tcpip.WriteOptions{To: addr}); err != nil {
 		return fmt.Errorf("write: %s", err)
 	}
 
@@ -303,7 +305,7 @@ func (s *Server) handleDiscover(hreq hdr, opts options) {
 	copy(h.yiaddr(), lease.addr)
 	copy(h.chaddr(), hreq.chaddr())
 	h.setOptions(opts)
-	s.conn.Write([]byte(h), &s.broadcast)
+	s.conn.Write(h, &s.broadcast)
 }
 
 func (s *Server) nack(hreq hdr) {
@@ -318,7 +320,7 @@ func (s *Server) nack(hreq hdr) {
 	copy(h.xidbytes(), hreq.xidbytes())
 	copy(h.chaddr(), hreq.chaddr())
 	h.setOptions(opts)
-	s.conn.Write([]byte(h), &s.broadcast)
+	s.conn.Write(h, &s.broadcast)
 }
 
 func (s *Server) handleRequest(hreq hdr, opts options) {
@@ -381,7 +383,7 @@ func (s *Server) handleRequest(hreq hdr, opts options) {
 			}
 		}
 	}
-	s.conn.Write([]byte(h), &addr)
+	s.conn.Write(h, &addr)
 }
 
 type leaseState int

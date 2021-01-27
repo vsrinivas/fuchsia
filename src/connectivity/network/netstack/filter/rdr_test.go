@@ -8,6 +8,7 @@ package filter
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 	"time"
 
@@ -114,7 +115,9 @@ func TestRDROneWayWANToLANUDP(t *testing.T) {
 	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	var r strings.Reader
+	r.Reset("hello")
+	if _, err := epWANUDP.Write(&r, tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("failed to write: %s", err)
 	}
 
@@ -174,7 +177,9 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	var r strings.Reader
+	r.Reset("hello")
+	if _, err := epWANUDP.Write(&r, tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -206,7 +211,9 @@ func TestRDRRoundtripWANToLANUDP(t *testing.T) {
 		waitEntryWAN, chWAN := waiter.NewChannelEntry(nil)
 		wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-		if _, err := epLANUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &res.RemoteAddr}); err != nil {
+		var r strings.Reader
+		r.Reset("hi")
+		if _, err := epLANUDP.Write(&r, tcpip.WriteOptions{To: &res.RemoteAddr}); err != nil {
 			t.Fatalf("Write error: %s", err)
 		}
 
@@ -307,8 +314,12 @@ func TestRDRWANToLANTCP(t *testing.T) {
 	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, err := epWANTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
-		t.Fatalf("Write error: %s", err)
+	{
+		var r strings.Reader
+		r.Reset("hello")
+		if _, err := epWANTCP.Write(&r, tcpip.WriteOptions{}); err != nil {
+			t.Fatalf("Write error: %s", err)
+		}
 	}
 
 	select {
@@ -330,8 +341,12 @@ func TestRDRWANToLANTCP(t *testing.T) {
 
 	wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-	if _, err := epLANTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
-		t.Fatalf("Write error: %s", err)
+	{
+		var r strings.Reader
+		r.Reset("hi")
+		if _, err := epLANTCP.Write(&r, tcpip.WriteOptions{}); err != nil {
+			t.Fatalf("Write error: %s", err)
+		}
 	}
 
 	select {

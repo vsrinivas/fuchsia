@@ -47,62 +47,57 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 		return routes.StateResolveResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
 	}
 	defer route.Release()
-	// Check if we need to resolve the link address for this route.
-	if route.IsResolutionRequired() {
-		attemptedResolution := false
-		for {
-			ch, err := route.Resolve(nil)
-			switch err {
-			case nil:
-			case tcpip.ErrWouldBlock:
-				if !attemptedResolution {
-					attemptedResolution = true
-					select {
-					case <-ch:
-						continue
-					case <-ctx.Done():
-						switch ctx.Err() {
-						case context.Canceled:
-							return routes.StateResolveResultWithErr(int32(zx.ErrCanceled)), nil
-						case context.DeadlineExceeded:
-							return routes.StateResolveResultWithErr(int32(zx.ErrTimedOut)), nil
-						}
-					}
+
+	ch := make(chan stack.ResolvedFieldsResult, 1)
+	switch err := route.ResolvedFields(func(result stack.ResolvedFieldsResult) {
+		ch <- result
+	}); err {
+	case nil, tcpip.ErrWouldBlock:
+		select {
+		case result := <-ch:
+			if result.Success {
+				// Build our response with the resolved route.
+				nicID := route.NICID()
+				route := result.RouteInfo
+
+				var response routes.StateResolveResponse
+				var node routes.Destination
+
+				node.SetSourceAddress(fidlconv.ToNetIpAddress(route.LocalAddress))
+				// If the remote link address is unspecified, then the outgoing link does not
+				// support MAC addressing.
+				if linkAddr := route.RemoteLinkAddress; len(linkAddr) != 0 {
+					node.SetMac(fidlconv.ToNetMacAddress(linkAddr))
 				}
-				err = tcpip.ErrNoRoute
-				fallthrough
-			default:
-				_ = syslog.InfoTf(
-					"fuchsia.net.routes", "route.Resolve(nil) returned: %s; unspecified=%t, v4=%t, v6=%t, proto=%d",
-					err,
-					remote.Unspecified(),
-					len(remote) == header.IPv4AddressSize,
-					len(remote) == header.IPv6AddressSize,
-					proto,
-				)
-				return routes.StateResolveResultWithErr(int32(zx.ErrAddressUnreachable)), nil
+				node.SetInterfaceId(uint64(nicID))
+				if len(route.NextHop) != 0 {
+					node.SetAddress(fidlconv.ToNetIpAddress(route.NextHop))
+					response.Result.SetGateway(node)
+				} else {
+					node.SetAddress(fidlconv.ToNetIpAddress(route.RemoteAddress))
+					response.Result.SetDirect(node)
+				}
+				return routes.StateResolveResultWithResponse(response), nil
 			}
-			break
+		case <-ctx.Done():
+			switch ctx.Err() {
+			case context.Canceled:
+				return routes.StateResolveResultWithErr(int32(zx.ErrCanceled)), nil
+			case context.DeadlineExceeded:
+				return routes.StateResolveResultWithErr(int32(zx.ErrTimedOut)), nil
+			}
 		}
+		err = tcpip.ErrNoRoute
+		fallthrough
+	default:
+		_ = syslog.InfoTf(
+			"fuchsia.net.routes", "route.Resolve(nil) returned: %s; unspecified=%t, v4=%t, v6=%t, proto=%d",
+			err,
+			remote.Unspecified(),
+			len(remote) == header.IPv4AddressSize,
+			len(remote) == header.IPv6AddressSize,
+			proto,
+		)
+		return routes.StateResolveResultWithErr(int32(zx.ErrAddressUnreachable)), nil
 	}
-
-	// Build our response with the resolved route.
-	var response routes.StateResolveResponse
-	var node routes.Destination
-
-	node.SetSourceAddress(fidlconv.ToNetIpAddress(route.LocalAddress))
-	// If the remote link address is unspecified, then the outgoing link does not
-	// support MAC addressing.
-	if linkAddr := route.RemoteLinkAddress(); len(linkAddr) != 0 {
-		node.SetMac(fidlconv.ToNetMacAddress(linkAddr))
-	}
-	node.SetInterfaceId(uint64(route.NICID()))
-	if len(route.NextHop) != 0 {
-		node.SetAddress(fidlconv.ToNetIpAddress(route.NextHop))
-		response.Result.SetGateway(node)
-	} else {
-		node.SetAddress(fidlconv.ToNetIpAddress(route.RemoteAddress))
-		response.Result.SetDirect(node)
-	}
-	return routes.StateResolveResultWithResponse(response), nil
 }

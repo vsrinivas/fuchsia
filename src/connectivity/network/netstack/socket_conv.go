@@ -153,7 +153,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return boolToInt32(v), nil
 
 	case C.SO_SNDBUF:
-		size, err := ep.GetSockOptInt(tcpip.SendBufferSizeOption)
+		size, err := ep.SocketOptions().GetSendBufferSize()
 		if err != nil {
 			return nil, err
 		}
@@ -510,7 +510,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptInt(tcpip.SendBufferSizeOption, int(v))
+		ep.SocketOptions().SetSendBufferSize(int64(v), true)
+		return nil
 
 	case C.SO_RCVBUF:
 		if len(optVal) < sizeOfInt32 {

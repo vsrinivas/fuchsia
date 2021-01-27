@@ -743,30 +743,38 @@ func (c *Client) send(
 	})
 	ip.SetChecksum(^ip.CalculateChecksum())
 
-	linkAddress, ok := c.stack.NetworkProtocolInstance(header.ARPProtocolNumber).(stack.LinkAddressResolver).ResolveStaticAddress(writeTo.Addr)
-	if !ok {
-		attemptedResolution := false
-		for {
-			resolved, ch, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, nil)
-			if err == tcpip.ErrWouldBlock {
-				if !attemptedResolution {
-					attemptedResolution = true
-					select {
-					case <-ch:
-						continue
-					case <-ctx.Done():
-						return fmt.Errorf("client address resolution: %w", ctx.Err())
-					}
-				}
+	var linkAddress tcpip.LinkAddress
+	{
+		ch := make(chan stack.LinkResolutionResult, 1)
+		err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, func(result stack.LinkResolutionResult) {
+			ch <- result
+		})
+		switch err {
+		case nil:
+			result := <-ch
+			if result.Success {
+				linkAddress = result.LinkAddress
+			} else {
 				err = tcpip.ErrTimeout
 			}
-			if err != nil {
-				return fmt.Errorf("failed to resolve link address: %s", err)
+		case tcpip.ErrWouldBlock:
+			select {
+			case result := <-ch:
+				if result.Success {
+					linkAddress = result.LinkAddress
+					err = nil
+				} else {
+					err = tcpip.ErrTimeout
+				}
+			case <-ctx.Done():
+				return fmt.Errorf("client address resolution: %w", ctx.Err())
 			}
-			linkAddress = resolved
-			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to resolve link address: %s", err)
 		}
 	}
+
 	if err := c.stack.WritePacketToRemote(
 		writeTo.NIC,
 		linkAddress,

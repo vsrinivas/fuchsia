@@ -96,7 +96,7 @@ async fn main() -> Result<(), anyhow::Error> {
             let bus = bus_subscribe(&sync_manager, CLIENT_NAME)?;
             // Wait for the server to be attached to the event bus, meaning it's
             // already bound and listening.
-            let _ = bus
+            let _: (bool, Option<Vec<String>>) = bus
                 .wait_for_clients(
                     &mut Some(SERVER_NAME).into_iter(),
                     zx::Time::INFINITE.into_nanos(),
@@ -156,14 +156,14 @@ async fn main() -> Result<(), anyhow::Error> {
             let connect_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?;
             let connect_timeout = async {
                 match connect_timeout.await {
-                    Ok(_stream) => Err(anyhow::format_err!("unexpectedly connected")),
-                    Err(io_error) => {
-                        if io_error.kind() == std::io::ErrorKind::TimedOut {
-                            Ok(())
-                        } else {
-                            Err(anyhow::format_err!("unexpected error {}", io_error))
-                        }
+                    Ok(stream) => {
+                        let _: fuchsia_async::net::TcpStream = stream;
+                        Err(anyhow::format_err!("unexpectedly connected"))
                     }
+                    Err(io_error) => match io_error.raw_os_error() {
+                        Some(libc::ETIMEDOUT) | Some(libc::EHOSTUNREACH) => Ok(()),
+                        _ => Err(anyhow::format_err!("unexpected error {}", io_error)),
+                    },
                 }
             };
 
@@ -238,10 +238,9 @@ async fn main() -> Result<(), anyhow::Error> {
         }
         SubCommand::Server(Server {}) => {
             println!("Starting server...");
-            let _listener = std::net::TcpListener::bind(&std::net::SocketAddr::from((
-                std::net::Ipv4Addr::UNSPECIFIED,
-                PORT,
-            )))?;
+            let _listener: std::net::TcpListener = std::net::TcpListener::bind(
+                &std::net::SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, PORT)),
+            )?;
             println!("Server bound.");
             let bus = bus_subscribe(&sync_manager, SERVER_NAME)?;
             let stream = bus.take_event_stream().try_filter_map(|event| async move {

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -966,7 +967,9 @@ func write(sender tcpip.Endpoint, s2fulladdr tcpip.FullAddress, payload string, 
 	payloadReceivedWaitEntry, payloadReceivedNotifyCh := waiter.NewChannelEntry(nil)
 	wq.EventRegister(&payloadReceivedWaitEntry, waiter.EventIn)
 	defer wq.EventUnregister(&payloadReceivedWaitEntry)
-	if _, err := sender.Write(tcpip.SlicePayload(payload), tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
+	var r strings.Reader
+	r.Reset(payload)
+	if _, err := sender.Write(&r, tcpip.WriteOptions{To: &s2fulladdr}); err != nil {
 		return fmt.Errorf("write failed: %s", err)
 	}
 	select {

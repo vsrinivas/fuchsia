@@ -9,6 +9,7 @@ package filter
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -255,7 +256,9 @@ func TestNATOneWayLANToWANUDP(t *testing.T) {
 	waitEntryWAN, chWAN := waiter.NewChannelEntry(nil)
 	wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-	if _, err := epLANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWAN}); err != nil {
+	var r strings.Reader
+	r.Reset("hello")
+	if _, err := epLANUDP.Write(&r, tcpip.WriteOptions{To: &receiverWAN}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -314,7 +317,9 @@ func TestNATRoundtripLANToWANUDP(t *testing.T) {
 	waitEntryWAN, chWAN := waiter.NewChannelEntry(nil)
 	wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-	if _, err := epLANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverWAN}); err != nil {
+	var r strings.Reader
+	r.Reset("hello")
+	if _, err := epLANUDP.Write(&r, tcpip.WriteOptions{To: &receiverWAN}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
@@ -344,7 +349,9 @@ func TestNATRoundtripLANToWANUDP(t *testing.T) {
 		waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
 		wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-		if _, err := epWANUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &res.RemoteAddr}); err != nil {
+		var r strings.Reader
+		r.Reset("hi")
+		if _, err := epWANUDP.Write(&r, tcpip.WriteOptions{To: &res.RemoteAddr}); err != nil {
 			t.Fatalf("Write error: %s", err)
 		}
 
@@ -444,8 +451,12 @@ func TestNATLANToWANTCP(t *testing.T) {
 	waitEntryWAN, chWAN := waiter.NewChannelEntry(nil)
 	wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-	if _, err := epLANTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
-		t.Fatalf("Write error: %s", err)
+	{
+		var r strings.Reader
+		r.Reset("hello")
+		if _, err := epLANTCP.Write(&r, tcpip.WriteOptions{}); err != nil {
+			t.Fatalf("Write error: %s", err)
+		}
 	}
 
 	select {
@@ -467,8 +478,12 @@ func TestNATLANToWANTCP(t *testing.T) {
 
 	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, err := epWANTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
-		t.Fatalf("Write error: %s", err)
+	{
+		var r strings.Reader
+		r.Reset("hi")
+		if _, err := epWANTCP.Write(&r, tcpip.WriteOptions{}); err != nil {
+			t.Fatalf("Write error: %s", err)
+		}
 	}
 
 	select {
