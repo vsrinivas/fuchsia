@@ -10,12 +10,16 @@ import("//build/host.gni")
 if (is_host) {
   go_library("summary_test_lib") {
     testonly = true
-    sources = [ "summary_test.go" ]
+    sources = [
+      "elementslice_test.go",
+      "summary_test.go",
+    ]
     deps = [ ":gopkg" ]
   }
 
   _fidlc_target = "//zircon/tools/fidl:fidlc($host_toolchain)"
   _fidlc_binary = get_label_info(_fidlc_target, "root_out_dir") + "/fidlc"
+
   go_test("summary_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidl_api_summarize" ]
     args = [
@@ -38,8 +42,17 @@ if (is_host) {
   go_library("gopkg") {
     name = "go.fuchsia.dev/fuchsia/tools/fidl/fidl_api_summarize/..."
     sources = [
+      "aliases.go",
+      "bits.go",
+      "consts.go",
+      "elementslice.go",
+      "enums.go",
+      "library.go",
       "main.go",
+      "properties.go",
+      "protocol.go",
       "summary.go",
+      "wraparoundtype.go",
     ]
     deps = [ "//tools/fidl/lib/fidlgen" ]
   }

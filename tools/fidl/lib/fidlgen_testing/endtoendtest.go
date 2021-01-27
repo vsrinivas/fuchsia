@@ -23,11 +23,24 @@ import (
 // Example usage:
 //
 //     root := EndToEndTest{T: t}.Single(`library example; struct MyStruct {};`)
+//
+// If dependencies are needed:
+//
+//     root := EndToEndTest{T: t}
+//         .WithDependency(`library dep; struct S{};`)
+//         .Single(`library example; struct MyStruct{ dep.S foo};`)
 type EndToEndTest struct {
 	*testing.T
+	deps []string
 }
 
 var fidlcPath = flag.String("fidlc", "", "Path to fidlc.")
+
+// WithDependency adds the source text for a dependency.
+func (t EndToEndTest) WithDependency(content string) EndToEndTest {
+	t.deps = append(t.deps, content)
+	return t
+}
 
 // Single compiles a single FIDL file, and returns a Root.
 func (t EndToEndTest) Single(content string) fidlgen.Root {
@@ -55,10 +68,30 @@ func (t EndToEndTest) Single(content string) fidlgen.Root {
 		t.Fatal(err)
 	}
 
+	params := []string{
+		"--json", dotJSONFile.Name(),
+	}
+
+	for _, dep := range t.deps {
+		depFidlFile, err := ioutil.TempFile("", "*.fidl")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(depFidlFile.Name())
+		defer func() {
+			if err := depFidlFile.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}()
+		if _, err := depFidlFile.Write([]byte(dep)); err != nil {
+			t.Fatal(err)
+		}
+		params = append(params, "--files", depFidlFile.Name())
+	}
+
+	params = append(params, "--files", dotFidlFile.Name())
 	var (
-		cmd = exec.CommandContext(ctx, *fidlcPath,
-			"--json", dotJSONFile.Name(),
-			"--files", dotFidlFile.Name())
+		cmd         = exec.CommandContext(ctx, *fidlcPath, params...)
 		fidlcStdout = new(bytes.Buffer)
 		fidlcStderr = new(bytes.Buffer)
 	)
@@ -66,6 +99,7 @@ func (t EndToEndTest) Single(content string) fidlgen.Root {
 	cmd.Stderr = fidlcStderr
 
 	if err := cmd.Run(); err != nil {
+		t.Logf("fidlc cmdline: %v %v", *fidlcPath, params)
 		t.Logf("fidlc stdout: %s", fidlcStdout.String())
 		t.Logf("fidlc stderr: %s", fidlcStderr.String())
 		t.Fatal(err)
