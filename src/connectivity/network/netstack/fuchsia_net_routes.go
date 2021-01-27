@@ -8,6 +8,7 @@ package netstack
 
 import (
 	"context"
+	"fmt"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -18,7 +19,8 @@ import (
 	"fidl/fuchsia/net/routes"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -34,15 +36,22 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 	const unspecifiedLocalAddress = tcpip.Address("")
 
 	remote, proto := fidlconv.ToTCPIPAddressAndProtocolNumber(destination)
+	var netProtoName string
+	switch proto {
+	case ipv4.ProtocolNumber:
+		netProtoName = "IPv4"
+	case ipv6.ProtocolNumber:
+		netProtoName = "IPv6"
+	default:
+		panic(fmt.Sprintf("impossible network protocol %x", proto))
+	}
 	route, err := r.stack.FindRoute(unspecifiedNIC, unspecifiedLocalAddress, remote, proto, false /* multicastLoop */)
 	if err != nil {
 		_ = syslog.InfoTf(
-			"fuchsia.net.routes", "stack.FindRoute returned: %s; unspecified=%t, v4=%t, v6=%t, proto=%d",
-			err,
+			"fuchsia.net.routes", "stack.FindRoute(%s(unspecified=%t)) = (_, %s)",
+			netProtoName,
 			remote.Unspecified(),
-			len(remote) == header.IPv4AddressSize,
-			len(remote) == header.IPv6AddressSize,
-			proto,
+			err,
 		)
 		return routes.StateResolveResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
 	}
@@ -91,12 +100,10 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 		fallthrough
 	default:
 		_ = syslog.InfoTf(
-			"fuchsia.net.routes", "route.Resolve(nil) returned: %s; unspecified=%t, v4=%t, v6=%t, proto=%d",
-			err,
+			"fuchsia.net.routes", "stack.FindRoute(%s(unspecified=%t)).ResolvedFields(_) = %s",
+			netProtoName,
 			remote.Unspecified(),
-			len(remote) == header.IPv4AddressSize,
-			len(remote) == header.IPv6AddressSize,
-			proto,
+			err,
 		)
 		return routes.StateResolveResultWithErr(int32(zx.ErrAddressUnreachable)), nil
 	}
