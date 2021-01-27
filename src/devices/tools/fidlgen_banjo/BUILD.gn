@@ -2,14 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 group("fidlgen_banjo") {
+  deps = [ ":bin($host_toolchain)" ]
 }
 
 group("tests") {
   testonly = true
   deps = [ "tests" ]
+}
+
+rustc_binary("bin") {
+  edition = "2018"
+
+  output_name = "fidlgen_banjo"
+
+  sources = [ "src/main.rs" ]
+
+  source_root = "src/main.rs"
+
+  deps = [
+    ":lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:structopt",
+  ]
 }
 
 rustc_library("lib") {
@@ -18,17 +37,20 @@ rustc_library("lib") {
   name = "fidlgen_banjo_lib"
 
   sources = [
+    "src/backends/dummy_c.rs",
+    "src/backends/mod.rs",
     "src/fidl.rs",
     "src/lib.rs",
   ]
 
+  inputs = [ "src/backends/templates/dummy_c/dummy_c.h" ]
+
   source_root = "src/lib.rs"
 
   deps = [
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:structopt",
   ]
 }
