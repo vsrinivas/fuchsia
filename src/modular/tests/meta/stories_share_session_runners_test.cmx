@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/stories_share_session_runners_test"
+        "binary": "bin/stories_share_session_runners_test"
     },
     "sandbox": {
         "services": [

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/story_shell_embedded_mod_test"
+        "binary": "bin/story_shell_embedded_mod_test"
     },
     "sandbox": {
         "services": [

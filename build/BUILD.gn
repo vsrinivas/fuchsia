@@ -503,7 +503,6 @@ group("deprecated_package") {
     "//src/modular/bin/sessionmgr/storage/*",
     "//src/modular/bin/sessionmgr/story_runner/*",
     "//src/modular/lib/modular_test_harness/cpp/*",
-    "//src/modular/tests/*",
     "//src/power/battery-manager/*",
     "//src/power/battery-manager/battery-cli/*",
     "//src/power/battery-manager/tests/*",

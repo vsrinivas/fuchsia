@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/story_shell_factory_test"
+        "binary": "bin/story_shell_factory_test"
     },
     "sandbox": {
         "services": [
