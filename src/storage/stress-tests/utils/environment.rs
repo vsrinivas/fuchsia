@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::actor::ActorConfig, futures::future::BoxFuture};
+use {crate::actor::ActorConfig, futures::future::BoxFuture, std::fmt::Debug};
 
 /// Every stress test must implement this trait exactly once and pass it
 /// to run_test(). The test loop uses these methods to drive the stress test.
@@ -11,7 +11,7 @@ use {crate::actor::ActorConfig, futures::future::BoxFuture};
 /// * creating actors that run during the stress test
 /// * creating a new instance when an actor requests one
 /// * specifying success criteria for the test (num operations or timeout)
-pub trait Environment: Send + Sync {
+pub trait Environment: Send + Sync + Debug {
     /// Returns the target number of operations to complete before exiting
     fn target_operations(&self) -> Option<u64>;
 

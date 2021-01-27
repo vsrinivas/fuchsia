@@ -18,7 +18,7 @@ use {
         future::{select, select_all, Either},
         FutureExt,
     },
-    log::{debug, info, set_logger, set_max_level, LevelFilter},
+    log::{debug, error, info, set_logger, set_max_level, LevelFilter},
     rand::{rngs::SmallRng, FromEntropy, Rng},
     std::{
         io::{stdout, Write},
@@ -70,6 +70,25 @@ pub fn random_seed() -> u128 {
 
 /// Runs the test loop for the given environment to completion.
 pub async fn run_test<E: 'static + Environment>(mut env: E) {
+    let env_string = format!("{:#?}", env);
+
+    info!("--------------------- stressor is starting -----------------------");
+    info!("{}", env_string);
+    info!("------------------------------------------------------------------");
+
+    {
+        // Setup a panic handler that prints out details of this invocation on crash
+        let default_panic_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            error!("");
+            error!("--------------------- stressor has crashed -----------------------");
+            error!("{}", env_string);
+            error!("------------------------------------------------------------------");
+            error!("");
+            default_panic_hook(panic_info);
+        }));
+    }
+
     // Extract the data from the environment
     let target_operations = env.target_operations().unwrap_or(u64::MAX);
     let timeout_secs = env.timeout_seconds();
