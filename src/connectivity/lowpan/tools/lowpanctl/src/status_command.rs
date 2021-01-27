@@ -96,10 +96,10 @@ async fn print_device_status(
                 }
             }
             if let Some(x) = identity.xpanid {
-                println!("\txpanid: {:?}", x);
+                println!("\txpanid: {}", hex::encode(x));
             }
             if let Some(x) = identity.panid {
-                println!("\tpanid: {:?}", x);
+                println!("\tpanid: 0x{:04x}", x);
             }
 
             if let Some(x) = device_state.role.as_ref() {
