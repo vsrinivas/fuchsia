@@ -216,8 +216,8 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
 
     const auto& highlight_translation = annotation_view_->GetTranslationVector();
     EXPECT_TRUE(highlight_translation.has_value());
-    EXPECT_EQ((*highlight_translation)[0], 460.0f);
-    EXPECT_EQ((*highlight_translation)[1], 1270.0f);
+    EXPECT_EQ((*highlight_translation)[0], 60.0f);
+    EXPECT_EQ((*highlight_translation)[1], 70.0f);
     EXPECT_EQ((*highlight_translation)[2], 1280.0f);  // no change in z axis.
 
     const auto& highlight_scale = annotation_view_->GetScaleVector();

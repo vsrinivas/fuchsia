@@ -27,8 +27,8 @@ fuchsia::ui::gfx::mat4 MakeTranslationTransform(const fuchsia::ui::gfx::vec2& of
   transform.matrix[10] = 1;
   transform.matrix[15] = 1;
 
-  transform.matrix[12] = offset.x;
-  transform.matrix[13] = offset.y;
+  transform.matrix[12] = -offset.x;
+  transform.matrix[13] = -offset.y;
   return transform;
 }
 
