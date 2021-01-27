@@ -457,7 +457,8 @@ void SetDefaults(GuestConfig* cfg) {
   if (cfg->default_net()) {
     cfg->mutable_net_devices()->push_back({
         .mac_address = kGuestMacAddress,
-        .enable_bridge = true,
+        // TODO(https://fxbug.dev/67566): Enable once bridging is fixed.
+        .enable_bridge = false,
     });
   }
 }
