@@ -35,10 +35,6 @@
 #define MMU_USER_SIZE_SHIFT 48
 #endif
 
-#ifndef MMU_IDENT_SIZE_SHIFT
-#define MMU_IDENT_SIZE_SHIFT 42 /* Max size supported by block mappings */
-#endif
-
 // See ARM DDI 0487B.b, Table D4-25 for the maximum IPA range that can be used.
 // This size is based on a 4KB granule and a starting level of 1. We chose this
 // size due to the 40-bit physical address range on Cortex-A53.
@@ -49,6 +45,16 @@
 #define MMU_KERNEL_PAGE_SIZE_SHIFT      (PAGE_SIZE_SHIFT)
 #define MMU_USER_PAGE_SIZE_SHIFT        (USER_PAGE_SIZE_SHIFT)
 #define MMU_GUEST_PAGE_SIZE_SHIFT       (USER_PAGE_SIZE_SHIFT)
+
+// For the identity map used temporarily in start.S as the cpu is trampolining
+// up to the high kernel address, set the max size of the temporary address
+// space constructed.
+//
+// Currently if between 30 and 39 the code will automatically use 4K base page
+// granules, which is maximally compatible with all cores.
+#ifndef MMU_IDENT_SIZE_SHIFT
+#define MMU_IDENT_SIZE_SHIFT 39
+#endif
 
 #if MMU_IDENT_SIZE_SHIFT < 25
 #error MMU_IDENT_SIZE_SHIFT too small
