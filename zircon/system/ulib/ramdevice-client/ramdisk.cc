@@ -246,11 +246,11 @@ struct ramdisk_client {
     auto resp = ::llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(
         zx::unowned_channel(ramdisk.get()));
     zx_status_t status = resp.status();
-    if (resp->result.is_err()) {
-      call_status = resp->result.err();
-    }
     if (status != ZX_OK) {
       return status;
+    }
+    if (resp->result.is_err()) {
+      call_status = resp->result.err();
     }
     return call_status;
   }

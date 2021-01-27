@@ -3,41 +3,35 @@
 // found in the LICENSE file.
 
 use {
-    crate::instance::MinfsInstance,
     async_trait::async_trait,
     fuchsia_zircon::Status,
     log::debug,
     rand::{rngs::SmallRng, seq::SliceRandom, Rng},
-    stress_test_utils::actor::{Actor, ActorError},
+    stress_test_utils::{
+        actor::{Actor, ActorError},
+        io::Directory,
+    },
 };
 
 // An actor responsible for deleting files randomly
 pub struct DeletionActor {
     rng: SmallRng,
-    // Which directory to operate out of.
-    home_dir: String,
+    pub home_dir: Directory,
 }
 
 impl DeletionActor {
-    pub fn new(rng: SmallRng, home_dir: String) -> Self {
+    pub fn new(rng: SmallRng, home_dir: Directory) -> Self {
         Self { rng, home_dir }
     }
 }
 
 #[async_trait]
-impl Actor<MinfsInstance> for DeletionActor {
-    async fn perform(&mut self, instance: &mut MinfsInstance) -> Result<(), ActorError> {
-        let home_dir = match instance.open_dir(&self.home_dir).await {
-            Ok(d) => d,
-            Err(Status::PEER_CLOSED) => {
-                return Err(ActorError::GetNewInstance);
-            }
-            Err(s) => panic!("Unexpected error from open_dir: {}", s),
-        };
+impl Actor for DeletionActor {
+    async fn perform(&mut self) -> Result<(), ActorError> {
         // Get list of all files
-        let files = match home_dir.entries().await {
+        let files = match self.home_dir.entries().await {
             Ok(files) => files,
-            Err(Status::PEER_CLOSED) => return Err(ActorError::GetNewInstance),
+            Err(Status::PEER_CLOSED) => return Err(ActorError::ResetEnvironment),
             Err(s) => panic!("Error occurred during delete: {}", s),
         };
 
@@ -51,9 +45,9 @@ impl Actor<MinfsInstance> for DeletionActor {
         // Randomly select files from the list and remove them
         let files_to_delete = files.choose_multiple(&mut self.rng, num_files_to_delete);
         for file in files_to_delete {
-            match home_dir.remove(file).await {
+            match self.home_dir.remove(file).await {
                 Ok(()) => {}
-                Err(Status::PEER_CLOSED) => return Err(ActorError::GetNewInstance),
+                Err(Status::PEER_CLOSED) => return Err(ActorError::ResetEnvironment),
                 Err(s) => panic!("Error occurred during delete: {}", s),
             }
         }

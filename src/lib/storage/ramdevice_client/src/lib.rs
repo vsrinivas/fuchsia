@@ -324,6 +324,12 @@ impl RamdiskClient {
 /// It is safe to move this struct between threads.
 unsafe impl Send for RamdiskClient {}
 
+/// The only methods that can be invoked from a reference of RamdiskClient
+/// are open() and get_path(). Both these functions are non-destructive and
+/// can be called from multiple threads.
+/// This implies that it is safe to share a reference to RamdiskClient between threads.
+unsafe impl Sync for RamdiskClient {}
+
 impl Drop for RamdiskClient {
     fn drop(&mut self) {
         let _ = unsafe { ramdevice_sys::ramdisk_destroy(self.ramdisk) };

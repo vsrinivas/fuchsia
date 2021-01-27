@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{blob::Blob, instance::BlobfsInstance},
+    crate::blob::Blob,
     async_trait::async_trait,
     fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE},
     fuchsia_zircon::Status,
@@ -12,6 +12,7 @@ use {
     stress_test_utils::{
         actor::{Actor, ActorError},
         data::{Compressibility, FileData},
+        io::Directory,
     },
 };
 
@@ -42,26 +43,25 @@ enum BlobfsOperation {
 // Performs operations on blobs expected to exist on disk
 pub struct BlobActor {
     // In-memory representations of all blobs as they exist on disk
-    blobs: Vec<Blob>,
+    pub blobs: Vec<Blob>,
 
     // Random number generator used by the operator
-    rng: SmallRng,
+    pub rng: SmallRng,
+
+    // Blobfs root directory
+    pub root_dir: Directory,
 }
 
 impl BlobActor {
-    pub fn new(rng: SmallRng) -> Self {
-        Self { blobs: vec![], rng }
-    }
-
     fn hashes(&self) -> Vec<String> {
         self.blobs.iter().map(|b| b.merkle_root_hash().to_string()).collect()
     }
 
     // Reads in all blobs stored on the filesystem and compares them to our in-memory
     // model to ensure that everything is as expected.
-    async fn verify_blobs(&mut self, instance: &BlobfsInstance) -> Result<(), Status> {
+    async fn verify_blobs(&mut self) -> Result<(), Status> {
         debug!("Verifying {} blobs...", self.blobs.len());
-        let on_disk_hashes = instance.root_dir.entries().await?;
+        let on_disk_hashes = self.root_dir.entries().await?;
 
         // Cleanup: Remove all blobs that no longer exist on disk
         let mut blobs = vec![];
@@ -81,7 +81,7 @@ impl BlobActor {
         }
 
         for blob in &self.blobs {
-            blob.verify_from_disk(&instance.root_dir).await?;
+            blob.verify_from_disk(&self.root_dir).await?;
         }
 
         Ok(())
@@ -89,7 +89,7 @@ impl BlobActor {
 
     // Creates reasonable-sized blobs to fill a percentage of the free space
     // available on disk.
-    async fn create_reasonable_blobs(&mut self, instance: &BlobfsInstance) -> Result<(), Status> {
+    async fn create_reasonable_blobs(&mut self) -> Result<(), Status> {
         let num_blobs_to_create: u64 = self.rng.gen_range(1, 200);
         debug!("Creating {} reasonable-size blobs...", num_blobs_to_create);
 
@@ -99,7 +99,7 @@ impl BlobActor {
             // if the requested size is too small.
             let data =
                 FileData::new_with_reasonable_size(&mut self.rng, Compressibility::Compressible);
-            let blob = Blob::create(data, &instance.root_dir).await?;
+            let blob = Blob::create(data, &self.root_dir).await?;
 
             // Another blob was created
             self.blobs.push(blob);
@@ -109,7 +109,7 @@ impl BlobActor {
     }
 
     // Creates open handles for a random number of blobs
-    async fn new_handles(&mut self, instance: &BlobfsInstance) -> Result<(), Status> {
+    async fn new_handles(&mut self) -> Result<(), Status> {
         // Decide how many blobs to create new handles for
         let num_blobs_with_new_handles = self.rng.gen_range(0, self.num_blobs());
         debug!("Creating handles for {} blobs", num_blobs_with_new_handles);
@@ -119,7 +119,7 @@ impl BlobActor {
             // Choose a random blob and open a handle to it
             let blob = self.blobs.choose_mut(&mut self.rng).unwrap();
             let handle =
-                instance.root_dir.open_file(blob.merkle_root_hash(), OPEN_RIGHT_READABLE).await?;
+                self.root_dir.open_file(blob.merkle_root_hash(), OPEN_RIGHT_READABLE).await?;
             blob.handles().push(handle);
         }
 
@@ -183,10 +183,7 @@ impl BlobActor {
 
     // Fills the disk with blobs that are |BLOCK_SIZE| bytes in size (when uncompressed)
     // until the filesystem reports an error.
-    async fn fill_disk_with_small_blobs(
-        &mut self,
-        instance: &BlobfsInstance,
-    ) -> Result<(), Status> {
+    async fn fill_disk_with_small_blobs(&mut self) -> Result<(), Status> {
         loop {
             // Keep making |BLOCK_SIZE| uncompressible blobs
             let data = FileData::new_with_exact_uncompressed_size(
@@ -195,7 +192,7 @@ impl BlobActor {
                 Compressibility::Uncompressible,
             );
 
-            let blob = Blob::create(data, &instance.root_dir).await?;
+            let blob = Blob::create(data, &self.root_dir).await?;
 
             // Another blob was created
             self.blobs.push(blob);
@@ -231,18 +228,16 @@ impl BlobActor {
 }
 
 #[async_trait]
-impl Actor<BlobfsInstance> for BlobActor {
-    async fn perform(&mut self, instance: &mut BlobfsInstance) -> Result<(), ActorError> {
+impl Actor for BlobActor {
+    async fn perform(&mut self) -> Result<(), ActorError> {
         let operations = self.valid_operations();
         let operation = operations.choose(&mut self.rng).unwrap();
 
         let result = match operation {
-            BlobfsOperation::VerifyBlobs => self.verify_blobs(instance).await,
-            BlobfsOperation::CreateReasonableBlobs => self.create_reasonable_blobs(instance).await,
-            BlobfsOperation::FillDiskWithSmallBlobs => {
-                self.fill_disk_with_small_blobs(instance).await
-            }
-            BlobfsOperation::NewHandles => self.new_handles(instance).await,
+            BlobfsOperation::VerifyBlobs => self.verify_blobs().await,
+            BlobfsOperation::CreateReasonableBlobs => self.create_reasonable_blobs().await,
+            BlobfsOperation::FillDiskWithSmallBlobs => self.fill_disk_with_small_blobs().await,
+            BlobfsOperation::NewHandles => self.new_handles().await,
             BlobfsOperation::CloseAllHandles => self.close_all_handles().await,
             BlobfsOperation::ReadFromAllHandles => self.read_from_all_handles().await,
         };
@@ -257,7 +252,7 @@ impl Actor<BlobfsInstance> for BlobActor {
                 for blob in &mut self.blobs {
                     blob.handles().drain(..);
                 }
-                Err(ActorError::GetNewInstance)
+                Err(ActorError::ResetEnvironment)
             }
             Err(s) => panic!("Error occurred during {:?}: {}", operation, s),
         }

@@ -36,10 +36,9 @@ rustc_binary("stressor-bin") {
 
   sources = [
     "deletion_actor.rs",
-    "disconnect_actor.rs",
     "environment.rs",
     "file_actor.rs",
-    "instance.rs",
+    "instance_actor.rs",
     "main.rs",
   ]
 }

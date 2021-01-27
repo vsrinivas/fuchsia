@@ -122,7 +122,7 @@ pub struct FvmInstance {
     controller: ControllerProxy,
 
     /// Manages the ramdisk device that is backed by a VMO
-    ramdisk: RamdiskClient,
+    _ramdisk: RamdiskClient,
 
     /// The component manager process that runs isolated-devmgr
     test: OpaqueTest,
@@ -132,12 +132,8 @@ impl FvmInstance {
     /// Kill the test's component manager process.
     /// This should take down the entire test's component tree with it,
     /// including the driver manager and ramdisk + fvm drivers.
-    pub fn kill_component_manager(mut self) {
+    pub fn kill_component_manager(&mut self) {
         self.test.component_manager_app.kill().unwrap();
-
-        // We do not want the ramdisk to be destroyed cleanly.
-        // Forget the ramdisk struct.
-        std::mem::forget(self.ramdisk);
     }
 
     /// Force rebind the FVM driver. This is similar to a device disconnect/reconnect.
@@ -161,7 +157,7 @@ impl FvmInstance {
 
         let (controller, volume_manager) = start_fvm_driver(ramdisk_path).await;
 
-        Self { test, controller, ramdisk, volume_manager }
+        Self { test, controller, _ramdisk: ramdisk, volume_manager }
     }
 
     /// Get the full path to /dev/class/block from the devmgr running in this test

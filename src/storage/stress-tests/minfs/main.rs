@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 mod deletion_actor;
-mod disconnect_actor;
 mod environment;
 mod file_actor;
-mod instance;
+mod instance_actor;
 
 use {
     anyhow::Error,
@@ -55,7 +54,8 @@ pub struct Args {
     time_limit_secs: Option<u64>,
 }
 
-#[fasync::run_singlethreaded]
+// This stress test will run on an executor that has 3 threads
+#[fasync::run(3)]
 async fn main() -> Result<(), Error> {
     // Get arguments from command line
     let args: Args = argh::from_env();

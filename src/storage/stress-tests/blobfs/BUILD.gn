@@ -39,9 +39,8 @@ rustc_binary("stressor-bin") {
     "blob.rs",
     "blob_actor.rs",
     "deletion_actor.rs",
-    "disconnect_actor.rs",
     "environment.rs",
-    "instance.rs",
+    "instance_actor.rs",
     "main.rs",
   ]
 }

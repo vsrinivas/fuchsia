@@ -118,12 +118,12 @@ impl FSInstance {
 
     /// Terminate the filesystem process and force unmount the mount point
     fn kill(self) -> Result<(), Error> {
-        self.process.kill().context("Could not kill filesystem process")?;
-
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         namespace
             .unbind(&self.mount_point)
-            .context("failed to unbind filesystem from default namespace")
+            .context("failed to unbind filesystem from default namespace")?;
+
+        self.process.kill().context("Could not kill filesystem process")
     }
 }
 

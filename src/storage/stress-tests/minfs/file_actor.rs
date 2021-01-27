@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::instance::MinfsInstance,
     async_trait::async_trait,
     fidl_fuchsia_io::{OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_WRITABLE},
     fuchsia_zircon::Status,
@@ -12,6 +11,7 @@ use {
     stress_test_utils::{
         actor::{Actor, ActorError},
         data::{Compressibility, FileData},
+        io::Directory,
     },
 };
 
@@ -26,21 +26,17 @@ enum MinfsOperation {
 // minfs as a true POSIX filesystem.
 pub struct FileActor {
     rng: SmallRng,
-    // Which directory to operate out of.
-    home_dir: String,
+    pub home_dir: Directory,
 }
 
 impl FileActor {
-    pub fn new(rng: SmallRng, home_dir: String) -> Self {
+    pub fn new(rng: SmallRng, home_dir: Directory) -> Self {
         Self { rng, home_dir }
     }
 
     // Creates reasonable-sized files to fill a percentage of the free space
     // available on disk.
-    async fn create_reasonable_files(
-        &mut self,
-        instance: &mut MinfsInstance,
-    ) -> Result<(), Status> {
+    async fn create_reasonable_files(&mut self) -> Result<(), Status> {
         let num_files_to_create: u64 = self.rng.gen_range(1, 1000);
         debug!("Creating {} files...", num_files_to_create);
 
@@ -54,9 +50,8 @@ impl FileActor {
                 FileData::new_with_reasonable_size(&mut self.rng, Compressibility::Compressible);
             let bytes = data.generate_bytes();
 
-            let file = instance
-                .open_dir(&self.home_dir)
-                .await?
+            let file = self
+                .home_dir
                 .open_file(
                     &filename,
                     OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_WRITABLE,
@@ -77,19 +72,19 @@ impl FileActor {
 }
 
 #[async_trait]
-impl Actor<MinfsInstance> for FileActor {
-    async fn perform(&mut self, instance: &mut MinfsInstance) -> Result<(), ActorError> {
+impl Actor for FileActor {
+    async fn perform(&mut self) -> Result<(), ActorError> {
         let operations = self.valid_operations();
         let operation = operations.choose(&mut self.rng).unwrap();
 
         let result = match operation {
-            MinfsOperation::CreateReasonableFiles => self.create_reasonable_files(instance).await,
+            MinfsOperation::CreateReasonableFiles => self.create_reasonable_files().await,
         };
 
         match result {
             Ok(()) => Ok(()),
             Err(Status::NO_SPACE) => Ok(()),
-            Err(Status::PEER_CLOSED) => Err(ActorError::GetNewInstance),
+            Err(Status::PEER_CLOSED) => Err(ActorError::ResetEnvironment),
             Err(s) => panic!("Error occurred during {:?}: {}", operation, s),
         }
     }

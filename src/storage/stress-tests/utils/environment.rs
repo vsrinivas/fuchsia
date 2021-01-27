@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{actor::ActorConfig, instance::InstanceUnderTest},
-    async_trait::async_trait,
-    std::fmt::Debug,
-};
+use {crate::actor::ActorConfig, futures::future::BoxFuture};
 
 /// Every stress test must implement this trait exactly once and pass it
 /// to run_test(). The test loop uses these methods to drive the stress test.
@@ -15,17 +11,16 @@ use {
 /// * creating actors that run during the stress test
 /// * creating a new instance when an actor requests one
 /// * specifying success criteria for the test (num operations or timeout)
-#[async_trait]
-pub trait Environment<I: InstanceUnderTest>: 'static + Send + Sync + Debug {
+pub trait Environment: Send + Sync {
     /// Returns the target number of operations to complete before exiting
     fn target_operations(&self) -> Option<u64>;
 
     /// Returns the number of seconds to wait before exiting
     fn timeout_seconds(&self) -> Option<u64>;
 
-    /// Returns a list of actors that will run during this test
-    async fn actors(&mut self) -> Vec<ActorConfig<I>>;
+    /// Return the configuration for all actors
+    fn actor_configs<'a>(&'a mut self) -> Vec<ActorConfig<'a>>;
 
-    /// Returns a new instance-under-test that actors can use
-    async fn new_instance(&mut self) -> I;
+    /// Reset the environment, when an actor requests one
+    fn reset(&mut self) -> BoxFuture<'_, ()>;
 }

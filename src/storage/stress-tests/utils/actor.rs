@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::instance::InstanceUnderTest, async_trait::async_trait};
+use async_trait::async_trait;
 
 pub enum ActorError {
     /// The operation did not occur due to the current state of the instance.
@@ -12,28 +12,35 @@ pub enum ActorError {
     /// if there are no files to delete.
     DoNotCount,
 
-    /// The operation did not occur because the actor requires a new instance.
+    /// The operation did not occur because the actor requires the environment to be reset.
     /// The global operation count should not be incremented.
     ///
     /// For example, if an actor's connection to a filesystem is severed, they may return
-    /// GetNewInstance to establish a new connection.
-    GetNewInstance,
+    /// ResetEnvironment to establish a new connection.
+    ResetEnvironment,
 }
 
 /// Describes the actor and how it should be run in the test.
-pub struct ActorConfig<I: InstanceUnderTest> {
+pub struct ActorConfig<'a> {
+    // The name of this actor
     pub name: String,
-    pub actor: Box<dyn Actor<I>>,
+
+    // A mutable reference to the actor for this configuration
+    pub actor: &'a mut dyn Actor,
+
+    // The number of seconds to wait between actor operations
     pub delay: u64,
 }
 
-impl<I: InstanceUnderTest> ActorConfig<I> {
-    pub fn new<A: Actor<I>>(name: &str, actor: A, delay: u64) -> Self {
-        Self { name: name.to_string(), actor: Box::new(actor), delay }
+impl<'a> ActorConfig<'a> {
+    pub fn new(name: &str, actor: &'a mut dyn Actor, delay: u64) -> Self {
+        Self { name: name.to_string(), actor, delay }
     }
 }
 
 #[async_trait]
-pub trait Actor<I: InstanceUnderTest>: 'static + Send + Sync {
-    async fn perform(&mut self, instance: &mut I) -> Result<(), ActorError>;
+pub trait Actor: Send + Sync {
+    // ActorRunner invokes this function, instructing the actor
+    // to perform exactly one operation and return result.
+    async fn perform(&mut self) -> Result<(), ActorError>;
 }

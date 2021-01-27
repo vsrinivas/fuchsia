@@ -3,33 +3,30 @@
 // found in the LICENSE file.
 
 use {
-    crate::instance::BlobfsInstance,
     async_trait::async_trait,
     fuchsia_zircon::Status,
     log::debug,
     rand::{rngs::SmallRng, seq::SliceRandom, Rng},
-    stress_test_utils::actor::{Actor, ActorError},
+    stress_test_utils::{
+        actor::{Actor, ActorError},
+        io::Directory,
+    },
 };
 
 // An actor responsible for deleting blobs randomly
 pub struct DeletionActor {
-    rng: SmallRng,
-}
-
-impl DeletionActor {
-    pub fn new(rng: SmallRng) -> Self {
-        Self { rng }
-    }
+    pub rng: SmallRng,
+    pub root_dir: Directory,
 }
 
 #[async_trait]
-impl Actor<BlobfsInstance> for DeletionActor {
-    async fn perform(&mut self, instance: &mut BlobfsInstance) -> Result<(), ActorError> {
+impl Actor for DeletionActor {
+    async fn perform(&mut self) -> Result<(), ActorError> {
         // Get list of all blobs
-        let blobs = match instance.root_dir.entries().await {
+        let blobs = match self.root_dir.entries().await {
             Ok(blobs) => blobs,
             Err(Status::PEER_CLOSED) | Err(Status::CONNECTION_ABORTED) => {
-                return Err(ActorError::GetNewInstance)
+                return Err(ActorError::ResetEnvironment)
             }
             Err(s) => panic!("Error occurred during delete: {}", s),
         };
@@ -44,10 +41,10 @@ impl Actor<BlobfsInstance> for DeletionActor {
         // Randomly select blobs from the list and remove them
         let blobs_to_delete = blobs.choose_multiple(&mut self.rng, num_blobs_to_delete);
         for blob in blobs_to_delete {
-            match instance.root_dir.remove(blob).await {
+            match self.root_dir.remove(blob).await {
                 Ok(()) => {}
                 Err(Status::PEER_CLOSED) | Err(Status::CONNECTION_ABORTED) => {
-                    return Err(ActorError::GetNewInstance)
+                    return Err(ActorError::ResetEnvironment)
                 }
                 Err(s) => panic!("Error occurred during delete: {}", s),
             }

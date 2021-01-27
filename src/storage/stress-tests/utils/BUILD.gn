@@ -39,7 +39,6 @@ rustc_library("utils") {
     "data.rs",
     "environment.rs",
     "fvm.rs",
-    "instance.rs",
     "io.rs",
     "mod.rs",
   ]
