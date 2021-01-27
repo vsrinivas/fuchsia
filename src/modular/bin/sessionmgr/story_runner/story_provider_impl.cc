@@ -248,7 +248,11 @@ void StoryProviderImpl::StopAllStories(fit::function<void()> callback) {
 }
 
 void StoryProviderImpl::SetPresentationProtocol(PresentationProtocolPtr presentation_protocol) {
+  FX_DCHECK(!std::holds_alternative<std::monostate>(presentation_protocol))
+      << "Presentation protocol cannot be set to the PresentationProtocolPtr default value. "
+         "It must be either a SessionShellPtr or a GraphicalPresenterPtr.";
   presentation_protocol_ = std::move(presentation_protocol);
+
   if (auto graphical_presenter =
           std::get_if<fuchsia::element::GraphicalPresenterPtr>(&presentation_protocol_)) {
     graphical_presenter->set_error_handler([](zx_status_t status) {
@@ -264,9 +268,17 @@ void StoryProviderImpl::SetPresentationProtocol(PresentationProtocolPtr presenta
           << "unexpectedly closed.";
     });
   } else {
-    FX_NOTREACHED() << "The session shell component should implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
+    FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
+                   << presentation_protocol_.index();
+    FX_NOTREACHED();
   }
+
+  // Re-attach/present pending views from previous calls to AttachOrPresentView()
+  for (auto& pending_call : pending_attach_or_present_view_calls) {
+    AttachOrPresentView(std::move(pending_call.story_id),
+                        std::move(pending_call.view_holder_token));
+  }
+  pending_attach_or_present_view_calls.clear();
 }
 
 void StoryProviderImpl::Teardown(fit::function<void()> callback) {
@@ -281,9 +293,12 @@ void StoryProviderImpl::Teardown(fit::function<void()> callback) {
   } else if (auto session_shell =
                  std::get_if<fuchsia::modular::SessionShellPtr>(&presentation_protocol_)) {
     session_shell->set_error_handler(nullptr);
+  } else if (std::holds_alternative<std::monostate>(presentation_protocol_)) {
+    // Nothing to do. SetPresentationProtocol has not been called, so no error handlers to clear.
   } else {
-    FX_NOTREACHED() << "The session shell component should implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
+    FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
+                   << presentation_protocol_.index();
+    FX_NOTREACHED();
   }
   operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, [] {}));
   operation_queue_.Add(std::make_unique<StopStoryShellCall>(this, std::move(callback)));
@@ -397,24 +412,40 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
 
 void StoryProviderImpl::AttachOrPresentView(std::string story_id,
                                             fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_)) {
-    PresentView(story_id, std::move(view_holder_token));
+  if (std::holds_alternative<std::monostate>(presentation_protocol_)) {
+    // The presentation protocol has not been chosen yet. Pend the view request so it can be
+    // attached/presented once the protocol is chosen.
+    auto pending_call = PendingAttachOrPresentViewCall{
+        .story_id = std::move(story_id),
+        .view_holder_token = std::move(view_holder_token),
+    };
+    pending_attach_or_present_view_calls.push_back(std::move(pending_call));
+  } else if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(
+                 presentation_protocol_)) {
+    PresentView(std::move(story_id), std::move(view_holder_token));
   } else if (std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_)) {
-    AttachView(story_id, std::move(view_holder_token));
+    AttachView(std::move(story_id), std::move(view_holder_token));
   } else {
-    FX_NOTREACHED() << "The session shell component but implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
+    FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
+                   << presentation_protocol_.index();
+    FX_NOTREACHED();
   }
 }
 
 void StoryProviderImpl::DetachOrDismissView(std::string story_id, fit::function<void()> done) {
-  if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_)) {
-    DismissView(story_id, std::move(done));
+  if (std::holds_alternative<std::monostate>(presentation_protocol_)) {
+    // If the view was dismissed before the presentation protocol has been selected, it was never
+    // attached/presented, so there's no need to dismiss/detach it.
+    done();
+  } else if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(
+                 presentation_protocol_)) {
+    DismissView(std::move(story_id), std::move(done));
   } else if (std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_)) {
-    DetachView(story_id, std::move(done));
+    DetachView(std::move(story_id), std::move(done));
   } else {
-    FX_NOTREACHED() << "The session shell component but implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
+    FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
+                   << presentation_protocol_.index();
+    FX_NOTREACHED();
   }
 }
 

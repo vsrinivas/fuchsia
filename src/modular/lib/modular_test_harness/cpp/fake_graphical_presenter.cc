@@ -73,6 +73,10 @@ void FakeGraphicalPresenter::OnCreate(fuchsia::sys::StartupInfo startup_info) {
           };
 
   component_context()->outgoing()->AddPublicService(std::move(graphical_presenter_handler));
+
+  if (on_create_) {
+    on_create_();
+  }
 }
 
 void FakeGraphicalPresenter::OnDestroy() {

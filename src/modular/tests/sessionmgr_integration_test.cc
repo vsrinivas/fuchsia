@@ -671,4 +671,47 @@ TEST_F(SessionmgrIntegrationTestWithoutDefaultHarness, PuppetMasterInAgentTermin
   }
 }
 
+// Tests that creating a story before StoryProviderImpl connects to a presentation protocol
+// results in the PresentView call being pended and called again once connected.
+TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected) {
+  fuchsia::modular::StoryPuppetMasterPtr story_master;
+  std::vector<fuchsia::modular::StoryState> sequence_of_story_states;
+
+  modular_testing::TestHarnessBuilder builder;
+  auto fake_graphical_presenter =
+      modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions();
+
+  fake_graphical_presenter->set_on_create([&]() {
+    // Create the story before the FakeGraphicalPresenter component starts serving its outgoing
+    // directory. This ensures that StoryProviderImpl has not yet selected a presentation protocol.
+    LaunchMod();
+  });
+
+  bool called_present_view = false;
+  fake_graphical_presenter->set_on_present_view(
+      [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
+
+  bool graphical_presenter_connected = false;
+  fake_graphical_presenter->set_on_graphical_presenter_connected(
+      [&]() { graphical_presenter_connected = true; });
+
+  fake_graphical_presenter->set_on_graphical_presenter_error([&](zx_status_t status) {
+    FX_PLOGS(FATAL, status) << "Failed to connect to FakeGraphicalPresenter";
+    FX_NOTREACHED();
+  });
+
+  builder.InterceptSessionShell(fake_graphical_presenter->BuildInterceptOptions());
+  builder.UseSessionShellForStoryShellFactory();
+
+  // Create the test harness and verify the session shell is up
+  builder.BuildAndRun(test_harness());
+
+  EXPECT_FALSE(fake_graphical_presenter->is_running());
+  RunLoopUntil([&] { return fake_graphical_presenter->is_running(); });
+
+  // StoryProviderImpl should have selected GraphicalPresenter called PresentView.
+  RunLoopUntil([&] { return graphical_presenter_connected; });
+  RunLoopUntil([&] { return called_present_view; });
+}
+
 }  // namespace

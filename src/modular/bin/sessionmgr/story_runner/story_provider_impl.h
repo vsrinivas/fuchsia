@@ -37,8 +37,8 @@
 
 namespace modular {
 
-using PresentationProtocolPtr =
-    std::variant<fuchsia::modular::SessionShellPtr, fuchsia::element::GraphicalPresenterPtr>;
+using PresentationProtocolPtr = std::variant<std::monostate, fuchsia::modular::SessionShellPtr,
+                                             fuchsia::element::GraphicalPresenterPtr>;
 
 // StoryControllerImpl has a circular dependency on StoryProviderImpl.
 class StoryControllerImpl;
@@ -241,6 +241,14 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   std::unordered_map<std::string, std::vector<fuchsia::element::ViewControllerPtr>>
       view_controllers_;
   std::unordered_map<std::string, std::vector<fit::function<void()>>> dismiss_callbacks_;
+
+  // Container for arguments to AttachOrPresentView that occurred before a presentation protocol
+  // was selected.
+  struct PendingAttachOrPresentViewCall {
+    std::string story_id;
+    fuchsia::ui::views::ViewHolderToken view_holder_token;
+  };
+  std::vector<PendingAttachOrPresentViewCall> pending_attach_or_present_view_calls;
 
   // Operations implemented here.
   class LoadStoryRuntimeCall;
