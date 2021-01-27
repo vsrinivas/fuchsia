@@ -47,22 +47,12 @@ static aml_sdmmc_config_t config = {
     .version_3 = true,
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
 };
-static const guid_map_t guid_map[] = {
-    {"zircon-a", GUID_ZIRCON_A_VALUE},
-    {"zircon-b", GUID_ZIRCON_B_VALUE},
-    {"zircon-r", GUID_ZIRCON_R_VALUE},
-    {"fvm", GUID_FVM_VALUE},
-};
+
 static const pbus_metadata_t emmc_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
         .data_buffer = &config,
         .data_size = sizeof(config),
-    },
-    {
-        .type = DEVICE_METADATA_GUID_MAP,
-        .data_buffer = guid_map,
-        .data_size = sizeof(guid_map),
     },
 };
 

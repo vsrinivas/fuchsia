@@ -17,6 +17,7 @@
 #include "src/storage/lib/paver/nelson.h"
 #include "src/storage/lib/paver/paver.h"
 #include "src/storage/lib/paver/sherlock.h"
+#include "src/storage/lib/paver/vim3.h"
 #include "src/storage/lib/paver/x64.h"
 
 namespace {
@@ -41,6 +42,7 @@ zx_status_t Init(void** out_ctx) {
   paver::DevicePartitionerFactory::Register(std::make_unique<paver::NelsonPartitionerFactory>());
   paver::DevicePartitionerFactory::Register(std::make_unique<paver::SherlockPartitionerFactory>());
   paver::DevicePartitionerFactory::Register(std::make_unique<paver::LuisPartitionerFactory>());
+  paver::DevicePartitionerFactory::Register(std::make_unique<paver::Vim3PartitionerFactory>());
   paver::DevicePartitionerFactory::Register(
       std::make_unique<paver::ChromebookX64PartitionerFactory>());
   paver::DevicePartitionerFactory::Register(std::make_unique<paver::X64PartitionerFactory>());
@@ -49,6 +51,7 @@ zx_status_t Init(void** out_ctx) {
   abr::ClientFactory::Register(std::make_unique<paver::NelsonAbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::SherlockAbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::LuisAbrClientFactory>());
+  abr::ClientFactory::Register(std::make_unique<paver::Vim3AbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::X64AbrClientFactory>());
   return ZX_OK;
 }
