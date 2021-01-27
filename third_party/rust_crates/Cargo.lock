@@ -997,6 +997,7 @@ dependencies = [
  "socket2",
  "splines",
  "static_assertions",
+ "strsim 0.10.0",
  "structopt",
  "syn 1.0.58",
  "synstructure",

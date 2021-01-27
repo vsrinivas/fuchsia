@@ -638,6 +638,10 @@ group("static_assertions") {
   deps = [ ":static_assertions-v1_1_0" ]
 }
 
+group("strsim") {
+  deps = [ ":strsim-v0_10_0" ]
+}
+
 group("structopt") {
   deps = [ ":structopt-v0_2_14" ]
 }

@@ -119,6 +119,7 @@ slab = "0.4"
 socket2 = { version = "0.3.12", features = ["reuseport", "unix"] }
 splines = "2.2.0"
 static_assertions = "1.1.0"
+strsim = "0.10.0"
 structopt = "0.2.14"
 tempfile = "3.1"
 termion = "1.5.3"
