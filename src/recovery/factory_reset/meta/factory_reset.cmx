@@ -8,6 +8,7 @@
     "sandbox": {
         "dev": [
             "class/block",
+            "nelson-emmc",
             "sherlock-emmc",
             "sys/platform"
         ],
