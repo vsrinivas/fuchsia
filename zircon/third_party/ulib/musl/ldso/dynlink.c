@@ -64,8 +64,6 @@ struct dso {
   struct link_map l_map;
 
   const struct gnu_note* build_id_note;
-  // TODO(mcgrathr): Remove build_id_log when everything uses markup.
-  struct iovec build_id_log;
   atomic_flag logged;
 
   // ID of this module for symbolizer markup.
@@ -670,68 +668,6 @@ __NO_SAFESTACK NO_ASAN static bool find_buildid_note(struct dso* dso, const Phdr
   return false;
 }
 
-// TODO(mcgrathr): Remove this all when everything uses markup.
-
-// We pre-format the log line for each DSO early so that we can log it
-// without running any nontrivial code.  We use hand-rolled formatting
-// code to avoid using large and complex code like the printf engine.
-// Each line looks like "dso: id=... base=0x... name=...\n".
-#define BUILD_ID_LOG_1 "dso: id="
-#define BUILD_ID_LOG_NONE "none"
-#define BUILD_ID_LOG_2 " base=0x"
-#define BUILD_ID_LOG_3 " name="
-
-__NO_SAFESTACK static size_t build_id_log_size(struct dso* dso, size_t namelen) {
-  size_t id_size = (dso->build_id_note == NULL ? sizeof(BUILD_ID_LOG_NONE) - 1
-                                               : dso->build_id_note->nhdr.n_descsz * 2);
-  return (sizeof(BUILD_ID_LOG_1) - 1 + id_size + sizeof(BUILD_ID_LOG_2) - 1 + (sizeof(size_t) * 2) +
-          sizeof(BUILD_ID_LOG_3) - 1 + namelen + 1);
-}
-
-__NO_SAFESTACK static void format_build_id_log(struct dso* dso, char* buffer, const char* name,
-                                               size_t namelen) {
-#define HEXDIGITS "0123456789abcdef"
-  const struct gnu_note* note = dso->build_id_note;
-  dso->build_id_log.iov_base = buffer;
-  memcpy(buffer, BUILD_ID_LOG_1, sizeof(BUILD_ID_LOG_1) - 1);
-  char* p = buffer + sizeof(BUILD_ID_LOG_1) - 1;
-  if (note == NULL) {
-    memcpy(p, BUILD_ID_LOG_NONE, sizeof(BUILD_ID_LOG_NONE) - 1);
-    p += sizeof(BUILD_ID_LOG_NONE) - 1;
-  } else {
-    for (Elf64_Word i = 0; i < note->nhdr.n_descsz; ++i) {
-      uint8_t byte = note->desc[i];
-      *p++ = HEXDIGITS[byte >> 4];
-      *p++ = HEXDIGITS[byte & 0xf];
-    }
-  }
-  memcpy(p, BUILD_ID_LOG_2, sizeof(BUILD_ID_LOG_2) - 1);
-  p += sizeof(BUILD_ID_LOG_2) - 1;
-  uintptr_t base = (uintptr_t)dso->l_map.l_addr;
-  unsigned int shift = sizeof(uintptr_t) * 8;
-  do {
-    shift -= 4;
-    *p++ = HEXDIGITS[(base >> shift) & 0xf];
-  } while (shift > 0);
-  memcpy(p, BUILD_ID_LOG_3, sizeof(BUILD_ID_LOG_3) - 1);
-  p += sizeof(BUILD_ID_LOG_3) - 1;
-  memcpy(p, name, namelen);
-  p += namelen;
-  *p++ = '\n';
-  dso->build_id_log.iov_len = p - buffer;
-#undef HEXDIGITS
-}
-
-__NO_SAFESTACK static void allocate_and_format_build_id_log(struct dso* dso) {
-  const char* name = dso->l_map.l_name;
-  if (name[0] == '\0')
-    name = dso->soname == NULL ? "<application>" : dso->soname;
-  size_t namelen = strlen(name);
-  char* buffer = dl_alloc(build_id_log_size(dso, namelen));
-  format_build_id_log(dso, buffer, name, namelen);
-}
-
-// TODO(mcgrathr): Remove above when everything uses markup.
 
 // Format the markup elements by hand to avoid using large and complex code
 // like the printf engine.
@@ -862,8 +798,6 @@ __NO_SAFESTACK static void log_dso(struct dso* dso) {
       }
     }
   }
-  // TODO(mcgrathr): Remove this when everything uses markup.
-  _dl_log_write(dso->build_id_log.iov_base, dso->build_id_log.iov_len);
 }
 
 __NO_SAFESTACK void _dl_log_unlogged(void) {
@@ -1350,8 +1284,7 @@ __NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo, const char* 
    * extended DTV capable of storing an additional slot for
    * the newly-loaded DSO. */
   size_t namelen = strlen(name);
-  size_t build_id_log_len = build_id_log_size(&temp_dso, namelen);
-  alloc_size = (sizeof *p + ndeps * sizeof(p->deps[0]) + namelen + 1 + build_id_log_len);
+  alloc_size = (sizeof *p + ndeps * sizeof(p->deps[0]) + namelen + 1);
   if (runtime && temp_dso.tls.image) {
     size_t per_th = temp_dso.tls.size + temp_dso.tls.align + sizeof(void*) * (tls_cnt + 3);
     n_th = atomic_load(&libc.thread_count);
@@ -1372,9 +1305,8 @@ __NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo, const char* 
   memcpy(p->l_map.l_name, name, namelen);
   p->l_map.l_name[namelen] = '\0';
   assign_module_id(p);
-  format_build_id_log(p, p->l_map.l_name + namelen + 1, p->l_map.l_name, namelen);
   if (runtime)
-    do_tls_layout(p, p->l_map.l_name + namelen + 1 + build_id_log_len, n_th);
+    do_tls_layout(p, p->l_map.l_name + namelen + 1, n_th);
 
   dso_set_next(tail, p);
   dso_set_prev(p, tail);
@@ -1833,11 +1765,6 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, const char* argv0, const 
 
   app.global = 1;
   decode_dyn(&app);
-
-  // Format the build ID log lines for the three special cases.
-  allocate_and_format_build_id_log(&ldso);
-  allocate_and_format_build_id_log(&vdso);
-  allocate_and_format_build_id_log(&app);
 
   /* Initial dso chain consists only of the app. */
   head = tail = &app;
