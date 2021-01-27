@@ -1,4 +1,4 @@
-# Set up and run zxdd, Fuchsia's native debugger
+# Set up and run zxdb, Fuchsia's native debugger
 
 ## Preparation: Boot with networking
 
