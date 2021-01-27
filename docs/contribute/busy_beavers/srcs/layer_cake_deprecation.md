@@ -61,6 +61,7 @@ deleting layer directories.
 *   [424156: [fuchsia-cprng] Move to src/lib/zircon/rust](https://fuchsia-review.googlesource.com/c/fuchsia/+/424156)
 *   [449714: [build][power] Move power_manager to //src/power](https://fuchsia-review.googlesource.com/c/fuchsia/+/449714)
 *   [461096: [thermd][shuffle] Migrate thermd from //garnet to //src](https://fuchsia-review.googlesource.com/c/fuchsia/+/461096)
+*   [473957: [sysmem] Move sysmem_connector to src/devices/sysmem/bin](https://fuchsia-review.googlesource.com/c/fuchsia/+/473957)
 
 ## Sponsors
 
