@@ -594,6 +594,7 @@ async fn connected_state(
                 let status_response = status_response.map_err(|e| {
                     ExitReason(Err(format_err!("failed to get sme status: {:?}", e)))
                 })?;
+                // Check if we're still connected to a network.
                 match status_response.connected_to {
                     Some(bss_info) => {
                         // TODO(fxbug.dev/53545): send some stats to the saved network manager
@@ -603,27 +604,41 @@ async fn connected_state(
                         }
                     }
                     None => {
-                        let next_connecting_options = ConnectingOptions {
-                            connect_responder: None,
-                            connect_request: types::ConnectRequest {
-                                reason: types::ConnectReason::RetryAfterDisconnectDetected,
-                                target: types::ConnectionCandidate {
-                                    // strip out the bss info to force a new scan
-                                    bss: None,
-                                    observed_in_passive_scan: None,
-                                    ..currently_fulfilled_request.target.clone()
-                                }
-                            },
-                            attempt_counter: 0,
-                        };
-                        let options = DisconnectingOptions {
-                            disconnect_responder: None,
-                            previous_network: Some((currently_fulfilled_request.target.network.clone(), types::DisconnectStatus::ConnectionFailed)),
-                            next_network: Some(next_connecting_options),
-                            reason: types::DisconnectReason::DisconnectDetectedFromSme
-                        };
-                        info!("Detected disconnection from network, will attempt reconnection");
-                        return Ok(disconnecting_state(common_options, options).into_state());
+                        // We're no longer connected to a network. When the SME layer detects a
+                        // Disassociation, it will automatically attempt a reconnection. We can
+                        // check for that scenario via the `connecting_to_ssid` field.
+                        if status_response.connecting_to_ssid == currently_fulfilled_request.target.network.ssid {
+                            info!("Detected disconnection, SME layer is reconnecting to network");
+                            // Log a disconnect in Cobalt
+                            common_options.cobalt_api.log_event(
+                                DISCONNECTION_METRIC_ID,
+                                types::DisconnectReason::DisconnectDetectedFromSme
+                            );
+                            // TODO(fxbug.dev/53545): record this blip in connectivity
+                            // TODO(fxbug.dev/67605): record a re-connection metric, if successful
+                        } else {
+                            let next_connecting_options = ConnectingOptions {
+                                connect_responder: None,
+                                connect_request: types::ConnectRequest {
+                                    reason: types::ConnectReason::RetryAfterDisconnectDetected,
+                                    target: types::ConnectionCandidate {
+                                        // strip out the bss info to force a new scan
+                                        bss: None,
+                                        observed_in_passive_scan: None,
+                                        ..currently_fulfilled_request.target.clone()
+                                    }
+                                },
+                                attempt_counter: 0,
+                            };
+                            let options = DisconnectingOptions {
+                                disconnect_responder: None,
+                                previous_network: Some((currently_fulfilled_request.target.network.clone(), types::DisconnectStatus::ConnectionFailed)),
+                                next_network: Some(next_connecting_options),
+                                reason: types::DisconnectReason::DisconnectDetectedFromSme
+                            };
+                            info!("Detected disconnection from network, will attempt reconnection");
+                            return Ok(disconnecting_state(common_options, options).into_state());
+                        }
                     }
                 }
             },
@@ -2769,6 +2784,98 @@ mod tests {
             CONNECTION_ATTEMPT_METRIC_ID,
             types::ConnectReason::RetryAfterDisconnectDetected
         );
+    }
+
+    #[test]
+    fn connected_state_detects_sme_reconnect() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+
+        let network_ssid = "foo";
+        let bss_desc = generate_random_bss_desc();
+        let connect_request = types::ConnectRequest {
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: bss_desc.clone(),
+                multiple_bss_candidates: Some(true),
+            },
+            reason: types::ConnectReason::IdleInterfaceAutoconnect,
+        };
+        let initial_state = connected_state(test_values.common_options, connect_request.clone());
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Respond to the SME status with `connecting_to_ssid: ssid`
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
+                responder.send(&mut fidl_sme::ClientStatusResponse{
+                    connecting_to_ssid: network_ssid.as_bytes().to_vec(),
+                    connected_to: None
+                }).expect("could not send sme response");
+            }
+        );
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(exec.wake_next_timer(), Some(_)); // wake timer for next SME status request
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Respond to the next SME status request showing we are connected
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
+                responder.send(&mut fidl_sme::ClientStatusResponse{
+                    connecting_to_ssid: vec![],
+                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: network_ssid.as_bytes().to_vec(),
+                        rssi_dbm: 0,
+                        snr_db: 0,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
+                        protection: fidl_sme::Protection::Unknown,
+                        compatible: true,
+                        bss_desc: bss_desc.clone(),
+                    }))
+                }).expect("could not send sme response");
+            }
+        );
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(exec.wake_next_timer(), Some(_)); // wake timer for next SME status request
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Next request should be another Status request
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Status{ .. }) => {}
+        );
+
+        // Check there were no state updates
+        assert_variant!(test_values.update_receiver.try_next(), Err(_));
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::DisconnectDetectedFromSme
+        );
+        validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
     #[test]
