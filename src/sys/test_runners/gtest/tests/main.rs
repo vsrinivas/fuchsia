@@ -78,7 +78,7 @@ async fn launch_and_run_sample_test() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: Some(10),
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -101,7 +101,7 @@ async fn launch_and_run_test_with_custom_args() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: Some(10),
-            arguments: Some(vec!["--my_custom_arg2".to_owned()]),
+            arguments: vec!["--my_custom_arg2".to_owned()],
         },
     )
     .await
@@ -124,7 +124,7 @@ async fn launch_and_run_sample_test_no_concurrent() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: None,
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -146,7 +146,7 @@ async fn launch_and_run_sample_test_include_disabled() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Include,
             parallel: Some(10),
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -194,7 +194,7 @@ async fn launch_and_run_empty_test() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: Some(10),
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -213,7 +213,7 @@ async fn launch_and_test_echo_test() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: Some(10),
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -236,7 +236,7 @@ async fn launch_and_run_hugetest() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: Some(100),
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -266,7 +266,7 @@ async fn test_parallel_execution() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: Some(5),
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await

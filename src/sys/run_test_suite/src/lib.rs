@@ -76,7 +76,7 @@ pub struct TestParams {
     pub parallel: Option<u16>,
 
     /// Arguments to pass to test using command line.
-    pub test_args: Option<Vec<String>>,
+    pub test_args: Vec<String>,
 
     /// HarnessProxy that manages running the tests.
     pub harness: HarnessProxy,

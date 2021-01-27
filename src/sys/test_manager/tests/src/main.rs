@@ -129,7 +129,7 @@ async fn launch_and_test_echo_test() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: None,
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -160,7 +160,7 @@ async fn launch_and_test_no_on_finished() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: None,
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -192,7 +192,7 @@ async fn launch_and_test_gtest_runner_sample_test() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: None,
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await

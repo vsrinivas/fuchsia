@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    argh::{EarlyExit, FromArgs},
+    argh::FromArgs,
     fidl_fuchsia_test_manager::HarnessMarker,
     fuchsia_async::{self, TimeoutExt},
     fuchsia_zircon as zx,
 };
 
 #[derive(FromArgs, Default, PartialEq, Eq, Debug)]
-// TODO(61417): use argh for test_args when the feature is implemented and rolled.
-/// Arguments. Use option delimiter(--) to pass arguments to the test suite.
+/// Entry point for executing tests.
 struct Args {
     /// test timeout. Exits with -`ZX_ERR_TIMED_OUT` if the test times out.
     #[argh(option, short = 't')]
@@ -46,26 +45,15 @@ struct Args {
     /// would be executed.
     #[argh(option)]
     count: Option<u16>,
-}
 
-// parses args, returns `Args` and everything after '--'.
-fn parse_args(cmd: Vec<String>) -> Result<(Args, Option<Vec<String>>), EarlyExit> {
-    let mut splits = cmd.splitn(2, |s| s == "--");
-    let s: Vec<&str> = splits.next().unwrap().iter().map(|s| s.as_str()).collect();
-    let args = Args::from_args(&[s[0]], &s[1..])?;
-    let rest = splits.next().map(|v| v.to_vec());
-    Ok((args, rest))
+    #[argh(positional)]
+    /// arguments passed to tests following `--`.
+    test_args: Vec<String>,
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
-    let (args, test_args) = parse_args(std::env::args().collect()).unwrap_or_else(|early_exit| {
-        println!("{}", early_exit.output);
-        std::process::exit(match early_exit.status {
-            Ok(()) => 0,
-            Err(()) => 1,
-        })
-    });
+    let args = argh::from_env();
 
     let Args {
         timeout,
@@ -75,6 +63,7 @@ async fn main() {
         also_run_disabled_tests,
         parallel,
         count,
+        test_args,
     } = args;
     let count = count.unwrap_or(1);
     if count == 0 {
@@ -129,94 +118,69 @@ async fn main() {
 mod tests {
     use super::*;
 
-    fn args_vec(mut args: Vec<&str>) -> Vec<String> {
-        let mut a = vec!["test_program"];
-        a.append(&mut args);
-        a.iter().map(|s| s.to_string()).collect()
-    }
-
     #[test]
     // As we have custom parsing when user passes "--", making sure everything works fine.
-    fn test_parse_args() {
+    fn test_args() {
         let url = "foo.cm";
         let mut expected_args = Args { test_url: url.to_string(), ..Default::default() };
         expected_args.test_url = url.to_string();
 
-        let (args, test_args) = parse_args(args_vec(vec![url])).unwrap();
+        let args = Args::from_args(&["cmd"], &[url]).unwrap();
         assert_eq!(args, expected_args);
-        assert_eq!(test_args, None);
 
-        let (args, test_args) = parse_args(args_vec(vec![url, "--"])).unwrap();
+        let args = Args::from_args(&["cmd"], &[url, "--"]).unwrap();
+        expected_args.test_args = vec![];
         assert_eq!(args, expected_args);
-        assert_eq!(test_args, Some(vec![]));
 
         // make sure we can parse --help flag when user passes "--"
-        let err = parse_args(args_vec(vec![url, "--help", "--"])).unwrap_err();
-        assert_eq!(err.status, Ok(()));
+        let early_exit = Args::from_args(&["cmd"], &[url, "--help", "--"]).unwrap_err();
+        assert_eq!(early_exit.status, Ok(()));
 
         // make sure we can parse --help flag without "--"
-        let err = parse_args(args_vec(vec![url, "--help"])).unwrap_err();
-        assert_eq!(err.status, Ok(()));
+        let early_exit = Args::from_args(&["cmd"], &[url, "--help"]).unwrap_err();
+        assert_eq!(early_exit.status, Ok(()));
 
         // make sure we can catch arg errors when user passes "--"
-        let err = parse_args(args_vec(vec![url, "--timeout", "a", "--"])).unwrap_err();
-        assert_eq!(err.status, Err(()));
+        let early_exit = Args::from_args(&["cmd"], &[url, "--timeout", "a", "--"]).unwrap_err();
+        assert_eq!(early_exit.status, Err(()));
 
         // make sure we can catch arg errors without "--"
-        let err = parse_args(args_vec(vec![url, "--timeout", "a"])).unwrap_err();
-        assert_eq!(err.status, Err(()));
+        let early_exit = Args::from_args(&["cmd"], &[url, "--timeout", "a"]).unwrap_err();
+        assert_eq!(early_exit.status, Err(()));
 
         // make sure we can parse args when user passes "--"
-        let (args, test_args) = parse_args(args_vec(vec![url, "--timeout", "2", "--"])).unwrap();
+        let args = Args::from_args(&["cmd"], &[url, "--timeout", "2", "--"]).unwrap();
         expected_args.timeout = Some(2);
+        expected_args.test_args = vec![];
         assert_eq!(args, expected_args);
-        assert_eq!(test_args, Some(vec![]));
 
         // make sure we can parse args without "--"
-        let (args, test_args) = parse_args(args_vec(vec![url, "--timeout", "2"])).unwrap();
+        let args = Args::from_args(&["cmd"], &[url, "--timeout", "2"]).unwrap();
         assert_eq!(args, expected_args);
-        assert_eq!(test_args, None);
 
         // make sure we can parse args after "--"
-        let (args, test_args) = parse_args(args_vec(vec![
-            url,
-            "--timeout",
-            "2",
-            "--",
-            "--arg1",
-            "some_random_str",
-            "-arg2",
-        ]))
+        let args = Args::from_args(
+            &["cmd"],
+            &[url, "--timeout", "2", "--", "--arg1", "some_random_str", "-arg2"],
+        )
         .unwrap();
+        expected_args.test_args =
+            vec!["--arg1".to_owned(), "some_random_str".to_owned(), "-arg2".to_owned()];
         assert_eq!(args, expected_args);
-        assert_eq!(
-            test_args,
-            Some(vec!["--arg1".to_owned(), "some_random_str".to_owned(), "-arg2".to_owned()])
-        );
 
-        // parse_args works with multiple "--"
-        let (args, test_args) = parse_args(args_vec(vec![
-            url,
-            "--timeout",
-            "2",
-            "--",
-            "--",
-            "--arg1",
-            "some_random_str",
-            "--",
-            "-arg2",
-        ]))
+        // Args::from_args works with multiple "--"
+        let args = Args::from_args(
+            &["cmd"],
+            &[url, "--timeout", "2", "--", "--", "--arg1", "some_random_str", "--", "-arg2"],
+        )
         .unwrap();
+        expected_args.test_args = vec![
+            "--".to_owned(),
+            "--arg1".to_owned(),
+            "some_random_str".to_owned(),
+            "--".to_owned(),
+            "-arg2".to_owned(),
+        ];
         assert_eq!(args, expected_args);
-        assert_eq!(
-            test_args,
-            Some(vec![
-                "--".to_owned(),
-                "--arg1".to_owned(),
-                "some_random_str".to_owned(),
-                "--".to_owned(),
-                "-arg2".to_owned()
-            ])
-        );
     }
 }

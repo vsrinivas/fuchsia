@@ -32,7 +32,7 @@ pub async fn test(
                 test_filter: cmd.test_filter,
                 also_run_disabled_tests: cmd.run_disabled,
                 parallel: cmd.parallel,
-                test_args: None,
+                test_args: vec![],
                 harness: harness_proxy,
             },
             count,

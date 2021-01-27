@@ -36,7 +36,7 @@ fn new_test_params(test_url: &str, harness: HarnessProxy) -> TestParams {
         timeout: None,
         test_filter: None,
         also_run_disabled_tests: false,
-        test_args: None,
+        test_args: vec![],
         parallel: None,
     }
 }

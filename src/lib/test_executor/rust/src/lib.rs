@@ -42,7 +42,7 @@ pub struct TestRunOptions {
     pub parallel: Option<u16>,
 
     /// Arguments passed to tests.
-    pub arguments: Option<Vec<String>>,
+    pub arguments: Vec<String>,
 }
 
 /// How to handle tests that were marked disabled/ignored by the developer.
@@ -61,21 +61,17 @@ impl Default for DisabledTestHandling {
 }
 
 impl From<TestRunOptions> for fidl_fuchsia_test::RunOptions {
-    #[allow(unreachable_patterns)]
     fn from(test_run_options: TestRunOptions) -> Self {
         // Note: This will *not* break if new members are added to the FIDL table.
-        let mut run_options = fidl_fuchsia_test::RunOptions::EMPTY;
-        run_options.parallel = test_run_options.parallel;
-        run_options.arguments = test_run_options.arguments;
-        match test_run_options.disabled_tests {
-            DisabledTestHandling::Exclude => {
-                run_options.include_disabled_tests = Some(false);
-            }
-            DisabledTestHandling::Include => {
-                run_options.include_disabled_tests = Some(true);
-            }
+        fidl_fuchsia_test::RunOptions {
+            parallel: test_run_options.parallel,
+            arguments: Some(test_run_options.arguments),
+            include_disabled_tests: Some(matches!(
+                test_run_options.disabled_tests,
+                DisabledTestHandling::Include
+            )),
+            ..fidl_fuchsia_test::RunOptions::EMPTY
         }
-        run_options
     }
 }
 

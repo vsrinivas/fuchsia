@@ -58,7 +58,7 @@ async fn launch_and_run_passing_test() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: None,
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -81,7 +81,7 @@ async fn launch_and_run_failing_test() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: None,
-            arguments: None,
+            arguments: vec![],
         },
     )
     .await
@@ -104,7 +104,7 @@ async fn launch_and_run_test_with_custom_args() {
         TestRunOptions {
             disabled_tests: DisabledTestHandling::Exclude,
             parallel: None,
-            arguments: Some(vec!["expected_arg".to_owned()]),
+            arguments: vec!["expected_arg".to_owned()],
         },
     )
     .await

@@ -36,7 +36,7 @@ async fn run_test(
     test_url: &str,
     disabled_tests: DisabledTestHandling,
     parallel: Option<u16>,
-    test_args: Option<Vec<String>>,
+    test_args: Vec<String>,
 ) -> Result<Vec<TestEvent>, Error> {
     let time_taken = Regex::new(r" \(.*?\)$").unwrap();
     let harness = connect_test_manager().await?;
@@ -72,7 +72,7 @@ async fn run_test(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/echo-test-realm.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10), None).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10), vec![]).await.unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("TestEcho"),
@@ -85,7 +85,7 @@ async fn launch_and_test_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_file_with_no_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/empty_go_test.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10), None).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10), vec![]).await.unwrap();
 
     let expected_events = vec![TestEvent::test_finished()];
     assert_eq!(expected_events, events);
@@ -97,7 +97,7 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         test_url,
         DisabledTestHandling::Exclude,
         parallel,
-        Some(vec!["-my_custom_flag_2".to_owned()]),
+        vec!["-my_custom_flag_2".to_owned()],
     )
     .await
     .unwrap();
@@ -178,7 +178,7 @@ async fn launch_and_run_sample_test_no_concurrent() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_parallel_execution() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/concurrency-test.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(5), None)
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(5), vec![])
         .await
         .unwrap()
         .into_iter()
