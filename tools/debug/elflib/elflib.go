@@ -60,6 +60,14 @@ func IsPDBFile(file io.ReaderAt) bool {
 	return err == nil && bytes.Equal(magicBytes, []byte(pdbMagic))
 }
 
+func hasElfMagic(r io.ReaderAt) bool {
+	var magic [4]byte
+	if _, err := r.ReadAt(magic[0:], 0); err != nil {
+		return false
+	}
+	return bytes.Compare(magic[0:], []byte(elf.ELFMAG)) == 0
+}
+
 // Verify verifies that the build id of b matches the build id found in the file.
 func (b BinaryFileRef) Verify() error {
 	file, err := os.Open(b.Filepath)
@@ -158,13 +166,23 @@ func parseBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, s
 
 // GetBuildIDs parses and returns all the build ids from file's section/program headers.
 func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
+	// Consider other binary formats if the file does not appear to be ELF.
+	if !hasElfMagic(file) {
+		if hasPeMagic(file) {
+			ids, err := PEGetBuildIDs(filename, file)
+			if err != nil {
+				return nil, fmt.Errorf("error with assumption of %q as PE/COFF: %w", filename, err)
+			}
+			return ids, nil
+		} else {
+			// No build IDs that we are aware of.
+			return nil, nil
+		}
+	}
+
 	elfFile, err := elf.NewFile(file)
 	if err != nil {
-		// If it's not ELF, maybe it's PE?
-		if out, peErr := PEGetBuildIDs(filename, file); peErr == nil {
-			return out, peErr
-		}
-		return nil, fmt.Errorf("could not parse ELF file %s: %w", filename, err)
+		return nil, fmt.Errorf("could not parse %q as ELF: %w", filename, err)
 	}
 	if len(elfFile.Progs) == 0 && len(elfFile.Sections) == 0 {
 		return nil, fmt.Errorf("no program headers or sections in %s", filename)

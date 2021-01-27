@@ -5,6 +5,7 @@
 package elflib
 
 import (
+	"bytes"
 	"debug/pe"
 	"encoding/binary"
 	"fmt"
@@ -22,7 +23,16 @@ const (
 	DebugDirectoryAddressOffset = 20
 	IMAGE_DEBUG_TYPE_CODEVIEW   = 2
 	PDB70                       = 0x53445352
+	peMagic                     = "MZ"
 )
+
+func hasPeMagic(r io.ReaderAt) bool {
+	var magic [2]byte
+	if _, err := r.ReadAt(magic[0:], 0); err != nil {
+		return false
+	}
+	return bytes.Compare(magic[0:], []byte(peMagic)) == 0
+}
 
 func loadData(filename string, file io.ReaderAt, peFile *pe.File, dir pe.DataDirectory) ([]byte, error) {
 	for _, scn := range peFile.Sections {

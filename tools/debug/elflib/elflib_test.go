@@ -5,6 +5,7 @@
 package elflib
 
 import (
+	"bytes"
 	"encoding/hex"
 	"flag"
 	"os"
@@ -49,5 +50,50 @@ func TestStrippedBuildIDs(t *testing.T) {
 	expected := "4fcb712aa6387724a9f465a32cd8c14b"
 	if hex.EncodeToString(buildIDs[0]) != expected {
 		t.Fatal("expected ", expected, " but got ", buildIDs[0])
+	}
+}
+
+func TestHasMagic(t *testing.T) {
+	{
+		buff := []byte("\177ELF...")
+		r := bytes.NewReader(buff)
+		if !hasElfMagic(r) {
+			t.Errorf("expected %q to have ELF magic", buff)
+		}
+	}
+
+	{
+		buff := []byte("Not at the beginning: \177ELF...")
+		r := bytes.NewReader(buff)
+		if hasElfMagic(r) {
+			t.Errorf("expected %q to not have ELF magic", buff)
+		}
+	}
+
+	{
+		buff := []byte("MZ...")
+		r := bytes.NewReader(buff)
+		if !hasPeMagic(r) {
+			t.Errorf("expected %q to have PE magic", buff)
+		}
+	}
+
+	{
+		buff := []byte("Not at the beginning: MZ...")
+		r := bytes.NewReader(buff)
+		if hasPeMagic(r) {
+			t.Errorf("expected %q to not have ELF magic", buff)
+		}
+	}
+
+	{
+		buff := []byte("garbage")
+		r := bytes.NewReader(buff)
+		if hasElfMagic(r) {
+			t.Errorf("expected %q to not have ELF magic", buff)
+		}
+		if hasPeMagic(r) {
+			t.Errorf("expected %q to not have PE magic", buff)
+		}
 	}
 }
