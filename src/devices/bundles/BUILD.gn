@@ -118,6 +118,7 @@ group("usb-peripheral-stack") {
 
 group("utils") {
   deps = [
+    "//src/devices/bin/driver-registrar",
     "//src/devices/bin/driverctl",
     "//src/devices/bin/lsdev",
     "//src/devices/bin/unbind",

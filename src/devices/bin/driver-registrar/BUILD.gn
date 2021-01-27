@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("driver-registrar") {
+  sources = [ "driver-registrar.cc" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_llcpp",
+    "//sdk/fidl/fuchsia.pkg",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/zx",
+  ]
+}

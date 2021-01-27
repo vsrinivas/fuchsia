@@ -169,6 +169,7 @@
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.NameProvider",
+                "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "fuchsia.hardware.pty.Device",

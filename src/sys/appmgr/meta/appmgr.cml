@@ -232,6 +232,10 @@
             path: "/svc_for_sys/fuchsia.device.manager.BindDebugger",
         },
         {
+            protocol: "fuchsia.driver.registrar.DriverRegistrar",
+            path: "/svc_for_sys/fuchsia.driver.registrar.DriverRegistrar",
+        },
+        {
             protocol: "fuchsia.hardware.pci.Bus",
             path: "/svc_for_sys/fuchsia.hardware.pci.Bus",
         },

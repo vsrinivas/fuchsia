@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/driver_manager",
         lifecycle: { stop_event: "notify" },
@@ -24,6 +25,7 @@
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.registrar.DriverRegistrar",
             ],
         },
     ],
@@ -77,9 +79,9 @@
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.registrar.DriverRegistrar",
             ],
             from: "self",
         },
     ],
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
 }
