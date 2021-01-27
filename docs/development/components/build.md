@@ -1237,9 +1237,6 @@ fuchsia_unittest_package("timekeeper-unittests") {
 
 *   Targets that generate executables or data files are not expected to change
     in a migration.
-*   Names for packages are expected to have dashes ("-") instead of underscores
-    ("_"). The same is not required for components, though it's recommended for
-    consistency.
 *   Previously, `meta/service.cmx` was given the destination `"timekeeper.cmx"`
     which placed it in `meta/timekeeper.cmx`. With `fuchsia_component()`, the
     given manifest is automatically renamed per the component name
