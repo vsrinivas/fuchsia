@@ -173,3 +173,33 @@ UNIC crates have distinct advantages over other crates:
   [ICU](http://site.icu-project.org/) for Rust. If the project succeeds, our
   dependencies on unrelated Unicode crates should be reduced over time.
 
+## Troubleshooting
+### Broken Config
+After running `fx update-rustc-third-party`, if you encounter an error like this:
+
+```
+Generating GN file from /$HOME/fuchsia/third_party/rust_crates/Cargo.toml
+Error: GNaw config exists for crates that were not found in the Cargo build graph:
+
+library crate, package handlebars version 2.0.0-beta.2
+library crate, package core-foundation-sys version 0.7.0
+library crate, package pulldown-cmark version 0.6.0
+library crate, package nix version 0.18.0
+```
+
+You can fix this issue commenting out your fuchsia target in `.cargo/config`:
+```
+[build]
+...
+target = "x86_64-fuchsia"
+```
+
+After commenting, it becomes:
+
+```
+[build]
+...
+# target = "x86_64-fuchsia"
+```
+
+This issue is being tracked [upstream](https://github.com/rust-lang/cargo/issues/8462).
