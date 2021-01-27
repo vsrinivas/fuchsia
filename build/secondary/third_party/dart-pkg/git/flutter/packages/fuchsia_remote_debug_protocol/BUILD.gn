@@ -25,6 +25,7 @@ dart_library("fuchsia_remote_debug_protocol") {
     "//third_party/dart-pkg/pub/json_rpc_2",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/process",
+    "//third_party/dart-pkg/pub/vm_service",
     "//third_party/dart-pkg/pub/web_socket_channel",
   ]
 }
