@@ -84,24 +84,23 @@ async fn test_environment_bringup() {
         .await
         .is_ok());
 
-    // Use captured actor to generate environment.
-    let mut receptor = monitor_actor_rx
+    // Use captured actor to start monitors.
+    let monitor_messenger = monitor_actor_rx
         .next()
         .await
         .expect("should receive actor")
         .start_monitoring()
         .await
-        .expect("should receive receptor");
+        .expect("should receive messenger");
 
-    // Use captured messenger factory to create a top level Messenger for the
-    // agent.
-    let monitor_context = monitor_context_rx.next().await.expect("should receive context");
+    let mut monitor_context = monitor_context_rx.next().await.expect("should receive context");
 
-    monitor_context.messenger.message(monitor::Payload::Monitor).send().ack();
+    // Send Monitor command to monitor.
+    monitor_messenger.message(monitor::Payload::Monitor).send().ack();
 
-    // Ensure command is received by the agent.
+    // Ensure command is received by the monitor.
     assert!(matches!(
-        receptor.next_payload().await.expect("payload should be present").0,
+        monitor_context.receptor.next_payload().await.expect("payload should be present").0,
         monitor::Payload::Monitor
     ));
 }

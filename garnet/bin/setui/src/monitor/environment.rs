@@ -15,8 +15,7 @@
 //! resource-watching component promotes code reshare and modularity.
 
 use crate::internal::monitor;
-use crate::message::base::{Audience, MessengerType};
-use crate::message::messenger::TargetedMessengerClient;
+use crate::message::base::MessengerType;
 use crate::monitor::base::{
     monitor::{self as base_monitor},
     Error,
@@ -31,34 +30,34 @@ pub struct Actor {
 }
 
 impl Actor {
-    /// Starts up environment monitors.
-    pub async fn start_monitoring(&self) -> Result<monitor::message::Receptor, Error> {
-        // Create unbound messenger to receive messages from the monitors.
-        let receptor = self
-            .messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .map_err(|_| Error::MessageSetupFailure("could not create listening messenger".into()))?
-            .1;
+    /// Starts up environment monitors and returns a TargetedMessenger that
+    /// broadcasts to all monitors.
+    pub async fn start_monitoring(&self) -> Result<monitor::message::TargetedMessenger, Error> {
+        // Create unbound, broadcasting messenger to send messages to the monitors.
+        let monitor_messenger = monitor::message::TargetedMessenger::new(
+            self.messenger_factory
+                .create(MessengerType::Unbound)
+                .await
+                .map_err(|_| {
+                    Error::MessageSetupFailure("could not create monitor messenger".into())
+                })?
+                .0,
+            monitor::message::Audience::Broadcast,
+        );
 
-        // Bring up each monitor
+        // Bring up each monitor.
         for monitor in &self.monitors {
-            let monitor_messenger = TargetedMessengerClient::new(
-                self.messenger_factory
-                    .create(MessengerType::Unbound)
-                    .await
-                    .map_err(|_| {
-                        Error::MessageSetupFailure("could not create monitor messenger".into())
-                    })?
-                    .0,
-                Audience::Messenger(receptor.get_signature()),
-            );
-            monitor(base_monitor::Context { messenger: monitor_messenger })
+            let (_, monitor_receptor) =
+                self.messenger_factory.create(MessengerType::Unbound).await.map_err(|_| {
+                    Error::MessageSetupFailure("could not create monitor receptor".into())
+                })?;
+
+            monitor(base_monitor::Context { receptor: monitor_receptor })
                 .await
                 .map_err(|_| Error::MonitorSetupFailure("could not create monitor".into()))?
         }
 
-        Ok(receptor)
+        Ok(monitor_messenger)
     }
 }
 

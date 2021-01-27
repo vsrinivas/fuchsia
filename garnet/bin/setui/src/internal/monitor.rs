@@ -60,6 +60,10 @@ use fuchsia_zircon as zx;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Payload {
     /// Broadcasted to inform monitors to start tracking resources.
+    ///
+    /// A monitor should reply to this message with updates
+    /// about the resource it is monitoring, using the [`Data`] variant as the
+    /// payload for those updates.
     Monitor,
     /// Details captured by a monitor, sent as a response to Monitor.
     Data(Data),

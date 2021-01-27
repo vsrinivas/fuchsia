@@ -30,9 +30,11 @@ pub mod monitor {
     /// the necessary facilities to connect and listen to various aspects of the
     /// setting service. It is expected that there will be new additions to
     /// `Context` as the variety of monitored resources expands.
-    #[derive(Clone)]
     pub struct Context {
-        pub messenger: monitor::message::TargetedMessenger,
+        /// [`Receptor`] on which monitors will receive messages from watchdog.
+        ///
+        /// [`Receptor`]: monitor::message::Receptor
+        pub receptor: monitor::message::Receptor,
     }
 
     /// `Generate` defines the closure for generating a monitor. This is
