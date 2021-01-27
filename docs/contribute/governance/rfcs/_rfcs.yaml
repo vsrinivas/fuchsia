@@ -171,6 +171,19 @@
   submitted: '2020-10-27'
   reviewed: '2020-12-02'
 
+- name: 'RFC-0013'
+  title: 'Cloning a VMO mapping'
+  short_description: 'A system call that creates a CoW clone of a VMO from a mapping, without needing a handle to it.'
+  authors: ['tbodt@google.com']
+  file: '0013_cloning_a_vmo_mapping.md'
+  area: ['Zircon']
+  issue: ['60232']
+  gerrit_change_id: ['443437']
+  status: 'Accepted'
+  reviewers: ['adanis@google.com','cpu@google.com','maniscalco@google.com','abarth@google.com','mcgrathr@google.com']
+  submitted: '2020-10-26'
+  reviewed: '2020-12-09'
+
 - name: 'RFC-0014'
   title: 'Relax zx_fifo_create constraints'
   short_description: 'Permit `zx_fifo_create` calls with element counts that are not powers of two.'
