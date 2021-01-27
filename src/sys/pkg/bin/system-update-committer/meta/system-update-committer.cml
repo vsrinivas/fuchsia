@@ -8,7 +8,12 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.paver.Paver" },
+        {
+            protocol: [
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.paver.Paver",
+            ],
+        },
     ],
     expose: [
         {

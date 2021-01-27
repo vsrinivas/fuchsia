@@ -6,13 +6,17 @@
 
 use {
     commit::do_commit,
-    errors::MetadataError,
     fidl_fuchsia_paver as paver,
     fuchsia_zircon::{self as zx, EventPair, Peered},
     futures::channel::oneshot,
     policy::PolicyEngine,
     verify::do_health_verification,
 };
+
+pub(super) use errors::{MetadataError, VerifyError};
+
+#[cfg(test)]
+pub(super) use errors::{BootManagerError, PolicyError, VerifyFailureReason};
 
 mod commit;
 mod configuration;

@@ -12,9 +12,11 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::prelude::*,
+    futures::{channel::oneshot, prelude::*},
     matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_reboot::{MockRebootService, RebootReason},
+    parking_lot::Mutex,
     std::{sync::Arc, time::Duration},
 };
 
@@ -24,10 +26,15 @@ const HANG_DURATION: Duration = Duration::from_millis(500);
 
 struct TestEnvBuilder {
     paver_service_builder: Option<MockPaverServiceBuilder>,
+    reboot_service: Option<MockRebootService>,
 }
 impl TestEnvBuilder {
     fn paver_service_builder(self, paver_service_builder: MockPaverServiceBuilder) -> Self {
         Self { paver_service_builder: Some(paver_service_builder), ..self }
+    }
+
+    fn reboot_service(self, reboot_service: MockRebootService) -> Self {
+        Self { reboot_service: Some(reboot_service), ..self }
     }
 
     fn build(self) -> TestEnv {
@@ -48,6 +55,20 @@ impl TestEnvBuilder {
             .detach()
         });
 
+        // Set up reboot service.
+        let reboot_service = Arc::new(self.reboot_service.unwrap_or_else(|| {
+            MockRebootService::new(Box::new(|_| panic!("unexpected call to reboot")))
+        }));
+        let reboot_service_clone = Arc::clone(&reboot_service);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(
+                Arc::clone(&reboot_service_clone)
+                    .run_reboot_service(stream)
+                    .unwrap_or_else(|e| panic!("error running reboot service: {:#}", anyhow!(e))),
+            )
+            .detach()
+        });
+
         let env = fs
             .create_salted_nested_environment("system_update_committer_env")
             .expect("nested environment to create successfully");
@@ -57,18 +78,24 @@ impl TestEnvBuilder {
             .spawn(env.launcher())
             .expect("system-update-committer to launch");
 
-        TestEnv { _env: env, system_update_committer, _paver_service: paver_service }
+        TestEnv {
+            _env: env,
+            system_update_committer,
+            _paver_service: paver_service,
+            _reboot_service: reboot_service,
+        }
     }
 }
 struct TestEnv {
     _env: NestedEnvironment,
     system_update_committer: App,
     _paver_service: Arc<MockPaverService>,
+    _reboot_service: Arc<MockRebootService>,
 }
 
 impl TestEnv {
     fn builder() -> TestEnvBuilder {
-        TestEnvBuilder { paver_service_builder: None }
+        TestEnvBuilder { paver_service_builder: None, reboot_service: None }
     }
 
     /// Opens a connection to the fuchsia.update/CommitStatusProvider FIDL service.
@@ -211,4 +238,30 @@ async fn multiple_commit_status_provider_requests() {
         p1.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
         Ok(zx::Signals::USER_0)
     );
+}
+
+/// When the paver fails, we expect the system-update-committer to trigger a reboot.
+#[fasync::run_singlethreaded(test)]
+async fn reboot() {
+    let (sender, recv) = oneshot::channel();
+    let sender = Arc::new(Mutex::new(Some(sender)));
+    let reboot_service = MockRebootService::new(Box::new(move |reason: RebootReason| {
+        sender.lock().take().unwrap().send(reason).unwrap();
+        Ok(())
+    }));
+
+    let _env = TestEnv::builder()
+        .paver_service_builder(MockPaverServiceBuilder::new().insert_hook(mphooks::return_error(
+            |e: &PaverEvent| {
+                if e == &PaverEvent::QueryCurrentConfiguration {
+                    zx::Status::NOT_FOUND
+                } else {
+                    zx::Status::OK
+                }
+            },
+        )))
+        .reboot_service(reboot_service)
+        .build();
+
+    assert_eq!(recv.await, Ok(RebootReason::RetrySystemUpdate));
 }

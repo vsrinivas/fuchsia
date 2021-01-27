@@ -19,9 +19,11 @@ rustc_test("test_driver") {
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/testing/mock-paver",
+    "//src/sys/pkg/testing/mock-reboot",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
   ]
 
   sources = [ "src/lib.rs" ]
