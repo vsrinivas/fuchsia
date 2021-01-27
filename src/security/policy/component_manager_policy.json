@@ -28,6 +28,103 @@
                     "/core/debug_serial",
                 ],
             },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.DebugResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.HypervisorResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.InfoResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.IoportResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.IrqResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.MmioResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.SmcResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
+                source_name: "fuchsia.kernel.VmexResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/bootstrap/fshost",
+                    "/core",
+                    "/core/appmgr",
+                    "/core/debug_serial",
+                ],
+            },
         ]
     }
 }
