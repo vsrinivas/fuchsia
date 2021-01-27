@@ -42,10 +42,16 @@ TEST(PixelFormatCost, Afbc) {
                   .build()))
           .build();
 
-  EXPECT_LT(
-      0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, 0, 1));
-  EXPECT_GT(
-      0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, 1, 0));
+  uint32_t amlogic_pids[] = {
+      PDEV_PID_AMLOGIC_S912,
+      PDEV_PID_AMLOGIC_S905D2,
+      PDEV_PID_AMLOGIC_T931,
+      PDEV_PID_AMLOGIC_A311D,
+  };
+  for (uint32_t pid : amlogic_pids) {
+    EXPECT_LT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, pid, constraints, 0, 1));
+    EXPECT_GT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, pid, constraints, 1, 0));
+  }
   EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, 0, 1));
   EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, 1, 0));
 }

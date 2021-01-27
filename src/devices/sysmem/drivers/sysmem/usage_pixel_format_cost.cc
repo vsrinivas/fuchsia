@@ -40,6 +40,7 @@ enum Platform {
   kPlatform_Amlogic_S912,
   kPlatform_Amlogic_S905D2,
   kPlatform_Amlogic_T931,
+  kPlatform_Amlogic_A311D,
 };
 
 constexpr uint64_t MakeVidPidKey(uint32_t vid, uint32_t pid) {
@@ -51,6 +52,7 @@ const std::map<uint64_t, Platform> kPlatformTranslation = {
     {MakeVidPidKey(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912), kPlatform_Amlogic_S912},
     {MakeVidPidKey(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S905D2), kPlatform_Amlogic_S905D2},
     {MakeVidPidKey(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_T931), kPlatform_Amlogic_T931},
+    {MakeVidPidKey(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_A311D), kPlatform_Amlogic_A311D},
 };
 
 // A UsagePixelFormatCostEntry with more query usage bits in
@@ -243,6 +245,14 @@ const PlatformCostsEntry kAmlogic_T931_Costs = {
     .costs = std::list<const UsagePixelFormatCostEntry>(),
 };
 
+// kAmlogic_A311D_Cost_Entries will go here.
+
+const PlatformCostsEntry kAmlogic_A311D_Costs = {
+    .platform = kPlatform_Amlogic_A311D,
+    .next_platform = kPlatform_Amlogic_Generic,
+    .costs = std::list<const UsagePixelFormatCostEntry>(),
+};
+
 const PlatformCostsEntry kGeneric_Costs = {
     .platform = kPlatform_Generic,
     .next_platform = kPlatform_None,
@@ -256,6 +266,7 @@ const std::map<Platform, const PlatformCostsEntry*> kPlatformCosts = {
     {kPlatform_Amlogic_S912, &kAmlogic_S912_Costs},
     {kPlatform_Amlogic_S905D2, &kAmlogic_S905D2_Costs},
     {kPlatform_Amlogic_T931, &kAmlogic_T931_Costs},
+    {kPlatform_Amlogic_A311D, &kAmlogic_A311D_Costs},
 };
 
 const double kDefaultCost = std::numeric_limits<double>::max();
