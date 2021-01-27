@@ -62,16 +62,78 @@ Replace `zx_library` with one of the following:
 *   `shared_library`
 *   `sdk_shared_library`
 
-Most commonly, `zx_library` can be replaced with `source_set` or
-`static_library`, especially for code that won't be linked into the kernel.
+#### Use build-in target types when possible
 
-Replace `zx_host_tool` with the built-in `executable` rule and using the host
-toolchain as needed. If the tool is used in the SDK, then you may also need to
-define an `sdk_atom` target. There is a convenience wrapper at
+Often `zx_library` can be replaced with `source_set` or `static_library`,
+especially for code that won't be linked into the kernel.
+
+Often `zx_host_tool` can be replaced with the built-in `executable` rule, using
+it with the host toolchain as you normally would for building a host binary.
+
+```gn
+executable("my-host-tool") {
+  sources = [
+    "main.cc",
+    ...
+  ]
+  ...
+}
+
+# To build as a host tool, append the string "($host_toolchain)" to the
+# dependency
+group(...) {
+  deps = [
+    ":my-host-tool($host_toolchain)",
+    ...
+  ]
+}
+```
+
+If the tool is used in the SDK, then you may also need to define an `sdk_atom`
+target. There is a convenience wrapper at
 [`//build/sdk/sdk_host_tool.gni`](/build/sdk/sdk_host_tool.gni) just for that.
 
-As you run into common failure modes and solutions, please consider documenting
-them here for reference.
+#### Defining public headers
+
+The `zx_library` template offered useful and convenient logic for defining
+C/C++ headers for public consumption by their dependents. This logic also
+promoted a consistent source layout for C/C++ includes.
+
+You can now accomplish the same thing with a dedicated template. Where before
+you would define:
+
+```gn
+import("//build/unification/zx_library.gni")
+
+zx_library("foo_headers") {
+  sdk = "source"
+  sources = []
+  sdk_headers = [ "foo.h" ]
+}
+
+source_set("foo_client") {
+  sources = [ "foo.cc" ]
+  deps = [ ":foo_headers" ]
+}
+```
+
+Instead, define:
+
+```gn
+import("//build/cpp/library_headers.gni")
+
+library_headers("foo_headers") {
+  headers = [ "foo.h" ]
+}
+
+source_set("foo_client") {
+  sources = [ "foo.cc" ]
+  public_deps = [ ":foo_headers" ]
+}
+```
+
+See also:
+[474231: [build] Add library_headers() template.](https://fuchsia-review.googlesource.com/c/fuchsia/+/474231)
 
 ### Completing a task
 
