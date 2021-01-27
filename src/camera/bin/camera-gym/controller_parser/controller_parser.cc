@@ -8,7 +8,6 @@
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <string.h>
 
 #include "src/lib/fxl/command_line.h"
 

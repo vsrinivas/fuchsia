@@ -21,7 +21,10 @@ group("camera-gym") {
 
 group("tests") {
   testonly = true
-  deps = [ ":camera_gym_test" ]
+  deps = [
+    ":camera_gym_test",
+    "controller_parser:tests",
+  ]
 }
 
 source_set("lib") {
