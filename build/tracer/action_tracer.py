@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
+"""Validates file system accesses of a subprocess command.
+
+This uses a traced exection wrapper (fsatrace) to invoke a command,
+captures a trace of file system {read,write} operations, and validates
+those access against constraints such as declared inputs and outputs.
+"""
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import argparse
-import dataclasses
 import enum
 import itertools
 import os
@@ -12,6 +17,7 @@ import shlex
 import subprocess
 import sys
 from typing import AbstractSet, Any, Callable, Collection, FrozenSet, Iterable, Optional, Sequence, TextIO, Tuple
+import dataclasses
 
 
 def _partition(
@@ -128,7 +134,7 @@ def _parse_fsatrace_line(fsatrace_line: str) -> Iterable[FSAccess]:
     """
     # ignore any lines that do not parse
     op, sep, path = fsatrace_line.partition("|")
-    if not sep == "|":
+    if sep != "|":
         return
 
     # op: operation code in [rwdtm]
@@ -142,7 +148,7 @@ def _parse_fsatrace_line(fsatrace_line: str) -> Iterable[FSAccess]:
         # path: "destination|source"
         # The source is deleted, and the destination is written.
         dest, sep, source = path.partition("|")
-        if not sep == "|":
+        if sep != "|":
             raise ValueError("Malformed move line: " + fsatrace_line)
         yield Delete(source)
         yield Write(dest)
@@ -218,7 +224,9 @@ def check_access_permissions(
     """Checks a sequence of accesses against permission constraints.
 
     Args:
-      accesses: stream of file-system accesses
+      accesses: stream of file-system accesses.
+      allowed_reads: set of files that are allowed to be read.
+      allowed_writes: set of files that are allowed to be written.
 
     Returns:
       access violations (in the order they were encountered)
@@ -316,6 +324,12 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
 
     Limitation: For now, assume one dep per line.
     TODO(fangism): ignore blank/comment lines
+
+    Args:
+      depfile_lines: lines from a depfile
+
+    Returns:
+      DepFile object, collection of dependencies.
     """
     return DepFile(deps=[parse_dep_edges(line) for line in depfile_lines])
 
@@ -335,6 +349,11 @@ class OutputDiagnostics(object):
         return self.nonexistent_outputs or self.stale_outputs
 
     def print_findings(self, stream: TextIO):
+        """Prints human-readable diagnostics.
+
+        Args:
+          stream: a file stream, like sys.stderr.
+        """
         required_writes_formatted = "\n".join(self.required_writes)
         print(
             f"""
@@ -342,7 +361,7 @@ Required writes:
 {required_writes_formatted}
 """, file=stream)
         if self.nonexistent_outputs:
-            nonexistent_outputs_formatted = "\n".join(selfnonexistent_outputs)
+            nonexistent_outputs_formatted = "\n".join(self.nonexistent_outputs)
             print(
                 f"""
 Missing outputs:
@@ -432,7 +451,13 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--outputs", nargs="*", help="action#outputs")
     parser.add_argument("--depfile", help="action#depfile")
 
-    parser.add_argument("--failed-check-status", type=int, default=1, help="On failing tracing checks, exit with this code.  Use 0 to report findings without failing.")
+    parser.add_argument(
+        "--failed-check-status",
+        type=int,
+        default=1,
+        help=
+        "On failing tracing checks, exit with this code.  Use 0 to report findings without failing.",
+    )
 
     # Want --foo (default:True) and --no-foo (False).
     # This is ugly, trying to emulate argparse.BooleanOptionalAction,
@@ -536,15 +561,17 @@ def main():
     }
     ignored_suffixes = {
         # Allow actions to access Python code such as via imports
-        # TODO(fangism): validate python imports under source control more precisely
+        # TODO(fangism): validate python imports under source control more
+        # precisely
         ".py",
     }
     ignored_path_parts = {
         # Python creates these directories with bytecode caches
         "__pycache__",
     }
-    # TODO(fangism): for suffixes that we always ignore for writing, such as safe
-    # or intended side-effect byproducts, make sure no declared inputs ever match them.
+    # TODO(fangism): for suffixes that we always ignore for writing, such as
+    # safe or intended side-effect byproducts, make sure no declared inputs ever
+    # match them.
 
     raw_trace = ""
     with open(args.trace_output, "r") as trace:
