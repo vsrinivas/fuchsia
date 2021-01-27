@@ -14,9 +14,10 @@
 
 use {
     fuchsia_zircon::{
-        sys::{zx_handle_t, ZX_HANDLE_INVALID}, // handle type (primitive, non-owning)
+        sys::{zx_handle_t, zx_status_t, ZX_HANDLE_INVALID}, // handle type (primitive, non-owning)
         Clock,
         Handle,
+        HandleBased,
         Job,
         Process,
         Rights,
@@ -41,6 +42,10 @@ extern "C" {
     pub fn zx_vmar_root_self() -> zx_handle_t;
     pub fn zx_job_default() -> zx_handle_t;
     pub fn zx_utc_reference_get() -> zx_handle_t;
+    pub fn zx_utc_reference_swap(
+        new_handle: zx_handle_t,
+        prev_handle: *mut zx_handle_t,
+    ) -> zx_status_t;
 }
 
 /// Handle types as defined by the processargs protocol.
@@ -334,6 +339,19 @@ pub fn duplicate_utc_clock_handle(rights: Rights) -> Result<Clock, Status> {
         Unowned::from_raw_handle(handle)
     };
     handle.duplicate(rights)
+}
+
+/// Swaps the current process-global UTC clock with `new_clock`, returning
+/// the old clock on success.
+/// If `new_clock` is a valid handle but does not have the ZX_RIGHT_READ right,
+/// an error is returned and `new_clock` is dropped.
+pub fn swap_utc_clock_handle(new_clock: Clock) -> Result<Clock, Status> {
+    Ok(unsafe {
+        let mut prev_handle = ZX_HANDLE_INVALID;
+        Status::ok(zx_utc_reference_swap(new_clock.into_raw(), &mut prev_handle))?;
+        Handle::from_raw(prev_handle)
+    }
+    .into())
 }
 
 /// Reads time from the UTC `Clock` registered with the runtime.
