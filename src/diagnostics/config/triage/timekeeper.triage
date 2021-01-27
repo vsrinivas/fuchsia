@@ -1,36 +1,39 @@
 {
     select: {
         backstop: "INSPECT:timekeeper.cmx:root:backstop",
+        current_mono: "INSPECT:timekeeper.cmx:root/current:monotonic",
         current_utc: "INSPECT:timekeeper.cmx:root/current:clock_utc",
         kernel_utc: "INSPECT:timekeeper.cmx:root/current:kernel_utc",
+        network_available_monotonic: "INSPECT:timekeeper.cmx:root:network_available_monotonic",
         primary_source_status: "INSPECT:timekeeper.cmx:root/primary_time_source:status",
         primary_estimate_0_counter: "INSPECT:timekeeper.cmx:root/primary_track/estimate_0:counter",
         rtc_initialization: "INSPECT:timekeeper.cmx:root/real_time_clock:initialization",
         rtc_write_failure_count: "INSPECT:timekeeper.cmx:root/real_time_clock:write_failures",
+        last_update_mono: "INSPECT:timekeeper.cmx:root/primary_track/last_update:retrieval_monotonic",
+        last_update_error: "INSPECT:timekeeper.cmx:root/primary_track/last_update:error_bounds",
     },
     eval: {
-        // It would be much better to use network_available time, but that's not
-        // always present. Assume that the only condition we have a source
-        // without status is because we were waiting for network before
-        // connecting.
-        network_probably_unavailable: "primary_source_status == \"Launched\"",
+        network_unavailable: "Missing(network_available_monotonic)",
         primary_source_unhealthy: "And(primary_source_status != \"Launched\", primary_source_status != \"Ok\")",
         primary_estimate_ok: "primary_estimate_0_counter > 0",
         clock_started: "current_utc > backstop",
         clock_difference: "current_utc - kernel_utc",
         rtc_present: "And(rtc_initialization != \"NoDevices\", rtc_initialization != \"InvalidBeforeBackstop\")",
         rtc_read_ok: "rtc_initialization == \"Succeeded\"",
+        // Error bound is set to UINT64_MAX when the error is unknown but triage
+        // tests fail to parse a value this large, use INT64_MAX instead.
+        error_available: "And(Not(Missing(last_update_error)), last_update_error <  9223372036854775807)",
     },
     act: {
         not_started_due_to_network: {
             type: "Warning",
-            trigger: "And(Not(clock_started), network_probably_unavailable)",
-            print: "Time not yet available, suspect network has never been connected",
+            trigger: "And(Not(clock_started), network_unavailable)",
+            print: "Time not yet available, network was not declared reachable",
         },
         not_started_other_reason: {
             type: "Warning",
-            trigger: "And(Not(clock_started), Not(network_probably_unavailable))",
-            print: "Time not yet available even though network has probably been connected",
+            trigger: "And(Not(clock_started), Not(network_unavailable))",
+            print: "Time not yet available even though network was declared reachable",
         },
         rtc_time_only: {
             type: "Warning",
@@ -44,7 +47,7 @@
         },
         clock_inconsistency: {
             type: "Warning",
-            trigger: "And(clock_started, Or(clock_difference > 2000000000, clock_difference < -2000000000))",
+            trigger: "And(clock_started, Or(clock_difference > Seconds(2), clock_difference < Seconds(-2)))",
             print: "Kernel and Userspace UTC clocks differ by more than 2 seconds, file bugs in the Time component",
         },
         rtc_could_not_be_read: {
@@ -57,15 +60,20 @@
             trigger: "And(rtc_present, rtc_write_failure_count > 0)",
             print: "Failures while writing to real time clock. See timekeeper.cmx:root/real_time_clock. File bugs in the Time component",
         },
-
-        // TODO(jsankey): Once we've worked out a way to use fields that are
-        // currently optional, add actions for the following conditions:
-        // * Covariance higher than expected
-        // * Last time update older than expected
-        // * Time source errors present
-        // * Sample validation errors present
-        // * Monitor track problems present
-        // * Large jumps in time
+        last_update_stale: {
+            type: "Warning",
+            trigger: "And(Not(Missing(last_update_mono)), (current_mono - last_update_mono) > Hours(1))",
+            print: "Most recent update to the UTC clock was over a hour ago. File bugs in the Time component",
+        },
+        error_too_high: {
+            type: "Warning",
+            trigger: "And(error_available, last_update_error > Seconds(5))",
+            print: "UTC error bound was over 5 seconds, may indicate network problems. See timekeeper.cmx:primary_track/last_update",
+        },
+        utc_error_bound_ms: {
+            type: "Gauge",
+            value: "Option(last_update_error // Millis(1), \"unknown\")",
+        }
     },
     test: {
         status_ok: {
@@ -79,6 +87,7 @@
             values: {
                 backstop: 33333,
                 current_utc: 123456789,
+                network_available_monotonic: 4444444,
                 primary_source_status: "Ok",
                 primary_estimate_0_counter: 1,
             },
@@ -95,7 +104,6 @@
             values: {
                 backstop: 33333,
                 current_utc: 33333,
-                primary_source_status: "Launched",
                 primary_estimate_0_counter: 0,
             },
         },
@@ -111,6 +119,7 @@
             values: {
                 backstop: 33333,
                 current_utc: 33333,
+                network_available_monotonic: 4444444,
                 primary_source_status: "Ok",
                 primary_estimate_0_counter: 0,
             },
@@ -197,6 +206,67 @@
             values: {
                 rtc_initialization: "Succeeded",
                 rtc_write_failure_count: 2,
+            },
+        },
+        last_update_missing: {
+            // Clock content warnings should not fire due to lack of time sync.
+            yes: [ ],
+            no: [
+                "last_update_stale",
+                "error_too_high",
+            ],
+            values: {
+                current_mono: 40000000000,
+            },
+        },
+        last_update_valid: {
+            yes: [ ],
+            no: [
+                "last_update_stale",
+                "error_too_high",
+            ],
+            values: {
+                current_mono: 40000000000,
+                last_update_mono: 2000000000,
+                last_update_error: 99000000,
+            },
+        },
+        last_update_valid_but_error_unknown: {
+            yes: [ ],
+            no: [
+                "last_update_stale",
+                "error_too_high",
+            ],
+            values: {
+                current_mono: 40000000000,
+                last_update_mono: 2000000000,
+                last_update_error: 9223372036854775807,
+            },
+        },
+        last_update_error_too_high: {
+            yes: [
+                "error_too_high",
+            ],
+            no: [
+                "last_update_stale",
+            ],
+            values: {
+                current_mono: 40000000000,
+                last_update_mono: 2000000000,
+                last_update_error: 999999999999999,
+            },
+        },
+        last_update_stale: {
+            yes: [
+                "last_update_stale",
+            ],
+            no: [
+                "error_too_high",
+            ],
+            values: {
+                current_mono: 72000000000000,
+                last_update_mono: 2000000000,
+                last_update_error: 99000000,
             },
         },
     },
