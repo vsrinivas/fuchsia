@@ -1,21 +1,20 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/test.gni")
-import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_package_with_single_component.gni")
 
 group("benchmark") {
-  public_deps = [ ":camera-benchmark-package" ]
+  public_deps = [ ":camera_benchmark" ]
 }
 
 source_set("lib") {
   sources = [ "bandwidth.cc" ]
+  public = [ "bandwidth.h" ]
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
-  public = [ "bandwidth.h" ]
   public_deps = [
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.hardware.ram.metrics",
@@ -26,8 +25,7 @@ source_set("lib") {
   ]
 }
 
-executable("bin") {
-  output_name = "camera_benchmark"
+executable("camera_benchmark_bin") {
   sources = [ "main.cc" ]
   deps = [
     ":lib",
@@ -39,11 +37,7 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("camera-benchmark") {
+fuchsia_package_with_single_component("camera_benchmark") {
   manifest = "camera_benchmark.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_package("camera-benchmark-package") {
-  deps = [ ":camera-benchmark" ]
+  deps = [ ":camera_benchmark_bin" ]
 }

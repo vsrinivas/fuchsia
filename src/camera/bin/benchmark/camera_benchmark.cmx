@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/camera_benchmark"
+        "binary": "bin/camera_benchmark_bin"
     },
     "sandbox": {
         "dev": [
