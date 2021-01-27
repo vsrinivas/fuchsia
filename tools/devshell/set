@@ -162,6 +162,14 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
+  if is_feature_enabled "fint_set"; then
+    go="${PREBUILT_GO_DIR}/bin/go"
+
+    cd "${FUCHSIA_DIR}/tools"
+    "$go" run ./build/fx-set/cmd "$@"
+    return 0
+  fi
+
   if [[ $# -lt 1 ]]; then
       fx-error Missing an explicit PRODUCT.BOARD goal.
       explain-goal-argument

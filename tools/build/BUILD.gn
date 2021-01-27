@@ -19,6 +19,7 @@ group("tests") {
 
   deps = [
     ":build_tests",
+    "fx-set:tests",
     "ninjago:tests",
   ]
 }

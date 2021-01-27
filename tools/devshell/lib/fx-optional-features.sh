@@ -7,6 +7,7 @@ function list_optional_features {
   echo \
     "incremental" \
     "ffx_discovery" \
+    "fint_set" \
     "legacy_fastboot"
 }
 
@@ -15,6 +16,7 @@ function is_feature_enabled_by_default {
   case "$1" in
   "incremental") return 1 ;;
   "ffx_discovery") return 0 ;;
+  "fint_set") return 1 ;;
   "legacy_fastboot") return 0 ;;
   esac
 
@@ -35,6 +37,11 @@ function help_optional_feature {
   "ffx_discovery")
     h=(
       "Device discovery based on ffx instead of device-finder."
+      )
+    ;;
+  "fint_set")
+    h=(
+      "Use 'fint' in 'fx set' for a build process more similar to infra."
       )
     ;;
   "legacy_fastboot")
