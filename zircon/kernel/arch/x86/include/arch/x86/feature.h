@@ -241,34 +241,6 @@ enum x86_vendor_list { X86_VENDOR_UNKNOWN, X86_VENDOR_INTEL, X86_VENDOR_AMD };
 
 extern enum x86_vendor_list x86_vendor;
 
-/* topology */
-
-#define X86_TOPOLOGY_INVALID 0
-#define X86_TOPOLOGY_SMT 1
-#define X86_TOPOLOGY_CORE 2
-
-struct x86_topology_level {
-  /* The number of bits to right shift to identify the next-higher topological
-   * level */
-  uint8_t right_shift;
-  /* The type of relationship this level describes (hyperthread/core/etc) */
-  uint8_t type;
-};
-
-/**
- * @brief Fetch the topology information for the given level.
- *
- * This interface is uncached.
- *
- * @param level The level to retrieve info for.  Should initially be 0 and
- * incremented with each call.
- * @param info The structure to populate with the discovered information
- *
- * @return true if the requested level existed (and there may be higher levels).
- * @return false if the requested level does not exist (and no higher ones do).
- */
-bool x86_topology_enumerate(uint8_t level, struct x86_topology_level* info);
-
 struct x86_model_info {
   uint8_t processor_type;
   uint8_t family;

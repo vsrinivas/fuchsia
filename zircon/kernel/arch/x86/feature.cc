@@ -350,22 +350,6 @@ bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num num, uint32_t subleaf, struct
   return true;
 }
 
-bool x86_topology_enumerate(uint8_t level, struct x86_topology_level* info) {
-  DEBUG_ASSERT(info);
-
-  uint32_t eax, ebx, ecx, edx;
-  cpuid_c(X86_CPUID_TOPOLOGY, level, &eax, &ebx, &ecx, &edx);
-
-  uint8_t type = (ecx >> 8) & 0xff;
-  if (type == X86_TOPOLOGY_INVALID) {
-    return false;
-  }
-
-  info->right_shift = eax & 0x1f;
-  info->type = type;
-  return true;
-}
-
 const struct x86_model_info* x86_get_model(void) { return &model_info; }
 
 void x86_feature_debug(void) {

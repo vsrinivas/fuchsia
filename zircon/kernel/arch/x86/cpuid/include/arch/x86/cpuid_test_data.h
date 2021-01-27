@@ -4,6 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#ifndef ZIRCON_KERNEL_ARCH_X86_CPUID_INCLUDE_ARCH_X86_CPUID_TEST_DATA_H_
+#define ZIRCON_KERNEL_ARCH_X86_CPUID_INCLUDE_ARCH_X86_CPUID_TEST_DATA_H_
+
 #include <arch/x86/cpuid.h>
 
 namespace cpu_id {
@@ -16,7 +19,6 @@ struct TestDataSet {
   Registers leaf4;
   Registers leaf6;
   Registers leaf7;
-  SubLeaves<Topology::kEaxBSubleaves> leafB;
   Registers leaf8_0;
   Registers leaf8_1;
   Registers leaf8_7;
@@ -47,9 +49,6 @@ const TestDataSet kTestDataCorei5_6260U = {
     .leaf4 = {.reg = {0x1c004121, 0x1c0003f, 0x3f, 0x0}},
     .leaf6 = {.reg = {0x4f7, 0x2, 0x9, 0x0}},
     .leaf7 = {.reg = {0x0, 0x29c67af, 0x0, 0x9c002400}},
-    .leafB = {{{.reg = {0x1, 0x2, 0x100, 0x0}},
-               {.reg = {0x4, 0x4, 0x201, 0x0}},
-               {.reg = {0x0, 0x0, 0x2, 0x0}}}},
     .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0, 0x0}},
     .leaf8_1 = {.reg = {0x0, 0x0, 0x121, 0x2c100800}},
     .leaf8_7 = {},
@@ -84,9 +83,6 @@ const TestDataSet kTestDataXeon2690v4 = {
     .leaf4 = {.reg = {0x3C07C163, 0x4C0003F, 0x6FFF, 0x6}},
     .leaf6 = {},
     .leaf7 = {.reg = {0x0, 0x21CBFBB, 0x0, 0x9C000000}},
-    .leafB = {{{.reg = {0x1, 0x2, 0x100, 0x28}},
-               {.reg = {0x5, 0x1C, 0x201, 0x29}},
-               {.reg = {0x0, 0x0, 0x2, 0x38}}}},
     .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0, 0x0}},
     .leaf8_1 = {.reg = {0x0, 0x0, 0x121, 0x2C100800}},
     .leaf8_7 = {},
@@ -115,12 +111,9 @@ const TestDataSet kTestDataThreadRipper2970wx = {
     .leaf4 = {.reg = {0x0, 0x0, 0x0, 0x0}},
     .leaf6 = {},
     .leaf7 = {.reg = {0x0, 0x209C01A9, 0x0, 0x0}},
-    .leafB = {{{.reg = {0x0, 0x0, 0x0, 0x0}},
-               {.reg = {0x0, 0x0, 0x0, 0x0}},
-               {.reg = {0x0, 0x0, 0x0, 0x0}}}},
     .leaf8_0 = {.reg = {0x8000001F, 0x68747541, 0x444D4163, 0x69746E65}},
     .leaf8_1 = {.reg = {0x800F82, 0x70000000, 0x35C233FF, 0x2FD3FBFF}},
-    .leaf8_7  = {.reg = {0x0, 0x1b, 0x0, 0x6799}},
+    .leaf8_7 = {.reg = {0x0, 0x1b, 0x0, 0x6799}},
     .leaf8_8 = {.reg = {0x3030, 0x1007, 0x602F, 0x0}},
     .leaf8_1D = {.reg = {0x14163, 0x3C0003F, 0x1FFF, 0x1}},
     .leaf8_1E = {.reg = {0x34, 0x102, 0x303, 0x0}},
@@ -144,9 +137,6 @@ const TestDataSet kTestDataAmdA49120C = {
     .leaf4 = {.reg = {0x0, 0x0, 0x0, 0x0}},
     .leaf6 = {.reg = {0x0, 0x0, 0x1, 0x0}},
     .leaf7 = {.reg = {0x0, 0x1a9, 0x0, 0x0}},
-    .leafB = {{{.reg = {0x0, 0x0, 0x0, 0x0}},
-               {.reg = {0x0, 0x0, 0x0, 0x0}},
-               {.reg = {0x0, 0x0, 0x0, 0x0}}}},
     .leaf8_0 = {.reg = {0x8000001e, 0x68747541, 0x444d4163, 0x69746e65}},
     .leaf8_1 = {.reg = {0x670f00, 0x40000000, 0x2fabbfff, 0x2fd3fbff}},
     .leaf8_7 = {.reg = {0x0, 0x5, 0x400, 0x37d9}},
@@ -164,7 +154,6 @@ const TestDataSet kTestDataCeleronJ3455 = {
     .leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}},
     .leaf6 = {},
     .leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}},
-    .leafB = {},
     .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0, 0x0}},
     .leaf8_1 = {.reg = {0x0, 0x0, 0x101, 0x2c100800}},
     .leaf8_7 = {},
@@ -188,13 +177,6 @@ class FakeCpuId : public CpuId {
                     data_.leaf8_8);
   }
 
-  Topology ReadTopology() const override {
-    return Topology(ManufacturerInfo(data_.leaf0, data_.leaf8_0),
-                    Features(data_.leaf1, data_.leaf6, data_.leaf7, data_.leaf8_1, data_.leaf8_7,
-                             data_.leaf8_8),
-                    data_.leaf4, data_.leafB, data_.leaf8_8, data_.leaf8_1D, data_.leaf8_1E);
-  }
-
  private:
   const TestDataSet& data_;
 };
@@ -206,3 +188,5 @@ const FakeCpuId kCpuIdAmdA49120C(kTestDataAmdA49120C);
 const FakeCpuId kCpuIdCeleronJ3455(kTestDataCeleronJ3455);
 
 }  // namespace cpu_id
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_CPUID_INCLUDE_ARCH_X86_CPUID_TEST_DATA_H_
