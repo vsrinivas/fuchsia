@@ -5,7 +5,6 @@
 use {
     analytics::{add_crash_event, add_launch_event, show_analytics_notice},
     anyhow::{anyhow, Context, Result},
-    async_std::future::timeout,
     ffx_core::{build_info, ffx_bail, ffx_error, FfxError},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::{from_env, Ffx},
@@ -14,8 +13,11 @@ use {
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
+    futures::Future,
+    futures::FutureExt,
     lazy_static::lazy_static,
     ring::digest::{Context as ShaContext, Digest, SHA256},
+    std::error::Error,
     std::fs::File,
     std::io::{BufReader, Read},
     std::sync::{Arc, Mutex},
@@ -90,6 +92,30 @@ async fn proxy_timeout() -> Result<Duration> {
             .ok_or(anyhow!("unable to convert to float: {:?}", proxy_timeout))?
             * 1000.0) as u64,
     ))
+}
+
+#[derive(Debug)]
+struct TimeoutError {}
+impl std::fmt::Display for TimeoutError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "timed out")
+    }
+}
+impl Error for TimeoutError {}
+
+async fn timeout<F, T>(t: Duration, f: F) -> Result<T, TimeoutError>
+where
+    F: Future<Output = T> + Unpin,
+{
+    // TODO(raggi): this could be made more efficient (avoiding the box) with some additional work,
+    // but for the local use cases here it's not sufficiently important.
+    let mut timer = fuchsia_async::Timer::new(t).boxed().fuse();
+    let mut f = f.fuse();
+
+    futures::select! {
+        _ = timer => Err(TimeoutError{}),
+        res = f => Ok(res),
+    }
 }
 
 async fn get_fastboot_proxy() -> Result<FastbootProxy> {
