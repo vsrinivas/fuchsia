@@ -154,7 +154,9 @@ pub struct BufferCollectionAllocator {
     collection_client: Option<fidl_fuchsia_sysmem::BufferCollectionProxy>,
 }
 
-fn set_allocator_name(sysmem_client: &fidl_fuchsia_sysmem::AllocatorProxy) -> Result<(), Error> {
+pub fn set_allocator_name(
+    sysmem_client: &fidl_fuchsia_sysmem::AllocatorProxy,
+) -> Result<(), Error> {
     let name = fuchsia_runtime::process_self().get_name()?;
     let koid = fuchsia_runtime::process_self().get_koid()?;
     Ok(sysmem_client.set_debug_client_info(name.to_str()?, koid.raw_koid())?)
