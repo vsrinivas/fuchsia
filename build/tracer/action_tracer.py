@@ -182,7 +182,8 @@ class Action(object):
     depfile: Optional[str] = None
     response_file_name: Optional[str] = None
 
-    def access_constraints(self) -> AccessConstraints:
+    def access_constraints(
+            self, writeable_depfile_inputs=False) -> AccessConstraints:
         """Build AccessConstraints from action attributes."""
         # Action is required to write outputs and depfile, if provided.
         required_writes = {path for path in self.outputs}
@@ -191,22 +192,24 @@ class Action(object):
         # Actions may touch files other than their listed outputs.
         allowed_writes = required_writes.copy()
 
-        depfile_ins = set()
+        allowed_reads = {
+            path for path in [self.script] + self.inputs + self.sources
+        }
+
         if self.depfile and os.path.exists(self.depfile):
             # Writing the depfile is not required (yet), but allowed.
             allowed_writes.add(self.depfile)
             with open(self.depfile, "r") as f:
                 depfile = parse_depfile(f)
 
-            depfile_ins = depfile.all_ins
-            # TODO(fangism): disallow writes to (depfile) inputs
-            allowed_writes.update(depfile.all_ins)
+            if (writeable_depfile_inputs):
+                allowed_writes.update(depfile.all_ins)
+            else:
+                allowed_reads.update(depfile.all_ins)
             allowed_writes.update(depfile.all_outs)
 
         # Everything writeable is readable.
-        allowed_reads = {
-            path for path in [self.script] + self.inputs + self.sources
-        } | depfile_ins | allowed_writes
+        allowed_reads.update(allowed_writes)
 
         if self.response_file_name:
             allowed_reads.add(self.response_file_name)
@@ -482,6 +485,17 @@ def main_arg_parser() -> argparse.ArgumentParser:
         action="store_false",
         dest="check_output_freshness")
 
+    parser.add_argument(
+        "--writeable-depfile-inputs",
+        action="store_true",
+        default=True,  # Goal: False (remove this flag entirely)
+        help="Allow writes to inputs found in depfiles.")
+    parser.add_argument(
+        "--no-writeable-depfile-inputs",
+        action="store_false",
+        dest="writeable_depfile_inputs")
+
+    # Positional args are the command to run and trace.
     parser.add_argument("args", nargs="*", help="action#args")
     return parser
 
@@ -541,7 +555,8 @@ def main():
         sources=args.sources,
         depfile=args.depfile,
         response_file_name=args.response_file_name)
-    access_constraints = action.access_constraints()
+    access_constraints = action.access_constraints(
+        writeable_depfile_inputs=args.writeable_depfile_inputs)
 
     # Limit most access checks to files under src_root.
     src_root = os.path.dirname(os.path.dirname(os.getcwd()))

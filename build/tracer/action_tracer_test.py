@@ -431,13 +431,14 @@ class AccessConstraintsTests(unittest.TestCase):
             action_tracer.AccessConstraints(
                 allowed_reads=abspaths({"script.sh", "response.out"})))
 
-    def test_have_depfile(self):
+    def test_have_depfile_writeable_inputs(self):
         action = action_tracer.Action(script="script.sh", depfile="foo.d")
         with mock.patch.object(os.path, 'exists',
                                return_value=True) as mock_exists:
             with mock.patch("builtins.open", mock.mock_open(
                     read_data="foo.o: foo.cc foo.h\n")) as mock_file:
-                constraints = action.access_constraints()
+                constraints = action.access_constraints(
+                    writeable_depfile_inputs=True)
 
         self.assertEqual(
             constraints,
@@ -445,6 +446,22 @@ class AccessConstraintsTests(unittest.TestCase):
                 allowed_reads=abspaths(
                     {"script.sh", "foo.d", "foo.o", "foo.cc", "foo.h"}),
                 allowed_writes=abspaths({"foo.d", "foo.o", "foo.cc", "foo.h"})))
+
+    def test_have_depfile_nonwritable_inputs(self):
+        action = action_tracer.Action(script="script.sh", depfile="foo.d")
+        with mock.patch.object(os.path, 'exists',
+                               return_value=True) as mock_exists:
+            with mock.patch("builtins.open", mock.mock_open(
+                    read_data="foo.o: foo.cc foo.h\n")) as mock_file:
+                constraints = action.access_constraints(
+                    writeable_depfile_inputs=False)
+
+        self.assertEqual(
+            constraints,
+            action_tracer.AccessConstraints(
+                allowed_reads=abspaths(
+                    {"script.sh", "foo.d", "foo.o", "foo.cc", "foo.h"}),
+                allowed_writes=abspaths({"foo.d", "foo.o"})))
 
 
 class DiagnoseStaleOutputsTest(unittest.TestCase):
