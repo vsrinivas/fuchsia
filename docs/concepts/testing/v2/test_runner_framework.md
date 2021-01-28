@@ -12,6 +12,27 @@ The Test Runner Framework uses Component Framework [runners][runners] as an
 integration layer between various testing runtimes and a common Fuchsia protocol
 for launching tests and receiving their results.
 
+## The Test Manager
+
+The `test_manager` component is responsible for running tests on a Fuchsia
+device. Test manager exposes the
+[`fuchsia.test.manager.Harness`][fidl-test-manager] protocol which allows
+launching test suites.
+
+Each test suite is launched as a child of test manager. Test suites are offered
+capabilities by test manager that enable them to do their work while
+maintaining isolation between the test and the rest of the system. For instance
+hermetic tests are given the capability to log messages, but are not given the
+capability to interact with real system resources outside of their sandbox.
+Test manager uses only one capability from the test realm, a controller protocol
+that test suites expose. This is done to ensure hermeticity (test results aren't
+affected by anything outside of their intended sandbox) and isolation (tests
+don't affect each other or the rest of the system).
+
+The test manager controller itself is offered to other components in the system
+in order to integrate test execution with various developer tools. Tests can
+then be launched with such tools as [`fx test`][fx-test] and [`ffx`][ffx].
+
 ## The test suite protocol {#test-suite-protocol}
 
 The test suite protocol, [`fuchsia.test.Suite`][fidl-test-suite], is used by the
@@ -184,7 +205,10 @@ Components in the test realm may play various roles in the test, as follows:
 
 [cf]: /docs/concepts/components/v2/
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
+[fidl-test-manager]: /sdk/fidl/fuchsia.test.manager/test_manager.fidl
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
+[ffx]: /docs/development/tools/ffx/overview.md
+[fx-test]: https://fuchsia.dev/reference/tools/fx/cmd/test
 [integration-testing]: /docs/concepts/testing/v2/v2_integration_testing.md
 [manifests-offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
