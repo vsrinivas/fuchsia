@@ -6,7 +6,6 @@ package checklicenses
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"strings"
 )
@@ -68,8 +67,58 @@ func NewConfig(path string) (*Config, error) {
 	if c.BaseDir == "" {
 		c.BaseDir = "."
 	}
-	if c.Target != "all" {
-		return nil, errors.New("target must be \"all\"")
-	}
 	return c, nil
+}
+
+// Merge two Config struct objects into one.
+// - List fields are concatenated together.
+// - boolean fields will be true if either one is true. (left || right)
+// - Regular fields will be equal to the left struct field ("c") if it's not equal to the default value ("" for strings, 0 for ints),
+//	otherwise they will be set to the right struct field.
+func (c *Config) Merge(other *Config) {
+	c.SkipDirs = append(c.SkipDirs, other.SkipDirs...)
+	c.SkipFiles = append(c.SkipFiles, other.SkipFiles...)
+	c.ProhibitedLicenseTypes = append(c.ProhibitedLicenseTypes, other.ProhibitedLicenseTypes...)
+	c.TextExtensionList = append(c.TextExtensionList, other.TextExtensionList...)
+	c.StrictTextExtensionList = append(c.StrictTextExtensionList, other.StrictTextExtensionList...)
+	c.ExitOnDirRestrictedLicense = c.ExitOnDirRestrictedLicense || other.ExitOnDirRestrictedLicense
+	c.ExitOnProhibitedLicenseTypes = c.ExitOnProhibitedLicenseTypes || other.ExitOnProhibitedLicenseTypes
+	c.ExitOnUnlicensedFiles = c.ExitOnUnlicensedFiles || other.ExitOnUnlicensedFiles
+	c.StrictAnalysis = c.StrictAnalysis || other.StrictAnalysis
+	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
+	if c.MaxReadSize == 0 {
+		c.MaxReadSize = other.MaxReadSize
+	}
+	if c.OutputFilePrefix == "" {
+		c.OutputFilePrefix = other.OutputFilePrefix
+	}
+	if c.OutputFileExtension == "" {
+		c.OutputFileExtension = other.OutputFileExtension
+	}
+	c.SingleLicenseFiles = append(c.SingleLicenseFiles, other.SingleLicenseFiles...)
+	c.StopLicensePropagation = append(c.StopLicensePropagation, other.StopLicensePropagation...)
+	if c.LicensePatternDir == "" {
+		c.LicensePatternDir = other.LicensePatternDir
+	}
+	c.CustomProjectLicenses = append(c.CustomProjectLicenses, other.CustomProjectLicenses...)
+	c.FlutterLicenses = append(c.FlutterLicenses, other.FlutterLicenses...)
+	c.NoticeTxtFiles = append(c.NoticeTxtFiles, other.NoticeTxtFiles...)
+	if c.BaseDir == "" {
+		c.BaseDir = other.BaseDir
+	}
+	if c.Target == "" {
+		c.Target = other.Target
+	}
+	if c.LogLevel == "" {
+		c.LogLevel = other.LogLevel
+	}
+
+	if c.LicenseAllowList == nil {
+		c.LicenseAllowList = make(map[string][]string)
+	}
+	if other.LicenseAllowList != nil {
+		for k := range other.LicenseAllowList {
+			c.LicenseAllowList[k] = append(c.LicenseAllowList[k], other.LicenseAllowList[k]...)
+		}
+	}
 }
