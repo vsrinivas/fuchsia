@@ -84,3 +84,14 @@ group("tests") {
     "//zircon/tools:tests",
   ]
 }
+
+# A list of host tests that cannot be part of the dependency chain
+# from the 'tests' target above. This should be aded to the 'host_labels' build
+# argument, either manually, or through a product configuration file.
+#
+# Do not try to add a dependency from //bundles:tests to this target, since
+# this will create a circular dependency that GN will complain about.
+group("host_tests") {
+  testonly = true
+  deps = [ "tests:host_tests" ]
+}

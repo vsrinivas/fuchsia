@@ -646,6 +646,10 @@ build_api_module("tests") {
 
     # Pull in tests from *_package_labels.
     "//build/images:packages",
+
+    # Pull in host tests that cannot in the _package_labels
+    # dependency graph (e.g. because they depend on a device target).
+    "//src:host_tests",
   ]
 }
 

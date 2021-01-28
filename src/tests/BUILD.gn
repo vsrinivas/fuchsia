@@ -23,7 +23,6 @@ group("tests") {
     "end_to_end/perf:tests",
     "end_to_end/snapshot:tests",
     "end_to_end/time_sync:test",
-    "femu:tests",
     "intl:tests",
     "kernel_crashlog:tests",
     "kernel_lockup_detector:tests",
@@ -34,4 +33,9 @@ group("tests") {
     "reboot:tests",
     "shutdown:tests",
   ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ "femu:host_tests" ]
 }
