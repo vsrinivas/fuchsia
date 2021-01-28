@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+
 #include <memory>
 #include <utility>
 
@@ -13,6 +16,7 @@
 
 namespace wlan {
 
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 namespace {
@@ -26,7 +30,7 @@ struct ServiceTest : public ::testing::Test {
 TEST(MlmeMsg, General) {
   // Construct simple message and write it to a Packet.
   auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
-  fidl_msg->reason_code = wlan_mlme::ReasonCode::UNSPECIFIED_REASON;
+  fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
 
   fidl::Encoder enc(42);
@@ -43,7 +47,7 @@ TEST(MlmeMsg, General) {
 TEST(MlmeMsg, Generalize) {
   // Construct simple message and write it to a Packet.
   auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
-  fidl_msg->reason_code = wlan_mlme::ReasonCode::UNSPECIFIED_REASON;
+  fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
   fidl::Encoder enc(42);
   SerializeServiceMsg(&enc, fidl_msg.get());
@@ -64,7 +68,7 @@ TEST(MlmeMsg, Generalize) {
 TEST(MlmeMsg, CorruptedPacket) {
   // Construct simple message but shorten it.
   auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
-  fidl_msg->reason_code = wlan_mlme::ReasonCode::UNSPECIFIED_REASON;
+  fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
   fidl::Encoder enc(42);
   SerializeServiceMsg(&enc, fidl_msg.get());
@@ -78,7 +82,7 @@ TEST(MlmeMsg, CorruptedPacket) {
 
 TEST(MlmeMsg, MismatchingOrdinal) {
   auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
-  fidl_msg->reason_code = wlan_mlme::ReasonCode::UNSPECIFIED_REASON;
+  fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   fidl::Encoder enc(42);
   SerializeServiceMsg(&enc, fidl_msg.get());
 

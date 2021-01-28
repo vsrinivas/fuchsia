@@ -7,7 +7,7 @@ mod convert;
 use {
     crate::{device::IfaceMap, inspect, telemetry::convert::*},
     fidl_fuchsia_cobalt::HistogramBucket,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_stats as fidl_stats,
+    fidl_fuchsia_wlan_stats as fidl_stats,
     fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats},
     fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
@@ -676,7 +676,7 @@ pub fn log_disconnect(
             cbw: format!("{:?}", info.channel.cbw.to_fidl().0),
             secondary80: info.channel.cbw.to_fidl().1,
         },
-        reason_code: info.disconnect_source.reason_code(),
+        reason_code: info.disconnect_source.reason_code() as u16,
         locally_initiated: info.disconnect_source.locally_initiated(),
         disconnect_source: match info.disconnect_source {
             DisconnectSource::User(_) => "user",
@@ -685,10 +685,8 @@ pub fn log_disconnect(
         },
         disconnect_reason: match info.disconnect_source {
             DisconnectSource::User(user_reason) => format!("{:?}", user_reason),
-            DisconnectSource::Mlme(mlme_reason) => fidl_mlme::ReasonCode::from_primitive(mlme_reason)
-                .map(|reason_code| format!("{:?}", reason_code)).unwrap_or("Undefined".to_string()),
-            DisconnectSource::Ap(ap_reason) => fidl_mlme::ReasonCode::from_primitive(ap_reason)
-                .map(|reason_code| format!("{:?}", reason_code)).unwrap_or("Undefined".to_string()),
+            DisconnectSource::Mlme(mlme_reason) => format!("{:?}", mlme_reason),
+            DisconnectSource::Ap(ap_reason) => format!("{:?}", ap_reason),
         },
         time_since_channel_switch?: info.time_since_channel_switch.map(|d| d.into_nanos()),
     });
@@ -768,6 +766,7 @@ mod tests {
         },
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_sme as fidl_sme,
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
@@ -972,10 +971,10 @@ mod tests {
         //       purpose, it's sufficient. The same applies for other connect stats failure
         //       test cases.
         let connect_stats = ConnectStats {
-            result: ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InvalidArgs).into(),
+            result: ConnectFailure::ScanFailure(fidl_mlme::ScanResultCode::InvalidArgs).into(),
             scan_end_stats: Some(ScanEndStats {
                 scan_end_at: now(),
-                result: ScanResult::Failed(fidl_mlme::ScanResultCodes::InvalidArgs),
+                result: ScanResult::Failed(fidl_mlme::ScanResultCode::InvalidArgs),
                 bss_count: 1,
             }),
             ..fake_connect_stats_old_code_path_with_join_scan()
@@ -1013,7 +1012,7 @@ mod tests {
     fn test_log_connect_stats_auth_failure() {
         let connect_stats = ConnectStats {
             result: ConnectFailure::AuthenticationFailure(
-                fidl_mlme::AuthenticateResultCodes::Refused,
+                fidl_mlme::AuthenticateResultCode::Refused,
             )
             .into(),
             ..fake_connect_stats()
@@ -1031,7 +1030,7 @@ mod tests {
         let connect_stats = ConnectStats {
             result: ConnectFailure::AssociationFailure(AssociationFailure {
                 bss_protection: BssProtection::Open,
-                code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
             })
             .into(),
             ..fake_connect_stats()
@@ -1117,7 +1116,7 @@ mod tests {
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::Mlme(
-                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+                fidl_ieee80211::ReasonCode::UnspecifiedReason,
             ),
             ..fake_disconnect_info()
         };
@@ -1166,9 +1165,7 @@ mod tests {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
-            disconnect_source: DisconnectSource::Ap(
-                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
-            ),
+            disconnect_source: DisconnectSource::Ap(fidl_ieee80211::ReasonCode::UnspecifiedReason),
             ..fake_disconnect_info()
         };
         log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
@@ -1211,7 +1208,7 @@ mod tests {
         let inspect_tree = fake_inspect_tree();
 
         let disconnect_source =
-            DisconnectSource::Mlme(fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive());
+            DisconnectSource::Mlme(fidl_ieee80211::ReasonCode::UnspecifiedReason);
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
@@ -1294,7 +1291,7 @@ mod tests {
             scan_end_at: now,
             scan_type: fidl_mlme::ScanTypes::Active,
             scan_start_while_connected: true,
-            result: ScanResult::Failed(fidl_mlme::ScanResultCodes::InvalidArgs),
+            result: ScanResult::Failed(fidl_mlme::ScanResultCode::InvalidArgs),
             bss_count: 5,
         };
         log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
@@ -1566,7 +1563,7 @@ mod tests {
             last_rssi: -90,
             last_snr: 1,
             disconnect_source: DisconnectSource::Mlme(
-                fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+                fidl_ieee80211::ReasonCode::UnspecifiedReason,
             ),
             time_since_channel_switch: None,
         }

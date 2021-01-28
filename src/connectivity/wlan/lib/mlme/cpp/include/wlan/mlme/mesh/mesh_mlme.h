@@ -36,9 +36,9 @@ class MeshMlme : public Mlme {
  private:
   const common::MacAddr& self_addr() const { return device_->GetState()->address(); }
 
-  ::fuchsia::wlan::mlme::StartResultCodes Start(
+  ::fuchsia::wlan::mlme::StartResultCode Start(
       const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
-  ::fuchsia::wlan::mlme::StopResultCodes Stop();
+  ::fuchsia::wlan::mlme::StopResultCode Stop();
   void SendPeeringOpen(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringOpenAction>& req);
   void SendPeeringConfirm(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringConfirmAction>& req);
   void ConfigurePeering(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringParams>& params);

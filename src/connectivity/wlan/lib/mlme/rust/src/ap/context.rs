@@ -12,7 +12,8 @@ use {
         timer::{EventId, Timer},
     },
     anyhow::format_err,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     wlan_common::{
         big_endian::BigEndianU16,
         data_writer,
@@ -62,7 +63,7 @@ impl Context {
     /// Sends MLME-START.confirm (IEEE Std 802.11-2016, 6.3.11.3) to the SME.
     pub fn send_mlme_start_conf(
         &self,
-        result_code: fidl_mlme::StartResultCodes,
+        result_code: fidl_mlme::StartResultCode,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
             sender.send_start_conf(&mut fidl_mlme::StartConfirm { result_code })
@@ -70,10 +71,7 @@ impl Context {
     }
 
     /// Sends MLME-STOP.confirm to the SME.
-    pub fn send_mlme_stop_conf(
-        &self,
-        result_code: fidl_mlme::StopResultCodes,
-    ) -> Result<(), Error> {
+    pub fn send_mlme_stop_conf(&self, result_code: fidl_mlme::StopResultCode) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
             sender.send_stop_conf(&mut fidl_mlme::StopConfirm { result_code })
         })
@@ -97,7 +95,7 @@ impl Context {
     pub fn send_mlme_deauth_ind(
         &self,
         peer_sta_address: MacAddr,
-        reason_code: fidl_mlme::ReasonCode,
+        reason_code: fidl_ieee80211::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
@@ -136,7 +134,7 @@ impl Context {
     pub fn send_mlme_disassoc_ind(
         &self,
         peer_sta_address: MacAddr,
-        reason_code: u16,
+        reason_code: fidl_ieee80211::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
@@ -542,7 +540,7 @@ mod test {
         let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_mlme_deauth_ind(
             CLIENT_ADDR,
-            fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+            fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             LocallyInitiated(true),
         )
         .expect("expected OK");
@@ -553,7 +551,7 @@ mod test {
             msg,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
                 locally_initiated: true,
             },
         );
@@ -596,7 +594,7 @@ mod test {
         let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_mlme_disassoc_ind(
             CLIENT_ADDR,
-            fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+            fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
             LocallyInitiated(true),
         )
         .expect("expected OK");
@@ -607,7 +605,7 @@ mod test {
             msg,
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
                 locally_initiated: true,
             },
         );

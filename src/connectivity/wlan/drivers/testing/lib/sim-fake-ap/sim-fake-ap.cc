@@ -461,7 +461,7 @@ void FakeAp::RxDataFrame(std::shared_ptr<const SimDataFrame> data_frame) {
   }
 }
 
-zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason) {
+zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, wlan_ieee80211::ReasonCode reason) {
   // Make sure the client is already associated
   SimDisassocReqFrame disassoc_req_frame(bssid_, sta_mac, reason);
   for (auto client : clients_) {

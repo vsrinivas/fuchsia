@@ -101,7 +101,8 @@ class FakeAp : public StationIfc {
   void SetAssocHandling(enum AssocHandling mode);
 
   // Disassociate a Station
-  zx_status_t DisassocSta(const common::MacAddr& sta_mac, uint16_t reason);
+  zx_status_t DisassocSta(const common::MacAddr& sta_mac,
+                          ::fuchsia::wlan::ieee80211::ReasonCode reason);
 
   // Beacon-specific error injection.
   // The beacon_mutator functor will be applied to each beacon frame before transmission.

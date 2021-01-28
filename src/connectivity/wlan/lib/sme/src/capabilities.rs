@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn fidl_assoc_conf_to_cap() {
         let ac = fidl_mlme::AssociateConfirm {
-            result_code: fidl_mlme::AssociateResultCodes::Success,
+            result_code: fidl_mlme::AssociateResultCode::Success,
             association_id: 123,
             cap_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129],

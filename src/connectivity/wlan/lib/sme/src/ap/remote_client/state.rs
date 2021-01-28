@@ -11,7 +11,8 @@ use {
         timer::EventId,
     },
     anyhow::{ensure, format_err},
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, DurationNum},
     log::error,
     std::sync::{Arc, Mutex},
@@ -109,8 +110,8 @@ pub struct Authenticated {
 /// association rejection.
 struct AssociationError {
     error: anyhow::Error,
-    result_code: fidl_mlme::AssociateResultCodes,
-    reason_code: fidl_mlme::ReasonCode,
+    result_code: fidl_mlme::AssociateResultCode,
+    reason_code: fidl_ieee80211::ReasonCode,
 }
 
 /// Contains information from a successful association.
@@ -153,8 +154,8 @@ impl Authenticated {
                 )
                 .map_err(|error| AssociationError {
                     error,
-                    result_code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
-                    reason_code: fidl_mlme::ReasonCode::Ieee8021XAuthFailed,
+                    result_code: fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch,
+                    reason_code: fidl_ieee80211::ReasonCode::Ieee8021XAuthFailed,
                 })?;
 
                 Some(RsnaLinkState::new(authenticator))
@@ -163,16 +164,16 @@ impl Authenticated {
             _ => {
                 return Err(AssociationError {
                     error: format_err!("unexpected RSN element: {:?}", s_rsne),
-                    result_code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
-                    reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
+                    result_code: fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch,
+                    reason_code: fidl_ieee80211::ReasonCode::ReasonInvalidElement,
                 });
             }
         };
 
         let aid = aid_map.assign_aid().map_err(|error| AssociationError {
             error,
-            result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+            result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+            reason_code: fidl_ieee80211::ReasonCode::UnspecifiedReason,
         })?;
 
         let (capabilities, rates) =
@@ -194,13 +195,13 @@ impl Authenticated {
                             ),
                             result_code: match error {
                                 intersect::IntersectRatesError::BasicRatesMismatch => {
-                                    fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch
+                                    fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch
                                 }
                                 intersect::IntersectRatesError::NoApRatesSupported => {
-                                    fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+                                    fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch
                                 }
                             },
-                            reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
+                            reason_code: fidl_ieee80211::ReasonCode::ReasonInvalidElement,
                         })?
                         .as_bytes()
                         .to_vec();
@@ -537,7 +538,7 @@ impl States {
                     Ok(timeout_event_id) => {
                         r_sta.send_authenticate_resp(
                             ctx,
-                            fidl_mlme::AuthenticateResultCodes::Success,
+                            fidl_mlme::AuthenticateResultCode::Success,
                         );
                         state.transition_to(Authenticated { timeout_event_id }).into()
                     }
@@ -545,14 +546,14 @@ impl States {
                         error!("client {:02X?} MLME-AUTHENTICATE.indication: {}", r_sta.addr, e);
                         r_sta.send_authenticate_resp(
                             ctx,
-                            fidl_mlme::AuthenticateResultCodes::Refused,
+                            fidl_mlme::AuthenticateResultCode::Refused,
                         );
                         state.into()
                     }
                 }
             }
             _ => {
-                r_sta.send_authenticate_resp(ctx, fidl_mlme::AuthenticateResultCodes::Refused);
+                r_sta.send_authenticate_resp(ctx, fidl_mlme::AuthenticateResultCode::Refused);
                 self
             }
         }
@@ -594,7 +595,7 @@ impl States {
                     Ok(Association { aid, capabilities, rates, mut rsna_link_state }) => {
                         r_sta.send_associate_resp(
                             ctx,
-                            fidl_mlme::AssociateResultCodes::Success,
+                            fidl_mlme::AssociateResultCode::Success,
                             aid,
                             capabilities,
                             rates,
@@ -609,7 +610,7 @@ impl States {
                                 );
                                 r_sta.send_deauthenticate_req(
                                     ctx,
-                                    fidl_mlme::ReasonCode::Ieee8021XAuthFailed,
+                                    fidl_ieee80211::ReasonCode::Ieee8021XAuthFailed,
                                 );
                                 return state.transition_to(Authenticating).into();
                             }
@@ -628,7 +629,7 @@ impl States {
             _ => {
                 r_sta.send_associate_resp(
                     ctx,
-                    fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                    fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
                     0,
                     CapabilityInfo(0),
                     vec![],
@@ -713,7 +714,7 @@ impl States {
                             r_sta.send_deauthenticate_req(
                                 ctx,
                                 // Not sure if this is the correct reason code.
-                                fidl_mlme::ReasonCode::InvalidAuthentication,
+                                fidl_ieee80211::ReasonCode::InvalidAuthentication,
                             );
                             state.transition_to(Authenticating).into()
                         }
@@ -744,10 +745,10 @@ impl States {
                                         "client {:02X?} RSNA negotiation error: {}",
                                         r_sta.addr, e
                                     );
-                                    fidl_mlme::ReasonCode::UnspecifiedReason
+                                    fidl_ieee80211::ReasonCode::UnspecifiedReason
                                 }
                                 RsnaNegotiationError::Timeout => {
-                                    fidl_mlme::ReasonCode::FourwayHandshakeTimeout
+                                    fidl_ieee80211::ReasonCode::FourwayHandshakeTimeout
                                 }
                             };
                             r_sta.send_deauthenticate_req(ctx, reason_code);
@@ -832,7 +833,7 @@ mod tests {
             result_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AuthenticateResultCodes::Success);
+            assert_eq!(result_code, fidl_mlme::AuthenticateResultCode::Success);
         });
     }
 
@@ -856,7 +857,7 @@ mod tests {
             result_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AuthenticateResultCodes::Refused);
+            assert_eq!(result_code, fidl_mlme::AuthenticateResultCode::Refused);
         });
     }
 
@@ -895,7 +896,7 @@ mod tests {
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(association_id, 0);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
             assert_eq!(cap, 0);
             assert_eq!(rates, Vec::<u8>::new());
         });
@@ -922,7 +923,7 @@ mod tests {
             result_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AuthenticateResultCodes::Refused);
+            assert_eq!(result_code, fidl_mlme::AuthenticateResultCode::Refused);
         });
     }
 
@@ -946,7 +947,7 @@ mod tests {
             reason_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::InvalidAuthentication);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::InvalidAuthentication);
         });
     }
 
@@ -1005,7 +1006,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
             assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![0b11111000]);
         });
@@ -1053,7 +1054,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
             assert_eq!(
                 cap,
                 CapabilityInfo(0).with_short_preamble(true).with_spectrum_mgmt(true).raw(),
@@ -1156,7 +1157,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch);
         });
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
@@ -1166,7 +1167,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::ReasonInvalidElement);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::ReasonInvalidElement);
         });
     }
 
@@ -1198,7 +1199,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch);
         });
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
@@ -1208,7 +1209,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::ReasonInvalidElement);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::ReasonInvalidElement);
         });
     }
 
@@ -1249,7 +1250,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
         });
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
@@ -1259,7 +1260,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::UnspecifiedReason);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::UnspecifiedReason);
         });
     }
 
@@ -1300,7 +1301,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch);
         });
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
@@ -1310,7 +1311,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::ReasonInvalidElement);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::ReasonInvalidElement);
         });
     }
 
@@ -1364,7 +1365,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch);
         });
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
@@ -1374,7 +1375,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::Ieee8021XAuthFailed);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::Ieee8021XAuthFailed);
         });
     }
 
@@ -1421,7 +1422,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
             assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).with_privacy(true).raw());
             assert_eq!(rates, vec![0b11111000]);
         });
@@ -1476,7 +1477,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
             assert_eq!(
                 cap,
                 CapabilityInfo(0)
@@ -1679,7 +1680,7 @@ mod tests {
             reason_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::FourwayHandshakeTimeout);
         });
     }
 
@@ -1777,7 +1778,7 @@ mod tests {
             reason_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::FourwayHandshakeTimeout);
         });
     }
 

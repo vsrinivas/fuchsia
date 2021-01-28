@@ -20,7 +20,7 @@ use {
         timer::{self, EventId, TimedEvent, Timer},
         MacAddr, MlmeRequest, Ssid,
     },
-    fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
@@ -261,7 +261,7 @@ impl ApSme {
                             // 802.11-2016, Table 9-45): Requesting STA is leaving the BSS (or
                             // resetting). The spec doesn't seem to mandate a choice of reason code
                             // here, so Fuchsia picks STA_LEAVING.
-                            reason_code: fidl_mlme::ReasonCode::StaLeaving,
+                            reason_code: fidl_ieee80211::ReasonCode::StaLeaving,
                         },
                     ));
                 }
@@ -373,14 +373,14 @@ impl super::Station for ApSme {
             },
             State::Stopping { ctx, stop_req, mut responders, mut stop_timeout } => match event {
                 MlmeEvent::StopConf { resp } => match resp.result_code {
-                    fidl_mlme::StopResultCodes::Success
-                    | fidl_mlme::StopResultCodes::BssAlreadyStopped => {
+                    fidl_mlme::StopResultCode::Success
+                    | fidl_mlme::StopResultCode::BssAlreadyStopped => {
                         for responder in responders.drain(..) {
                             responder.respond(fidl_sme::StopApResultCode::Success);
                         }
                         State::Idle { ctx }
                     }
-                    fidl_mlme::StopResultCodes::InternalError => {
+                    fidl_mlme::StopResultCode::InternalError => {
                         for responder in responders.drain(..) {
                             responder.respond(fidl_sme::StopApResultCode::InternalError);
                         }
@@ -409,7 +409,7 @@ impl super::Station for ApSme {
                     MlmeEvent::DisassociateInd { ind } => bss.handle_disassoc_ind(ind),
                     MlmeEvent::EapolInd { ind } => bss.handle_eapol_ind(ind),
                     MlmeEvent::EapolConf { resp } => {
-                        if resp.result_code != fidl_mlme::EapolResultCodes::Success {
+                        if resp.result_code != fidl_mlme::EapolResultCode::Success {
                             // TODO(fxbug.dev/29301) - Handle unsuccessful EAPoL confirmation. It doesn't
                             //                  include client address, though. Maybe we can just
                             //                  ignore these messages and just set a handshake
@@ -534,7 +534,7 @@ fn handle_start_conf(
 ) -> State {
     if stop_responders.is_empty() {
         match conf.result_code {
-            fidl_mlme::StartResultCodes::Success => {
+            fidl_mlme::StartResultCode::Success => {
                 start_responder.respond(StartResult::Success);
                 State::Started {
                     bss: InfraBss {
@@ -886,7 +886,7 @@ mod tests {
         });
 
         assert_eq!(Ok(None), receiver.try_recv());
-        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCode::Success));
         assert_eq!(Ok(Some(StartResult::Success)), receiver.try_recv());
     }
 
@@ -899,7 +899,7 @@ mod tests {
         // status should be Starting
         assert_eq!(None, sme.get_running_ap());
         assert_eq!(Ok(None), receiver.try_recv());
-        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCode::Success));
         assert_eq!(Ok(Some(StartResult::Success)), receiver.try_recv());
         assert_eq!(
             Some(fidl_sme::Ap {
@@ -950,7 +950,7 @@ mod tests {
         let (mut sme, _, _) = create_sme();
         let mut receiver = sme.on_start_command(unprotected_config());
 
-        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::NotSupported));
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCode::NotSupported));
         assert_eq!(Ok(Some(StartResult::InternalError)), receiver.try_recv());
         // Check status
         assert_eq!(None, sme.get_running_ap());
@@ -966,7 +966,7 @@ mod tests {
         assert_eq!(Ok(Some(StartResult::PreviousStartInProgress)), receiver_two.try_recv());
 
         // Start confirmation for first request should still have an affect
-        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCode::Success));
         assert_eq!(Ok(Some(StartResult::Success)), receiver_one.try_recv());
     }
 
@@ -988,7 +988,7 @@ mod tests {
         });
 
         // Respond with a successful stop result code
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::Success));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver.try_recv());
     }
 
@@ -1007,7 +1007,7 @@ mod tests {
         });
 
         // Once start confirmation is finished, then stop request is sent out
-        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCode::Success));
         assert_eq!(Ok(Some(StartResult::Canceled)), start_receiver.try_recv());
         assert_eq!(Ok(None), stop_receiver.try_recv());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
@@ -1015,7 +1015,7 @@ mod tests {
         });
 
         // Respond with a successful stop result code
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::Success));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), stop_receiver.try_recv());
     }
 
@@ -1043,7 +1043,7 @@ mod tests {
         });
 
         // Respond with a successful stop result code
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::Success));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), stop_receiver.try_recv());
     }
 
@@ -1056,7 +1056,7 @@ mod tests {
             assert_eq!(stop_req.ssid, SSID.to_vec());
         });
         assert_eq!(Ok(None), receiver.try_recv());
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::BssAlreadyStopped));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::BssAlreadyStopped));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver.try_recv());
     }
 
@@ -1065,7 +1065,7 @@ mod tests {
         let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
-        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
+        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCode::Success);
 
         // Check status
         assert_eq!(
@@ -1081,14 +1081,14 @@ mod tests {
         mlme_stream.try_next(),
         Ok(Some(MlmeRequest::Deauthenticate(deauth_req))) => {
             assert_eq!(deauth_req.peer_sta_address, client.addr);
-            assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::StaLeaving);
+            assert_eq!(deauth_req.reason_code, fidl_ieee80211::ReasonCode::StaLeaving);
         });
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
             assert_eq!(stop_req.ssid, SSID.to_vec());
         });
         assert_eq!(Ok(None), receiver.try_recv());
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::Success));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver.try_recv());
 
         // Check status
@@ -1104,7 +1104,7 @@ mod tests {
         assert_eq!(Ok(None), receiver1.try_recv());
         assert_eq!(Ok(None), receiver2.try_recv());
 
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::Success));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver1.try_recv());
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), receiver2.try_recv());
     }
@@ -1119,7 +1119,7 @@ mod tests {
         });
 
         assert_eq!(Ok(None), stop_receiver1.try_recv());
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::InternalError));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::InternalError));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::InternalError)), stop_receiver1.try_recv());
 
         // While in unclean stopping state, no start request can be made
@@ -1137,7 +1137,7 @@ mod tests {
 
         // Respond successful this time
         assert_eq!(Ok(None), stop_receiver2.try_recv());
-        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCodes::Success));
+        sme.on_mlme_event(create_stop_conf(fidl_mlme::StopResultCode::Success));
         assert_eq!(Ok(Some(fidl_sme::StopApResultCode::Success)), stop_receiver2.try_recv());
     }
 
@@ -1146,7 +1146,7 @@ mod tests {
         let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
-        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
+        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCode::Success);
     }
 
     #[test]
@@ -1155,7 +1155,7 @@ mod tests {
         let client = Client::default();
         let auth_ind = client.create_auth_ind(fidl_mlme::AuthenticationTypes::FastBssTransition);
         sme.on_mlme_event(auth_ind);
-        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Refused);
+        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCode::Refused);
     }
 
     #[test]
@@ -1163,13 +1163,13 @@ mod tests {
         let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
-        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
+        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCode::Success);
 
         sme.on_mlme_event(client.create_assoc_ind(None));
         client.verify_assoc_resp(
             &mut mlme_stream,
             1,
-            fidl_mlme::AssociateResultCodes::Success,
+            fidl_mlme::AssociateResultCode::Success,
             false,
         );
     }
@@ -1184,7 +1184,7 @@ mod tests {
         client.verify_assoc_resp(
             &mut mlme_stream,
             1,
-            fidl_mlme::AssociateResultCodes::Success,
+            fidl_mlme::AssociateResultCode::Success,
             true,
         );
         client.verify_eapol_req(&mut mlme_stream);
@@ -1199,7 +1199,7 @@ mod tests {
         sme.on_mlme_event(client.create_assoc_ind(None));
         client.verify_refused_assoc_resp(
             &mut mlme_stream,
-            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
+            fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch,
         );
     }
 
@@ -1216,7 +1216,7 @@ mod tests {
         client.verify_assoc_resp(
             &mut mlme_stream,
             1,
-            fidl_mlme::AssociateResultCodes::Success,
+            fidl_mlme::AssociateResultCode::Success,
             true,
         );
 
@@ -1237,7 +1237,10 @@ mod tests {
             sme.on_timeout(event);
         }
 
-        client.verify_deauth_req(&mut mlme_stream, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
+        client.verify_deauth_req(
+            &mut mlme_stream,
+            fidl_ieee80211::ReasonCode::FourwayHandshakeTimeout,
+        );
     }
 
     #[test]
@@ -1248,13 +1251,13 @@ mod tests {
         client.associate_and_drain_mlme(&mut sme, &mut mlme_stream, None);
 
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
-        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
+        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCode::Success);
 
         sme.on_mlme_event(client.create_assoc_ind(None));
         client.verify_assoc_resp(
             &mut mlme_stream,
             1,
-            fidl_mlme::AssociateResultCodes::Success,
+            fidl_mlme::AssociateResultCode::Success,
             false,
         );
     }
@@ -1266,16 +1269,16 @@ mod tests {
         let client2 = Client { addr: CLIENT_ADDR2 };
 
         sme.on_mlme_event(client1.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
-        client1.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
+        client1.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCode::Success);
 
         sme.on_mlme_event(client2.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
-        client2.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
+        client2.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCode::Success);
 
         sme.on_mlme_event(client1.create_assoc_ind(Some(RSNE.to_vec())));
         client1.verify_assoc_resp(
             &mut mlme_stream,
             1,
-            fidl_mlme::AssociateResultCodes::Success,
+            fidl_mlme::AssociateResultCode::Success,
             true,
         );
         client1.verify_eapol_req(&mut mlme_stream);
@@ -1284,7 +1287,7 @@ mod tests {
         client2.verify_assoc_resp(
             &mut mlme_stream,
             2,
-            fidl_mlme::AssociateResultCodes::Success,
+            fidl_mlme::AssociateResultCode::Success,
             true,
         );
         client2.verify_eapol_req(&mut mlme_stream);
@@ -1399,11 +1402,11 @@ mod tests {
         }
     }
 
-    fn create_start_conf(result_code: fidl_mlme::StartResultCodes) -> MlmeEvent {
+    fn create_start_conf(result_code: fidl_mlme::StartResultCode) -> MlmeEvent {
         MlmeEvent::StartConf { resp: fidl_mlme::StartConfirm { result_code } }
     }
 
-    fn create_stop_conf(result_code: fidl_mlme::StopResultCodes) -> MlmeEvent {
+    fn create_stop_conf(result_code: fidl_mlme::StopResultCode) -> MlmeEvent {
         MlmeEvent::StopConf { resp: fidl_mlme::StopConfirm { result_code } }
     }
 
@@ -1459,7 +1462,7 @@ mod tests {
         fn verify_auth_resp(
             &self,
             mlme_stream: &mut MlmeStream,
-            result_code: fidl_mlme::AuthenticateResultCodes,
+            result_code: fidl_mlme::AuthenticateResultCode,
         ) {
             let msg = mlme_stream.try_next();
             assert_variant!(msg, Ok(Some(MlmeRequest::AuthResponse(auth_resp))) => {
@@ -1472,7 +1475,7 @@ mod tests {
             &self,
             mlme_stream: &mut MlmeStream,
             aid: Aid,
-            result_code: fidl_mlme::AssociateResultCodes,
+            result_code: fidl_mlme::AssociateResultCode,
             privacy: bool,
         ) {
             let msg = mlme_stream.try_next();
@@ -1490,7 +1493,7 @@ mod tests {
         fn verify_refused_assoc_resp(
             &self,
             mlme_stream: &mut MlmeStream,
-            result_code: fidl_mlme::AssociateResultCodes,
+            result_code: fidl_mlme::AssociateResultCode,
         ) {
             let msg = mlme_stream.try_next();
             assert_variant!(msg, Ok(Some(MlmeRequest::AssocResponse(assoc_resp))) => {
@@ -1512,7 +1515,7 @@ mod tests {
         fn verify_deauth_req(
             &self,
             mlme_stream: &mut MlmeStream,
-            reason_code: fidl_mlme::ReasonCode,
+            reason_code: fidl_ieee80211::ReasonCode,
         ) {
             let msg = mlme_stream.try_next();
             assert_variant!(msg, Ok(Some(MlmeRequest::Deauthenticate(deauth_req))) => {
@@ -1537,7 +1540,7 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(..))));
         // drain time stream
         while let Ok(..) = time_stream.try_next() {}
-        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCode::Success));
 
         assert_eq!(Ok(Some(StartResult::Success)), receiver.try_recv());
         (sme, mlme_stream, time_stream)

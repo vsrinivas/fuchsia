@@ -128,9 +128,9 @@ zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   }
 }
 
-wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
+wlan_mlme::StartResultCode MeshMlme::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
   if (state_) {
-    return wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED;
+    return wlan_mlme::StartResultCode::BSS_ALREADY_STARTED_OR_JOINED;
   }
 
   std::unique_ptr<Timer> timer;
@@ -140,7 +140,7 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
   zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
   if (status != ZX_OK) {
     errorf("[mesh-mlme] Failed to create the HWMP timer: %s\n", zx_status_get_string(status));
-    return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
+    return wlan_mlme::StartResultCode::INTERNAL_ERROR;
   }
 
   wlan_channel_t channel = GetChannel(req.body()->channel);
@@ -148,7 +148,7 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
   if (status != ZX_OK) {
     errorf("[mesh-mlme] failed to set channel to %s: %s\n", common::ChanStr(channel).c_str(),
            zx_status_get_string(status));
-    return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
+    return wlan_mlme::StartResultCode::INTERNAL_ERROR;
   }
 
   MgmtFrame<Beacon> buffer;
@@ -156,7 +156,7 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
   status = BuildMeshBeacon(channel, device_, req, &buffer, &cfg.tim_ele_offset);
   if (status != ZX_OK) {
     errorf("[mesh-mlme] failed to build a beacon template: %s\n", zx_status_get_string(status));
-    return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
+    return wlan_mlme::StartResultCode::INTERNAL_ERROR;
   }
 
   auto packet = buffer.Take();
@@ -166,17 +166,17 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
   status = device_->EnableBeaconing(&cfg);
   if (status != ZX_OK) {
     errorf("[mesh-mlme] failed to enable beaconing: %s\n", zx_status_get_string(status));
-    return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
+    return wlan_mlme::StartResultCode::INTERNAL_ERROR;
   }
 
   device_->SetStatus(ETHERNET_STATUS_ONLINE);
   state_.emplace(std::move(timer));
-  return wlan_mlme::StartResultCodes::SUCCESS;
+  return wlan_mlme::StartResultCode::SUCCESS;
 }
 
-wlan_mlme::StopResultCodes MeshMlme::Stop() {
+wlan_mlme::StopResultCode MeshMlme::Stop() {
   if (!state_) {
-    return wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED;
+    return wlan_mlme::StopResultCode::BSS_ALREADY_STOPPED;
   };
 
   // TODO(gbonik): call clear_assoc for all peers once we have a list of peers
@@ -184,12 +184,12 @@ wlan_mlme::StopResultCodes MeshMlme::Stop() {
   zx_status_t status = device_->EnableBeaconing(nullptr);
   if (status != ZX_OK) {
     errorf("[mesh-mlme] failed to disable beaconing: %s\n", zx_status_get_string(status));
-    return wlan_mlme::StopResultCodes::INTERNAL_ERROR;
+    return wlan_mlme::StopResultCode::INTERNAL_ERROR;
   }
 
   device_->SetStatus(0);
   state_.reset();
-  return wlan_mlme::StopResultCodes::SUCCESS;
+  return wlan_mlme::StopResultCode::SUCCESS;
 }
 
 void MeshMlme::SendPeeringOpen(const MlmeMsg<wlan_mlme::MeshPeeringOpenAction>& req) {

@@ -17,7 +17,7 @@ pub use frame::{AntiCloggingTokenMsg, CommitMsg, ConfirmMsg};
 use {
     anyhow::{bail, Error},
     boringssl::{Bignum, EcGroupId},
-    fidl_fuchsia_wlan_ieee80211::StatusCode,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     log::warn,
     mundane::{hash::Digest, hmac},
     wlan_common::ie::rsn::akm::{self, Akm, AKM_PSK, AKM_SAE},
@@ -71,14 +71,14 @@ impl From<Error> for RejectReason {
 #[derive(Debug)]
 pub struct AuthFrameRx<'a> {
     pub seq: u16,
-    pub status_code: StatusCode,
+    pub status_code: fidl_ieee80211::StatusCode,
     pub body: &'a [u8],
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AuthFrameTx {
     pub seq: u16,
-    pub status_code: StatusCode,
+    pub status_code: fidl_ieee80211::StatusCode,
     pub body: Vec<u8>,
 }
 

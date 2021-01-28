@@ -5,6 +5,7 @@
 library fuchsia.wlan.mlme;
 
 using fuchsia.wlan.common;
+using fuchsia.wlan.ieee80211;
 using fuchsia.wlan.mesh;
 using fuchsia.wlan.internal as internal;
 
@@ -59,7 +60,7 @@ struct WmmParameter {
     array<uint8>:WMM_PARAM_LEN bytes;
 };
 
-enum ScanResultCodes {
+enum ScanResultCode {
     SUCCESS = 0;
     NOT_SUPPORTED = 1;
     INVALID_ARGS = 2;
@@ -74,7 +75,7 @@ struct ScanResult {
 
 struct ScanEnd {
     uint64 txn_id;
-    ScanResultCodes code;
+    ScanResultCode code;
 };
 
 // MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
@@ -99,14 +100,14 @@ struct JoinRequest {
 
 // MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)
 
-enum JoinResultCodes {
+enum JoinResultCode {
     SUCCESS = 0;
     JOIN_FAILURE_TIMEOUT = 1;
     //LAST = JOIN_FAILURE_TIMEOUT;
 };
 
 struct JoinConfirm {
-    JoinResultCodes result_code;
+    JoinResultCode result_code;
 };
 
 // MLME-AUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.5.2)
@@ -132,20 +133,19 @@ struct AuthenticateRequest {
 
 // MLME-AUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.5.3)
 
-enum AuthenticateResultCodes {
+enum AuthenticateResultCode {
     SUCCESS = 0;
     REFUSED = 1;
     ANTI_CLOGGING_TOKEN_REQUIRED = 2;
     FINITE_CYCLIC_GROUP_NOT_SUPPORTED = 3;
     AUTHENTICATION_REJECTED = 4;
     AUTH_FAILURE_TIMEOUT = 5;
-    //LAST = AUTH_FAILURE_TIMEOUT;
 };
 
 struct AuthenticateConfirm {
     array<uint8>:6 peer_sta_address;
     AuthenticationTypes auth_type;
-    AuthenticateResultCodes result_code;
+    AuthenticateResultCode result_code;
 
     // etc
 };
@@ -163,86 +163,16 @@ struct AuthenticateIndication {
 
 struct AuthenticateResponse {
     array<uint8>:6 peer_sta_address;
-    AuthenticateResultCodes result_code;
+    AuthenticateResultCode result_code;
 
     // etc
 };
 
 // MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2)
 
-// IEEE Std 802.11-2016, 9.4.1.7, Table 9-45
-enum ReasonCode : uint16 {
-    // 0 Reserved
-    UNSPECIFIED_REASON = 1;
-    INVALID_AUTHENTICATION = 2;
-    LEAVING_NETWORK_DEAUTH = 3;
-    REASON_INACTIVITY = 4;
-    NO_MORE_STAS = 5;
-    INVALID_CLASS2_FRAME = 6;
-    INVALID_CLASS3_FRAME = 7;
-    LEAVING_NETWORK_DISASSOC = 8;
-    NOT_AUTHENTICATED = 9;
-    UNACCEPTABLE_POWER_CA = 10;
-    UNACCEPTABLE_SUPPORTED_CHANNELS = 11;
-    BSS_TRANSITION_DISASSOC = 12;
-    REASON_INVALID_ELEMENT = 13;
-    MIC_FAILURE = 14;
-    FOURWAY_HANDSHAKE_TIMEOUT = 15;
-    GK_HANDSHAKE_TIMEOUT = 16;
-    HANDSHAKE_ELEMENT_MISMATCH = 17;
-    REASON_INVALID_GROUP_CIPHER = 18;
-    REASON_INVALID_PAIRWISE_CIPHER = 19;
-    REASON_INVALID_AKMP = 20;
-    UNSUPPORTED_RSNE_VERSION = 21;
-    INVALID_RSNE_CAPABILITIES = 22;
-    IEEE802_1_X_AUTH_FAILED = 23;
-    REASON_CIPHER_OUT_OF_POLICY = 24;
-    TDLS_PEER_UNREACHABLE = 25;
-    TDLS_UNSPECIFIED_REASON = 26;
-    SSP_REQUESTED_DISASSOC = 27;
-    NO_SSP_ROAMING_AGREEMENT = 28;
-    BAD_CIPHER_OR_AKM = 29;
-    NOT_AUTHORIZED_THIS_LOCATION = 30;
-    SERVICE_CHANGE_PRECLUDES_TS = 31;
-    UNSPECIFIED_QOS_REASON = 32;
-    NOT_ENOUGH_BANDWIDTH = 33;
-    MISSING_ACKS = 34;
-    EXCEEDED_TXOP = 35;
-    STA_LEAVING = 36;
-    // Values 37 and 38 are overloaded but should be clear from context.
-    END_TS_BA_DLS = 37;
-    UNKNOWN_TS_BA = 38;
-    TIMEOUT = 39;
-    // 40-44 Reserved
-    PEERKEY_MISMATCH = 45;
-    PEER_INITIATED = 46;
-    AP_INITIATED = 47;
-    REASON_INVALID_FT_ACTION_FRAME_COUNT = 48;
-    REASON_INVALID_PMKID = 49;
-    REASON_INVALID_MDE = 50;
-    REASON_INVALID_FTE = 51;
-    MESH_PEERING_CANCELED = 52;
-    MESH_MAX_PEERS = 53;
-    MESH_CONFIGURATION_POLICY_VIOLATION = 54;
-    MESH_CLOSE_RCVD = 55;
-    MESH_MAX_RETRIES = 56;
-    MESH_CONFIRM_TIMEOUT = 57;
-    MESH_INVALID_GTK = 58;
-    MESH_INCONSISTENT_PARAMETERS = 59;
-    MESH_INVALID_SECURITY_CAPABILITY = 60;
-    MESH_PATH_ERROR_NO_PROXY_INFORMATION = 61;
-    MESH_PATH_ERROR_NO_FORWARDING_INFORMATION = 62;
-    MESH_PATH_ERROR_DESTINATION_UNREACHABLE = 63;
-    MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS = 64;
-    MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS = 65;
-    MESH_CHANNEL_SWITCH_UNSPECIFIED = 66;
-    // 67 - 65535 Reserved
-};
-
 struct DeauthenticateRequest {
     array<uint8>:6 peer_sta_address;
-    // TODO(tkilbourn): define a ReasonCode enum for FIDL
-    ReasonCode reason_code;
+    fuchsia.wlan.ieee80211.ReasonCode reason_code;
     // VendorSpecificInfo
 };
 
@@ -256,8 +186,7 @@ struct DeauthenticateConfirm {
 
 struct DeauthenticateIndication {
     array<uint8>:6 peer_sta_address;
-    // TODO(tkilbourn): define a ReasonCode enum for FIDL
-    ReasonCode reason_code;
+    fuchsia.wlan.ieee80211.ReasonCode reason_code;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
     bool locally_initiated;
@@ -283,7 +212,7 @@ struct AssociateRequest {
 
 // MLME-ASSOCIATE.confrm (IEEE Std 802.11-2016, 6.3.7.3)
 
-enum AssociateResultCodes {
+enum AssociateResultCode {
     SUCCESS = 0;
     REFUSED_REASON_UNSPECIFIED = 1;
     REFUSED_NOT_AUTHENTICATED = 2;
@@ -296,7 +225,7 @@ enum AssociateResultCodes {
 };
 
 struct AssociateConfirm {
-    AssociateResultCodes result_code;
+    AssociateResultCode result_code;
     // CapabilityInformation
     uint16 association_id;
 
@@ -329,7 +258,7 @@ struct AssociateIndication {
 
 struct AssociateResponse {
     array<uint8>:6 peer_sta_address;
-    AssociateResultCodes result_code;
+    AssociateResultCode result_code;
 
     uint16 association_id;
 
@@ -348,8 +277,7 @@ struct AssociateResponse {
 
 struct DisassociateRequest {
     array<uint8>:6 peer_sta_address;
-    // TODO(tkilbourn): define a ReasonCode enum for FIDL
-    uint16 reason_code;
+    fuchsia.wlan.ieee80211.ReasonCode reason_code;
     // VendorSpecificInfo
 };
 
@@ -363,8 +291,7 @@ struct DisassociateConfirm {
 
 struct DisassociateIndication {
     array<uint8>:6 peer_sta_address;
-    // TODO(tkilbourn): define a ReasonCode enum for FIDL
-    uint16 reason_code;
+    fuchsia.wlan.ieee80211.ReasonCode reason_code;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
     bool locally_initiated;
@@ -442,7 +369,7 @@ struct StartRequest {
 
 // MLME-START.confirm (IEEE Std 802.11-2016, 6.3.11.3)
 
-enum StartResultCodes {
+enum StartResultCode {
     SUCCESS = 0;
     BSS_ALREADY_STARTED_OR_JOINED = 1;
     RESET_REQUIRED_BEFORE_START = 2;
@@ -451,7 +378,7 @@ enum StartResultCodes {
 };
 
 struct StartConfirm {
-    StartResultCodes result_code;
+    StartResultCode result_code;
 };
 
 // MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2)
@@ -460,14 +387,14 @@ struct StopRequest {
     bytes:32 ssid;
 };
 
-enum StopResultCodes {
+enum StopResultCode {
     SUCCESS = 0;
     BSS_ALREADY_STOPPED = 1;
     INTERNAL_ERROR = 2;
 };
 
 struct StopConfirm {
-    StopResultCodes result_code;
+    StopResultCode result_code;
 };
 
 // MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
@@ -516,14 +443,14 @@ struct EapolRequest {
 
 // MLME-EAPOL.confirm (IEEE Std 802.11-2016 6.3.22.2)
 
-enum EapolResultCodes {
+enum EapolResultCode {
     SUCCESS = 0;
     TRANSMISSION_FAILURE = 1;
     //LAST = TRANSMISSION_FAILURE;
 };
 
 struct EapolConfirm {
-    EapolResultCodes result_code;
+    EapolResultCode result_code;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.98

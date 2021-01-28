@@ -19,15 +19,15 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
 }  // namespace
 
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
-constexpr auto kDefaultAssocStatus =
-    ::fuchsia::wlan::ieee80211::StatusCode::STATUS_INVALID_PAIRWISE_CIPHER;
-constexpr uint16_t kDefaultDisassocReason = 5;
+constexpr auto kDefaultAssocStatus = wlan_ieee80211::StatusCode::STATUS_INVALID_PAIRWISE_CIPHER;
+constexpr auto kDefaultDisassocReason = wlan_ieee80211::ReasonCode::NO_MORE_STAS;
 
 void checkChannel(const wlan_channel_t& channel) {
   EXPECT_EQ(channel.primary, kDefaultTxInfo.channel.primary);

@@ -19,7 +19,6 @@
 #include <arpa/inet.h>
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
-#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
@@ -308,7 +307,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           }
           common::MacAddr bssid(assoc_state_.opts->bssid);
           ZX_ASSERT(bssid == *req_bssid);
-          DisassocLocalClient(scb_val->val);
+          DisassocLocalClient(static_cast<wlan_ieee80211::ReasonCode>(scb_val->val));
         } else if (softap_ifidx_ != std::nullopt && softap_ifidx_ == ifidx) {
           BRCMF_ERR("This iovar is not expected to be used on softAP iface.");
           return ZX_ERR_IO_REFUSED;
@@ -357,7 +356,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       if (softap_ifidx_ != std::nullopt) {
         StopSoftAP(softap_ifidx_.value());
       }
-      DisassocLocalClient(BRCMF_E_REASON_LINK_DISASSOC);
+      DisassocLocalClient(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
       dev_is_up_ = false;
       break;
     }
@@ -560,8 +559,9 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
 void SimFirmware::StopSoftAP(uint16_t ifidx) {
   // Disassoc and remove all the associated clients
   for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-    simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[ifidx].mac_addr, client->mac_addr,
-                                                       0);
+    simulation::SimDisassocReqFrame disassoc_req_frame(
+        iface_tbl_[ifidx].mac_addr, client->mac_addr,
+        wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON);
     hw_.Tx(disassoc_req_frame);
   }
   iface_tbl_[ifidx].ap_config.clients.clear();
@@ -700,8 +700,9 @@ zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* dat
           if (iface_tbl_[i].ap_config.ap_started) {
             BRCMF_DBG(SIM, "AP is still started...disassoc all clients");
             for (auto client : iface_tbl_[i].ap_config.clients) {
-              simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[i].mac_addr,
-                                                                 client->mac_addr, 0);
+              simulation::SimDisassocReqFrame disassoc_req_frame(
+                  iface_tbl_[i].mac_addr, client->mac_addr,
+                  wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON);
               hw_.Tx(disassoc_req_frame);
             }
           }
@@ -1220,7 +1221,7 @@ zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num,
 
 // Remove the client from the list. If found return true else false.
 bool SimFirmware::FindAndRemoveClient(const common::MacAddr client_mac, bool motivation_deauth,
-                                      uint16_t deauth_reason) {
+                                      wlan_ieee80211::ReasonCode deauth_reason) {
   if (softap_ifidx_ == std::nullopt) {
     BRCMF_ERR("SoftAP iface has not been allocated or started.");
     return false;
@@ -1234,12 +1235,14 @@ bool SimFirmware::FindAndRemoveClient(const common::MacAddr client_mac, bool mot
           // When this client is authenticated but not associated, only send up BRCMF_E_DEAUTH_IND
           // to driver.
           SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS,
-                            softap_ifidx_.value(), nullptr, 0, deauth_reason, client_mac);
+                            softap_ifidx_.value(), nullptr, 0, static_cast<uint32_t>(deauth_reason),
+                            client_mac);
         } else if (client->state == Client::ASSOCIATED) {
           // When this client is associated, send both BRCMF_E_DEAUTH_IND and BRCMF_E_DISASSOC_IND
           // events up to driver.
           SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS,
-                            softap_ifidx_.value(), nullptr, 0, deauth_reason, client_mac);
+                            softap_ifidx_.value(), nullptr, 0, static_cast<uint32_t>(deauth_reason),
+                            client_mac);
           SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS,
                             softap_ifidx_.value(), nullptr, BRCMF_EVENT_MSG_LINK,
                             WLANIF_REASON_CODE_LEAVING_NETWORK_DISASSOC, client_mac);
@@ -1283,7 +1286,7 @@ std::vector<brcmf_wsec_key_le> SimFirmware::GetKeyList(uint16_t ifidx) {
 
 void SimFirmware::RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> frame) {
   BRCMF_DBG(SIM, "Deauth from %s for %s reason: %d", MACSTR(frame->src_addr_),
-            MACSTR(frame->dst_addr_), frame->reason_);
+            MACSTR(frame->dst_addr_), static_cast<int>(frame->reason_));
   // First check if this is a deauth meant for a client associated to our SoftAP
   auto ifidx = GetIfidxByMac(frame->dst_addr_);
   if (ifidx == -1) {
@@ -1346,7 +1349,7 @@ wlan_channel_t SimFirmware::GetIfChannel(bool is_ap) {
 // This routine for now only handles Disassoc Request meant for the SoftAP IF.
 void SimFirmware::RxDisassocReq(std::shared_ptr<const simulation::SimDisassocReqFrame> frame) {
   BRCMF_DBG(SIM, "Disassoc from %s for %s reason: %d", MACSTR(frame->src_addr_),
-            MACSTR(frame->dst_addr_), frame->reason_);
+            MACSTR(frame->dst_addr_), static_cast<int>(frame->reason_));
   // First check if this is a disassoc meant for a client associated to our SoftAP
   auto ifidx = GetIfidxByMac(frame->dst_addr_);
   if (ifidx == -1) {
@@ -1360,7 +1363,8 @@ void SimFirmware::RxDisassocReq(std::shared_ptr<const simulation::SimDisassocReq
     return;
   }
   // Remove the client from the list (if found)
-  if (FindAndRemoveClient(frame->src_addr_, false)) {
+  if (FindAndRemoveClient(frame->src_addr_, false,
+                          wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON)) {
     BRCMF_DBG(SIM, "Disassoc done Num Clients: %lu", iface_tbl_[ifidx].ap_config.clients.size());
     return;
   }
@@ -1431,7 +1435,7 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
 void SimFirmware::SetAssocState(AssocState::AssocStateName state) { assoc_state_.state = state; }
 
 // Disassociate the Local Client (request coming in from the driver)
-void SimFirmware::DisassocLocalClient(uint32_t reason) {
+void SimFirmware::DisassocLocalClient(wlan_ieee80211::ReasonCode reason) {
   if (assoc_state_.state == AssocState::ASSOCIATED) {
     common::MacAddr bssid(assoc_state_.opts->bssid);
     common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
@@ -1451,7 +1455,7 @@ void SimFirmware::DisassocLocalClient(uint32_t reason) {
 // Disassoc/deauth Request from FakeAP for the Client IF.
 void SimFirmware::HandleDisconnectForClientIF(
     std::shared_ptr<const simulation::SimManagementFrame> frame, const common::MacAddr& bssid,
-    uint32_t reason) {
+    wlan_ieee80211::ReasonCode reason) {
   // Ignore if this is not intended for us
   common::MacAddr mac_addr(iface_tbl_[kClientIfidx].mac_addr);
   if (frame->dst_addr_ != mac_addr) {
@@ -1466,7 +1470,7 @@ void SimFirmware::HandleDisconnectForClientIF(
   if (frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_DEAUTH) {
     // The client could receive a deauth even after disassociation. Notify the driver always
     SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS, kClientIfidx, 0, 0,
-                      reason);
+                      static_cast<uint32_t>(reason));
     if (auth_state_.state == AuthState::AUTHENTICATED) {
       AuthClearContext();
     }
@@ -1483,15 +1487,16 @@ void SimFirmware::HandleDisconnectForClientIF(
 }
 
 // precondition: was associated
-void SimFirmware::SetStateToDisassociated(uint32_t reason, bool locally_initiated) {
+void SimFirmware::SetStateToDisassociated(wlan_ieee80211::ReasonCode reason,
+                                          bool locally_initiated) {
   // Disable beacon watchdog that triggers disconnect
   DisableBeaconWatchdog();
   // Send the appropriate event to driver.
   SendEventToDriver(0, nullptr, locally_initiated ? BRCMF_E_DISASSOC : BRCMF_E_DISASSOC_IND,
-                    BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0, reason,
+                    BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0, static_cast<uint32_t>(reason),
                     assoc_state_.opts->bssid, kDisassocEventDelay);
   SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
-                    reason, assoc_state_.opts->bssid, kLinkEventDelay);
+                    static_cast<uint32_t>(reason), assoc_state_.opts->bssid, kLinkEventDelay);
 }
 
 // Assoc Request from Client for the SoftAP IF
@@ -1671,7 +1676,7 @@ zx_status_t SimFirmware::StopInterface(const int32_t bsscfgidx) {
   if (iface_tbl_[ifidx].ap_mode) {
     StopSoftAP(ifidx);
   } else {
-    DisassocLocalClient(BRCMF_E_REASON_LINK_DISASSOC);
+    DisassocLocalClient(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
   }
   return ZX_OK;
 }

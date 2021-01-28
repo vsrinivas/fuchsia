@@ -5,7 +5,7 @@
 use {
     crate::client::{inspect, DeviceInfo, Ssid},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, ScanRequest, ScanResultCodes},
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, ScanRequest, ScanResultCode},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
     log::{error, warn},
@@ -104,10 +104,10 @@ pub enum ScanResult<D, J> {
     None,
     // "Join" scan has finished, either successfully or not.
     // The SME state machine can now send a JoinRequest to MLME if it desires so.
-    JoinScanFinished { token: J, result: Result<Vec<BssDescription>, ScanResultCodes> },
+    JoinScanFinished { token: J, result: Result<Vec<BssDescription>, ScanResultCode> },
     // "Discovery" scan has finished, either successfully or not.
     // SME is expected to forward the result to the user.
-    DiscoveryFinished { tokens: Vec<D>, result: Result<Vec<BssDescription>, ScanResultCodes> },
+    DiscoveryFinished { tokens: Vec<D>, result: Result<Vec<BssDescription>, ScanResultCode> },
 }
 
 impl<D, J> ScanScheduler<D, J> {
@@ -207,7 +207,7 @@ impl<D, J> ScanScheduler<D, J> {
             ScanState::NotScanning | ScanState::StaleJoinScan { .. } => ScanResult::None,
             ScanState::ScanningToJoin { cmd, bss_map, .. } => {
                 let result = match msg.code {
-                    ScanResultCodes::Success => {
+                    ScanResultCode::Success => {
                         Ok(convert_bss_map(bss_map, Some(cmd.ssid), sme_inspect))
                     }
                     other => Err(other),
@@ -217,7 +217,7 @@ impl<D, J> ScanScheduler<D, J> {
             ScanState::ScanningToDiscover { cmd, bss_map, .. } => ScanResult::DiscoveryFinished {
                 tokens: cmd.tokens,
                 result: match msg.code {
-                    ScanResultCodes::Success => Ok(convert_bss_map(bss_map, None, sme_inspect)),
+                    ScanResultCode::Success => Ok(convert_bss_map(bss_map, None, sme_inspect)),
                     other => Err(other),
                 },
             },
@@ -512,7 +512,7 @@ mod tests {
             &sme_inspect,
         );
         let (result, req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
         assert!(req.is_none());
@@ -560,7 +560,7 @@ mod tests {
             &sme_inspect,
         );
         let (result, req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
         assert!(req.is_none());
@@ -599,7 +599,7 @@ mod tests {
         bss.ies.extend_from_slice(ie_marker2);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect);
         let (result, req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
         assert!(req.is_none());
@@ -712,7 +712,7 @@ mod tests {
             &sme_inspect,
         );
         let (result, req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
 
@@ -771,7 +771,7 @@ mod tests {
             &sme_inspect,
         );
         let (result, mlme_req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
 
@@ -796,7 +796,7 @@ mod tests {
             &sme_inspect,
         );
         let (result, mlme_req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
 
@@ -873,7 +873,7 @@ mod tests {
         );
 
         let (result, req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
         assert!(req.is_none());
@@ -910,7 +910,7 @@ mod tests {
 
         // When stale scan finishes, the new one is ready to be sent
         let (stale_scan_result, next_req) = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
         match stale_scan_result {
@@ -997,7 +997,7 @@ mod tests {
         assert_eq!(req.channel_list, Some(vec![52, 1]));
 
         let _ = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id: req.txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id: req.txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
 
@@ -1027,7 +1027,7 @@ mod tests {
         assert_eq!(req.channel_list, Some(vec![52, 1]));
 
         let _ = sched.on_mlme_scan_end(
-            fidl_mlme::ScanEnd { txn_id: req.txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            fidl_mlme::ScanEnd { txn_id: req.txn_id, code: fidl_mlme::ScanResultCode::Success },
             &sme_inspect,
         );
 

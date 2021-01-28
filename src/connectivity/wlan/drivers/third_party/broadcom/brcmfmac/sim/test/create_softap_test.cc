@@ -26,6 +26,8 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
 }  // namespace
 
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
+
 constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = kDefaultCh, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
@@ -58,7 +60,7 @@ class CreateSoftAPTest : public SimTest {
   void SetExpectMacForInds(common::MacAddr set_mac);
 
   // Status field in the last received authentication frame.
-  ::fuchsia::wlan::ieee80211::StatusCode auth_resp_status_;
+  wlan_ieee80211::StatusCode auth_resp_status_;
 
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
@@ -306,7 +308,7 @@ void CreateSoftAPTest::TxAuthReq(simulation::SimAuthType auth_type, common::MacA
   common::MacAddr soft_ap_mac;
   softap_ifc_.GetMacAddr(&soft_ap_mac);
   simulation::SimAuthFrame auth_req_frame(client_mac, soft_ap_mac, 1, auth_type,
-                                          ::fuchsia::wlan::ieee80211::StatusCode::SUCCESS);
+                                          wlan_ieee80211::StatusCode::SUCCESS);
   env_->Tx(auth_req_frame, tx_info_, this);
 }
 
@@ -315,7 +317,8 @@ void CreateSoftAPTest::TxDisassocReq(common::MacAddr client_mac) {
   common::MacAddr soft_ap_mac;
   softap_ifc_.GetMacAddr(&soft_ap_mac);
   // Disassociate with the SoftAP
-  simulation::SimDisassocReqFrame disassoc_req_frame(client_mac, soft_ap_mac, 0);
+  simulation::SimDisassocReqFrame disassoc_req_frame(
+      client_mac, soft_ap_mac, wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
   env_->Tx(disassoc_req_frame, tx_info_, this);
 }
 
@@ -324,7 +327,8 @@ void CreateSoftAPTest::TxDeauthReq(common::MacAddr client_mac) {
   common::MacAddr soft_ap_mac;
   softap_ifc_.GetMacAddr(&soft_ap_mac);
   // Disassociate with the SoftAP
-  simulation::SimDeauthFrame deauth_frame(client_mac, soft_ap_mac, 0);
+  simulation::SimDeauthFrame deauth_frame(client_mac, soft_ap_mac,
+                                          wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
   env_->Tx(deauth_frame, tx_info_, this);
 }
 
@@ -524,7 +528,7 @@ TEST_F(CreateSoftAPTest, AssocWithWrongAuth) {
                              zx::msec(10));
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyNotAssoc, this), zx::msec(20));
   env_->Run(kSimulatedClockDuration);
-  EXPECT_EQ(auth_resp_status_, ::fuchsia::wlan::ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(auth_resp_status_, wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 }
 
 TEST_F(CreateSoftAPTest, DeauthBeforeAssoc) {

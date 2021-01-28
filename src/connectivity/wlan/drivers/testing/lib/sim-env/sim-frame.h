@@ -240,7 +240,7 @@ class SimDisassocReqFrame : public SimManagementFrame {
  public:
   SimDisassocReqFrame() = default;
   explicit SimDisassocReqFrame(const common::MacAddr& src, const common::MacAddr& dst,
-                               uint16_t reason)
+                               ::fuchsia::wlan::ieee80211::ReasonCode reason)
       : SimManagementFrame(src, dst), reason_(reason){};
 
   SimDisassocReqFrame(const SimDisassocReqFrame& disassoc_req);
@@ -251,7 +251,7 @@ class SimDisassocReqFrame : public SimManagementFrame {
 
   SimFrame* CopyFrame() const override;
 
-  uint16_t reason_;
+  ::fuchsia::wlan::ieee80211::ReasonCode reason_;
 };
 
 // Only one type of authentication frame for request and response
@@ -282,7 +282,8 @@ class SimAuthFrame : public SimManagementFrame {
 class SimDeauthFrame : public SimManagementFrame {
  public:
   SimDeauthFrame() = default;
-  explicit SimDeauthFrame(const common::MacAddr& src, const common::MacAddr& dst, uint16_t reason)
+  explicit SimDeauthFrame(const common::MacAddr& src, const common::MacAddr& dst,
+                          ::fuchsia::wlan::ieee80211::ReasonCode reason)
       : SimManagementFrame(src, dst), reason_(reason){};
 
   SimDeauthFrame(const SimDeauthFrame& deauth);
@@ -293,7 +294,7 @@ class SimDeauthFrame : public SimManagementFrame {
 
   SimFrame* CopyFrame() const override;
 
-  uint16_t reason_;
+  ::fuchsia::wlan::ieee80211::ReasonCode reason_;
 };
 
 // No support for contention-free data frames, aggregation or fragmentation for now

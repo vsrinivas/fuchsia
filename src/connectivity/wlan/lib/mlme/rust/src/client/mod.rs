@@ -233,7 +233,7 @@ impl ClientMlme {
                 ));
                 self.ctx.device.access_sme_sender(|sender| {
                     sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
-                        result_code: fidl_mlme::JoinResultCodes::Success,
+                        result_code: fidl_mlme::JoinResultCode::Success,
                     })
                 })
             }
@@ -243,7 +243,7 @@ impl ClientMlme {
                     sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
                         // TODO(fxbug.dev/44317): Only one failure code defined in IEEE 802.11-2016 6.3.4.3
                         // Can we do better?
-                        result_code: fidl_mlme::JoinResultCodes::JoinFailureTimeout,
+                        result_code: fidl_mlme::JoinResultCode::JoinFailureTimeout,
                     })
                 })?;
                 Err(e)
@@ -750,10 +750,10 @@ impl<'a> BoundClient<'a> {
             eapol_frame,
         );
         let result_code = match result {
-            Ok(()) => fidl_mlme::EapolResultCodes::Success,
+            Ok(()) => fidl_mlme::EapolResultCode::Success,
             Err(e) => {
                 error!("error sending EAPoL frame: {}", e);
-                fidl_mlme::EapolResultCodes::TransmissionFailure
+                fidl_mlme::EapolResultCode::TransmissionFailure
             }
         };
 
@@ -823,7 +823,7 @@ impl<'a> BoundClient<'a> {
     fn send_authenticate_conf(
         &mut self,
         auth_type: fidl_mlme::AuthenticationTypes,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        result_code: fidl_mlme::AuthenticateResultCode,
     ) {
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
@@ -838,7 +838,7 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an MLME-ASSOCIATE.confirm message to the SME.
-    fn send_associate_conf_failure(&mut self, result_code: fidl_mlme::AssociateResultCodes) {
+    fn send_associate_conf_failure(&mut self, result_code: fidl_mlme::AssociateResultCode) {
         // AID used for reporting failed associations to SME.
         const FAILED_ASSOCIATION_AID: mac::Aid = 0;
 
@@ -871,7 +871,7 @@ impl<'a> BoundClient<'a> {
         let mut assoc_conf = fidl_mlme::AssociateConfirm {
             association_id,
             cap_info: cap_info.raw(),
-            result_code: fidl_mlme::AssociateResultCodes::Success,
+            result_code: fidl_mlme::AssociateResultCode::Success,
             rates: vec![],
             wmm_param: None,
             ht_cap: None,
@@ -920,7 +920,7 @@ impl<'a> BoundClient<'a> {
     /// Sends an MLME-DEAUTHENTICATE.indication message to the joined BSS.
     fn send_deauthenticate_ind(
         &mut self,
-        reason_code: fidl_mlme::ReasonCode,
+        reason_code: fidl_ieee80211::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) {
         // Clear main_channel since there is no "main channel" after deauthenticating
@@ -941,13 +941,13 @@ impl<'a> BoundClient<'a> {
     /// Sends an MLME-DISASSOCIATE.indication message to the joined BSS.
     fn send_disassoc_ind(
         &mut self,
-        reason_code: fidl_mlme::ReasonCode,
+        reason_code: fidl_ieee80211::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) {
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
                 peer_sta_address: self.sta.bssid.0,
-                reason_code: reason_code.into_primitive(),
+                reason_code: reason_code,
                 locally_initiated: locally_initiated.0,
             })
         });
@@ -1354,7 +1354,7 @@ mod tests {
         let msg =
             m.fake_device.next_mlme_msg::<fidl_mlme::ScanEnd>().expect("error reading SCAN.end");
         assert_eq!(msg.txn_id, scan_txn_id);
-        assert_eq!(msg.code, fidl_mlme::ScanResultCodes::Success);
+        assert_eq!(msg.code, fidl_mlme::ScanResultCode::Success);
     }
 
     #[test]
@@ -1482,7 +1482,7 @@ mod tests {
             deauth_ind,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
                 locally_initiated: true,
             }
         );
@@ -1536,7 +1536,7 @@ mod tests {
             deauth_ind,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
                 locally_initiated: true,
             }
         );
@@ -2055,7 +2055,7 @@ mod tests {
             .expect("error reading EAPOL.confirm");
         assert_eq!(
             eapol_confirm,
-            fidl_mlme::EapolConfirm { result_code: fidl_mlme::EapolResultCodes::Success }
+            fidl_mlme::EapolConfirm { result_code: fidl_mlme::EapolResultCode::Success }
         );
 
         // Verify EAPoL frame was sent over the air.
@@ -2094,7 +2094,7 @@ mod tests {
         assert_eq!(
             eapol_confirm,
             fidl_mlme::EapolConfirm {
-                result_code: fidl_mlme::EapolResultCodes::TransmissionFailure
+                result_code: fidl_mlme::EapolResultCode::TransmissionFailure
             }
         );
 
@@ -2226,7 +2226,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
                 cap_info: 0x1234,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8],
                 wmm_param: None,
                 ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
@@ -2245,7 +2245,7 @@ mod tests {
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        client.send_associate_conf_failure(fidl_mlme::AssociateResultCodes::RefusedExternalReason);
+        client.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedExternalReason);
         let associate_conf = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
@@ -2255,7 +2255,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
                 cap_info: 0,
-                result_code: fidl_mlme::AssociateResultCodes::RefusedExternalReason,
+                result_code: fidl_mlme::AssociateResultCode::RefusedExternalReason,
                 rates: vec![],
                 wmm_param: None,
                 ht_cap: None,

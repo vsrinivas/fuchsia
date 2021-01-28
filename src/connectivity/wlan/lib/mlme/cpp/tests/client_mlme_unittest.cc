@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <gtest/gtest.h>
@@ -22,6 +23,7 @@ namespace wlan {
 
 namespace {
 
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 constexpr uint8_t kTestPayload[] = "Hello Fuchsia";
@@ -167,12 +169,12 @@ struct ClientTest : public ::testing::Test {
   }
 
   void AssertAuthConfirm(MlmeMsg<wlan_mlme::AuthenticateConfirm> msg,
-                         wlan_mlme::AuthenticateResultCodes result_code) {
+                         wlan_mlme::AuthenticateResultCode result_code) {
     EXPECT_EQ(msg.body()->result_code, result_code);
   }
 
   void AssertAssocConfirm(MlmeMsg<wlan_mlme::AssociateConfirm> msg, uint16_t aid,
-                          wlan_mlme::AssociateResultCodes result_code) {
+                          wlan_mlme::AssociateResultCode result_code) {
     EXPECT_EQ(msg.body()->association_id, aid);
     EXPECT_EQ(msg.body()->result_code, result_code);
   }
@@ -187,7 +189,7 @@ struct ClientTest : public ::testing::Test {
     EXPECT_EQ(frame.body()->status_code, 0);
   }
 
-  void AssertDeauthFrame(WlanPacket pkt, wlan_mlme::ReasonCode reason_code) {
+  void AssertDeauthFrame(WlanPacket pkt, wlan_ieee80211::ReasonCode reason_code) {
     auto frame = TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
@@ -261,7 +263,7 @@ TEST_F(ClientTest, Join) {
   // to SME.
   ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(true)));
   auto join_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
-  ASSERT_EQ(join_confirm.body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
+  ASSERT_EQ(join_confirm.body()->result_code, wlan_mlme::JoinResultCode::SUCCESS);
 }
 
 TEST_F(ClientTest, Authenticate) {
@@ -278,7 +280,7 @@ TEST_F(ClientTest, Authenticate) {
   //            then sent to SME
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
   auto auth_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
-  AssertAuthConfirm(std::move(auth_confirm), wlan_mlme::AuthenticateResultCodes::SUCCESS);
+  AssertAuthConfirm(std::move(auth_confirm), wlan_mlme::AuthenticateResultCode::SUCCESS);
 
   // Verify a delayed timeout won't cause another confirmation.
   SetTimeInBeaconPeriods(100);
@@ -305,7 +307,7 @@ TEST_F(ClientTest, Associate_Protected) {
   //            then sent to SME.
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame()));
   auto assoc_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
-  AssertAssocConfirm(std::move(assoc_confirm), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
+  AssertAssocConfirm(std::move(assoc_confirm), kAid, wlan_mlme::AssociateResultCode::SUCCESS);
 
   // Verify a delayed timeout won't cause another confirmation.
   SetTimeInBeaconPeriods(100);
@@ -319,7 +321,7 @@ TEST_F(ClientTest, Associate_Unprotected) {
   // to SME.
   ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(false)));
   auto join_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
-  ASSERT_EQ(join_conf.body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
+  ASSERT_EQ(join_conf.body()->result_code, wlan_mlme::JoinResultCode::SUCCESS);
 
   // (sme->mlme) Send AUTHENTICATION.request. Verify that no confirmation was
   // sent yet.
@@ -338,7 +340,7 @@ TEST_F(ClientTest, Associate_Unprotected) {
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
 
   auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
-  AssertAuthConfirm(std::move(auth_conf), wlan_mlme::AuthenticateResultCodes::SUCCESS);
+  AssertAuthConfirm(std::move(auth_conf), wlan_mlme::AuthenticateResultCode::SUCCESS);
 
   // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
   // yet.
@@ -355,7 +357,7 @@ TEST_F(ClientTest, Associate_Unprotected) {
   //            was then sent SME.
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame()));
   auto assoc_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
-  AssertAssocConfirm(std::move(assoc_conf), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
+  AssertAssocConfirm(std::move(assoc_conf), kAid, wlan_mlme::AssociateResultCode::SUCCESS);
 }
 
 TEST_F(ClientTest, ExchangeEapolFrames) {
@@ -391,7 +393,7 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
   auto eapol_confirm = MlmeMsg<wlan_mlme::EapolConfirm>::Decode(
       msg_data->data(), fuchsia::wlan::mlme::internal::kMLME_EapolConf_Ordinal);
   ASSERT_TRUE(eapol_confirm.has_value());
-  EXPECT_EQ(eapol_confirm.value().body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
+  EXPECT_EQ(eapol_confirm.value().body()->result_code, wlan_mlme::EapolResultCode::SUCCESS);
 
   // After controlled port opens, EAPOL frame has protected flag enabled
   EstablishRsna();
@@ -469,7 +471,7 @@ TEST_F(ClientTest, AuthTimeout) {
   SetTimeInBeaconPeriods(kAuthTimeout);
   TriggerTimeout();
   auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
-  AssertAuthConfirm(std::move(auth_conf), wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+  AssertAuthConfirm(std::move(auth_conf), wlan_mlme::AuthenticateResultCode::AUTH_FAILURE_TIMEOUT);
 }
 
 TEST_F(ClientTest, AssocTimeout) {
@@ -490,8 +492,7 @@ TEST_F(ClientTest, AssocTimeout) {
   SetTimeInBeaconPeriods(40);
   TriggerTimeout();
   auto assoc_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
-  AssertAssocConfirm(std::move(assoc_conf), 0,
-                     wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+  AssertAssocConfirm(std::move(assoc_conf), 0, wlan_mlme::AssociateResultCode::REFUSED_TEMPORARILY);
 }
 
 TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
@@ -698,7 +699,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
-                    wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                    wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
   device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
@@ -721,7 +722,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
-                    wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                    wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
   device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
@@ -760,7 +761,7 @@ TEST_F(ClientTest, AutoDeauth_DoNotDeauthWhileSwitchingChannel) {
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
-                    wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                    wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
   device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
@@ -819,7 +820,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
       kAssociationStatusBeaconCount);  // -- On-channel time without beacon -- //
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
-                    wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                    wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
   device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
@@ -854,7 +855,7 @@ TEST_F(ClientTest, AutoDeauth_SwitchingChannelBeforeDeauthTimeoutCouldTrigger) {
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
-                    wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                    wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
   device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
@@ -867,7 +868,7 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
-                    wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                    wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
   device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
@@ -897,7 +898,7 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
   // Verify that AUTHENTICATION.confirm was received.
   auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
   AssertAuthConfirm(std::move(auth_conf),
-                    wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+                    wlan_mlme::AuthenticateResultCode::AUTHENTICATION_REJECTED);
 
   // Fast forward in time would have caused a timeout.
   // The timeout however should have been canceled and we should not receive

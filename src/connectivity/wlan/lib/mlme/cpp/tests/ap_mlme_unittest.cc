@@ -109,14 +109,14 @@ struct Context {
 
   void AuthenticateClient() {
     SendClientAuthReqFrame();
-    HandleMlmeMsg(CreateAuthResponse(client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
+    HandleMlmeMsg(CreateAuthResponse(client_addr, wlan_mlme::AuthenticateResultCode::SUCCESS));
     device->AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>();
     device->wlan_queue.clear();
   }
 
   void AssociateClient(uint16_t aid) {
     SendClientAssocReqFrame();
-    HandleMlmeMsg(CreateAssocResponse(client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, aid));
+    HandleMlmeMsg(CreateAssocResponse(client_addr, wlan_mlme::AssociateResultCode::SUCCESS, aid));
     device->AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
     device->wlan_queue.clear();
   }
@@ -136,7 +136,7 @@ struct Context {
   }
 
   void AssertDeauthInd(MlmeMsg<wlan_mlme::DeauthenticateIndication> msg,
-                       wlan_mlme::ReasonCode reason_code) {
+                       wlan_ieee80211::ReasonCode reason_code) {
     EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), client_addr.byte, 6), 0);
     EXPECT_EQ(msg.body()->reason_code, reason_code);
   }
@@ -154,8 +154,7 @@ struct Context {
 
   void AssertDisassocInd(MlmeMsg<wlan_mlme::DisassociateIndication> msg) {
     EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), client_addr.byte, 6), 0);
-    EXPECT_EQ(msg.body()->reason_code,
-              static_cast<uint16_t>(wlan_mlme::ReasonCode::LEAVING_NETWORK_DISASSOC));
+    EXPECT_EQ(msg.body()->reason_code, wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
   }
 
   void AssertAuthFrame(WlanPacket pkt) {
@@ -233,7 +232,7 @@ TEST_F(ApInfraBssTest, StartAp) {
   ctx.HandleMlmeMsg(CreateStartRequest(true));
 
   ASSERT_EQ(device.AssertNextMsgFromSmeChannel<wlan_mlme::StartConfirm>().body()->result_code,
-            wlan_mlme::StartResultCodes::SUCCESS);
+            wlan_mlme::StartResultCode::SUCCESS);
 }
 
 TEST_F(ApInfraBssTest, ProbeRequest_Success) {
@@ -265,7 +264,7 @@ TEST_F(ApInfraBssTest, Authenticate_Success) {
 
   // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
   ctx.HandleMlmeMsg(
-      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
+      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCode::SUCCESS));
 
   // Verify authentication response frame for the client
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -280,7 +279,7 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
 
   // Simulate SME sending MLME-AUTHENTICATE.response msg with a refusal code
   ctx.HandleMlmeMsg(
-      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::REFUSED));
+      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCode::REFUSED));
 
   // Verify that authentication response frame for client is a refusal
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -329,7 +328,7 @@ TEST_F(ApInfraBssTest, ReauthenticateWhileAuthenticated) {
 
   // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
   ctx.HandleMlmeMsg(
-      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
+      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCode::SUCCESS));
 
   // Verify authentication response frame for the client
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -344,7 +343,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
   ctx.SendClientDeauthFrame();
 
   ctx.AssertDeauthInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>(),
-                      wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                      wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
 
   // Expect association context is still blank.
   wlan_assoc_ctx_t expected_ctx = {};
@@ -366,7 +365,7 @@ TEST_F(ApInfraBssTest, Associate_Success) {
 
   // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
   ctx.HandleMlmeMsg(
-      CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, kAid));
+      CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCode::SUCCESS, kAid));
 
   // Verify association response frame for the client
   // WLAN queue should have AssociateResponse
@@ -389,7 +388,7 @@ TEST_F(ApInfraBssTest, Associate_AssociationContext) {
 
   // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
   ctx.HandleMlmeMsg(
-      CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, kAid));
+      CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCode::SUCCESS, kAid));
 
   // Expect association context has been set properly.
   const wlan_assoc_ctx_t* actual_ctx = device.GetStationAssocContext();
@@ -442,7 +441,7 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
 
   // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
   ctx.HandleMlmeMsg(CreateAssocResponse(
-      ctx.client_addr, wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH, 0));
+      ctx.client_addr, wlan_mlme::AssociateResultCode::REFUSED_CAPABILITIES_MISMATCH, 0));
 
   // Expect association context has not been set (blank).
   wlan_assoc_ctx_t expected_ctx = {};
@@ -543,7 +542,7 @@ TEST_F(ApInfraBssTest, ReauthenticateWhileAssociated) {
 
   // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
   ctx.HandleMlmeMsg(
-      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
+      CreateAuthResponse(ctx.client_addr, wlan_mlme::AuthenticateResultCode::SUCCESS));
 
   // Verify authentication response frame for the client
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -567,7 +566,7 @@ TEST_F(ApInfraBssTest, ReassociationFlowWhileAssociated) {
 
   // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
   ctx.HandleMlmeMsg(
-      CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, kAid));
+      CreateAssocResponse(ctx.client_addr, wlan_mlme::AssociateResultCode::SUCCESS, kAid));
 
   // Verify association response frame for the client
   // WLAN queue should have AssociateResponse
@@ -589,7 +588,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
   // Send deauthentication frame
   ctx.SendClientDeauthFrame();
   ctx.AssertDeauthInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>(),
-                      wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
+                      wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
 
   // Expect association context has been cleared.
   wlan_assoc_ctx_t expected_ctx = {};
@@ -690,7 +689,7 @@ TEST_F(ApInfraBssTest, MlmeDeauthReqWhileAssociated) {
   ctx.EstablishRsna();
 
   // Send MLME-DEAUTHENTICATE.request
-  const auto reason_code = wlan_mlme::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT;
+  const auto reason_code = wlan_ieee80211::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT;
   ctx.HandleMlmeMsg(CreateDeauthRequest(ctx.client_addr, reason_code));
 
   // Verify deauthenticate frame was sent

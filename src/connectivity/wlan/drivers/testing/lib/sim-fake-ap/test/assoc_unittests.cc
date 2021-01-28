@@ -24,13 +24,13 @@ constexpr simulation::WlanTxInfo kDefaultTxInfo = {
 constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kClientMacAddr({0x11, 0x22, 0x33, 0x44, 0xee, 0xff});
-const uint16_t kClientDisassocReason = 1;
-const uint16_t kApDisassocReason = 2;
+constexpr auto kClientDisassocReason = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
+constexpr auto kApDisassocReason = wlan_ieee80211::ReasonCode::INVALID_AUTHENTICATION;
 
 class AssocTest : public ::testing::Test, public simulation::StationIfc {
  public:
   AssocTest() : ap_(&env_, kApBssid, kApSsid, kDefaultTxInfo.channel) { env_.AddStation(this); };
-  void DisassocFromAp(const common::MacAddr& sta, uint16_t reason);
+  void DisassocFromAp(const common::MacAddr& sta, wlan_ieee80211::ReasonCode reason);
   void FinishAuth();
   simulation::Environment env_;
   simulation::FakeAp ap_;
@@ -38,7 +38,7 @@ class AssocTest : public ::testing::Test, public simulation::StationIfc {
   unsigned assoc_resp_count_ = 0;
   unsigned disassoc_req_count_ = 0;
   std::list<wlan_ieee80211::StatusCode> assoc_status_list_;
-  std::list<uint16_t> disassoc_reason_list_;
+  std::list<wlan_ieee80211::ReasonCode> disassoc_reason_list_;
 
  private:
   // StationIfc methods
@@ -52,7 +52,7 @@ void validateChannel(const wlan_channel_t& channel) {
   EXPECT_EQ(channel.secondary80, kDefaultTxInfo.channel.secondary80);
 }
 
-void AssocTest::DisassocFromAp(const common::MacAddr& sta, uint16_t reason) {
+void AssocTest::DisassocFromAp(const common::MacAddr& sta, wlan_ieee80211::ReasonCode reason) {
   EXPECT_EQ(ap_.GetNumAssociatedClient(), 1U);
   ap_.DisassocSta(sta, reason);
 }

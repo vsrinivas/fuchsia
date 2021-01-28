@@ -156,8 +156,8 @@ MlmeMsg<wlan_mlme::AuthenticateRequest> CreateAuthRequest() {
   return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_AuthenticateReq_Ordinal};
 }
 
-MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(common::MacAddr peer_addr,
-                                                              wlan_mlme::ReasonCode reason_code) {
+MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(
+    common::MacAddr peer_addr, wlan_ieee80211::ReasonCode reason_code) {
   auto req = wlan_mlme::DeauthenticateRequest::New();
   std::memcpy(req->peer_sta_address.data(), peer_addr.byte, common::kMacAddrLen);
   req->reason_code = reason_code;
@@ -165,7 +165,7 @@ MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(common::MacAddr pe
 }
 
 MlmeMsg<wlan_mlme::AuthenticateResponse> CreateAuthResponse(
-    common::MacAddr client_addr, wlan_mlme::AuthenticateResultCodes result_code) {
+    common::MacAddr client_addr, wlan_mlme::AuthenticateResultCode result_code) {
   auto resp = wlan_mlme::AuthenticateResponse::New();
   std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
   resp->result_code = result_code;
@@ -189,7 +189,7 @@ MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsne) {
 }
 
 MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
-    common::MacAddr client_addr, wlan_mlme::AssociateResultCodes result_code, uint16_t aid) {
+    common::MacAddr client_addr, wlan_mlme::AssociateResultCode result_code, uint16_t aid) {
   auto resp = wlan_mlme::AssociateResponse::New();
   std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
   resp->result_code = result_code;

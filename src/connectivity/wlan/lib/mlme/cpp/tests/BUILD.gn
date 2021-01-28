@@ -39,14 +39,13 @@ source_set("test_main") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//sdk/fidl/fuchsia.wlan.mlme",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/timekeeper:testing",
   ]
 
-  deps = [
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ "//third_party/googletest:gtest" ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
@@ -61,6 +60,7 @@ executable("ap_mlme_tests") {
   deps = [
     ":test_main",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//sdk/fidl/fuchsia.wlan.mlme",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
@@ -81,6 +81,8 @@ executable("client_mlme_tests") {
 
   deps = [
     ":test_main",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//sdk/fidl/fuchsia.wlan.mlme",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
@@ -161,6 +163,8 @@ executable("service_tests") {
 
   deps = [
     ":test_main",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//sdk/fidl/fuchsia.wlan.mlme",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",

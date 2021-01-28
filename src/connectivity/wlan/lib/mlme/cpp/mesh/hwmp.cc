@@ -360,7 +360,7 @@ static void HandlePrep(const common::MacAddr& prep_transmitter_addr,
 static bool ShouldInvalidatePathByPerr(const common::MacAddr& perr_transmitter_addr,
                                        const common::ParsedPerrDestination& perr_dest,
                                        const PathTable* path_table, uint32_t* out_hwmp_seqno) {
-  using Rc = ::fuchsia::wlan::mlme::ReasonCode;
+  using Rc = ::fuchsia::wlan::ieee80211::ReasonCode;
 
   // PERR elements with an external address can only invalidate proxy
   // information, not forwarding information. An element with reason code set to
@@ -674,7 +674,7 @@ PacketQueue OnMissingForwardingPath(const common::MacAddr& peer_to_notify,
   });
   destination_writer.WriteValue<PerrPerDestinationTail>(
       {.reason_code = static_cast<uint16_t>(
-           fuchsia::wlan::mlme::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)});
+           ::fuchsia::wlan::ieee80211::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)});
 
   BufferWriter w(*packet);
   mac_header_writer.WriteMeshMgmtHeader(&w, kAction, peer_to_notify);

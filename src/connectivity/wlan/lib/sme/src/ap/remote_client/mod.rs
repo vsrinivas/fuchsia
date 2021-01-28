@@ -15,7 +15,8 @@ use {
         },
         timer::EventId,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::error,
     wlan_common::{
         ie::SupportedRate,
@@ -101,7 +102,7 @@ impl RemoteClient {
     pub fn send_authenticate_resp(
         &mut self,
         ctx: &mut Context,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        result_code: fidl_mlme::AuthenticateResultCode,
     ) {
         ctx.mlme_sink.send(MlmeRequest::AuthResponse(fidl_mlme::AuthenticateResponse {
             peer_sta_address: self.addr.clone(),
@@ -113,7 +114,7 @@ impl RemoteClient {
     pub fn send_deauthenticate_req(
         &mut self,
         ctx: &mut Context,
-        reason_code: fidl_mlme::ReasonCode,
+        reason_code: fidl_ieee80211::ReasonCode,
     ) {
         ctx.mlme_sink.send(MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
             peer_sta_address: self.addr.clone(),
@@ -125,7 +126,7 @@ impl RemoteClient {
     pub fn send_associate_resp(
         &mut self,
         ctx: &mut Context,
-        result_code: fidl_mlme::AssociateResultCodes,
+        result_code: fidl_mlme::AssociateResultCode,
         aid: Aid,
         capabilities: CapabilityInfo,
         rates: Vec<u8>,
@@ -318,7 +319,7 @@ mod tests {
         let (mut ctx, mut mlme_stream, _) = make_env();
         r_sta.send_authenticate_resp(
             &mut ctx,
-            fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+            fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
         );
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AuthResponse(fidl_mlme::AuthenticateResponse {
@@ -326,7 +327,7 @@ mod tests {
             result_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired);
+            assert_eq!(result_code, fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired);
         });
     }
 
@@ -348,7 +349,7 @@ mod tests {
         let (mut ctx, mut mlme_stream, _) = make_env();
         r_sta.send_associate_resp(
             &mut ctx,
-            fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory,
+            fidl_mlme::AssociateResultCode::RefusedApOutOfMemory,
             1,
             CapabilityInfo(0).with_short_preamble(true),
             vec![1, 2, 3],
@@ -362,7 +363,7 @@ mod tests {
             rates,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedApOutOfMemory);
             assert_eq!(association_id, 1);
             assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![1, 2, 3]);
@@ -373,14 +374,14 @@ mod tests {
     fn send_deauthenticate_req() {
         let mut r_sta = make_remote_client();
         let (mut ctx, mut mlme_stream, _) = make_env();
-        r_sta.send_deauthenticate_req(&mut ctx, fidl_mlme::ReasonCode::NoMoreStas);
+        r_sta.send_deauthenticate_req(&mut ctx, fidl_ieee80211::ReasonCode::NoMoreStas);
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
             peer_sta_address,
             reason_code,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::NoMoreStas);
+            assert_eq!(reason_code, fidl_ieee80211::ReasonCode::NoMoreStas);
         });
     }
 

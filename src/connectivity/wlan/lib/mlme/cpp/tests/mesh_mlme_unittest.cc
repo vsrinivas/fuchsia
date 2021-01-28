@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+
 #include <memory>
 
 #include <gtest/gtest.h>
@@ -21,7 +23,7 @@ struct MeshMlmeTest : public ::testing::Test {
     mlme.Init();
   }
 
-  wlan_mlme::StartResultCodes JoinMesh() {
+  wlan_mlme::StartResultCode JoinMesh() {
     wlan_mlme::StartRequest join;
     zx_status_t status = mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::StartRequest>(std::move(join), 123));
     EXPECT_EQ(ZX_OK, status);
@@ -31,7 +33,7 @@ struct MeshMlmeTest : public ::testing::Test {
     return msgs[0].body()->result_code;
   }
 
-  wlan_mlme::StopResultCodes LeaveMesh() {
+  wlan_mlme::StopResultCode LeaveMesh() {
     wlan_mlme::StopRequest leave;
     zx_status_t status = mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::StopRequest>(std::move(leave), 123));
     EXPECT_EQ(ZX_OK, status);
@@ -88,19 +90,19 @@ static std::unique_ptr<Packet> MakeWlanPacket(fbl::Span<const uint8_t> bytes) {
 }
 
 TEST_F(MeshMlmeTest, JoinLeave) {
-  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED);
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCode::BSS_ALREADY_STOPPED);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
   EXPECT_TRUE(device.beaconing_enabled);
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
-  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::BSS_ALREADY_STARTED_OR_JOINED);
+  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCode::SUCCESS);
   EXPECT_FALSE(device.beaconing_enabled);
-  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED);
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCode::BSS_ALREADY_STOPPED);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
   EXPECT_TRUE(device.beaconing_enabled);
 }
 
 TEST_F(MeshMlmeTest, HandleMpmOpen) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   // clang-format off
     const uint8_t frame[] = {
@@ -139,7 +141,7 @@ TEST_F(MeshMlmeTest, HandleMpmOpen) {
 }
 
 TEST_F(MeshMlmeTest, HandleMpmConfirm) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   // clang-format off
     const uint8_t frame[] = {
@@ -179,14 +181,14 @@ TEST_F(MeshMlmeTest, HandleMpmConfirm) {
 }
 
 TEST_F(MeshMlmeTest, GetPathTable) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
   auto path_table_msgs = GetPathTable();
   EXPECT_EQ(path_table_msgs.size(), 1ULL);
   EXPECT_EQ(0UL, path_table_msgs[0].body()->paths.size());
 }
 
 TEST_F(MeshMlmeTest, DeliverProxiedData) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   // Simulate receiving a data frame
   zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
@@ -264,13 +266,13 @@ TEST_F(MeshMlmeTest, DoNotDeliverWhenNotJoined) {
   EXPECT_EQ(mlme.HandleFramePacket(packet(1)), ZX_OK);
   EXPECT_TRUE(device.GetEthPackets().empty());
 
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   // Receive a frame while joined: expect it to be delivered
   EXPECT_EQ(mlme.HandleFramePacket(packet(2)), ZX_OK);
   EXPECT_EQ(device.GetEthPackets().size(), 1u);
 
-  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::SUCCESS);
+  EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCode::SUCCESS);
 
   // Again, receive a frame while not joined: expect it to be dropped
   EXPECT_EQ(mlme.HandleFramePacket(packet(3)), ZX_OK);
@@ -278,7 +280,7 @@ TEST_F(MeshMlmeTest, DoNotDeliverWhenNotJoined) {
 }
 
 TEST_F(MeshMlmeTest, HandlePreq) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
       // clang-format off
@@ -322,7 +324,7 @@ TEST_F(MeshMlmeTest, HandlePreq) {
 }
 
 TEST_F(MeshMlmeTest, DeliverDuplicateData) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   auto mesh_packet = [](uint8_t addr, uint8_t seq, uint8_t data) {
     // clang-format off
@@ -420,7 +422,7 @@ TEST_F(MeshMlmeTest, DeliverDuplicateData) {
 }
 
 TEST_F(MeshMlmeTest, DataForwarding) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   const common::MacAddr next_hop("20:20:20:20:20:20");
   const common::MacAddr mesh_da("30:30:30:30:30:30");
@@ -515,7 +517,7 @@ TEST_F(MeshMlmeTest, OutgoingData) {
     };
   };
 
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   EstablishPath(dest, next_hop, 100);
 
@@ -577,7 +579,7 @@ TEST_F(MeshMlmeTest, OutgoingData) {
 }
 
 TEST_F(MeshMlmeTest, GeneratePerrIfMissingForwardingPath) {
-  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCode::SUCCESS);
 
   // Receive a data frame originating from an external address 60:60:60:60:60:60
   // (proxied by 40:40:40:40:40:40) and targeted at an external address

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
+#include "src/connectivity/wlan/drivers/wlanif/device.h"
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <net/ethernet.h>
@@ -12,14 +13,15 @@
 
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
-#include <wlan/common/logging.h>
 
-#include "convert.h"
-#include "driver.h"
+#include "src/connectivity/wlan/drivers/wlanif/convert.h"
+#include "src/connectivity/wlan/drivers/wlanif/driver.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/logging.h"
 
 namespace wlanif {
 
 namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
@@ -427,7 +429,7 @@ void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
   std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
 
   // reason_code
-  impl_req.reason_code = req.reason_code;
+  impl_req.reason_code = static_cast<uint16_t>(req.reason_code);
 
   wlanif_impl_disassoc_req(&wlanif_impl_, &impl_req);
 }
@@ -891,7 +893,7 @@ void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
   std::memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
 
   // reason_code
-  fidl_ind.reason_code = ind->reason_code;
+  fidl_ind.reason_code = static_cast<wlan_ieee80211::ReasonCode>(ind->reason_code);
 
   // locally_initiated
   fidl_ind.locally_initiated = ind->locally_initiated;

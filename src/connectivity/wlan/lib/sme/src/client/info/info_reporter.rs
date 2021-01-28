@@ -132,7 +132,7 @@ impl InfoReporter {
 }
 
 fn convert_scan_result(
-    result: &Result<Vec<BssDescription>, fidl_mlme::ScanResultCodes>,
+    result: &Result<Vec<BssDescription>, fidl_mlme::ScanResultCode>,
 ) -> (Option<&Vec<BssDescription>>, ScanResult) {
     match result {
         Ok(bss_list) => (Some(bss_list), ScanResult::Success),

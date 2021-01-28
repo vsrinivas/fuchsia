@@ -75,13 +75,13 @@ pub fn fake_wmm_param() -> fidl_mlme::WmmParameter {
     wmm_param
 }
 
-pub fn create_join_conf(result_code: fidl_mlme::JoinResultCodes) -> fidl_mlme::MlmeEvent {
+pub fn create_join_conf(result_code: fidl_mlme::JoinResultCode) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::JoinConf { resp: fidl_mlme::JoinConfirm { result_code } }
 }
 
 pub fn create_auth_conf(
     bssid: [u8; 6],
-    result_code: fidl_mlme::AuthenticateResultCodes,
+    result_code: fidl_mlme::AuthenticateResultCode,
 ) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AuthenticateConf {
         resp: fidl_mlme::AuthenticateConfirm {
@@ -112,7 +112,7 @@ pub fn fake_negotiated_channel_and_capabilities() -> (channel::Channel, ClientCa
     )
 }
 
-pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> fidl_mlme::MlmeEvent {
+pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCode) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AssociateConf {
         resp: fidl_mlme::AssociateConfirm {
             result_code,

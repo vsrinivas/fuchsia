@@ -239,6 +239,7 @@ executable("disassoc_test") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/fuchsia.hardware.wlan.info",
     "//sdk/banjo/fuchsia.hardware.wlanif",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",

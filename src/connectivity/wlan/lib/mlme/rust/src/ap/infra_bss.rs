@@ -203,7 +203,7 @@ impl InfraBss {
     ) -> Result<(), Error> {
         let client = get_client_mut(&mut self.clients, req.peer_sta_address)?;
         client
-            .handle_mlme_disassoc_req(ctx, req.reason_code)
+            .handle_mlme_disassoc_req(ctx, req.reason_code as u16)
             .map_err(|e| make_client_error(client.addr, e))
     }
 
@@ -607,6 +607,7 @@ mod tests {
             key::{KeyType, Protection},
             timer::{FakeScheduler, Scheduler, Timer},
         },
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         wlan_common::{
             assert_variant,
             big_endian::BigEndianU16,
@@ -713,7 +714,7 @@ mod tests {
             &mut ctx,
             fidl_mlme::AuthenticateResponse {
                 peer_sta_address: CLIENT_ADDR,
-                result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+                result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
             },
         )
         .expect("expected InfraBss::handle_mlme_auth_resp ok");
@@ -759,7 +760,7 @@ mod tests {
                     &mut ctx,
                     fidl_mlme::AuthenticateResponse {
                         peer_sta_address: CLIENT_ADDR,
-                        result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+                        result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
                     },
                 )
                 .expect_err("expected InfraBss::handle_mlme_auth_resp error")
@@ -791,7 +792,7 @@ mod tests {
             &mut ctx,
             fidl_mlme::DeauthenticateRequest {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             },
         )
         .expect("expected InfraBss::handle_mlme_deauth_req ok");
@@ -837,7 +838,7 @@ mod tests {
             &mut ctx,
             fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
                 cap: 0,
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -891,7 +892,7 @@ mod tests {
             &mut ctx,
             fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
                 cap: CapabilityInfo(0).with_short_preamble(true).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -945,7 +946,7 @@ mod tests {
             &mut ctx,
             fidl_mlme::DisassociateRequest {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
             },
         )
         .expect("expected InfraBss::handle_mlme_disassoc_req ok");
@@ -989,7 +990,7 @@ mod tests {
             &mut ctx,
             fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
                 cap: 0,
                 rates: vec![1, 2, 3],
@@ -1124,7 +1125,7 @@ mod tests {
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
 
         bss.handle_mgmt_frame(
@@ -1364,7 +1365,7 @@ mod tests {
 
         // Move the client to associated so it can handle data frames.
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -1372,7 +1373,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1484,7 +1485,7 @@ mod tests {
 
         // Move the client to associated so it can handle data frames.
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -1492,7 +1493,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1529,7 +1530,7 @@ mod tests {
             msg,
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::ReasonInactivity as u16,
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
                 locally_initiated: true,
             },
         );
@@ -1621,7 +1622,7 @@ mod tests {
         // Move the client to authenticated, but not associated: data frames are still not
         // permitted.
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
 
         fake_device.wlan_queue.clear();
@@ -1692,7 +1693,7 @@ mod tests {
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -1700,7 +1701,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1792,7 +1793,7 @@ mod tests {
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -1800,7 +1801,7 @@ mod tests {
                 true,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1842,7 +1843,7 @@ mod tests {
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -1850,7 +1851,7 @@ mod tests {
                 true,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1912,7 +1913,7 @@ mod tests {
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -1920,7 +1921,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -2307,7 +2308,7 @@ mod tests {
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -2315,7 +2316,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -2382,7 +2383,7 @@ mod tests {
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -2390,7 +2391,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -2537,7 +2538,7 @@ mod tests {
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -2545,7 +2546,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )

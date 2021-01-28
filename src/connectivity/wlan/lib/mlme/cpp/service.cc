@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+
 #include <wlan/mlme/service.h>
 
 namespace wlan {
 namespace service {
 
+namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_mesh = ::fuchsia::wlan::mesh;
 
@@ -30,7 +33,7 @@ std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg) {
   }
 }
 
-zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code) {
+zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCode result_code) {
   debugfn();
   wlan_mlme::JoinConfirm conf;
   conf.result_code = result_code;
@@ -38,7 +41,7 @@ zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes 
 }
 
 zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
-                            wlan_mlme::AuthenticateResultCodes code) {
+                            wlan_mlme::AuthenticateResultCode code) {
   debugfn();
   wlan_mlme::AuthenticateConfirm conf;
   peer_sta.CopyTo(conf.peer_sta_address.data());
@@ -67,7 +70,7 @@ zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& pe
 }
 
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                 wlan_mlme::ReasonCode code) {
+                                 wlan_ieee80211::ReasonCode code) {
   debugfn();
   wlan_mlme::DeauthenticateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());
@@ -76,10 +79,10 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
                         fuchsia::wlan::mlme::internal::kMLME_DeauthenticateInd_Ordinal);
 }
 
-zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
+zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCode code,
                              uint16_t aid) {
   debugfn();
-  ZX_DEBUG_ASSERT(code != wlan_mlme::AssociateResultCodes::SUCCESS || aid != 0);
+  ZX_DEBUG_ASSERT(code != wlan_mlme::AssociateResultCode::SUCCESS || aid != 0);
 
   wlan_mlme::AssociateConfirm conf;
   conf.result_code = code;
@@ -106,7 +109,7 @@ zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& 
 }
 
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                       uint16_t code) {
+                                       wlan_ieee80211::ReasonCode code) {
   debugfn();
   wlan_mlme::DisassociateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());
@@ -121,7 +124,7 @@ zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi
   return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_SignalReport_Ordinal);
 }
 
-zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code) {
+zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCode result_code) {
   debugfn();
   wlan_mlme::EapolConfirm resp;
   resp.result_code = result_code;
@@ -149,13 +152,13 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
   return SendServiceMsg(device, &ind, fuchsia::wlan::mlme::internal::kMLME_EapolInd_Ordinal);
 }
 
-zx_status_t SendStartConfirm(DeviceInterface* device, wlan_mlme::StartResultCodes code) {
+zx_status_t SendStartConfirm(DeviceInterface* device, wlan_mlme::StartResultCode code) {
   wlan_mlme::StartConfirm msg;
   msg.result_code = code;
   return SendServiceMsg(device, &msg, fuchsia::wlan::mlme::internal::kMLME_StartConf_Ordinal);
 }
 
-zx_status_t SendStopConfirm(DeviceInterface* device, wlan_mlme::StopResultCodes code) {
+zx_status_t SendStopConfirm(DeviceInterface* device, wlan_mlme::StopResultCode code) {
   wlan_mlme::StopConfirm msg;
   msg.result_code = code;
   return SendServiceMsg(device, &msg, fuchsia::wlan::mlme::internal::kMLME_StopConf_Ordinal);

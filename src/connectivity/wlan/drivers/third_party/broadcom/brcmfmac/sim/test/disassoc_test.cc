@@ -3,6 +3,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/errors.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
@@ -15,7 +16,7 @@ namespace wlan::brcmfmac {
 
 TEST_F(SimTest, Disassoc) {
   constexpr zx::duration kTestDuration = zx::sec(100);
-  uint16_t kDisassocReason = 44;
+  constexpr auto kDisassocReason = ::fuchsia::wlan::ieee80211::ReasonCode::NOT_AUTHENTICATED;
   const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
   constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
   constexpr wlan_channel_t kApChannel = {
@@ -48,7 +49,7 @@ TEST_F(SimTest, Disassoc) {
   ASSERT_EQ(client_ifc.stats_.disassoc_indications.size(), 1U);
   const wlanif_disassoc_indication_t& disassoc_ind = client_ifc.stats_.disassoc_indications.front();
   // Verify reason code is propagated
-  EXPECT_EQ(disassoc_ind.reason_code, kDisassocReason);
+  EXPECT_EQ(disassoc_ind.reason_code, static_cast<wlanif_reason_code_t>(kDisassocReason));
   // Disassociated by AP so not locally initiated
   EXPECT_EQ(disassoc_ind.locally_initiated, false);
 }

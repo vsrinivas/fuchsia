@@ -204,7 +204,7 @@ impl super::Station for MeshSme {
             State::Idle => State::Idle,
             State::Joining { responder, pending, config } => match event {
                 MlmeEvent::StartConf { resp } => match resp.result_code {
-                    fidl_mlme::StartResultCodes::Success => {
+                    fidl_mlme::StartResultCode::Success => {
                         responder.respond(JoinMeshResult::Success);
                         if pending.is_empty() {
                             State::Joined { config }
@@ -266,9 +266,7 @@ impl super::Station for MeshSme {
             },
             State::Leaving { config, pending } => match event {
                 MlmeEvent::StopConf { resp } => match resp.result_code {
-                    fidl_mlme::StopResultCodes::Success => {
-                        on_back_to_idle(pending, &self.mlme_sink)
-                    }
+                    fidl_mlme::StopResultCode::Success => on_back_to_idle(pending, &self.mlme_sink),
                     other => {
                         error!("failed to leave mesh: {:?}", other);
                         for responder in pending.leave {

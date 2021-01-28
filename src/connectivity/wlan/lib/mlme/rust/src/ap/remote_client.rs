@@ -14,7 +14,8 @@ use {
     },
     banjo_ddk_hw_wlan_ieee80211::*,
     banjo_fuchsia_hardware_wlan_info::*,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     std::collections::VecDeque,
     wlan_common::{
         appendable::Appendable,
@@ -262,7 +263,7 @@ impl RemoteClient {
         })?;
         ctx.send_mlme_disassoc_ind(
             self.addr.clone(),
-            ReasonCode::REASON_INACTIVITY.0,
+            fidl_ieee80211::ReasonCode::ReasonInactivity,
             LocallyInitiated(true),
         )
         .map_err(ClientRejection::SmeSendError)?;
@@ -321,11 +322,11 @@ impl RemoteClient {
     pub fn handle_mlme_auth_resp(
         &mut self,
         ctx: &mut Context,
-        result_code: fidl_mlme::AuthenticateResultCodes,
+        result_code: fidl_mlme::AuthenticateResultCode,
     ) -> Result<(), Error> {
         self.change_state(
             ctx,
-            if result_code == fidl_mlme::AuthenticateResultCodes::Success {
+            if result_code == fidl_mlme::AuthenticateResultCode::Success {
                 State::Authenticated
             } else {
                 State::Deauthenticated
@@ -340,18 +341,18 @@ impl RemoteClient {
             AuthAlgorithmNumber::OPEN,
             2,
             match result_code {
-                fidl_mlme::AuthenticateResultCodes::Success => StatusCode::SUCCESS,
-                fidl_mlme::AuthenticateResultCodes::Refused => StatusCode::REFUSED,
-                fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired => {
+                fidl_mlme::AuthenticateResultCode::Success => StatusCode::SUCCESS,
+                fidl_mlme::AuthenticateResultCode::Refused => StatusCode::REFUSED,
+                fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired => {
                     StatusCode::ANTI_CLOGGING_TOKEN_REQUIRED
                 }
-                fidl_mlme::AuthenticateResultCodes::FiniteCyclicGroupNotSupported => {
+                fidl_mlme::AuthenticateResultCode::FiniteCyclicGroupNotSupported => {
                     StatusCode::UNSUPPORTED_FINITE_CYCLIC_GROUP
                 }
-                fidl_mlme::AuthenticateResultCodes::AuthenticationRejected => {
+                fidl_mlme::AuthenticateResultCode::AuthenticationRejected => {
                     StatusCode::CHALLENGE_FAILURE
                 }
-                fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout => {
+                fidl_mlme::AuthenticateResultCode::AuthFailureTimeout => {
                     StatusCode::REJECTED_SEQUENCE_TIMEOUT
                 }
             },
@@ -368,7 +369,7 @@ impl RemoteClient {
     pub fn handle_mlme_deauth_req(
         &mut self,
         ctx: &mut Context,
-        reason_code: fidl_mlme::ReasonCode,
+        reason_code: fidl_ieee80211::ReasonCode,
     ) -> Result<(), Error> {
         self.change_state(ctx, State::Deauthenticated)?;
 
@@ -395,13 +396,13 @@ impl RemoteClient {
         is_rsn: bool,
         channel: u8,
         capabilities: mac::CapabilityInfo,
-        result_code: fidl_mlme::AssociateResultCodes,
+        result_code: fidl_mlme::AssociateResultCode,
         aid: Aid,
         rates: &[u8],
     ) -> Result<(), Error> {
         self.change_state(
             ctx,
-            if result_code == fidl_mlme::AssociateResultCodes::Success {
+            if result_code == fidl_mlme::AssociateResultCode::Success {
                 State::Associated {
                     aid,
                     eapol_controlled_port: if is_rsn {
@@ -463,7 +464,7 @@ impl RemoteClient {
         }
 
         let (in_buf, bytes_written) = match result_code {
-            fidl_mlme::AssociateResultCodes::Success => ctx.make_assoc_resp_frame(
+            fidl_mlme::AssociateResultCode::Success => ctx.make_assoc_resp_frame(
                 self.addr,
                 capabilities,
                 aid,
@@ -474,31 +475,29 @@ impl RemoteClient {
                 self.addr,
                 capabilities,
                 match result_code {
-                    fidl_mlme::AssociateResultCodes::Success => {
+                    fidl_mlme::AssociateResultCode::Success => {
                         panic!("Success should have already been handled");
                     }
-                    fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified => {
-                        StatusCode::REFUSED
-                    }
-                    fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated => {
+                    fidl_mlme::AssociateResultCode::RefusedReasonUnspecified => StatusCode::REFUSED,
+                    fidl_mlme::AssociateResultCode::RefusedNotAuthenticated => {
                         StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED
                     }
-                    fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch => {
+                    fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch => {
                         StatusCode::REFUSED_CAPABILITIES_MISMATCH
                     }
-                    fidl_mlme::AssociateResultCodes::RefusedExternalReason => {
+                    fidl_mlme::AssociateResultCode::RefusedExternalReason => {
                         StatusCode::REFUSED_EXTERNAL_REASON
                     }
-                    fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory => {
+                    fidl_mlme::AssociateResultCode::RefusedApOutOfMemory => {
                         StatusCode::REFUSED_AP_OUT_OF_MEMORY
                     }
-                    fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch => {
+                    fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch => {
                         StatusCode::REFUSED_BASIC_RATES_MISMATCH
                     }
-                    fidl_mlme::AssociateResultCodes::RejectedEmergencyServicesNotSupported => {
+                    fidl_mlme::AssociateResultCode::RejectedEmergencyServicesNotSupported => {
                         StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED
                     }
-                    fidl_mlme::AssociateResultCodes::RefusedTemporarily => {
+                    fidl_mlme::AssociateResultCode::RefusedTemporarily => {
                         StatusCode::REFUSED_TEMPORARILY
                     }
                 },
@@ -579,8 +578,13 @@ impl RemoteClient {
         reason_code: ReasonCode,
     ) -> Result<(), ClientRejection> {
         self.change_state(ctx, State::Authenticated).map_err(ClientRejection::DeviceError)?;
-        ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code.0, LocallyInitiated(false))
-            .map_err(ClientRejection::SmeSendError)
+        ctx.send_mlme_disassoc_ind(
+            self.addr.clone(),
+            fidl_ieee80211::ReasonCode::from_primitive(reason_code.0)
+                .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason),
+            LocallyInitiated(false),
+        )
+        .map_err(ClientRejection::SmeSendError)
     }
 
     /// Handles association request frames (IEEE Std 802.11-2016, 9.3.3.6) from the PHY.
@@ -654,8 +658,8 @@ impl RemoteClient {
         self.change_state(ctx, State::Deauthenticated).map_err(ClientRejection::DeviceError)?;
         ctx.send_mlme_deauth_ind(
             self.addr.clone(),
-            fidl_mlme::ReasonCode::from_primitive(reason_code.0)
-                .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason),
+            fidl_ieee80211::ReasonCode::from_primitive(reason_code.0)
+                .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason),
             LocallyInitiated(false),
         )
         .map_err(ClientRejection::SmeSendError)
@@ -860,8 +864,8 @@ impl RemoteClient {
 
                 ctx.send_mlme_deauth_ind(
                     self.addr,
-                    // Safe: fidl_mlme::ReasonCode has a 1:1 mapping with ReasonCode.
-                    fidl_mlme::ReasonCode::from_primitive(reason_code.0).unwrap(),
+                    // Safe: fidl_ieee80211::ReasonCode has a 1:1 mapping with ReasonCode.
+                    fidl_ieee80211::ReasonCode::from_primitive(reason_code.0).unwrap(),
                     LocallyInitiated(true),
                 )
                 .map_err(ClientRejection::SmeSendError)?;
@@ -877,8 +881,13 @@ impl RemoteClient {
                     ))
                 })?;
 
-                ctx.send_mlme_disassoc_ind(self.addr, reason_code.0, LocallyInitiated(true))
-                    .map_err(ClientRejection::SmeSendError)?;
+                ctx.send_mlme_disassoc_ind(
+                    self.addr,
+                    // Safe: fidl_ieee80211::ReasonCode has a 1:1 mapping with ReasonCode.
+                    fidl_ieee80211::ReasonCode::from_primitive(reason_code.0).unwrap(),
+                    LocallyInitiated(true),
+                )
+                .map_err(ClientRejection::SmeSendError)?;
             }
             State::Associated { .. } => {
                 panic!("all frames should be permitted for an associated client")
@@ -1114,7 +1123,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
-            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         assert_variant!(r_sta.state.as_ref(), State::Authenticated);
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -1143,7 +1152,7 @@ mod tests {
         r_sta
             .handle_mlme_auth_resp(
                 &mut ctx,
-                fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+                fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
             )
             .expect("expected OK");
         assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
@@ -1171,7 +1180,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
-            .handle_mlme_deauth_req(&mut ctx, fidl_mlme::ReasonCode::LeavingNetworkDeauth)
+            .handle_mlme_deauth_req(&mut ctx, fidl_ieee80211::ReasonCode::LeavingNetworkDeauth)
             .expect("expected OK");
         assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -1201,7 +1210,7 @@ mod tests {
                 true,
                 1,
                 CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1267,7 +1276,7 @@ mod tests {
                 true,
                 1,
                 CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1277,7 +1286,7 @@ mod tests {
         r_sta
             .handle_mlme_disassoc_req(
                 &mut ctx,
-                fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc as u16,
             )
             .expect("expected OK");
         assert!(!fake_device.assocs.contains_key(&CLIENT_ADDR));
@@ -1296,7 +1305,7 @@ mod tests {
                 true,
                 1,
                 CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1304,7 +1313,7 @@ mod tests {
         assert!(fake_device.assocs.contains_key(&CLIENT_ADDR));
 
         r_sta
-            .handle_mlme_deauth_req(&mut ctx, fidl_mlme::ReasonCode::LeavingNetworkDeauth)
+            .handle_mlme_deauth_req(&mut ctx, fidl_ieee80211::ReasonCode::LeavingNetworkDeauth)
             .expect("expected OK");
         assert!(!fake_device.assocs.contains_key(&CLIENT_ADDR));
     }
@@ -1321,7 +1330,7 @@ mod tests {
                 false,
                 1,
                 CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -1344,7 +1353,7 @@ mod tests {
                 false,
                 1,
                 CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
                 1, // This AID is ignored in the case of an error.
                 &[][..],
             )
@@ -1379,7 +1388,7 @@ mod tests {
                 false,
                 1,
                 CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::RejectedEmergencyServicesNotSupported,
+                fidl_mlme::AssociateResultCode::RejectedEmergencyServicesNotSupported,
                 1, // This AID is ignored in the case of an error.
                 &[][..],
             )
@@ -1411,7 +1420,7 @@ mod tests {
         r_sta
             .handle_mlme_disassoc_req(
                 &mut ctx,
-                fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc as u16,
             )
             .expect("expected OK");
         assert_variant!(r_sta.state.as_ref(), State::Authenticated);
@@ -1543,7 +1552,7 @@ mod tests {
         r_sta
             .handle_disassoc_frame(
                 &mut ctx,
-                ReasonCode(fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16),
+                ReasonCode(fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc as u16),
             )
             .expect("expected OK");
 
@@ -1554,7 +1563,7 @@ mod tests {
             msg,
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
                 locally_initiated: false,
             },
         );
@@ -1650,7 +1659,7 @@ mod tests {
         r_sta
             .handle_deauth_frame(
                 &mut ctx,
-                ReasonCode(fidl_mlme::ReasonCode::LeavingNetworkDeauth as u16),
+                ReasonCode(fidl_ieee80211::ReasonCode::LeavingNetworkDeauth as u16),
             )
             .expect("expected OK");
         let msg = fake_device
@@ -1660,7 +1669,7 @@ mod tests {
             msg,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
                 locally_initiated: false,
             }
         );
@@ -2006,7 +2015,7 @@ mod tests {
             msg,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::InvalidClass3Frame,
+                reason_code: fidl_ieee80211::ReasonCode::InvalidClass3Frame,
                 locally_initiated: true,
             },
         );
@@ -2069,7 +2078,7 @@ mod tests {
             msg,
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::InvalidClass3Frame as u16,
+                reason_code: fidl_ieee80211::ReasonCode::InvalidClass3Frame,
                 locally_initiated: true,
             },
         );
@@ -2312,7 +2321,7 @@ mod tests {
             msg,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::InvalidClass2Frame,
+                reason_code: fidl_ieee80211::ReasonCode::InvalidClass2Frame,
                 locally_initiated: true,
             },
         );
@@ -2450,7 +2459,7 @@ mod tests {
             msg,
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::ReasonInactivity as u16,
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
                 locally_initiated: true,
             },
         );

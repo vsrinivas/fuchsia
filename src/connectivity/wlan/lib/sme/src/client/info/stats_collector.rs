@@ -440,7 +440,7 @@ mod tests {
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
-            fidl_mlme::AuthenticateResultCodes::Refused,
+            fidl_mlme::AuthenticateResultCode::Refused,
         ));
         let stats = stats_collector.report_connect_finished(result.clone());
 
@@ -598,7 +598,7 @@ mod tests {
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
         let scan_req = fake_scan_request();
         assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
-        let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InternalError).into();
+        let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCode::InternalError).into();
         let stats = stats_collector.report_connect_finished(failure);
 
         // Previous disconnect info should not be reported on fail attempt

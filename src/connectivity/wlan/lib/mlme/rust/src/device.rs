@@ -555,7 +555,7 @@ mod tests {
         fidl_mlme::AuthenticateConfirm {
             peer_sta_address: [1; 6],
             auth_type: fidl_mlme::AuthenticationTypes::SharedKey,
-            result_code: fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout,
+            result_code: fidl_mlme::AuthenticateResultCode::AuthFailureTimeout,
         }
     }
 

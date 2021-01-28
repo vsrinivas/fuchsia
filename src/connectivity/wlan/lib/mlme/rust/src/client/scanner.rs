@@ -62,16 +62,16 @@ impl From<ScanError> for zx::Status {
     }
 }
 
-impl From<ScanError> for fidl_mlme::ScanResultCodes {
+impl From<ScanError> for fidl_mlme::ScanResultCode {
     fn from(e: ScanError) -> Self {
         match e {
-            ScanError::Busy => fidl_mlme::ScanResultCodes::NotSupported,
+            ScanError::Busy => fidl_mlme::ScanResultCode::NotSupported,
             ScanError::EmptyChannelList
             | ScanError::ChannelListTooLarge
             | ScanError::MaxChannelTimeLtMin
-            | ScanError::SsidTooLong => fidl_mlme::ScanResultCodes::InvalidArgs,
+            | ScanError::SsidTooLong => fidl_mlme::ScanResultCode::InvalidArgs,
             ScanError::StartHwScanFails(..) | ScanError::HwScanAborted => {
-                fidl_mlme::ScanResultCodes::InternalError
+                fidl_mlme::ScanResultCode::InternalError
             }
         }
     }
@@ -263,9 +263,9 @@ impl<'a> BoundScanner<'a> {
             }
         };
         let result_code = if status == banjo_wlan_mac::WlanHwScan::SUCCESS {
-            fidl_mlme::ScanResultCodes::Success
+            fidl_mlme::ScanResultCode::Success
         } else {
-            fidl_mlme::ScanResultCodes::InternalError
+            fidl_mlme::ScanResultCode::InternalError
         };
         send_scan_end(req.req.txn_id, result_code, &mut self.ctx.device);
     }
@@ -332,11 +332,7 @@ impl<'a> BoundScanner<'a> {
     /// request. The scanner submits scan results to SME.
     pub fn handle_channel_req_complete(&mut self) {
         if let Some(req) = self.scanner.ongoing_scan.take() {
-            send_scan_end(
-                req.req.txn_id,
-                fidl_mlme::ScanResultCodes::Success,
-                &mut self.ctx.device,
-            );
+            send_scan_end(req.req.txn_id, fidl_mlme::ScanResultCode::Success, &mut self.ctx.device);
         }
     }
 }
@@ -364,7 +360,7 @@ fn send_scan_result(txn_id: u64, bss: fidl_internal::BssDescription, device: &mu
     }
 }
 
-fn send_scan_end(txn_id: u64, code: fidl_mlme::ScanResultCodes, device: &mut Device) {
+fn send_scan_end(txn_id: u64, code: fidl_mlme::ScanResultCode, device: &mut Device) {
     let result = device.access_sme_sender(|sender| {
         sender.send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id, code })
     });
@@ -571,7 +567,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1338, code: fidl_mlme::ScanResultCodes::NotSupported }
+            fidl_mlme::ScanEnd { txn_id: 1338, code: fidl_mlme::ScanResultCode::NotSupported }
         );
     }
 
@@ -594,7 +590,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
         );
     }
 
@@ -621,7 +617,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
         );
     }
 
@@ -645,7 +641,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
         );
     }
 
@@ -668,7 +664,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
         );
     }
 
@@ -715,7 +711,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::Success }
         );
     }
 
@@ -740,7 +736,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InternalError }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InternalError }
         );
     }
 
@@ -776,7 +772,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InternalError }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InternalError }
         );
     }
 
@@ -830,7 +826,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::Success }
         );
     }
 
@@ -872,7 +868,7 @@ mod tests {
             .expect("error reading MLME ScanEnd");
         assert_eq!(
             scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::Success }
         );
     }
 

@@ -72,11 +72,9 @@ const uint8_t kIes[] = {
     0x10, 0x3c, 0x00, 0x01, 0x03, 0x10, 0x49, 0x00, 0x06, 0x00, 0x37, 0x2a, 0x00, 0x01, 0x20};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kMadeupClient({0xde, 0xad, 0xbe, 0xef, 0x00, 0x01});
-const uint16_t kDefaultApDisassocReason = 1;
-// INVALID_AUTHENTICATION, IEEE 802.11-2016 9.4.17
-const uint16_t kDefaultApDeauthReason = 2;
-// LEAVING_NETWORK_DISASSOC, IEEE 802.11-2016 9.4.17
-const uint16_t kDefaultClientDeauthReason = 8;
+constexpr auto kDefaultApDisassocReason = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
+constexpr auto kDefaultApDeauthReason = wlan_ieee80211::ReasonCode::INVALID_AUTHENTICATION;
+constexpr auto kDefaultClientDeauthReason = wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC;
 // Sim firmware returns these values for SNR and RSSI.
 const uint8_t kDefaultSimFwSnr = 40;
 const int8_t kDefaultSimFwRssi = -20;
@@ -597,7 +595,8 @@ void AssocTest::DisassocClient(const common::MacAddr& mac_addr) {
 }
 
 void AssocTest::DeauthClient() {
-  wlanif_deauth_req_t deauth_req = {.reason_code = kDefaultClientDeauthReason};
+  wlanif_deauth_req_t deauth_req = {
+      .reason_code = static_cast<wlanif_reason_code_t>(kDefaultClientDeauthReason)};
 
   std::memcpy(deauth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->deauth_req(client_ifc_.if_impl_ctx_, &deauth_req);

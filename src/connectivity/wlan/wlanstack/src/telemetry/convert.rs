@@ -120,43 +120,43 @@ pub(super) fn convert_to_fail_at_dim(
 }
 
 pub(super) fn convert_auth_error_code(
-    code: fidl_mlme::AuthenticateResultCodes,
+    code: fidl_mlme::AuthenticateResultCode,
 ) -> metrics::AuthenticationFailureMetricDimensionErrorCode {
     use metrics::AuthenticationFailureMetricDimensionErrorCode::*;
     match code {
-        fidl_mlme::AuthenticateResultCodes::Success => {
+        fidl_mlme::AuthenticateResultCode::Success => {
             warn!("unexpected success code in auth failure");
             Refused
         }
-        fidl_mlme::AuthenticateResultCodes::Refused => Refused,
-        fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired => AntiCloggingTokenRequired,
-        fidl_mlme::AuthenticateResultCodes::FiniteCyclicGroupNotSupported => {
+        fidl_mlme::AuthenticateResultCode::Refused => Refused,
+        fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired => AntiCloggingTokenRequired,
+        fidl_mlme::AuthenticateResultCode::FiniteCyclicGroupNotSupported => {
             FiniteCyclicGroupNotSupported
         }
-        fidl_mlme::AuthenticateResultCodes::AuthenticationRejected => AuthenticationRejected,
-        fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout => AuthFailureTimeout,
+        fidl_mlme::AuthenticateResultCode::AuthenticationRejected => AuthenticationRejected,
+        fidl_mlme::AuthenticateResultCode::AuthFailureTimeout => AuthFailureTimeout,
     }
 }
 
 pub(super) fn convert_assoc_error_code(
-    code: fidl_mlme::AssociateResultCodes,
+    code: fidl_mlme::AssociateResultCode,
 ) -> metrics::AssociationFailureMetricDimensionErrorCode {
     use metrics::AssociationFailureMetricDimensionErrorCode::*;
     match code {
-        fidl_mlme::AssociateResultCodes::Success => {
+        fidl_mlme::AssociateResultCode::Success => {
             warn!("unexpected success code in assoc failure");
             RefusedReasonUnspecified
         }
-        fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified => RefusedReasonUnspecified,
-        fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated => RefusedNotAuthenticated,
-        fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch => RefusedCapabilitiesMismatch,
-        fidl_mlme::AssociateResultCodes::RefusedExternalReason => RefusedExternalReason,
-        fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory => RefusedApOutOfMemory,
-        fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch => RefusedBasicRatesMismatch,
-        fidl_mlme::AssociateResultCodes::RejectedEmergencyServicesNotSupported => {
+        fidl_mlme::AssociateResultCode::RefusedReasonUnspecified => RefusedReasonUnspecified,
+        fidl_mlme::AssociateResultCode::RefusedNotAuthenticated => RefusedNotAuthenticated,
+        fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch => RefusedCapabilitiesMismatch,
+        fidl_mlme::AssociateResultCode::RefusedExternalReason => RefusedExternalReason,
+        fidl_mlme::AssociateResultCode::RefusedApOutOfMemory => RefusedApOutOfMemory,
+        fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch => RefusedBasicRatesMismatch,
+        fidl_mlme::AssociateResultCode::RejectedEmergencyServicesNotSupported => {
             RejectedEmergencyServicesNotSupported
         }
-        fidl_mlme::AssociateResultCodes::RefusedTemporarily => RefusedTemporarily,
+        fidl_mlme::AssociateResultCode::RefusedTemporarily => RefusedTemporarily,
     }
 }
 
@@ -174,12 +174,12 @@ pub(super) fn convert_scan_result(
         ScanResult::Failed(error_code) => (
             Failed,
             Some(match error_code {
-                fidl_mlme::ScanResultCodes::NotSupported => NotSupported,
-                fidl_mlme::ScanResultCodes::InvalidArgs => InvalidArgs,
-                fidl_mlme::ScanResultCodes::InternalError => InternalError,
-                fidl_mlme::ScanResultCodes::ShouldWait => InternalError,
+                fidl_mlme::ScanResultCode::NotSupported => NotSupported,
+                fidl_mlme::ScanResultCode::InvalidArgs => InvalidArgs,
+                fidl_mlme::ScanResultCode::InternalError => InternalError,
+                fidl_mlme::ScanResultCode::ShouldWait => InternalError,
                 // This shouldn't happen, but we'll just map it to InternalError
-                fidl_mlme::ScanResultCodes::Success => InternalError,
+                fidl_mlme::ScanResultCode::Success => InternalError,
             }),
         ),
     }

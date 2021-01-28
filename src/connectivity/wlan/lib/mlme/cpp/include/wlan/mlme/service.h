@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_SERVICE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_SERVICE_H_
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
@@ -146,31 +147,31 @@ namespace service {
 // Returns the peer MAC address for messages which carry one, none otherwise.
 std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg);
 zx_status_t SendJoinConfirm(DeviceInterface* device,
-                            ::fuchsia::wlan::mlme::JoinResultCodes result_code);
+                            ::fuchsia::wlan::mlme::JoinResultCode result_code);
 zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
-                            ::fuchsia::wlan::mlme::AuthenticateResultCodes code);
+                            ::fuchsia::wlan::mlme::AuthenticateResultCode code);
 zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                ::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta);
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                 ::fuchsia::wlan::mlme::ReasonCode code);
+                                 ::fuchsia::wlan::ieee80211::ReasonCode code);
 zx_status_t SendAssocConfirm(DeviceInterface* device,
-                             ::fuchsia::wlan::mlme::AssociateResultCodes code, uint16_t aid = 0);
+                             ::fuchsia::wlan::mlme::AssociateResultCode code, uint16_t aid = 0);
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                 uint16_t listen_interval, fbl::Span<const uint8_t> ssid,
                                 std::optional<fbl::Span<const uint8_t>> rsn_body);
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                       uint16_t code);
+                                       ::fuchsia::wlan::ieee80211::ReasonCode code);
 
 zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm);
 
 zx_status_t SendEapolConfirm(DeviceInterface* device,
-                             ::fuchsia::wlan::mlme::EapolResultCodes result_code);
+                             ::fuchsia::wlan::mlme::EapolResultCode result_code);
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
                                 const common::MacAddr& src, const common::MacAddr& dst);
 
-zx_status_t SendStartConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StartResultCodes code);
-zx_status_t SendStopConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StopResultCodes code);
+zx_status_t SendStartConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StartResultCode code);
+zx_status_t SendStopConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StopResultCode code);
 zx_status_t SendMeshPathTable(DeviceInterface* device, ::fuchsia::wlan::mesh::MeshPathTable& table,
                               uint64_t ordinal, zx_txid_t txid);
 

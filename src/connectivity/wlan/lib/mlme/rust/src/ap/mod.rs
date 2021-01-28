@@ -159,14 +159,13 @@ impl Ap {
     fn handle_mlme_start_req(&mut self, req: fidl_mlme::StartRequest) -> Result<(), Error> {
         if self.bss.is_some() {
             info!("MLME-START.request: BSS already started");
-            self.ctx
-                .send_mlme_start_conf(fidl_mlme::StartResultCodes::BssAlreadyStartedOrJoined)?;
+            self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCode::BssAlreadyStartedOrJoined)?;
             return Ok(());
         }
 
         if req.bss_type != fidl_internal::BssTypes::Infrastructure {
             info!("MLME-START.request: BSS type {:?} not supported", req.bss_type);
-            self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCodes::NotSupported)?;
+            self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCode::NotSupported)?;
             return Ok(());
         }
 
@@ -181,7 +180,7 @@ impl Ap {
             req.rsne,
         )?);
 
-        self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCodes::Success)?;
+        self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCode::Success)?;
 
         info!("MLME-START.request: OK");
         Ok(())
@@ -191,15 +190,15 @@ impl Ap {
     fn handle_mlme_stop_req(&mut self, _req: fidl_mlme::StopRequest) -> Result<(), Error> {
         match self.bss.take() {
             Some(bss) => match bss.stop(&mut self.ctx) {
-                Ok(_) => self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCodes::Success)?,
+                Ok(_) => self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCode::Success)?,
                 Err(e) => {
-                    self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCodes::InternalError)?;
+                    self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCode::InternalError)?;
                     return Err(e);
                 }
             },
             None => {
                 info!("MLME-STOP.request: BSS not started");
-                self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCodes::BssAlreadyStopped)?;
+                self.ctx.send_mlme_stop_conf(fidl_mlme::StopResultCode::BssAlreadyStopped)?;
             }
         }
         info!("MLME-STOP.request: OK");
@@ -354,7 +353,7 @@ mod tests {
             timer::FakeScheduler,
         },
         banjo_fuchsia_hardware_wlan_info::{WlanChannel, WlanChannelBandwidth},
-        fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         wlan_common::{
             assert_variant, big_endian::BigEndianU16, test_utils::fake_frames::fake_wpa2_rsne,
         },
@@ -412,7 +411,7 @@ mod tests {
 
         let client = ap.bss.as_mut().unwrap().clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ap.ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ap.ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -420,7 +419,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -566,7 +565,7 @@ mod tests {
 
         let client = ap.bss.as_mut().unwrap().clients.get_mut(&CLIENT_ADDR).unwrap();
         client
-            .handle_mlme_auth_resp(&mut ap.ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .handle_mlme_auth_resp(&mut ap.ctx, fidl_mlme::AuthenticateResultCode::Success)
             .expect("expected OK");
         client
             .handle_mlme_assoc_resp(
@@ -574,7 +573,7 @@ mod tests {
                 false,
                 1,
                 mac::CapabilityInfo(0),
-                fidl_mlme::AssociateResultCodes::Success,
+                fidl_mlme::AssociateResultCode::Success,
                 1,
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
@@ -805,7 +804,7 @@ mod tests {
             fake_device.next_mlme_msg::<fidl_mlme::StartConfirm>().expect("expected MLME message");
         assert_eq!(
             msg,
-            fidl_mlme::StartConfirm { result_code: fidl_mlme::StartResultCodes::Success },
+            fidl_mlme::StartConfirm { result_code: fidl_mlme::StartResultCode::Success },
         );
     }
 
@@ -854,7 +853,7 @@ mod tests {
         assert_eq!(
             msg,
             fidl_mlme::StartConfirm {
-                result_code: fidl_mlme::StartResultCodes::BssAlreadyStartedOrJoined
+                result_code: fidl_mlme::StartResultCode::BssAlreadyStartedOrJoined
             },
         );
     }
@@ -889,10 +888,7 @@ mod tests {
 
         let msg =
             fake_device.next_mlme_msg::<fidl_mlme::StopConfirm>().expect("expected MLME message");
-        assert_eq!(
-            msg,
-            fidl_mlme::StopConfirm { result_code: fidl_mlme::StopResultCodes::Success },
-        );
+        assert_eq!(msg, fidl_mlme::StopConfirm { result_code: fidl_mlme::StopResultCode::Success },);
     }
 
     #[test]
@@ -914,7 +910,7 @@ mod tests {
             fake_device.next_mlme_msg::<fidl_mlme::StopConfirm>().expect("expected MLME message");
         assert_eq!(
             msg,
-            fidl_mlme::StopConfirm { result_code: fidl_mlme::StopResultCodes::BssAlreadyStopped },
+            fidl_mlme::StopConfirm { result_code: fidl_mlme::StopResultCode::BssAlreadyStopped },
         );
     }
 
@@ -1072,7 +1068,7 @@ mod tests {
         ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
             resp: fidl_mlme::AuthenticateResponse {
                 peer_sta_address: CLIENT_ADDR,
-                result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+                result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
             },
         })
         .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) ok");
@@ -1112,7 +1108,7 @@ mod tests {
                 ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
                     resp: fidl_mlme::AuthenticateResponse {
                         peer_sta_address: CLIENT_ADDR,
-                        result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+                        result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
                     },
                 })
                 .expect_err("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
@@ -1151,7 +1147,7 @@ mod tests {
                 ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
                     resp: fidl_mlme::AuthenticateResponse {
                         peer_sta_address: CLIENT_ADDR,
-                        result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+                        result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
                     },
                 })
                 .expect_err("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
@@ -1189,7 +1185,7 @@ mod tests {
         ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DeauthenticateReq {
             req: fidl_mlme::DeauthenticateRequest {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             },
         })
         .expect(
@@ -1241,7 +1237,7 @@ mod tests {
         ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
             resp: fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
                 cap: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -1300,7 +1296,7 @@ mod tests {
         ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq {
             req: fidl_mlme::DisassociateRequest {
                 peer_sta_address: CLIENT_ADDR,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
             },
         })
         .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq) ok");
@@ -1350,7 +1346,7 @@ mod tests {
         ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
             resp: fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
                 cap: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3],

@@ -18,7 +18,8 @@ use {
         key::KeyConfig,
         timer::*,
     },
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, warn},
     static_assertions::assert_eq_size,
@@ -81,7 +82,7 @@ impl Joined {
             Ok(akm::AkmState::Failed) | Err(_) => {
                 sta.send_authenticate_conf(
                     algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCodes::Refused,
+                    fidl_mlme::AuthenticateResultCode::Refused,
                 );
                 error!("Failed to initiate authentication");
                 Err(())
@@ -108,7 +109,7 @@ impl Authenticating {
             Ok(akm::AkmState::AuthComplete) => {
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCodes::Success,
+                    fidl_mlme::AuthenticateResultCode::Success,
                 );
                 akm::AkmState::AuthComplete
             }
@@ -117,7 +118,7 @@ impl Authenticating {
                 error!("authentication with BSS failed");
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
+                    fidl_mlme::AuthenticateResultCode::AuthenticationRejected,
                 );
                 akm::AkmState::Failed
             }
@@ -125,7 +126,7 @@ impl Authenticating {
                 error!("Internal error while authenticating: {}", e);
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
+                    fidl_mlme::AuthenticateResultCode::AuthenticationRejected,
                 );
                 akm::AkmState::Failed
             }
@@ -183,7 +184,7 @@ impl Authenticating {
         self.algorithm.cancel(sta);
         sta.send_authenticate_conf(
             self.algorithm.auth_type(),
-            fidl_mlme::AuthenticateResultCodes::Refused,
+            fidl_mlme::AuthenticateResultCode::Refused,
         );
     }
 
@@ -197,7 +198,7 @@ impl Authenticating {
             Ok(akm::AkmState::Failed) => {
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout,
+                    fidl_mlme::AuthenticateResultCode::AuthFailureTimeout,
                 );
             }
             _ => (),
@@ -237,9 +238,7 @@ impl Authenticated {
             }
             Err(e) => {
                 error!("Error sending association request frame: {}", e);
-                sta.send_associate_conf_failure(
-                    fidl_mlme::AssociateResultCodes::RefusedTemporarily,
-                );
+                sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedTemporarily);
                 Err(())
             }
         }
@@ -247,8 +246,8 @@ impl Authenticated {
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
     fn on_deauth_frame(&self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
-        let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
-            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
+        let reason_code = fidl_ieee80211::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
+            .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason);
         sta.send_deauthenticate_ind(reason_code, LocallyInitiated(false));
     }
 
@@ -327,7 +326,7 @@ impl Associating {
             status_code => {
                 error!("association with BSS failed: {:?}", status_code);
                 sta.send_associate_conf_failure(
-                    fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                    fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
                 );
                 Err(())
             }
@@ -343,7 +342,7 @@ impl Associating {
         sta.ctx.timer.cancel_event(self.timeout);
 
         warn!("received unexpected disassociation frame while associating");
-        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
+        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
     }
 
     /// Processes an inbound deauthentication frame.
@@ -357,7 +356,7 @@ impl Associating {
              association failed: {:?}",
             { deauth_hdr.reason_code }
         );
-        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
+        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
     }
 
     /// Invoked when the pending timeout fired. The original association request is now
@@ -369,7 +368,7 @@ impl Associating {
         // ensure the timeout is canceled in any case.
         sta.ctx.timer.cancel_event(self.timeout);
 
-        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCodes::RefusedTemporarily);
+        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedTemporarily);
     }
 
     fn on_sme_deauthenticate(&self, sta: &mut BoundClient<'_>) {
@@ -492,16 +491,16 @@ impl Associated {
     /// This always results in an MLME-DISASSOCIATE.indication message to MLME's SME peer.
     fn on_disassoc_frame(&mut self, sta: &mut BoundClient<'_>, disassoc_hdr: &mac::DisassocHdr) {
         self.pre_leaving_associated_state(sta);
-        let reason_code = fidl_mlme::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
-            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
+        let reason_code = fidl_ieee80211::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
+            .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason);
         sta.send_disassoc_ind(reason_code, LocallyInitiated(false));
     }
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
     fn on_deauth_frame(&mut self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
         self.pre_leaving_associated_state(sta);
-        let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
-            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
+        let reason_code = fidl_ieee80211::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
+            .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason);
         sta.send_deauthenticate_ind(reason_code, LocallyInitiated(false));
     }
 
@@ -771,7 +770,7 @@ impl Associated {
         let auto_deauth = self.0.lost_bss_counter.should_deauthenticate();
         if auto_deauth {
             sta.send_deauthenticate_ind(
-                fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
                 LocallyInitiated(true),
             );
             if let Err(e) = sta.send_deauth_frame(mac::ReasonCode::LEAVING_NETWORK_DEAUTH) {
@@ -1308,7 +1307,7 @@ mod tests {
     fn empty_associate_conf() -> fidl_mlme::AssociateConfirm {
         fidl_mlme::AssociateConfirm {
             association_id: 0,
-            result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+            result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
             cap_info: 0,
             rates: vec![],
             wmm_param: None,
@@ -1362,7 +1361,7 @@ mod tests {
         fidl_mlme::MlmeRequestMessage::DeauthenticateReq {
             req: fidl_mlme::DeauthenticateRequest {
                 peer_sta_address: BSSID.0,
-                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             },
         }
     }
@@ -1461,7 +1460,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+                result_code: fidl_mlme::AuthenticateResultCode::Refused,
             }
         );
     }
@@ -1499,7 +1498,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCodes::Success,
+                result_code: fidl_mlme::AuthenticateResultCode::Success,
             }
         );
     }
@@ -1537,7 +1536,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
+                result_code: fidl_mlme::AuthenticateResultCode::AuthenticationRejected,
             }
         );
     }
@@ -1564,7 +1563,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout,
+                result_code: fidl_mlme::AuthenticateResultCode::AuthFailureTimeout,
             }
         );
     }
@@ -1593,7 +1592,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+                result_code: fidl_mlme::AuthenticateResultCode::Refused,
             }
         );
     }
@@ -1620,7 +1619,7 @@ mod tests {
             msg,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
-                reason_code: fidl_mlme::ReasonCode::NoMoreStas,
+                reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
                 locally_initiated: false,
             }
         );
@@ -1662,7 +1661,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 cap_info: 52,
                 ..empty_associate_conf()
             }
@@ -1702,7 +1701,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
-                result_code: fidl_mlme::AssociateResultCodes::Success,
+                result_code: fidl_mlme::AssociateResultCode::Success,
                 cap_info: 52,
                 ..empty_associate_conf()
             }
@@ -1742,7 +1741,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
                 ..empty_associate_conf()
             }
         );
@@ -1771,7 +1770,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCodes::RefusedTemporarily,
+                result_code: fidl_mlme::AssociateResultCode::RefusedTemporarily,
                 ..empty_associate_conf()
             }
         );
@@ -1802,7 +1801,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
                 ..empty_associate_conf()
             }
         );
@@ -1833,7 +1832,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
                 ..empty_associate_conf()
             }
         );
@@ -1922,7 +1921,7 @@ mod tests {
             msg,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
-                reason_code: fidl_mlme::ReasonCode::ApInitiated,
+                reason_code: fidl_ieee80211::ReasonCode::ApInitiated,
                 locally_initiated: false,
             }
         );
@@ -1962,7 +1961,7 @@ mod tests {
             msg,
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: BSSID.0,
-                reason_code: mac::ReasonCode::AP_INITIATED.0,
+                reason_code: fidl_ieee80211::ReasonCode::ApInitiated,
                 locally_initiated: false,
             }
         );

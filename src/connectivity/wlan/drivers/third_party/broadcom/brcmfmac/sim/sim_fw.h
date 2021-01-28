@@ -17,6 +17,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_FW_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_FW_H_
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/types.h>
@@ -332,7 +333,8 @@ class SimFirmware {
   zx_status_t HandleJoinRequest(const void* value, size_t value_len);
   void HandleAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame);
   void HandleDisconnectForClientIF(std::shared_ptr<const simulation::SimManagementFrame> frame,
-                                   const common::MacAddr& bssid, uint32_t reason);
+                                   const common::MacAddr& bssid,
+                                   ::fuchsia::wlan::ieee80211::ReasonCode reason);
   void HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame);
   void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
 
@@ -358,8 +360,9 @@ class SimFirmware {
   void AssocHandleFailure();
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
-  void DisassocLocalClient(uint32_t reason);
-  void SetStateToDisassociated(uint32_t reason, bool locally_initiated);
+  void DisassocLocalClient(::fuchsia::wlan::ieee80211::ReasonCode reason);
+  void SetStateToDisassociated(::fuchsia::wlan::ieee80211::ReasonCode reason,
+                               bool locally_initiated);
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
@@ -433,7 +436,7 @@ class SimFirmware {
   // value "true" means it is triggered by a deauth frame, and "false" means ut's triggered by a
   // disassoc frame.
   bool FindAndRemoveClient(const common::MacAddr client_mac, bool motivation_deauth,
-                           uint16_t deauth_reason = 0);
+                           ::fuchsia::wlan::ieee80211::ReasonCode deauth_reason);
   std::shared_ptr<Client> FindClient(const common::MacAddr client_mac);
   void ScheduleLinkEvent(zx::duration when, uint16_t ifidx);
   void SendAPStartLinkEvent(uint16_t ifidx);

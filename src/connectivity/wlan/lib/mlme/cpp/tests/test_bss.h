@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/timekeeper/clock.h>
@@ -157,12 +158,12 @@ MlmeMsg<::fuchsia::wlan::mlme::StopRequest> CreateStopRequest();
 MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest> CreateAuthRequest();
 MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse> CreateAuthResponse(
-    common::MacAddr client_addr, ::fuchsia::wlan::mlme::AuthenticateResultCodes result_code);
+    common::MacAddr client_addr, ::fuchsia::wlan::mlme::AuthenticateResultCode result_code);
 MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest> CreateDeauthRequest(
-    common::MacAddr, ::fuchsia::wlan::mlme::ReasonCode reason_code);
+    common::MacAddr, ::fuchsia::wlan::ieee80211::ReasonCode reason_code);
 MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest> CreateAssocRequest(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse> CreateAssocResponse(
-    common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCodes result_code,
+    common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCode result_code,
     uint16_t aid);
 MlmeMsg<::fuchsia::wlan::mlme::NegotiatedCapabilities> CreateFinalizeAssociationRequest(
     const wlan_assoc_ctx& ac, wlan_channel_t chan);

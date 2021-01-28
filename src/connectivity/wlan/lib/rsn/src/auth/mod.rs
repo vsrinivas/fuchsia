@@ -241,7 +241,7 @@ fn process_sae_updates(
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
+    use fidl_fuchsia_wlan_ieee80211;
     use std::sync::{Arc, Mutex};
     use wlan_common::assert_variant;
 
@@ -253,7 +253,7 @@ mod test {
         auth.on_sae_handshake_ind(&mut sink).expect_err("PSK auth method accepted SAE ind");
         let frame = SaeFrame {
             peer_sta_address: [0xaa; 6],
-            status_code: fidl_ieee80211::StatusCode::Success,
+            status_code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
             seq_num: 1,
             sae_fields: vec![0u8; 10],
         };

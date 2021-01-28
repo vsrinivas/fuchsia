@@ -17,7 +17,8 @@ use {
         Ssid,
     },
     derivative::Derivative,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     wlan_common::{self, bss::BssDescription},
 };
@@ -39,7 +40,7 @@ pub enum InfoEvent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ScanResult {
     Success,
-    Failed(fidl_mlme::ScanResultCodes),
+    Failed(fidl_mlme::ScanResultCode),
 }
 
 #[derive(Debug, PartialEq)]
@@ -361,19 +362,17 @@ pub enum DisconnectSource {
     /// Disconnect initiated by upper layer.
     User(fidl_sme::UserDisconnectReason),
     /// Disconnect initiated by AP.
-    Ap(u16),
+    Ap(fidl_ieee80211::ReasonCode),
     /// Disconnect initiated by MLME.
-    Mlme(u16),
+    Mlme(fidl_ieee80211::ReasonCode),
 }
 
 impl DisconnectSource {
-    pub fn reason_code(&self) -> u16 {
+    pub fn reason_code(&self) -> fidl_ieee80211::ReasonCode {
         match self {
             DisconnectSource::Ap(ap_reason_code) => *ap_reason_code,
             DisconnectSource::Mlme(mlme_reason_code) => *mlme_reason_code,
-            DisconnectSource::User(_) => {
-                fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive()
-            }
+            DisconnectSource::User(_) => fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
         }
     }
 
@@ -418,12 +417,9 @@ mod tests {
 
     #[test]
     fn test_disconnect_source_locally_initiated() {
-        assert!(!DisconnectSource::Ap(fidl_mlme::ReasonCode::NoMoreStas.into_primitive())
+        assert!(!DisconnectSource::Ap(fidl_ieee80211::ReasonCode::NoMoreStas).locally_initiated());
+        assert!(DisconnectSource::Mlme(fidl_ieee80211::ReasonCode::LeavingNetworkDeauth)
             .locally_initiated());
-        assert!(DisconnectSource::Mlme(
-            fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive()
-        )
-        .locally_initiated());
         assert!(DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
             .locally_initiated());
     }
@@ -431,16 +427,15 @@ mod tests {
     #[test]
     fn test_disconnect_source_reason_code() {
         assert_eq!(
-            fidl_mlme::ReasonCode::NoMoreStas.into_primitive(),
-            DisconnectSource::Ap(fidl_mlme::ReasonCode::NoMoreStas.into_primitive()).reason_code()
+            fidl_ieee80211::ReasonCode::NoMoreStas,
+            DisconnectSource::Ap(fidl_ieee80211::ReasonCode::NoMoreStas).reason_code()
         );
         assert_eq!(
-            fidl_mlme::ReasonCode::ReasonInactivity.into_primitive(),
-            DisconnectSource::Mlme(fidl_mlme::ReasonCode::ReasonInactivity.into_primitive())
-                .reason_code()
+            fidl_ieee80211::ReasonCode::ReasonInactivity,
+            DisconnectSource::Mlme(fidl_ieee80211::ReasonCode::ReasonInactivity).reason_code()
         );
         assert_eq!(
-            fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive(),
+            fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
                 .reason_code()
         );

@@ -5,7 +5,7 @@
 use anyhow::format_err;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy, ScanResultCodes};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy, ScanResultCode};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
@@ -142,7 +142,7 @@ async fn scan(
 ) -> Result<(), anyhow::Error> {
     let handle = txn.into_stream()?.control_handle();
     let receiver = sme.lock().unwrap().on_scan_command(scan_request);
-    let result = receiver.await.unwrap_or(Err(fidl_mlme::ScanResultCodes::InternalError));
+    let result = receiver.await.unwrap_or(Err(fidl_mlme::ScanResultCode::InternalError));
     let send_result = send_scan_results(handle, result);
     filter_out_peer_closed(send_result)?;
     Ok(())
@@ -235,11 +235,11 @@ fn send_scan_results(
         }
         Err(e) => {
             let mut fidl_err = match e {
-                fidl_mlme::ScanResultCodes::NotSupported => fidl_sme::ScanError {
+                fidl_mlme::ScanResultCode::NotSupported => fidl_sme::ScanError {
                     code: fidl_sme::ScanErrorCode::NotSupported,
                     message: "Scanning not supported by device".to_string(),
                 },
-                fidl_mlme::ScanResultCodes::ShouldWait => fidl_sme::ScanError {
+                fidl_mlme::ScanResultCode::ShouldWait => fidl_sme::ScanError {
                     code: fidl_sme::ScanErrorCode::ShouldWait,
                     message: "Scanning is temporarily unavailable".to_string(),
                 },
@@ -271,7 +271,7 @@ fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode
     match result {
         ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
         ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
-        ConnectResult::Failed(ConnectFailure::ScanFailure(ScanResultCodes::ShouldWait)) => {
+        ConnectResult::Failed(ConnectFailure::ScanFailure(ScanResultCode::ShouldWait)) => {
             fidl_sme::ConnectResultCode::Canceled
         }
         ConnectResult::Failed(failure) if failure.likely_due_to_credential_rejected() => {
@@ -308,7 +308,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_mlme::ScanResultCodes,
+        fidl_fuchsia_wlan_mlme::ScanResultCode,
         fidl_fuchsia_wlan_sme::{self as fidl_sme},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::task::Poll,
@@ -324,27 +324,27 @@ mod tests {
     };
 
     #[test_case(
-        fidl_mlme::ScanResultCodes::ShouldWait,
+        fidl_mlme::ScanResultCode::ShouldWait,
         fidl_sme::ScanErrorCode::ShouldWait,
         "Scanning is temporarily unavailable"
     )]
     #[test_case(
-        fidl_mlme::ScanResultCodes::NotSupported,
+        fidl_mlme::ScanResultCode::NotSupported,
         fidl_sme::ScanErrorCode::NotSupported,
         "Scanning not supported by device"
     )]
     #[test_case(
-        fidl_mlme::ScanResultCodes::InvalidArgs,
+        fidl_mlme::ScanResultCode::InvalidArgs,
         fidl_sme::ScanErrorCode::InternalError,
         "Internal error occurred"
     )]
     #[test_case(
-        fidl_mlme::ScanResultCodes::InternalError,
+        fidl_mlme::ScanResultCode::InternalError,
         fidl_sme::ScanErrorCode::InternalError,
         "Internal error occurred"
     )]
     fn test_send_scan_error(
-        scan_code: fidl_mlme::ScanResultCodes,
+        scan_code: fidl_mlme::ScanResultCode,
         scan_error: fidl_sme::ScanErrorCode,
         err_msg: &str,
     ) {
@@ -378,7 +378,7 @@ mod tests {
         );
         assert_eq!(
             convert_connect_result(&ConnectResult::Failed(ConnectFailure::ScanFailure(
-                ScanResultCodes::ShouldWait
+                ScanResultCode::ShouldWait
             ))),
             fidl_sme::ConnectResultCode::Canceled
         );
@@ -395,7 +395,7 @@ mod tests {
 
         assert_eq!(
             convert_connect_result(&ConnectResult::Failed(ConnectFailure::ScanFailure(
-                ScanResultCodes::InternalError
+                ScanResultCode::InternalError
             ))),
             fidl_sme::ConnectResultCode::Failed
         );
