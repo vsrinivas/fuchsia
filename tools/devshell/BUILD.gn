@@ -22,6 +22,7 @@ if (!is_host) {
       "//tools/symbolizer",
 
       # For `fx format-code`.
+      "//tools/cmc",
       "//zircon/tools/fidl:fidl-format",
 
       # For `fx lint`.
