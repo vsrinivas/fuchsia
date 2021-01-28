@@ -39,29 +39,49 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
     ZX_ASSERT(status == ZX_OK);
   }
 
-  virtual void CreateDecoder(
+  void CreateDecoder(
       fuchsia::mediacodec::CreateDecoder_Params decoder_params,
       fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request) override {
-    VendCodecAdapter<DecoderAdapter>(std::move(decoder_params), std::move(decoder_request));
+    VendCodecAdapter<DecoderAdapter>(std::move(decoder_params), std::move(decoder_request),
+                                     std::move(lifetime_tracking_));
+    ZX_DEBUG_ASSERT(lifetime_tracking_.empty());
   }
 
-  virtual void CreateEncoder(
+  void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
       fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override {
-    VendCodecAdapter<EncoderAdapter>(std::move(encoder_params), std::move(encoder_request));
+    VendCodecAdapter<EncoderAdapter>(std::move(encoder_params), std::move(encoder_request),
+                                     std::move(lifetime_tracking_));
+    ZX_DEBUG_ASSERT(lifetime_tracking_.empty());
+  }
+
+  void AttachLifetimeTracking(zx::eventpair codec_end) override {
+    ZX_DEBUG_ASSERT(lifetime_tracking_.size() <=
+                    fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX);
+    if (lifetime_tracking_.size() >=
+        fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX) {
+      binding_.Close(ZX_ERR_BAD_STATE);
+      // This call will delete this, and will Quit() the loop of the isolate so the isolate will
+      // exit shortly.
+      factory_done_callback_(nullptr);
+      return;
+    }
+    lifetime_tracking_.emplace_back(std::move(codec_end));
   }
 
  private:
   template <typename Adapter, typename Params>
   void VendCodecAdapter(Params params,
-                        fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+                        fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request,
+                        std::vector<zx::eventpair> lifetime_tracking_eventpair) {
     // Ignore channel errors (e.g. PEER_CLOSED) after this point, because this channel has served
     // its purpose. Otherwise the error handler could tear down the loop before the codec was
     // finished being added.
     binding_.set_error_handler([](auto) {});
     codec_admission_control_->TryAddCodec(
         /*multi_instance=*/true,
-        [this, params = std::move(params), codec_request = std::move(codec_request)](
+        [this, params = std::move(params), codec_request = std::move(codec_request),
+         lifetime_tracking_eventpair = std::move(lifetime_tracking_eventpair)](
             std::unique_ptr<CodecAdmission> codec_admission) mutable {
           if (!codec_admission) {
             // ~codec_request closes channel.
@@ -79,6 +99,8 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
               std::move(sysmem_), std::move(codec_admission), fidl_dispatcher_, thrd_current(),
               std::move(params), std::move(codec_request));
 
+          codec_impl->SetLifetimeTracking(std::move(lifetime_tracking_eventpair));
+
           codec_impl->SetCoreCodecAdapter(
               std::make_unique<Adapter>(codec_impl->lock(), codec_impl.get()));
 
@@ -91,17 +113,21 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   template <>
   void VendCodecAdapter<NoAdapter, fuchsia::mediacodec::CreateDecoder_Params>(
       fuchsia::mediacodec::CreateDecoder_Params params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request,
+      std::vector<zx::eventpair> lifetime_tracking_eventpair) {
     // No adapter.
     // ~codec_request.
+    // ~lifetime_tracking_eventpair
   }
 
   template <>
   void VendCodecAdapter<NoAdapter, fuchsia::mediacodec::CreateEncoder_Params>(
       fuchsia::mediacodec::CreateEncoder_Params params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request,
+      std::vector<zx::eventpair> lifetime_tracking_eventpair) {
     // No adapter.
     // ~codec_request.
+    // ~lifetime_tracking_eventpair
   }
 
   async_dispatcher_t* fidl_dispatcher_;
@@ -110,6 +136,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   // Returns the codec implementation and requests drop of self.
   fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback_;
   CodecAdmissionControl* codec_admission_control_;
+  std::vector<zx::eventpair> lifetime_tracking_;
 };
 
 #endif  // SRC_MEDIA_CODEC_CODECS_SW_LOCAL_SINGLE_CODEC_FACTORY_H_

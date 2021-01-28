@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/trace-provider/provider.h>
 
 #include <string>
 
@@ -15,8 +16,9 @@ int main(int argc, char* argv[]) {
   syslog::SetTags({"codec_factory"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "codec_factory trace provider");
 
-  codec_factory::CodecFactoryApp app(loop.dispatcher());
+  CodecFactoryApp app(loop.dispatcher());
 
   loop.Run();
 

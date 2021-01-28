@@ -7,9 +7,9 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/global.h>
-#include <lib/trace-provider/provider.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -17,10 +17,9 @@
 
 #include "codec_factory_impl.h"
 #include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/lib/fsl/io/device_watcher.h"
-
-namespace codec_factory {
 
 namespace {
 
@@ -33,13 +32,16 @@ const std::string kAllSwDecoderMimeTypes[] = {
 
 }  // namespace
 
-CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
-  trace::TraceProviderWithFdio trace_provider(dispatcher_);
-
+// board_name_ initialization requires startup_context_ already initialized.
+// policy_ initialization requires board_name_ already initialized.
+CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher),
+      startup_context_(sys::ComponentContext::Create()),
+      board_name_(GetBoardName()),
+      policy_(this) {
   // Don't publish service or outgoing()->ServeFromStartupInfo() until after initial discovery is
   // done, else the pumping of the loop will drop the incoming request for CodecFactory before
   // AddPublicService() below has had a chance to register for it.
-  startup_context_ = sys::ComponentContext::Create();
 
   zx_status_t status =
       outgoing_codec_aux_service_directory_parent_.AddPublicService<fuchsia::cobalt::LoggerFactory>(
@@ -324,4 +326,40 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
   }
 }
 
-}  // namespace codec_factory
+// This is called during field initialization portion of the constructor, so needs to avoid reading
+// any fields that are not yet initialized.
+std::string CodecFactoryApp::GetBoardName() {
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
+  zx_status_t status =
+      startup_context_->svc()->Connect<fuchsia::sysinfo::SysInfo>(sysinfo.NewRequest());
+  // CodecFactoryApp's process can't necessarily work correctly without the board name.
+  ZX_ASSERT(status == ZX_OK);
+  fidl::StringPtr board_name;
+  zx_status_t fidl_status = sysinfo->GetBoardName(&status, &board_name);
+  if (fidl_status != ZX_OK || status != ZX_OK) {
+    // This path is only taken if CodecFactory can't contact fuchsia.sysinfo.SysInfo.  Most often
+    // this happens in tests that don't grant access to fuchsia.sysinfo.SysInfo (yet).  Tests which
+    // print this out should be updated to include these in their .cmx file:
+    //
+    // "facets": {
+    //     "fuchsia.test": {
+    //         "system-services": [
+    //             "fuchsia.sysinfo.SysInfo"
+    //         ]
+    //     }
+    // },
+    // "sandbox": {
+    //     "services": [
+    //         "fuchsia.sysinfo.SysInfo"
+    //     ]
+    // }
+    FX_LOGS(WARNING) << "#############################";
+    FX_LOGS(WARNING) << "sysinfo->GetBoardName() failed.  "
+                        "CodecFactoryApp needs access to fuchsia.sysinfo.SysInfo.  fidl_status: "
+                     << fidl_status << " status: " << status;
+    FX_LOGS(WARNING) << "#############################";
+    return "<UNKNOWN>";
+  }
+  ZX_ASSERT(fidl_status == ZX_OK && status == ZX_OK);
+  return board_name.value();
+}

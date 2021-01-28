@@ -323,6 +323,9 @@ void LocalCodecFactory::CreateDecoder(
                                         device_->driver()->shared_fidl_thread(),
                                         std::move(video_decoder_params), std::move(video_decoder));
 
+        codec->SetLifetimeTracking(std::move(lifetime_tracking_));
+        ZX_DEBUG_ASSERT(lifetime_tracking_.empty());
+
         codec->SetCodecMetrics(&device_->metrics());
         auto core_codec = factory->create(codec->lock(), codec.get(), device_);
         // Don't wait for CodecAdapter sub-class to call LogEvent().  Verify this is not
@@ -339,5 +342,18 @@ void LocalCodecFactory::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {
   // We have no encoders to provide.
+  lifetime_tracking_.clear();
   // ~encoder_request
+}
+
+void LocalCodecFactory::AttachLifetimeTracking(zx::eventpair codec_end) {
+  ZX_DEBUG_ASSERT(lifetime_tracking_.size() <=
+                  fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX);
+  if (lifetime_tracking_.size() >=
+      fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX) {
+    factory_binding_.Close(ZX_ERR_BAD_STATE);
+    device_->device_fidl()->DeleteFactory(this);
+    return;
+  }
+  lifetime_tracking_.emplace_back(std::move(codec_end));
 }

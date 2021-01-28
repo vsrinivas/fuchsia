@@ -47,6 +47,16 @@ class CodecRunnerApp {
               codec_factory_ = std::make_unique<LocalSingleCodecFactory<Decoder, Encoder>>(
                   loop_.dispatcher(), std::move(sysmem), std::move(request),
                   [this](std::unique_ptr<CodecImpl> created_codec_instance) {
+                    ZX_DEBUG_ASSERT(!codec_instance_);
+                    if (!created_codec_instance) {
+                      // Drop factory and close factory channel on factory
+                      // failure to create instance.
+                      codec_factory_ = nullptr;
+                      // The codec_instance_ channel is the only reason for the
+                      // isolate to exist.
+                      loop_.Quit();
+                      return;
+                    }
                     // Own codec implementation and bind it.
                     codec_instance_ = std::move(created_codec_instance);
                     codec_instance_->BindAsync([this] {

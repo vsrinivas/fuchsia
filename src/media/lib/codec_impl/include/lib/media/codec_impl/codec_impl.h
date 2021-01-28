@@ -89,6 +89,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // appropriate CodecAdapter.
   std::mutex& lock();
 
+  void SetLifetimeTracking(std::vector<zx::eventpair> lifetime_tracking_eventpair);
+
   // The LocalCodecFactory optionally calls this method between construction and
   // SetCoreCodecAdapter().  If this method is not called, CodecImpl will treat
   // any call to onCoreCodecLogEvent() as a nop, and will not require that the
@@ -526,6 +528,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   bool was_unbind_completed_ = false;
   std::condition_variable wake_stream_control_condition_;
   std::condition_variable stream_control_done_condition_;
+  std::vector<zx::eventpair> lifetime_tracking_;
 
   //
   // Codec protocol aspects.

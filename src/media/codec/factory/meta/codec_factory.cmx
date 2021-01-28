@@ -12,6 +12,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry"
         ]
     }

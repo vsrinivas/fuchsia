@@ -14,9 +14,8 @@
 #include <list>
 #include <memory>
 
+#include "codec_factory_policy.h"
 #include "src/lib/fsl/io/device_watcher.h"
-
-namespace codec_factory {
 
 // CodecFactoryApp is singleton per-process.
 class CodecFactoryApp {
@@ -30,12 +29,15 @@ class CodecFactoryApp {
   // on the FIDL thread could ~CodecFactoryPtr or similar.
   //
   // This method can return nullptr if a HW decoder isn't found...
-  const fuchsia::mediacodec::CodecFactoryPtr* FindHwCodec(
+  [[nodiscard]] const fuchsia::mediacodec::CodecFactoryPtr* FindHwCodec(
       fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match);
 
-  std::vector<fuchsia::mediacodec::CodecDescription> MakeCodecList() const;
+  [[nodiscard]] std::vector<fuchsia::mediacodec::CodecDescription> MakeCodecList() const;
 
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
+  [[nodiscard]] async_dispatcher_t* dispatcher() { return dispatcher_; }
+  [[nodiscard]] const std::string& board_name() { return board_name_; }
+
+  [[nodiscard]] CodecFactoryPolicy& policy() { return policy_; }
 
  private:
   struct CodecListEntry {
@@ -55,9 +57,17 @@ class CodecFactoryApp {
   void PostDiscoveryQueueProcessing();
   void ProcessDiscoveryQueue();
 
-  std::unique_ptr<sys::ComponentContext> startup_context_;
+  [[nodiscard]] std::string GetBoardName();
 
   async_dispatcher_t* dispatcher_;
+
+  std::unique_ptr<sys::ComponentContext> startup_context_;
+  std::string board_name_;
+
+  // Per-board (or similar) policy on # of concurrent HW decoders that use
+  // contiguous_memory_size before falling back to SW (or other similar sorts of
+  // policy).
+  CodecFactoryPolicy policy_;
 
   // We don't keep a fidl::BindingSet<> here, as we want each CodecFactory
   // instance to delete itself if an error occurs on its channel.
@@ -129,7 +139,5 @@ class CodecFactoryApp {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CodecFactoryApp);
 };
-
-}  // namespace codec_factory
 
 #endif  // SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_

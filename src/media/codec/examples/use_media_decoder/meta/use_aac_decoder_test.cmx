@@ -3,7 +3,11 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx"
-            }
+            },
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.sysmem.Allocator"
+            ]
         }
     },
     "program": {
@@ -14,6 +18,7 @@
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry"
         ]
     }
