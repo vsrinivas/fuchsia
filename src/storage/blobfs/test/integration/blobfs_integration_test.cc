@@ -1402,6 +1402,34 @@ TEST_P(BlobfsIntegrationTest, VmoCloneWatchingTest) {
   clone_thread.join();
 }
 
+TEST_P(BlobfsIntegrationTest, ReaddirAfterUnlinkingFileWithOpenHandleShouldNotReturnFile) {
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 5);
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
+
+  // Make sure the blob can be listed with readdir.
+  DIR* dir = opendir(fs().mount_path().c_str());
+  ASSERT_NE(dir, nullptr);
+  auto cleanup = fbl::MakeAutoCall([dir]() { closedir(dir); });
+  struct dirent* dir_entry = readdir(dir);
+  ASSERT_EQ(strcmp(strrchr(info->path, '/') + 1, dir_entry->d_name), 0);
+
+  // Unlink the blob while it's still open.
+  ASSERT_EQ(0, unlink(info->path));
+
+  // Check that the blob is no longer included in readdir.
+  rewinddir(dir);
+  dir_entry = readdir(dir);
+  EXPECT_EQ(dir_entry, nullptr);
+
+  // Verify that the blob is still open.
+  constexpr ssize_t bytes_to_check = 20;
+  std::array<uint8_t, bytes_to_check> buf;
+  ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
+  EXPECT_EQ(read(fd.get(), buf.data(), bytes_to_check), bytes_to_check);
+  EXPECT_EQ(memcmp(buf.data(), info->data.get(), bytes_to_check), 0);
+}
+
 class BlobfsMetricIntegrationTest : public FdioTest {
  protected:
   void GetReadBytes(uint64_t* total_read_bytes) {

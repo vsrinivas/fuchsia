@@ -588,6 +588,18 @@ zx_status_t Blobfs::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, s
     if (GetNode(node_index)->header.IsAllocated() &&
         !GetNode(node_index)->header.IsExtentContainer()) {
       Digest digest(GetNode(node_index)->merkle_root_hash);
+
+      fbl::RefPtr<CacheNode> cache_node;
+      if (Cache().Lookup(digest, &cache_node) != ZX_OK) {
+        // Skip blobs that can't be found in the cache.
+        continue;
+      }
+      auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
+      if (vnode->DeletionQueued()) {
+        // Skip blobs that are scheduled for deletion.
+        continue;
+      }
+
       auto name = digest.ToString();
       uint64_t ino = ::llcpp::fuchsia::io::INO_UNKNOWN;
       if (df.Next(name.ToStringPiece(), VTYPE_TO_DTYPE(V_TYPE_FILE), ino) != ZX_OK) {
