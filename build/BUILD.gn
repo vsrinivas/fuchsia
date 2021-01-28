@@ -213,7 +213,6 @@ group("deprecated_package") {
     "//src/bringup/bin/pwrbtn-monitor/test/*",
     "//src/camera/*",
     "//src/camera/bin/device/*",
-    "//src/camera/bin/device_watcher/*",
     "//src/camera/bin/factory/*",
     "//src/camera/bin/factory_cli/*",
     "//src/camera/drivers/bus/aml_mipicsi/*",
