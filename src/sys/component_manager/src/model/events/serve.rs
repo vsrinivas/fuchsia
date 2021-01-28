@@ -86,7 +86,7 @@ pub async fn serve_event_source_sync(
                             .take_static_event_stream(path)
                             .await
                             .ok_or(fcomponent::Error::ResourceUnavailable);
-                        responder.send(&mut result).expect("responder send ok");
+                        responder.send(&mut result)?;
                     }
                     fsys::BlockingEventSourceRequest::StartComponentTree { responder } => {
                         event_source.start_component_tree().await;
