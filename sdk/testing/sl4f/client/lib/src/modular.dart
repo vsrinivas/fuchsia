@@ -148,4 +148,47 @@ class Modular {
     }
     _controlsBasemgr = false;
   }
+
+  /// Updates [extraArgs] to [componentPattern] in the modular session [config]
+  /// in json. We assume that the component_args are unique, and overwrites
+  /// args in [extraArgs] that are already exists in [config].
+  ///
+  /// Note: This method will replace existing args, if your component accepts
+  /// repeated args ex:
+  /// {
+  ///   "args": [
+  ///     "--flag_a=1",
+  ///     "--flag_a=2"
+  ///   ]
+  /// }
+  /// then calling this method with [extraArgs] = {"flag_a": 3, "flag_a": 4}
+  /// will resulted in:
+  /// {
+  ///   "args": [
+  ///     "--flag_a=3",
+  ///     "--flag_a=4"
+  ///   ]
+  /// }
+  /// Note: only args from the first matched [componentPattern] is updated.
+  String updateComponentArgs(
+      String config, RegExp componentPattern, Map<String, dynamic> extraArgs) {
+    dynamic configJson = jsonDecode(config);
+    final componentArgsBody = configJson['sessionmgr']['component_args'];
+    final componentArgs = componentArgsBody?.firstWhere(
+        (e) =>
+            e['uri'] is String &&
+            componentPattern.hasMatch(Uri.parse(e['uri']).fragment),
+        orElse: () => _log.warning('No component matched $componentPattern'));
+
+    if (componentArgs != null) {
+      // Update all the flags in [args].
+      componentArgs['args']?.removeWhere((currentArg) => extraArgs.keys
+          .contains(currentArg.split('=')[0].replaceFirst('--', '')));
+      componentArgs['args']?.addAll(extraArgs
+          .map((arg, val) =>
+              MapEntry(val != null ? '--$arg=$val' : '--$arg', ''))
+          .keys);
+    }
+    return jsonEncode(configJson);
+  }
 }

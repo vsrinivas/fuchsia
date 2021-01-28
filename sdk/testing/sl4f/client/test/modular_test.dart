@@ -278,4 +278,89 @@ void main(List<String> args) {
         reason: 'still controlsBasemgr after shutdown');
     expect(killed, isTrue, reason: 'did not call KillBasemgr');
   });
+
+  test('modify config', () {
+    const fakeConfig = '''
+    {
+  "basemgr": {
+    "base_shell": {
+      "url": "fuchsia-pkg://fuchsia.com/base_shell#meta/base_shell.cmx",
+      "args": ["--base_shell_arg"]
+    },
+    "session_shells": [
+      {
+        "url": "fuchsia-pkg://fuchsia.com/session#meta/session.cmx"
+      }
+    ],
+    "session_shell_arg": true
+  },
+  "sessionmgr": {
+    "session_agents": [
+      "fuchsia-pkg://fuchsia.com/component_foo#meta/foo_a.cmx",
+      "fuchsia-pkg://fuchsia.com/component_foo#meta/foo_b.cmx",
+      "fuchsia-pkg://fuchsia.com/component_bar#meta/bar.cmx"
+    ],
+    "component_args": [
+      {
+        "uri": "fuchsia-pkg://fuchsia.com/component_foo#meta/foo_a.cmx",
+        "args": [
+          "--food=burger",
+          "--drink=coffee"
+        ]
+      },
+      {
+        "uri": "fuchsia-pkg://fuchsia.com/component_bar#meta/bar.cmx",
+        "args": []
+      }
+    ],
+    "agent_service_index": [
+      {
+        "service_name": "some.service.a",
+        "agent_url": "fuchsia-pkg://fuchsia.com/service_a#meta/service_a.cmx"
+      },
+      {
+        "service_name": "some.service.b",
+        "agent_url": "fuchsia-pkg://fuchsia.com/service_b#meta/service_b.cmx"
+      }
+    ]
+  }
+}
+    ''';
+    // Can modify args.
+    final modified_1 =
+        Modular(sl4f).updateComponentArgs(fakeConfig, RegExp(r'foo_\w'), {
+      'food': 'salad',
+      'desert': 'cake',
+    });
+    final fooArgs =
+        jsonDecode(modified_1)['sessionmgr']['component_args'][0]['args'];
+    expect(fooArgs[0], '--drink=coffee', reason: 'did not keep arg --drink');
+    expect(fooArgs[1], '--food=salad', reason: 'did not update arg --food');
+    expect(fooArgs[2], '--desert=cake', reason: 'did not add new arg --desert');
+    expect(fooArgs.length, 3, reason: 'expect 3 args, got ${fooArgs.length}');
+
+    // Can insert args for components with empty args.
+    final modified_2 =
+        Modular(sl4f).updateComponentArgs(modified_1, RegExp('bar'), {
+      'animal': 'cat',
+      'happy': null,
+    });
+    final barArgs =
+        jsonDecode(modified_2)['sessionmgr']['component_args'][1]['args'];
+    expect(barArgs[0], '--animal=cat', reason: 'did not add arg --animal');
+    expect(barArgs[1], '--happy', reason: 'did not add arg --happy');
+    expect(barArgs.length, 2, reason: 'expect 2 args, got ${barArgs.length}');
+
+    // Check everything stays the same on a non-existent component
+    final modified_3 =
+        Modular(sl4f).updateComponentArgs(modified_2, RegExp('fake'), {
+      'animal': 'cat',
+      'happy': null,
+    });
+    final fakeArgs =
+        jsonDecode(modified_3)['sessionmgr']['component_args'][1]['args'];
+    expect(fakeArgs[0], '--animal=cat', reason: 'did not add arg --animal');
+    expect(fakeArgs[1], '--happy', reason: 'did not add arg --happy');
+    expect(fakeArgs.length, 2, reason: 'expect 2 args, got ${fakeArgs.length}');
+  });
 }
