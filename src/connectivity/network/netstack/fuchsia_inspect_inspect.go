@@ -41,16 +41,17 @@ type inspectInner interface {
 }
 
 const (
-	statsLabel     = "Stats"
-	socketInfo     = "Socket Info"
-	dhcpInfo       = "DHCP Info"
-	neighborsLabel = "Neighbors"
-	ethInfo        = "Ethernet Info"
-	netdeviceInfo  = "Network Device Info"
-	rxReads        = "RxReads"
-	rxWrites       = "RxWrites"
-	txReads        = "TxReads"
-	txWrites       = "TxWrites"
+	statsLabel                = "Stats"
+	networkEndpointStatsLabel = "Network Endpoint Stats"
+	socketInfo                = "Socket Info"
+	dhcpInfo                  = "DHCP Info"
+	neighborsLabel            = "Neighbors"
+	ethInfo                   = "Ethernet Info"
+	netdeviceInfo             = "Network Device Info"
+	rxReads                   = "RxReads"
+	rxWrites                  = "RxWrites"
+	txReads                   = "TxReads"
+	txWrites                  = "TxWrites"
 )
 
 // An adapter that implements fuchsia.inspect.InspectWithCtx using the above.
@@ -199,14 +200,15 @@ var _ inspectInner = (*nicInfoMapInspectImpl)(nil)
 // Picking info to inspect from ifState in netstack.
 type ifStateInfo struct {
 	stack.NICInfo
-	nicid               tcpip.NICID
-	adminUp, linkOnline bool
-	dnsServers          []tcpip.Address
-	dhcpEnabled         bool
-	dhcpInfo            dhcp.Info
-	dhcpStats           *dhcp.Stats
-	controller          link.Controller
-	neighbors           map[string]stack.NeighborEntry
+	nicid                tcpip.NICID
+	adminUp, linkOnline  bool
+	dnsServers           []tcpip.Address
+	dhcpEnabled          bool
+	dhcpInfo             dhcp.Info
+	dhcpStats            *dhcp.Stats
+	controller           link.Controller
+	neighbors            map[string]stack.NeighborEntry
+	networkEndpointStats map[string]stack.NetworkEndpointStats
 }
 
 type nicInfoMapInspectImpl struct {
@@ -301,6 +303,9 @@ func (impl *nicInfoInspectImpl) ListChildren() []string {
 	children := []string{
 		statsLabel,
 	}
+	if len(impl.value.NetworkStats) != 0 {
+		children = append(children, networkEndpointStatsLabel)
+	}
 	if impl.value.dhcpEnabled {
 		children = append(children, dhcpInfo)
 	}
@@ -325,6 +330,11 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 			name:  childName,
 			value: reflect.ValueOf(impl.value.Stats),
 		}
+	case networkEndpointStatsLabel:
+		return &networkEndpointStatsInspectImpl{
+			name:  childName,
+			value: impl.value.networkEndpointStats,
+		}
 	case dhcpInfo:
 		return &dhcpInfoInspectImpl{
 			name:  childName,
@@ -348,6 +358,43 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 		}
 	default:
 		return nil
+	}
+}
+
+var _ inspectInner = (*networkEndpointStatsInspectImpl)(nil)
+
+type networkEndpointStatsInspectImpl struct {
+	name  string
+	value map[string]stack.NetworkEndpointStats
+}
+
+func (impl *networkEndpointStatsInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+	}
+}
+
+func (impl *networkEndpointStatsInspectImpl) ListChildren() []string {
+	children := make([]string, 0, len(impl.value))
+	for k := range impl.value {
+		children = append(children, k)
+	}
+	return children
+}
+
+func (impl *networkEndpointStatsInspectImpl) GetChild(childName string) inspectInner {
+	entry, ok := impl.value[childName]
+	if !ok {
+		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName,
+			"GetChild: there are no stats for protocol %s",
+			childName,
+		)
+		return nil
+	}
+
+	return &statCounterInspectImpl{
+		name:  childName,
+		value: reflect.Indirect(reflect.ValueOf(entry)),
 	}
 }
 

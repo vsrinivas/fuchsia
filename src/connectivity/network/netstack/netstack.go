@@ -1175,6 +1175,11 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 			}
 		}
 
+		info.networkEndpointStats = make(map[string]stack.NetworkEndpointStats, len(ni.NetworkStats))
+		for proto, netEPStats := range ni.NetworkStats {
+			info.networkEndpointStats[networkProtocolToString(proto)] = netEPStats
+		}
+
 		ifs.mu.Unlock()
 		info.controller = ifs.controller
 		ifStates[id] = info
@@ -1192,4 +1197,17 @@ func findAddress(addrs []tcpip.ProtocolAddress, addr tcpip.ProtocolAddress) (tcp
 		}
 	}
 	return tcpip.ProtocolAddress{}, false
+}
+
+func networkProtocolToString(proto tcpip.NetworkProtocolNumber) string {
+	switch proto {
+	case header.IPv4ProtocolNumber:
+		return "IPv4"
+	case header.IPv6ProtocolNumber:
+		return "IPv6"
+	case header.ARPProtocolNumber:
+		return "ARP"
+	default:
+		return fmt.Sprintf("0x%x", proto)
+	}
 }

@@ -208,6 +208,11 @@ async fn inspect_nic() -> Result {
                 Neighbor: {
                     FailedEntryLookups: 0u64,
                 },
+            },
+            "Network Endpoint Stats": {
+                ARP: contains {},
+                IPv4: contains {},
+                IPv6: contains {},
             }
         },
         eth.id().to_string() => {
@@ -264,6 +269,11 @@ async fn inspect_nic() -> Result {
                     // then converted back, losing type information.
                     "Last updated": NonZeroUintProperty,
                 }
+            },
+            "Network Endpoint Stats": {
+                ARP: contains {},
+                IPv4: contains {},
+                IPv6: contains {},
             }
         },
         netdev.id().to_string() => {
@@ -307,7 +317,12 @@ async fn inspect_nic() -> Result {
                 TxReads: contains {},
                 TxWrites: contains {}
             },
-            Neighbors: {}
+            Neighbors: {},
+            "Network Endpoint Stats": {
+                ARP: contains {},
+                IPv4: contains {},
+                IPv6: contains {},
+            }
         }
     });
 

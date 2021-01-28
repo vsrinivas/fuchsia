@@ -8,7 +8,6 @@ package netstack
 
 import (
 	"context"
-	"fmt"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -19,8 +18,6 @@ import (
 	"fidl/fuchsia/net/routes"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -36,15 +33,7 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 	const unspecifiedLocalAddress = tcpip.Address("")
 
 	remote, proto := fidlconv.ToTCPIPAddressAndProtocolNumber(destination)
-	var netProtoName string
-	switch proto {
-	case ipv4.ProtocolNumber:
-		netProtoName = "IPv4"
-	case ipv6.ProtocolNumber:
-		netProtoName = "IPv6"
-	default:
-		panic(fmt.Sprintf("impossible network protocol %x", proto))
-	}
+	netProtoName := networkProtocolToString(proto)
 	route, err := r.stack.FindRoute(unspecifiedNIC, unspecifiedLocalAddress, remote, proto, false /* multicastLoop */)
 	if err != nil {
 		_ = syslog.InfoTf(

@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -591,6 +592,47 @@ func TestRouteInfoInspectImpl(t *testing.T) {
 				t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestNetworkEndpointStatsInspectImpl(t *testing.T) {
+	const unknownNetworkProtocolNumber = 0
+	impl := networkEndpointStatsInspectImpl{
+		name: "Network Endpoint Stats",
+		value: map[string]stack.NetworkEndpointStats{
+			"IPv4":        &ipv4.Stats{},
+			"IPv6":        &ipv6.Stats{},
+			"ARP":         &arp.Stats{},
+			"Random Name": &arp.Stats{},
+		},
+	}
+
+	expectedProtocols := []string{"IPv4", "IPv6", "ARP", "Random Name"}
+
+	children := impl.ListChildren()
+	if diff := cmp.Diff(expectedProtocols, children, cmpopts.SortSlices(func(a, b string) bool {
+		return strings.Compare(a, b) < 0
+	})); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+
+	for _, childName := range children {
+		if child := impl.GetChild(childName); child == nil {
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
+		} else if _, ok := child.(*statCounterInspectImpl); !ok {
+			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
+		}
+	}
+
+	childName := "not a real child"
+	if got := impl.GetChild(childName); got != nil {
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, got)
+	}
+
+	if diff := cmp.Diff(inspect.Object{
+		Name: "Network Endpoint Stats",
+	}, impl.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{})); diff != "" {
+		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 	}
 }
 
