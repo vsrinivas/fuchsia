@@ -19,12 +19,12 @@ enum MailboxType : uint8 {
 
 struct MailboxDataBuf {
     uint32 cmd;
-    vector<voidptr> tx;
+    [Buffer] vector<uint8> tx;
 };
 
 struct MailboxChannel {
     MailboxType mailbox;
-    vector<voidptr> rx;
+    [Buffer] vector<uint8> rx;
 };
 
 [Layout = "ddk-protocol"]
