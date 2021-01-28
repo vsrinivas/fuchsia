@@ -22,13 +22,13 @@ constexpr PtFlags kSlptExecute = 1u << 2;
 vaddr_t compute_vaddr_mask(PageTableLevel top_level) {
   uint width;
   switch (top_level) {
-    case PD_L:
+    case PageTableLevel::PD_L:
       width = 30;
       break;
-    case PDP_L:
+    case PageTableLevel::PDP_L:
       width = 39;
       break;
-    case PML4_L:
+    case PageTableLevel::PML4_L:
       width = 48;
       break;
     default:
@@ -94,11 +94,11 @@ bool SecondLevelPageTable::check_vaddr(vaddr_t vaddr) { return !(vaddr & ~valid_
 
 bool SecondLevelPageTable::supports_page_size(PageTableLevel level) {
   switch (level) {
-    case PT_L:
+    case PageTableLevel::PT_L:
       return true;
-    case PD_L:
+    case PageTableLevel::PD_L:
       return supports_2mb_;
-    case PDP_L:
+    case PageTableLevel::PDP_L:
       return supports_1gb_;
     default:
       return false;

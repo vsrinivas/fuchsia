@@ -26,13 +26,13 @@ namespace {
 // Return the page size for this level
 size_t page_size(PageTableLevel level) {
   switch (level) {
-    case PT_L:
+    case PageTableLevel::PT_L:
       return 1ULL << PT_SHIFT;
-    case PD_L:
+    case PageTableLevel::PD_L:
       return 1ULL << PD_SHIFT;
-    case PDP_L:
+    case PageTableLevel::PDP_L:
       return 1ULL << PDP_SHIFT;
-    case PML4_L:
+    case PageTableLevel::PML4_L:
       return 1ULL << PML4_SHIFT;
     default:
       panic("page_size: invalid level\n");
@@ -47,13 +47,13 @@ bool page_aligned(PageTableLevel level, vaddr_t vaddr) {
 // Extract the index needed for finding |vaddr| for the given level
 uint vaddr_to_index(PageTableLevel level, vaddr_t vaddr) {
   switch (level) {
-    case PML4_L:
+    case PageTableLevel::PML4_L:
       return VADDR_TO_PML4_INDEX(vaddr);
-    case PDP_L:
+    case PageTableLevel::PDP_L:
       return VADDR_TO_PDP_INDEX(vaddr);
-    case PD_L:
+    case PageTableLevel::PD_L:
       return VADDR_TO_PD_INDEX(vaddr);
-    case PT_L:
+    case PageTableLevel::PT_L:
       return VADDR_TO_PT_INDEX(vaddr);
     default:
       panic("vaddr_to_index: invalid level\n");
@@ -66,25 +66,25 @@ paddr_t paddr_from_pte(PageTableLevel level, pt_entry_t pte) {
 
   paddr_t pa;
   switch (level) {
-    case PDP_L:
+    case PageTableLevel::PDP_L:
       pa = (pte & X86_HUGE_PAGE_FRAME);
       break;
-    case PD_L:
+    case PageTableLevel::PD_L:
       pa = (pte & X86_LARGE_PAGE_FRAME);
       break;
-    case PT_L:
+    case PageTableLevel::PT_L:
       pa = (pte & X86_PG_FRAME);
       break;
     default:
-      panic("paddr_from_pte at unhandled level %d\n", level);
+      panic("paddr_from_pte at unhandled level %d\n", static_cast<int>(level));
   }
 
   return pa;
 }
 
 PageTableLevel lower_level(PageTableLevel level) {
-  DEBUG_ASSERT(level != 0);
-  return (PageTableLevel)(level - 1);
+  DEBUG_ASSERT(level != PageTableLevel::PT_L);
+  return static_cast<PageTableLevel>(static_cast<int>(level) - 1);
 }
 
 bool page_table_is_clear(const volatile pt_entry_t* page_table) {
@@ -107,7 +107,7 @@ void PendingTlbInvalidation::enqueue(vaddr_t v, PageTableLevel level, bool is_gl
 
   // We mark PML4_L entries as full shootdowns, since it's going to be
   // expensive one way or another.
-  if (count >= ktl::size(item) || level == PML4_L) {
+  if (count >= ktl::size(item) || level == PageTableLevel::PML4_L) {
     full_shootdown = true;
     return;
   }
@@ -421,8 +421,8 @@ pt_entry_t* X86PageTableBase::AllocatePageTable() {
  */
 zx_status_t X86PageTableBase::SplitLargePage(PageTableLevel level, vaddr_t vaddr,
                                              volatile pt_entry_t* pte, ConsistencyManager* cm) {
-  DEBUG_ASSERT_MSG(level != PT_L, "tried splitting PT_L");
-  LTRACEF_LEVEL(2, "splitting table %p at level %d\n", pte, level);
+  DEBUG_ASSERT_MSG(level != PageTableLevel::PT_L, "tried splitting PT_L");
+  LTRACEF_LEVEL(2, "splitting table %p at level %d\n", pte, static_cast<int>(level));
 
   DEBUG_ASSERT(IS_PAGE_PRESENT(*pte) && IS_LARGE_PAGE(*pte));
   volatile pt_entry_t* m = AllocatePageTable();
@@ -481,7 +481,7 @@ zx_status_t X86PageTableBase::GetMapping(volatile pt_entry_t* table, vaddr_t vad
   DEBUG_ASSERT(ret_level);
   DEBUG_ASSERT(mapping);
 
-  if (level == PT_L) {
+  if (level == PageTableLevel::PT_L) {
     return GetMappingL0(table, vaddr, ret_level, mapping);
   }
 
@@ -510,14 +510,14 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
                                            PageTableLevel* ret_level,
                                            volatile pt_entry_t** mapping) {
   /* do the final page table lookup */
-  uint index = vaddr_to_index(PT_L, vaddr);
+  uint index = vaddr_to_index(PageTableLevel::PT_L, vaddr);
   volatile pt_entry_t* e = table + index;
   DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
   if (!IS_PAGE_PRESENT(*e))
     return ZX_ERR_NOT_FOUND;
 
   *mapping = e;
-  *ret_level = PT_L;
+  *ret_level = PageTableLevel::PT_L;
   return ZX_OK;
 }
 
@@ -540,10 +540,11 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
                                      const MappingCursor& start_cursor, MappingCursor* new_cursor,
                                      ConsistencyManager* cm) {
   DEBUG_ASSERT(table);
-  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr(), start_cursor.size());
+  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", static_cast<int>(level), start_cursor.vaddr(),
+          start_cursor.size());
   DEBUG_ASSERT(check_vaddr(start_cursor.vaddr()));
 
-  if (level == PT_L) {
+  if (level == PageTableLevel::PT_L) {
     return RemoveMappingL0(table, start_cursor, new_cursor, cm);
   }
 
@@ -609,8 +610,8 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
     }
     if (unmap_page_table) {
       paddr_t ptable_phys = X86_VIRT_TO_PHYS(next_table);
-      LTRACEF("L: %d free pt v %#" PRIxPTR " phys %#" PRIxPTR "\n", level, (uintptr_t)next_table,
-              ptable_phys);
+      LTRACEF("L: %d free pt v %#" PRIxPTR " phys %#" PRIxPTR "\n", static_cast<int>(level),
+              (uintptr_t)next_table, ptable_phys);
 
       vm_page_t* page = paddr_to_vm_page(ptable_phys);
       DEBUG_ASSERT(page == paddr_to_vm_page(X86_VIRT_TO_PHYS(get_next_table_from_entry(*e))));
@@ -644,12 +645,12 @@ bool X86PageTableBase::RemoveMappingL0(volatile pt_entry_t* table,
   *new_cursor = start_cursor;
 
   bool unmapped = false;
-  uint index = vaddr_to_index(PT_L, new_cursor->vaddr());
+  uint index = vaddr_to_index(PageTableLevel::PT_L, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
     DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
     if (IS_PAGE_PRESENT(*e)) {
-      UnmapEntry(cm, PT_L, new_cursor->vaddr(), e, /*was_terminal=*/true);
+      UnmapEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, /*was_terminal=*/true);
       unmapped = true;
     }
 
@@ -684,7 +685,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
   zx_status_t ret = ZX_OK;
   *new_cursor = start_cursor;
 
-  if (level == PT_L) {
+  if (level == PageTableLevel::PT_L) {
     return AddMappingL0(table, mmu_flags, start_cursor, new_cursor, cm);
   }
 
@@ -741,7 +742,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
           return ZX_ERR_NO_MEMORY;
         }
 
-        LTRACEF_LEVEL(2, "new table %p at level %d\n", m, level);
+        LTRACEF_LEVEL(2, "new table %p at level %d\n", m, static_cast<int>(level));
 
         UpdateEntry(cm, level, new_cursor->vaddr(), e, X86_VIRT_TO_PHYS(m), interm_flags,
                     /*was_terminal=*/false);
@@ -771,9 +772,9 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
 
   *new_cursor = start_cursor;
 
-  PtFlags term_flags = terminal_flags(PT_L, mmu_flags);
+  PtFlags term_flags = terminal_flags(PageTableLevel::PT_L, mmu_flags);
 
-  uint index = vaddr_to_index(PT_L, new_cursor->vaddr());
+  uint index = vaddr_to_index(PageTableLevel::PT_L, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
     DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != VM_PAGE_STATE_FREE);
@@ -781,7 +782,7 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    UpdateEntry(cm, PT_L, new_cursor->vaddr(), e, new_cursor->paddr(), term_flags,
+    UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, new_cursor->paddr(), term_flags,
                 /*was_terminal=*/false);
 
     new_cursor->ConsumePAddr(PAGE_SIZE);
@@ -807,10 +808,11 @@ zx_status_t X86PageTableBase::UpdateMapping(volatile pt_entry_t* table, uint mmu
                                             PageTableLevel level, const MappingCursor& start_cursor,
                                             MappingCursor* new_cursor, ConsistencyManager* cm) {
   DEBUG_ASSERT(table);
-  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr(), start_cursor.size());
+  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", static_cast<int>(level), start_cursor.vaddr(),
+          start_cursor.size());
   DEBUG_ASSERT(check_vaddr(start_cursor.vaddr()));
 
-  if (level == PT_L) {
+  if (level == PageTableLevel::PT_L) {
     return UpdateMappingL0(table, mmu_flags, start_cursor, new_cursor, cm);
   }
 
@@ -881,22 +883,22 @@ zx_status_t X86PageTableBase::UpdateMappingL0(volatile pt_entry_t* table, uint m
 
   *new_cursor = start_cursor;
 
-  PtFlags term_flags = terminal_flags(PT_L, mmu_flags);
+  PtFlags term_flags = terminal_flags(PageTableLevel::PT_L, mmu_flags);
 
-  uint index = vaddr_to_index(PT_L, new_cursor->vaddr());
+  uint index = vaddr_to_index(PageTableLevel::PT_L, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
     pt_entry_t pt_val = *e;
     // Skip unmapped pages (we may encounter these due to demand paging)
     if (IS_PAGE_PRESENT(pt_val)) {
-      UpdateEntry(cm, PT_L, new_cursor->vaddr(), e, paddr_from_pte(PT_L, pt_val), term_flags,
+      UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, paddr_from_pte(PageTableLevel::PT_L, pt_val), term_flags,
                   /*was_terminal=*/true);
     }
 
     new_cursor->ConsumeVAddr(PAGE_SIZE);
     DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
   }
-  DEBUG_ASSERT(new_cursor->size() == 0 || page_aligned(PT_L, new_cursor->vaddr()));
+  DEBUG_ASSERT(new_cursor->size() == 0 || page_aligned(PageTableLevel::PT_L, new_cursor->vaddr()));
   return ZX_OK;
 }
 
@@ -918,10 +920,11 @@ zx_status_t X86PageTableBase::HarvestMapping(volatile pt_entry_t* table, PageTab
                                              MappingCursor* new_cursor, ConsistencyManager* cm,
                                              const HarvestCallback& accessed_callback) {
   DEBUG_ASSERT(table);
-  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr(), start_cursor.size());
+  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", static_cast<int>(level), start_cursor.vaddr(),
+          start_cursor.size());
   DEBUG_ASSERT(check_vaddr(start_cursor.vaddr()));
 
-  if (level == PT_L) {
+  if (level == PageTableLevel::PT_L) {
     return HarvestMappingL0(table, start_cursor, new_cursor, cm, accessed_callback);
   }
 
@@ -978,16 +981,16 @@ zx_status_t X86PageTableBase::HarvestMappingL0(volatile pt_entry_t* table,
 
   *new_cursor = start_cursor;
 
-  uint index = vaddr_to_index(PT_L, new_cursor->vaddr());
+  uint index = vaddr_to_index(PageTableLevel::PT_L, new_cursor->vaddr());
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
     pt_entry_t pt_val = *e;
     if (IS_PAGE_PRESENT(pt_val) && (pt_val & X86_MMU_PG_A)) {
-      const paddr_t paddr = paddr_from_pte(PT_L, pt_val);
-      const uint mmu_flags = pt_flags_to_mmu_flags(pt_val, PT_L);
-      const PtFlags term_flags = terminal_flags(PT_L, mmu_flags);
+      const paddr_t paddr = paddr_from_pte(PageTableLevel::PT_L, pt_val);
+      const uint mmu_flags = pt_flags_to_mmu_flags(pt_val, PageTableLevel::PT_L);
+      const PtFlags term_flags = terminal_flags(PageTableLevel::PT_L, mmu_flags);
       if (accessed_callback(paddr, new_cursor->vaddr(), mmu_flags)) {
-        UpdateEntry(cm, PT_L, new_cursor->vaddr(), e, paddr_from_pte(PT_L, pt_val), term_flags,
+        UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, paddr_from_pte(PageTableLevel::PT_L, pt_val), term_flags,
                     /*was_terminal=*/true, /*exact_flags=*/true);
       }
     }
@@ -995,7 +998,7 @@ zx_status_t X86PageTableBase::HarvestMappingL0(volatile pt_entry_t* table,
     new_cursor->ConsumeVAddr(PAGE_SIZE);
     DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
   }
-  DEBUG_ASSERT(new_cursor->size() == 0 || page_aligned(PT_L, new_cursor->vaddr()));
+  DEBUG_ASSERT(new_cursor->size() == 0 || page_aligned(PageTableLevel::PT_L, new_cursor->vaddr()));
   return ZX_OK;
 }
 
@@ -1003,10 +1006,11 @@ bool X86PageTableBase::FreeUnaccessedPageTable(volatile pt_entry_t* table, PageT
                                                const MappingCursor& start_cursor,
                                                MappingCursor* new_cursor, ConsistencyManager* cm) {
   DEBUG_ASSERT(table);
-  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", level, start_cursor.vaddr(), start_cursor.size());
+  LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", static_cast<int>(level), start_cursor.vaddr(),
+          start_cursor.size());
   DEBUG_ASSERT(check_vaddr(start_cursor.vaddr()));
 
-  DEBUG_ASSERT(level != PT_L);
+  DEBUG_ASSERT(level != PageTableLevel::PT_L);
 
   *new_cursor = start_cursor;
 
@@ -1049,7 +1053,7 @@ bool X86PageTableBase::FreeUnaccessedPageTable(volatile pt_entry_t* table, PageT
       // shootdown.
       cm->SetFullShootdown();
 
-      if (level == PD_L) {
+      if (level == PageTableLevel::PD_L) {
         // Skip recursing here.
         DEBUG_ASSERT(new_cursor->size() >= ps);
         new_cursor->ConsumeVAddr(ps);
@@ -1073,8 +1077,8 @@ bool X86PageTableBase::FreeUnaccessedPageTable(volatile pt_entry_t* table, PageT
       unmap_page_table = page_table_is_clear(next_table);
     }
     if (unmap_page_table) {
-      LTRACEF("L: %d free pt v %#" PRIxPTR " phys %#" PRIxPTR "\n", level, (uintptr_t)next_table,
-              ptable_phys);
+      LTRACEF("L: %d free pt v %#" PRIxPTR " phys %#" PRIxPTR "\n", static_cast<int>(level),
+              (uintptr_t)next_table, ptable_phys);
 
       vm_page_t* page = paddr_to_vm_page(ptable_phys);
       DEBUG_ASSERT(page == paddr_to_vm_page(X86_VIRT_TO_PHYS(get_next_table_from_entry(*e))));
@@ -1254,21 +1258,21 @@ zx_status_t X86PageTableBase::QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mm
 
   DEBUG_ASSERT(last_valid_entry);
   LTRACEF("last_valid_entry (%p) 0x%" PRIxPTE ", level %d\n", last_valid_entry, *last_valid_entry,
-          ret_level);
+          static_cast<int>(ret_level));
 
   /* based on the return level, parse the page table entry */
   if (paddr) {
     switch (ret_level) {
-      case PDP_L: /* 1GB page */
-        *paddr = paddr_from_pte(PDP_L, *last_valid_entry);
+      case PageTableLevel::PDP_L: /* 1GB page */
+        *paddr = paddr_from_pte(PageTableLevel::PDP_L, *last_valid_entry);
         *paddr |= vaddr & PAGE_OFFSET_MASK_HUGE;
         break;
-      case PD_L: /* 2MB page */
-        *paddr = paddr_from_pte(PD_L, *last_valid_entry);
+      case PageTableLevel::PD_L: /* 2MB page */
+        *paddr = paddr_from_pte(PageTableLevel::PD_L, *last_valid_entry);
         *paddr |= vaddr & PAGE_OFFSET_MASK_LARGE;
         break;
-      case PT_L: /* 4K page */
-        *paddr = paddr_from_pte(PT_L, *last_valid_entry);
+      case PageTableLevel::PT_L: /* 4K page */
+        *paddr = paddr_from_pte(PageTableLevel::PT_L, *last_valid_entry);
         *paddr |= vaddr & PAGE_OFFSET_MASK_4KB;
         break;
       default:

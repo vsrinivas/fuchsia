@@ -190,12 +190,12 @@ static void TlbInvalidatePage_task(void* raw_context) {
 
   for (uint i = 0; i < context->pending->count; ++i) {
     const auto& item = context->pending->item[i];
-    switch (item.page_level()) {
-      case PML4_L:
+    switch (static_cast<PageTableLevel>(item.page_level())) {
+      case PageTableLevel::PML4_L:
         panic("PML4_L invld found; should not be here\n");
-      case PDP_L:
-      case PD_L:
-      case PT_L:
+      case PageTableLevel::PDP_L:
+      case PageTableLevel::PD_L:
+      case PageTableLevel::PT_L:
         __asm__ volatile("invlpg %0" ::"m"(*(uint8_t*)item.addr()));
         break;
     }
@@ -255,13 +255,13 @@ bool X86PageTableMmu::check_paddr(paddr_t paddr) { return x86_mmu_check_paddr(pa
 bool X86PageTableMmu::check_vaddr(vaddr_t vaddr) { return x86_mmu_check_vaddr(vaddr); }
 
 bool X86PageTableMmu::supports_page_size(PageTableLevel level) {
-  DEBUG_ASSERT(level != PT_L);
+  DEBUG_ASSERT(level != PageTableLevel::PT_L);
   switch (level) {
-    case PD_L:
+    case PageTableLevel::PD_L:
       return true;
-    case PDP_L:
+    case PageTableLevel::PDP_L:
       return supports_huge_pages;
-    case PML4_L:
+    case PageTableLevel::PML4_L:
       return false;
     default:
       panic("Unreachable case in supports_page_size\n");
@@ -286,7 +286,7 @@ PtFlags X86PageTableMmu::terminal_flags(PageTableLevel level, uint flags) {
     terminal_flags |= X86_MMU_PG_NX;
   }
 
-  if (level > 0) {
+  if (level != PageTableLevel::PT_L) {
     switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
       case ARCH_MMU_FLAG_CACHED:
         terminal_flags |= X86_MMU_LARGE_PAT_WRITEBACK;
@@ -322,9 +322,9 @@ PtFlags X86PageTableMmu::terminal_flags(PageTableLevel level, uint flags) {
 }
 
 PtFlags X86PageTableMmu::split_flags(PageTableLevel level, PtFlags flags) {
-  DEBUG_ASSERT(level != PML4_L && level != PT_L);
+  DEBUG_ASSERT(level != PageTableLevel::PML4_L && level != PageTableLevel::PT_L);
   DEBUG_ASSERT(flags & X86_MMU_PG_PS);
-  if (level == PD_L) {
+  if (level == PageTableLevel::PD_L) {
     // Note: Clear PS before the check below; the PAT bit for a PTE is the
     // the same as the PS bit for a higher table entry.
     flags &= ~X86_MMU_PG_PS;
@@ -356,7 +356,7 @@ uint X86PageTableMmu::pt_flags_to_mmu_flags(PtFlags flags, PageTableLevel level)
     mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
   }
 
-  if (level > 0) {
+  if (level != PageTableLevel::PT_L) {
     switch (flags & X86_MMU_LARGE_PAT_MASK) {
       case X86_MMU_LARGE_PAT_WRITEBACK:
         mmu_flags |= ARCH_MMU_FLAG_CACHED;
@@ -400,13 +400,13 @@ bool X86PageTableEpt::check_paddr(paddr_t paddr) { return x86_mmu_check_paddr(pa
 bool X86PageTableEpt::check_vaddr(vaddr_t vaddr) { return x86_mmu_check_vaddr(vaddr); }
 
 bool X86PageTableEpt::supports_page_size(PageTableLevel level) {
-  DEBUG_ASSERT(level != PT_L);
+  DEBUG_ASSERT(level != PageTableLevel::PT_L);
   switch (level) {
-    case PD_L:
+    case PageTableLevel::PD_L:
       return true;
-    case PDP_L:
+    case PageTableLevel::PDP_L:
       return supports_huge_pages;
-    case PML4_L:
+    case PageTableLevel::PML4_L:
       return false;
     default:
       panic("Unreachable case in supports_page_size\n");
@@ -447,7 +447,7 @@ PtFlags X86PageTableEpt::terminal_flags(PageTableLevel level, uint flags) {
 }
 
 PtFlags X86PageTableEpt::split_flags(PageTableLevel level, PtFlags flags) {
-  DEBUG_ASSERT(level != PML4_L && level != PT_L);
+  DEBUG_ASSERT(level != PageTableLevel::PML4_L && level != PageTableLevel::PT_L);
   // We don't need to relocate any flags on split for EPT.
   return flags;
 }

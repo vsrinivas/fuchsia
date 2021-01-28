@@ -78,7 +78,7 @@ DeviceContext::~DeviceContext() {
 zx_status_t DeviceContext::InitCommon() {
   // TODO(teisenbe): don't hardcode PML4_L
   DEBUG_ASSERT(parent_->caps()->supports_48_bit_agaw());
-  zx_status_t status = second_level_pt_.Init(PML4_L);
+  zx_status_t status = second_level_pt_.Init(PageTableLevel::PML4_L);
   if (status != ZX_OK) {
     return status;
   }

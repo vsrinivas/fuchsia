@@ -18,11 +18,11 @@ typedef uint64_t pt_entry_t;
 #define PRIxPTE PRIx64
 
 // Different page table levels in the page table mgmt hirerachy
-enum PageTableLevel {
-  PT_L,
-  PD_L,
-  PDP_L,
-  PML4_L,
+enum class PageTableLevel {
+  PT_L = 0,
+  PD_L = 1,
+  PDP_L = 2,
+  PML4_L = 3,
 };
 
 // Structure for tracking an upcoming TLB invalidation

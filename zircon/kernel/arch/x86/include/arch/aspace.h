@@ -41,7 +41,7 @@ class X86PageTableMmu final : public X86PageTableBase {
   using X86PageTableBase::phys_;
   using X86PageTableBase::virt_;
 
-  PageTableLevel top_level() final { return PML4_L; }
+  PageTableLevel top_level() final { return PageTableLevel::PML4_L; }
   bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
   bool check_paddr(paddr_t paddr) final;
   bool check_vaddr(vaddr_t vaddr) final;
@@ -64,7 +64,7 @@ class X86PageTableEpt final : public X86PageTableBase {
   using X86PageTableBase::Init;
 
  private:
-  PageTableLevel top_level() final { return PML4_L; }
+  PageTableLevel top_level() final { return PageTableLevel::PML4_L; }
   bool allowed_flags(uint flags) final;
   bool check_paddr(paddr_t paddr) final;
   bool check_vaddr(vaddr_t vaddr) final;
