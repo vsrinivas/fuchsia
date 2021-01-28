@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"runtime"
 	"runtime/pprof"
 	"strings"
 	"syscall"
@@ -349,6 +350,27 @@ func (p *pprofFile) GetReader() (Reader, uint64) {
 }
 
 func (*pprofFile) GetVMO() zx.VMO {
+	return zx.VMO(zx.HandleInvalid)
+}
+
+var _ File = (*stackTraceFile)(nil)
+
+// stackTraceFile provides a File implementation to expose goroutine
+// stacks.
+type stackTraceFile struct{}
+
+func (f *stackTraceFile) GetReader() (Reader, uint64) {
+	buf := make([]byte, 4096)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			return bytes.NewReader(buf[:n]), uint64(n)
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+}
+
+func (f *stackTraceFile) GetVMO() zx.VMO {
 	return zx.VMO(zx.HandleInvalid)
 }
 

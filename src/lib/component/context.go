@@ -114,6 +114,7 @@ func NewContextFromStartupInfo() *Context {
 	}
 
 	c.OutgoingService.AddDebug("pprof", &DirectoryWrapper{Directory: &pprofDirectory{}})
+	c.OutgoingService.AddDebug("goroutines", &FileWrapper{File: &stackTraceFile{}})
 
 	return c
 }
