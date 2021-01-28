@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/68629): Remove the ignore tag.
+// ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'dart:async';
 
 import 'package:logging/logging.dart';
-import 'package:meta/meta.dart';
 import 'package:fidl_fuchsia_logger/fidl_async.dart' as fidl_logger;
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart' as zircon;
@@ -22,8 +24,7 @@ class FuchsiaLogWriter extends LogWriter {
 
   /// Constructor
   FuchsiaLogWriter({required Stream<LogRecord> logStream})
-      : assert(logStream != null),
-        super(
+      : super(
           logStream: logStream,
           shouldBufferLogs: true,
         ) {

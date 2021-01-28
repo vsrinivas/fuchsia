@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/68629): Remove the ignore tag.
+//ignore_for_file: import_of_legacy_library_into_null_safe, unnecessary_null_comparison
+
 import 'dart:convert' show utf8;
 import 'dart:io';
 import 'dart:math';
@@ -9,7 +12,6 @@ import 'dart:typed_data';
 
 import 'package:fidl_fuchsia_logger/fidl_async.dart' as fidl_log;
 import 'package:logging/logging.dart';
-import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
 
 const int _maxCombinedTags = 5;
@@ -68,9 +70,7 @@ class LogMessage {
     this.loggerBaseName,
     this.codeLocation,
     this.tags = const [],
-  })  : assert(record != null),
-        assert(processId != null),
-        assert(threadId != null);
+  });
 
   /// Converts this to a ByteData which can be used to send the message to the
   /// log socket.
@@ -130,7 +130,7 @@ class LogMessage {
   /// next value.
   int _setString(
       ByteData bytes, int firstByteOffset, String value, int maxLen) {
-    if (value == null || value.isEmpty) {
+    if (value.isEmpty) {
       return firstByteOffset;
     }
     List<int> charBytes = utf8.encode(value);

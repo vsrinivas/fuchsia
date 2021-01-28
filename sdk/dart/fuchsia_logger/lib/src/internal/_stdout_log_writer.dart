@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/68629): Remove the ignore tag.
+//ignore_for_file: import_of_legacy_library_into_null_safe, unnecessary_null_comparison
+
 import 'package:logging/logging.dart';
-import 'package:meta/meta.dart';
 
 import '_log_message.dart';
 import '_log_writer.dart';
@@ -12,8 +14,7 @@ import '_log_writer.dart';
 class StdoutLogWriter extends LogWriter {
   /// Constructor
   StdoutLogWriter({required Stream<LogRecord> logStream})
-      : assert(logStream != null),
-        super(
+      : super(
           logStream: logStream,
           shouldBufferLogs: false,
         );

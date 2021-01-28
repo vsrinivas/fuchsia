@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/68629): Remove the ignore tag.
+//ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
@@ -36,7 +39,7 @@ abstract class LogWriter {
   LogWriter({
     required Stream<LogRecord> logStream,
     bool shouldBufferLogs = false,
-  }) : assert(logStream != null) {
+  }) {
     void Function(LogMessage) onMessageFunc;
 
     if (shouldBufferLogs) {
@@ -58,10 +61,6 @@ abstract class LogWriter {
 
   /// Remaps the level string to the ones used in FTL.
   String getLevelString(Level level) {
-    if (level == null) {
-      return null;
-    }
-
     if (level == Level.FINE) {
       return 'VLOG(1)';
     } else if (level == Level.FINER) {
@@ -101,25 +100,24 @@ abstract class LogWriter {
 
     // make our own copy to allow us to remove null values and not change the
     // original values
-    final incomingTags = List.of(tags ?? const [])
+    final incomingTags = List.of(tags)
       ..removeWhere((t) => t == null || t.isEmpty);
 
-    if (incomingTags != null) {
-      if (incomingTags.length > _maxGlobalTags) {
-        Logger.root.warning('Logger initialized with > $_maxGlobalTags tags.');
-        Logger.root.warning('Later tags will be ignored.');
-      }
-      for (int i = 0; i < _maxGlobalTags && i < incomingTags.length; i++) {
-        String s = incomingTags[i];
-        if (s.length > _maxTagLength) {
-          Logger.root
-              .warning('Logger tags limited to $_maxTagLength characters.');
-          Logger.root.warning('Tag "$s" will be truncated.');
-          s = s.substring(0, _maxTagLength);
-        }
-        result.add(s);
-      }
+    if (incomingTags.length > _maxGlobalTags) {
+      Logger.root.warning('Logger initialized with > $_maxGlobalTags tags.');
+      Logger.root.warning('Later tags will be ignored.');
     }
+    for (int i = 0; i < _maxGlobalTags && i < incomingTags.length; i++) {
+      String s = incomingTags[i]!;
+      if (s.length > _maxTagLength) {
+        Logger.root
+            .warning('Logger tags limited to $_maxTagLength characters.');
+        Logger.root.warning('Tag "$s" will be truncated.');
+        s = s.substring(0, _maxTagLength);
+      }
+      result.add(s);
+    }
+
     return result;
   }
 

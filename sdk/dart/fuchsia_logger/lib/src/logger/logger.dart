@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/68629): Remove the ignore tag.
+//ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'dart:io';
 
 import 'package:collection/collection.dart' show IterableExtension;
@@ -74,14 +77,14 @@ void setupLogger({
   _connectToLogWriterIfNeeded();
 
   final loggerBaseName =
-      name ?? Platform.script?.pathSegments?.lastWhereOrNull((_) => true);
+      name ?? Platform.script.pathSegments.lastWhereOrNull((_) => true);
 
   // Tags get appended to each log statement. We put the name, if present
   // as the first tag so it makes it easier to identify.
   // We remove any null values before sending them to the logger
   final List<String> tags = []
     ..addAll(globalTags ?? const [])
-    ..removeWhere((t) => t == null || t.isEmpty);
+    ..removeWhere((t) => t.isEmpty);
 
   bool inCheckedMode = false;
   assert(() {
@@ -90,7 +93,7 @@ void setupLogger({
   }());
 
   _logWriter
-    ..loggerBaseName = loggerBaseName
+    ?..loggerBaseName = loggerBaseName
     ..globalTags = tags
     ..forceShowCodeLocation = forceShowCodeLocation ?? inCheckedMode;
 }

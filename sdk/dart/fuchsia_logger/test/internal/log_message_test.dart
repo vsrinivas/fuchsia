@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: implementation_imports
+// TODO(fxb/68629): Remove the ignore tag.
+// ignore_for_file: implementation_imports, import_of_legacy_library_into_null_safe
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -23,7 +25,8 @@ void main() {
   /// They should remain to ensure backwards compatibility
   group('legacy toBytes tests', () {
     test('convert to bytes info', () {
-      final message = _makeMessage(Level.INFO, 'foo');
+      final message = _makeMessage(Level.INFO, 'foo',
+          error: Exception(''), stackTrace: StackTrace.fromString(''));
 
       final bytes = message.toBytes();
       final buffer = bytes.buffer.asUint8List();
@@ -33,14 +36,15 @@ void main() {
       // The name of the logger
       expect(utf8.decode(buffer.sublist(33, 37)), equals('TEST'));
       expect(utf8.decode(buffer.sublist(38, 41)), equals('foo'));
-      expect(buffer[41], equals(0));
-      // Length should be 33 + 5 (TEST) + 4 (foo)
-      expect(bytes.lengthInBytes, equals(42));
+      expect(utf8.decode(buffer.sublist(41, 54)), equals(': Exception: '));
+      expect(buffer[56], equals(0));
+      // Length should be 33 + 5 (TEST) + 4 (foo) + 14 (: Exception: \n)
+      expect(bytes.lengthInBytes, equals(56));
     });
 
     test('convert to bytes exception', () {
-      final message =
-          _makeMessage(Level.SHOUT, 'error', error: Exception('cause'));
+      final message = _makeMessage(Level.SHOUT, 'error',
+          error: Exception('cause'), stackTrace: StackTrace.fromString(''));
 
       final bytes = message.toBytes();
       final buffer = bytes.buffer.asUint8List();
@@ -58,6 +62,7 @@ void main() {
       expect(utf8.decode(buffer.sublist(start)),
           matches('error: Exception: cause'));
       end = start + 23;
+      expect(buffer[end++], equals(10)); // newline
       expect(buffer[end++], equals(0));
       expect(bytes.lengthInBytes, equals(end));
     });
@@ -99,11 +104,10 @@ void main() {
 
     test('convert to bytes with tags', () {
       final tags = ['tag1', 'tag2'];
-      final message = _makeMessage(
-        Level.FINE,
-        'bar',
-        tags: tags,
-      );
+      final message = _makeMessage(Level.FINE, 'bar',
+          tags: tags,
+          error: Exception(''),
+          stackTrace: StackTrace.fromString(''));
 
       final bytes = message.toBytes();
       final buffer = bytes.buffer.asUint8List();
@@ -132,7 +136,11 @@ void main() {
 
       start = end;
       expect(utf8.decode(buffer.sublist(start, start + 3)), equals('bar'));
-      end = start + 3;
+      start = start + 3;
+      expect(utf8.decode(buffer.sublist(start, start + 13)),
+          equals(': Exception: '));
+      end = start + 13;
+      expect(buffer[end++], equals(10)); // newline
       expect(buffer[end++], equals(0));
       expect(bytes.lengthInBytes, equals(end));
     });
@@ -144,6 +152,8 @@ void main() {
         'bar',
         tags: tags,
         loggerName: 'test-logger',
+        error: Exception(''),
+        stackTrace: StackTrace.fromString(''),
       );
 
       final bytes = message.toBytes();
@@ -174,6 +184,11 @@ void main() {
       start = end;
       expect(utf8.decode(buffer.sublist(start, start + 3)), equals('bar'));
       end = start + 3;
+
+      start = end;
+      end = start + 13;
+      expect(utf8.decode(buffer.sublist(start, end)), equals(': Exception: '));
+      expect(buffer[end++], equals(10));
       expect(buffer[end++], equals(0));
       expect(bytes.lengthInBytes, equals(end));
     });
@@ -199,11 +214,11 @@ int _bytesToUint64(List<int> bytes) {
 }
 
 LogMessage _makeMessage(Level level, String message,
-        {int processId = 1,
+        {required Object error,
+        required StackTrace stackTrace,
+        int processId = 1,
         int threadId = 2,
         String name = 'TEST',
-        required Object error,
-        required StackTrace stackTrace,
         List<String>? tags,
         String loggerName = ''}) =>
     LogMessage(

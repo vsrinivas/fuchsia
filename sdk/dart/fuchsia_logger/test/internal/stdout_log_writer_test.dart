@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: implementation_imports
+// TODO(fxb/68629): Remove the ignore tag.
+// ignore_for_file: implementation_imports, import_of_legacy_library_into_null_safe
 
 import 'dart:async';
 
