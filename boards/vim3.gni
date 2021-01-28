@@ -9,6 +9,7 @@ board_name = "vim3"
 _common_bootfs_deps = [
   "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
   "//src/connectivity/ethernet/drivers/dwmac",
+  "//src/connectivity/ethernet/drivers/ethernet",
   "//src/connectivity/ethernet/drivers/realtek-8211f",
   "//src/devices/block/drivers/aml-sdmmc",
   "//src/devices/block/drivers/bootpart",
