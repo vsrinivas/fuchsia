@@ -1,4 +1,4 @@
-# UTC Synchronization Algorithms
+# UTC synchronization algorithms
 
 ## Introduction
 
@@ -19,7 +19,7 @@ README.md in each time source component for further details.
 
 ## Overview
 
-We split the operation of Timekeeper into answering six separate questions:
+The operation of Timekeeper is split into answering seven separate questions:
 
 1. **Should a time sample be accepted?** Each time a sample is received from a
    time source Timekeeper decides whether it should be accepted (in which case
@@ -43,24 +43,27 @@ We split the operation of Timekeeper into answering six separate questions:
    sequence of time samples may be used to estimate errors in a device’s
    oscillator. Correcting for these frequency errors increases the accuracy of
    the system.
-6. **What clock updates should be made?** Once a convergence strategy has been
+6. **How can clock error be bounded?** The time reported by the UTC clock is
+   unlikely to perfectly match the true UTC. Although the exact error is not
+   known, Timekeeper may estimate and publish a bound on the error.
+7. **What clock updates should be made?** Once a convergence strategy has been
    selected it must be implemented by making one or more updates to the UTC
-   clock object. Estimated frequency changes should also update the UTC clock
-   object.
+   clock object. Estimated frequency and error bound changes should also update
+   the UTC clock object.
 
 In some other time synchronization systems (for example NTP) the same algorithm
 is used to answer more than one of these questions. This can make it difficult
 to clearly reason about the behavior of a particular feature, to avoid
 unintentional interactions between features, or to adjust components of the
-algorithm in response to new requirements. On Fuchsia we intentionally use
+algorithm in response to new requirements. Timekeeper intentionally uses
 separate algorithms to answer each question. This leads to a system that is
 simpler to develop, analyze, and debug and provides greater flexibility to
 change or reconfigure individual algorithms when supporting a wide range of
 different products.
 
-The interactions between these algorithms are summarized in Figure 1 below,
-where black elements are present in all configurations and grey elements are
-only present when an optional time source role is present.
+The interactions between these algorithms are summarized in Figure 1, where
+black elements are present in all configurations and grey elements are only
+present when an optional time source role is present.
 
 ![This figure present a block diagram of algorithm interactions.](images/algorithm_block_diagram.png "Figure 1 - Algorithm Block Diagram")
 
@@ -107,14 +110,14 @@ Time samples are subjected to simple validity tests before being accepted:
    This check ensures that all other sources remain consistent with the gating
    source.
 
-We considered whether to reject time samples that were inconsistent with current
-estimated UTC (either by being before current UTC or significantly after current
-UTC) but conclude this is undesirable. Any system that rejects new inputs based
-on the current estimate is vulnerable to permanent failure if its estimate
-becomes erroneous and in the case of two mismatched inputs there is no reason to
-believe the first is more reliable than the second. We prefer a system that can
-recover from an error, even at the cost of a significant jump in time, to one
-that cannot.
+The algorithms designers considered whether to reject time samples that were
+inconsistent with current estimated UTC (either by being before current UTC or
+significantly after current UTC) but concluded this was undesirable. Any system
+that rejects new inputs based on the current estimate is vulnerable to permanent
+failure if its estimate becomes erroneous and in the case of two mismatched
+inputs there is no reason to believe the first is more reliable than the second.
+A system that can recover from an error, even at the cost of a significant jump
+in time, is preferable to one that cannot.
 
 ### Which time source should be used? {#source_selection}
 
@@ -149,11 +152,11 @@ time samples:
 *Note: As of Q4 2020 gating and fallback sources are not yet supported and
 therefore the time source selection algorithm has not yet been implemented.*
 
-We considered whether to include hysteresis or failure counting in the time
-source selection algorithm but since we intend to accommodate many failure modes
-internal to the time sources we expect the overall health of a time source will
-be reasonably stable. This means hysteresis would not add sufficient value to
-compensate for its additional complexity.
+The algorithm designers considered whether to include hysteresis or failure
+counting in the time source selection algorithm but concluded this would not add
+sufficient value to compensate for the additional complexity. Many failure modes
+are accommodated internal to the time sources so complete time source failures
+should be rare events.
 
 ### How should a time sample change the estimated UTC? {#update_estimate}
 
@@ -163,21 +166,21 @@ and the size of this error varies between samples. The UTC estimate must
 therefore combine information from multiple samples rather than blindly
 following the most recent sample.
 
-This state estimation problem is commonly and efficiently solved using a
-[Kalman filter][1] in other domains. We define a simple two dimensional Kalman
-filter to maintain the Timekeeper UTC estimate where the two states are UTC time
-and oscillator frequency. Note that frequency is maintained external to the
-filter through the [frequency correction algorithm](#frequency_estimation);
-filter frequency is excluded from the Kalman filter’s measurement model and has
-a covariance of zero.
+This state estimation problem is commonly and efficiently solved using a [Kalman
+filter][1] in other domains. Timekeeper defines a simple two dimensional Kalman
+filter to maintain the UTC estimate where the two states are UTC time and
+oscillator frequency. Note that frequency is maintained external to the filter
+through the [frequency correction algorithm](#frequency_estimation); filter
+frequency is excluded from the Kalman filter’s measurement model and has a
+covariance of zero.
 
-The parameters in our filter are presented in Figure 2 below.
+The parameters in the Kalman filter are presented in Figure 2.
 
 ![This figure presents the Kalman filter parameters and defines terms used.](images/kalman_filter.png "Figure 2 - Kalman Filter Parameters")
 
 Note that, as a result of the fixed frequency estimate and the spare process
 covariance matrix, only the upper left element of the state covariance matrix is
-ever non-zero. We apply a minimum bound of MIN_COVARIANCE on this value to
+ever non-zero. This value is limited to a lower limit of MIN_COVARIANCE to
 prevent the filter from over-indexing on its internal state and rejecting new
 inputs.
 
@@ -186,7 +189,7 @@ inputs.
 After each update to the estimated UTC, Timekeeper decides whether to
 immediately step the userspace clock to the new estimate or apply a rate
 correction to gradually slew the userspace clock to the new estimate. These
-options are illustrated in Figure 3 below.
+options are illustrated in Figure 3.
 
 ![This figure illustrates stepping and slewing a clock.](images/step_vs_slew.png "Figure 3 - Clock Correction by Step vs by Slew")
 
@@ -199,11 +202,11 @@ duration to bound the time over which the clock is known to be inaccurate; for
 example, slewing away an error of multiple hours over a period of two weeks
 would be undesirable.
 
-For small corrections we pick a preferred rate correction at which to perform a
-slew and apply this rate for as long as is necessary to achieve the correction.
-For larger corrections, once the slew duration would reach some maximum, we keep
-the slew duration fixed at this maximum and increase the rate correction. Once
-the rate correction would exceed some maximum we resort to stepping the time.
+For small corrections a slew is applied using a fixed small rate for as long as
+is necessary to achieve the correction. For larger corrections, once the slew
+duration would reach some maximum, a slew is applied for a fixed duration using
+whatever rate is necessary to achieve the correction. Once the rate would exceed
+some maximum Timekeeper resorts to using a time step instead of a slew.
 
 In summary:
 
@@ -225,16 +228,17 @@ which clock corrections must be made.
 
 Oscillator errors are bounded by specification to some small value (typically
 tens of parts per million) hence the UTC estimate algorithm above is stable and
-reliable even when a frequency estimate is unavailable; we consider the
-frequency estimate to be an enhancement that is beneficial but not necessary.
+reliable even when a frequency estimate is unavailable; the frequency estimate
+is an enhancement that is beneficial to performance but not necessary.
 
 The frequency estimate is refined over a much longer time period than the UTC
 estimate. This places the time constants of the two algorithms far apart to
 avoid potential interactions and ensures the frequency algorithm will not track
 transient errors such as a temperature driven error while a device is under
 heavy use. This high time constant means frequency errors would remain in the
-system for a long time and so we prefer making no improvement in the frequency
-estimate to introducing an error in the frequency estimate.
+system for a long time and. As a design philosophy, Timekeeper favors making
+no improvement in the frequency estimate to introducing an error in the
+frequency estimate.
 
 Timekeeper estimates a period frequency for each FREQUENCY_ESTIMATION_WINDOW
 period providing all of the following conditions are met:
@@ -243,18 +247,18 @@ period providing all of the following conditions are met:
    the period. This avoids placing an excessive weight on a small number of
    samples if time was unavailable for most of the period.
 2. No step changes in time occurred during the period. A step change is evidence
-   of a significant error either before or after the step, we avoid these
-   periods to avoid incorporating this error.
+   of a significant error either before or after the step. These periods are not
+   used to avoid incorporating this error.
 3. No part of the period falls within 12 hours of the UTC time at which a leap
    second may have occurred. Some time sources indulge in leap second smearing
    where they introduce a significant frequency error for a 24 hour period
-   rather than a step change. We avoid these windows to avoid incorporating this
-   frequency error. This affects a maximum of two 24 hour periods a year, fewer
-   if the system tracks whether the next leap second is scheduled.
+   rather than a step change. These periods are not used to avoid incorporating
+   this frequency error. This affects a maximum of two 24 hour periods a year,
+   fewer if the system tracks whether the next leap second is scheduled.
 
 The period frequency is calculated as the gradient of a least squares linear
 regression over the (monotonic, utc) tuples for all time samples accepted in the
-period as illustrated in Figure 4 below.
+period as illustrated in Figure 4.
 
 ![This figure illustrates the frequency estimation process.](images/frequency_estimation.png "Figure 4 - Frequency Estimation Process")
 
@@ -268,11 +272,11 @@ period_frequency = {sum(utc * monotonic) - sum(utc)*sum(monotonic)/n}
 Where n is the number of accepted samples within the period. Note that
 MIN_SAMPLE_INTERVAL places an upper bounds on this value. The overall frequency
 estimate is calculated as the exponentially weighted moving average (EWMA) of
-the period frequencies. In all cases we constrain the final estimated frequency
-to be within double the standard deviation of the oscillator error such that no
-combination of the events could cause the frequency error to be wildly
-inaccurate to the point where it could impact the correctness of the Kalman
-filter. i.e.
+the period frequencies. In all cases the final estimated frequency is
+constrained to be within double the standard deviation of the oscillator error
+such that no combination of the events could cause the frequency error to be
+wildly inaccurate to the point where it could impact the correctness of the
+Kalman filter. i.e.
 
 ```
 estimated_frequency = clamp(
@@ -288,46 +292,112 @@ minimal state.
 *Note: As of Q4 2020 the frequency estimation algorithm has not yet been
 implemented.*
 
+### How can clock error be bounded? {#error_bound}
+
+For the UTC clock, the error bound is defined as half of a 95% confidence
+interval. In other words, for a randomly selected time on a randomly selected
+Fuchsia device, there is a ≥95% probability that the true value of UTC is
+between `reported_utc - error_bound` and `reported_utc + error_bound`.
+Attempting to report any higher level of confidence would imply a level of
+certainty that Timekeeper cannot provide because some time failure modes are
+invisible to Timekeeper. For example, the local oscillator could be running
+outside its specified tolerance due to a defect or a remote time source could
+send an incorrect time due to a bug.
+
+The error in the UTC clock is composed of three components:
+
+1. **A known difference between the reported clock time and the Kalman filter
+   UTC estimate while a slew is in progress.**
+
+   The current clock value and the UTC estimate are easily calculated at any
+   point therefore calculating the difference is trivial. The error bound
+   includes the complete difference, however, this is overly pessimistic.
+
+1. **An unknown difference between the Kalman filter UTC estimate and the time
+   standard used by the remote time source.**
+
+   Each time source supplies error standard deviations with its time samples.
+   The probability distribution of these errors is not known and may differ
+   between time sources. However, based on the [central limit theorem][2], the
+   normalized sum of independent random variables approaches a normal
+   distribution even if the original random variables were not normally
+   distributed. Since the Kalman filter is averaging the input samples (albeit
+   not equally), it is expected that the error distribution of the Kalman filter
+   approaches a normal distribution as the filter accumulates a large number of
+   samples, with a standard deviation that is determined by the covariance. This
+   error bound includes a term of [twice the square root of covariance][3] in
+   the error bound to account for this error component. This this may either be
+   optimistic or pessimistic for early time samples while the filter error is
+   dominated by the unknown probability distribution received from the time
+   source.
+
+1. **A known difference between the time standard used by the remote time source
+   and true UTC.**
+
+   Some sources, such as Google, "smear" leap seconds by deliberately
+   introducing an error of up to 500ms to the reported time during the 24 hours
+   surrounding a leap second. This algorithm does not document this error in the
+   error bound, reasoning that the complexity and computational cost of
+   documenting smearing error is not worth the benefit to time clients. Leap
+   seconds occurred five times between 2000 and 2020 causing a smearing error on
+   0.07% of all days in this range. It is unlikely this can cause the final
+   bound to fail the 95% confidence criteria.
+
+In summary, the error bound is calculated in the following way:
+`error_bound = 2 * sqrt(covariance[0,0]) + |estimated_utc - clock_utc|`
+
+Until the Kalman filter has been initialized by receipt of the first time
+sample, the error bound is set to `ZX_CLOCK_UNKNOWN_ERROR`. This includes the
+case where the clock has been initialized from the real-time clock (RTC) but the
+network time is not yet available.
+
+The error bound calculation is summarized in Figure 5:
+
+![This figure illustrates the error bound construction.](images/error_bound.png "Figure 5 - Error Bound Construction")
+
+
 ### What clock updates should be made? {#clock_updates}
 
 Changes to the rate and offset of the clock follow directly from selecting a
-convergence strategy and estimating the oscillator frequency as discussed in the
-previous two algorithms.
+convergence strategy and estimating the oscillator frequency as discussed in
+earlier algorithms. The error bound defined by the previous algorithm
+is a continuously changing value that must be periodically published in the
+clock.
 
-In addition to rate and offset information,
-[`zx_clock_details_v1`](/zircon/system/public/zircon/syscalls/clock.h) also
-contains an error bound field. Clock error is composed of a symmetric error
-driven by uncertainty in the Kalman filter estimate plus an asymmetric error
-driven by the mismatch between the Kalman filter estimate and the reported clock
-time while a slew is in progress.
+While a large slew is in progress the clock is continually approaching the
+Kalman filter estimate and therefore the error bound is continuously decreasing.
+To limit resource utilization Timekeeper only updates
+`zx_clock_details_v1.error_bound` during a slew when either some other clock
+update is required or when the error in the last reported value exceeds
+ERROR_BOUND_UPDATE.
 
-While a slew is in progress the clock is continually approaching the estimate
-and therefore the error bound is continuously decreasing. To limit resource
-utilization Timekeeper only updates `zx_clock_details_v1.error_bound` when
-either some other clock update is required or when the error in the last
-reported value exceeds ERROR_BOUND_UPDATE. *Note: As at Q4 2020 the error_bound
-field is not yet populated.*
+While a slew is not in progress, the error bound is continuously and slowly
+increasing as the oscillator frequency error accumulates. Outside a slew,
+timekeeper updates `zx_clock_details_v1.error_bound` at some conveniently low
+frequency, ensuring that the error in the last reported value never exceeds
+ERROR_BOUND_UPDATE.
 
 In summary, Timekeeper makes updates to the UTC clock as follows:
 
-1. Step changes to the clock are always implemented as a single clock update.
-2. Clock slews are usually implemented as two clock updates: a rate change to
-   `1/estimated_frequency + rate_correction` when the slew is started followed
-   by a rate change to `1/estimated_frequency` after a delay of `slew_duration`.
-   If a subsequent update is accepted before this second clock change, the
-   second clock change is discarded.
-3. If a new frequency estimate is calculated while no clock slew is in progress,
-   the clock rate is changed to `1/estimated_frequency` (if a clock slew is in
-   progress, the clock update at the end of the slew picks up the new frequency
-   update). If `|last_set_error_bound - error_bound| > ERROR_BOUND_UPDATE`, the
-   error bound is updated.
+* Step changes to the clock are always implemented as a single clock update.
+* Clock slews are usually implemented as two clock updates: a rate change to
+  `1/estimated_frequency + rate_correction` when the slew is started followed
+  by a rate change to `1/estimated_frequency` after a delay of `slew_duration`.
+  If a subsequent update is accepted before this second clock change, the
+  second clock change is discarded.
+* If a new frequency estimate is calculated while no clock slew is in progress,
+  the clock rate is changed to `1/estimated_frequency` (if a clock slew is in
+  progress, the clock update at the end of the slew picks up the new frequency
+  update).
+* If `|last_set_error_bound - error_bound| > ERROR_BOUND_UPDATE`, the error
+  bound is updated.
 
 ## Configurable Parameters
 
 The previous sections introduced a number of parameters that may be used to
 configure the behavior of the algorithms. The following tables provide more
-information about each of these parameters and justify the initial value we
-intend to use.
+information about each of these parameters and justify the initial value that
+is used.
 
 ### GATING_THRESHOLD
 
@@ -455,7 +525,9 @@ progress.
 
 Units | Value | Rationale
 ------|-------|-----------
-Nanoseconds | 200,000,000 (i.e. 200ms) | The maximum rate at which error that can be corrected by slewing is determined by MAX_RATE_CORRECTION. An error bound update of 200ms means one error bound correction is required every 16.7 minutes assuming no other time updates have arrived. This seems to be an appropriately low burden to maintain error bounds.
+Nanoseconds | 100,000,000 (i.e. 100ms) | An error bound update of 100ms combined with an error bound growth of 30ppm from OSCILLATOR_ERROR_SIGMA means one error bound correction is required every 10 minutes during a maximum rate slew. This seems to be an appropriately low burden to maintain error bounds.
 
 
 [1]: https://www.cs.unc.edu/~welch/media/pdf/kalman_intro.pdf
+[2]: https://en.wikipedia.org/wiki/Central_limit_theorem
+[3]: https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
