@@ -383,6 +383,16 @@ impl Ip for Ipv6 {
 }
 
 impl Ipv6 {
+    /// The default loopback address.
+    ///
+    /// When sending packets to a loopback interface, this address is used as
+    /// the source address. It is an address in the loopback subnet.
+    ///
+    /// Unlike [`Ip::LOOPBACK_ADDRESS`], `LOOPBACK_IPV6_ADDRESS` is a
+    /// [`UnicastAddr`].
+    pub const LOOPBACK_IPV6_ADDRESS: UnicastAddr<Ipv6Addr> =
+        unsafe { UnicastAddr::new_unchecked(Ipv6::LOOPBACK_ADDRESS.0) };
+
     /// The IPv6 All Nodes multicast address in link-local scope, as defined in
     /// [RFC 4291 Section 2.7.1].
     ///
@@ -1265,7 +1275,7 @@ impl Ipv6Addr {
 impl sealed::Sealed for Ipv6Addr {}
 
 /// [`Ipv4Addr`] is convertible into [`Ipv6Addr`] through
-/// [`Ipv4addr::to_v6_mapped`].
+/// [`Ipv4Addr::to_v6_mapped`].
 impl From<Ipv4Addr> for Ipv6Addr {
     fn from(addr: Ipv4Addr) -> Self {
         addr.to_v6_mapped()
