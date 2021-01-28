@@ -1506,7 +1506,78 @@ fuchsia_package("tools") {
 }
 ```
 
-### Unsupported features
+### Legacy component index (aka `fx run my-package`)
+
+The legacy `package()` template supported a short-form syntax for launching legacy
+v1 components in the legacy sys shell.
+
+```gn
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "fibonacci"
+  sources = [ "fibonacci.c" ]
+}
+
+package("fibonacci") {
+  deps = [ ":bin" ]
+  binaries = [
+    {
+      name = "fibonacci"
+    },
+  ]
+  meta = [
+    {
+      path = "meta/fibonacci.cmx"
+      dest = "fibonacci.cmx"
+    },
+  ]
+}
+```
+
+```posix-shell
+fx run fibonacci 5
+The 5th Fibonacci number is 3.
+```
+
+This is also known as the [Component Index][component-index].
+
+The new templates don't support this feature out of the box, but you can use the
+full launch URL.
+
+```posix-shell
+fx run fuchsia-pkg://fuchsia.com/fibonacci#meta/fibonacci.cmx 5
+The 5th Fibonacci number is 3.
+```
+
+The plan is to deprecate the legacy shell and the legacy component index along
+with it, but there is currently no concrete timeline for this deprecation. If
+you'd like to keep the old behavior, you can do so with this special syntax:
+
+```gn
+import("//src/sys/build/components.gni")
+import("//src/sys/component_index/component_index.gni")
+
+executable("bin") {
+  output_name = "fibonacci"
+  sources = [ "fibonacci.c" ]
+}
+
+add_to_component_index("component_index") {
+  package_name = "fibonacci"
+  manifest = "meta/fibonacci.cmx"
+}
+
+fuchsia_package_with_single_component("fibonacci") {
+  deps = [
+    ":bin",
+    ":component_index",
+  ]
+  manifest = "meta/fibonacci.cmx"
+}
+```
+
+### Other unsupported features
 
 Note that some features of `package()` are unsupported moving forward. If your
 package depends on them then at this time it cannot be migrated to the new
@@ -1514,11 +1585,6 @@ templates. These unsupported features include:
 
 *   Marking a test as disabled. Instead, change the test source code to mark it
     as disabled, or comment out the disabled test component from the build file.
-*   The [Component Index][component-index]. Components using the new templates
-    cannot be launched using `run` followed by a fuzzy match with their launch
-    URL. Components can still be launched using their full launch URL. Tests
-    can still be launched with `fx test` followed by the short name of the
-    test. See [fxbug.dev/55739][fxb-55739] for more details.
 *   `__deprecated_system_image`: the legacy approach to including a package in
     the system image is not supported moving forward. A solution is being
     prepared and will be available later in 2021.
