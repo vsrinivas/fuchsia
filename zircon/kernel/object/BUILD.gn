@@ -75,6 +75,7 @@ zx_library("object") {
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/page_cache",
     "//zircon/kernel/lib/root_resource_filter",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/region-alloc",
@@ -86,6 +87,9 @@ zx_library("object") {
   public_deps = [
     # <object/buffer_chain.h> has #include <ktl/move.h>.
     "//zircon/kernel/lib/ktl:headers",
+
+    # <object/buffer_chain.h> has <lib/page_cache.h>
+    "//zircon/kernel/lib/page_cache:headers",
 
     # <object/pci_device_dispatcher.h> has #include <dev/pci_common.h>
     "//zircon/kernel/dev/pcie:headers",
