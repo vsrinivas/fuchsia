@@ -42,18 +42,18 @@ pub enum Error {
     Timeout,
 
     /// The Remote end rejected a command we sent (with this error code)
-    #[error("Remote end rejected the command (code = {:}", _0)]
+    #[error("Remote end rejected the command (code = {:})", _0)]
     RemoteRejected(u8),
 
     /// The Remote end rejected a set configuration or reconfigure command we sent,
     /// indicating this ServiceCategory (code).
     /// The indicated ServiceCategory can be retrieved using `ServiceCategory::try_from`
-    #[error("Remote end rejected the command (Category = {:}, code = {:}", _0, _1)]
+    #[error("Remote end rejected the command (category = {:}, code = {:})", _0, _1)]
     RemoteConfigRejected(u8, u8),
 
     /// The Remote end rejected a start or suspend command we sent, indicating this SEID and error
     /// code.
-    #[error("Remote end rejected the command (SEID = {:}, code = {:}", _0, _1)]
+    #[error("Remote end rejected the command (SEID = {:}, code = {:})", _0, _1)]
     RemoteStreamRejected(u8, u8),
 
     /// When a message hasn't been implemented yet, the parser will return this.

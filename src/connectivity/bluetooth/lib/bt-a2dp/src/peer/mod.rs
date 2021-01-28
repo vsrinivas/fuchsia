@@ -266,27 +266,16 @@ impl Peer {
         false
     }
 
-    /// Suspend a media transport stream that connects a local stream `local_id` to the
-    /// remote stream `remote_id`.
+    /// Suspend a media transport stream `local_id`.
     /// It's possible that the stream is not active - a suspend will be attempted, but an
     /// error from the command will be returned.
     /// Returns the result of the suspend command.
     pub fn stream_suspend(
         &self,
         local_id: StreamEndpointId,
-        remote_id: StreamEndpointId,
     ) -> impl Future<Output = avdtp::Result<()>> {
         let peer = Arc::downgrade(&self.inner);
-        let avdtp = self.avdtp();
-        async move {
-            trace!("Suspending stream {} to remote {}", local_id, remote_id);
-            {
-                let strong = PeerInner::upgrade(peer)?;
-                strong.lock().suspend_local_stream(&local_id)?;
-            }
-            let to_suspend = &[remote_id];
-            avdtp.suspend(to_suspend).await
-        }
+        PeerInner::suspend(peer, local_id)
     }
 
     /// Start an asynchronous task to handle any requests from the AVDTP peer.
@@ -368,7 +357,7 @@ struct PeerInner {
     peer: Arc<avdtp::Peer>,
     /// The PeerId that this peer is representing
     peer_id: PeerId,
-    /// Some(local_id) if an endpoint has been configured but hasn't completed opening yet.
+    /// Some(local_id) if an endpoint has been configured but hasn't finished opening.
     /// Per AVDTP Sec 6.11 only up to one stream can be in this state.
     opening: Option<StreamEndpointId>,
     /// The local stream endpoint collection
@@ -395,11 +384,11 @@ impl PeerInner {
     pub fn new(peer: avdtp::Peer, peer_id: PeerId, local: Streams) -> Self {
         Self {
             peer: Arc::new(peer),
-            local,
             peer_id,
             opening: None,
-            remote_endpoints: None,
+            local,
             inspect: Default::default(),
+            remote_endpoints: None,
             remote_inspect: Default::default(),
         }
     }
@@ -452,7 +441,7 @@ impl PeerInner {
         stream
             .configure(&peer_id, &remote_id, capabilities)
             .await
-            .map_err(|(_, c)| avdtp::Error::RequestInvalid(c))?;
+            .map_err(|(cat, c)| avdtp::Error::RequestInvalidExtra(c, (&cat).into()))?;
         stream.endpoint_mut().establish().or(Err(avdtp::Error::InvalidState))?;
         self.opening = Some(local_id.clone());
         Ok(())
@@ -462,27 +451,43 @@ impl PeerInner {
         weak.upgrade().ok_or(avdtp::Error::PeerDisconnected)
     }
 
-    /// Start any streams in the suspended state.
+    /// Start the stream that is opening, completing the opened procedure.
     async fn start_opened(weak: Weak<Mutex<Self>>) -> avdtp::Result<()> {
-        let (avdtp, stream_pairs): (Arc<avdtp::Peer>, Vec<_>) = {
+        let (avdtp, stream_pairs) = {
             let peer = Self::upgrade(weak.clone())?;
             let peer = peer.lock();
-            let idle_stream_pairs = peer
+            let stream_pairs: Vec<(StreamEndpointId, StreamEndpointId)> = peer
                 .local
                 .open()
-                .map(|s| (s.endpoint().local_id().clone(), s.endpoint().remote_id().cloned()))
+                .filter_map(|stream| {
+                    let endpoint = stream.endpoint();
+                    endpoint.remote_id().cloned().map(|id| (endpoint.local_id().clone(), id))
+                })
                 .collect();
-            (peer.peer.clone(), idle_stream_pairs)
+            (peer.peer.clone(), stream_pairs)
         };
         for (local_id, remote_id) in stream_pairs {
-            let to_start = &[remote_id.ok_or(avdtp::Error::InvalidState)?];
+            let to_start = &[remote_id.clone()];
             avdtp.start(to_start).await?;
-
             let peer = Self::upgrade(weak.clone())?;
-            let mut peer = peer.lock();
-            peer.start_local_stream(&local_id)?;
+            let start_result = peer.lock().start_local_stream(&local_id);
+            if let Err(e) = start_result {
+                warn!("Failed local start of {}: {:?}, suspend remote {}", local_id, e, remote_id);
+                avdtp.suspend(to_start).await?;
+            }
         }
         Ok(())
+    }
+
+    /// Suspend a stream locally.
+    async fn suspend(weak: Weak<Mutex<Self>>, local_id: StreamEndpointId) -> avdtp::Result<()> {
+        let (avdtp, remote_id) = {
+            let peer = Self::upgrade(weak.clone())?;
+            let mut peer = peer.lock();
+            (peer.peer.clone(), peer.suspend_local_stream(&local_id)?)
+        };
+        let to_suspend = &[remote_id];
+        avdtp.suspend(to_suspend).await
     }
 
     /// Finds a stream in the local stream set which is compatible with the codec parameters.
@@ -504,19 +509,27 @@ impl PeerInner {
 
     /// Starts the stream which is in the local Streams with `local_id`
     fn start_local_stream(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
+        // TODO(fxbug.dev/49525): should get a permit when we try to start
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
-        // TODO(fxbug.dev/49525): Get a ticket for streaming
         info!("Starting stream: {:?}", stream);
-        let _stream_finished = stream.start().map_err(|c| avdtp::Error::RequestInvalid(c))?;
-        // TODO(fxbug.dev/49525): Drop a ticket when the streaming is done
+        let _finished = stream.start().map_err(|c| avdtp::Error::RequestInvalid(c))?;
+        // TODO(fxbug.dev/68238): if streaming stops unexpectedly, send a suspend to match to peer
+        // TODO(fxbug.dev/49525): drop the permit when streaming is done.
         Ok(())
     }
 
-    fn suspend_local_stream(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
+    /// Suspend a stream on the local side. Returns the remote StreamEndpointId if the stream was suspended,
+    /// or a RequestInvalid error eith the error code otherwise.
+    fn suspend_local_stream(
+        &mut self,
+        local_id: &StreamEndpointId,
+    ) -> avdtp::Result<StreamEndpointId> {
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         info!("Suspending stream: {:?}", stream);
         // TODO(fxbug.dev/49525): Suspending should drop the ticket (setup by the start_local_stream)
-        stream.suspend().map_err(|c| avdtp::Error::RequestInvalid(c))
+        stream.suspend().map_err(|c| avdtp::Error::RequestInvalid(c))?;
+        let remote_id = stream.endpoint().remote_id().cloned().ok_or(avdtp::Error::InvalidState)?;
+        Ok(remote_id)
     }
 
     /// Provide a new established L2CAP channel to this remote peer.
@@ -611,24 +624,24 @@ impl PeerInner {
             }
             avdtp::Request::Start { responder, stream_ids } => {
                 for seid in stream_ids {
-                    let stream = match self.get_mut(&seid) {
-                        Err(e) => return responder.reject(&seid, e),
-                        Ok(stream) => stream,
-                    };
-                    if let Err(_) = stream.start() {
-                        return responder.reject(&seid, avdtp::ErrorCode::BadState);
+                    match self.start_local_stream(&seid) {
+                        Ok(()) => {}
+                        Err(avdtp::Error::RequestInvalid(code)) => {
+                            return responder.reject(&seid, code)
+                        }
+                        Err(_e) => return responder.reject(&seid, avdtp::ErrorCode::BadState),
                     }
                 }
                 responder.send()
             }
             avdtp::Request::Suspend { responder, stream_ids } => {
                 for seid in stream_ids {
-                    let stream = match self.get_mut(&seid) {
-                        Err(e) => return responder.reject(&seid, e),
-                        Ok(stream) => stream,
-                    };
-                    if let Err(_) = stream.suspend() {
-                        return responder.reject(&seid, avdtp::ErrorCode::BadState);
+                    match self.suspend_local_stream(&seid) {
+                        Ok(_remote_id) => {}
+                        Err(avdtp::Error::RequestInvalid(code)) => {
+                            return responder.reject(&seid, code)
+                        }
+                        Err(_e) => return responder.reject(&seid, avdtp::ErrorCode::BadState),
                     }
                 }
                 responder.send()
@@ -639,7 +652,7 @@ impl PeerInner {
                     Ok(stream) => stream,
                 };
                 stream.abort(None).await;
-                self.opening = self.opening.take().filter(|id| id != &stream_id);
+                self.opening = self.opening.take().filter(|local_id| local_id != &stream_id);
                 responder.send()
             }
             avdtp::Request::DelayReport { responder, delay, stream_id } => {

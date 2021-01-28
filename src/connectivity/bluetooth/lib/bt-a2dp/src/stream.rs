@@ -174,15 +174,22 @@ impl Stream {
         self.media_task_runner.as_mut().ok_or(ErrorCode::BadState)
     }
 
-    /// Attempt to start the endpoint.  If the endpoint is successfully started, the media task is
-    /// started and a future that will finish when the media task finishes is returned.
+    /// Attempt to start the endpoint.
+    /// If the endpoint is successfully started, the media task is started and a future that
+    /// will finish when the media task finishes is returned.
     pub fn start(&mut self) -> Result<BoxFuture<'static, Result<(), Error>>, ErrorCode> {
         if self.media_task_runner.is_none() {
             return Err(ErrorCode::BadState);
         };
         let transport = self.endpoint.take_transport().ok_or(ErrorCode::BadState)?;
         let _ = self.endpoint.start()?;
-        let mut task = self.media_runner_ref()?.start(transport).or(Err(ErrorCode::BadState))?;
+        let mut task = match self.media_runner_ref()?.start(transport) {
+            Ok(media_task) => media_task,
+            Err(_e) => {
+                let _ = self.endpoint.suspend()?;
+                return Err(ErrorCode::BadState);
+            }
+        };
         let finished = task.finished();
         self.media_task = Some(task);
         Ok(finished.err_into().boxed())
