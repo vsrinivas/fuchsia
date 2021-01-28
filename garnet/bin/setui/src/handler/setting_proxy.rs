@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/68069): Add module documentation describing Setting Proxy's role in
+// setting handling.
 use crate::handler::base::{
     Command, Event, ExitResult, SettingHandlerFactory, SettingHandlerResult, State,
 };
@@ -26,31 +28,64 @@ use crate::service;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use fuchsia_zircon::Duration;
 
+/// An enumeration of the different client types that provide requests to
+/// setting handlers.
+#[derive(Clone, Debug)]
+enum Client {
+    /// A client from the core MessageHub to communicate with the switchboard.
+    /// The first element represents the id of the action while the second
+    /// element is the client to communicate back responses to.
+    Core(u64, core::message::MessageClient),
+}
+
+/// A container for associating a Handler Request with a given [`Client`].
+#[derive(Clone, Debug)]
+struct RequestInfo {
+    setting_request: Request,
+    client: Client,
+}
+
+impl RequestInfo {
+    /// Sends the supplied result as a reply with the associated [`Client`].
+    pub fn reply(&self, result: SettingHandlerResult) {
+        match &self.client {
+            Client::Core(id, client) => {
+                client.reply(core::Payload::Event(SettingEvent::Response(*id, result))).send();
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct ActiveRequest {
-    id: u64,
-    request: Request,
-    client: core::message::MessageClient,
+    request: RequestInfo,
+    // The number of attempts that have been made on this request.
     attempts: u64,
     last_result: Option<SettingHandlerResult>,
 }
 
+impl ActiveRequest {
+    pub fn get_request(&self) -> Request {
+        self.request.setting_request.clone()
+    }
+}
+
 #[derive(Clone, Debug)]
-enum ActiveControllerRequest {
-    /// Request to add an active request from a ControllerState.
-    AddActive(ActiveRequest),
-    /// Executes the next active request, recreating the handler if the
+enum ProxyRequest {
+    /// Adds a request to the pending request queue.
+    Add(RequestInfo),
+    /// Executes the next pending request, recreating the handler if the
     /// argument is set to true.
     Execute(bool),
-    /// Processes the result to a request.
-    HandleResult(u64, SettingHandlerResult),
-    /// Request to remove an active request from a ControllerState.
-    RemoveActive(u64),
+    /// Evaluates supplied the result for the active request.
+    HandleResult(SettingHandlerResult),
+    /// Request to remove the active request.
+    RemoveActive,
     /// Requests resources be torn down. Called when there are no more requests
     /// to process.
     Teardown,
-    /// Request to retry the current request.
-    Retry(u64),
+    /// Request to retry the active request.
+    Retry,
     /// Requests listen
     Listen(ListenEvent),
 }
@@ -67,7 +102,8 @@ pub struct SettingProxy {
     core_messenger_client: core::message::Messenger,
 
     client_signature: Option<handler::message::Signature>,
-    active_requests: VecDeque<ActiveRequest>,
+    active_request: Option<ActiveRequest>,
+    pending_requests: VecDeque<RequestInfo>,
     has_active_listener: bool,
 
     /// Handler factory.
@@ -82,7 +118,7 @@ pub struct SettingProxy {
     event_publisher: event::Publisher,
 
     /// Sender for passing messages about the active requests and controllers.
-    active_controller_sender: UnboundedSender<ActiveControllerRequest>,
+    proxy_request_sender: UnboundedSender<ProxyRequest>,
     max_attempts: u64,
     request_timeout: Option<Duration>,
     retry_on_timeout: bool,
@@ -135,8 +171,8 @@ impl SettingProxy {
 
         let handler_signature = controller_receptor.get_signature();
 
-        let (active_controller_sender, mut active_controller_receiver) =
-            futures::channel::mpsc::unbounded::<ActiveControllerRequest>();
+        let (proxy_request_sender, mut proxy_request_receiver) =
+            futures::channel::mpsc::unbounded::<ProxyRequest>();
 
         // We must create handle here rather than return back the value as we
         // reference the proxy in the async tasks below.
@@ -144,14 +180,15 @@ impl SettingProxy {
             setting_type,
             handler_factory,
             client_signature: None,
-            active_requests: VecDeque::new(),
+            active_request: None,
+            pending_requests: VecDeque::new(),
             has_active_listener: false,
             core_messenger_client: core_client,
             controller_messenger_signature: handler_signature.clone(),
             controller_messenger_client,
             controller_messenger_factory,
             event_publisher: event_publisher,
-            active_controller_sender,
+            proxy_request_sender,
             max_attempts,
             request_timeout: request_timeout,
             retry_on_timeout,
@@ -200,29 +237,30 @@ impl SettingProxy {
                         }
                     }
 
-                    // Handle messages for dealing with the active_controllers.
-                    request = active_controller_receiver.next() => {
+                    // Handles messages for enqueueing requests and processing
+                    // results on the main event loop for proxy.
+                    request = proxy_request_receiver.next() => {
                         if let Some(request) = request {
                             match request {
-                                ActiveControllerRequest::AddActive(active_request) => {
-                                    proxy.add_active_request(active_request);
+                                ProxyRequest::Add(request) => {
+                                    proxy.add_request(request);
                                 }
-                                ActiveControllerRequest::Execute(recreate_handler) => {
+                                ProxyRequest::Execute(recreate_handler) => {
                                     proxy.execute_next_request(recreate_handler).await;
                                 }
-                                ActiveControllerRequest::RemoveActive(id) => {
-                                    proxy.remove_active_request(id);
+                                ProxyRequest::RemoveActive => {
+                                    proxy.remove_active_request();
                                 }
-                                ActiveControllerRequest::Teardown => {
+                                ProxyRequest::Teardown => {
                                     proxy.teardown_if_needed().await
                                 }
-                                ActiveControllerRequest::Retry(id) => {
-                                    proxy.retry(id);
+                                ProxyRequest::Retry => {
+                                    proxy.retry();
                                 }
-                                ActiveControllerRequest::HandleResult(id, result) => {
-                                    proxy.handle_result(id, result);
+                                ProxyRequest::HandleResult(result) => {
+                                    proxy.handle_result(result);
                                 }
-                                ActiveControllerRequest::Listen(event) => {
+                                ProxyRequest::Listen(event) => {
                                     proxy.handle_listen(event).await;
                                 }
                             }
@@ -253,10 +291,14 @@ impl SettingProxy {
 
         match action.data {
             SettingActionData::Request(request) => {
-                self.process_request(action.id, request, message_client).await;
+                self.process_request(RequestInfo {
+                    setting_request: request,
+                    client: Client::Core(action.id, message_client),
+                })
+                .await;
             }
             SettingActionData::Listen(size) => {
-                self.request(ActiveControllerRequest::Listen(ListenEvent::ListenerCount(size)));
+                self.request(ProxyRequest::Listen(ListenEvent::ListenerCount(size)));
                 // Inform client that the request has been processed, regardless
                 // of whether a result was produced.
                 message_client.acknowledge().await;
@@ -285,8 +327,8 @@ impl SettingProxy {
         self.client_signature
     }
 
-    /// Called by the receiver task when a sink has reported a change to its
-    /// setting type.
+    /// Informs the Switchboard when the controller has indicated the setting
+    /// has changed.
     fn notify(&self, setting_info: SettingInfo) {
         if !self.has_active_listener {
             return;
@@ -311,67 +353,54 @@ impl SettingProxy {
         self.client_signature = None;
 
         // If there is an active request, process the error
-        if !self.active_requests.is_empty() {
-            self.active_controller_sender
-                .unbounded_send(ActiveControllerRequest::HandleResult(
-                    self.active_requests.front().expect("active request should be present").id,
-                    Err(ControllerError::ExitError),
-                ))
+        if self.active_request.is_some() {
+            self.proxy_request_sender
+                .unbounded_send(ProxyRequest::HandleResult(Err(ControllerError::ExitError)))
                 .ok();
         }
 
         // If there is an active listener, forefully refetch
         if self.has_active_listener {
-            self.request(ActiveControllerRequest::Listen(ListenEvent::Restart));
+            self.request(ProxyRequest::Listen(ListenEvent::Restart));
         }
     }
 
-    /// Forwards request to proper sink. A new task is spawned in order to receive
-    /// the response. If no sink is available, an error is immediately reported
-    /// back.
-    async fn process_request(
-        &mut self,
-        id: u64,
-        request: Request,
-        client: core::message::MessageClient,
-    ) {
+    /// Ensures we first have an active controller (spun up by
+    /// get_handler_signature if not already active) before adding the request
+    /// to the proxy's queue.
+    async fn process_request(&mut self, request: RequestInfo) {
         match self.get_handler_signature(false).await {
             None => {
-                client
-                    .reply(core::Payload::Event(SettingEvent::Response(
-                        id,
-                        Err(ControllerError::UnhandledType(self.setting_type)),
-                    )))
-                    .send();
+                request.reply(Err(ControllerError::UnhandledType(self.setting_type)));
             }
             Some(_) => {
-                // Add the request to the queue of requests to process.
-                let active_request = ActiveRequest {
-                    id,
-                    request: request.clone(),
-                    client: client.clone(),
-                    attempts: 0,
-                    last_result: None,
-                };
-                self.request(ActiveControllerRequest::AddActive(active_request));
+                self.request(ProxyRequest::Add(request));
             }
         }
     }
 
-    /// Adds an active request to the request queue for this setting.
+    /// Adds a request to the request queue for this setting.
     ///
     /// If this is the first request in the queue, processing will begin immediately.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    fn add_active_request(&mut self, active_request: ActiveRequest) {
-        self.active_requests.push_back(active_request);
-        if self.active_requests.len() == 1 {
-            self.request(ActiveControllerRequest::Execute(false));
+    fn add_request(&mut self, request: RequestInfo) {
+        self.pending_requests.push_back(request);
+
+        // If this is the first request (no active request or pending requests),
+        // request the controller begin execution of requests. Otherwise, the
+        // controller is already executing requests and will eventually process
+        // this new request.
+        if self.pending_requests.len() == 1 && self.active_request.is_none() {
+            self.request(ProxyRequest::Execute(false));
         }
     }
 
-    fn request(&mut self, request: ActiveControllerRequest) {
-        self.active_controller_sender.unbounded_send(request).ok();
+    /// Sends a request to be processed by the proxy. Requests are sent as
+    /// messages and marshalled onto a single event loop to ensure proper
+    /// ordering.
+    fn request(&mut self, request: ProxyRequest) {
+        self.proxy_request_sender.unbounded_send(request).ok();
     }
 
     /// Notifies handler in the case the notification listener count is
@@ -408,15 +437,16 @@ impl SettingProxy {
             .send()
             .ack();
 
-        self.request(ActiveControllerRequest::Teardown);
+        self.request(ProxyRequest::Teardown);
     }
 
-    fn handle_result(&mut self, id: u64, mut result: SettingHandlerResult) {
-        let request_index = self.active_requests.iter().position(|r| r.id == id);
-        let request = self
-            .active_requests
-            .get_mut(request_index.expect("request ID not found"))
-            .expect("request should be present");
+    /// Evaluates the supplied result for the current active request. Based
+    /// on the return result, also determines whether the request should be
+    /// retried. Based on this determination, the function will request from
+    /// the proxy whether to retry the request or remove the request (and send
+    /// response).
+    fn handle_result(&mut self, mut result: SettingHandlerResult) {
+        let active_request = self.active_request.as_mut().expect("request should be present");
         let mut retry = false;
 
         if matches!(result, Err(ControllerError::ExternalFailure(..)))
@@ -429,83 +459,87 @@ impl SettingProxy {
                 self,
                 event::handler::Event::Request(
                     event::handler::Action::Timeout,
-                    request.request.clone()
+                    active_request.get_request()
                 )
             );
             retry = self.retry_on_timeout;
         }
 
-        request.last_result = Some(result);
+        active_request.last_result = Some(result);
 
         if retry {
-            self.request(ActiveControllerRequest::Retry(id));
+            self.request(ProxyRequest::Retry);
         } else {
-            self.request(ActiveControllerRequest::RemoveActive(id));
+            self.request(ProxyRequest::RemoveActive);
         }
     }
 
-    /// Removes an active request from the request queue for this setting.
+    /// Removes the active request for this setting.
     ///
     /// Should only be called once a request is finished processing.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
-    fn remove_active_request(&mut self, id: u64) {
-        let request_index = self.active_requests.iter().position(|r| r.id == id);
-        let mut removed_request = self
-            .active_requests
-            .remove(request_index.expect("request ID not found"))
-            .expect("request should be present");
+    fn remove_active_request(&mut self) {
+        let mut removed_request = self.active_request.take().expect("request should be present");
 
         // Send result back to original caller if present.
         if let Some(result) = removed_request.last_result.take() {
-            removed_request
-                .client
-                .reply(core::Payload::Event(SettingEvent::Response(removed_request.id, result)))
-                .send();
+            removed_request.request.reply(result)
         }
 
         // If there are still requests to process, then request for the next to
         // be processed. Otherwise request teardown.
-        if !self.active_requests.is_empty() {
-            self.request(ActiveControllerRequest::Execute(false));
+        if !self.pending_requests.is_empty() {
+            self.request(ProxyRequest::Execute(false));
         } else {
-            self.request(ActiveControllerRequest::Teardown);
+            self.request(ProxyRequest::Teardown);
         }
     }
 
-    /// Processes the next request in the queue of active requests.
+    /// Processes the next request in the queue of pending requests.
     ///
     /// If the queue is empty, nothing happens.
     ///
     /// Should only be called on the main task spawned in [SettingProxy::create](#method.create).
     async fn execute_next_request(&mut self, recreate_handler: bool) {
+        if self.active_request.is_none() {
+            // Add the request to the queue of requests to process.
+            self.active_request = Some(ActiveRequest {
+                request: self
+                    .pending_requests
+                    .pop_front()
+                    .expect("execute should only be called with present requests"),
+                attempts: 0,
+                last_result: None,
+            });
+        }
+
         // Recreating signature is always honored, even if the request is not.
         let signature = self
             .get_handler_signature(recreate_handler)
             .await
             .expect("failed to generate handler signature");
 
-        let mut active_request = self
-            .active_requests
-            .front_mut()
-            .expect("execute should only be called with present requests");
-
+        let active_request =
+            self.active_request.as_mut().expect("active request should be present");
         active_request.attempts += 1;
 
         // Note that we must copy these values as we are borrowing self for
         // active_requests and self is needed to remove active below.
-        let id = active_request.id;
-        let current_attempts = active_request.attempts;
-        let request = active_request.request.clone();
+        let request = active_request.get_request();
 
         // If we have exceeded the maximum number of attempts, remove this
         // request from the queue.
-        if current_attempts > self.max_attempts {
+        if active_request.attempts > self.max_attempts {
             publish!(
                 self,
-                event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request)
+                event::handler::Event::Request(
+                    event::handler::Action::AttemptsExceeded,
+                    request.clone()
+                )
             );
-            self.request(ActiveControllerRequest::RemoveActive(id));
+
+            self.request(ProxyRequest::RemoveActive);
             return;
         }
 
@@ -523,7 +557,7 @@ impl SettingProxy {
             .set_timeout(self.request_timeout)
             .send();
 
-        let active_controller_sender_clone = self.active_controller_sender.clone();
+        let proxy_request_sender_clone = self.proxy_request_sender.clone();
 
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
@@ -541,8 +575,8 @@ impl SettingProxy {
                 if let Some(result) = handler_result {
                     // Mark the request as having been handled after retries have been
                     // attempted and the client has been notified.
-                    active_controller_sender_clone
-                        .unbounded_send(ActiveControllerRequest::HandleResult(id, result))
+                    proxy_request_sender_clone
+                        .unbounded_send(ProxyRequest::HandleResult(result))
                         .ok();
                     return;
                 }
@@ -551,33 +585,28 @@ impl SettingProxy {
         .detach();
     }
 
-    /// Requests the first request in the queue be tried again, forcefully
-    /// recreating the handler.
-    fn retry(&mut self, id: u64) {
-        // The supplied id should always match the first request in the queue.
-        debug_assert!(
-            id == self.active_requests.front().expect("active request should be present").id
-        );
-
+    /// Requests the active request to be tried again, forcefully recreating the
+    /// handler.
+    fn retry(&mut self) {
         publish!(
             self,
             event::handler::Event::Request(
                 event::handler::Action::Retry,
-                self.active_requests
-                    .front()
+                self.active_request
+                    .as_ref()
                     .expect("active request should be present")
-                    .request
-                    .clone(),
+                    .get_request(),
             )
         );
 
-        self.request(ActiveControllerRequest::Execute(true));
+        self.request(ProxyRequest::Execute(true));
     }
 
     /// Transitions the controller for the [setting_type] to the Teardown phase
     /// and removes it from the active_controllers.
     async fn teardown_if_needed(&mut self) {
-        if !self.active_requests.is_empty()
+        if self.active_request.is_some()
+            || !self.pending_requests.is_empty()
             || self.has_active_listener
             || self.client_signature.is_none()
         {
