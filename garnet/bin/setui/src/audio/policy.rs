@@ -305,8 +305,6 @@ impl From<Transform> for PolicyParameters {
 /// Available requests to interact with the volume policy.
 #[derive(PartialEq, Clone, Debug)]
 pub enum Request {
-    /// Fetches the current policy state.
-    Get,
     /// Adds a policy transform to the specified property. If successful, this transform will become
     /// a policy on the property.
     AddPolicy(PropertyTarget, Transform),
@@ -322,8 +320,6 @@ pub enum Response {
     /// Response to any transform addition or policy removal. The returned id
     /// represents the modified policy.
     Policy(PolicyId),
-    /// Response to request for state.
-    State(State),
 }
 
 #[cfg(test)]

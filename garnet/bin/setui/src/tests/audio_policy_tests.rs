@@ -3,15 +3,12 @@
 // found in the LICENSE file.
 
 use crate::audio::default_audio_info;
-use crate::audio::policy::{
-    PropertyTarget, Request as AudioRequest, Response as AudioResponse, StateBuilder, Transform,
-    TransformFlags,
-};
+use crate::audio::policy::{PropertyTarget, StateBuilder, Transform, TransformFlags};
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::base::{Audience, MessengerType};
-use crate::policy::base::{response::Payload, Request};
+use crate::policy::base::{response::Payload, PolicyInfo, Request};
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::{internal, EnvironmentBuilder};
@@ -137,7 +134,7 @@ async fn test_policy_message_hub() {
         .expect("addressable messenger should be present")
         .1;
 
-    let request_payload = internal::policy::Payload::Request(Request::Audio(AudioRequest::Get));
+    let request_payload = internal::policy::Payload::Request(Request::Get);
 
     // Send request.
     let mut reply_receptor = messenger
@@ -155,7 +152,7 @@ async fn test_policy_message_hub() {
 
     // Send response.
     let reply_payload =
-        internal::policy::Payload::Response(Ok(Payload::Audio(AudioResponse::State(state))));
+        internal::policy::Payload::Response(Ok(Payload::PolicyInfo(PolicyInfo::Audio(state))));
     client.reply(reply_payload.clone()).send().ack();
 
     // Verify response received.

@@ -13,7 +13,6 @@ use fuchsia_inspect::Property;
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
-use crate::audio::policy as audio_policy;
 use crate::base::SettingType;
 use crate::clock;
 use crate::internal::policy;
@@ -28,8 +27,7 @@ use crate::policy::base::Request;
 pub struct PolicyInspectBroker {
     messenger_client: Messenger,
     inspect_node: Arc<inspect::Node>,
-    policy_proxies: HashMap<policy::message::Signature, SettingType>,
-    policy_values: HashMap<SettingType, PolicyInspectInfo>,
+    policy_values: HashMap<String, PolicyInspectInfo>,
 }
 
 /// Information about a policy to be written to inspect.
@@ -59,7 +57,6 @@ impl PolicyInspectBroker {
 
         let mut broker = Self {
             messenger_client,
-            policy_proxies: policy_proxies.clone(),
             inspect_node: Arc::new(inspect_node),
             policy_values: HashMap::new(),
         };
@@ -113,87 +110,53 @@ impl PolicyInspectBroker {
         reply_receptor.next_payload().await.map(|(_, reply_client)| reply_client.get_author())
     }
 
-    /// Given a policy type, chooses an appropriate request type to send to the policy to query its
-    /// state.
-    ///
-    /// This is necessary since there is no unified "get" request for policies, so the request may
-    /// vary from policy to policy.
-    // TODO(fxbug.dev/68267): get rid of thise once there's a unified Get/PolicyInfo
-    fn request_for_policy_type(policy_type: SettingType) -> Result<Request, Error> {
-        Ok(match policy_type {
-            SettingType::Audio => Request::Audio(audio_policy::Request::Get),
-            _ => return Err(format_err!("Unknown request for policy type: {:?}", policy_type)),
-        })
-    }
-
-    /// Converts a policy response to a string to store in inspect.
-    ///
-    /// This is necessary because there is no unified "get" request or response for policies, so
-    /// each policy may have a different response type and different data to store in inspect.
-    // TODO(fxbug.dev/68267): get rid of thise once there's a unified Get/PolicyInfo
-    fn response_to_inspect_string(
-        policy_response: policy_base::response::Payload,
-    ) -> Result<String, Error> {
-        Ok(match policy_response {
-            policy_base::response::Payload::Audio(audio_response) => {
-                if let audio_policy::Response::State(state) = audio_response {
-                    format!("{:?}", state)
-                } else {
-                    return Err(format_err!(
-                        "Unexpected response for audio policy: {:?}",
-                        audio_response
-                    ));
-                }
-            }
-        })
-    }
-
     /// Requests the policy state from a given signature for a policy handler and records the result
     /// in inspect.
     async fn request_and_write_to_inspect(&mut self, signature: Signature) -> Result<(), Error> {
-        // Determine the policy type for this signatures.
-        let policy_type =
-            *self.policy_proxies.get(&signature).ok_or(format_err!("Policy proxy not found"))?;
-
         // Send the request to the policy proxy.
         let mut send_receptor = self
             .messenger_client
-            .message(
-                Payload::Request(PolicyInspectBroker::request_for_policy_type(policy_type)?),
-                Audience::Messenger(signature),
-            )
+            .message(Payload::Request(Request::Get), Audience::Messenger(signature))
             .send();
 
         // Wait for a response from the policy proxy.
-        let response = send_receptor.next_payload().await.and_then(|payload| {
-            if let (Payload::Response(Ok(response)), _) = payload {
-                Ok(response)
+        let (payload, _) = send_receptor.next_payload().await?;
+
+        self.write_response_to_inspect(payload).await
+    }
+
+    async fn write_response_to_inspect(&mut self, payload: Payload) -> Result<(), Error> {
+        let policy_info =
+            if let Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(policy_info))) =
+                payload
+            {
+                policy_info
             } else {
-                Err(format_err!("did not receive policy state"))
-            }
-        })?;
+                return Err(format_err!("did not receive policy state"));
+            };
 
         // Convert the response to a string for inspect.
-        let inspect_string = PolicyInspectBroker::response_to_inspect_string(response)?;
+        let policy_name = policy_info.name();
+        let inspect_str = policy_info.value_str();
 
         let timestamp = clock::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .map(|duration| duration.as_millis())
             .unwrap_or(0);
 
-        match self.policy_values.get_mut(&policy_type) {
+        match self.policy_values.get_mut(&policy_name.to_string()) {
             Some(policy_info) => {
                 // Value already known, just update its fields.
                 policy_info.timestamp.set(&timestamp.to_string());
-                policy_info.value.set(&inspect_string);
+                policy_info.value.set(&inspect_str);
             }
             None => {
                 // Policy info not recorded yet, create a new inspect node.
-                let node = self.inspect_node.create_child(format!("{:?}", policy_type));
-                let value_prop = node.create_string("value", inspect_string);
+                let node = self.inspect_node.create_child(policy_name);
+                let value_prop = node.create_string("value", inspect_str);
                 let timestamp_prop = node.create_string("timestamp", timestamp.to_string());
                 self.policy_values.insert(
-                    policy_type,
+                    policy_name.to_string(),
                     PolicyInspectInfo { _node: node, value: value_prop, timestamp: timestamp_prop },
                 );
             }
@@ -223,10 +186,10 @@ mod tests {
     use crate::inspect::policy_inspect_broker::PolicyInspectBroker;
     use crate::message::base::{MessageEvent, MessengerType, Status};
     use crate::policy::base as policy_base;
+    use crate::policy::base::PolicyInfo;
     use crate::tests::message_utils::verify_payload;
 
-    const AUDIO_GET_REQUEST: Payload =
-        Payload::Request(policy_base::Request::Audio(audio_policy::Request::Get));
+    const GET_REQUEST: Payload = Payload::Request(policy_base::Request::Get);
 
     /// Verifies that inspect broker requests and writes state for each policy on start.
     #[fuchsia_async::run_until_stalled(test)]
@@ -257,13 +220,13 @@ mod tests {
         // Policy proxy receives a get request on start and returns the state.
         let state_clone = expected_state.clone();
         verify_payload(
-            AUDIO_GET_REQUEST.clone(),
+            GET_REQUEST.clone(),
             &mut policy_receptor,
             Some(Box::new(|client| -> BoxFuture<'_, ()> {
                 Box::pin(async move {
                     let mut receptor = client
-                        .reply(Payload::Response(Ok(policy_base::response::Payload::Audio(
-                            audio_policy::Response::State(state_clone),
+                        .reply(Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(
+                            PolicyInfo::Audio(state_clone),
                         ))))
                         .send();
                     // Wait until the policy inspect broker receives the message and writes to
@@ -331,13 +294,13 @@ mod tests {
 
         // Policy proxy receives a get request on start and returns the initial state.
         verify_payload(
-            AUDIO_GET_REQUEST.clone(),
+            GET_REQUEST.clone(),
             &mut policy_receptor,
             Some(Box::new(|client| -> BoxFuture<'_, ()> {
                 Box::pin(async move {
                     client
-                        .reply(Payload::Response(Ok(policy_base::response::Payload::Audio(
-                            audio_policy::Response::State(initial_state),
+                        .reply(Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(
+                            PolicyInfo::Audio(initial_state),
                         ))))
                         .send();
                 })
@@ -347,16 +310,13 @@ mod tests {
 
         // Send a message to the policy proxy.
         policy_sender
-            .message(
-                AUDIO_GET_REQUEST.clone(),
-                Audience::Messenger(policy_receptor.get_signature()),
-            )
+            .message(GET_REQUEST.clone(), Audience::Messenger(policy_receptor.get_signature()))
             .send();
 
         // Policy proxy receives the request from the policy_sender. Inspect broker waits for a
         // reply to know where to ask for the policy state so send a nonsensical reply.
         verify_payload(
-            AUDIO_GET_REQUEST.clone(),
+            GET_REQUEST.clone(),
             &mut policy_receptor,
             Some(Box::new(|client| -> BoxFuture<'_, ()> {
                 Box::pin(async move {
@@ -374,13 +334,13 @@ mod tests {
         // state.
         let state_clone = expected_state.clone();
         verify_payload(
-            AUDIO_GET_REQUEST.clone(),
+            GET_REQUEST.clone(),
             &mut policy_receptor,
             Some(Box::new(|client| -> BoxFuture<'_, ()> {
                 Box::pin(async move {
                     let mut receptor = client
-                        .reply(Payload::Response(Ok(policy_base::response::Payload::Audio(
-                            audio_policy::Response::State(state_clone),
+                        .reply(Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(
+                            PolicyInfo::Audio(state_clone),
                         ))))
                         .send();
                     // Wait until the policy inspect broker receives the message and writes to

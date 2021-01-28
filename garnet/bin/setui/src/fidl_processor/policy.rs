@@ -14,11 +14,9 @@ use fuchsia_syslog::fx_log_err;
 /// Convenience macro to make a policy request and send the result to a responder.
 #[macro_export]
 macro_rules! policy_request_respond {
-    ($context:ident, $responder:ident, $setting_type:expr, $request:expr, $payload_type:ident) => {
+    ($context:ident, $responder:ident, $setting_type:expr, $request:expr) => {
         match $context.request($setting_type, $request).await {
-            Ok(crate::policy::base::response::Payload::$payload_type(response)) => {
-                $responder.send_response(response.into())
-            }
+            Ok(response) => $responder.send_response(response.into()),
             Err(err) => $responder.on_error(&anyhow::Error::new(err)),
         };
     };

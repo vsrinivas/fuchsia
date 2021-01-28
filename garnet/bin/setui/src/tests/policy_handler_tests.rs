@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #[cfg(test)]
-use crate::audio::policy as audio;
-use crate::audio::policy::PolicyId;
 use crate::base::SettingType;
 use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
@@ -13,7 +11,7 @@ use crate::handler::setting_handler::persist::Storage;
 use crate::internal::core;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
-use crate::policy::base::Request as PolicyRequest;
+use crate::policy::base::{PolicyInfo, Request as PolicyRequest, UnknownInfo};
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
@@ -79,7 +77,7 @@ async fn test_write() {
         core_messenger,
         setting_proxy_receptor.get_signature(),
         store.clone(),
-        SettingType::Audio,
+        SettingType::Unknown,
     );
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is
@@ -89,15 +87,12 @@ async fn test_write() {
     handler.set_handle_policy_request_callback(Box::new(move |_, client_proxy| {
         Box::pin(async move {
             client_proxy.write(expected_value.clone(), false).await.expect("write failed");
-            Ok(Payload::Audio(audio::Response::Policy(PolicyId::create(0))))
+            Ok(Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true))))
         })
     }));
 
     // Call handle_policy_request.
-    handler
-        .handle_policy_request(PolicyRequest::Audio(audio::Request::Get))
-        .await
-        .expect("handle failed");
+    handler.handle_policy_request(PolicyRequest::Get).await.expect("handle failed");
 
     // Verify the value was written to the store through the client proxy.
     assert_eq!(store.lock().await.get().await, expected_value);

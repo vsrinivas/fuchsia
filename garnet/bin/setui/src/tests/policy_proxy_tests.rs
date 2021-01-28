@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::audio::policy::{PolicyId, Request as PolicyRequest, Response};
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
@@ -11,7 +10,7 @@ use crate::internal::policy;
 use crate::internal::policy::Address;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::base as policy_base;
-use crate::policy::base::{BoxedHandler, PolicyHandlerFactory};
+use crate::policy::base::{BoxedHandler, PolicyHandlerFactory, PolicyInfo, UnknownInfo};
 use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
@@ -117,7 +116,7 @@ async fn test_policy_proxy_creation() {
     let handler_factory = create_handler_factory(
         storage_factory,
         FakePolicyHandler::create(
-            Ok(policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)))),
+            Ok(policy_base::response::Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true)))),
             None,
             None,
         ),
@@ -141,9 +140,9 @@ async fn test_policy_proxy_creation() {
 /// response is returned via the proxy.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_messages_passed_to_handler() {
-    let policy_request = policy_base::Request::Audio(PolicyRequest::Get);
+    let policy_request = policy_base::Request::Get;
     let policy_payload =
-        policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)));
+        policy_base::response::Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true)));
     let storage_factory = InMemoryStorageFactory::create();
     let handler_factory = create_handler_factory(
         storage_factory,
@@ -502,9 +501,9 @@ async fn test_setting_event_replace() {
 /// all answered.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_multiple_messages() {
-    let policy_request = policy_base::Request::Audio(PolicyRequest::Get);
+    let policy_request = policy_base::Request::Get;
     let policy_payload =
-        policy_base::response::Payload::Audio(Response::Policy(PolicyId::create(0)));
+        policy_base::response::Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true)));
 
     let core_messenger_factory = core::message::create_hub();
 

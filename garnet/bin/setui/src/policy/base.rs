@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::audio::policy as audio;
+use crate::audio::policy::State;
 use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
@@ -11,15 +12,49 @@ use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::sync::Arc;
 use thiserror::Error;
+
+/// Enumeration over the possible policy state information for all policies.
+#[derive(PartialEq, Debug, Clone)]
+pub enum PolicyInfo {
+    /// This value is reserved for testing purposes.
+    Unknown(UnknownInfo),
+    Audio(State),
+}
+
+// TODO(fxbug.dev/56718): simplify this with a macro.
+impl PolicyInfo {
+    pub fn name(&self) -> &'static str {
+        match self {
+            PolicyInfo::Unknown(_) => "Unknown",
+            PolicyInfo::Audio(_) => "Audio",
+        }
+    }
+
+    pub fn value_str(&self) -> String {
+        match self {
+            PolicyInfo::Unknown(info) => format!("{:?}", info),
+            PolicyInfo::Audio(info) => format!("{:?}", info),
+        }
+    }
+}
+
+/// This struct is reserved for testing purposes.
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct UnknownInfo(pub bool);
 
 /// `Request` defines the request space for all policies handled by
 /// the Setting Service. Note that the actions that can be taken upon each
 /// policy should be defined within each policy's Request enum.
 #[derive(PartialEq, Debug, Clone)]
 pub enum Request {
+    /// Fetches the current policy state.
+    Get,
+
+    /// Request targeted to the Audio policy.
     Audio(audio::Request),
 }
 
@@ -32,6 +67,7 @@ pub mod response {
     /// should be a corresponding policy response payload type for each request type.
     #[derive(PartialEq, Debug, Clone)]
     pub enum Payload {
+        PolicyInfo(PolicyInfo),
         Audio(audio::Response),
     }
 

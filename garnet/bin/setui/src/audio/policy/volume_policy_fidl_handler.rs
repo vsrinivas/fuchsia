@@ -22,7 +22,7 @@ use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
 use crate::handler::base::Error;
 use crate::internal::policy::{Address, Payload};
-use crate::policy::base as policy;
+use crate::policy::base::{response, PolicyInfo, Request};
 use crate::shutdown_responder_with_error;
 use crate::switchboard::base::FidlResponseErrorLogger;
 use crate::switchboard::hanging_get_handler::Sender;
@@ -48,9 +48,9 @@ impl Sender<Vec<Property>> for VolumePolicyControllerGetPropertiesResponder {
     }
 }
 
-impl From<Response> for Vec<Property> {
-    fn from(response: Response) -> Self {
-        if let Response::State(state) = response {
+impl From<response::Payload> for Vec<Property> {
+    fn from(response: response::Payload) -> Self {
+        if let response::Payload::PolicyInfo(PolicyInfo::Audio(state)) = response {
             // Internally we store the data in a HashMap, need to flatten it out into a vector.
             return state.properties.values().cloned().map(Property::from).collect::<Vec<_>>();
         }
@@ -59,9 +59,9 @@ impl From<Response> for Vec<Property> {
     }
 }
 
-impl From<Response> for VolumePolicyControllerAddPolicyResult {
-    fn from(response: Response) -> Self {
-        if let Response::Policy(id) = response {
+impl From<response::Payload> for VolumePolicyControllerAddPolicyResult {
+    fn from(response: response::Payload) -> Self {
+        if let response::Payload::Audio(Response::Policy(id)) = response {
             return Ok(id.0);
         }
 
@@ -69,9 +69,9 @@ impl From<Response> for VolumePolicyControllerAddPolicyResult {
     }
 }
 
-impl From<Response> for VolumePolicyControllerRemovePolicyResult {
-    fn from(response: Response) -> Self {
-        if let Response::Policy(_) = response {
+impl From<response::Payload> for VolumePolicyControllerRemovePolicyResult {
+    fn from(response: response::Payload) -> Self {
+        if let response::Payload::Audio(Response::Policy(_)) = response {
             // We don't return any sort of ID on removal, can just ignore the ID in the policy
             // response.
             return Ok(());
@@ -89,13 +89,7 @@ async fn process_request(
 ) -> Result<Option<VolumePolicyControllerRequest>, anyhow::Error> {
     match request {
         VolumePolicyControllerRequest::GetProperties { responder } => {
-            policy_request_respond!(
-                context,
-                responder,
-                SettingType::Audio,
-                policy::Request::Audio(audio::Request::Get),
-                Audio
-            );
+            policy_request_respond!(context, responder, SettingType::Audio, Request::Get);
         }
         VolumePolicyControllerRequest::AddPolicy { target, parameters, responder } => {
             let transform: Transform = match parameters.try_into() {
@@ -109,13 +103,12 @@ async fn process_request(
                 }
             };
             let policy_request =
-                policy::Request::Audio(audio::Request::AddPolicy(target.into(), transform));
-            policy_request_respond!(context, responder, SettingType::Audio, policy_request, Audio);
+                Request::Audio(audio::Request::AddPolicy(target.into(), transform));
+            policy_request_respond!(context, responder, SettingType::Audio, policy_request);
         }
         VolumePolicyControllerRequest::RemovePolicy { policy_id, responder } => {
-            let policy_request =
-                policy::Request::Audio(audio::Request::RemovePolicy(PolicyId(policy_id)));
-            policy_request_respond!(context, responder, SettingType::Audio, policy_request, Audio);
+            let policy_request = Request::Audio(audio::Request::RemovePolicy(PolicyId(policy_id)));
+            policy_request_respond!(context, responder, SettingType::Audio, policy_request);
         }
     };
     return Ok(None);
@@ -123,15 +116,18 @@ async fn process_request(
 
 #[cfg(test)]
 mod tests {
-    use crate::audio::policy::{Property, PropertyTarget, Response, State, TransformFlags};
+    use crate::audio::policy::{Property, PropertyTarget, State, TransformFlags};
     use crate::audio::types::AudioStreamType;
+    use crate::policy::base::{response, PolicyInfo};
     use std::collections::HashMap;
 
     /// Verifies that converting a policy response containing an empty `State` into a vector of
     /// `Property` results in an empty vector.
     #[test]
     fn test_response_to_property_vector_empty() {
-        let response = Response::State(State { properties: Default::default() });
+        let response = response::Payload::PolicyInfo(PolicyInfo::Audio(State {
+            properties: Default::default(),
+        }));
 
         let property_list: Vec<fidl_fuchsia_settings_policy::Property> = response.into();
 
@@ -147,7 +143,8 @@ mod tests {
         let mut property_map: HashMap<PropertyTarget, Property> = HashMap::new();
         property_map.insert(property1.target, property1.clone());
         property_map.insert(property2.target, property2.clone());
-        let response = Response::State(State { properties: property_map });
+        let response =
+            response::Payload::PolicyInfo(PolicyInfo::Audio(State { properties: property_map }));
 
         let mut property_list: Vec<fidl_fuchsia_settings_policy::Property> = response.into();
         // Sort so the result is guaranteed to be in a consistent order.

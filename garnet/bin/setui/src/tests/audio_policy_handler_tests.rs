@@ -20,8 +20,8 @@ use crate::handler::device_storage::{
 use crate::internal::core;
 use crate::internal::core::message::Receptor;
 use crate::message::base::MessengerType;
-use crate::policy::base::response::Error as PolicyError;
-use crate::policy::base::{response::Payload, Request};
+use crate::policy::base::response::{Error as PolicyError, Payload};
+use crate::policy::base::{PolicyInfo, Request};
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
@@ -265,14 +265,10 @@ async fn test_handler_no_persisted_state() {
     let mut env = create_handler_test_environment().await;
 
     // Request the policy state from the handler.
-    let payload = env
-        .handler
-        .handle_policy_request(Request::Audio(audio::Request::Get))
-        .await
-        .expect("get failed");
+    let payload = env.handler.handle_policy_request(Request::Get).await.expect("get failed");
 
     // The state response matches the expected value.
-    assert_eq!(payload, Payload::Audio(Response::State(expected_value)));
+    assert_eq!(payload, Payload::PolicyInfo(PolicyInfo::Audio(expected_value)));
 
     // Verify that nothing was written to storage.
     assert_eq!(env.store.lock().await.get().await, State::default_value());
@@ -321,13 +317,10 @@ async fn test_handler_restore_persisted_state() {
         AudioPolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
 
     // Request the policy state from the handler.
-    let payload = handler
-        .handle_policy_request(Request::Audio(audio::Request::Get))
-        .await
-        .expect("get failed");
+    let payload = handler.handle_policy_request(Request::Get).await.expect("get failed");
 
     // The state response matches the expected value.
-    if let Payload::Audio(Response::State(mut state)) = payload {
+    if let Payload::PolicyInfo(PolicyInfo::Audio(mut state)) = payload {
         // The persisted transform was found in the returned state.
         verify_state(&state, modified_property, expected_transform);
 
@@ -369,12 +362,8 @@ async fn test_handler_add_policy() {
     verify_state(&stored_value, modified_property, expected_transform);
 
     // Request the policy state from the handler and verify that it matches the stored value.
-    let payload = env
-        .handler
-        .handle_policy_request(Request::Audio(audio::Request::Get))
-        .await
-        .expect("get failed");
-    assert_eq!(payload, Payload::Audio(Response::State(stored_value)));
+    let payload = env.handler.handle_policy_request(Request::Get).await.expect("get failed");
+    assert_eq!(payload, Payload::PolicyInfo(PolicyInfo::Audio(stored_value)));
 }
 
 /// Tests that attempting to removing an unknown policy returns an appropriate error.
@@ -440,14 +429,10 @@ async fn test_handler_remove_policy() {
     assert_eq!(payload, Payload::Audio(Response::Policy(policy_id)));
 
     // Request the policy state from the handler.
-    let payload = env
-        .handler
-        .handle_policy_request(Request::Audio(audio::Request::Get))
-        .await
-        .expect("get failed");
+    let payload = env.handler.handle_policy_request(Request::Get).await.expect("get failed");
 
     // The state response matches the expected value.
-    assert_eq!(payload, Payload::Audio(Response::State(expected_value.clone())));
+    assert_eq!(payload, Payload::PolicyInfo(PolicyInfo::Audio(expected_value.clone())));
 
     // Verify that the expected value is persisted to storage.
     assert_eq!(env.store.lock().await.get().await, expected_value);

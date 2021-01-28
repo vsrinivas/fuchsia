@@ -68,6 +68,7 @@ use crate::handler::base::Request as SettingRequest;
 use crate::internal::core::Payload;
 use crate::policy::base as policy_base;
 use crate::policy::base::response::Error as PolicyError;
+use crate::policy::base::PolicyInfo;
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
@@ -118,10 +119,10 @@ impl PolicyHandler for AudioPolicyHandler {
         request: policy_base::Request,
     ) -> policy_base::response::Response {
         match request {
+            policy_base::Request::Get => Ok(policy_base::response::Payload::PolicyInfo(
+                PolicyInfo::Audio(self.state.clone()),
+            )),
             policy_base::Request::Audio(audio_request) => match audio_request {
-                PolicyRequest::Get => {
-                    Ok(policy_base::response::Payload::Audio(Response::State(self.state.clone())))
-                }
                 PolicyRequest::AddPolicy(target, transform) => {
                     self.add_policy_transform(target, transform).await
                 }
