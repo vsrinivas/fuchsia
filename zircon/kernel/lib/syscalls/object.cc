@@ -686,6 +686,11 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       stats.ipc_bytes = state_count[VM_PAGE_STATE_IPC] * PAGE_SIZE;
       sum_bytes += stats.ipc_bytes;
 
+      // TODO(fxbug.dev/68327): Extend zx_info_kmem_stats_t and
+      // zx_info_kmem_stats_extended_t with SLAB and CACHE fields.
+      sum_bytes += state_count[VM_PAGE_STATE_CACHE] * PAGE_SIZE;
+      sum_bytes += state_count[VM_PAGE_STATE_SLAB] * PAGE_SIZE;
+
       // Is there unaccounted memory?
       if (stats.total_bytes > sum_bytes) {
         // Everything else gets counted as "other".

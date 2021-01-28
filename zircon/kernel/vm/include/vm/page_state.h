@@ -20,11 +20,13 @@ enum vm_page_state : uint32_t {
   VM_PAGE_STATE_MMU,    // allocated to serve arch-specific mmu purposes
   VM_PAGE_STATE_IOMMU,  // allocated for platform-specific iommu structures
   VM_PAGE_STATE_IPC,
+  VM_PAGE_STATE_CACHE,
+  VM_PAGE_STATE_SLAB,
 
   VM_PAGE_STATE_COUNT_
 };
 
-#define VM_PAGE_STATE_BITS 3
+#define VM_PAGE_STATE_BITS 4
 static_assert((1u << VM_PAGE_STATE_BITS) >= VM_PAGE_STATE_COUNT_, "");
 
 typedef struct vm_page_counts {
