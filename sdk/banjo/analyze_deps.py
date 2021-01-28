@@ -5,11 +5,21 @@
 '''Produces a representation of the dependencies between Banjo libraries.'''
 
 import argparse
+import copy
 import json
 import re
 import sys
 
 _LIBRARY_LABEL = r'^//sdk/banjo/([^:]+):\1(\.\.\.)?$'
+
+_DUMMY_LIBRARIES = set(
+    [
+        'ddk.driver',
+        'ddk.physiter',
+        'zircon.hw.pci',
+        'zircon.hw.usb',
+        'zircon.syscalls.pci',
+    ])
 
 
 def _extract_dependencies(label, base_depth, deps, result):
@@ -37,7 +47,7 @@ def extract_dependencies(deps):
     return result
 
 
-def filter_banjo_libaries(deps):
+def filter_banjo_libraries(deps):
     # This filters dep lists to retain only Banjo libraries.
     normalize_deps = lambda l: list(
         filter(lambda i: i, map(lambda c: get_library_label(c), l)))
@@ -63,6 +73,40 @@ def get_library_label(label):
     return match.group(1) if match else None
 
 
+def remove_composite_library(deps):
+    composite_library = 'fuchsia.hardware.composite'
+    if composite_library in deps:
+        del deps[composite_library]
+    for v in deps.values():
+        if composite_library in v:
+            v.remove(composite_library)
+
+
+def add_back_edges(deps):
+    result = copy.deepcopy(deps)
+    for lib, lib_deps in deps.items():
+        for d in lib_deps:
+            result[d].append(lib)
+    return result
+
+
+def find_connected_components(deps):
+
+    def find_component(library, component):
+        connections = deps.pop(library)
+        component.add(library)
+        for c in connections:
+            if c not in deps:
+                continue
+            find_component(c, component)
+        return component
+
+    result = []
+    while deps:
+        result.append(find_component(list(deps.keys())[0], set()))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -75,11 +119,45 @@ def main():
         deps = json.load(deps_file)
 
     all_deps = extract_dependencies(deps['//sdk/banjo:banjo']['deps'])
-    banjo_deps = filter_banjo_libaries(all_deps)
+    banjo_deps = filter_banjo_libraries(all_deps)
+    remove_composite_library(banjo_deps)
+    banjo_graph = add_back_edges(banjo_deps)
 
-    print(
-        json.dumps(
-            banjo_deps, indent=2, sort_keys=True, separators=(',', ': ')))
+    components = find_connected_components(banjo_graph)
+
+    blocked = filter(lambda g: g & _DUMMY_LIBRARIES, components)
+    if blocked:
+        print()
+        print('Blocked by dummy libraries')
+        all_blocked = set()
+        for group in blocked:
+            all_blocked |= group
+        for library in sorted(all_blocked - _DUMMY_LIBRARIES):
+            print(' - ' + library)
+
+    standalones = filter(
+        lambda s: len(s) == 1 and not s & _DUMMY_LIBRARIES, components)
+    if standalones:
+        print()
+        print('Standalone:')
+        for singleton in standalones:
+            print(' - ' + next(iter(singleton)))
+
+    groups = map(
+        lambda t: t[1],
+        sorted(
+            map(
+                lambda s: (len(s), s),
+                filter(
+                    lambda g: len(g) > 1 and not g & _DUMMY_LIBRARIES,
+                    components))))
+    if groups:
+        print()
+        print('Groups:')
+        for index, group in enumerate(groups):
+            print('[' + str(index) + ']')
+            for library in sorted(group):
+                print(' - ' + library)
 
     return 0
 

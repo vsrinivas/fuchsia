@@ -5,7 +5,7 @@
 
 import unittest
 
-from analyze_deps import extract_dependencies, filter_banjo_libaries, get_library_label
+from analyze_deps import add_back_edges, extract_dependencies, filter_banjo_libraries, find_connected_components, get_library_label, remove_composite_library
 
 
 class AnalysisTests(unittest.TestCase):
@@ -73,7 +73,7 @@ class AnalysisTests(unittest.TestCase):
             '//sdk/banjo/two:two':
                 ['//sdk/banjo/three:three', '//sdk/banjo/four:four']
         }
-        deps = filter_banjo_libaries(deps)
+        deps = filter_banjo_libraries(deps)
         self.assertCountEqual(
             deps.keys(), ['one', 'two', 'three', 'four', 'five'])
         self.assertCountEqual(deps['one'], ['two'])
@@ -81,6 +81,60 @@ class AnalysisTests(unittest.TestCase):
         self.assertCountEqual(deps['three'], [])
         self.assertCountEqual(deps['four'], [])
         self.assertCountEqual(deps['five'], [])
+
+    def test_remove_composite_library(self):
+        deps = {
+            'one': ['fuchsia.hardware.composite', 'three'],
+            'two': [],
+            'three': ['two'],
+            'fuchsia.hardware.composite': []
+        }
+        remove_composite_library(deps)
+        self.assertFalse('fuchsia.hardware.composite' in deps)
+        self.assertCountEqual(deps['one'], ['three'])
+        self.assertCountEqual(deps['two'], [])
+        self.assertCountEqual(deps['three'], ['two'])
+
+    def test_add_back_edges(self):
+        deps = {
+            'one': ['two', 'three'],
+            'two': [],
+            'three': ['four'],
+            'four': [],
+            'five': ['two'],
+        }
+        deps = add_back_edges(deps)
+        self.assertCountEqual(deps['one'], ['two', 'three'])
+        self.assertCountEqual(deps['two'], ['one', 'five'])
+        self.assertCountEqual(deps['three'], ['one', 'four'])
+        self.assertCountEqual(deps['four'], ['three'])
+        self.assertCountEqual(deps['five'], ['two'])
+
+    def test_find_connected_components(self):
+        deps = {
+            'one': ['two', 'three'],
+            'two': ['one', 'five'],
+            'three': ['one', 'four'],
+            'four': ['three'],
+            'five': ['two'],
+        }
+        components = find_connected_components(deps)
+        self.assertCountEqual(
+            components, [set(['one', 'two', 'three', 'four', 'five'])])
+
+    def test_find_connected_components(self):
+        deps = {
+            'one': ['two'],
+            'two': ['one', 'five'],
+            'three': ['four'],
+            'four': ['three'],
+            'five': ['two'],
+        }
+        components = find_connected_components(deps)
+        print(components)
+        self.assertCountEqual(
+            components, [set(['one', 'two', 'five']),
+                         set(['three', 'four'])])
 
 
 if __name__ == "__main__":
