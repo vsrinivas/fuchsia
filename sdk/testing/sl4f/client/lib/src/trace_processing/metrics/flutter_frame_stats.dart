@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:logging/logging.dart';
+import 'package:meta/meta.dart';
 
 import '../metrics_results.dart';
 import '../time_delta.dart';
@@ -59,6 +60,7 @@ class _Group {
 class _FpsResult {
   int flowedFrameCount;
   TimeDelta totalDuration;
+  TimeDelta frameTimeDiscrepancy;
   double get averageFps => (totalDuration == TimeDelta.zero())
       ? (0.0)
       : (flowedFrameCount / totalDuration.toSecondsF());
@@ -136,6 +138,7 @@ _FpsResult _computeFps(Model model, Thread uiThread, Thread rasterThread) {
 
   final Set<Event> countedDisplayVsyncs = {};
   TimeDelta totalDuration = TimeDelta.zero();
+  TimeDelta frameTimeDiscrepancy = TimeDelta.zero();
 
   for (final group in groups) {
     // Hitting this indicates a logic error in the above grouping code.
@@ -169,11 +172,82 @@ _FpsResult _computeFps(Model model, Thread uiThread, Thread rasterThread) {
     final adjustedGroupEnd =
         _max(group.end, followingVsyncs.last.start + refreshRate);
     totalDuration += adjustedGroupEnd - firstVsyncStart;
+
+    final vsyncTimes = followingVsyncs
+        .map((vsync) => (vsync.start - firstVsyncStart).toMillisecondsF())
+        .toList();
+    final groupDiscrepancy =
+        TimeDelta.fromMilliseconds(computeDiscrepancy(vsyncTimes));
+    // As discrepancy is defined by a supremum, we report the maximal
+    // discrepancy from any one group.
+    if (groupDiscrepancy > frameTimeDiscrepancy) {
+      frameTimeDiscrepancy = groupDiscrepancy;
+    }
   }
 
   return _FpsResult()
     ..flowedFrameCount = countedDisplayVsyncs.length
-    ..totalDuration = totalDuration;
+    ..totalDuration = totalDuration
+    ..frameTimeDiscrepancy = frameTimeDiscrepancy;
+}
+
+/// Compute the discrepancy for a series of timestamps.
+///
+/// Discrepancy is a measure of how far a sequence deviates from uniform, in a
+/// way that gives a rough picture of the worst-case jank in the case of
+/// framerates.
+///
+/// It is defined in section 3 of
+/// https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45361.pdf
+@visibleForTesting
+double computeDiscrepancy(List<double> timestamps) {
+  if (timestamps.length < 2) {
+    return 0.0;
+  }
+
+  timestamps.sort();
+  final n = timestamps.length;
+  final a = timestamps[0];
+  final b = timestamps[n - 1];
+  // [a] gets normalized to 1/2N and [b] gets normalized to 1 - 1/2N
+  final normalizationFactor = (1.0 - 1.0 / n) / (b - a);
+  final normalizationOffset = 1.0 / (2.0 * n) - a * normalizationFactor;
+
+  final normalizedTimestamps = timestamps
+      .map((t) => t * normalizationFactor + normalizationOffset)
+      .toList();
+
+  // For the normalized series in the interval [0,1], the discrepancy is defined
+  // as sup_{c <= d} |\frac{S \cap [c, d]}{N} - (d-c)|. For a chosen interval
+  // [c, d], the first term is the actual portion of the timestamps that lie
+  // within the interval, while the second term is the expected portion.
+  //
+  // With a bit of rearrangement, we have \frac{S \cap [c, d]}{N} - (d-c)
+  // = \frac{S \cap [0, d]}{N} - d - (\frac{S \cap [0, c]}{N} - c).
+  //
+  // Thus if we compute the supremum and infimum values for
+  // \frac{S \cap [0, x]}{N} - x, we obtain the discrepancy by sending one of c
+  // or d to the supremum and the other to the infimum.
+  //
+  // The supremum will occur when x is equal to one of the timestamps, and the
+  // infimum will occur as x approaches one of the timestamps from below, where
+  // the value is approaches exactly \frac{1}{N} less than the value when x is
+  // actually equal to the timestamp.
+  var maximumPrefixDiscrepancy = -1.0;
+  var minimumPrefixDiscrepancy = 1.0;
+  for (var i = 0; i < n; i++) {
+    final prefixDiscrepancy = i.toDouble() / n - normalizedTimestamps[i];
+    if (prefixDiscrepancy > maximumPrefixDiscrepancy) {
+      maximumPrefixDiscrepancy = prefixDiscrepancy;
+    }
+    if (prefixDiscrepancy < minimumPrefixDiscrepancy) {
+      minimumPrefixDiscrepancy = prefixDiscrepancy;
+    }
+  }
+  final normalizedDiscrepancy =
+      maximumPrefixDiscrepancy - minimumPrefixDiscrepancy + 1.0 / n;
+
+  return normalizedDiscrepancy / normalizationFactor;
 }
 
 List<double> _computeFrameLatencies(Thread uiThread) {
@@ -261,6 +335,8 @@ ${results.appName} Flutter Frame Stats
     ..write('\n')
     ..write('render_frame_total_durations:\n')
     ..write(describeValues(results.renderFrameTotalDurations, indent: 2))
+    ..write(
+        'frame_time_discrepancy: ${results.fpsResult.frameTimeDiscrepancy.toMillisecondsF()}\n')
     ..write('\n');
 
   return buffer.toString();
@@ -390,6 +466,10 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
         results.frameLatencies),
     TestCaseResults('${flutterAppName}_render_frame_total_durations',
         Unit.milliseconds, results.renderFrameTotalDurations),
+    TestCaseResults(
+        '${flutterAppName}_frame_time_discrepancy',
+        Unit.milliseconds,
+        [results.fpsResult.frameTimeDiscrepancy.toMillisecondsF()]),
   ];
 }
 

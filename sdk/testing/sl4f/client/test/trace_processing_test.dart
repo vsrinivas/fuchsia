@@ -378,6 +378,28 @@ void main(List<String> args) {
     expect(differenceValues([1.0, 2.0, 3.0]), equals([1.0, 1.0]));
   });
 
+  test('Test discrepancy calculation', () async {
+    // The sample sequences from section 3 of
+    // https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45361.pdf
+    expect(computeDiscrepancy([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+        _closeTo(1.0));
+    expect(computeDiscrepancy([1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+        _closeTo(2.0));
+    // The paper linked above has an error in the third example. The true value
+    // is 23/9, which is the overshoot from the interval [4, 10], while the
+    // stated value of 2 is the undershoot from e.g. (2, 4).
+    expect(computeDiscrepancy([1, 2, 4, 5, 6, 7, 8, 9, 10, 12]),
+        _closeTo(23.0 / 9.0));
+    expect(computeDiscrepancy([1, 2, 4, 6, 7, 8, 9, 10, 11, 12]),
+        _closeTo(25.0 / 9.0));
+    expect(
+        computeDiscrepancy([1, 2, 5, 6, 7, 8, 9, 10, 11, 12]), _closeTo(3.0));
+
+    // Check that small sample counts return zero.
+    expect(computeDiscrepancy([]), _closeTo(0.0));
+    expect(computeDiscrepancy([1]), _closeTo(0.0));
+  });
+
   test('Flutter frame stats metric', () async {
     final model = createModelFromJsonString(flutterAppTraceJsonString);
     final results = flutterFrameStatsMetricsProcessor(
@@ -393,6 +415,8 @@ void main(List<String> args) {
     expect(computeMean(results[3].values), _closeTo(34.17552801895736));
     expect(results[4].label, 'flutter_app_render_frame_total_durations');
     expect(computeMean(results[4].values), _closeTo(10.729088445497638));
+    expect(results[5].label, 'flutter_app_frame_time_discrepancy');
+    expect(results[5].values[0], _closeTo(300.633182));
   });
 
   test('Flutter frame stats with long name app', () async {
