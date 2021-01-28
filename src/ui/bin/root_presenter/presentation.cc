@@ -17,11 +17,11 @@
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
-#include <glm/ext.hpp>
-
 #include <cmath>
 
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
+
+#include <glm/ext.hpp>
 
 namespace root_presenter {
 namespace {
@@ -195,6 +195,9 @@ Presentation::Presentation(
 Presentation::~Presentation() = default;
 
 void Presentation::RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier) {
+  // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+  fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
+
   magnifier->RegisterHandler(a11y_binding_.NewBinding());
   a11y_binding_.set_error_handler([this](auto) { ResetClipSpaceTransform(); });
 }

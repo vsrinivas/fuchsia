@@ -35,8 +35,10 @@ TEST(ProxyController, Send) {
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   nullptr));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  controller.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(), nullptr);
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
 
   IncomingMessageBuffer buffer;
   HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
@@ -70,8 +72,11 @@ TEST(ProxyController, Callback) {
       },
       &zero_arg_message_type);
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  controller.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                  std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -113,23 +118,15 @@ TEST(ProxyController, BadSend) {
   });
 
   EXPECT_EQ(0, error_count);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, controller.Send(&unbounded_nonnullable_string_message_type,
-                                                 encoder.GetMessage(), nullptr));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  controller.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(), nullptr);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
   EXPECT_EQ(0, error_count);
 
-  EXPECT_EQ(ZX_OK, controller.reader().Unbind().replace(ZX_RIGHT_WAIT, &h1));
-  EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
-
-  encoder.Reset(35u);
-  StringPtr string("hello!");
-  fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
-
-  EXPECT_EQ(0, error_count);
-  EXPECT_EQ(ZX_ERR_ACCESS_DENIED, controller.Send(&unbounded_nonnullable_string_message_type,
-                                                  encoder.GetMessage(), nullptr));
-  EXPECT_EQ(0, error_count);
+  EXPECT_EQ(ZX_HANDLE_INVALID, controller.reader().channel());
 }
 
 TEST(ProxyController, BadReply) {
@@ -230,8 +227,11 @@ TEST(ProxyController, Move) {
       },
       &zero_arg_message_type);
 
-  EXPECT_EQ(ZX_OK, controller1.Send(&unbounded_nonnullable_string_message_type,
-                                    encoder.GetMessage(), std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  controller1.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  controller1.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                   std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -280,8 +280,11 @@ TEST(ProxyController, Reset) {
       },
       &zero_arg_message_type);
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  controller.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                  std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -330,8 +333,10 @@ TEST(ProxyController, ReentrantDestructor) {
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     auto callback_handler = std::make_unique<SingleUseMessageHandler>(
         [](HLCPPIncomingMessage&& message) { return ZX_OK; }, &zero_arg_message_type);
-    zx_status_t status = controller.Send(&unbounded_nonnullable_string_message_type,
-                                         encoder.GetMessage(), std::move(callback_handler));
+    zx_status_t status = std::numeric_limits<zx_status_t>::max();
+    controller.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+    controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                    std::move(callback_handler));
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
 
     controller.Reset();
@@ -340,8 +345,11 @@ TEST(ProxyController, ReentrantDestructor) {
       [defer = std::move(defer)](HLCPPIncomingMessage&& message) { return ZX_OK; },
       &zero_arg_message_type);
 
-  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  controller.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                  std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
 
   loop.RunUntilIdle();
 

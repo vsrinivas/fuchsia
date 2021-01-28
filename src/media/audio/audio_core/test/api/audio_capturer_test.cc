@@ -286,6 +286,9 @@ TEST_F(AudioCapturerTestOldAPI, BindGainControl) {
 
 // Null requests to BindGainControl should have no effect.
 TEST_F(AudioCapturerTestOldAPI, BindGainControlNull) {
+  // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+  fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
+
   audio_capturer_->BindGainControl(nullptr);
 
   // Give time for Disconnect to occur, if it must.
@@ -349,6 +352,9 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_Custom) {
 // inadequate ZX_RIGHTS -- if no TRANSFER, the SetReferenceClock silently does nothing.
 // The reference clock should remain the unique recognizable reference clock from before the call.
 TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_NoTransferNoChange) {
+  // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+  fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
+
   // First create a unique custom clock that we will recognize...
   zx::clock dupe_clock, retained_clock, orig_clock = clock::AdjustableCloneOfMonotonic();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);

@@ -38,6 +38,9 @@ class ActivityReporterTest : public HermeticAudioTest {
 
 // Test that the user is connected to the activity reporter.
 TEST_F(ActivityReporterTest, AddAndRemove) {
+  // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+  fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
+
   std::vector<AudioRenderUsage> active_usages;
   auto add_callback = [this, &active_usages](std::string name) {
     active_usages.clear();

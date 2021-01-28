@@ -58,10 +58,10 @@ class ProxyController : public MessageHandler {
   // |ProxyController| will call the |OnMessage| method of the
   // |response_handler|.
   //
-  // Returns an error if the message fails to encode properly or if the message
-  // cannot be written to the channel.
-  zx_status_t Send(const fidl_type_t* type, HLCPPOutgoingMessage message,
-                   std::unique_ptr<SingleUseMessageHandler> response_handler);
+  // Calls |error_handler_| on |reader_| upon failure to validate or write the
+  // message.
+  void Send(const fidl_type_t* type, HLCPPOutgoingMessage message,
+            std::unique_ptr<SingleUseMessageHandler> response_handler);
 
   // Clears all the state associated with this |ProxyController|.
   //
@@ -88,6 +88,13 @@ class ProxyController : public MessageHandler {
   Proxy* proxy_ = nullptr;
   std::map<zx_txid_t, std::unique_ptr<SingleUseMessageHandler>> handlers_;
   zx_txid_t next_txid_;
+};
+
+// RAII object to disable ProxyController's client side error reporting when in scope.
+// TODO(fxbug.dev/68206) Remove this.
+struct TransitoryProxyControllerClientSideErrorDisabler {
+  TransitoryProxyControllerClientSideErrorDisabler();
+  ~TransitoryProxyControllerClientSideErrorDisabler();
 };
 
 }  // namespace internal

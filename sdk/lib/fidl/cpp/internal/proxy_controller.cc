@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 
+#include <atomic>
+#include <cstdint>
 #include <utility>
 
 #include "lib/fidl/cpp/internal/logging.h"
@@ -13,6 +15,12 @@ namespace internal {
 namespace {
 
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
+
+// Enables client side error callbacks, which will eventually always be
+// enabled. This should generally not be set, but exists to provide a
+// mechanism to denylist test cases
+// TODO(fxbug.dev/68206) Remove this.
+static std::atomic<uint32_t> transitory_clientside_error_disable_count(0);
 
 }  // namespace
 
@@ -36,8 +44,8 @@ ProxyController& ProxyController::operator=(ProxyController&& other) {
   return *this;
 }
 
-zx_status_t ProxyController::Send(const fidl_type_t* type, HLCPPOutgoingMessage message,
-                                  std::unique_ptr<SingleUseMessageHandler> response_handler) {
+void ProxyController::Send(const fidl_type_t* type, HLCPPOutgoingMessage message,
+                           std::unique_ptr<SingleUseMessageHandler> response_handler) {
   zx_txid_t txid = 0;
   if (response_handler) {
     txid = next_txid_++ & kUserspaceTxidMask;
@@ -49,7 +57,11 @@ zx_status_t ProxyController::Send(const fidl_type_t* type, HLCPPOutgoingMessage 
   zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {
     FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-    return status;
+    if (transitory_clientside_error_disable_count == 0 && reader_.error_handler_ != nullptr) {
+      reader_.error_handler_(status);
+      reader_.Reset();
+    }
+    return;
   }
   status = message.Write(reader_.channel().get(), 0);
   if (status != ZX_OK) {
@@ -57,12 +69,15 @@ zx_status_t ProxyController::Send(const fidl_type_t* type, HLCPPOutgoingMessage 
     // completed, so ZX_ERR_PEER_CLOSED is expected to occur sometimes under normal operation.
     if (status != ZX_ERR_PEER_CLOSED) {
       FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
+      if (transitory_clientside_error_disable_count == 0 && reader_.error_handler_ != nullptr) {
+        reader_.error_handler_(status);
+        reader_.Reset();
+      }
     }
-    return status;
+    return;
   }
   if (response_handler)
     handlers_.emplace(txid, std::move(response_handler));
-  return ZX_OK;
 }
 
 void ProxyController::Reset() {
@@ -92,6 +107,15 @@ void ProxyController::ClearPendingHandlers() {
   auto doomed = std::move(handlers_);
   next_txid_ = 1;
   doomed.clear();
+}
+
+TransitoryProxyControllerClientSideErrorDisabler::
+    TransitoryProxyControllerClientSideErrorDisabler() {
+  ++transitory_clientside_error_disable_count;
+}
+TransitoryProxyControllerClientSideErrorDisabler::
+    ~TransitoryProxyControllerClientSideErrorDisabler() {
+  --transitory_clientside_error_disable_count;
 }
 
 }  // namespace internal

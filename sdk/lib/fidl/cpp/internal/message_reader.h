@@ -20,6 +20,8 @@
 namespace fidl {
 namespace internal {
 
+class ProxyController;
+
 class MessageReader final {
  public:
   explicit MessageReader(MessageHandler* message_handler = nullptr);
@@ -146,6 +148,8 @@ class MessageReader final {
   bool* destroyed_;    // See |Canary| in message_reader.cc.
   MessageHandler* message_handler_;
   fit::function<void(zx_status_t)> error_handler_;
+
+  friend class ProxyController;
 };
 
 }  // namespace internal

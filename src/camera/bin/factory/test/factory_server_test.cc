@@ -30,6 +30,9 @@ class FactoryServerTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
+  // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+  fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
+
   std::unique_ptr<FactoryServer> factory_server_;
 };
 

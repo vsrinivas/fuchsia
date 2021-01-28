@@ -112,6 +112,9 @@ void Session::EnqueueReleaseFence(zx::event fence) {
 
 void Session::Flush() {
   if (!commands_.empty()) {
+    // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+    fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
+
     session_->Enqueue(std::move(commands_));
 
     // After being moved, |commands_| is in a "valid but unspecified state";
@@ -138,6 +141,9 @@ void Session::Present(zx::time presentation_time, PresentCallback callback) {
 void Session::Present2(zx_duration_t requested_presentation_time,
                        zx_duration_t requested_prediction_span,
                        Present2Callback immediate_callback) {
+  // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+  fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
+
   ZX_DEBUG_ASSERT(session_);
   Flush();
 

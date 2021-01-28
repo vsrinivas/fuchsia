@@ -7,6 +7,9 @@
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
+#include <zircon/types.h>
+
+#include <limits>
 
 #include <zxtest/zxtest.h>
 
@@ -61,8 +64,10 @@ TEST(StubController, NoResponse) {
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   nullptr));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  proxy_ctrl.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(), nullptr);
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
   EXPECT_EQ(1, callback_count);
@@ -110,8 +115,11 @@ TEST(StubController, Response) {
       },
       &unbounded_nonnullable_string_message_type);
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  proxy_ctrl.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                  std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -164,8 +172,11 @@ TEST(StubController, ResponseAfterUnbind) {
       },
       &unbounded_nonnullable_string_message_type);
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  proxy_ctrl.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                  std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -218,8 +229,11 @@ TEST(StubController, ResponseAfterDestroy) {
       },
       &unbounded_nonnullable_string_message_type);
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  proxy_ctrl.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                  std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -273,8 +287,11 @@ TEST(StubController, BadResponse) {
       },
       &unbounded_nonnullable_string_message_type);
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
-                                   std::move(handler)));
+  zx_status_t status = std::numeric_limits<zx_status_t>::max();
+  proxy_ctrl.reader().set_error_handler([&status](zx_status_t s) { status = s; });
+  proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
+                  std::move(handler));
+  EXPECT_EQ(std::numeric_limits<zx_status_t>::max(), status);
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   EXPECT_EQ(0, error_count);
