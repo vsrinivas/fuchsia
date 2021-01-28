@@ -62,8 +62,10 @@ fuchsia_component("dhcpd-cli-test-component") {
 }
 
 fuchsia_shell_package("dhcpd-cli") {
-  deps = [ ":bin" ]
-  manifest = "meta/dhcpd-cli.cmx"
+  deps = [
+    ":bin",
+    ":component",
+  ]
 }
 
 fuchsia_test_package("dhcpd-cli-tests") {

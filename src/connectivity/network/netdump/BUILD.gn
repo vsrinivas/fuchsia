@@ -65,8 +65,10 @@ fuchsia_component("component") {
 }
 
 fuchsia_shell_package("netdump") {
-  deps = [ ":bin" ]
-  manifest = "meta/netdump.cmx"
+  deps = [
+    ":bin",
+    ":component",
+  ]
 }
 
 fuchsia_unittest_package("netdump-unit-tests") {
