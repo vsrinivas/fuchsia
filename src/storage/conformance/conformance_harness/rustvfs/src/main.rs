@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io_test::{
         self as io_test, Io1Config, Io1HarnessRequest, Io1HarnessRequestStream,
     },
-    fuchsia_async as fasync,
+    fidl_fuchsia_mem, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::prelude::*,
@@ -30,6 +30,26 @@ use {
 };
 
 struct Harness(Io1HarnessRequestStream);
+
+/// Creates and returns a rustvfs VMO file using the contents of the given buffer.
+fn new_vmo_file(buffer: &fidl_fuchsia_mem::Range) -> Result<Arc<dyn DirectoryEntry>, Error> {
+    // Copy the data out of the buffer.
+    let size = buffer.size;
+    let mut data = vec![0; size as usize];
+    buffer.vmo.read(&mut data, buffer.offset)?;
+    let data = std::sync::Arc::new(data);
+    // Create a new VMO file.
+    let init_vmo = move || {
+        let data_clone = data.clone();
+        async move {
+            let vmo = zx::Vmo::create(size)?;
+            vmo.write(&data_clone, 0)?;
+            Ok(vmo::NewVmo { vmo, size, capacity: size })
+        }
+    };
+    let consume_vmo = move |_vmo| async move {};
+    Ok(vmo::read_write(init_vmo, consume_vmo))
+}
 
 fn add_entry(
     entry: &io_test::DirectoryEntry,
@@ -56,11 +76,14 @@ fn add_entry(
                 100,
                 |_content| async move { Ok(()) },
             );
+            // TODO(fxbug.dev/33880): File.flags is not used.
             dest.add_entry(name, new_file)?;
         }
-        io_test::DirectoryEntry::VmoFile(_vmo_file) => {
-            // TODO(fxbug.dev/33880): Add support for VMO files.
-            return Err(anyhow!("VMO files are not supported"));
+        io_test::DirectoryEntry::VmoFile(vmo_file) => {
+            let name = vmo_file.name.as_ref().expect("VMO file must have a name");
+            let buffer = vmo_file.buffer.as_ref().expect("VMO file must have a buffer");
+            // TODO(fxbug.dev/33880): VmoFile.flags is not used.
+            dest.add_entry(name, new_vmo_file(buffer)?)?;
         }
     }
     Ok(())
@@ -79,6 +102,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     // haven't been implemented in this harness yet.
                     no_remote_dir: Some(true),
                     no_admin: Some(true),
+                    no_get_buffer: Some(false),
                     ..Io1Config::EMPTY
                 };
                 responder.send(config)?;
@@ -103,19 +127,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 control_handle: _,
             } => {
                 let dir = simple();
-                let size = file.size;
-                let mut data = vec![0; size as usize];
-                file.vmo.read(&mut data, file.offset)?;
-                let data = std::sync::Arc::new(data);
-                let file = vmo::read_only(move || {
-                    let data_clone = data.clone();
-                    async move {
-                        let vmo = zx::Vmo::create(size)?;
-                        vmo.write(&data_clone, 0)?;
-                        Ok(vmo::NewVmo { vmo, size, capacity: size })
-                    }
-                });
-                dir.clone().add_entry(name, file)?;
+                dir.add_entry(name, new_vmo_file(&file)?)?;
                 (dir, flags, directory_request)
             }
             // TODO(fxbug.dev/33880): Implement GetDirectoryWithRemoteDirectory.

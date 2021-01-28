@@ -90,6 +90,8 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_vmofile(false);
     config.set_no_remote_dir(false);
     config.set_no_admin(false);
+    // TODO(fxbug.dev/33880): Figure out why the GetBuffer method isn't working.
+    config.set_no_get_buffer(true);
     callback(std::move(config));
   }
 

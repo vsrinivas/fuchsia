@@ -4,8 +4,8 @@
 
 use {
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
-    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::StreamExt,
     io_conformance::io1_request_logger_factory::Io1RequestLoggerFactory,
@@ -152,6 +152,19 @@ fn file(name: &str, flags: u32, contents: Vec<u8>) -> io_test::DirectoryEntry {
         flags: Some(flags),
         contents: Some(contents),
         ..io_test::File::EMPTY
+    })
+}
+
+fn vmo_file(name: &str, flags: u32, contents: &[u8]) -> io_test::DirectoryEntry {
+    let size = contents.len() as u64;
+    let vmo = zx::Vmo::create(size).expect("Cannot create VMO");
+    vmo.write(contents, 0).expect("Cannot write to VMO");
+    let range = fidl_fuchsia_mem::Range { vmo, offset: 0, size };
+    io_test::DirectoryEntry::VmoFile(io_test::VmoFile {
+        name: Some(name.to_string()),
+        flags: Some(flags),
+        buffer: Some(range),
+        ..io_test::VmoFile::EMPTY
     })
 }
 
@@ -498,6 +511,124 @@ async fn file_read_in_subdirectory() {
         .await;
         let (status, _data) = file.read(0).await.expect("Read failed");
         assert_eq!(Status::from_raw(status), Status::OK);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_get_readable_buffer_with_sufficient_rights() {
+    let harness = connect_to_harness().await;
+
+    let config = harness.get_config().await.expect("Cannot get config from harness");
+    if config.no_get_buffer.unwrap_or_default() {
+        return;
+    }
+
+    let all_rights = all_rights_for_harness(&harness).await;
+    let contents = "abcdef".as_bytes();
+
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
+        let root = root_directory(all_rights, vec![vmo_file("filename.txt", file_flags, contents)]);
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
+                .await;
+        let (status, buffer) = file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        // Check contents of buffer.
+        let buffer = *buffer.expect("buffer is missing");
+        let mut data = vec![0; buffer.size as usize];
+        buffer.vmo.read(&mut data, 0).expect("vmo read failed");
+        assert_eq!(&data, contents);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_get_readable_buffer_with_insufficient_rights() {
+    let harness = connect_to_harness().await;
+
+    let config = harness.get_config().await.expect("Cannot get config from harness");
+    if config.no_get_buffer.unwrap_or_default() {
+        return;
+    }
+
+    let all_rights = all_rights_for_harness(&harness).await;
+    let non_readable_flags = all_rights & !io::OPEN_RIGHT_READABLE;
+
+    for file_flags in build_flag_combinations(0, non_readable_flags) {
+        let root = root_directory(
+            all_rights,
+            vec![vmo_file("filename.txt", file_flags, "abcdef".as_bytes())],
+        );
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
+                .await;
+        let (status, _buffer) =
+            file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
+        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_get_writable_buffer_with_sufficient_rights() {
+    let harness = connect_to_harness().await;
+
+    let config = harness.get_config().await.expect("Cannot get config from harness");
+    if config.no_get_buffer.unwrap_or_default() {
+        return;
+    }
+
+    let all_rights = all_rights_for_harness(&harness).await;
+
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
+        let root = root_directory(
+            all_rights,
+            vec![vmo_file("filename.txt", file_flags, "aaaaa".as_bytes())],
+        );
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
+                .await;
+        // Get writable buffer.
+        let (status, buffer) =
+            file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        // Try to write to buffer.
+        let buffer = *buffer.expect("buffer is missing");
+        buffer.vmo.write("bbbbb".as_bytes(), 0).expect("vmo write failed");
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_get_writable_buffer_with_insufficient_rights() {
+    let harness = connect_to_harness().await;
+
+    let config = harness.get_config().await.expect("Cannot get config from harness");
+    if config.no_get_buffer.unwrap_or_default() {
+        return;
+    }
+
+    let all_rights = all_rights_for_harness(&harness).await;
+    let non_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
+
+    for file_flags in build_flag_combinations(0, non_writable_flags) {
+        let root = root_directory(
+            all_rights,
+            vec![vmo_file("filename.txt", file_flags, "abcdef".as_bytes())],
+        );
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, "filename.txt")
+                .await;
+        let (status, _buffer) =
+            file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
+        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
     }
 }
 

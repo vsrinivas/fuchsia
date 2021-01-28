@@ -49,6 +49,7 @@ rustc_test("io1_conformance_test") {
     ":io_conformance",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

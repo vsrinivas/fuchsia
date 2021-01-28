@@ -71,6 +71,8 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     // Minfs doesn't support vmo files or remote directories.
     config.set_no_vmofile(true);
     config.set_no_remote_dir(true);
+    config.set_no_get_buffer(true);
+
     callback(std::move(config));
   }
 

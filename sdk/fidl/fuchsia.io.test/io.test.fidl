@@ -54,6 +54,9 @@ table Io1Config {
 
     /// The admin right is not supported.
     6: bool no_admin;
+
+    /// The GetBuffer method is not supported.
+    7: bool no_get_buffer;
 };
 
 resource table Directory {
