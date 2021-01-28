@@ -17,10 +17,8 @@ use {
     },
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_lifecycle as fui_lifecycle,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
-    futures::lock::Mutex,
-    futures::{StreamExt, TryStreamExt},
+    futures::{lock::Mutex, StreamExt, TryStreamExt},
     std::sync::Arc,
 };
 
@@ -47,15 +45,16 @@ struct SessionManagerState {
 
     /// The realm in which sessions will be launched.
     realm: fsys::RealmProxy,
-
-    /// Proxy to the scenic lifecycle service.
-    scenic_lifecycle: Option<fui_lifecycle::LifecycleControllerProxy>,
 }
+
+pub type UILifecycleFactory =
+    dyn Fn() -> Option<fui_lifecycle::LifecycleControllerProxy> + Send + Sync + 'static;
 
 /// Manages the session lifecycle and provides services to control the session.
 #[derive(Clone)]
 pub struct SessionManager {
     state: Arc<Mutex<SessionManagerState>>,
+    ui_lifecycle_factory: Arc<UILifecycleFactory>,
 }
 
 impl SessionManager {
@@ -64,17 +63,10 @@ impl SessionManager {
     /// # Parameters
     /// - `realm`: The realm in which sessions will be launched.
     /// - `scenic_lifecycle`: Proxy to the scenic lifecycle service.
-    pub fn new(
-        realm: fsys::RealmProxy,
-        scenic_lifecycle: Option<fui_lifecycle::LifecycleControllerProxy>,
-    ) -> SessionManager {
-        let state = SessionManagerState {
-            session_url: None,
-            session_exposed_dir_channel: None,
-            realm,
-            scenic_lifecycle,
-        };
-        SessionManager { state: Arc::new(Mutex::new(state)) }
+    pub fn new(realm: fsys::RealmProxy, ui_lifecycle_factory: Arc<UILifecycleFactory>) -> Self {
+        let state =
+            SessionManagerState { session_url: None, session_exposed_dir_channel: None, realm };
+        SessionManager { state: Arc::new(Mutex::new(state)), ui_lifecycle_factory }
     }
 
     /// Launch the session specified in the session manager startup configuration, if any.
@@ -82,13 +74,11 @@ impl SessionManager {
     /// # Errors
     /// Returns an error if the session could not be launched.
     pub async fn launch_startup_session(&mut self) -> Result<(), Error> {
-        let mut state = self.state.lock().await;
         if let Some(session_url) = startup::get_session_url() {
+            let mut state = self.state.lock().await;
             state.session_exposed_dir_channel =
                 Some(startup::launch_session(&session_url, &state.realm).await?);
             state.session_url = Some(session_url);
-        } else {
-            fx_log_warn!("No startup session specified");
         }
         Ok(())
     }
@@ -154,17 +144,17 @@ impl SessionManager {
                         element_manager_proxy,
                     )
                     .await
-                    .expect("ElementManager request stream got an error.");
+                    .expect("Element Manager request stream got an error.");
                 }
                 ExposedServices::Launcher(request_stream) => {
                     self.handle_launcher_request_stream(request_stream)
                         .await
-                        .expect("Launcher request stream got an error.");
+                        .expect("Session Launcher request stream got an error.");
                 }
                 ExposedServices::Restarter(request_stream) => {
                     self.handle_restarter_request_stream(request_stream)
                         .await
-                        .expect("Restarter request stream got an error.");
+                        .expect("Session Restarter request stream got an error.");
                 }
                 ExposedServices::InputDeviceRegistry(request_stream) => {
                     // Connect to InputDeviceRegistry served by the session.
@@ -188,7 +178,7 @@ impl SessionManager {
                         input_device_registry_proxy,
                     )
                     .await
-                    .expect("InputDeviceRegistry request stream got an error.");
+                    .expect("Input device registry request stream got an error.");
                 }
             }
         }
@@ -342,12 +332,7 @@ impl SessionManager {
                     startup::StartupError::NotDestroyed { .. } => {
                         LaunchError::DestroyComponentFailed
                     }
-                    startup::StartupError::NotCreated {
-                        name: _,
-                        collection: _,
-                        url: _,
-                        err: sys_err,
-                    } => match sys_err {
+                    startup::StartupError::NotCreated { err, .. } => match err {
                         fcomponent::Error::InstanceCannotResolve => LaunchError::NotFound,
                         _ => LaunchError::CreateComponentFailed,
                     },
@@ -364,14 +349,13 @@ impl SessionManager {
 
     /// Handles calls to Restarter.Restart().
     async fn handle_restart_request(&mut self) -> Result<(), RestartError> {
-        let mut state = self.state.lock().await;
-
-        if let Some(scenic_lifecycle) = &state.scenic_lifecycle {
-            if let Err(_) = scenic_lifecycle.terminate() {
+        if let Some(scenic_lifecycle) = (&self.ui_lifecycle_factory)() {
+            if let Err(error) = scenic_lifecycle.terminate() {
+                eprintln!("{:?}", error);
                 return Err(RestartError::NotRunning);
             }
         }
-
+        let mut state = self.state.lock().await;
         if let Some(ref session_url) = state.session_url {
             startup::launch_session(&session_url, &state.realm)
                 .await
@@ -379,12 +363,7 @@ impl SessionManager {
                     startup::StartupError::NotDestroyed { .. } => {
                         RestartError::DestroyComponentFailed
                     }
-                    startup::StartupError::NotCreated {
-                        name: _,
-                        collection: _,
-                        url: _,
-                        err: sys_err,
-                    } => match sys_err {
+                    startup::StartupError::NotCreated { err, .. } => match err {
                         fcomponent::Error::InstanceCannotResolve => RestartError::NotFound,
                         _ => RestartError::CreateComponentFailed,
                     },
@@ -411,9 +390,13 @@ mod tests {
             ElementManagerMarker, ElementManagerRequest, ElementSpec, LaunchConfiguration,
             LauncherMarker, LauncherProxy, RestartError, RestarterMarker, RestarterProxy,
         },
-        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_lifecycle as fui_lifecycle,
+        fuchsia_async as fasync,
         futures::prelude::*,
+        lazy_static::lazy_static,
         matches::assert_matches,
+        std::sync::{mpsc::sync_channel, Arc},
+        test_util::Counter,
     };
 
     /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
@@ -496,7 +479,7 @@ mod tests {
             };
         });
 
-        let session_manager = SessionManager::new(realm, None);
+        let session_manager = SessionManager::new(realm, Arc::new(|| None));
         let (launcher, _restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -531,7 +514,7 @@ mod tests {
             };
         });
 
-        let session_manager = SessionManager::new(realm, None);
+        let session_manager = SessionManager::new(realm, Arc::new(|| None));
         let (launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -546,6 +529,72 @@ mod tests {
         assert!(restarter.restart().await.expect("could not call Restart").is_ok());
     }
 
+    /// Verifies that scenic is shut down on restart.
+    #[fasync::run_until_stalled(test)]
+    async fn test_restart_scenic() {
+        lazy_static! {
+            static ref CALL_COUNT: Counter = Counter::new(0);
+        }
+
+        let session_url = "session";
+
+        let realm = spawn_realm_server(move |realm_request| {
+            match realm_request {
+                fsys::RealmRequest::DestroyChild { child: _, responder } => {
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys::RealmRequest::CreateChild { collection: _, decl, responder } => {
+                    assert_eq!(decl.url.unwrap(), session_url);
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => {
+                    assert!(false);
+                }
+            };
+        });
+
+        let (sender, receiver) = sync_channel(1);
+        let ui_lifecycle_factory = move || {
+            let (ui_lifecycle_proxy, ui_lifecycle_stream) =
+                create_proxy_and_stream::<fui_lifecycle::LifecycleControllerMarker>()
+                    .expect("Failed to create UI LifecycleControllerMarker proxy and stream");
+
+            sender.send(ui_lifecycle_stream).unwrap();
+            Some(ui_lifecycle_proxy)
+        };
+
+        let session_manager = SessionManager::new(realm, Arc::new(ui_lifecycle_factory));
+        let (launcher, restarter) = serve_session_manager_services(session_manager);
+
+        assert!(launcher
+            .launch(LaunchConfiguration {
+                session_url: Some(session_url.to_string()),
+                ..LaunchConfiguration::EMPTY
+            })
+            .await
+            .expect("could not call Launch")
+            .is_ok());
+
+        assert!(restarter.restart().await.expect("could not call Restart").is_ok());
+
+        let mut ui_lifecycle_stream = receiver.recv().unwrap();
+        let ui_lifcycle_fut = async {
+            while let Some(request) = ui_lifecycle_stream.try_next().await.unwrap() {
+                match request {
+                    fui_lifecycle::LifecycleControllerRequest::Terminate { .. } => {
+                        CALL_COUNT.inc();
+                    }
+                }
+            }
+        };
+
+        ui_lifcycle_fut.await;
+        assert_eq!(CALL_COUNT.get(), 1);
+    }
+
     /// Verifies that Launcher.Restart return an error if there is no running existing session.
     #[fasync::run_until_stalled(test)]
     async fn test_restart_error_not_running() {
@@ -553,7 +602,7 @@ mod tests {
             assert!(false);
         });
 
-        let session_manager = SessionManager::new(realm, None);
+        let session_manager = SessionManager::new(realm, Arc::new(|| None));
         let (_launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert_eq!(

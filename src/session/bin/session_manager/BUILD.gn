@@ -56,6 +56,11 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [
+    "//src/lib/test_util",
+    "//third_party/rust_crates:lazy_static",
+  ]
+
   sources = [
     "src/cobalt.rs",
     "src/lib.rs",
