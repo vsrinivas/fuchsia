@@ -131,7 +131,6 @@ class AnalysisTests(unittest.TestCase):
             'five': ['two'],
         }
         components = find_connected_components(deps)
-        print(components)
         self.assertCountEqual(
             components, [set(['one', 'two', 'five']),
                          set(['three', 'four'])])
