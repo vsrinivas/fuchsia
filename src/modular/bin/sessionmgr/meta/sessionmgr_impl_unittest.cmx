@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/sessionmgr_impl_unittest"
+        "binary": "bin/sessionmgr_impl_unittest"
     },
     "sandbox": {
         "features": [

@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/remove_mod_command_runner_unittest"
+        "binary": "bin/remove_mod_command_runner_unittest"
     },
     "sandbox": {
         "services": [

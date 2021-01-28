@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/tests_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("agent_runner") {
   sources = [
@@ -62,8 +62,14 @@ executable("agent_runner_unittest") {
   ]
 }
 
-hermetic_tests_package("agent_runner_unittests") {
+fuchsia_unittest_package("agent_runner_unittests") {
+  manifest = "meta/agent_runner_unittest.cmx"
   deps = [ ":agent_runner_unittest" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 # Broken out for component to depend on w/o creating circles.

@@ -2,30 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/tests_package.gni")
+import("//src/sys/build/components.gni")
 
 group("puppet_master") {
   testonly = true
   deps = [
+    ":dispatch-story-command-executor-unittest",
     ":dispatch_story_command_executor",
-    ":dispatch_story_command_executor_unittest",
     ":make_production_impl",
+    ":puppet-master-impl-unittest",
     ":puppet_master_impl",
-    ":puppet_master_impl_unittest",
     ":puppet_master_unittests",
+    ":story-command-executor-unittest",
     ":story_command_executor",
-    ":story_command_executor_unittest",
     "command_runners",
-  ]
-}
-
-hermetic_tests_package("puppet_master_unittests") {
-  deps = [
-    ":dispatch_story_command_executor_unittest",
-    ":puppet_master_impl_unittest",
-    ":story_command_executor_unittest",
-    "command_runners:add_mod_command_runner_unittest",
-    "command_runners:remove_mod_command_runner_unittest",
   ]
 }
 
@@ -66,6 +56,11 @@ executable("puppet_master_impl_unittest") {
   ]
 }
 
+fuchsia_unittest_component("puppet-master-impl-unittest") {
+  manifest = "meta/puppet_master_impl_unittest.cmx"
+  deps = [ ":puppet_master_impl_unittest" ]
+}
+
 source_set("story_command_executor") {
   sources = [
     "story_command_executor.cc",
@@ -88,6 +83,10 @@ executable("story_command_executor_unittest") {
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl/test:gtest_main",
   ]
+}
+
+fuchsia_unittest_component("story-command-executor-unittest") {
+  deps = [ ":story_command_executor_unittest" ]
 }
 
 source_set("dispatch_story_command_executor") {
@@ -122,6 +121,11 @@ executable("dispatch_story_command_executor_unittest") {
   ]
 }
 
+fuchsia_unittest_component("dispatch-story-command-executor-unittest") {
+  manifest = "meta/dispatch_story_command_executor_unittest.cmx"
+  deps = [ ":dispatch_story_command_executor_unittest" ]
+}
+
 source_set("make_production_impl") {
   sources = [
     "make_production_impl.cc",
@@ -133,5 +137,13 @@ source_set("make_production_impl") {
     ":puppet_master_impl",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:add_mod_command_runner",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:remove_mod_command_runner",
+  ]
+}
+
+fuchsia_test_package("puppet_master_unittests") {
+  test_components = [
+    ":dispatch-story-command-executor-unittest",
+    ":puppet-master-impl-unittest",
+    ":story-command-executor-unittest",
   ]
 }

@@ -2,17 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/executable_package.gni")
-import("//src/modular/build/tests_package.gni")
+import("//src/sys/build/components.gni")
 
-executable_package("sessionmgr") {
-  meta = [
-    {
-      path = "meta/sessionmgr.cmx"
-      dest = "sessionmgr.cmx"
-    },
-  ]
-
+executable("sessionmgr_bin") {
+  output_name = "sessionmgr"
   sources = [ "sessionmgr.cc" ]
 
   deps = [
@@ -28,6 +21,11 @@ executable_package("sessionmgr") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+fuchsia_package_with_single_component("sessionmgr") {
+  manifest = "meta/sessionmgr.cmx"
+  deps = [ ":sessionmgr_bin" ]
 }
 
 source_set("sessionmgr_lib") {
@@ -94,13 +92,8 @@ source_set("sessionmgr_lib") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable_package("dev_session_shell") {
-  meta = [
-    {
-      path = "meta/dev_session_shell.cmx"
-      dest = "dev_session_shell.cmx"
-    },
-  ]
+executable("dev_session_shell_bin") {
+  output_name = "dev_session_shell"
 
   sources = [ "dev_session_shell.cc" ]
 
@@ -117,6 +110,11 @@ executable_package("dev_session_shell") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_package_with_single_component("dev_session_shell") {
+  manifest = "meta/dev_session_shell.cmx"
+  deps = [ ":dev_session_shell_bin" ]
 }
 
 source_set("session_ctl") {
@@ -208,14 +206,6 @@ source_set("annotations") {
   ]
 }
 
-hermetic_tests_package("sessionmgr_unittests") {
-  deps = [
-    ":annotations_unittest",
-    ":element_controller_impl_unittest",
-    ":element_manager_impl_unittest",
-  ]
-}
-
 executable("element_manager_impl_unittest") {
   testonly = true
 
@@ -230,6 +220,10 @@ executable("element_manager_impl_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuchsia_unittest_component("element-manager-impl-unittest") {
+  deps = [ ":element_manager_impl_unittest" ]
 }
 
 executable("element_controller_impl_unittest") {
@@ -248,6 +242,10 @@ executable("element_controller_impl_unittest") {
   ]
 }
 
+fuchsia_unittest_component("element-controller-impl-unittest") {
+  deps = [ ":element_controller_impl_unittest" ]
+}
+
 executable("annotations_unittest") {
   testonly = true
 
@@ -259,5 +257,17 @@ executable("annotations_unittest") {
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_component("annotations-unittest") {
+  deps = [ ":annotations_unittest" ]
+}
+
+fuchsia_test_package("sessionmgr_unittests") {
+  test_components = [
+    ":annotations-unittest",
+    ":element-controller-impl-unittest",
+    ":element-manager-impl-unittest",
   ]
 }

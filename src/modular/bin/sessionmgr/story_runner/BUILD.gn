@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/executable_package.gni")
-import("//src/modular/build/tests_package.gni")
+import("//src/sys/build/components.gni")
 
-hermetic_tests_package("story_runner_unittests") {
+fuchsia_unittest_package("story_runner_unittests") {
   deps = [ ":story_controller_impl_unittest" ]  # incomplete, for now.
 }
 
@@ -67,15 +66,9 @@ source_set("story_runner") {
   ]
 }
 
-executable_package("dev_story_shell") {
-  meta = [
-    {
-      path = "meta/dev_story_shell.cmx"
-      dest = "dev_story_shell.cmx"
-    },
-  ]
+executable("dev_story_shell_bin") {
+  output_name = "dev_story_shell"
   sources = [ "dev_story_shell.cc" ]
-
   deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -87,6 +80,11 @@ executable_package("dev_story_shell") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_package_with_single_component("dev_story_shell") {
+  manifest = "meta/dev_story_shell.cmx"
+  deps = [ ":dev_story_shell_bin" ]
 }
 
 executable("story_controller_impl_unittest") {

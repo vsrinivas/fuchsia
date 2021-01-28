@@ -2,16 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/tests_package.gni")
-
-hermetic_tests_package("storage_unittests") {
-  deps = [
-    ":encode_module_path_unittest",
-    ":session_storage_unittest",
-    ":story_storage_unittest",
-    ":watcher_list_unittest",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 group("storage") {
   public_deps = [
@@ -50,6 +41,10 @@ executable("encode_module_path_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuchsia_unittest_component("encode-module-path-unittest") {
+  deps = [ ":encode_module_path_unittest" ]
 }
 
 source_set("session_storage") {
@@ -91,6 +86,10 @@ executable("session_storage_unittest") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_unittest_component("session-storage-unittest") {
+  deps = [ ":session_storage_unittest" ]
 }
 
 source_set("story_storage") {
@@ -138,6 +137,10 @@ executable("story_storage_unittest") {
   ]
 }
 
+fuchsia_unittest_component("story-storage-unittest") {
+  deps = [ ":story_storage_unittest" ]
+}
+
 executable("watcher_list_unittest") {
   testonly = true
 
@@ -148,5 +151,18 @@ executable("watcher_list_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
+  ]
+}
+
+fuchsia_unittest_component("watcher-list-unittest") {
+  deps = [ ":watcher_list_unittest" ]
+}
+
+fuchsia_test_package("storage_unittests") {
+  test_components = [
+    ":encode-module-path-unittest",
+    ":session-storage-unittest",
+    ":story-storage-unittest",
+    ":watcher-list-unittest",
   ]
 }

@@ -2,14 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/components.gni")
+
 group("command_runners") {
   testonly = true
   deps = [
+    ":add-mod-command-runner-unittest",
     ":add_mod_command_runner",
-    ":add_mod_command_runner_unittest",
     ":command_runner",
+    ":remove-mod-command-runner-unittest",
     ":remove_mod_command_runner",
-    ":remove_mod_command_runner_unittest",
     "operation_calls",
   ]
 }
@@ -58,6 +60,11 @@ executable("add_mod_command_runner_unittest") {
   ]
 }
 
+fuchsia_unittest_component("add-mod-command-runner-unittest") {
+  manifest = "../meta/add_mod_command_runner_unittest.cmx"
+  deps = [ ":add_mod_command_runner_unittest" ]
+}
+
 source_set("remove_mod_command_runner") {
   sources = [
     "remove_mod_command_runner.cc",
@@ -82,5 +89,17 @@ executable("remove_mod_command_runner_unittest") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:test_with_session_storage",
+  ]
+}
+
+fuchsia_unittest_component("remove-mod-command-runner-unittest") {
+  manifest = "../meta/remove_mod_command_runner_unittest.cmx"
+  deps = [ ":remove_mod_command_runner_unittest" ]
+}
+
+fuchsia_test_package("command_runners_unittests") {
+  test_components = [
+    ":add-mod-command-runner-unittest",
+    ":remove-mod-command-runner-unittest",
   ]
 }

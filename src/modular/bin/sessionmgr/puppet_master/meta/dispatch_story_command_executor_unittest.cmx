@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/dispatch_story_command_executor_unittest"
+        "binary": "bin/dispatch_story_command_executor_unittest"
     },
     "sandbox": {
         "services": [

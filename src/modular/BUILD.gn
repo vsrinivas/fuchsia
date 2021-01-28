@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/tests_package.gni")
+import("//src/sys/build/components.gni")
 
 group("modular") {
   testonly = true
@@ -32,6 +32,7 @@ group("tests") {
     "//src/modular/bin/sessionmgr:sessionmgr_unittests",
     "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittests",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:command_runners_unittests",
     "//src/modular/bin/sessionmgr/storage:storage_unittests",
     "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
     "//src/modular/bundles:integration_testing",
@@ -40,10 +41,12 @@ group("tests") {
   ]
 }
 
-hermetic_tests_package("modular_lib_tests") {
+fuchsia_unittest_package("modular_lib_tests") {
   deps = [ "//src/modular/lib:modular_lib_unittests" ]
-  environments = basic_envs
-  log_settings = {
-    max_severity = "ERROR"
+  manifest = "meta/modular_lib_unittests.cmx"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
