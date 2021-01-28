@@ -21,7 +21,7 @@
     {
       "name": "fidl.test.structdefaultvalueenumlibraryreference/Foo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/struct_default_value_enum_library_reference/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
         "line": 5,
         "column": 8,
         "length": 3
@@ -36,7 +36,7 @@
           },
           "name": "field",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/struct_default_value_enum_library_reference/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
             "line": 6,
             "column": 22,
             "length": 5

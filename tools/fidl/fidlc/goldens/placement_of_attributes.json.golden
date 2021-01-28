@@ -16,7 +16,7 @@
     {
       "name": "fidl.test.placementofattributes/ExampleBits",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 7,
         "column": 6,
         "length": 11
@@ -36,7 +36,7 @@
         {
           "name": "MEMBER",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 9,
             "column": 5,
             "length": 6
@@ -66,7 +66,7 @@
     {
       "name": "fidl.test.placementofattributes/EXAMPLE_CONST",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 13,
         "column": 14,
         "length": 13
@@ -97,7 +97,7 @@
     {
       "name": "fidl.test.placementofattributes/ExampleEnum",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 16,
         "column": 6,
         "length": 11
@@ -113,7 +113,7 @@
         {
           "name": "MEMBER",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 18,
             "column": 5,
             "length": 6
@@ -144,7 +144,7 @@
     {
       "name": "fidl.test.placementofattributes/ExampleProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 22,
         "column": 10,
         "length": 15
@@ -160,7 +160,7 @@
           "ordinal": 2341079615635566980,
           "name": "Method",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 24,
             "column": 5,
             "length": 6
@@ -181,7 +181,7 @@
               },
               "name": "arg",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
                 "line": 24,
                 "column": 31,
                 "length": 3
@@ -213,7 +213,7 @@
     {
       "name": "fidl.test.placementofattributes/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 24,
         "column": 11,
         "length": 24
@@ -228,7 +228,7 @@
           },
           "name": "arg",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 24,
             "column": 31,
             "length": 3
@@ -253,7 +253,7 @@
     {
       "name": "fidl.test.placementofattributes/ExampleStruct",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 28,
         "column": 8,
         "length": 13
@@ -273,7 +273,7 @@
           },
           "name": "member",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 30,
             "column": 12,
             "length": 6
@@ -306,7 +306,7 @@
     {
       "name": "fidl.test.placementofattributes/ExampleTable",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 34,
         "column": 7,
         "length": 12
@@ -327,7 +327,7 @@
           },
           "name": "member",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 36,
             "column": 15,
             "length": 6
@@ -357,7 +357,7 @@
     {
       "name": "fidl.test.placementofattributes/ExampleUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 43,
         "column": 7,
         "length": 12
@@ -378,7 +378,7 @@
             "subtype": "uint32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 45,
             "column": 15,
             "length": 7
@@ -406,7 +406,7 @@
     {
       "name": "fidl.test.placementofattributes/ExampleXUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 49,
         "column": 16,
         "length": 13
@@ -427,7 +427,7 @@
             "subtype": "uint32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 51,
             "column": 15,
             "length": 7
@@ -457,7 +457,7 @@
     {
       "name": "fidl.test.placementofattributes/TypeAlias",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 40,
         "column": 7,
         "length": 9

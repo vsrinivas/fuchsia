@@ -12,7 +12,7 @@
     {
       "name": "fidl.test.doccomments/MyStrictBits",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 9,
         "column": 13,
         "length": 12
@@ -32,7 +32,7 @@
         {
           "name": "MY_FIRST_BIT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 13,
             "column": 5,
             "length": 12
@@ -57,7 +57,7 @@
         {
           "name": "MY_OTHER_BIT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 17,
             "column": 5,
             "length": 12
@@ -85,7 +85,7 @@
     {
       "name": "fidl.test.doccomments/MyFlexibleBits",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 23,
         "column": 15,
         "length": 14
@@ -105,7 +105,7 @@
         {
           "name": "MY_FIRST_BIT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 27,
             "column": 5,
             "length": 12
@@ -130,7 +130,7 @@
         {
           "name": "MY_OTHER_BIT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 31,
             "column": 5,
             "length": 12
@@ -160,7 +160,7 @@
     {
       "name": "fidl.test.doccomments/C",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 37,
         "column": 13,
         "length": 1
@@ -191,7 +191,7 @@
     {
       "name": "fidl.test.doccomments/MyStrictEnum",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 42,
         "column": 13,
         "length": 12
@@ -207,7 +207,7 @@
         {
           "name": "FOO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 46,
             "column": 5,
             "length": 3
@@ -232,7 +232,7 @@
         {
           "name": "BAR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 51,
             "column": 5,
             "length": 3
@@ -260,7 +260,7 @@
     {
       "name": "fidl.test.doccomments/MyFlexibleEnum",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 57,
         "column": 15,
         "length": 14
@@ -276,7 +276,7 @@
         {
           "name": "FOO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 61,
             "column": 5,
             "length": 3
@@ -301,7 +301,7 @@
         {
           "name": "BAR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 66,
             "column": 5,
             "length": 3
@@ -333,7 +333,7 @@
     {
       "name": "fidl.test.doccomments/Interface",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 112,
         "column": 10,
         "length": 9
@@ -349,7 +349,7 @@
           "ordinal": 6649887292072346213,
           "name": "Method",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 116,
             "column": 5,
             "length": 6
@@ -378,7 +378,7 @@
           "ordinal": 3999525675942213370,
           "name": "OnEvent",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 121,
             "column": 8,
             "length": 7
@@ -410,7 +410,7 @@
     {
       "name": "fidl.test.doccomments/Service",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 127,
         "column": 9,
         "length": 7
@@ -430,7 +430,7 @@
           },
           "name": "interface",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 131,
             "column": 15,
             "length": 9
@@ -449,7 +449,7 @@
     {
       "name": "fidl.test.doccomments/Struct",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 72,
         "column": 8,
         "length": 6
@@ -469,7 +469,7 @@
           },
           "name": "Field",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 76,
             "column": 11,
             "length": 5
@@ -502,7 +502,7 @@
     {
       "name": "fidl.test.doccomments/Table",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 102,
         "column": 7,
         "length": 5
@@ -523,7 +523,7 @@
           },
           "name": "Field",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 106,
             "column": 14,
             "length": 5
@@ -553,7 +553,7 @@
     {
       "name": "fidl.test.doccomments/StrictUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 82,
         "column": 14,
         "length": 11
@@ -574,7 +574,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 86,
             "column": 14,
             "length": 5
@@ -602,7 +602,7 @@
     {
       "name": "fidl.test.doccomments/FlexibleUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 92,
         "column": 16,
         "length": 13
@@ -623,7 +623,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/doc_comments.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 96,
             "column": 14,
             "length": 5

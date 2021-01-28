@@ -4,7 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/rust/rustc_binary.gni")
-import("//zircon/tools/fidl/testdata/info.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
 
 rustc_binary("parser_bin") {
   edition = 2018

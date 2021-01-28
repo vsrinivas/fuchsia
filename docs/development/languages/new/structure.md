@@ -89,7 +89,7 @@ the language runtime.
 
 ### FIDL compiler backend
 
-The [FIDL compiler](/zircon/tools/fidl/)
+The [FIDL compiler](/tools/fidl/fidlc/)
 has a single frontend that is used for all languages and multiple backends that
 support a diverse assortment of languages. The frontend produces a
 [JSON intermediate format][json-ir]

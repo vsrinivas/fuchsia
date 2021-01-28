@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.emptystruct/EmptyProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 6,
         "column": 10,
         "length": 13
@@ -20,7 +20,7 @@
           "ordinal": 2183815705502904104,
           "name": "Send",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 7,
             "column": 5,
             "length": 4
@@ -35,7 +35,7 @@
               },
               "name": "e",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
                 "line": 7,
                 "column": 16,
                 "length": 1
@@ -63,7 +63,7 @@
           "ordinal": 5025214662316626400,
           "name": "Receive",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 8,
             "column": 8,
             "length": 7
@@ -79,7 +79,7 @@
               },
               "name": "e",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
                 "line": 8,
                 "column": 22,
                 "length": 1
@@ -106,7 +106,7 @@
           "ordinal": 6253929606062814577,
           "name": "SendAndReceive",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 9,
             "column": 5,
             "length": 14
@@ -121,7 +121,7 @@
               },
               "name": "e",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
                 "line": 9,
                 "column": 26,
                 "length": 1
@@ -152,7 +152,7 @@
               },
               "name": "e",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
                 "line": 9,
                 "column": 39,
                 "length": 1
@@ -183,7 +183,7 @@
     {
       "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 7,
         "column": 9,
         "length": 9
@@ -198,7 +198,7 @@
           },
           "name": "e",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 7,
             "column": 16,
             "length": 1
@@ -223,7 +223,7 @@
     {
       "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 8,
         "column": 15,
         "length": 9
@@ -238,7 +238,7 @@
           },
           "name": "e",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 8,
             "column": 22,
             "length": 1
@@ -263,7 +263,7 @@
     {
       "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix2",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 9,
         "column": 19,
         "length": 9
@@ -278,7 +278,7 @@
           },
           "name": "e",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 9,
             "column": 26,
             "length": 1
@@ -303,7 +303,7 @@
     {
       "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix3",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 9,
         "column": 32,
         "length": 9
@@ -318,7 +318,7 @@
           },
           "name": "e",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 9,
             "column": 39,
             "length": 1
@@ -343,7 +343,7 @@
     {
       "name": "fidl.test.emptystruct/Empty",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/empty_struct.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 3,
         "column": 8,
         "length": 5

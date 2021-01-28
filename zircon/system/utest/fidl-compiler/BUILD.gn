@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//zircon/tools/fidl/testdata/info.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
 
 # The generation depends only on the source, so do it only once.
 if (current_toolchain == default_toolchain) {
@@ -17,9 +17,8 @@ if (current_toolchain == default_toolchain) {
     ]
     foreach(info, fidl_testdata_info) {
       # Only use the standalone libraries since they have predictable filenames.
-      if (get_label_info(info.target, "dir") ==
-          "//zircon/tools/fidl/testdata") {
-        sources += [ "//zircon/tools/fidl/testdata/${info.name}.test.fidl" ]
+      if (get_label_info(info.target, "dir") == "//tools/fidl/fidlc/testdata") {
+        sources += [ "//tools/fidl/fidlc/testdata/${info.name}.test.fidl" ]
       }
     }
     args = rebase_path(outputs, root_build_dir) +
@@ -82,8 +81,8 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":examples",
       "//third_party/boringssl",
+      "//tools/fidl/fidlc:fidl",
       "//zircon/public/lib/zxtest",
-      "//zircon/tools/fidl:fidl",
     ]
   }
 

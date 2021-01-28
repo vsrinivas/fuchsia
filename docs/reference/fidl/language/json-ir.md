@@ -13,5 +13,5 @@ If you are interested in the JSON IR, you can generate it by [running
 the FIDL compiler][fidl-cli].
 
 <!-- xrefs -->
-[json-schema]: /zircon/tools/fidl/schema.json
+[json-schema]: /tools/fidl/fidlc/schema.json
 [fidl-cli]: /docs/development/languages/fidl/guides/cli.md

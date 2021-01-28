@@ -586,7 +586,7 @@ void LibraryLoader::AddContent(const std::string& content, LibraryReadError* err
   rapidjson::Document document;
   err->parse_result = document.Parse<rapidjson::kParseNumbersAsStringsFlag>(content.c_str());
   // TODO: This would be a good place to validate that the resulting JSON
-  // matches the schema in zircon/tools/fidl/schema.json.  If there are
+  // matches the schema in tools/fidl/fidlc/schema.json.  If there are
   // errors, we will currently get mysterious crashes.
   if (document.HasParseError()) {
     err->value = LibraryReadError::kParseError;

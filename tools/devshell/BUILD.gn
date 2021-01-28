@@ -23,10 +23,10 @@ if (!is_host) {
 
       # For `fx format-code`.
       "//tools/cmc",
-      "//zircon/tools/fidl:fidl-format",
+      "//tools/fidl/fidlc:fidl-format",
 
       # For `fx lint`.
-      "//zircon/tools/fidl:fidl-lint",
+      "//tools/fidl/fidlc:fidl-lint",
     ]
   }
 }

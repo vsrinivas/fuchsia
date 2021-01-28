@@ -18,7 +18,7 @@
     {
       "name": "fidl.test.typealiases/obj_type",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 8,
         "column": 6,
         "length": 8
@@ -28,7 +28,7 @@
         {
           "name": "NONE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 9,
             "column": 5,
             "length": 4
@@ -47,7 +47,7 @@
         {
           "name": "CHANNEL",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 10,
             "column": 5,
             "length": 7
@@ -71,7 +71,7 @@
     {
       "name": "fidl.test.typealiases/handle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 13,
         "column": 21,
         "length": 6
@@ -84,7 +84,7 @@
         {
           "name": "subtype",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 15,
             "column": 18,
             "length": 7
@@ -104,7 +104,7 @@
     {
       "name": "fidl.test.typealiases/ExampleOfUseOfAliases",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 25,
         "column": 17,
         "length": 21
@@ -123,7 +123,7 @@
           },
           "name": "field_of_u32",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 26,
             "column": 9,
             "length": 12
@@ -149,7 +149,7 @@
           },
           "name": "field_of_vec_of_strings",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 27,
             "column": 20,
             "length": 23
@@ -177,7 +177,7 @@
           },
           "name": "field_of_vec_of_strings_at_most_nine",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 28,
             "column": 22,
             "length": 36
@@ -204,7 +204,7 @@
           },
           "name": "field_of_vec_of_strings_at_most_5",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 29,
             "column": 30,
             "length": 33
@@ -227,7 +227,7 @@
           },
           "name": "field_of_vec_of_ref_me_at_most_5",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 31,
             "column": 44,
             "length": 32
@@ -251,7 +251,7 @@
           },
           "name": "field_of_channel",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 32,
             "column": 13,
             "length": 16
@@ -275,7 +275,7 @@
           },
           "name": "field_of_client_end",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 33,
             "column": 16,
             "length": 19
@@ -299,7 +299,7 @@
           },
           "name": "field_of_nullable_client_end",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 34,
             "column": 17,
             "length": 28
@@ -328,7 +328,7 @@
     {
       "name": "fidl.test.typealiases/u32",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 19,
         "column": 7,
         "length": 3
@@ -342,7 +342,7 @@
     {
       "name": "fidl.test.typealiases/vec_of_strings",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 20,
         "column": 7,
         "length": 14
@@ -362,7 +362,7 @@
     {
       "name": "fidl.test.typealiases/vec_of_strings_at_most_5",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 21,
         "column": 7,
         "length": 24
@@ -392,7 +392,7 @@
     {
       "name": "fidl.test.typealiases/channel",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 22,
         "column": 7,
         "length": 7
@@ -406,7 +406,7 @@
     {
       "name": "fidl.test.typealiases/client_end",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 23,
         "column": 7,
         "length": 10

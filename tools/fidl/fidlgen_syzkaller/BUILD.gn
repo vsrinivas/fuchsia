@@ -8,7 +8,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
 import("//build/testing/golden_test.gni")
-import("//zircon/tools/fidl/testdata/info.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/..."

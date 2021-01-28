@@ -103,7 +103,7 @@ Download and build it, then `export AFL_PATH` to be whatever path you downloaded
 
 afl-fuzz treats crashes as interesting but the parser currently calls `__builtin_trap()`
 when it encounters invalid syntax. Remove that line in
-[parser.h](/zircon/tools/fidl/include/fidl/parser.h) - it's in the `Parser::Fail()` method.
+[parser.h](/tools/fidl/fidlc/include/fidl/parser.h) - it's in the `Parser::Fail()` method.
 
 ### Build the `fidl` tool with afl-fuzz's instrumentation
 

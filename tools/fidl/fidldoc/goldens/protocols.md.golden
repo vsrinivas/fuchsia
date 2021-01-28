@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## ChannelProtocol {#ChannelProtocol}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#40)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#40)*
 
 
 ### EventA {#fidl.test.protocols/ChannelProtocol.EventA}
@@ -122,7 +122,7 @@
     </table>
 
 ## Transitional {#Transitional}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#48)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#48)*
 
 
 ### Event {#fidl.test.protocols/Transitional.Event}
@@ -180,7 +180,7 @@
         </tr></table>
 
 ## WithAndWithoutRequestResponse {#WithAndWithoutRequestResponse}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#17)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#17)*
 
 
 ### NoRequestEmptyResponse {#fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse}
@@ -310,7 +310,7 @@
         </tr></table>
 
 ## WithErrorSyntax {#WithErrorSyntax}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#33)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#33)*
 
 
 ### ErrorAsEnum {#fidl.test.protocols/WithErrorSyntax.ErrorAsEnum}
@@ -375,7 +375,7 @@
 ## **STRUCTS**
 
 ### WithErrorSyntax_ErrorAsEnum_Response {#WithErrorSyntax_ErrorAsEnum_Response}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#36)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#36)*
 
 
 
@@ -384,7 +384,7 @@
 </table>
 
 ### WithErrorSyntax_ErrorAsPrimitive_Response {#WithErrorSyntax_ErrorAsPrimitive_Response}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#35)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#35)*
 
 
 
@@ -393,7 +393,7 @@
 </table>
 
 ### WithErrorSyntax_ResponseAsStruct_Response {#WithErrorSyntax_ResponseAsStruct_Response}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#34)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#34)*
 
 
 
@@ -429,7 +429,7 @@
 ### ErrorEnun {#ErrorEnun}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#28)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#28)*
 
 
 
@@ -447,7 +447,7 @@ Type: <code>uint32</code>
 ### obj_type {#obj_type}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#6)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#6)*
 
 
 
@@ -469,7 +469,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### WithErrorSyntax_ErrorAsEnum_Result {#WithErrorSyntax_ErrorAsEnum_Result}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#36)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#36)*
 
 
 <table>
@@ -488,7 +488,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### WithErrorSyntax_ErrorAsPrimitive_Result {#WithErrorSyntax_ErrorAsPrimitive_Result}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#35)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#35)*
 
 
 <table>
@@ -507,7 +507,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### WithErrorSyntax_ResponseAsStruct_Result {#WithErrorSyntax_ResponseAsStruct_Result}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#34)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/protocols.test.fidl#34)*
 
 
 <table>

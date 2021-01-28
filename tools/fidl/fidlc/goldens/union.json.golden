@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.union/TestProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 127,
         "column": 10,
         "length": 12
@@ -20,7 +20,7 @@
           "ordinal": 8393311445612289086,
           "name": "StrictXUnionHenceResponseMayBeStackAllocated",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 128,
             "column": 5,
             "length": 44
@@ -46,7 +46,7 @@
               },
               "name": "xu",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
                 "line": 128,
                 "column": 76,
                 "length": 2
@@ -73,7 +73,7 @@
           "ordinal": 6296412872266712530,
           "name": "FlexibleXUnionHenceResponseMustBeHeapAllocated",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 129,
             "column": 5,
             "length": 46
@@ -99,7 +99,7 @@
               },
               "name": "xu",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
                 "line": 129,
                 "column": 75,
                 "length": 2
@@ -130,7 +130,7 @@
     {
       "name": "fidl.test.union/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 128,
         "column": 55,
         "length": 24
@@ -145,7 +145,7 @@
           },
           "name": "xu",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 128,
             "column": 76,
             "length": 2
@@ -170,7 +170,7 @@
     {
       "name": "fidl.test.union/SomeLongAnonymousPrefix3",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 129,
         "column": 57,
         "length": 21
@@ -185,7 +185,7 @@
           },
           "name": "xu",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 129,
             "column": 75,
             "length": 2
@@ -210,7 +210,7 @@
     {
       "name": "fidl.test.union/Pizza",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 3,
         "column": 8,
         "length": 5
@@ -229,7 +229,7 @@
           },
           "name": "toppings",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 4,
             "column": 23,
             "length": 8
@@ -254,7 +254,7 @@
     {
       "name": "fidl.test.union/Pasta",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 7,
         "column": 8,
         "length": 5
@@ -269,7 +269,7 @@
           },
           "name": "sauce",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 8,
             "column": 15,
             "length": 5
@@ -294,7 +294,7 @@
     {
       "name": "fidl.test.union/NullableUnionStruct",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 66,
         "column": 8,
         "length": 19
@@ -309,7 +309,7 @@
           },
           "name": "the_union",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 67,
             "column": 12,
             "length": 9
@@ -334,7 +334,7 @@
     {
       "name": "fidl.test.union/Empty",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 114,
         "column": 8,
         "length": 5
@@ -355,7 +355,7 @@
     {
       "name": "fidl.test.union/StructWithNullableXUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 132,
         "column": 8,
         "length": 24
@@ -370,7 +370,7 @@
           },
           "name": "x1",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 133,
             "column": 23,
             "length": 2
@@ -398,7 +398,7 @@
     {
       "name": "fidl.test.union/PizzaOrPasta",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 11,
         "column": 7,
         "length": 12
@@ -414,7 +414,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 12,
             "column": 14,
             "length": 5
@@ -430,7 +430,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 13,
             "column": 14,
             "length": 5
@@ -452,7 +452,7 @@
     {
       "name": "fidl.test.union/ExplicitPizzaOrPasta",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 16,
         "column": 7,
         "length": 20
@@ -462,7 +462,7 @@
           "ordinal": 3,
           "reserved": true,
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 17,
             "column": 5,
             "length": 11
@@ -472,7 +472,7 @@
           "ordinal": 2,
           "reserved": true,
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 18,
             "column": 5,
             "length": 11
@@ -488,7 +488,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 19,
             "column": 14,
             "length": 5
@@ -504,7 +504,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 20,
             "column": 14,
             "length": 5
@@ -526,7 +526,7 @@
     {
       "name": "fidl.test.union/FlexiblePizzaOrPasta",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 23,
         "column": 16,
         "length": 20
@@ -542,7 +542,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 24,
             "column": 14,
             "length": 5
@@ -558,7 +558,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 25,
             "column": 14,
             "length": 5
@@ -580,7 +580,7 @@
     {
       "name": "fidl.test.union/StrictPizzaOrPasta",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 28,
         "column": 7,
         "length": 18
@@ -596,7 +596,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 29,
             "column": 14,
             "length": 5
@@ -612,7 +612,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 30,
             "column": 14,
             "length": 5
@@ -634,7 +634,7 @@
     {
       "name": "fidl.test.union/Union",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 33,
         "column": 7,
         "length": 5
@@ -649,7 +649,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 34,
             "column": 14,
             "length": 9
@@ -664,7 +664,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 35,
             "column": 15,
             "length": 22
@@ -683,7 +683,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 36,
             "column": 23,
             "length": 32
@@ -705,7 +705,7 @@
     {
       "name": "fidl.test.union/FlexibleUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 39,
         "column": 16,
         "length": 13
@@ -720,7 +720,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 40,
             "column": 14,
             "length": 9
@@ -735,7 +735,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 41,
             "column": 15,
             "length": 22
@@ -754,7 +754,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 42,
             "column": 23,
             "length": 32
@@ -776,7 +776,7 @@
     {
       "name": "fidl.test.union/StrictUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 45,
         "column": 7,
         "length": 11
@@ -791,7 +791,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 46,
             "column": 14,
             "length": 9
@@ -806,7 +806,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 47,
             "column": 15,
             "length": 22
@@ -825,7 +825,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 48,
             "column": 23,
             "length": 32
@@ -847,7 +847,7 @@
     {
       "name": "fidl.test.union/FieldCollision",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 51,
         "column": 7,
         "length": 14
@@ -862,7 +862,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 52,
             "column": 14,
             "length": 19
@@ -884,7 +884,7 @@
     {
       "name": "fidl.test.union/ExplicitUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 55,
         "column": 7,
         "length": 13
@@ -894,7 +894,7 @@
           "ordinal": 2,
           "reserved": true,
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 56,
             "column": 5,
             "length": 11
@@ -909,7 +909,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 57,
             "column": 14,
             "length": 9
@@ -924,7 +924,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 58,
             "column": 15,
             "length": 22
@@ -946,7 +946,7 @@
     {
       "name": "fidl.test.union/ReverseOrdinalUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 61,
         "column": 7,
         "length": 19
@@ -961,7 +961,7 @@
             "subtype": "uint32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 62,
             "column": 15,
             "length": 6
@@ -976,7 +976,7 @@
             "subtype": "uint32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 63,
             "column": 15,
             "length": 5
@@ -998,7 +998,7 @@
     {
       "name": "fidl.test.union/FlexibleFoo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 70,
         "column": 16,
         "length": 11
@@ -1013,7 +1013,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 71,
             "column": 15,
             "length": 1
@@ -1028,7 +1028,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 72,
             "column": 14,
             "length": 1
@@ -1050,7 +1050,7 @@
     {
       "name": "fidl.test.union/StrictFoo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 75,
         "column": 14,
         "length": 9
@@ -1065,7 +1065,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 76,
             "column": 15,
             "length": 1
@@ -1080,7 +1080,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 77,
             "column": 14,
             "length": 1
@@ -1102,7 +1102,7 @@
     {
       "name": "fidl.test.union/ExplicitFoo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 80,
         "column": 16,
         "length": 11
@@ -1117,7 +1117,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 81,
             "column": 15,
             "length": 1
@@ -1132,7 +1132,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 82,
             "column": 14,
             "length": 1
@@ -1142,7 +1142,7 @@
           "ordinal": 3,
           "reserved": true,
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 83,
             "column": 5,
             "length": 11
@@ -1164,7 +1164,7 @@
     {
       "name": "fidl.test.union/ExplicitStrictFoo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 86,
         "column": 14,
         "length": 17
@@ -1174,7 +1174,7 @@
           "ordinal": 1,
           "reserved": true,
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 87,
             "column": 5,
             "length": 11
@@ -1189,7 +1189,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 88,
             "column": 15,
             "length": 1
@@ -1204,7 +1204,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 89,
             "column": 14,
             "length": 1
@@ -1226,7 +1226,7 @@
     {
       "name": "fidl.test.union/OlderSimpleUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 92,
         "column": 16,
         "length": 16
@@ -1241,7 +1241,7 @@
             "subtype": "int64"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 93,
             "column": 14,
             "length": 1
@@ -1256,7 +1256,7 @@
             "subtype": "float32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 94,
             "column": 16,
             "length": 1
@@ -1278,7 +1278,7 @@
     {
       "name": "fidl.test.union/NewerSimpleUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 97,
         "column": 16,
         "length": 16
@@ -1293,7 +1293,7 @@
             "subtype": "int64"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 100,
             "column": 14,
             "length": 1
@@ -1308,7 +1308,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 102,
             "column": 15,
             "length": 1
@@ -1327,7 +1327,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 103,
             "column": 23,
             "length": 1
@@ -1349,7 +1349,7 @@
     {
       "name": "fidl.test.union/StrictSimpleXUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 108,
         "column": 14,
         "length": 18
@@ -1364,7 +1364,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 109,
             "column": 14,
             "length": 1
@@ -1379,7 +1379,7 @@
             "subtype": "float32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 110,
             "column": 16,
             "length": 1
@@ -1394,7 +1394,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 111,
             "column": 15,
             "length": 1
@@ -1416,7 +1416,7 @@
     {
       "name": "fidl.test.union/XUnionContainingEmptyStruct",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 117,
         "column": 16,
         "length": 27
@@ -1432,7 +1432,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 120,
             "column": 14,
             "length": 5
@@ -1454,7 +1454,7 @@
     {
       "name": "fidl.test.union/StrictBoundedXUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 123,
         "column": 14,
         "length": 19
@@ -1474,7 +1474,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 124,
             "column": 25,
             "length": 1
@@ -1496,7 +1496,7 @@
     {
       "name": "fidl.test.union/ExplicitXUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 136,
         "column": 16,
         "length": 14
@@ -1506,7 +1506,7 @@
           "ordinal": 3,
           "reserved": true,
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 137,
             "column": 5,
             "length": 11
@@ -1516,7 +1516,7 @@
           "ordinal": 2,
           "reserved": true,
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 138,
             "column": 5,
             "length": 11
@@ -1531,7 +1531,7 @@
             "subtype": "int64"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 139,
             "column": 14,
             "length": 1
@@ -1546,7 +1546,7 @@
             "subtype": "float32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/union.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 140,
             "column": 16,
             "length": 1

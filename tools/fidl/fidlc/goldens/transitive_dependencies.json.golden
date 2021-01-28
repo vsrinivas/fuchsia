@@ -22,7 +22,7 @@
     {
       "name": "fidl.test.transitivedependencies/Baz",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/transitive_dependencies/top.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
         "line": 5,
         "column": 8,
         "length": 3
@@ -37,7 +37,7 @@
           },
           "name": "g",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/transitive_dependencies/top.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
             "line": 6,
             "column": 16,
             "length": 1

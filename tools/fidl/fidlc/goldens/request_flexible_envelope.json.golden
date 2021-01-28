@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.requestflexibleenvelope/Protocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 13,
         "column": 10,
         "length": 8
@@ -20,7 +20,7 @@
           "ordinal": 4346871690266280218,
           "name": "RequestStrictResponseFlexible",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 14,
             "column": 5,
             "length": 29
@@ -35,7 +35,7 @@
               },
               "name": "s",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
                 "line": 14,
                 "column": 45,
                 "length": 1
@@ -66,7 +66,7 @@
               },
               "name": "f",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
                 "line": 14,
                 "column": 64,
                 "length": 1
@@ -93,7 +93,7 @@
           "ordinal": 4374294377437089654,
           "name": "RequestFlexibleResponseStrict",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 15,
             "column": 5,
             "length": 29
@@ -108,7 +108,7 @@
               },
               "name": "s",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
                 "line": 15,
                 "column": 47,
                 "length": 1
@@ -139,7 +139,7 @@
               },
               "name": "f",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
                 "line": 15,
                 "column": 64,
                 "length": 1
@@ -170,7 +170,7 @@
     {
       "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 14,
         "column": 34,
         "length": 13
@@ -185,7 +185,7 @@
           },
           "name": "s",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 14,
             "column": 45,
             "length": 1
@@ -210,7 +210,7 @@
     {
       "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 14,
         "column": 51,
         "length": 15
@@ -225,7 +225,7 @@
           },
           "name": "f",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 14,
             "column": 64,
             "length": 1
@@ -250,7 +250,7 @@
     {
       "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix2",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 15,
         "column": 34,
         "length": 15
@@ -265,7 +265,7 @@
           },
           "name": "s",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 15,
             "column": 47,
             "length": 1
@@ -290,7 +290,7 @@
     {
       "name": "fidl.test.requestflexibleenvelope/SomeLongAnonymousPrefix3",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 15,
         "column": 53,
         "length": 13
@@ -305,7 +305,7 @@
           },
           "name": "f",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 15,
             "column": 64,
             "length": 1
@@ -333,7 +333,7 @@
     {
       "name": "fidl.test.requestflexibleenvelope/FlexibleFoo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 3,
         "column": 16,
         "length": 11
@@ -348,7 +348,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 4,
             "column": 15,
             "length": 1
@@ -363,7 +363,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 5,
             "column": 14,
             "length": 1
@@ -385,7 +385,7 @@
     {
       "name": "fidl.test.requestflexibleenvelope/StrictFoo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 8,
         "column": 7,
         "length": 9
@@ -400,7 +400,7 @@
             "nullable": false
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 9,
             "column": 15,
             "length": 1
@@ -415,7 +415,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 10,
             "column": 14,
             "length": 1

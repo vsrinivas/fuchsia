@@ -50,7 +50,7 @@ The `tests` target will generate a unit test binary in the build output director
 
 # Goldens
 The test `fidldoc_goldens_test` uses `.test.fidl` files from
-`//zircon/tools/fidl/testdata` as input, and compares the generated output with
+`//tools/fidl/fidlc/testdata` as input, and compares the generated output with
 goldens from `//tools/fidl/fidldoc/goldens`.
 
 To regenerate the goldens run:

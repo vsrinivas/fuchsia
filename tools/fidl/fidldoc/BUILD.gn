@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/golden_test.gni")
-import("//zircon/tools/fidl/testdata/info.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (host_toolchain == current_toolchain) {
   common_sources = [

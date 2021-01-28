@@ -17,7 +17,7 @@ if (is_host) {
     deps = [ ":gopkg" ]
   }
 
-  _fidlc_target = "//zircon/tools/fidl:fidlc($host_toolchain)"
+  _fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
   _fidlc_binary = get_label_info(_fidlc_target, "root_out_dir") + "/fidlc"
 
   go_test("summary_test") {

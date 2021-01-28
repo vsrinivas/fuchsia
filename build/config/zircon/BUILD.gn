@@ -534,6 +534,7 @@ config("Wno-conversion") {
   cflags_cc = [ "-Wno-conversion" ]
   cflags_c = cflags_cc
   visibility = [
+    "//tools/fidl/fidlc/*",
     "//zircon/kernel/arch/x86/*",
     "//zircon/kernel/arch/x86/cpuid/*",
     "//zircon/kernel/debugcommands/*",
@@ -564,7 +565,6 @@ config("Wno-conversion") {
     "//zircon/third_party/lz4/*",
     "//zircon/third_party/ulib/cksum/*",
     "//zircon/third_party/ulib/usbhost/*",
-    "//zircon/tools/fidl/*",
     "//zircon/tools/kazoo/*",
     "//zircon/tools/zbi/*",
   ]

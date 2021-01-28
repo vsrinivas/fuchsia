@@ -12,7 +12,7 @@
     {
       "name": "fidl.test.padding/Padding1ByteEnd",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 3,
         "column": 8,
         "length": 15
@@ -26,7 +26,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 4,
             "column": 12,
             "length": 1
@@ -43,7 +43,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 5,
             "column": 11,
             "length": 1
@@ -68,7 +68,7 @@
     {
       "name": "fidl.test.padding/Padding2ByteEnd",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 9,
         "column": 8,
         "length": 15
@@ -82,7 +82,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 10,
             "column": 12,
             "length": 1
@@ -99,7 +99,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 11,
             "column": 12,
             "length": 1
@@ -124,7 +124,7 @@
     {
       "name": "fidl.test.padding/Padding3ByteEnd",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 15,
         "column": 8,
         "length": 15
@@ -138,7 +138,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 16,
             "column": 12,
             "length": 1
@@ -155,7 +155,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 17,
             "column": 11,
             "length": 1
@@ -180,7 +180,7 @@
     {
       "name": "fidl.test.padding/Padding4ByteEnd",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 21,
         "column": 8,
         "length": 15
@@ -194,7 +194,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 22,
             "column": 12,
             "length": 1
@@ -211,7 +211,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 23,
             "column": 12,
             "length": 1
@@ -236,7 +236,7 @@
     {
       "name": "fidl.test.padding/Padding5ByteEnd",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 27,
         "column": 8,
         "length": 15
@@ -250,7 +250,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 28,
             "column": 12,
             "length": 1
@@ -267,7 +267,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 29,
             "column": 12,
             "length": 1
@@ -284,7 +284,7 @@
           },
           "name": "c",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 30,
             "column": 11,
             "length": 1
@@ -309,7 +309,7 @@
     {
       "name": "fidl.test.padding/Padding6ByteEnd",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 34,
         "column": 8,
         "length": 15
@@ -323,7 +323,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 35,
             "column": 12,
             "length": 1
@@ -340,7 +340,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 36,
             "column": 12,
             "length": 1
@@ -365,7 +365,7 @@
     {
       "name": "fidl.test.padding/Padding7ByteEnd",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 40,
         "column": 8,
         "length": 15
@@ -379,7 +379,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 41,
             "column": 12,
             "length": 1
@@ -396,7 +396,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 42,
             "column": 11,
             "length": 1
@@ -421,7 +421,7 @@
     {
       "name": "fidl.test.padding/Padding1ByteMiddle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 46,
         "column": 8,
         "length": 18
@@ -435,7 +435,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 47,
             "column": 11,
             "length": 1
@@ -452,7 +452,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 49,
             "column": 12,
             "length": 1
@@ -477,7 +477,7 @@
     {
       "name": "fidl.test.padding/Padding2ByteMiddle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 52,
         "column": 8,
         "length": 18
@@ -491,7 +491,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 53,
             "column": 12,
             "length": 1
@@ -508,7 +508,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 55,
             "column": 12,
             "length": 1
@@ -533,7 +533,7 @@
     {
       "name": "fidl.test.padding/Padding3ByteMiddle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 58,
         "column": 8,
         "length": 18
@@ -547,7 +547,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 59,
             "column": 11,
             "length": 1
@@ -564,7 +564,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 61,
             "column": 12,
             "length": 1
@@ -589,7 +589,7 @@
     {
       "name": "fidl.test.padding/Padding4ByteMiddle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 64,
         "column": 8,
         "length": 18
@@ -603,7 +603,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 65,
             "column": 12,
             "length": 1
@@ -620,7 +620,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 67,
             "column": 12,
             "length": 1
@@ -645,7 +645,7 @@
     {
       "name": "fidl.test.padding/Padding5ByteMiddle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 70,
         "column": 8,
         "length": 18
@@ -659,7 +659,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 71,
             "column": 12,
             "length": 1
@@ -676,7 +676,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 72,
             "column": 11,
             "length": 1
@@ -693,7 +693,7 @@
           },
           "name": "c",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 74,
             "column": 12,
             "length": 1
@@ -718,7 +718,7 @@
     {
       "name": "fidl.test.padding/Padding6ByteMiddle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 77,
         "column": 8,
         "length": 18
@@ -732,7 +732,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 78,
             "column": 12,
             "length": 1
@@ -749,7 +749,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 80,
             "column": 12,
             "length": 1
@@ -774,7 +774,7 @@
     {
       "name": "fidl.test.padding/Padding7ByteMiddle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 83,
         "column": 8,
         "length": 18
@@ -788,7 +788,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 84,
             "column": 11,
             "length": 1
@@ -805,7 +805,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 86,
             "column": 12,
             "length": 1
@@ -830,7 +830,7 @@
     {
       "name": "fidl.test.padding/Padding4ByteAlignmentLength12",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 93,
         "column": 8,
         "length": 29
@@ -844,7 +844,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 94,
             "column": 12,
             "length": 1
@@ -861,7 +861,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 95,
             "column": 11,
             "length": 1
@@ -878,7 +878,7 @@
           },
           "name": "c",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 97,
             "column": 12,
             "length": 1
@@ -895,7 +895,7 @@
           },
           "name": "d",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 98,
             "column": 12,
             "length": 1
@@ -920,7 +920,7 @@
     {
       "name": "fidl.test.padding/Padding2ByteAlignmentLength6",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 102,
         "column": 8,
         "length": 28
@@ -934,7 +934,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 104,
             "column": 11,
             "length": 1
@@ -951,7 +951,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 106,
             "column": 12,
             "length": 1
@@ -968,7 +968,7 @@
           },
           "name": "c",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
             "line": 108,
             "column": 11,
             "length": 1

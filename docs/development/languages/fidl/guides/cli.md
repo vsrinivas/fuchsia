@@ -112,4 +112,4 @@ fx format-code
 
 <!-- xrefs -->
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
-[schema]: /zircon/tools/fidl/schema.json
+[schema]: /tools/fidl/fidlc/schema.json

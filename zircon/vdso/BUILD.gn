@@ -17,7 +17,7 @@ zx_host_tool_action("zx") {
     ":*",
     "//src/lib/zircon/rust:*",
   ]
-  tool = "//zircon/tools/fidl:fidlc"
+  tool = "//tools/fidl/fidlc:fidlc"
   outputs = [ "$target_gen_dir/$target_name.fidl.json" ]
   inputs = []
   args = [

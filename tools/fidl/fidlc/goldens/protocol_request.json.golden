@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.protocolrequest/Child",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 3,
         "column": 10,
         "length": 5
@@ -20,7 +20,7 @@
     {
       "name": "fidl.test.protocolrequest/Parent",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 6,
         "column": 10,
         "length": 6
@@ -30,7 +30,7 @@
           "ordinal": 7929845654914578302,
           "name": "GetChild",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 7,
             "column": 5,
             "length": 8
@@ -56,7 +56,7 @@
               },
               "name": "c",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
                 "line": 7,
                 "column": 26,
                 "length": 1
@@ -83,7 +83,7 @@
           "ordinal": 1819029190665166744,
           "name": "GetChildRequest",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 8,
             "column": 5,
             "length": 15
@@ -109,7 +109,7 @@
               },
               "name": "r",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
                 "line": 8,
                 "column": 42,
                 "length": 1
@@ -136,7 +136,7 @@
           "ordinal": 374110854839013230,
           "name": "TakeChild",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 9,
             "column": 5,
             "length": 9
@@ -151,7 +151,7 @@
               },
               "name": "c",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
                 "line": 9,
                 "column": 21,
                 "length": 1
@@ -179,7 +179,7 @@
           "ordinal": 1574820689302890956,
           "name": "TakeChildRequest",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 10,
             "column": 5,
             "length": 16
@@ -194,7 +194,7 @@
               },
               "name": "r",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
                 "line": 10,
                 "column": 37,
                 "length": 1
@@ -226,7 +226,7 @@
     {
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 7,
         "column": 19,
         "length": 9
@@ -241,7 +241,7 @@
           },
           "name": "c",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 7,
             "column": 26,
             "length": 1
@@ -266,7 +266,7 @@
     {
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 8,
         "column": 26,
         "length": 18
@@ -281,7 +281,7 @@
           },
           "name": "r",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 8,
             "column": 42,
             "length": 1
@@ -306,7 +306,7 @@
     {
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix4",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 9,
         "column": 14,
         "length": 9
@@ -321,7 +321,7 @@
           },
           "name": "c",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 9,
             "column": 21,
             "length": 1
@@ -346,7 +346,7 @@
     {
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix5",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 10,
         "column": 21,
         "length": 18
@@ -361,7 +361,7 @@
           },
           "name": "r",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocol_request.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 10,
             "column": 37,
             "length": 1

@@ -162,7 +162,7 @@ template("fidl_library") {
                            ])
 
     # run_and_gen_stamp.sh runs this tool, and touches lint_stamp_file if successful
-    tool_with_no_output = "//zircon/tools/fidl:fidl-lint"
+    tool_with_no_output = "//tools/fidl/fidlc:fidl-lint"
 
     # Construct the host toolchain version of the tool.
     host_tool = "${tool_with_no_output}($host_toolchain)"
@@ -244,7 +244,7 @@ template("fidl_library") {
 
     visibility = [ ":*" ]
 
-    tool = "//zircon/tools/fidl:fidlc"
+    tool = "//tools/fidl/fidlc:fidlc"
 
     inputs = [ response_file ]
 
@@ -272,7 +272,7 @@ template("fidl_library") {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     data = json_representation
-    schema = "//zircon/tools/fidl/schema.json"
+    schema = "//tools/fidl/fidlc/schema.json"
     deps = [ ":$compilation_target_name" ]
   }
 

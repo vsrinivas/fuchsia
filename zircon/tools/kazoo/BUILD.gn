@@ -108,7 +108,7 @@ test("kazoo-unittests") {
 }
 
 zx_host_tool_action_foreach("test_files_fidl_to_json") {
-  tool = "//zircon/tools/fidl:fidlc"
+  tool = "//tools/fidl/fidlc:fidlc"
 
   args = [
     "--json",
@@ -148,7 +148,7 @@ zx_host_tool_action_foreach("test_files_fidl_to_json") {
 }
 
 zx_host_tool_action_foreach("test_files_fidl_to_json_zxio") {
-  tool = "//zircon/tools/fidl:fidlc"
+  tool = "//tools/fidl/fidlc:fidlc"
 
   args = [
     "--json",
@@ -195,7 +195,7 @@ fidlc_rspfile = "$target_gen_dir/fidlc.rspfile"
 link_output_rspfile("fidlc.rspfile") {
   visibility = [ ":*" ]
   outputs = [ fidlc_rspfile ]
-  deps = [ "//zircon/tools/fidl:fidlc" ]
+  deps = [ "//tools/fidl/fidlc:fidlc" ]
 }
 
 kazoo_rspfile = "$target_gen_dir/kazoo.rspfile"

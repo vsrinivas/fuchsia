@@ -70,7 +70,7 @@
     {
       "name": "fidl.test.nullable/SimpleProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 17,
         "column": 10,
         "length": 14
@@ -80,7 +80,7 @@
           "ordinal": 1238508415331800925,
           "name": "Add",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 18,
             "column": 5,
             "length": 3
@@ -94,7 +94,7 @@
               },
               "name": "a",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
                 "line": 18,
                 "column": 15,
                 "length": 1
@@ -111,7 +111,7 @@
               },
               "name": "b",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
                 "line": 18,
                 "column": 24,
                 "length": 1
@@ -141,7 +141,7 @@
               },
               "name": "sum",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
                 "line": 18,
                 "column": 37,
                 "length": 3
@@ -172,7 +172,7 @@
     {
       "name": "fidl.test.nullable/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 18,
         "column": 8,
         "length": 18
@@ -186,7 +186,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 18,
             "column": 15,
             "length": 1
@@ -203,7 +203,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 18,
             "column": 24,
             "length": 1
@@ -228,7 +228,7 @@
     {
       "name": "fidl.test.nullable/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 18,
         "column": 30,
         "length": 11
@@ -242,7 +242,7 @@
           },
           "name": "sum",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 18,
             "column": 37,
             "length": 3
@@ -267,7 +267,7 @@
     {
       "name": "fidl.test.nullable/StructWithNullableString",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 5,
         "column": 8,
         "length": 24
@@ -281,7 +281,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 6,
             "column": 13,
             "length": 3
@@ -306,7 +306,7 @@
     {
       "name": "fidl.test.nullable/StructWithNullableVector",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 9,
         "column": 8,
         "length": 24
@@ -324,7 +324,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 10,
             "column": 20,
             "length": 3
@@ -349,7 +349,7 @@
     {
       "name": "fidl.test.nullable/StructWithNullableHandle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 13,
         "column": 17,
         "length": 24
@@ -365,7 +365,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 14,
             "column": 20,
             "length": 3
@@ -390,7 +390,7 @@
     {
       "name": "fidl.test.nullable/StructWithNullableProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 21,
         "column": 17,
         "length": 26
@@ -405,7 +405,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 22,
             "column": 21,
             "length": 3
@@ -430,7 +430,7 @@
     {
       "name": "fidl.test.nullable/StructWithNullableRequest",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 25,
         "column": 17,
         "length": 25
@@ -445,7 +445,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 26,
             "column": 30,
             "length": 3
@@ -470,7 +470,7 @@
     {
       "name": "fidl.test.nullable/Int32Wrapper",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 29,
         "column": 8,
         "length": 12
@@ -484,7 +484,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 30,
             "column": 11,
             "length": 3
@@ -509,7 +509,7 @@
     {
       "name": "fidl.test.nullable/StructWithNullableStruct",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 33,
         "column": 8,
         "length": 24
@@ -524,7 +524,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 34,
             "column": 19,
             "length": 3
@@ -549,7 +549,7 @@
     {
       "name": "fidl.test.nullable/StructWithNullableUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 42,
         "column": 8,
         "length": 23
@@ -564,7 +564,7 @@
           },
           "name": "val",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 43,
             "column": 18,
             "length": 3
@@ -592,7 +592,7 @@
     {
       "name": "fidl.test.nullable/SimpleUnion",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 37,
         "column": 7,
         "length": 11
@@ -607,7 +607,7 @@
             "subtype": "int32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 38,
             "column": 14,
             "length": 1
@@ -622,7 +622,7 @@
             "subtype": "float32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/nullable.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 39,
             "column": 16,
             "length": 1

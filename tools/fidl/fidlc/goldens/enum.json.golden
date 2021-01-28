@@ -8,7 +8,7 @@
     {
       "name": "fidl.test.enum/MyStrictEnum",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
         "line": 3,
         "column": 13,
         "length": 12
@@ -18,7 +18,7 @@
         {
           "name": "FOO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
             "line": 4,
             "column": 5,
             "length": 3
@@ -37,7 +37,7 @@
         {
           "name": "BAR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
             "line": 5,
             "column": 5,
             "length": 3
@@ -59,7 +59,7 @@
     {
       "name": "fidl.test.enum/MyFlexibleEnum",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
         "line": 8,
         "column": 15,
         "length": 14
@@ -69,7 +69,7 @@
         {
           "name": "FOO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
             "line": 9,
             "column": 5,
             "length": 3
@@ -88,7 +88,7 @@
         {
           "name": "BAR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
             "line": 10,
             "column": 5,
             "length": 3
@@ -111,7 +111,7 @@
     {
       "name": "fidl.test.enum/MyFlexibleEnumWithCustomUnknown",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
         "line": 13,
         "column": 15,
         "length": 31
@@ -121,7 +121,7 @@
         {
           "name": "FOO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
             "line": 14,
             "column": 5,
             "length": 3
@@ -140,7 +140,7 @@
         {
           "name": "BAR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
             "line": 15,
             "column": 5,
             "length": 3
@@ -159,7 +159,7 @@
         {
           "name": "CUSTOM_UNKNOWN",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/enum.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
             "line": 16,
             "column": 15,
             "length": 14

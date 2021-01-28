@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## Top {#Top}
-*Defined in [fidl.test.transitivedependenciescompose/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/transitive_dependencies_compose/top.test.fidl#5)*
+*Defined in [fidl.test.transitivedependenciescompose/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl#5)*
 
 
 ### GetFoo {#fidl.test.transitivedependenciescompose/Top.GetFoo}

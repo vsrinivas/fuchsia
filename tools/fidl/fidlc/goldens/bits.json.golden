@@ -6,7 +6,7 @@
     {
       "name": "fidl.test.bits/MyBits",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
         "line": 3,
         "column": 6,
         "length": 6
@@ -20,7 +20,7 @@
         {
           "name": "MY_FIRST_BIT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
             "line": 4,
             "column": 5,
             "length": 12
@@ -39,7 +39,7 @@
         {
           "name": "MY_OTHER_BIT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
             "line": 5,
             "column": 5,
             "length": 12
@@ -58,7 +58,7 @@
         {
           "name": "MASK",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
             "line": 7,
             "column": 5,
             "length": 4
@@ -80,7 +80,7 @@
     {
       "name": "fidl.test.bits/StrictBits",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
         "line": 10,
         "column": 13,
         "length": 10
@@ -94,7 +94,7 @@
         {
           "name": "SMALLEST",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
             "line": 11,
             "column": 5,
             "length": 8
@@ -113,7 +113,7 @@
         {
           "name": "BIGGEST",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
             "line": 12,
             "column": 5,
             "length": 7
@@ -135,7 +135,7 @@
     {
       "name": "fidl.test.bits/FlexibleBits",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
         "line": 15,
         "column": 15,
         "length": 12
@@ -149,7 +149,7 @@
         {
           "name": "SMALLEST",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
             "line": 16,
             "column": 5,
             "length": 8
@@ -168,7 +168,7 @@
         {
           "name": "BIGGEST",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
             "line": 17,
             "column": 5,
             "length": 7

@@ -6,7 +6,10 @@ group("fidl") {
   testonly = true
 
   public_deps = [
+    ":fidl-lint",
+    ":fidlfmt",
     "fidl_api_summarize:host",
+    "fidlc:host",
     "fidlcparsequality:host",
     "fidldoc($host_toolchain)",
     "fidlgen_dart:host",
@@ -20,6 +23,18 @@ group("fidl") {
     "gidl:host",
     "measure-tape/src:host",
   ]
+}
+
+group("fidlfmt") {
+  if (current_os != "fuchsia") {
+    deps = [ "fidlc:fidl-format" ]
+  }
+}
+
+group("fidl-lint") {
+  if (current_os != "fuchsia") {
+    deps = [ "fidlc:fidl-lint" ]
+  }
 }
 
 group("tests") {

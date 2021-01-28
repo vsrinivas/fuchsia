@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.error/Example",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 3,
         "column": 10,
         "length": 7
@@ -20,7 +20,7 @@
           "ordinal": 6333213382893778862,
           "name": "foo",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
             "line": 4,
             "column": 5,
             "length": 3
@@ -34,7 +34,7 @@
               },
               "name": "s",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
                 "line": 4,
                 "column": 16,
                 "length": 1
@@ -96,7 +96,7 @@
     {
       "name": "fidl.test.error/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 4,
         "column": 8,
         "length": 10
@@ -110,7 +110,7 @@
           },
           "name": "s",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
             "line": 4,
             "column": 16,
             "length": 1
@@ -135,7 +135,7 @@
     {
       "name": "fidl.test.error/Example_foo_Response",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 4,
         "column": 22,
         "length": 9
@@ -149,7 +149,7 @@
           },
           "name": "y",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
             "line": 4,
             "column": 29,
             "length": 1
@@ -174,7 +174,7 @@
     {
       "name": "fidl.test.error/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 4,
         "column": 22,
         "length": 9
@@ -217,7 +217,7 @@
     {
       "name": "fidl.test.error/Example_foo_Result",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/error.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 4,
         "column": 22,
         "length": 9

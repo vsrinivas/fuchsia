@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.inheritance/super",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 3,
         "column": 10,
         "length": 5
@@ -20,7 +20,7 @@
           "ordinal": 4999045011615110827,
           "name": "foo",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,
             "column": 5,
             "length": 3
@@ -34,7 +34,7 @@
               },
               "name": "s",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
                 "line": 4,
                 "column": 16,
                 "length": 1
@@ -64,7 +64,7 @@
               },
               "name": "y",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
                 "line": 4,
                 "column": 29,
                 "length": 1
@@ -92,7 +92,7 @@
     {
       "name": "fidl.test.inheritance/sub",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 7,
         "column": 10,
         "length": 3
@@ -102,7 +102,7 @@
           "ordinal": 4999045011615110827,
           "name": "foo",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,
             "column": 5,
             "length": 3
@@ -116,7 +116,7 @@
               },
               "name": "s",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
                 "line": 4,
                 "column": 16,
                 "length": 1
@@ -146,7 +146,7 @@
               },
               "name": "y",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
                 "line": 4,
                 "column": 29,
                 "length": 1
@@ -177,7 +177,7 @@
     {
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 4,
         "column": 8,
         "length": 10
@@ -191,7 +191,7 @@
           },
           "name": "s",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,
             "column": 16,
             "length": 1
@@ -216,7 +216,7 @@
     {
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 4,
         "column": 22,
         "length": 9
@@ -230,7 +230,7 @@
           },
           "name": "y",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,
             "column": 29,
             "length": 1
@@ -255,7 +255,7 @@
     {
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 4,
         "column": 8,
         "length": 10
@@ -269,7 +269,7 @@
           },
           "name": "s",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,
             "column": 16,
             "length": 1
@@ -294,7 +294,7 @@
     {
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 4,
         "column": 22,
         "length": 9
@@ -308,7 +308,7 @@
           },
           "name": "y",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,
             "column": 29,
             "length": 1

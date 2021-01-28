@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### BasicStruct {#BasicStruct}
-*Defined in [fidl.test.struct/struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/struct.test.fidl#8)*
+*Defined in [fidl.test.struct/struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/struct.test.fidl#8)*
 
 
 
@@ -31,7 +31,7 @@
 </table>
 
 ### Simple {#Simple}
-*Defined in [fidl.test.struct/struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/struct.test.fidl#3)*
+*Defined in [fidl.test.struct/struct.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/tools/fidl/fidlc/testdata/struct.test.fidl#3)*
 
 
 

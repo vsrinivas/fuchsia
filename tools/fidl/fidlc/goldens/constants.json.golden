@@ -6,7 +6,7 @@
     {
       "name": "fidl.test.constants/BitsType",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 22,
         "column": 6,
         "length": 8
@@ -20,7 +20,7 @@
         {
           "name": "VALUE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 23,
             "column": 5,
             "length": 5
@@ -39,7 +39,7 @@
         {
           "name": "SECOND_VALUE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 24,
             "column": 5,
             "length": 12
@@ -58,7 +58,7 @@
         {
           "name": "THIRD_VALUE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 25,
             "column": 5,
             "length": 11
@@ -80,7 +80,7 @@
     {
       "name": "fidl.test.constants/Bits",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 37,
         "column": 6,
         "length": 4
@@ -94,7 +94,7 @@
         {
           "name": "B",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 38,
             "column": 5,
             "length": 1
@@ -118,7 +118,7 @@
     {
       "name": "fidl.test.constants/UINT8",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 3,
         "column": 13,
         "length": 5
@@ -141,7 +141,7 @@
     {
       "name": "fidl.test.constants/UINT16",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 4,
         "column": 14,
         "length": 6
@@ -164,7 +164,7 @@
     {
       "name": "fidl.test.constants/UINT32",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 5,
         "column": 14,
         "length": 6
@@ -187,7 +187,7 @@
     {
       "name": "fidl.test.constants/UINT64",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 6,
         "column": 14,
         "length": 6
@@ -210,7 +210,7 @@
     {
       "name": "fidl.test.constants/INT8",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 7,
         "column": 12,
         "length": 4
@@ -233,7 +233,7 @@
     {
       "name": "fidl.test.constants/INT16",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 8,
         "column": 13,
         "length": 5
@@ -256,7 +256,7 @@
     {
       "name": "fidl.test.constants/INT32",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 9,
         "column": 13,
         "length": 5
@@ -279,7 +279,7 @@
     {
       "name": "fidl.test.constants/INT64",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 10,
         "column": 13,
         "length": 5
@@ -302,7 +302,7 @@
     {
       "name": "fidl.test.constants/FLOAT32",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 11,
         "column": 15,
         "length": 7
@@ -325,7 +325,7 @@
     {
       "name": "fidl.test.constants/FLOAT64",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 12,
         "column": 15,
         "length": 7
@@ -348,7 +348,7 @@
     {
       "name": "fidl.test.constants/BOOL",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 13,
         "column": 12,
         "length": 4
@@ -371,7 +371,7 @@
     {
       "name": "fidl.test.constants/STRING",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 14,
         "column": 14,
         "length": 6
@@ -394,7 +394,7 @@
     {
       "name": "fidl.test.constants/enumVal",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 19,
         "column": 16,
         "length": 7
@@ -414,7 +414,7 @@
     {
       "name": "fidl.test.constants/enumPrimitiveVal",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 20,
         "column": 13,
         "length": 16
@@ -433,7 +433,7 @@
     {
       "name": "fidl.test.constants/bitsVal",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 27,
         "column": 16,
         "length": 7
@@ -453,7 +453,7 @@
     {
       "name": "fidl.test.constants/bitsPrimitiveVal",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 28,
         "column": 13,
         "length": 16
@@ -472,7 +472,7 @@
     {
       "name": "fidl.test.constants/orResult",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 30,
         "column": 16,
         "length": 8
@@ -491,7 +491,7 @@
     {
       "name": "fidl.test.constants/orResultPrimitiveVal",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 31,
         "column": 13,
         "length": 20
@@ -511,7 +511,7 @@
     {
       "name": "fidl.test.constants/EnumType",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 16,
         "column": 6,
         "length": 8
@@ -521,7 +521,7 @@
         {
           "name": "VALUE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 17,
             "column": 5,
             "length": 5
@@ -543,7 +543,7 @@
     {
       "name": "fidl.test.constants/Enum",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 33,
         "column": 6,
         "length": 4
@@ -553,7 +553,7 @@
         {
           "name": "E",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 34,
             "column": 5,
             "length": 1
@@ -580,7 +580,7 @@
     {
       "name": "fidl.test.constants/Struct",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 41,
         "column": 8,
         "length": 6
@@ -594,7 +594,7 @@
           },
           "name": "int64_with_default",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 42,
             "column": 11,
             "length": 18
@@ -621,7 +621,7 @@
           },
           "name": "string_with_default",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 43,
             "column": 12,
             "length": 19
@@ -648,7 +648,7 @@
           },
           "name": "bool_with_default",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 44,
             "column": 10,
             "length": 17
@@ -676,7 +676,7 @@
           },
           "name": "enum_with_default",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 45,
             "column": 10,
             "length": 17
@@ -700,7 +700,7 @@
           },
           "name": "bits_with_default",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/constants.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
             "line": 46,
             "column": 10,
             "length": 17

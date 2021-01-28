@@ -12,7 +12,7 @@
     {
       "name": "fidl.test.escaping/DocCommentWithQuotes",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/escaping.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
         "line": 4,
         "column": 8,
         "length": 20

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Based on https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/tools/fidl/schema.json
+// Based on https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/fidl/fidlc/schema.json
 
 use {
     lazy_static::lazy_static,

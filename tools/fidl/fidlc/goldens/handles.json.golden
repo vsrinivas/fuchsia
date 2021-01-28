@@ -8,7 +8,7 @@
     {
       "name": "fidl.test.handles/obj_type",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 6,
         "column": 6,
         "length": 8
@@ -18,7 +18,7 @@
         {
           "name": "NONE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 7,
             "column": 5,
             "length": 4
@@ -37,7 +37,7 @@
         {
           "name": "PROCESS",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 8,
             "column": 5,
             "length": 7
@@ -56,7 +56,7 @@
         {
           "name": "THREAD",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 9,
             "column": 5,
             "length": 6
@@ -75,7 +75,7 @@
         {
           "name": "VMO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 10,
             "column": 5,
             "length": 3
@@ -94,7 +94,7 @@
         {
           "name": "CHANNEL",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 11,
             "column": 5,
             "length": 7
@@ -113,7 +113,7 @@
         {
           "name": "EVENT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 12,
             "column": 5,
             "length": 5
@@ -132,7 +132,7 @@
         {
           "name": "PORT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 13,
             "column": 5,
             "length": 4
@@ -151,7 +151,7 @@
         {
           "name": "INTERRUPT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 14,
             "column": 5,
             "length": 9
@@ -170,7 +170,7 @@
         {
           "name": "PCI_DEVICE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 15,
             "column": 5,
             "length": 10
@@ -189,7 +189,7 @@
         {
           "name": "LOG",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 16,
             "column": 5,
             "length": 3
@@ -208,7 +208,7 @@
         {
           "name": "SOCKET",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 17,
             "column": 5,
             "length": 6
@@ -227,7 +227,7 @@
         {
           "name": "RESOURCE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 18,
             "column": 5,
             "length": 8
@@ -246,7 +246,7 @@
         {
           "name": "EVENTPAIR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 19,
             "column": 5,
             "length": 9
@@ -265,7 +265,7 @@
         {
           "name": "JOB",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 20,
             "column": 5,
             "length": 3
@@ -284,7 +284,7 @@
         {
           "name": "VMAR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 21,
             "column": 5,
             "length": 4
@@ -303,7 +303,7 @@
         {
           "name": "FIFO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 22,
             "column": 5,
             "length": 4
@@ -322,7 +322,7 @@
         {
           "name": "GUEST",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 23,
             "column": 5,
             "length": 5
@@ -341,7 +341,7 @@
         {
           "name": "VCPU",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 24,
             "column": 5,
             "length": 4
@@ -360,7 +360,7 @@
         {
           "name": "TIMER",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 25,
             "column": 5,
             "length": 5
@@ -379,7 +379,7 @@
         {
           "name": "IOMMU",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 26,
             "column": 5,
             "length": 5
@@ -398,7 +398,7 @@
         {
           "name": "BTI",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 27,
             "column": 5,
             "length": 3
@@ -417,7 +417,7 @@
         {
           "name": "PROFILE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 28,
             "column": 5,
             "length": 7
@@ -436,7 +436,7 @@
         {
           "name": "PMT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 29,
             "column": 5,
             "length": 3
@@ -455,7 +455,7 @@
         {
           "name": "SUSPEND_TOKEN",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 30,
             "column": 5,
             "length": 13
@@ -474,7 +474,7 @@
         {
           "name": "PAGER",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 31,
             "column": 5,
             "length": 5
@@ -493,7 +493,7 @@
         {
           "name": "EXCEPTION",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 32,
             "column": 5,
             "length": 9
@@ -512,7 +512,7 @@
         {
           "name": "CLOCK",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 33,
             "column": 5,
             "length": 5
@@ -531,7 +531,7 @@
         {
           "name": "STREAM",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 34,
             "column": 5,
             "length": 6
@@ -550,7 +550,7 @@
         {
           "name": "MSI_ALLOCATION",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 35,
             "column": 5,
             "length": 14
@@ -569,7 +569,7 @@
         {
           "name": "MSI_INTERRUPT",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 36,
             "column": 5,
             "length": 13
@@ -593,7 +593,7 @@
     {
       "name": "fidl.test.handles/handle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 39,
         "column": 21,
         "length": 6
@@ -606,7 +606,7 @@
         {
           "name": "subtype",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 41,
             "column": 18,
             "length": 7
@@ -624,7 +624,7 @@
     {
       "name": "fidl.test.handles/SomeProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 45,
         "column": 10,
         "length": 12
@@ -637,7 +637,7 @@
     {
       "name": "fidl.test.handles/Handles",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 52,
         "column": 17,
         "length": 7
@@ -653,7 +653,7 @@
           },
           "name": "plain_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 53,
             "column": 12,
             "length": 12
@@ -672,7 +672,7 @@
           },
           "name": "bti_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 55,
             "column": 16,
             "length": 10
@@ -691,7 +691,7 @@
           },
           "name": "channel_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 56,
             "column": 20,
             "length": 14
@@ -710,7 +710,7 @@
           },
           "name": "clock_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 57,
             "column": 18,
             "length": 12
@@ -729,7 +729,7 @@
           },
           "name": "debuglog_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 58,
             "column": 16,
             "length": 15
@@ -748,7 +748,7 @@
           },
           "name": "event_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 59,
             "column": 18,
             "length": 12
@@ -767,7 +767,7 @@
           },
           "name": "eventpair_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 60,
             "column": 22,
             "length": 16
@@ -786,7 +786,7 @@
           },
           "name": "exception_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 61,
             "column": 22,
             "length": 16
@@ -805,7 +805,7 @@
           },
           "name": "fifo_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 62,
             "column": 17,
             "length": 11
@@ -824,7 +824,7 @@
           },
           "name": "guest_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 63,
             "column": 18,
             "length": 12
@@ -843,7 +843,7 @@
           },
           "name": "interrupt_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 64,
             "column": 22,
             "length": 16
@@ -862,7 +862,7 @@
           },
           "name": "iommu_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 65,
             "column": 18,
             "length": 12
@@ -881,7 +881,7 @@
           },
           "name": "job_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 66,
             "column": 16,
             "length": 10
@@ -900,7 +900,7 @@
           },
           "name": "pager_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 67,
             "column": 18,
             "length": 12
@@ -919,7 +919,7 @@
           },
           "name": "pcidevice_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 68,
             "column": 23,
             "length": 16
@@ -938,7 +938,7 @@
           },
           "name": "pmt_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 69,
             "column": 16,
             "length": 10
@@ -957,7 +957,7 @@
           },
           "name": "port_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 70,
             "column": 17,
             "length": 11
@@ -976,7 +976,7 @@
           },
           "name": "process_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 71,
             "column": 20,
             "length": 14
@@ -995,7 +995,7 @@
           },
           "name": "profile_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 72,
             "column": 20,
             "length": 14
@@ -1014,7 +1014,7 @@
           },
           "name": "resource_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 73,
             "column": 21,
             "length": 15
@@ -1033,7 +1033,7 @@
           },
           "name": "socket_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 74,
             "column": 19,
             "length": 13
@@ -1052,7 +1052,7 @@
           },
           "name": "suspendtoken_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 75,
             "column": 26,
             "length": 19
@@ -1071,7 +1071,7 @@
           },
           "name": "thread_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 76,
             "column": 19,
             "length": 13
@@ -1090,7 +1090,7 @@
           },
           "name": "timer_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 77,
             "column": 18,
             "length": 12
@@ -1109,7 +1109,7 @@
           },
           "name": "vcpu_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 78,
             "column": 17,
             "length": 11
@@ -1128,7 +1128,7 @@
           },
           "name": "vmar_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 79,
             "column": 17,
             "length": 11
@@ -1147,7 +1147,7 @@
           },
           "name": "vmo_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 80,
             "column": 16,
             "length": 10
@@ -1166,7 +1166,7 @@
           },
           "name": "rights_handle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 82,
             "column": 21,
             "length": 13
@@ -1190,7 +1190,7 @@
           },
           "name": "aliased_plain_handle_field",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 84,
             "column": 26,
             "length": 26
@@ -1214,7 +1214,7 @@
           },
           "name": "aliased_subtype_handle_field",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 85,
             "column": 28,
             "length": 28
@@ -1238,7 +1238,7 @@
           },
           "name": "aliased_rights_handle_field",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 86,
             "column": 27,
             "length": 27
@@ -1256,7 +1256,7 @@
           },
           "name": "some_protocol",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 88,
             "column": 18,
             "length": 13
@@ -1274,7 +1274,7 @@
           },
           "name": "request_some_protocol",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
             "line": 89,
             "column": 27,
             "length": 21
@@ -1303,7 +1303,7 @@
     {
       "name": "fidl.test.handles/aliased_plain_handle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 48,
         "column": 7,
         "length": 20
@@ -1317,7 +1317,7 @@
     {
       "name": "fidl.test.handles/aliased_subtype_handle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 49,
         "column": 7,
         "length": 22
@@ -1331,7 +1331,7 @@
     {
       "name": "fidl.test.handles/aliased_rights_handle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/handles.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 50,
         "column": 7,
         "length": 21

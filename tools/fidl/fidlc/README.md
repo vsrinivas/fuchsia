@@ -1,12 +1,13 @@
 # fidlc
 
-The fidlc code lives in //zircon/tools/fidl. Once build unification is complete,
-it can be moved here. In the meantime, this directory just contains the goldens.
+Refer to the [compiler
+reference page](https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#compiler_internals) for
+documentation.
 
 ## Goldens
 
 The fidlc goldens are the result of running fidlc on the test libraries in
-//zircon/tools/fidl/testdata (see README.md there). In particular, we store
+//tools/fidl/fidlc/testdata (see README.md there). In particular, we store
 golden files for the JSON IR and coding tables.
 
 To regenerate, run `fx regen-goldens fidlc`.

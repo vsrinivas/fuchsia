@@ -6,7 +6,7 @@
     {
       "name": "fidl.test.bindingsdenylist/OnlySyzkaller",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 13,
         "column": 6,
         "length": 13
@@ -26,7 +26,7 @@
         {
           "name": "A",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
             "line": 14,
             "column": 5,
             "length": 1
@@ -50,7 +50,7 @@
     {
       "name": "fidl.test.bindingsdenylist/AllBindings",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 10,
         "column": 14,
         "length": 11
@@ -81,7 +81,7 @@
     {
       "name": "fidl.test.bindingsdenylist/OnlyDart",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 18,
         "column": 6,
         "length": 8
@@ -97,7 +97,7 @@
         {
           "name": "A",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
             "line": 19,
             "column": 5,
             "length": 1
@@ -122,7 +122,7 @@
     {
       "name": "fidl.test.bindingsdenylist/OnlyLibfuzzer",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 36,
         "column": 10,
         "length": 13
@@ -138,7 +138,7 @@
           "ordinal": 6837315459284345174,
           "name": "LibfuzzerNeedsNonemptyProtocol",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
             "line": 37,
             "column": 5,
             "length": 30
@@ -174,7 +174,7 @@
     {
       "name": "fidl.test.bindingsdenylist/OnlyHlcpp",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 41,
         "column": 9,
         "length": 9
@@ -192,7 +192,7 @@
     {
       "name": "fidl.test.bindingsdenylist/OnlyGo",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 23,
         "column": 8,
         "length": 6
@@ -221,7 +221,7 @@
     {
       "name": "fidl.test.bindingsdenylist/OnlyRust",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 27,
         "column": 7,
         "length": 8
@@ -250,7 +250,7 @@
     {
       "name": "fidl.test.bindingsdenylist/OnlyLlcpp",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 31,
         "column": 7,
         "length": 9
@@ -271,7 +271,7 @@
             "subtype": "uint32"
           },
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
             "line": 32,
             "column": 15,
             "length": 1

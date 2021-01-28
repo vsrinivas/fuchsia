@@ -36,7 +36,7 @@
     {
       "name": "fidl.test.foreigntypeinresponseusedthroughcompose/Top",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
         "line": 5,
         "column": 10,
         "length": 3
@@ -46,7 +46,7 @@
           "ordinal": 7703637629648977298,
           "name": "GetFoo",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
             "line": 6,
             "column": 5,
             "length": 6
@@ -72,7 +72,7 @@
               },
               "name": "foo",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
                 "line": 6,
                 "column": 29,
                 "length": 3
@@ -103,7 +103,7 @@
     {
       "name": "middle/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
         "line": 6,
         "column": 17,
         "length": 16
@@ -118,7 +118,7 @@
           },
           "name": "foo",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
             "line": 6,
             "column": 29,
             "length": 3

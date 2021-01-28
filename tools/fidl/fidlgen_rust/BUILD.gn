@@ -9,7 +9,7 @@ import("//build/host.gni")
 import("//build/rust/fidl_rust.gni")
 import("//build/rust/toolchain.gni")
 import("//build/testing/golden_test.gni")
-import("//zircon/tools/fidl/testdata/info.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
@@ -48,7 +48,7 @@ install_host_tools("host") {
 }
 
 if (is_host) {
-  fidlc_target = "//zircon/tools/fidl:fidlc($host_toolchain)"
+  fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
 
   go_test("fidlgen_rust_lib_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/codegen" ]

@@ -20,15 +20,15 @@ The [FIDL][fidl-readme] toolchain is composed of roughly three parts:
 ### Code location
 
 #### Compiler front-end
-The front-end lives at [//zircon/tools/fidl/][fidlc-source],
+The front-end lives at [//tools/fidl/fidlc/][fidlc-source],
 with tests in [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 
 #### Compiler back-ends {#compiler-backends}
 
 Target | Codegen | Runtime Libraries | Tests
 -------|---------|-------------------|-------
-C | [/zircon/tools/fidl/lib/c_generator.cc] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/c]
-Coding Tables | [/zircon/tools/fidl/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
+C | [/tools/fidl/fidlc/lib/c_generator.cc] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/c]
+Coding Tables | [/tools/fidl/fidlc/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
 HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
 LLCPP | [/tools/fidl/fidlgen_llcpp] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/llcpp]
 Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl) | *(located alongside runtime libraries)*
@@ -93,7 +93,7 @@ Some other FIDL related areas are:
 Path | Contents
 -------|-----
 [/tools/fidl/fidlgen_*](/tools/fidl/) | Various other compiler back-ends.
-[/zircon/tools/fidl/{linter,compiler}](/zircon/tools/fidl) | FIDL linter/formatter.
+[/tools/fidl/fidlc/{linter,compiler}](/tools/fidl/fidlc) | FIDL linter/formatter.
 [/tools/fidl/fidldoc] | Generate documentation for FIDL.
 [/tools/fidl/fidlmerge] | Tool for generating code from FIDL JSON.
 [/tools/fidl/measure-tape] | Tool to [max out pagination][pagination].
@@ -534,7 +534,7 @@ Note: While `fx test dart-bindings-test` prints test names as they run, it does 
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
-| fidlc compiler           | `fx test fidl-compiler`<br>`fx test fidlc_golden_tests` | //zircon/tools/fidl
+| fidlc compiler           | `fx test fidl-compiler`<br>`fx test fidlc_golden_tests` | //tools/fidl/fidlc
 | gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser
 | measure tape test        | `fx test measure-tape_test`         | //tools/fidl/measure-tape
 | Rust IR parser           | `fx build`                          | //src/devices/tools/fidlgen_banjo/tests
@@ -588,9 +588,9 @@ fx test --e2e fidl_microbenchmarks_test
 
 | Name                  | Regen commands                                                        | Input                                              |  Output
 |-----------------------|-----------------------------------------------------------------------|----------------------------------------------------|------------
-| fidlc goldens         | fx regen-goldens fidlc                                                | zircon/tools/fidl/testdata                         | tools/fidl/fidlc/goldens
-| fidlgen goldens       | fx regen-goldens $TOOL                                                | zircon/tools/fidl/testdata                         | tools/fidl/$TOOL/goldens
-| fidldoc goldens       | fx regen-goldens fidldoc                                              | zircon/tools/fidl/testdata                         | tools/fidl/fidldoc/goldens
+| fidlc goldens         | fx regen-goldens fidlc                                                | tools/fidl/fidlc/testdata                         | tools/fidl/fidlc/goldens
+| fidlgen goldens       | fx regen-goldens $TOOL                                                | tools/fidl/fidlc/testdata                         | tools/fidl/$TOOL/goldens
+| fidldoc goldens       | fx regen-goldens fidldoc                                              | tools/fidl/fidlc/testdata                         | tools/fidl/fidldoc/goldens
 | dangerous identifiers | fx exec $FUCHSIA_DIR/src/tests/fidl/dangerous_identifiers/generate.sh | src/tests/fidl/dangerous_identifiers/generate/*.py | src/tests/fidl/dangerous_identifiers/{cpp, fidl}
 | third party go        | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl                        |                                                    |
 
@@ -705,7 +705,7 @@ fidl fmt --library my_library.fidl -i
 [abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
 [fidl-readme]: /docs/development/languages/fidl
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
-[fidlc-source]: /zircon/tools/fidl/
+[fidlc-source]: /tools/fidl/fidlc/
 [fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
 [fidl-simple]: /src/lib/fidl/c/simple_tests/
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
@@ -719,8 +719,8 @@ fidl fmt --library my_library.fidl -i
 [FTP-042]: /docs/contribute/governance/fidl/ftp/ftp-042.md
 [pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
 
-[/zircon/tools/fidl/lib/c_generator.cc]: /zircon/tools/fidl/lib/c_generator.cc
-[/zircon/tools/fidl/lib/tables_generator.cc]: /zircon/tools/fidl/lib/tables_generator.cc
+[/tools/fidl/fidlc/lib/c_generator.cc]: /tools/fidl/fidlc/lib/c_generator.cc
+[/tools/fidl/fidlc/lib/tables_generator.cc]: /tools/fidl/fidlc/lib/tables_generator.cc
 [/tools/fidl/fidlgen_hlcpp]: /tools/fidl/fidlgen_hlcpp
 [/tools/fidl/fidlgen_llcpp]: /tools/fidl/fidlgen_llcpp
 [/tools/fidl/fidlgen_go]: /tools/fidl/fidlgen_go

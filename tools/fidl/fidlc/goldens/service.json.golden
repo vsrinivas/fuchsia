@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.service/FirstProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
         "line": 10,
         "column": 10,
         "length": 13
@@ -20,7 +20,7 @@
           "ordinal": 6590661047173168036,
           "name": "MethodOnFirst",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 11,
             "column": 5,
             "length": 13
@@ -44,7 +44,7 @@
     {
       "name": "fidl.test.service/SecondProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
         "line": 18,
         "column": 10,
         "length": 14
@@ -54,7 +54,7 @@
           "ordinal": 6118813307380259369,
           "name": "MethodOnSecond",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 19,
             "column": 5,
             "length": 14
@@ -80,7 +80,7 @@
     {
       "name": "fidl.test.service/EmptyService",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
         "line": 7,
         "column": 9,
         "length": 12
@@ -90,7 +90,7 @@
     {
       "name": "fidl.test.service/SingleMemberService",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
         "line": 14,
         "column": 9,
         "length": 19
@@ -104,7 +104,7 @@
           },
           "name": "single_member",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 15,
             "column": 19,
             "length": 13
@@ -115,7 +115,7 @@
     {
       "name": "fidl.test.service/MultiHeterogeneousMemberService",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
         "line": 22,
         "column": 9,
         "length": 31
@@ -129,7 +129,7 @@
           },
           "name": "first_member",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 23,
             "column": 19,
             "length": 12
@@ -143,7 +143,7 @@
           },
           "name": "second_member",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 24,
             "column": 20,
             "length": 13
@@ -154,7 +154,7 @@
     {
       "name": "fidl.test.service/MultiHomogeneousMemberService",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
         "line": 27,
         "column": 9,
         "length": 29
@@ -168,7 +168,7 @@
           },
           "name": "first_member",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 28,
             "column": 19,
             "length": 12
@@ -182,7 +182,7 @@
           },
           "name": "second_member",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 29,
             "column": 19,
             "length": 13

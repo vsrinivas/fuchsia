@@ -9,7 +9,7 @@ import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/testing/golden_test.gni")
-import("//zircon/tools/fidl/testdata/info.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
 
 go_library("fidlgen_dart_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."

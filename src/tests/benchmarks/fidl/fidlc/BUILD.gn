@@ -9,9 +9,9 @@ executable("bin") {
   testonly = true
   sources = [ "main.cc" ]
   deps = [
+    "//tools/fidl/fidlc:fidl",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/perftest",
-    "//zircon/tools/fidl:fidl",
   ]
 }
 

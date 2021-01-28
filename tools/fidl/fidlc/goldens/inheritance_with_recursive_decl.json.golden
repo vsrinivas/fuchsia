@@ -10,7 +10,7 @@
     {
       "name": "fidl.test.inheritancewithrecursivedecl/Parent",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 3,
         "column": 10,
         "length": 6
@@ -20,7 +20,7 @@
           "ordinal": 3051519745671742363,
           "name": "First",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 4,
             "column": 5,
             "length": 5
@@ -35,7 +35,7 @@
               },
               "name": "request",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
                 "line": 4,
                 "column": 27,
                 "length": 7
@@ -64,7 +64,7 @@
     {
       "name": "fidl.test.inheritancewithrecursivedecl/Child",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 7,
         "column": 10,
         "length": 5
@@ -74,7 +74,7 @@
           "ordinal": 3051519745671742363,
           "name": "First",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 4,
             "column": 5,
             "length": 5
@@ -89,7 +89,7 @@
               },
               "name": "request",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
                 "line": 4,
                 "column": 27,
                 "length": 7
@@ -117,7 +117,7 @@
           "ordinal": 489667253787160198,
           "name": "Second",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 9,
             "column": 5,
             "length": 6
@@ -132,7 +132,7 @@
               },
               "name": "request",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
                 "line": 9,
                 "column": 28,
                 "length": 7
@@ -164,7 +164,7 @@
     {
       "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 4,
         "column": 10,
         "length": 25
@@ -179,7 +179,7 @@
           },
           "name": "request",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 4,
             "column": 27,
             "length": 7
@@ -204,7 +204,7 @@
     {
       "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 9,
         "column": 11,
         "length": 25
@@ -219,7 +219,7 @@
           },
           "name": "request",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 9,
             "column": 28,
             "length": 7
@@ -244,7 +244,7 @@
     {
       "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 4,
         "column": 10,
         "length": 25
@@ -259,7 +259,7 @@
           },
           "name": "request",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 4,
             "column": 27,
             "length": 7

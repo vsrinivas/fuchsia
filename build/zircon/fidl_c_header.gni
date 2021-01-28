@@ -101,7 +101,7 @@ template("fidl_c_header") {
     #
     action(fidlc_target) {
       # Find the path to the fidlc binary.
-      fidlc_target = "//zircon/tools/fidl:fidlc($host_toolchain)"
+      fidlc_target = "//tools/fidl/fidlc:fidlc($host_toolchain)"
       fidlc_path = get_label_info(fidlc_target, "root_out_dir") + "/fidlc"
       if (host_os == "win") {
         fidlc_path += ".exe"

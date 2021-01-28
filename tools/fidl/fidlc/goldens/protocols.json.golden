@@ -8,7 +8,7 @@
     {
       "name": "fidl.test.protocols/obj_type",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 6,
         "column": 6,
         "length": 8
@@ -18,7 +18,7 @@
         {
           "name": "NONE",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 7,
             "column": 5,
             "length": 4
@@ -37,7 +37,7 @@
         {
           "name": "SOCKET",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 8,
             "column": 5,
             "length": 6
@@ -59,7 +59,7 @@
     {
       "name": "fidl.test.protocols/ErrorEnun",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 28,
         "column": 6,
         "length": 9
@@ -69,7 +69,7 @@
         {
           "name": "ERR_FOO",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 29,
             "column": 5,
             "length": 7
@@ -88,7 +88,7 @@
         {
           "name": "ERR_BAR",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 30,
             "column": 5,
             "length": 7
@@ -112,7 +112,7 @@
     {
       "name": "fidl.test.protocols/handle",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 11,
         "column": 21,
         "length": 6
@@ -125,7 +125,7 @@
         {
           "name": "subtype",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 13,
             "column": 18,
             "length": 7
@@ -143,7 +143,7 @@
     {
       "name": "fidl.test.protocols/WithAndWithoutRequestResponse",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 17,
         "column": 10,
         "length": 29
@@ -153,7 +153,7 @@
           "ordinal": 7699066378708085668,
           "name": "NoRequestNoResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 18,
             "column": 5,
             "length": 19
@@ -176,7 +176,7 @@
           "ordinal": 4641225961522096302,
           "name": "NoRequestEmptyResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 19,
             "column": 5,
             "length": 22
@@ -209,7 +209,7 @@
           "ordinal": 4935493674668456948,
           "name": "NoRequestWithResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 20,
             "column": 5,
             "length": 21
@@ -234,7 +234,7 @@
               },
               "name": "ret",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 20,
                 "column": 40,
                 "length": 3
@@ -261,7 +261,7 @@
           "ordinal": 8985942600963248509,
           "name": "WithRequestNoResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 21,
             "column": 5,
             "length": 21
@@ -275,7 +275,7 @@
               },
               "name": "arg",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 21,
                 "column": 34,
                 "length": 3
@@ -303,7 +303,7 @@
           "ordinal": 7344052883704365182,
           "name": "WithRequestEmptyResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 22,
             "column": 5,
             "length": 24
@@ -317,7 +317,7 @@
               },
               "name": "arg",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 22,
                 "column": 37,
                 "length": 3
@@ -355,7 +355,7 @@
           "ordinal": 2103802322332450033,
           "name": "WithRequestWithResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 23,
             "column": 5,
             "length": 23
@@ -369,7 +369,7 @@
               },
               "name": "arg",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 23,
                 "column": 36,
                 "length": 3
@@ -399,7 +399,7 @@
               },
               "name": "ret",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 23,
                 "column": 52,
                 "length": 3
@@ -426,7 +426,7 @@
           "ordinal": 1323081535741489193,
           "name": "OnEmptyResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 24,
             "column": 8,
             "length": 15
@@ -449,7 +449,7 @@
           "ordinal": 1691906546593908418,
           "name": "OnWithResponse",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 25,
             "column": 8,
             "length": 14
@@ -464,7 +464,7 @@
               },
               "name": "ret",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 25,
                 "column": 30,
                 "length": 3
@@ -492,7 +492,7 @@
     {
       "name": "fidl.test.protocols/WithErrorSyntax",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 33,
         "column": 10,
         "length": 15
@@ -502,7 +502,7 @@
           "ordinal": 4000554951765344912,
           "name": "ResponseAsStruct",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 34,
             "column": 5,
             "length": 16
@@ -555,7 +555,7 @@
           "ordinal": 3421672554503271630,
           "name": "ErrorAsPrimitive",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 35,
             "column": 5,
             "length": 16
@@ -608,7 +608,7 @@
           "ordinal": 627496610701472780,
           "name": "ErrorAsEnum",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 36,
             "column": 5,
             "length": 11
@@ -662,7 +662,7 @@
     {
       "name": "fidl.test.protocols/ChannelProtocol",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 40,
         "column": 10,
         "length": 15
@@ -678,7 +678,7 @@
           "ordinal": 565531679656837166,
           "name": "MethodA",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 41,
             "column": 5,
             "length": 7
@@ -692,7 +692,7 @@
               },
               "name": "a",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 41,
                 "column": 19,
                 "length": 1
@@ -709,7 +709,7 @@
               },
               "name": "b",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 41,
                 "column": 28,
                 "length": 1
@@ -737,7 +737,7 @@
           "ordinal": 5963604044179602938,
           "name": "EventA",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 42,
             "column": 8,
             "length": 6
@@ -752,7 +752,7 @@
               },
               "name": "a",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 42,
                 "column": 21,
                 "length": 1
@@ -769,7 +769,7 @@
               },
               "name": "b",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 42,
                 "column": 30,
                 "length": 1
@@ -796,7 +796,7 @@
           "ordinal": 6746905632127147242,
           "name": "MethodB",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 43,
             "column": 5,
             "length": 7
@@ -810,7 +810,7 @@
               },
               "name": "a",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 43,
                 "column": 19,
                 "length": 1
@@ -827,7 +827,7 @@
               },
               "name": "b",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 43,
                 "column": 28,
                 "length": 1
@@ -857,7 +857,7 @@
               },
               "name": "result",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 43,
                 "column": 41,
                 "length": 6
@@ -884,7 +884,7 @@
           "ordinal": 875219241480379432,
           "name": "TakeHandle",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 44,
             "column": 5,
             "length": 10
@@ -900,7 +900,7 @@
               },
               "name": "h",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 44,
                 "column": 23,
                 "length": 1
@@ -938,7 +938,7 @@
           "ordinal": 9065806117349865322,
           "name": "MutateSocket",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 45,
             "column": 5,
             "length": 12
@@ -954,7 +954,7 @@
               },
               "name": "a",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 45,
                 "column": 32,
                 "length": 1
@@ -986,7 +986,7 @@
               },
               "name": "b",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 45,
                 "column": 53,
                 "length": 1
@@ -1014,7 +1014,7 @@
     {
       "name": "fidl.test.protocols/Transitional",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 48,
         "column": 10,
         "length": 12
@@ -1024,7 +1024,7 @@
           "ordinal": 7121112290509197032,
           "name": "Request",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 50,
             "column": 5,
             "length": 7
@@ -1044,7 +1044,7 @@
               },
               "name": "x",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 50,
                 "column": 19,
                 "length": 1
@@ -1074,7 +1074,7 @@
               },
               "name": "y",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 50,
                 "column": 32,
                 "length": 1
@@ -1101,7 +1101,7 @@
           "ordinal": 1124136612964114085,
           "name": "OneWay",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 53,
             "column": 5,
             "length": 6
@@ -1121,7 +1121,7 @@
               },
               "name": "x",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 53,
                 "column": 18,
                 "length": 1
@@ -1149,7 +1149,7 @@
           "ordinal": 6033576734966581606,
           "name": "Event",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 56,
             "column": 8,
             "length": 5
@@ -1170,7 +1170,7 @@
               },
               "name": "x",
               "location": {
-                "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
                 "line": 56,
                 "column": 20,
                 "length": 1
@@ -1201,7 +1201,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix4",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 20,
         "column": 32,
         "length": 12
@@ -1215,7 +1215,7 @@
           },
           "name": "ret",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 20,
             "column": 40,
             "length": 3
@@ -1240,7 +1240,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix5",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 21,
         "column": 26,
         "length": 12
@@ -1254,7 +1254,7 @@
           },
           "name": "arg",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 21,
             "column": 34,
             "length": 3
@@ -1279,7 +1279,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix6",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 22,
         "column": 29,
         "length": 12
@@ -1293,7 +1293,7 @@
           },
           "name": "arg",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 22,
             "column": 37,
             "length": 3
@@ -1318,7 +1318,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix8",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 23,
         "column": 28,
         "length": 12
@@ -1332,7 +1332,7 @@
           },
           "name": "arg",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 23,
             "column": 36,
             "length": 3
@@ -1357,7 +1357,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix9",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 23,
         "column": 44,
         "length": 12
@@ -1371,7 +1371,7 @@
           },
           "name": "ret",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 23,
             "column": 52,
             "length": 3
@@ -1396,7 +1396,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix11",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 25,
         "column": 22,
         "length": 12
@@ -1410,7 +1410,7 @@
           },
           "name": "ret",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 25,
             "column": 30,
             "length": 3
@@ -1435,7 +1435,7 @@
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 34,
         "column": 27,
         "length": 27
@@ -1449,7 +1449,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 34,
             "column": 34,
             "length": 1
@@ -1466,7 +1466,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 34,
             "column": 43,
             "length": 1
@@ -1483,7 +1483,7 @@
           },
           "name": "c",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 34,
             "column": 52,
             "length": 1
@@ -1508,7 +1508,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix13",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 34,
         "column": 27,
         "length": 27
@@ -1548,7 +1548,7 @@
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 35,
         "column": 27,
         "length": 2
@@ -1569,7 +1569,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix15",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 35,
         "column": 27,
         "length": 2
@@ -1609,7 +1609,7 @@
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 36,
         "column": 22,
         "length": 2
@@ -1630,7 +1630,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix17",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 36,
         "column": 22,
         "length": 2
@@ -1670,7 +1670,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix18",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 41,
         "column": 12,
         "length": 18
@@ -1684,7 +1684,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 41,
             "column": 19,
             "length": 1
@@ -1701,7 +1701,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 41,
             "column": 28,
             "length": 1
@@ -1726,7 +1726,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix19",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 42,
         "column": 14,
         "length": 18
@@ -1740,7 +1740,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 42,
             "column": 21,
             "length": 1
@@ -1757,7 +1757,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 42,
             "column": 30,
             "length": 1
@@ -1782,7 +1782,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix20",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 43,
         "column": 12,
         "length": 18
@@ -1796,7 +1796,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 43,
             "column": 19,
             "length": 1
@@ -1813,7 +1813,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 43,
             "column": 28,
             "length": 1
@@ -1838,7 +1838,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix21",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 43,
         "column": 34,
         "length": 14
@@ -1852,7 +1852,7 @@
           },
           "name": "result",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 43,
             "column": 41,
             "length": 6
@@ -1877,7 +1877,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix22",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 44,
         "column": 15,
         "length": 10
@@ -1893,7 +1893,7 @@
           },
           "name": "h",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 44,
             "column": 23,
             "length": 1
@@ -1918,7 +1918,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix24",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 45,
         "column": 17,
         "length": 17
@@ -1934,7 +1934,7 @@
           },
           "name": "a",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 45,
             "column": 32,
             "length": 1
@@ -1959,7 +1959,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix25",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 45,
         "column": 38,
         "length": 17
@@ -1975,7 +1975,7 @@
           },
           "name": "b",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 45,
             "column": 53,
             "length": 1
@@ -2000,7 +2000,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix26",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 50,
         "column": 12,
         "length": 9
@@ -2014,7 +2014,7 @@
           },
           "name": "x",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 50,
             "column": 19,
             "length": 1
@@ -2039,7 +2039,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix27",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 50,
         "column": 25,
         "length": 9
@@ -2053,7 +2053,7 @@
           },
           "name": "y",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 50,
             "column": 32,
             "length": 1
@@ -2078,7 +2078,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix28",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 53,
         "column": 11,
         "length": 9
@@ -2092,7 +2092,7 @@
           },
           "name": "x",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 53,
             "column": 18,
             "length": 1
@@ -2117,7 +2117,7 @@
     {
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix29",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 56,
         "column": 13,
         "length": 9
@@ -2131,7 +2131,7 @@
           },
           "name": "x",
           "location": {
-            "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 56,
             "column": 20,
             "length": 1
@@ -2159,7 +2159,7 @@
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 34,
         "column": 27,
         "length": 27
@@ -2218,7 +2218,7 @@
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 35,
         "column": 27,
         "length": 2
@@ -2277,7 +2277,7 @@
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
       "location": {
-        "filename": "../../zircon/tools/fidl/testdata/protocols.test.fidl",
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 36,
         "column": 22,
         "length": 2
