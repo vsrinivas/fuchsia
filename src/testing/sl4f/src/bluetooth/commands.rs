@@ -382,8 +382,11 @@ impl Facade for AvdtpFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "AvdtpInit" => {
-                let role = parse_arg!(args, as_str, "role")?;
-                let result = self.init_avdtp_service_proxy(role.to_string()).await?;
+                let initiator_delay = match parse_arg!(args, as_str, "initiator_delay") {
+                    Ok(v) => Some(v.to_string()),
+                    Err(_e) => None,
+                };
+                let result = self.init_avdtp_service_proxy(initiator_delay).await?;
                 Ok(to_value(result)?)
             }
             "AvdtpGetConnectedPeers" => {

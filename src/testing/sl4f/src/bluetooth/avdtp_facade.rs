@@ -48,7 +48,14 @@ impl AvdtpFacade {
     }
 
     /// Creates a Peer Manager Proxy
-    async fn create_avdtp_service_proxy(&self, role: String) -> Result<PeerManagerProxy, Error> {
+    ///
+    /// # Arguments
+    /// * `initiator_delay`: A String representing the stream
+    /// initiator delay in milliseconds.
+    async fn create_avdtp_service_proxy(
+        &self,
+        initiator_delay: Option<String>,
+    ) -> Result<PeerManagerProxy, Error> {
         let tag = "AvdtpFacade::create_avdtp_service_proxy";
         match self.inner.read().avdtp_service_proxy.clone() {
             Some(avdtp_service_proxy) => {
@@ -71,17 +78,18 @@ impl AvdtpFacade {
                         format_err!("Failed to get launcher service: {}", err)
                     ),
                 };
-                let bt_a2dp_package_url = match role.as_ref() {
-                    "source" => fuchsia_single_component_package_url!("bt-a2dp-source"),
-                    "sink" => fuchsia_single_component_package_url!("bt-a2dp-sink"),
-                    _ => fx_err_and_bail!(
-                        &with_line!(tag),
-                        format!("Invalid A2DP profile role: {}", role)
-                    ),
-                }
-                .to_string();
 
-                let bt_a2dp = client::launch(&launcher, bt_a2dp_package_url, None)?;
+                let mut options: Vec<String> = Vec::new();
+                match initiator_delay {
+                    Some(initiator_delay) => {
+                        options.push("--initiator-delay".to_string());
+                        options.push(initiator_delay.to_string());
+                    }
+                    None => {}
+                };
+
+                let component_url = fuchsia_single_component_package_url!("bt-a2dp").to_string();
+                let bt_a2dp = client::launch(&launcher, component_url, Some(options))?;
 
                 let avdtp_service_proxy = bt_a2dp.connect_to_service::<PeerManagerMarker>();
                 if let Err(err) = avdtp_service_proxy {
@@ -96,13 +104,18 @@ impl AvdtpFacade {
         }
     }
 
-    /// Initialize the Avdtp service and starts A2DP Sink or Source based on input role.
+    /// Initialize the Avdtp service and starts A2DP.
     ///
     /// # Arguments
-    /// * `role`: A String representing "sink" or "source".
-    pub async fn init_avdtp_service_proxy(&self, role: String) -> Result<(), Error> {
+    /// * `initiator_delay`: A String representing the stream
+    /// initiator delay in milliseconds.
+    pub async fn init_avdtp_service_proxy(
+        &self,
+        initiator_delay: Option<String>,
+    ) -> Result<(), Error> {
         let tag = "AvdtpFacade::init_avdtp_service_proxy";
-        self.inner.write().avdtp_service_proxy = Some(self.create_avdtp_service_proxy(role).await?);
+        self.inner.write().avdtp_service_proxy =
+            Some(self.create_avdtp_service_proxy(initiator_delay).await?);
 
         let avdtp_svc = match &self.inner.read().avdtp_service_proxy {
             Some(p) => p.clone(),
