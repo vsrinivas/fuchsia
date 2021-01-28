@@ -21,6 +21,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/zstd-plain.h"
@@ -265,6 +266,12 @@ class ExternalDecompressorE2eUnpagedTest : public FdioTest {
 
   // The ZSTD algorithm requires an older revision.
   uint64_t GetOldestRevision() const override { return kBlobfsRevisionBackupSuperblock; }
+
+  // Using the kCompactMerkleTreeAtEnd requires a higher version of blobfs that doesn't support
+  // ZSTD.
+  BlobLayoutFormat GetBlobLayoutFormat() const override {
+    return BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+  }
 };
 
 TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {

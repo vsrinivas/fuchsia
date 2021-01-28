@@ -13,6 +13,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/runner.h"
@@ -60,6 +61,10 @@ class FdioTest : public testing::Test {
                      uint64_t* value);
 
   virtual uint64_t GetOldestRevision() const { return kBlobfsCurrentRevision; }
+
+  virtual BlobLayoutFormat GetBlobLayoutFormat() const {
+    return BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+  }
 
  private:
   block_client::FakeBlockDevice* block_device_ = nullptr;  // Owned by the runner_.

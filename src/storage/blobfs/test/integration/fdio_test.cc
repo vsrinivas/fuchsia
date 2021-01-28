@@ -24,9 +24,12 @@ void FdioTest::SetUp() {
 
   auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
   block_device_ = device.get();
-  ASSERT_EQ(
-      FormatFilesystem(block_device_, FilesystemOptions{.oldest_revision = GetOldestRevision()}),
-      ZX_OK);
+  ASSERT_EQ(FormatFilesystem(block_device_,
+                             FilesystemOptions{
+                                 .blob_layout_format = GetBlobLayoutFormat(),
+                                 .oldest_revision = GetOldestRevision(),
+                             }),
+            ZX_OK);
 
   zx::channel root_client, root_server;
   ASSERT_EQ(zx::channel::create(0, &root_client, &root_server), ZX_OK);
