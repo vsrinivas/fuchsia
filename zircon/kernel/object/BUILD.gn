@@ -75,6 +75,7 @@ zx_library("object") {
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/ktrace",
+    "$zx/kernel/lib/page_cache",
     "$zx/kernel/lib/root_resource_filter",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",
@@ -86,6 +87,9 @@ zx_library("object") {
   public_deps = [
     # <object/buffer_chain.h> has #include <ktl/move.h>.
     "$zx/kernel/lib/ktl:headers",
+
+    # <object/buffer_chain.h> has <lib/page_cache.h>
+    "$zx/kernel/lib/page_cache:headers",
 
     # <object/pci_device_dispatcher.h> has #include <dev/pci_common.h>
     "$zx/kernel/dev/pcie:headers",
