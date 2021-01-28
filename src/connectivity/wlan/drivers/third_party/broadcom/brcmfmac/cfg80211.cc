@@ -4703,8 +4703,7 @@ static zx_status_t brcmf_notify_start_auth(struct brcmf_if* ifp, const struct br
   brcmf_ext_auth* auth_start_evt = (brcmf_ext_auth*)data;
 
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
-    BRCMF_ERR("Receiving a BRCMF_E_START_AUTH event when we are not even connecting to an AP.");
-    ZX_DEBUG_ASSERT(0);
+    BRCMF_INFO("Receiving a BRCMF_E_START_AUTH event when we are not even connecting to an AP.");
     return ZX_ERR_BAD_STATE;
   }
 
