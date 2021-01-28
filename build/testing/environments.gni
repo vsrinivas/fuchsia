@@ -181,6 +181,15 @@ _all_named_envs += [
   },
 ]
 
+with_display_envs = [
+  aemu_env,
+  astro_env,
+  luis_env,
+  nelson_env,
+  nuc_env,
+  sherlock_env,
+]
+
 ### Select environment lists ###
 
 # Tests that fail on a NUC in ASan but otherwise want to run on a NUC should

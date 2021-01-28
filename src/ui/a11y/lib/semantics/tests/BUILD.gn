@@ -104,10 +104,7 @@ fuchsia_test_package("semantics-integration-tests") {
   ]
 
   test_specs = {
-    # fxbug.dev/33778
-    # environments = basic_envs
-    # This does not seem to flake on NUCs.
-    environments = [ nuc_env ]
+    environments = with_display_envs
   }
 }
 
