@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -99,10 +99,10 @@ impl Supplicant {
         self.esssa.initiate(&mut dead_update_sink)
     }
 
-    /// Resets all established Security Associations and invalidates all derived keys.
+    /// Resets all established Security Associations and invalidates all derived keys in this ESSSA.
     /// The Supplicant must be reset or destroyed when the underlying 802.11 association terminates.
     pub fn reset(&mut self) {
-        self.esssa.reset();
+        self.esssa.reset_security_associations();
     }
 
     /// Entry point for all incoming EAPOL frames. Incoming frames can be corrupted, invalid or of
@@ -189,11 +189,11 @@ impl Authenticator {
         &self.esssa.negotiated_protection
     }
 
-    /// Resets all established Security Associations and invalidates all derived keys.
+    /// Resets all established Security Associations and invalidates all derived keys in this ESSSA.
     /// The Authenticator must be reset or destroyed when the underlying 802.11 association
     /// terminates.
     pub fn reset(&mut self) {
-        self.esssa.reset();
+        self.esssa.reset_security_associations();
     }
 
     /// `initiate(...)` must be called when the Authenticator should start establishing a

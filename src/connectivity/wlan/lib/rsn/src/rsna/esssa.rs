@@ -227,8 +227,8 @@ impl EssSa {
         }
     }
 
-    pub fn reset(&mut self) {
-        info!("resetting ESSSA");
+    pub fn reset_security_associations(&mut self) {
+        info!("resetting ESSSA security associations");
         self.pmksa.replace_state(|state| state.reset());
         self.ptksa.replace_state(|state| state.reset());
         self.gtksa.replace_state(|state| state.reset());
