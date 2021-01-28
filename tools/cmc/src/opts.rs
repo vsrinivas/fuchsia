@@ -31,6 +31,29 @@ pub enum Commands {
         extra_schemas: Vec<(PathBuf, Option<String>)>,
     },
 
+    #[structopt(name = "validate-references")]
+    /// validate component manifest {.cmx|.cml} against package manifest.
+    ValidateReferences {
+        #[structopt(
+            name = "Component Manifest",
+            short = "c",
+            long = "component-manifest",
+            parse(from_os_str)
+        )]
+        component_manifest: PathBuf,
+
+        #[structopt(
+            name = "Package Manifest",
+            short = "p",
+            long = "package-manifest",
+            parse(from_os_str)
+        )]
+        package_manifest: PathBuf,
+
+        #[structopt(name = "GN Label", short = "l", long = "gn-label")]
+        gn_label: Option<String>,
+    },
+
     #[structopt(name = "merge")]
     /// merge the listed cmx files
     Merge {

@@ -27,6 +27,7 @@ fuchsia_component("echo-server") {
 
 fuchsia_component("echo-server-bad") {
   deps = [ ":bin" ]
+  check_references = false
   manifest = "meta/echo_server_bad.cml"
 }
 

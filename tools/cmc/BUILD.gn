@@ -29,6 +29,7 @@ rustc_binary("cmc") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
+    "//third_party/rust_crates:strsim",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
@@ -47,6 +48,7 @@ rustc_binary("cmc") {
     "src/main.rs",
     "src/merge.rs",
     "src/opts.rs",
+    "src/reference.rs",
     "src/util.rs",
     "src/validate.rs",
   ]
@@ -88,6 +90,7 @@ rustc_binary("cmc_integration_test_bin") {
 
 fuchsia_component("example_component") {
   testonly = true
+  check_references = false
   component_name = "example"
   manifest = "meta/example.cml"
 }

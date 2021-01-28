@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::{Error, Location},
-    crate::include,
-    crate::{cml, one_or_many::OneOrMany},
+    crate::{cml, error::Error, include, one_or_many::OneOrMany, util},
     cm_json::{JsonSchema, CMX_SCHEMA},
     cm_types::Name,
     directed_graph::{self, DirectedGraph},
     serde_json::Value,
-    serde_json5,
     std::{
         collections::{HashMap, HashSet},
         fmt,
@@ -45,11 +42,11 @@ pub fn validate<P: AsRef<Path>>(
 
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
 pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Document, Error> {
-    let mut document: cml::Document = read_cml(file)?;
+    let mut document: cml::Document = util::read_cml(file)?;
 
     if let Some(include_path) = includepath {
         for include in include::transitive_includes(&file.into(), include_path)? {
-            let mut include_document = read_cml(&include_path.join(&include))?;
+            let mut include_document = util::read_cml(&include_path.join(&include))?;
             document.merge_from(&mut include_document);
         }
     }
@@ -60,23 +57,6 @@ pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Docu
         *filename = Some(file.to_string_lossy().into_owned());
     }
     res.and(Ok(document))
-}
-
-fn read_cml(file: &Path) -> Result<cml::Document, Error> {
-    let mut buffer = String::new();
-    File::open(&file)
-        .map_err(|e| {
-            Error::parse(format!("Couldn't read include {:?}: {}", file, e), None, Some(file))
-        })?
-        .read_to_string(&mut buffer)
-        .map_err(|e| {
-            Error::parse(format!("Couldn't read include {:?}: {}", file, e), None, Some(file))
-        })?;
-    serde_json5::from_str(&buffer).map_err(|e| {
-        let serde_json5::Error::Message { location, msg } = e;
-        let location = location.map(|l| Location { line: l.line, column: l.column });
-        Error::parse(msg, location, Some(file))
-    })
 }
 
 /// Read in and parse a single manifest file, and return an Error if the given file is not valid.

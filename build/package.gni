@@ -10,9 +10,9 @@ import("//build/packages/package_metadata.gni")
 import("//build/testing/test_spec.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
+import("//tools/cmc/build/cmc.gni")
 import("//tools/cmc/build/cml.gni")
 import("//tools/cmc/build/cmx.gni")
-import("//tools/cmc/build/validate_component_manifest_references.gni")
 
 # Defines a package
 #
@@ -651,7 +651,7 @@ template("package") {
     foreach(meta, pkg.meta) {
       validate_target = pkg_target_name + "_validate_manifests_" +
                         get_path_info(meta.dest, "file")
-      validate_component_manifest_references(validate_target) {
+      cmc_validate_references(validate_target) {
         forward_variables_from(pkg,
                                [
                                  "deps",

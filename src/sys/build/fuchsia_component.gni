@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/dist/resource.gni")
+import("//tools/cmc/build/cmc.gni")
 import("//tools/cmc/build/cml.gni")
 import("//tools/cmc/build/cmx.gni")
-import("//tools/cmc/build/validate_component_manifest_references.gni")
 
 # Defines a Fuchsia component.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
@@ -72,6 +72,12 @@ import("//tools/cmc/build/validate_component_manifest_references.gni")
 #     Type: string
 #     Default: target_name
 #
+#   check_references (optional)
+#     Check component manifest references (e.g. "program.binary") against
+#     package manifest.
+#     Type: boolean
+#     Default: true
+#
 #   deps
 #   testonly
 #   visibility
@@ -99,7 +105,15 @@ template("fuchsia_component") {
   }
 
   manifest_resource_target = "${target_name}_manifest_resource"
-  validate_target = "${target_name}_validate_component_manifest_references"
+
+  check_references = true
+  if (defined(invoker.check_references)) {
+    check_references = invoker.check_references
+  }
+
+  if (check_references) {
+    validate_target = "${target_name}_cmc_validate_references"
+  }
 
   # Process the manifest
   target(manifest_processor, target_name) {
@@ -114,10 +128,11 @@ template("fuchsia_component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [
-      ":$manifest_resource_target",
-      ":$validate_target",
-    ]
+    deps += [ ":$manifest_resource_target" ]
+
+    if (check_references) {
+      deps += [ ":$validate_target" ]
+    }
   }
 
   # Add the manifest
@@ -127,15 +142,17 @@ template("fuchsia_component") {
     visibility = [ ":*" ]
   }
 
-  # Validate the manifest against packaged files
-  validate_component_manifest_references(validate_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
-    component_manifest = invoker.manifest
-    label = get_label_info(":$target_name", "label_with_toolchain")
+  if (check_references) {
+    # Validate the manifest against packaged files
+    cmc_validate_references(validate_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      visibility = [ ":*" ]
+      component_manifest = invoker.manifest
+      label = get_label_info(":$target_name", "label_with_toolchain")
+    }
   }
 }

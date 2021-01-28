@@ -2,7 +2,6 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        // #[allow(invalid_program_binary)]
         binary: "bin/example",
         lifecycle: { stop_event: "notify" },
     },

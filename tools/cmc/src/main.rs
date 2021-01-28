@@ -20,6 +20,7 @@ mod format;
 mod include;
 mod merge;
 mod opts;
+mod reference;
 mod util;
 mod validate;
 
@@ -35,6 +36,9 @@ fn run_cmc() -> Result<(), Error> {
     match opt.cmd {
         opts::Commands::Validate { files, extra_schemas } => {
             validate::validate(&files, &extra_schemas)?
+        }
+        opts::Commands::ValidateReferences { component_manifest, package_manifest, gn_label } => {
+            reference::validate(&component_manifest, &package_manifest, gn_label.as_ref())?
         }
         opts::Commands::Merge { files, output, fromfile } => merge::merge(files, output, fromfile)?,
         opts::Commands::Include { file, output, depfile, includepath } => {
