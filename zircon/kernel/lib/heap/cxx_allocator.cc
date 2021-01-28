@@ -27,6 +27,8 @@ void operator delete[](void* p, std::align_val_t align) { free(p); }
 
 void operator delete(void* p, std::size_t s, std::align_val_t align) { free(p); }
 
+void operator delete[](void* p, std::size_t s, std::align_val_t align) { free(p); }
+
 // These are the mangled names of all the functions above.  Because these
 // functions are magical in the language, the compiler insists on making
 // default-visibility definitions regardless of all the ways to tell it to use
@@ -39,3 +41,4 @@ asm(".hidden _ZdlPvm");
 asm(".hidden _ZdlPvSt11align_val_t");
 asm(".hidden _ZdaPvSt11align_val_t");
 asm(".hidden _ZdlPvmSt11align_val_t");
+asm(".hidden _ZdaPvmSt11align_val_t");
