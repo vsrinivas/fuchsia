@@ -11,10 +11,28 @@ Last but not least, each project makes a great starting point for a team fixit.
 
 ## Choosing a project
 
-Use the left-side navigation pane to select a project from a category.
-Pick a category by topics that you're familiar with or would like to learn more
-about, and then pick a project that you fancy, then pick up a pickaxe and start
-picking at it.
+Pick a project from one of the categories below.
+You could focus on an area that you're familiar with, or choose something that
+you'd like to learn more about.
+
+{% set tocmeta | yamlloads %}
+{% include "docs/contribute/busy_beavers/_toc.yaml" %}
+{% endset %}
+
+{% for item in tocmeta.toc %}
+  {% if item.path and item.title != "Introduction" and item.title != "Project template" %}
+    <li><a href="{{ item.path }}">{{ item.title }}</a></li>
+  {% elif item.section and item.title != "Graduated projects" %}
+      <h3>{{ item.title }}</h3>
+        <ul>
+    {% for sectionItem in item.section %}
+        {% if sectionItem.path %}
+          <li><a href="{{ sectionItem.path }}">{{ sectionItem.title }}</a></li>
+        {% endif %}
+    {% endfor %}
+        </ul>
+  {% endif %}
+{% endfor %}
 
 ## Adding new projects
 
