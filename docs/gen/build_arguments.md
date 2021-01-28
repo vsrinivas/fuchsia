@@ -2727,7 +2727,7 @@ From //src/recovery/system/system_recovery_args.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:15](https://fuchsia.googlesource.com/third_party/boringssl/+/bca4036276214a2ba502a765cbfbd3a3b006535d/BUILD.gn#15)
+From [//third_party/boringssl/BUILD.gn:15](https://fuchsia.googlesource.com/third_party/boringssl/+/0e1398c94ad9791b5de876438af8c377408c1d9b/BUILD.gn#15)
 
 ### rust_cap_lints
 Sets the maximum lint level.
