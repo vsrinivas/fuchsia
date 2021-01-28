@@ -27,96 +27,75 @@
 namespace blobfs {
 namespace pager {
 
-UserPager::UserPager(size_t decompression_buffer_size, BlobfsMetrics* metrics)
-    : decompression_buffer_size_(decompression_buffer_size), metrics_(metrics) {}
+struct ReadRange {
+  uint64_t offset;
+  uint64_t length;
+};
 
-zx::status<std::unique_ptr<UserPager>> UserPager::Create(
-    std::unique_ptr<TransferBuffer> uncompressed_buffer,
-    std::unique_ptr<TransferBuffer> compressed_buffer, size_t decompression_buffer_size,
-    BlobfsMetrics* metrics, bool sandbox_decompression) {
-  ZX_DEBUG_ASSERT(metrics != nullptr && uncompressed_buffer != nullptr &&
-                  uncompressed_buffer->vmo().is_valid() && compressed_buffer != nullptr &&
-                  compressed_buffer->vmo().is_valid());
+// Returns a range which covers [offset, offset+length), adjusted for alignment.
+//
+// The returned range will have the following guarantees:
+//  - The range will contain [offset, offset+length).
+//  - The returned offset will be block-aligned.
+//  - The end of the returned range is *either* block-aligned or is the end of the file.
+//  - The range will be adjusted for verification (see |BlobVerifier::Align|).
+//
+// The range needs to be extended before actually populating the transfer buffer with pages, as
+// absent pages will cause page faults during verification on the userpager thread, causing it to
+// block against itself indefinitely.
+//
+// For example:
+//                  |...input_range...|
+// |..data_block..|..data_block..|..data_block..|
+//                |........output_range.........|
+ReadRange GetBlockAlignedReadRange(const UserPagerInfo& info, uint64_t offset, uint64_t length) {
+  ZX_DEBUG_ASSERT(offset < info.data_length_bytes);
+  // Clamp the range to the size of the blob.
+  length = std::min(length, info.data_length_bytes - offset);
 
-  if (uncompressed_buffer->size() % kBlobfsBlockSize ||
-      compressed_buffer->size() % kBlobfsBlockSize ||
-      decompression_buffer_size % kBlobfsBlockSize) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-  if (compressed_buffer->size() < decompression_buffer_size) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
+  // Align to the block size for verification. (In practice this means alignment to 8k).
+  zx_status_t status = info.verifier->Align(&offset, &length);
+  // This only happens if the info.verifier thinks that [offset,length) is out of range, which
+  // will only happen if |verifier| was initialized with a different length than the rest of |info|
+  // (which is a programming error).
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 
-  TRACE_DURATION("blobfs", "UserPager::Create");
+  ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
+  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info.data_length_bytes);
 
-  auto pager = std::unique_ptr<UserPager>(new UserPager(decompression_buffer_size, metrics));
-  pager->uncompressed_transfer_buffer_ = std::move(uncompressed_buffer);
-  pager->compressed_transfer_buffer_ = std::move(compressed_buffer);
-
-  zx_status_t status =
-      pager->compressed_mapper_.Map(pager->compressed_transfer_buffer_->vmo(), 0,
-                                    pager->compressed_transfer_buffer_->size(), ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to map the compressed TransferBuffer: "
-                   << zx_status_get_string(status);
-    return zx::error(status);
-  }
-
-  status = zx::vmo::create(pager->decompression_buffer_size_, 0, &pager->decompression_buffer_);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create decompression buffer: " << zx_status_get_string(status);
-    return zx::error(status);
-  }
-
-  if (sandbox_decompression) {
-    status = zx::vmo::create(kDecompressionBufferSize, 0, &pager->sandbox_buffer_);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "blobfs: Failed to create sandbox buffer: %s\n"
-                     << zx_status_get_string(status);
-      return zx::error(status);
-    }
-
-    auto client_or = ExternalDecompressorClient::Create(pager->sandbox_buffer_,
-                                                        pager->compressed_transfer_buffer_->vmo());
-    if (!client_or.is_ok()) {
-      return zx::error(client_or.status_value());
-    }
-    pager->decompressor_client_ = std::move(client_or.value());
-  }
-
-  // Create the pager object.
-  status = zx::pager::create(0, &pager->pager_);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot initialize pager";
-    return zx::error(status);
-  }
-
-  // Start the pager thread.
-  thrd_t thread;
-  status = pager->pager_loop_.StartThread("blobfs-pager-thread", &thread);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not start pager thread";
-    return zx::error(status);
-  }
-
-  // Set a scheduling deadline profile for the blobfs-pager-thread. This is purely a performance
-  // optimization, and failure to do so is not fatal. So in the case of an error encountered
-  // in any of the steps within |SetDeadlineProfile|, we log a warning, and successfully return the
-  // UserPager instance.
-  SetDeadlineProfile(thread);
-
-  // Initialize and start the watchdog.
-  pager->watchdog_ = fs_watchdog::CreateWatchdog();
-  zx::status<> watchdog_status = pager->watchdog_->Start();
-  if (!watchdog_status.is_ok()) {
-    FX_LOGS(ERROR) << "Could not start pager watchdog";
-    return zx::error(watchdog_status.status_value());
-  }
-
-  return zx::ok(std::move(pager));
+  return {.offset = offset, .length = length};
 }
 
-void UserPager::SetDeadlineProfile(thrd_t thread) {
+// Returns a range at least as big as GetBlockAlignedReadRange(), extended by an implementation
+// defined read-ahead algorithm.
+//
+// The same alignment guarantees for GetBlockAlignedReadRange() apply.
+ReadRange GetBlockAlignedExtendedRange(const UserPagerInfo& info, uint64_t offset,
+                                       uint64_t length) {
+  // TODO(rashaeqbal): Consider making the cluster size dynamic once we have prefetch read
+  // efficiency metrics from the kernel - i.e. what percentage of prefetched pages are actually
+  // used. Note that dynamic prefetch sizing might not play well with compression, since we
+  // always need to read in entire compressed frames.
+  //
+  // TODO(rashaeqbal): Consider extending the range backwards as well. Will need some way to track
+  // populated ranges.
+  //
+  // Read in at least 32KB at a time. This gives us the best performance numbers w.r.t. memory
+  // savings and observed latencies. Detailed results from experiments to tune this can be found in
+  // fxbug.dev/48519.
+  constexpr uint64_t kReadAheadClusterSize = (32 * (1 << 10));
+
+  size_t read_ahead_offset = offset;
+  size_t read_ahead_length = std::max(kReadAheadClusterSize, length);
+  read_ahead_length = std::min(read_ahead_length, info.data_length_bytes - read_ahead_offset);
+
+  // Align to the block size for verification. (In practice this means alignment to 8k).
+  return GetBlockAlignedReadRange(info, read_ahead_offset, read_ahead_length);
+}
+
+// Helper function to apply a scheduling deadline profile to the pager |thread|. Called from
+// |UserPager::Create| after starting the pager thread.
+void SetDeadlineProfile(thrd_t thread) {
   zx::channel channel0, channel1;
   zx_status_t status = zx::channel::create(0u, &channel0, &channel1);
   if (status != ZX_OK) {
@@ -164,51 +143,70 @@ void UserPager::SetDeadlineProfile(thrd_t thread) {
   }
 }
 
-UserPager::ReadRange UserPager::GetBlockAlignedReadRange(const UserPagerInfo& info, uint64_t offset,
-                                                         uint64_t length) const {
-  ZX_DEBUG_ASSERT(offset < info.data_length_bytes);
-  // Clamp the range to the size of the blob.
-  length = std::min(length, info.data_length_bytes - offset);
+UserPager::Worker::Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics)
+    : decompression_buffer_size_(decompression_buffer_size), metrics_(metrics) {}
 
-  // Align to the block size for verification. (In practice this means alignment to 8k).
-  zx_status_t status = info.verifier->Align(&offset, &length);
-  // This only happens if the info.verifier thinks that [offset,length) is out of range, which
-  // will only happen if |verifier| was initialized with a different length than the rest of |info|
-  // (which is a programming error).
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+zx::status<std::unique_ptr<UserPager::Worker>> UserPager::Worker::Create(
+    std::unique_ptr<TransferBuffer> uncompressed_buffer,
+    std::unique_ptr<TransferBuffer> compressed_buffer, size_t decompression_buffer_size,
+    BlobfsMetrics* metrics, bool sandbox_decompression) {
+  ZX_DEBUG_ASSERT(metrics != nullptr && uncompressed_buffer != nullptr &&
+                  uncompressed_buffer->vmo().is_valid() && compressed_buffer != nullptr &&
+                  compressed_buffer->vmo().is_valid());
 
-  ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
-  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info.data_length_bytes);
+  if (uncompressed_buffer->size() % kBlobfsBlockSize ||
+      compressed_buffer->size() % kBlobfsBlockSize ||
+      decompression_buffer_size % kBlobfsBlockSize) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (compressed_buffer->size() < decompression_buffer_size) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
 
-  return {.offset = offset, .length = length};
+  TRACE_DURATION("blobfs", "UserPager::Worker::Create");
+
+  auto worker =
+      std::unique_ptr<UserPager::Worker>(new UserPager::Worker(decompression_buffer_size, metrics));
+  worker->uncompressed_transfer_buffer_ = std::move(uncompressed_buffer);
+  worker->compressed_transfer_buffer_ = std::move(compressed_buffer);
+
+  zx_status_t status =
+      worker->compressed_mapper_.Map(worker->compressed_transfer_buffer_->vmo(), 0,
+                                     worker->compressed_transfer_buffer_->size(), ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to map the compressed TransferBuffer: "
+                   << zx_status_get_string(status);
+    return zx::error(status);
+  }
+
+  status = zx::vmo::create(worker->decompression_buffer_size_, 0, &worker->decompression_buffer_);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create decompression buffer: " << zx_status_get_string(status);
+    return zx::error(status);
+  }
+
+  if (sandbox_decompression) {
+    status = zx::vmo::create(kDecompressionBufferSize, 0, &worker->sandbox_buffer_);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to create sandbox buffer: %s\n" << zx_status_get_string(status);
+      return zx::error(status);
+    }
+
+    auto client_or = ExternalDecompressorClient::Create(worker->sandbox_buffer_,
+                                                        worker->compressed_transfer_buffer_->vmo());
+    if (!client_or.is_ok()) {
+      return zx::error(client_or.status_value());
+    }
+    worker->decompressor_client_ = std::move(client_or.value());
+  }
+
+  return zx::ok(std::move(worker));
 }
 
-UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(const UserPagerInfo& info,
-                                                             uint64_t offset,
-                                                             uint64_t length) const {
-  // TODO(rashaeqbal): Consider making the cluster size dynamic once we have prefetch read
-  // efficiency metrics from the kernel - i.e. what percentage of prefetched pages are actually
-  // used. Note that dynamic prefetch sizing might not play well with compression, since we
-  // always need to read in entire compressed frames.
-  //
-  // TODO(rashaeqbal): Consider extending the range backwards as well. Will need some way to track
-  // populated ranges.
-  //
-  // Read in at least 32KB at a time. This gives us the best performance numbers w.r.t. memory
-  // savings and observed latencies. Detailed results from experiments to tune this can be found in
-  // fxbug.dev/48519.
-  constexpr uint64_t kReadAheadClusterSize = (32 * (1 << 10));
-
-  size_t read_ahead_offset = offset;
-  size_t read_ahead_length = std::max(kReadAheadClusterSize, length);
-  read_ahead_length = std::min(read_ahead_length, info.data_length_bytes - read_ahead_offset);
-
-  // Align to the block size for verification. (In practice this means alignment to 8k).
-  return GetBlockAlignedReadRange(info, read_ahead_offset, read_ahead_length);
-}
-
-PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                               const UserPagerInfo& info) {
+PagerErrorStatus UserPager::Worker::TransferPagesToVmo(uint64_t offset, uint64_t length,
+                                                       const zx::vmo& vmo,
+                                                       const UserPagerInfo& info,
+                                                       const zx::pager& pager) {
   size_t end;
   if (add_overflow(offset, length, &end)) {
     FX_LOGS(ERROR) << "pager transfer range would overflow (off=" << offset << ", len=" << length
@@ -216,14 +214,10 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
     return PagerErrorStatus::kErrBadState;
   }
 
-  static const fs_watchdog::FsOperationType kOperation(
-      fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
-  [[maybe_unused]] fs_watchdog::FsOperationTracker tracker(&kOperation, watchdog_.get());
-
   if (info.decompressor != nullptr) {
-    return TransferChunkedPagesToVmo(offset, length, vmo, info);
+    return TransferChunkedPagesToVmo(offset, length, vmo, info, pager);
   } else {
-    return TransferUncompressedPagesToVmo(offset, length, vmo, info);
+    return TransferUncompressedPagesToVmo(offset, length, vmo, info, pager);
   }
 }
 
@@ -236,10 +230,11 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
 // The assumption here is that the transfer buffer is sized per the alignment requirements for
 // Merkle tree verification. We have static asserts in place to check this assumption - the transfer
 // buffer (256MB) is 8k block aligned.
-PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
-                                                           uint64_t requested_length,
-                                                           const zx::vmo& vmo,
-                                                           const UserPagerInfo& info) {
+PagerErrorStatus UserPager::Worker::TransferUncompressedPagesToVmo(uint64_t requested_offset,
+                                                                   uint64_t requested_length,
+                                                                   const zx::vmo& vmo,
+                                                                   const UserPagerInfo& info,
+                                                                   const zx::pager& pager) {
   ZX_DEBUG_ASSERT(!info.decompressor);
 
   const auto [start_offset, total_length] =
@@ -318,7 +313,7 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
     ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
     // Move the pages from the transfer buffer to the destination VMO.
     zx_status_t status =
-        pager_.supply_pages(vmo, offset, rounded_length, uncompressed_transfer_buffer_->vmo(), 0);
+        pager.supply_pages(vmo, offset, rounded_length, uncompressed_transfer_buffer_->vmo(), 0);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "TransferUncompressed: Failed to supply pages to paged VMO: "
                      << zx_status_get_string(status);
@@ -352,9 +347,11 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
 // transfer buffer should work with the worst case compression ratio of 1. We have static asserts in
 // place to check both these assumptions - the transfer buffer is the same size as the decompression
 // buffer (256MB), and both these buffers are 8k block aligned.
-PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
-                                                      uint64_t requested_length, const zx::vmo& vmo,
-                                                      const UserPagerInfo& info) {
+PagerErrorStatus UserPager::Worker::TransferChunkedPagesToVmo(uint64_t requested_offset,
+                                                              uint64_t requested_length,
+                                                              const zx::vmo& vmo,
+                                                              const UserPagerInfo& info,
+                                                              const zx::pager& pager) {
   ZX_DEBUG_ASSERT(info.decompressor);
 
   const auto [offset, length] = GetBlockAlignedReadRange(info, requested_offset, requested_length);
@@ -477,8 +474,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
     decompressed_mapper.Unmap();
 
     // Move the pages from the decompression buffer to the destination VMO.
-    status = pager_.supply_pages(vmo, mapping.decompressed_offset, rounded_length,
-                                 decompression_buffer_, 0);
+    status = pager.supply_pages(vmo, mapping.decompressed_offset, rounded_length,
+                                decompression_buffer_, 0);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "TransferChunked: Failed to supply pages to paged VMO: "
                      << zx_status_get_string(status);
@@ -491,6 +488,63 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   }
 
   return PagerErrorStatus::kOK;
+}
+
+UserPager::UserPager(std::unique_ptr<Worker> worker) : worker_(std::move(worker)) {}
+
+zx::status<std::unique_ptr<UserPager>> UserPager::Create(
+    std::unique_ptr<TransferBuffer> uncompressed_buffer,
+    std::unique_ptr<TransferBuffer> compressed_buffer, size_t decompression_buffer_size,
+    BlobfsMetrics* metrics, bool sandbox_decompression) {
+  auto worker_or =
+      UserPager::Worker::Create(std::move(uncompressed_buffer), std::move(compressed_buffer),
+                                decompression_buffer_size, metrics, sandbox_decompression);
+  if (worker_or.is_error()) {
+    return worker_or.take_error();
+  }
+  auto pager = std::unique_ptr<UserPager>(new UserPager(std::move(worker_or.value())));
+
+  // Create the pager object.
+  zx_status_t status = zx::pager::create(0, &pager->pager_);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot initialize pager";
+    return zx::error(status);
+  }
+
+  // Start the worker thread.
+  thrd_t thread;
+  status = pager->pager_loop_.StartThread("blobfs-pager-thread", &thread);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not start pager thread";
+    return zx::error(status);
+  }
+
+  // Set a scheduling deadline profile for the blobfs-pager-thread. This is purely a performance
+  // optimization, and failure to do so is not fatal. So in the case of an error encountered
+  // in any of the steps within |SetDeadlineProfile|, we log a warning, and successfully return the
+  // UserPager instance.
+  SetDeadlineProfile(thread);
+
+  // Initialize and start the watchdog.
+  pager->watchdog_ = fs_watchdog::CreateWatchdog();
+  zx::status<> watchdog_status = pager->watchdog_->Start();
+  if (!watchdog_status.is_ok()) {
+    FX_LOGS(ERROR) << "Could not start pager watchdog";
+    return zx::error(watchdog_status.status_value());
+  }
+
+  return zx::ok(std::move(pager));
+}
+
+PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                               const UserPagerInfo& info) {
+  static const fs_watchdog::FsOperationType kOperation(
+      fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
+  [[maybe_unused]] fs_watchdog::FsOperationTracker tracker(&kOperation, watchdog_.get());
+
+  // TODO(fxbug.dev/67659): This will eventually contain logic for selecting which worker will
+  // handle this request.
+  return worker_->TransferPagesToVmo(offset, length, vmo, info, pager_);
 }
 
 }  // namespace pager
