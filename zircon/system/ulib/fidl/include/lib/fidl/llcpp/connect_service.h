@@ -65,6 +65,29 @@ zx::status<Endpoints<Protocol>> CreateEndpoints() {
   });
 }
 
+// Creates a pair of Zircon channel endpoints speaking the |Protocol| protocol.
+// Whenever interacting with LLCPP, using this method should be encouraged over
+// |zx::channel::create|, because this method encodes the precise protocol type
+// into its results at compile time.
+//
+// This overload of |CreateEndpoints| may lead to more concise code when the
+// caller already has the client endpoint defined as an instance variable.
+// It will replace the destination of |out_client| with a newly created client
+// endpoint, and return the corresponding server endpoint in a |zx::status|:
+//
+//     // |client_end_| is an instance variable.
+//     auto server_end = fidl::CreateEndpoints(&client_end_);
+//     if (server_end.is_ok()) { ... }
+template <typename Protocol>
+zx::status<fidl::ServerEnd<Protocol>> CreateEndpoints(fidl::ClientEnd<Protocol>* out_client) {
+  auto endpoints = fidl::CreateEndpoints<Protocol>();
+  if (!endpoints.is_ok()) {
+    return endpoints.take_error();
+  }
+  *out_client = fidl::ClientEnd<Protocol>(std::move(endpoints->client));
+  return zx::ok(fidl::ServerEnd<Protocol>(std::move(endpoints->server)));
+}
+
 namespace internal {
 
 // The method signature required to implement the method that issues the Directory::Open

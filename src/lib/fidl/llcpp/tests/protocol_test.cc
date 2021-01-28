@@ -429,3 +429,15 @@ TEST(Endpoints, CreateFromProtocol) {
     ASSERT_TRUE(server_end.is_valid());
   }
 }
+
+// Test creating a typed channel endpoint pair using the out-parameter
+// overload.
+TEST(Endpoints, CreateFromProtocolOutParameterStyle) {
+  fidl::ClientEnd<test::Empty> client_end;
+  auto server_end = fidl::CreateEndpoints(&client_end);
+  ASSERT_TRUE(server_end.is_ok());
+  ASSERT_EQ(ZX_OK, server_end.status_value()) << server_end.status_string();
+
+  ASSERT_TRUE(client_end.is_valid());
+  ASSERT_TRUE(server_end->is_valid());
+}
