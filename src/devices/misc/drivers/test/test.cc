@@ -13,7 +13,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
@@ -21,6 +20,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/string_piece.h>
+
+#include "src/devices/misc/drivers/test/test_bind.h"
 
 namespace {
 
@@ -223,11 +224,4 @@ const zx_driver_ops_t kTestDriverOps = []() {
 
 }  // namespace
 
-ZIRCON_DRIVER_BEGIN(test, kTestDriverOps, "zircon", "0.1", 4)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-
-    // This bind functionality is used for the libdriver integration tests to
-    // let us hook into composite devices after they are instantiated.
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_LIBDRIVER_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE), ZIRCON_DRIVER_END(test)
+ZIRCON_DRIVER(test, kTestDriverOps, "zircon", "0.1");
