@@ -34,6 +34,8 @@ rustc_library("async-utils") {
     "src/lib.rs",
     "src/mutex_ticket.rs",
     "src/stream.rs",
+    "src/stream/future_map.rs",
+    "src/stream/stream_map.rs",
     "src/traits.rs",
   ]
 }
