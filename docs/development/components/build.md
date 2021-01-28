@@ -1515,29 +1515,28 @@ v1 components in the legacy sys shell.
 import("//build/package.gni")
 
 executable("bin") {
-  output_name = "fibonacci"
-  sources = [ "fibonacci.c" ]
+  output_name = "echo"
+  sources = [ "echo.cc" ]
 }
 
-package("fibonacci") {
+package("echo") {
   deps = [ ":bin" ]
   binaries = [
     {
-      name = "fibonacci"
+      name = "echo"
     },
   ]
   meta = [
     {
-      path = "meta/fibonacci.cmx"
-      dest = "fibonacci.cmx"
+      path = "meta/echo.cmx"
+      dest = "echo.cmx"
     },
   ]
 }
 ```
 
-```posix-shell
-fx run fibonacci 5
-The 5th Fibonacci number is 3.
+```posix-terminal
+fx run echo Hello World
 ```
 
 This is also known as the [Component Index][component-index].
@@ -1545,9 +1544,8 @@ This is also known as the [Component Index][component-index].
 The new templates don't support this feature out of the box, but you can use the
 full launch URL.
 
-```posix-shell
-fx run fuchsia-pkg://fuchsia.com/fibonacci#meta/fibonacci.cmx 5
-The 5th Fibonacci number is 3.
+```posix-terminal
+fx run fuchsia-pkg://fuchsia.com/echo#meta/echo.cmx Hello World
 ```
 
 The plan is to deprecate the legacy shell and the legacy component index along
@@ -1559,21 +1557,21 @@ import("//src/sys/build/components.gni")
 import("//src/sys/component_index/component_index.gni")
 
 executable("bin") {
-  output_name = "fibonacci"
-  sources = [ "fibonacci.c" ]
+  output_name = "echo"
+  sources = [ "echo.cc" ]
 }
 
 add_to_component_index("component_index") {
-  package_name = "fibonacci"
-  manifest = "meta/fibonacci.cmx"
+  package_name = "echo"
+  manifest = "meta/echo.cmx"
 }
 
-fuchsia_package_with_single_component("fibonacci") {
+fuchsia_package_with_single_component("echo") {
   deps = [
     ":bin",
     ":component_index",
   ]
-  manifest = "meta/fibonacci.cmx"
+  manifest = "meta/echo.cmx"
 }
 ```
 
