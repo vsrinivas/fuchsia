@@ -55,7 +55,7 @@ class DisplaySwapchainMockTest : public gtest::TestLoopFixture {
   std::unique_ptr<DisplaySwapchain> CreateSwapchain(display::Display* display) {
     auto swapchain = std::make_unique<DisplaySwapchain>(
         sysmem_.get(), display_manager_->default_display_controller(),
-        display_manager_->default_display_controller_listener(), display, /*escher*/ nullptr);
+        display_manager_->default_display_controller_listener(), 2, display, /*escher*/ nullptr);
     display_manager_->default_display_controller_listener()->SetOnVsyncCallback(
         fit::bind_member(swapchain.get(), &DisplaySwapchain::OnVsync));
     return swapchain;

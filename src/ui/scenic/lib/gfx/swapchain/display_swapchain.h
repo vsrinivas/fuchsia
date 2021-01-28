@@ -41,7 +41,7 @@ class DisplaySwapchain : public Swapchain {
       Sysmem* sysmem,
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
       std::shared_ptr<display::DisplayControllerListener> display_controller_listener,
-      display::Display* display, escher::Escher* escher);
+      uint64_t swapchain_image_count, display::Display* display, escher::Escher* escher);
   ~DisplaySwapchain() override;
 
   // Callback to call on every vsync. Arguments are:
@@ -147,6 +147,8 @@ class DisplaySwapchain : public Swapchain {
   escher::Escher* const escher_ = nullptr;
 
   Sysmem* sysmem_;
+
+  const uint64_t swapchain_image_count_;
 
   display::Display* const display_;
   uint64_t primary_layer_id_ = fuchsia::hardware::display::INVALID_DISP_ID;

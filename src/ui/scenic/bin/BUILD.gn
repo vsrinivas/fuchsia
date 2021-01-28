@@ -35,6 +35,7 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
+    "//zircon/third_party/rapidjson",
   ]
   defines = []
 

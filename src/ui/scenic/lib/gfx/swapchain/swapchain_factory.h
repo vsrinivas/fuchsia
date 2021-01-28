@@ -22,8 +22,8 @@ class SwapchainFactory {
   // Create a swapchain for the specified display.  The display must not
   // already be claimed by another swapchain.
   static std::unique_ptr<DisplaySwapchain> CreateDisplaySwapchain(
-      display::Display* display, Sysmem* sysmem, display::DisplayManager* display_manager,
-      escher::Escher* escher);
+      uint64_t swapchain_image_count, display::Display* display, Sysmem* sysmem,
+      display::DisplayManager* display_manager, escher::Escher* escher);
 
  private:
   SwapchainFactory() = delete;

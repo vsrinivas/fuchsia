@@ -24,16 +24,14 @@
 namespace scenic_impl {
 namespace gfx {
 
-// TODO (fxbug.dev/64056): Make this configurable.
-static const uint32_t kSwapchainImageCount = 2;
-
 DisplaySwapchain::DisplaySwapchain(
     Sysmem* sysmem,
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
     std::shared_ptr<display::DisplayControllerListener> display_controller_listener,
-    display::Display* display, escher::Escher* escher)
+    uint64_t swapchain_image_count, display::Display* display, escher::Escher* escher)
     : escher_(escher),
       sysmem_(sysmem),
+      swapchain_image_count_(swapchain_image_count),
       display_(display),
       display_controller_(display_controller),
       display_controller_listener_(display_controller_listener),
@@ -47,7 +45,7 @@ DisplaySwapchain::DisplaySwapchain(
     device_ = escher_->vk_device();
     queue_ = escher_->device()->vk_main_queue();
     display_->Claim();
-    frame_records_.resize(kSwapchainImageCount);
+    frame_records_.resize(swapchain_image_count_);
 
     if (!InitializeDisplayLayer()) {
       FX_LOGS(FATAL) << "Initializing display layer failed";
@@ -86,7 +84,7 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
       .recycler = resource_recycler,
       .vk_device = device_,
   };
-  BufferPool pool(kSwapchainImageCount, &environment, use_protected_memory);
+  BufferPool pool(swapchain_image_count_, &environment, use_protected_memory);
   if ((*display_controller_)->SetLayerPrimaryConfig(primary_layer_id_, pool.image_config()) !=
       ZX_OK) {
     FX_LOGS(ERROR) << "Failed to set layer primary config";
@@ -276,7 +274,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   FX_CHECK(frame_record->buffer != nullptr);
 
   // Bump the ring head.
-  next_frame_index_ = (next_frame_index_ + 1) % kSwapchainImageCount;
+  next_frame_index_ = (next_frame_index_ + 1) % swapchain_image_count_;
 
   // Running total.
   outstanding_frame_count_++;
@@ -396,7 +394,7 @@ bool DisplaySwapchain::InitializeDisplayLayer() {
 }
 
 void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finished_time) {
-  FX_DCHECK(frame_index < kSwapchainImageCount);
+  FX_DCHECK(frame_index < swapchain_image_count_);
   auto& record = frame_records_[frame_index];
 
   uint64_t frame_number = record->frame_timings ? record->frame_timings->frame_number() : 0u;
@@ -462,7 +460,7 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
     // FrameRecord. It will eventually be replaced by DrawAndPresentFrame(),
     // when a new frame is rendered into this index.
     if (!match) {
-      presented_frame_idx_ = (presented_frame_idx_ + 1) % kSwapchainImageCount;
+      presented_frame_idx_ = (presented_frame_idx_ + 1) % swapchain_image_count_;
       outstanding_frame_count_--;
     }
   }

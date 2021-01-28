@@ -261,6 +261,7 @@ source_set("gfx") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
+    "//zircon/third_party/rapidjson",
   ]
 }
 

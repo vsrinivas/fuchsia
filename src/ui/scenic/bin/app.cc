@@ -17,6 +17,7 @@
 #include "src/ui/scenic/lib/input/input_system.h"
 #endif
 
+#include "rapidjson/document.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/files/file.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
@@ -40,12 +41,19 @@ static const std::string kDependencyDir = "/dev/class/gpu";
 zx::duration GetMinimumPredictedFrameDuration() {
   std::string frame_scheduler_min_predicted_frame_duration;
   int frame_scheduler_min_predicted_frame_duration_in_us = 0;
-  if (files::ReadFileToString("/config/data/frame_scheduler_min_predicted_frame_duration_in_us",
+  if (files::ReadFileToString("/config/data/scenic_config",
                               &frame_scheduler_min_predicted_frame_duration)) {
-    frame_scheduler_min_predicted_frame_duration_in_us =
-        atoi(frame_scheduler_min_predicted_frame_duration.c_str());
-    FX_DCHECK(frame_scheduler_min_predicted_frame_duration_in_us >= 0);
-    FX_LOGS(INFO) << "min_predicted_frame_duration(us): "
+    rapidjson::Document document;
+    document.Parse(frame_scheduler_min_predicted_frame_duration);
+
+    if (document.HasMember("frame_scheduler_min_predicted_frame_duration_in_us")) {
+      auto& val = document["frame_scheduler_min_predicted_frame_duration_in_us"];
+      FX_CHECK(val.IsInt()) << "min_preducted_frame_duration must be an integer";
+      frame_scheduler_min_predicted_frame_duration_in_us = val.GetInt();
+      FX_CHECK(frame_scheduler_min_predicted_frame_duration_in_us >= 0);
+    }
+
+    FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
                   << frame_scheduler_min_predicted_frame_duration_in_us;
   }
   return frame_scheduler_min_predicted_frame_duration_in_us > 0

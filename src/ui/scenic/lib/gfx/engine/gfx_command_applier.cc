@@ -13,6 +13,8 @@
 
 #include <cmath>
 
+#include "rapidjson/document.h"
+#include "src/lib/files/file.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/shape/mesh.h"
@@ -66,6 +68,9 @@ constexpr std::array<fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
 
 namespace scenic_impl {
 namespace gfx {
+
+// This is the default swapchain length. It can be changed below by reading from a config file.
+constexpr int64_t kDefaultSwapchainImageCount = 3;
 
 bool GfxCommandApplier::AssertValueIsOfType(const fuchsia::ui::gfx::Value& value,
                                             const fuchsia::ui::gfx::Value::Tag* tags,
@@ -1535,9 +1540,26 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
     return nullptr;
   }
 
-  auto swapchain = SwapchainFactory::CreateDisplaySwapchain(display, command_context->sysmem,
-                                                            command_context->display_manager,
-                                                            session->session_context().escher);
+  // Get swapchain image count from config file. The default is 3.
+  std::string swapchain_image_count_str;
+  int64_t swapchain_image_count = kDefaultSwapchainImageCount;
+  if (files::ReadFileToString("/config/data/scenic_config", &swapchain_image_count_str)) {
+    rapidjson::Document document;
+    document.Parse(swapchain_image_count_str);
+
+    if (document.HasMember("swapchain_image_count")) {
+      auto& val = document["swapchain_image_count"];
+      FX_CHECK(val.IsInt()) << "swapchain_image_count must be an integer";
+      swapchain_image_count = val.GetInt();
+      FX_CHECK(swapchain_image_count > 0);
+    }
+
+    FX_LOGS(INFO) << "Scenic swapchain_image_count: " << swapchain_image_count;
+  }
+
+  auto swapchain = SwapchainFactory::CreateDisplaySwapchain(
+      swapchain_image_count, display, command_context->sysmem, command_context->display_manager,
+      session->session_context().escher);
 
   // Warm pipeline cache for swapchain format. This is cheap when called
   // a second time for the same format.

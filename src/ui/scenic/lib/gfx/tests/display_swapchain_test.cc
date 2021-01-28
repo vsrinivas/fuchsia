@@ -45,7 +45,7 @@ class DisplaySwapchainTest : public Fixture {
   std::unique_ptr<DisplaySwapchain> CreateSwapchain(display::Display* display) {
     return std::make_unique<DisplaySwapchain>(
         sysmem(), display_manager()->default_display_controller(),
-        display_manager()->default_display_controller_listener(), display, escher());
+        display_manager()->default_display_controller_listener(), 2, display, escher());
   }
 
   // |testing::Test|
