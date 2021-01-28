@@ -72,6 +72,7 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
   void CreateDeviceStub(zx::channel coordinator_client, zx::channel device_controller_rpc,
                         uint32_t protocol_id, uint64_t local_device_id,
                         CreateDeviceStubCompleter::Sync& completer) override;
+  void Restart(RestartCompleter::Sync& completer) override;
 
   DriverHostContext* const driver_host_context_;
   fbl::RefPtr<zx_driver> proxy_driver_;

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -92,6 +93,7 @@ bind_rules("test-devhost-parent-bind") {
 driver_module("driver-host-test-driver") {
   sources = [ "test-driver.cc" ]
   deps = [
+    ":fuchsia.device.restarttest_llcpp",
     ":test-devhost-parent-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
@@ -117,6 +119,29 @@ driver_module("driver-host-test-child-driver") {
   ]
 }
 
+fidl("fuchsia.device.restarttest") {
+  sources = [ "driver.host.restart.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+bind_rules("driver-host-restart-bind") {
+  rules = "driver-host-restart.bind"
+  output = "driver-host-restart-bind.h"
+  deps = [ "//src/devices/bind/test.platform" ]
+}
+
+driver_module("driver-host-restart-driver") {
+  sources = [ "host-restart-test-driver.cc" ]
+  deps = [
+    ":driver-host-restart-bind",
+    ":fuchsia.device.restarttest_llcpp",
+    "//sdk/lib/fdio",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
 test("driver_host_test") {
   sources = [
     "core_test.cc",
@@ -124,12 +149,14 @@ test("driver_host_test") {
     "device_controller_connection_test.cc",
     "device_controller_integration_test.cc",
     "driver_host_test.cc",
+    "hot_reload_integration_test.cc",
     "inspect_test.cc",
     "proxy_iostate_test.cc",
   ]
 
   deps = [
     ":common",
+    ":fuchsia.device.restarttest_llcpp",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//zircon/public/lib/zxtest",
@@ -177,6 +204,7 @@ isolated_devmgr_unittest_package("driver-host-tests") {
   executable_path = "test/driver_host_test"
 
   deps = [
+    ":driver-host-restart-driver",
     ":driver-host-test-child-driver",
     ":driver-host-test-driver",
     ":driver_host_test",

@@ -618,6 +618,11 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_clien
   }
 }
 
+// TODO(fxbug.dev/68309): Implement Restart.
+void DevhostControllerConnection::Restart(RestartCompleter::Sync& completer) {
+  completer.Reply(ZX_OK);
+}
+
 zx_status_t DevhostControllerConnection::HandleRead() {
   zx::unowned_channel conn = channel();
   uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];

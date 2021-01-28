@@ -201,6 +201,11 @@ protocol DevhostController {
                           vector<Fragment>:FRAGMENTS_MAX fragments,
                           string:DEVICE_NAME_MAX name, LocalDeviceId local_device_id)
         -> (zx.status status);
+
+    // TODO(fxbug.dev/68309): Currently unimplemented.
+    /// Request to restart the driver host. Also restarts all children devices and drivers and
+    /// rebinds them once the Driver Host has restarted.
+    Restart() -> (zx.status status);
 };
 
 /// Interface for the devices in devhosts to coordinate with the devcoordinator.

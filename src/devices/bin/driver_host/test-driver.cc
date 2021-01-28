@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/restarttest/llcpp/fidl.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -15,9 +21,13 @@
 #include "src/devices/bin/driver_host/test-devhost-parent-bind.h"
 #include "src/devices/bin/driver_host/test-metadata.h"
 
+using llcpp::fuchsia::device::restarttest::TestDevice;
+
 class TestDevhostDriver;
 using DeviceType = ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable>;
-class TestDevhostDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST> {
+class TestDevhostDriver : public DeviceType,
+                          public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
+                          public TestDevice::Interface {
  public:
   TestDevhostDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
@@ -28,7 +38,23 @@ class TestDevhostDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOC
  private:
   struct devhost_test_metadata metadata_;
   size_t metadata_size_;
+
+  void GetPid(GetPidCompleter::Sync& _completer) override;
 };
+
+void TestDevhostDriver::GetPid(GetPidCompleter::Sync& _completer) {
+  pid_t pid;
+  auto self = zx_process_self();
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx_object_get_info(self, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    pid = ZX_KOID_INVALID;
+  } else {
+    pid = info.koid;
+  }
+  _completer.ReplySuccess(pid);
+}
 
 zx_status_t TestDevhostDriver::Bind() {
   size_t size;
