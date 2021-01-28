@@ -42,18 +42,6 @@ group("tools") {
   public_deps = [ "//src/camera/bin/benchmark" ]
 }
 
-group("factory-tools") {
-  deps = [
-    "//src/camera/bin/factory:camera-factory",
-    "//src/camera/bin/factory_cli:camera-factory-cli",
-  ]
-}
-
-config_data("camera_factory_config") {
-  for_pkg = "sysmgr"
-  sources = [ "//src/camera/bin/factory/camera-factory.config" ]
-}
-
 group("tests") {
   testonly = true
 
