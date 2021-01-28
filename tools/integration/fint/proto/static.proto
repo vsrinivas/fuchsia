@@ -92,4 +92,7 @@ message Static {
 
   // Whether to generate an IDE project.json file containing target information.
   bool generate_ide = 19;
+
+  // Host-only targets to build.
+  repeated string host_labels = 20;
 }

@@ -335,11 +335,13 @@ func TestGenArgs(t *testing.T) {
 				BasePackages:     []string{"//b"},
 				CachePackages:    []string{"//c"},
 				UniversePackages: []string{"//u1", "//u2"},
+				HostLabels:       []string{"//src:host-tests"},
 			},
 			expectedArgs: []string{
 				`base_package_labels=["//b"]`,
 				`cache_package_labels=["//c"]`,
 				`universe_package_labels=["//u1","//u2"]`,
+				`host_labels=["//src:host-tests"]`,
 			},
 		},
 		{
@@ -349,11 +351,13 @@ func TestGenArgs(t *testing.T) {
 				BasePackages:     []string{"//b"},
 				CachePackages:    []string{"//c"},
 				UniversePackages: []string{"//u1", "//u2"},
+				HostLabels:       []string{"//src:host-tests"},
 			},
 			expectedArgs: []string{
 				`base_package_labels+=["//b"]`,
 				`cache_package_labels+=["//c"]`,
 				`universe_package_labels+=["//u1","//u2"]`,
+				`host_labels+=["//src:host-tests"]`,
 			},
 		},
 		{

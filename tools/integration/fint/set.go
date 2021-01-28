@@ -200,23 +200,22 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 		vars["test_durations_file"] = testDurationsFile
 	}
 
-	for varName, packages := range map[string][]string{
+	for varName, values := range map[string][]string{
 		"base_package_labels":     staticSpec.BasePackages,
 		"cache_package_labels":    staticSpec.CachePackages,
 		"universe_package_labels": staticSpec.UniversePackages,
+		"host_labels":             staticSpec.HostLabels,
 	} {
-		if len(packages) == 0 {
+		if len(values) == 0 {
 			continue
 		}
 		// If product is set, append to the corresponding list variable instead
 		// of overwriting it to avoid overwriting any packages set in the
 		// imported product file.
-		// TODO(olivernewman): Is it safe to always append whether or not
-		// product is set?
 		if staticSpec.Product == "" {
-			vars[varName] = packages
+			vars[varName] = values
 		} else {
-			appends[varName] = packages
+			appends[varName] = values
 		}
 	}
 
