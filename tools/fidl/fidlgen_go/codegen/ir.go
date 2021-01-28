@@ -748,6 +748,9 @@ func (c *compiler) compileBitsMember(val fidl.BitsMember) BitsMember {
 }
 
 func (c *compiler) compileBits(val fidl.Bits) Bits {
+	// all bits must implement fidl.Bits
+	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+
 	t, _ := c.compileType(val.Type)
 	r := Bits{
 		Bits: val,
@@ -781,6 +784,9 @@ func (c *compiler) compileEnumMember(val fidl.EnumMember) EnumMember {
 }
 
 func (c *compiler) compileEnum(val fidl.Enum) Enum {
+	// all enums must implement fidl.Enum
+	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+
 	r := Enum{
 		Enum: val,
 		Name: c.compileCompoundIdentifier(val.Name, true, ""),
@@ -817,6 +823,9 @@ func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val fidl.Struct) Struct {
+	// required for fidl.CreateLazymarshaler which is called on all structs
+	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+
 	tags := Tags{
 		FidlTag:            "s",
 		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
@@ -837,6 +846,10 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 }
 
 func (c *compiler) compileUnion(val fidl.Union) Union {
+	if val.IsFlexible() {
+		// fidl.UnknownData is needed only for flexible unions
+		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+	}
 	var members []UnionMember
 	for _, member := range val.Members {
 		if member.Reserved {
@@ -886,6 +899,8 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 }
 
 func (c *compiler) compileTable(val fidl.Table) Table {
+	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+
 	var members []TableMember
 	for _, member := range val.SortedMembersNoReserved() {
 		ty, rbtag := c.compileType(member.Type)
@@ -964,6 +979,8 @@ func (c *compiler) compileMethod(protocolName fidl.EncodedCompoundIdentifier, va
 }
 
 func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
+	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+
 	var proxyType string
 	switch val.Attributes.GetAttribute("Transport").Value {
 	case "", "Channel":
@@ -1062,9 +1079,6 @@ func Compile(fidlData fidl.Root) Root {
 	}
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
-	}
-	if len(fidlData.Structs) != 0 || len(fidlData.Bits) != 0 || len(fidlData.Enums) != 0 || len(fidlData.Protocols) != 0 || len(fidlData.Tables) != 0 || len(fidlData.Unions) != 0 {
-		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
 	for _, v := range fidlData.Protocols {
 		protocol := c.compileProtocol(v)

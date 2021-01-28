@@ -7,6 +7,8 @@ package codegen
 import (
 	"math"
 	"testing"
+
+	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_testing"
 )
 
 func TestStackOfBoundsTag(t *testing.T) {
@@ -31,6 +33,52 @@ func TestStackOfBoundsTag(t *testing.T) {
 		actual := StackOfBoundsTag{ex.input}.String()
 		if actual != ex.expected {
 			t.Errorf("%v: expected '%s', actual '%s'", ex.input, ex.expected, actual)
+		}
+	}
+}
+
+func TestBindingsPackageDependency(t *testing.T) {
+	cases := []struct {
+		fidl                 string
+		needsBindingsPackage bool
+	}{
+		{
+			fidl:                 "flexible union MyUnion { 1: uint8 foo; };",
+			needsBindingsPackage: true,
+		},
+		{
+			fidl:                 "strict union MyUnion { 1: uint8 foo; };",
+			needsBindingsPackage: false,
+		},
+		{
+			fidl:                 "struct MyStruct {};",
+			needsBindingsPackage: true,
+		},
+		{
+			fidl:                 "table MyTable {};",
+			needsBindingsPackage: true,
+		},
+		{
+			fidl:                 "enum MyEnum { FOO = 1; BAR = 2; };",
+			needsBindingsPackage: true,
+		},
+		{
+			fidl:                 "bits MyBits { FOO = 0b01; BAR = 0b10; };",
+			needsBindingsPackage: true,
+		},
+	}
+	for _, ex := range cases {
+		root := Compile(fidl_testing.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
+
+		hasBindingsPackage := false
+		for _, lib := range root.Libraries {
+			if lib.Path == BindingsPackage {
+				hasBindingsPackage = true
+			}
+		}
+
+		if hasBindingsPackage != ex.needsBindingsPackage {
+			t.Errorf("%s: expected %t, found %t", ex.fidl, ex.needsBindingsPackage, hasBindingsPackage)
 		}
 	}
 }
