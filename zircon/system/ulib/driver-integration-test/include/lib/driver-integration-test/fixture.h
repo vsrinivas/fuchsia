@@ -43,8 +43,6 @@ class IsolatedDevmgr {
     uint32_t board_revision;
     // If set to true, the block watcher will be disabled.
     bool disable_block_watcher = true;
-    // If set to true, the netsvc will be disabled.
-    bool disable_netsvc = true;
 
     bool no_exit_after_suspend = true;
   };

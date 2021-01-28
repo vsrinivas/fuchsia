@@ -166,7 +166,6 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
 
   std::vector<const char*> argv;
   argv.push_back(kDevmgrPath);
-  argv.push_back("--no-start-svchost");
   for (const char* path : args.driver_search_paths) {
     argv.push_back("--driver-search-path");
     argv.push_back(path);
@@ -178,9 +177,6 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
   if (args.sys_device_driver != nullptr) {
     argv.push_back("--sys-device-driver");
     argv.push_back(args.sys_device_driver);
-  }
-  if (args.disable_netsvc) {
-    argv.push_back("--disable-netsvc");
   }
   if (args.no_exit_after_suspend) {
     argv.push_back("--no-exit-after-suspend");

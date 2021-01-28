@@ -3,7 +3,6 @@
     program: {
         binary: "bin/driver_manager",
         args: [
-            "--no-start-svchost",
             "--path-prefix",
             "/pkg/",
             "--use-default-loader",

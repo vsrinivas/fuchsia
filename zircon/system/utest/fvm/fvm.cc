@@ -92,7 +92,6 @@ class FvmTest : public zxtest::Test {
   void SetUp() override {
     devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
     args.disable_block_watcher = true;
-    args.disable_netsvc = true;
     args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));

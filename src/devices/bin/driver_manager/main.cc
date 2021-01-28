@@ -134,22 +134,21 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     kDriverSearchPath,
     kLoadDriver,
     kSysDeviceDriver,
-    kNoStartSvchost,
-    kDisableNetsvc,
     kLogToDebuglog,
     kPathPrefix,
     kUseDefaultLoader,
     kNoExitAfterSuspend,
   };
-  option options[] = {{"driver-search-path", required_argument, nullptr, kDriverSearchPath},
-                      {"load-driver", required_argument, nullptr, kLoadDriver},
-                      {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
-                      {"no-start-svchost", no_argument, nullptr, kNoStartSvchost},
-                      {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
-                      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
-                      {"path-prefix", required_argument, nullptr, kPathPrefix},
-                      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
-                      {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend}};
+  option options[] = {
+      {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
+      {"load-driver", required_argument, nullptr, kLoadDriver},
+      {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
+      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
+      {"path-prefix", required_argument, nullptr, kPathPrefix},
+      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
+      {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
+      {0, 0, 0, 0},
+  };
 
   auto print_usage_and_exit = [options]() {
     printf("driver_manager: supported arguments:\n");
@@ -181,12 +180,6 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
       case kSysDeviceDriver:
         check_not_duplicated(out->sys_device_driver);
         out->sys_device_driver = optarg;
-        break;
-      case kNoStartSvchost:
-        out->start_svchost = false;
-        break;
-      case kDisableNetsvc:
-        out->disable_netsvc = true;
         break;
       case kLogToDebuglog:
         out->log_to_debuglog = true;
@@ -273,7 +266,6 @@ int main(int argc, char** argv) {
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
   config.log_to_debuglog = driver_manager_params.log_to_debuglog || devmgr_args.log_to_debuglog;
   config.verbose = driver_manager_params.verbose;
-  config.disable_netsvc = devmgr_args.disable_netsvc;
   config.fs_provider = &system_instance;
   config.path_prefix = devmgr_args.path_prefix;
   config.eager_fallback_drivers = std::move(driver_manager_params.eager_fallback_drivers);

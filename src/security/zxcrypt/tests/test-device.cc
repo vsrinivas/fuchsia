@@ -102,9 +102,6 @@ void TestDevice::SetupDevmgr() {
   // racing with us to call Bind.
   args.disable_block_watcher = true;
 
-  // We have no need for the netsvc.
-  args.disable_netsvc = true;
-
   ASSERT_EQ(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
   fbl::unique_fd ctl;
   ASSERT_EQ(

@@ -51,7 +51,6 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     args.load_drivers.push_back("/boot/driver/ethernet.so");
     args.load_drivers.push_back("/boot/driver/ethertap.so");
     args.disable_block_watcher = true;
-    args.disable_netsvc = true;
     return IsolatedDevmgr::Create(std::move(args));
   }
 
@@ -65,7 +64,6 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");
     args.disable_block_watcher = true;
-    args.disable_netsvc = true;
     device_list_ptr->push_back(kRtcDeviceEntry);
     device_list_ptr->push_back(kCrashDeviceEntry);
     return IsolatedDevmgr::Create(std::move(args), std::move(device_list_ptr));

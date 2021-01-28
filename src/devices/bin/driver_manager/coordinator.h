@@ -161,15 +161,6 @@ struct DevmgrArgs {
   // Use this driver as the sys_device driver.  If nullptr, the default will
   // be used.
   std::string sys_device_driver;
-  // Select whether to launch a new svchost process, or to use the /svc provided through the
-  // namespace when launching subprocesses (only used in integration tests).
-  bool start_svchost = true;
-  // Disables the block watcher if set to true. This can be used for testing purposes,
-  // where it is not necessary to have the block watcher running.
-  bool disable_block_watcher = false;
-  // Disables the netsvc if set to true. This can be used for testing purposes,
-  // where it is not necessary to have the netsvc running.
-  bool disable_netsvc = false;
   // Connect the stdout and stderr file descriptors for this program to a
   // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
   bool log_to_debuglog = false;
@@ -189,8 +180,6 @@ struct CoordinatorConfig {
   zx::event oom_event;
   // Client for the Arguments service.
   llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
-  // If true, netsvc is disabled and will not start.
-  bool disable_netsvc = false;
   // Whether we require /system.
   bool require_system = false;
   // Whether we require ASan drivers.
@@ -318,7 +307,6 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
   llcpp::fuchsia::boot::Arguments::SyncClient* boot_args() const { return config_.boot_args; }
-  bool disable_netsvc() const { return config_.disable_netsvc; }
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }
   power_fidl::statecontrol::SystemPowerState shutdown_system_state() const {

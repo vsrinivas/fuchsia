@@ -60,7 +60,6 @@ class BlockVerityTest : public zxtest::Test {
     args.driver_search_paths.push_back("/boot/driver");
 
     args.disable_block_watcher = true;
-    args.disable_netsvc = true;
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
     // Create ramdisk.
     ramdisk_ =

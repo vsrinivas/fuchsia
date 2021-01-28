@@ -107,7 +107,6 @@ int main(int argc, const char** argv) {
   args.load_drivers.push_back("/boot/driver/test/sysdev.so");
   args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
   args.disable_block_watcher = true;
-  args.disable_netsvc = true;
 
   std::string svc_name = "fuchsia.io.Directory";
   std::vector<std::string> wait;

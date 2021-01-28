@@ -45,8 +45,6 @@ struct Args {
   std::vector<std::pair<const char*, zx::channel>> flat_namespace;
   // If true, the block watcher will be disabled and will not start.
   bool disable_block_watcher = false;
-  // If true, the netsvc will be disabled and will not start.
-  bool disable_netsvc = false;
 
   bool no_exit_after_suspend = false;
 

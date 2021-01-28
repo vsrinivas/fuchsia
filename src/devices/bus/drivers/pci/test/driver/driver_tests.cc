@@ -54,7 +54,6 @@ TEST_F(PciDriverTests, TestRunner) {
   args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry);
   args.disable_block_watcher = true;
-  args.disable_netsvc = true;
 
   switch (test_log_level) {
     case 1:
