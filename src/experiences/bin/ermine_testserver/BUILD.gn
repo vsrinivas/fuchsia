@@ -16,7 +16,7 @@ dart_library("lib") {
     "src/file_group.dart",
   ]
   deps = [
-    "//src/experiences/bin/simple_browser_localhost:simple_browser_localhost",
+    "//src/experiences/lib/ermine_localhost:ermine_localhost",
     dart_package_label.fuchsia_logger,
   ]
 }

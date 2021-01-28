@@ -35,6 +35,8 @@ class Localhost {
   bool _isReady;
   final _pages = <String, File>{};
 
+  Map<String, File> get pages => _pages;
+
   Localhost() {
     setupLogger(name: 'simple_browser_localhost');
     _isReady = false;
@@ -63,7 +65,7 @@ class Localhost {
   /// it finds the file in the [_pages] map with key, `index.html`, and serves it.
   /// If it cannot find the correspondant file in the map, it renders a plain
   /// text saying, 'Missing file: <file_name>'
-  void startServing({int port = 8080}) async {
+  void startServing() async {
     assert(
       _isReady,
       'The server is not ready for serving files. Call bindServer() first.',
@@ -114,13 +116,13 @@ class Localhost {
   /// via the url `http://127.0.0.1:8080/index.html`, you have to call this
   /// method with this optional parameter: `passWebFile(File, name: 'index')`.
   // TODO(fxr/68321): Support media type files too.
-  void passWebFile(File file, {bool replace = true}) {
+  bool passWebFile(File file, {bool replace = true}) {
     final fileName = file.path.split('/').last;
     final fileType = fileName.split('.').last;
-    assert(
-      ['html', 'css', 'txt'].any((type) => fileType == type),
-      'The file type has to be one of html, css, and txt.',
-    );
+    if (!['html', 'css', 'txt'].any((type) => fileType == type)) {
+      log.warning('Files that are not html, css, or txt-type are ignored.');
+      return false;
+    }
 
     _pages.update(
       fileName,
@@ -137,6 +139,7 @@ class Localhost {
         return file;
       },
     );
+    return true;
   }
 
   /// Stops listening on http://127.0.0.1:<port_number>.

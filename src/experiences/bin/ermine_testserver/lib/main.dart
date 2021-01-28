@@ -4,7 +4,7 @@
 
 import 'dart:io';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:simple_browser_localhost/localhost.dart';
+import 'package:ermine_localhost/localhost.dart';
 
 import 'src/file_group.dart';
 
