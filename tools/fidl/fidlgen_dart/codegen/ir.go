@@ -691,7 +691,13 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.Decl = "$zircon." + subtype
 		r.SyncDecl = r.Decl
 		r.AsyncDecl = r.Decl
-		r.typeExpr = fmt.Sprintf("$fidl.%s%sType()", nullablePrefix, subtype)
+		baseType := fmt.Sprintf("$fidl.%sType(objectType: %d, rights: %d)",
+			subtype, fidl.ObjectTypeFromHandleSubtype(val.HandleSubtype), val.HandleRights)
+		if val.Nullable {
+			r.typeExpr = fmt.Sprintf("$fidl.NullableHandleType(%s)", baseType)
+		} else {
+			r.typeExpr = baseType
+		}
 	case fidl.RequestType:
 		compound := fidl.ParseCompoundIdentifier(val.RequestSubtype)
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)

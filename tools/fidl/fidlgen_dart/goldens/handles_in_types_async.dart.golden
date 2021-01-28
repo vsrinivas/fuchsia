@@ -164,7 +164,7 @@ class UnionWithHandle extends $fidl.XUnion {
 const $fidl.UnionType<UnionWithHandle> kUnionWithHandle_Type =
     $fidl.UnionType<UnionWithHandle>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.VmoType(),
+    1: $fidl.VmoType(objectType: 3, rights: 2147483648),
   },
   ctor: UnionWithHandle._ctor,
   flexible: true,
@@ -175,7 +175,7 @@ const $fidl.UnionType<UnionWithHandle> kUnionWithHandle_Type =
 const $fidl.NullableUnionType<UnionWithHandle> kUnionWithHandle_OptType =
     $fidl.NullableUnionType<UnionWithHandle>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.VmoType(),
+    1: $fidl.VmoType(objectType: 3, rights: 2147483648),
   },
   ctor: UnionWithHandle._ctor,
   flexible: true,
@@ -228,15 +228,18 @@ class HandlesInTypes extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.VmoType();
+  static const $fieldType0 = $fidl.VmoType(objectType: 3, rights: 2147483648);
   static const $fieldType1 = $fidl.VectorType<$zircon.Vmo, List<$zircon.Vmo>>(
-      element: $fidl.VmoType(), maybeElementCount: null);
+      element: $fidl.VmoType(objectType: 3, rights: 2147483648),
+      maybeElementCount: null);
   static const $fieldType2 = $fidl.ArrayType<$zircon.Vmo, List<$zircon.Vmo>>(
-      element: $fidl.VmoType(), elementCount: 5);
+      element: $fidl.VmoType(objectType: 3, rights: 2147483648),
+      elementCount: 5);
   static const $fieldType3 =
       $fidl.VectorType<List<$zircon.Vmo>, List<List<$zircon.Vmo>>>(
           element: $fidl.ArrayType<$zircon.Vmo, List<$zircon.Vmo>>(
-              element: $fidl.VmoType(), elementCount: 5),
+              element: $fidl.VmoType(objectType: 3, rights: 2147483648),
+              elementCount: 5),
           maybeElementCount: null);
   static const $fieldType4 = kTableWithHandle_Type;
   static const $fieldType5 = kUnionWithHandle_Type;
@@ -326,7 +329,7 @@ const $fidl.TableType<TableWithHandle> kTableWithHandle_Type =
     $fidl.TableType<TableWithHandle>(
   inlineSize: 16,
   members: [
-    $fidl.VmoType(),
+    $fidl.VmoType(objectType: 3, rights: 2147483648),
   ],
   ctor: TableWithHandle._ctor,
   resource: true,

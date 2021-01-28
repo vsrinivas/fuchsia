@@ -275,7 +275,8 @@ class StructWithNullableHandle extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.NullableVmoType();
+  static const $fieldType0 = $fidl.NullableHandleType(
+      $fidl.VmoType(objectType: 3, rights: 2147483648));
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {

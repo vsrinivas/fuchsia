@@ -514,7 +514,11 @@ Handle _decodeHandle(Decoder decoder, int offset) {
 // to further standardize handling of handles.
 
 abstract class _BaseHandleType<W> extends SimpleFidlType<W> {
-  const _BaseHandleType() : super(inlineSize: 4);
+  const _BaseHandleType({required this.objectType, required this.rights})
+      : super(inlineSize: 4);
+
+  final int objectType;
+  final int rights;
 
   W wrap(Handle handle);
   Handle? unwrap(W wrapper);
@@ -527,9 +531,9 @@ abstract class _BaseHandleType<W> extends SimpleFidlType<W> {
   W decode(Decoder decoder, int offset) => wrap(_decodeHandle(decoder, offset));
 }
 
-class _NullableHandleType<W> extends SimpleFidlType<W?> {
+class NullableHandleType<W> extends SimpleFidlType<W?> {
   final _BaseHandleType<W> _base;
-  const _NullableHandleType(this._base) : super(inlineSize: 4);
+  const NullableHandleType(this._base) : super(inlineSize: 4);
 
   @override
   void encode(Encoder encoder, W? value, int offset) => _encodeHandle(
@@ -543,7 +547,8 @@ class _NullableHandleType<W> extends SimpleFidlType<W?> {
 }
 
 class HandleType extends _BaseHandleType<Handle> {
-  const HandleType() : super();
+  const HandleType({required objectType, required rights})
+      : super(objectType: objectType, rights: rights);
 
   @override
   Handle wrap(Handle handle) => handle;
@@ -552,12 +557,9 @@ class HandleType extends _BaseHandleType<Handle> {
   Handle? unwrap(Handle handle) => handle;
 }
 
-class NullableHandleType extends _NullableHandleType<Handle> {
-  const NullableHandleType() : super(const HandleType());
-}
-
 class ChannelType extends _BaseHandleType<Channel> {
-  const ChannelType() : super();
+  const ChannelType({required objectType, required rights})
+      : super(objectType: objectType, rights: rights);
 
   @override
   Channel wrap(Handle handle) => Channel(handle);
@@ -565,12 +567,9 @@ class ChannelType extends _BaseHandleType<Channel> {
   Handle? unwrap(Channel wrapper) => wrapper.handle;
 }
 
-class NullableChannelType extends _NullableHandleType<Channel> {
-  const NullableChannelType() : super(const ChannelType());
-}
-
 class EventPairType extends _BaseHandleType<EventPair> {
-  const EventPairType() : super();
+  const EventPairType({required objectType, required rights})
+      : super(objectType: objectType, rights: rights);
 
   @override
   EventPair wrap(Handle handle) => EventPair(handle);
@@ -578,12 +577,9 @@ class EventPairType extends _BaseHandleType<EventPair> {
   Handle? unwrap(EventPair wrapper) => wrapper.handle;
 }
 
-class NullableEventPairType extends _NullableHandleType<EventPair> {
-  const NullableEventPairType() : super(const EventPairType());
-}
-
 class SocketType extends _BaseHandleType<Socket> {
-  const SocketType() : super();
+  const SocketType({required objectType, required rights})
+      : super(objectType: objectType, rights: rights);
 
   @override
   Socket wrap(Handle handle) => Socket(handle);
@@ -591,21 +587,14 @@ class SocketType extends _BaseHandleType<Socket> {
   Handle? unwrap(Socket wrapper) => wrapper.handle;
 }
 
-class NullableSocketType extends _NullableHandleType<Socket> {
-  const NullableSocketType() : super(const SocketType());
-}
-
 class VmoType extends _BaseHandleType<Vmo> {
-  const VmoType() : super();
+  const VmoType({required objectType, required rights})
+      : super(objectType: objectType, rights: rights);
 
   @override
   Vmo wrap(Handle handle) => Vmo(handle);
   @override
   Handle? unwrap(Vmo wrapper) => wrapper.handle;
-}
-
-class NullableVmoType extends _NullableHandleType<Vmo> {
-  const NullableVmoType() : super(const VmoType());
 }
 
 class InterfaceHandleType<T> extends SimpleFidlType<InterfaceHandle<T>> {

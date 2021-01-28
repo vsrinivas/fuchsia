@@ -294,7 +294,8 @@ class NonInlineStructTestStruct extends $fidl.Struct {
 
   static const $fieldType0 =
       $fidl.PointerType<Int16Int8>(element: kInt16Int8_Type);
-  static const $fieldType1 = $fidl.HandleType();
+  static const $fieldType1 =
+      $fidl.HandleType(objectType: 0, rights: 2147483648);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {

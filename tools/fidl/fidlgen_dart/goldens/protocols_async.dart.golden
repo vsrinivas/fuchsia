@@ -1823,7 +1823,8 @@ const $fidl.MethodType _kChannelProtocol_MethodB_Type = $fidl.MethodType(
 const int _kChannelProtocol_TakeHandle_Ordinal = 0xc25674355065c28;
 const $fidl.MethodType _kChannelProtocol_TakeHandle_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Handle>(type: $fidl.HandleType(), offset: 0),
+    $fidl.MemberType<$zircon.Handle>(
+        type: $fidl.HandleType(objectType: 0, rights: 2147483648), offset: 0),
   ],
   response: [],
   name: r"ChannelProtocol.TakeHandle",
@@ -1834,10 +1835,12 @@ const $fidl.MethodType _kChannelProtocol_TakeHandle_Type = $fidl.MethodType(
 const int _kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76a;
 const $fidl.MethodType _kChannelProtocol_MutateSocket_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(type: $fidl.SocketType(), offset: 0),
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 2147483648), offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<$zircon.Socket>(type: $fidl.SocketType(), offset: 0),
+    $fidl.MemberType<$zircon.Socket>(
+        type: $fidl.SocketType(objectType: 14, rights: 2147483648), offset: 0),
   ],
   name: r"ChannelProtocol.MutateSocket",
   requestInlineSize: 8,

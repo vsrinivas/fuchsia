@@ -505,37 +505,64 @@ class Handles extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.HandleType();
-  static const $fieldType1 = $fidl.HandleType();
-  static const $fieldType2 = $fidl.ChannelType();
-  static const $fieldType3 = $fidl.HandleType();
-  static const $fieldType4 = $fidl.HandleType();
-  static const $fieldType5 = $fidl.HandleType();
-  static const $fieldType6 = $fidl.EventPairType();
-  static const $fieldType7 = $fidl.HandleType();
-  static const $fieldType8 = $fidl.HandleType();
-  static const $fieldType9 = $fidl.HandleType();
-  static const $fieldType10 = $fidl.HandleType();
-  static const $fieldType11 = $fidl.HandleType();
-  static const $fieldType12 = $fidl.HandleType();
-  static const $fieldType13 = $fidl.HandleType();
-  static const $fieldType14 = $fidl.HandleType();
-  static const $fieldType15 = $fidl.HandleType();
-  static const $fieldType16 = $fidl.HandleType();
-  static const $fieldType17 = $fidl.HandleType();
-  static const $fieldType18 = $fidl.HandleType();
-  static const $fieldType19 = $fidl.HandleType();
-  static const $fieldType20 = $fidl.SocketType();
-  static const $fieldType21 = $fidl.HandleType();
-  static const $fieldType22 = $fidl.HandleType();
-  static const $fieldType23 = $fidl.HandleType();
-  static const $fieldType24 = $fidl.HandleType();
-  static const $fieldType25 = $fidl.HandleType();
-  static const $fieldType26 = $fidl.VmoType();
-  static const $fieldType27 = $fidl.VmoType();
-  static const $fieldType28 = $fidl.HandleType();
-  static const $fieldType29 = $fidl.VmoType();
-  static const $fieldType30 = $fidl.VmoType();
+  static const $fieldType0 =
+      $fidl.HandleType(objectType: 0, rights: 2147483648);
+  static const $fieldType1 =
+      $fidl.HandleType(objectType: 24, rights: 2147483648);
+  static const $fieldType2 =
+      $fidl.ChannelType(objectType: 4, rights: 2147483648);
+  static const $fieldType3 =
+      $fidl.HandleType(objectType: 0, rights: 2147483648);
+  static const $fieldType4 =
+      $fidl.HandleType(objectType: 12, rights: 2147483648);
+  static const $fieldType5 =
+      $fidl.HandleType(objectType: 5, rights: 2147483648);
+  static const $fieldType6 =
+      $fidl.EventPairType(objectType: 16, rights: 2147483648);
+  static const $fieldType7 =
+      $fidl.HandleType(objectType: 0, rights: 2147483648);
+  static const $fieldType8 =
+      $fidl.HandleType(objectType: 19, rights: 2147483648);
+  static const $fieldType9 =
+      $fidl.HandleType(objectType: 20, rights: 2147483648);
+  static const $fieldType10 =
+      $fidl.HandleType(objectType: 9, rights: 2147483648);
+  static const $fieldType11 =
+      $fidl.HandleType(objectType: 23, rights: 2147483648);
+  static const $fieldType12 =
+      $fidl.HandleType(objectType: 17, rights: 2147483648);
+  static const $fieldType13 =
+      $fidl.HandleType(objectType: 28, rights: 2147483648);
+  static const $fieldType14 =
+      $fidl.HandleType(objectType: 11, rights: 2147483648);
+  static const $fieldType15 =
+      $fidl.HandleType(objectType: 26, rights: 2147483648);
+  static const $fieldType16 =
+      $fidl.HandleType(objectType: 6, rights: 2147483648);
+  static const $fieldType17 =
+      $fidl.HandleType(objectType: 1, rights: 2147483648);
+  static const $fieldType18 =
+      $fidl.HandleType(objectType: 25, rights: 2147483648);
+  static const $fieldType19 =
+      $fidl.HandleType(objectType: 15, rights: 2147483648);
+  static const $fieldType20 =
+      $fidl.SocketType(objectType: 14, rights: 2147483648);
+  static const $fieldType21 =
+      $fidl.HandleType(objectType: 27, rights: 2147483648);
+  static const $fieldType22 =
+      $fidl.HandleType(objectType: 2, rights: 2147483648);
+  static const $fieldType23 =
+      $fidl.HandleType(objectType: 22, rights: 2147483648);
+  static const $fieldType24 =
+      $fidl.HandleType(objectType: 21, rights: 2147483648);
+  static const $fieldType25 =
+      $fidl.HandleType(objectType: 18, rights: 2147483648);
+  static const $fieldType26 = $fidl.VmoType(objectType: 3, rights: 2147483648);
+  static const $fieldType27 = $fidl.VmoType(objectType: 3, rights: 1);
+  static const $fieldType28 =
+      $fidl.HandleType(objectType: 0, rights: 2147483648);
+  static const $fieldType29 = $fidl.VmoType(objectType: 3, rights: 2147483648);
+  static const $fieldType30 = $fidl.VmoType(objectType: 3, rights: 1);
   static const $fieldType31 = $fidl.InterfaceHandleType<SomeProtocol>();
   static const $fieldType32 = $fidl.InterfaceRequestType<SomeProtocol>();
 
