@@ -580,6 +580,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(empty_ast);
 
         let expected = vec![
+            "[NoDoc]".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
         ];
@@ -596,6 +597,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
+            "[NoDoc]".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
             "const fdf.NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),
@@ -614,6 +616,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
+            "[NoDoc]".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
             "const fdf.NodePropertyValueUint BIND_PROTOCOL_BUS = 84;".to_string(),
@@ -631,6 +634,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
+            "[NoDoc]".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
             "const fdf.NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),

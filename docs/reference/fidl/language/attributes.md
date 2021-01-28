@@ -9,6 +9,7 @@ The following FIDL attributes are supported:
 * [`[ForDeprecatedCBindings]`](#layout)
 * [`[MaxBytes]`](#maxbytes)
 * [`[MaxHandles]`](#maxhandles)
+* [`[NoDoc]`](#nodoc)
 * [`[Selector]`](#selector)
 * [`[Transitional]`](#transitional)
 * [`[Transport]`](#transport)
@@ -129,6 +130,15 @@ The compiler will issue an error if the number of bytes exceeds this limit.
 This attribute is used to limit the number of handles that can be
 transferred in a message.
 The compiler will issue an error if the number of handles exceeds this limit.
+
+## `[NoDoc]` {#nodoc}
+
+**USAGE**: `[NoDoc]`
+
+**MEANING**:
+This attribute is used to mark libraries that should be skipped by documentation
+generation tools. As an example, this attribute is used by generated FIDL
+libraries, such as by the [driver bind compiler](/docs/concepts/drivers/driver-binding.md).
 
 ## `[Selector]` {#selector}
 

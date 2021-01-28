@@ -279,6 +279,12 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
         }
 
         let package_name = fidl_json.name.clone();
+
+        if fidl_json.maybe_attributes.iter().any(|attr| attr["name"] == "NoDoc") {
+            info!("Skipping library with NoDoc attribute: {}", package_name);
+            continue;
+        }
+
         declarations.append(&mut fidl_json.declaration_order);
         if !package_set.contains(&package_name) {
             package_set.insert(package_name.clone());
