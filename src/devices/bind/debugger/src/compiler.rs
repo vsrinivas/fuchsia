@@ -47,6 +47,8 @@ pub enum BindProgramEncodeError {
     DuplicateSymbol(String),
     UnsupportedSymbol,
     IntegerOutOfRange,
+    MismatchValueTypes(Symbol, Symbol),
+    MissingStringInSymbolTable(String),
 }
 
 impl fmt::Display for BindProgramEncodeError {

@@ -377,6 +377,18 @@ impl From<BindProgramEncodeError> for UserError {
             BindProgramEncodeError::IntegerOutOfRange => {
                 UserError::new("E603", &format!("Integer out of range"), None, true)
             }
+            BindProgramEncodeError::MismatchValueTypes(lhs, rhs) => UserError::new(
+                "E604",
+                &format!("Cannot compare different value types for {:?} and {:?}", lhs, rhs),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::MissingStringInSymbolTable(str) => UserError::new(
+                "E605",
+                &format!("Missing string {} in symbol table", str),
+                None,
+                true,
+            ),
         }
     }
 }
