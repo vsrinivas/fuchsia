@@ -5,15 +5,26 @@
 import("//build/config/profile/config.gni")
 import("//build/toolchain/variant.gni")
 
+if (profile_source_files != []) {
+  # This can't use a generated_file() target because there's no way to
+  # express the deps to make GN accept the file in the inputs list if it's
+  # the output of some target.
+  _profile_source_files_file = "$root_out_dir/profile-source-files.list"
+  write_file(_profile_source_files_file,
+             rebase_path(profile_source_files, root_build_dir),
+             "list lines")
+  profile_source_files_list_files += [ _profile_source_files_file ]
+}
+
 variant("profile") {
   common_flags = [
     "-fprofile-instr-generate",
     "-fcoverage-mapping",
   ]
 
-  if (profile_list != "") {
-    common_flags +=
-        [ "-fprofile-list=" + rebase_path(profile_list, "", root_build_dir) ]
+  inputs = profile_source_files_list_files
+  foreach(file, profile_source_files_list_files) {
+    common_flags += [ "-fprofile-list=" + rebase_path(file, root_build_dir) ]
   }
 
   is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
