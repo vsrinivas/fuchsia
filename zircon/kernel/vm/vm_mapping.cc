@@ -891,12 +891,6 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
     DEBUG_ASSERT(mapped == 1);
   }
 
-// TODO: figure out what to do with this
-#if ARCH_ARM64
-  if (!(pf_flags & VMM_PF_FLAG_GUEST) && (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)) {
-    arch_sync_cache_range(va, PAGE_SIZE);
-  }
-#endif
   return ZX_OK;
 }
 

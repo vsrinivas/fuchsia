@@ -11,6 +11,7 @@
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 #include <stdlib.h>
@@ -68,6 +69,9 @@ pte_t* arm64_get_kernel_ptable() { return arm64_kernel_translation_table; }
 namespace {
 
 AsidAllocator asid;
+
+KCOUNTER(vm_mmu_protect_make_execute_calls, "vm.mmu.protect.make_execute_calls")
+KCOUNTER(vm_mmu_protect_make_execute_pages, "vm.mmu.protect.make_execute_pages")
 
 // Convert user level mmu flags to flags that go in L1 descriptors.
 pte_t mmu_flags_to_s1_pte_attr(uint flags) {
@@ -988,6 +992,10 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
   ssize_t ret;
   {
     Guard<Mutex> a{&lock_};
+    if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+      ArmVmICacheConsistencyManager cache_cm;
+      cache_cm.SyncAddr(reinterpret_cast<vaddr_t>(paddr_to_physmap(paddr)), count * PAGE_SIZE);
+    }
     pte_t attrs;
     vaddr_t vaddr_base;
     uint top_size_shift, top_index_shift, page_size_shift;
@@ -1041,6 +1049,12 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
   size_t total_mapped = 0;
   {
     Guard<Mutex> a{&lock_};
+    if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+      ArmVmICacheConsistencyManager cache_cm;
+      for (size_t idx = 0; idx < count; ++idx) {
+        cache_cm.SyncAddr(reinterpret_cast<vaddr_t>(paddr_to_physmap(phys[idx])), PAGE_SIZE);
+      }
+    }
     pte_t attrs;
     vaddr_t vaddr_base;
     uint top_size_shift, top_index_shift, page_size_shift;
@@ -1135,6 +1149,27 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
   }
 
   Guard<Mutex> a{&lock_};
+  if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+    // If mappings are going to become executable then we first need to sync their caches.
+    // Unfortunately this needs to be done on kernel virtual addresses to avoid taking translation
+    // faults, and so we need to first query for the physical address to then get the kernel virtual
+    // address in the physmap.
+    // This sync could be more deeply integrated into ProtectPages, but making existing regions
+    // executable is very uncommon operation and so we keep it simple.
+    vm_mmu_protect_make_execute_calls.Add(1);
+    ArmVmICacheConsistencyManager cache_cm;
+    size_t pages_synced = 0;
+    for (size_t idx = 0; idx < count; idx++) {
+      paddr_t paddr;
+      uint flags;
+      if (QueryLocked(vaddr + idx * PAGE_SIZE, &paddr, &flags) == ZX_OK &&
+          (flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
+        cache_cm.SyncAddr(reinterpret_cast<vaddr_t>(paddr_to_physmap(paddr)), PAGE_SIZE);
+        pages_synced++;
+      }
+    }
+    vm_mmu_protect_make_execute_pages.Add(pages_synced);
+  }
 
   int ret;
   {
