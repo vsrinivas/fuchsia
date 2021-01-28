@@ -111,6 +111,7 @@ if (toolchain.environment != "user.vdso") {
       "zx_system_get_dcache_line_size.cc",
       "zx_system_get_features.cc",
       "zx_system_get_num_cpus.cc",
+      "zx_system_get_page_size.cc",
       "zx_system_get_physmem.cc",
       "zx_system_get_version.cc",
       "zx_system_get_version_string.cc",

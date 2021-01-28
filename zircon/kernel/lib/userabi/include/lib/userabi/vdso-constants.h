@@ -19,10 +19,12 @@
 #define MAX_VERSION_STRING_SIZE 64
 
 // The manifest for the constants size is currently...
-// + 8 32-bit integers
+// + 10 32-bit integers
 // |++ max_num_cpus (1)
 // |++ features (3)
 // |++ cache lines sizes (2)
+// |++ system page size (1)
+// |++ padding (1)
 // |++ ticks to mono ratio (2)
 // |
 // + 3 64-bit integers
@@ -32,7 +34,7 @@
 // |
 // + max version string size (64 bytes)
 //
-#define VDSO_CONSTANTS_SIZE ((8 * 4) + (3 * 8) + MAX_VERSION_STRING_SIZE)
+#define VDSO_CONSTANTS_SIZE ((10 * 4) + (3 * 8) + MAX_VERSION_STRING_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -66,6 +68,12 @@ struct vdso_constants {
 
   // Number of bytes in an instruction cache line.
   uint32_t icache_line_size;
+
+  // System page size in bytes. Guaranteed to be a power of 2.
+  uint32_t page_size;
+
+  // Explicit padding as the remaining struct members end up 64-bit aligned.
+  uint32_t padding;
 
   // Conversion factor for zx_ticks_get return values to seconds.
   zx_ticks_t ticks_per_second;

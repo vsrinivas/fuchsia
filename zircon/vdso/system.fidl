@@ -34,6 +34,10 @@ protocol system {
     [const, vdsocall]
     system_get_version_string() -> (string_view version);
 
+    /// Get the page size for the system.
+    [const, vdsocall]
+    system_get_page_size() -> (uint32 size);
+
     /// Get amount of physical memory on the system.
     [vdsocall]
     system_get_physmem() -> (uint64 physmem);

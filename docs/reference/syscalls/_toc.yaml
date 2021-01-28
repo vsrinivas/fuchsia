@@ -286,6 +286,8 @@ toc:
     path: /docs/reference/syscalls/system_get_features.md
   - title: "zx_system_get_num_cpus"
     path: /docs/reference/syscalls/system_get_num_cpus.md
+  - title: "zx_system_get_page_size"
+    path: /docs/reference/syscalls/system_get_page_size.md
   - title: "zx_system_get_physmem"
     path: /docs/reference/syscalls/system_get_physmem.md
   - title: "zx_system_get_version_string"

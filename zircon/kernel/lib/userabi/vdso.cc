@@ -193,6 +193,8 @@ void SetConstants(const fbl::RefPtr<VmObject>& vmo) {
       },
       arch_dcache_line_size(),
       arch_icache_line_size(),
+      PAGE_SIZE,
+      0,
       per_second,
       ticks_to_mono_ratio.numerator(),
       ticks_to_mono_ratio.denominator(),

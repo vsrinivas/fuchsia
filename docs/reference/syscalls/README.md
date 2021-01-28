@@ -154,6 +154,7 @@
 + [system_get_dcache_line_size](system_get_dcache_line_size.md)
 + [system_get_features](system_get_features.md) - get hardware-specific features
 + [system_get_num_cpus](system_get_num_cpus.md) - get number of CPUs
++ [system_get_page_size](system_get_page_size.md) - get memory page size
 + [system_get_physmem](system_get_physmem.md) - get physical memory size
 + [system_get_version_string](system_get_version_string.md) - get version string
 

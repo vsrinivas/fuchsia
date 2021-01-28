@@ -137,6 +137,7 @@ SYSCALL_CATEGORY_BEGIN(const)
     SYSCALL_IN_CATEGORY(system_get_dcache_line_size)
     SYSCALL_IN_CATEGORY(system_get_num_cpus)
     SYSCALL_IN_CATEGORY(system_get_version_string)
+    SYSCALL_IN_CATEGORY(system_get_page_size)
 SYSCALL_CATEGORY_END(const)
 
 #define HAVE_SYSCALL_CATEGORY_noreturn 1
@@ -172,6 +173,7 @@ SYSCALL_CATEGORY_BEGIN(vdsocall)
     SYSCALL_IN_CATEGORY(system_get_dcache_line_size)
     SYSCALL_IN_CATEGORY(system_get_num_cpus)
     SYSCALL_IN_CATEGORY(system_get_version_string)
+    SYSCALL_IN_CATEGORY(system_get_page_size)
     SYSCALL_IN_CATEGORY(system_get_physmem)
     SYSCALL_IN_CATEGORY(system_get_features)
 SYSCALL_CATEGORY_END(vdsocall)
@@ -763,6 +765,10 @@ TEXT ·Sys_system_get_num_cpus(SB),NOSPLIT,$0
 // func Sys_system_get_version_string() unsafe.Pointer
 TEXT ·Sys_system_get_version_string(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_version_string(SB)
+
+// func Sys_system_get_page_size() uint32
+TEXT ·Sys_system_get_page_size(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_system_get_page_size(SB)
 
 // func Sys_system_get_physmem() uint64
 TEXT ·Sys_system_get_physmem(SB),NOSPLIT,$0
@@ -1516,6 +1522,10 @@ func Sys_system_get_version_string() unsafe.Pointer
 
 //go:noescape
 //go:nosplit
+func Sys_system_get_page_size() uint32
+
+//go:noescape
+//go:nosplit
 func Sys_system_get_physmem() uint64
 
 //go:noescape
@@ -2261,6 +2271,10 @@ TEXT ·Sys_system_get_num_cpus(SB),NOSPLIT,$0
 // func Sys_system_get_version_string() unsafe.Pointer
 TEXT ·Sys_system_get_version_string(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_version_string(SB)
+
+// func Sys_system_get_page_size() uint32
+TEXT ·Sys_system_get_page_size(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_system_get_page_size(SB)
 
 // func Sys_system_get_physmem() uint64
 TEXT ·Sys_system_get_physmem(SB),NOSPLIT,$0
@@ -4978,6 +4992,20 @@ TEXT runtime·vdsoCall_zx_system_get_version_string(SB),NOSPLIT,$0-8
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
+// func vdsoCall_zx_system_get_page_size() uint32
+TEXT runtime·vdsoCall_zx_system_get_page_size(SB),NOSPLIT,$0-4
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	BL vdso_zx_system_get_page_size(SB)
+	MOVW R0, ret+0(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
 // func vdsoCall_zx_system_get_physmem() uint64
 TEXT runtime·vdsoCall_zx_system_get_physmem(SB),NOSPLIT,$0-8
 	GO_ARGS
@@ -5839,6 +5867,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_system_get_dcache_line_size", 0x2d6d6511, &vdso_zx_system_get_dcache_line_size},
 	{"_zx_system_get_num_cpus", 0x8e92a0c2, &vdso_zx_system_get_num_cpus},
 	{"_zx_system_get_version_string", 0xf2daeaf4, &vdso_zx_system_get_version_string},
+	{"_zx_system_get_page_size", 0x1495920f, &vdso_zx_system_get_page_size},
 	{"_zx_system_get_physmem", 0x5a0e027b, &vdso_zx_system_get_physmem},
 	{"_zx_system_get_features", 0x42682df7, &vdso_zx_system_get_features},
 	{"_zx_system_get_event", 0x7a0b68da, &vdso_zx_system_get_event},
@@ -6025,6 +6054,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_system_get_dcache_line_size zx_system_get_dcache_line_size
 //go:cgo_import_dynamic vdso_zx_system_get_num_cpus zx_system_get_num_cpus
 //go:cgo_import_dynamic vdso_zx_system_get_version_string zx_system_get_version_string
+//go:cgo_import_dynamic vdso_zx_system_get_page_size zx_system_get_page_size
 //go:cgo_import_dynamic vdso_zx_system_get_physmem zx_system_get_physmem
 //go:cgo_import_dynamic vdso_zx_system_get_features zx_system_get_features
 //go:cgo_import_dynamic vdso_zx_system_get_event zx_system_get_event
@@ -6210,6 +6240,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_system_get_dcache_line_size vdso_zx_system_get_dcache_line_size
 //go:linkname vdso_zx_system_get_num_cpus vdso_zx_system_get_num_cpus
 //go:linkname vdso_zx_system_get_version_string vdso_zx_system_get_version_string
+//go:linkname vdso_zx_system_get_page_size vdso_zx_system_get_page_size
 //go:linkname vdso_zx_system_get_physmem vdso_zx_system_get_physmem
 //go:linkname vdso_zx_system_get_features vdso_zx_system_get_features
 //go:linkname vdso_zx_system_get_event vdso_zx_system_get_event
@@ -6829,6 +6860,10 @@ func vdsoCall_zx_system_get_version_string() unsafe.Pointer
 
 //go:noescape
 //go:nosplit
+func vdsoCall_zx_system_get_page_size() uint32
+
+//go:noescape
+//go:nosplit
 func vdsoCall_zx_system_get_physmem() uint64
 
 //go:noescape
@@ -7132,6 +7167,7 @@ var (
 	vdso_zx_system_get_dcache_line_size uintptr
 	vdso_zx_system_get_num_cpus uintptr
 	vdso_zx_system_get_version_string uintptr
+	vdso_zx_system_get_page_size uintptr
 	vdso_zx_system_get_physmem uintptr
 	vdso_zx_system_get_features uintptr
 	vdso_zx_system_get_event uintptr
@@ -10495,6 +10531,25 @@ TEXT runtime·vdsoCall_zx_system_get_version_string(SB),NOSPLIT,$8-8
 	MOVQ vdso_zx_system_get_version_string(SB), AX
 	CALL AX
 	MOVQ AX, ret+0(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_system_get_page_size() uint32
+TEXT runtime·vdsoCall_zx_system_get_page_size(SB),NOSPLIT,$8-4
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ vdso_zx_system_get_page_size(SB), AX
+	CALL AX
+	MOVL AX, ret+0(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -17236,6 +17291,22 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_string_view_t"
     },
     {
+      "name": "system_get_page_size",
+      "attributes": [
+        "*",
+        "const",
+        "vdsocall"
+      ],
+      "top_description": [
+        "Get", "the", "page", "size", "for", "the", "system", "."
+      ],
+      "requirements": [
+      ],
+      "arguments": [
+      ],
+      "return_type": "uint32_t"
+    },
+    {
       "name": "system_get_physmem",
       "attributes": [
         "*",
@@ -19713,6 +19784,9 @@ VDSO_SYSCALL(system_get_num_cpus, uint32_t, __CONST, 0,
     (), (void))
 
 VDSO_SYSCALL(system_get_version_string, zx_string_view_t, __CONST, 0,
+    (), (void))
+
+VDSO_SYSCALL(system_get_page_size, uint32_t, __CONST, 0,
     (), (void))
 
 VDSO_SYSCALL(system_get_physmem, uint64_t, /* no attributes */, 0,
@@ -22238,6 +22312,9 @@ VDSO_SYSCALL(system_get_num_cpus, uint32_t, __CONST, 0,
 VDSO_SYSCALL(system_get_version_string, zx_string_view_t, __CONST, 0,
     (), (void))
 
+VDSO_SYSCALL(system_get_page_size, uint32_t, __CONST, 0,
+    (), (void))
+
 VDSO_SYSCALL(system_get_physmem, uint64_t, /* no attributes */, 0,
     (), (void))
 
@@ -23330,6 +23407,9 @@ _ZX_SYSCALL_DECL(system_get_num_cpus, uint32_t, __CONST, 0,
     (), (void))
 
 _ZX_SYSCALL_DECL(system_get_version_string, zx_string_view_t, __CONST, 0,
+    (), (void))
+
+_ZX_SYSCALL_DECL(system_get_page_size, uint32_t, __CONST, 0,
     (), (void))
 
 _ZX_SYSCALL_DECL(system_get_physmem, uint64_t, /* no attributes */, 0,
@@ -24501,6 +24581,9 @@ extern {
 
     pub fn zx_system_get_version_string(
         ) -> zx_string_view_t;
+
+    pub fn zx_system_get_page_size(
+        ) -> u32;
 
     pub fn zx_system_get_physmem(
         ) -> u64;
