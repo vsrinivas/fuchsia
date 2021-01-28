@@ -1,0 +1,121 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":analyze_deps_test($host_toolchain)" ]
+}
+
+python_host_test("analyze_deps_test") {
+  main_source = "analyze_deps_test.py"
+
+  sources = [ "analyze_deps.py" ]
+}
+
+# This target only exists to support the `analyze_deps.py` script. It is
+# currently not connected to the build graph.
+group("banjo") {
+  deps = [
+    "ddk.driver",
+    "ddk.hw.wlan.ieee80211",
+    "ddk.hw.wlan.wlaninfo",
+    "ddk.physiter",
+    "fuchsia.hardware.acpi",
+    "fuchsia.hardware.amlogiccanvas",
+    "fuchsia.hardware.audio",
+    "fuchsia.hardware.audiotypes",
+    "fuchsia.hardware.badblock",
+    "fuchsia.hardware.block",
+    "fuchsia.hardware.block.partition",
+    "fuchsia.hardware.block.volume",
+    "fuchsia.hardware.bt.gattsvc",
+    "fuchsia.hardware.bt.hci",
+    "fuchsia.hardware.bt.vendor",
+    "fuchsia.hardware.buttons",
+    "fuchsia.hardware.camera",
+    "fuchsia.hardware.camera.sensor",
+    "fuchsia.hardware.camerahwaccel",
+    "fuchsia.hardware.clock",
+    "fuchsia.hardware.clockimpl",
+    "fuchsia.hardware.composite",
+    "fuchsia.hardware.display.capture",
+    "fuchsia.hardware.display.clamprgb",
+    "fuchsia.hardware.display.controller",
+    "fuchsia.hardware.dotmatrixdisplay",
+    "fuchsia.hardware.dsi",
+    "fuchsia.hardware.dsiimpl",
+    "fuchsia.hardware.ethernet",
+    "fuchsia.hardware.ethernet.board",
+    "fuchsia.hardware.ethernet.mac",
+    "fuchsia.hardware.gdc",
+    "fuchsia.hardware.ge2d",
+    "fuchsia.hardware.goldfish.addressspace",
+    "fuchsia.hardware.goldfish.control",
+    "fuchsia.hardware.goldfish.pipe",
+    "fuchsia.hardware.goldfish.sync",
+    "fuchsia.hardware.gpio",
+    "fuchsia.hardware.gpioimpl",
+    "fuchsia.hardware.hidbus",
+    "fuchsia.hardware.hiddevice",
+    "fuchsia.hardware.i2c",
+    "fuchsia.hardware.i2cimpl",
+    "fuchsia.hardware.intelgpucore",
+    "fuchsia.hardware.intelhda.codec",
+    "fuchsia.hardware.iommu",
+    "fuchsia.hardware.isp",
+    "fuchsia.hardware.mailbox",
+    "fuchsia.hardware.mipicsi",
+    "fuchsia.hardware.nand",
+    "fuchsia.hardware.nandinfo",
+    "fuchsia.hardware.network.device",
+    "fuchsia.hardware.network.mac",
+    "fuchsia.hardware.pci",
+    "fuchsia.hardware.pciroot",
+    "fuchsia.hardware.platform.bus",
+    "fuchsia.hardware.platform.device",
+    "fuchsia.hardware.power",
+    "fuchsia.hardware.powerimpl",
+    "fuchsia.hardware.pwm",
+    "fuchsia.hardware.rawnand",
+    "fuchsia.hardware.registers",
+    "fuchsia.hardware.rpmb",
+    "fuchsia.hardware.scpi",
+    "fuchsia.hardware.sdhci",
+    "fuchsia.hardware.sdio",
+    "fuchsia.hardware.sdmmc",
+    "fuchsia.hardware.serial",
+    "fuchsia.hardware.serialimpl",
+    "fuchsia.hardware.serialimpl.async",
+    "fuchsia.hardware.shareddma",
+    "fuchsia.hardware.spi",
+    "fuchsia.hardware.spiimpl",
+    "fuchsia.hardware.sysmem",
+    "fuchsia.hardware.tee",
+    "fuchsia.hardware.test",
+    "fuchsia.hardware.thermal",
+    "fuchsia.hardware.usb",
+    "fuchsia.hardware.usb.bus",
+    "fuchsia.hardware.usb.composite",
+    "fuchsia.hardware.usb.dci",
+    "fuchsia.hardware.usb.function",
+    "fuchsia.hardware.usb.hci",
+    "fuchsia.hardware.usb.hub",
+    "fuchsia.hardware.usb.hubdescriptor",
+    "fuchsia.hardware.usb.modeswitch",
+    "fuchsia.hardware.usb.phy",
+    "fuchsia.hardware.usb.request",
+    "fuchsia.hardware.vreg",
+    "fuchsia.hardware.wlan.info",
+    "fuchsia.hardware.wlan.mac",
+    "fuchsia.hardware.wlanif",
+    "fuchsia.hardware.wlanphy",
+    "fuchsia.hardware.wlanphyimpl",
+    "fuchsia.sysmem",
+    "zircon.hw.pci",
+    "zircon.hw.usb",
+    "zircon.syscalls.pci",
+  ]
+}
