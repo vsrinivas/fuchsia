@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod nonce;
-
 // Used in PRF as specified in IEEE Std 802.11-2016, 12.7.1.2.
 use crate::Error;
 use anyhow::ensure;

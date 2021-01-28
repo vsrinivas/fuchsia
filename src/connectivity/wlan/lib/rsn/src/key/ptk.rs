@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::crypto_utils::prf;
-use crate::Error;
+use crate::{prf, Error};
 use anyhow::ensure;
 use std::cmp::{max, min};
 use wlan_common::ie::rsn::{
@@ -69,7 +68,7 @@ impl Ptk {
         let ptk_bytes = match akm.suite_type {
             // IEEE 802.11-2016 does not specify this PRF for SAE, but in practice it is used.
             akm::SAE => kdf_sha256(pmk, "Pairwise key expansion", &data, prf_bits as u16),
-            _ => prf(pmk, "Pairwise key expansion", &data, prf_bits as usize)?,
+            _ => prf::prf(pmk, "Pairwise key expansion", &data, prf_bits as usize)?,
         };
         let ptk = Ptk {
             ptk: ptk_bytes,

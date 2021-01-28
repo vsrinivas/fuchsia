@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::crypto_utils::nonce::Nonce;
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
 use crate::key::exchange::{compute_mic_from_buf, Key};
 use crate::key::gtk::Gtk;
@@ -11,6 +10,7 @@ use crate::key::ptk::Ptk;
 use crate::key::Tk;
 use crate::key_data;
 use crate::key_data::kde;
+use crate::nonce::Nonce;
 use crate::rsna::{
     Dot11VerifiedKeyFrame, IgtkSupport, NegotiatedProtection, ProtectionType, SecAssocUpdate,
     UnverifiedKeyData, UpdateSink,

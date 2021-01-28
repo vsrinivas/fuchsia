@@ -4,7 +4,6 @@
 
 use super::*;
 use crate::auth;
-use crate::crypto_utils::nonce::NonceReader;
 use crate::key::exchange::handshake::fourway::{self, Fourway};
 use crate::key::exchange::{compute_mic, compute_mic_from_buf};
 use crate::key::{
@@ -13,6 +12,7 @@ use crate::key::{
     ptk::Ptk,
 };
 use crate::key_data::kde;
+use crate::nonce::NonceReader;
 use crate::psk;
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate};
 use crate::ProtectionInfo;

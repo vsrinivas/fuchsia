@@ -2,175 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::Algorithm;
+use crate::{
+    aes::{self, KeyUnwrapIo, KeyWrapIo, SizedKey},
+    keywrap::Algorithm,
+    Error,
+};
 
-use crate::{format_rsn_err, rsn_ensure, Error};
-
-use byteorder::{BigEndian, ByteOrder};
-use crypto::aes::KeySize;
-use crypto::aessafe;
-use crypto::blockmodes::{self, EcbDecryptor, EcbEncryptor, PaddingProcessor};
-use crypto::buffer;
-use crypto::symmetriccipher::{Decryptor, Encryptor};
-
-// Implementation of RFC 3394 - Advanced Encryption Standard (AES) Key Wrap Algorithm
-// RFC 3394, 2.2.3
-static DEFAULT_IV: &[u8] = &[0xa6; 8];
-const BLOCK_SIZE: usize = 16;
-
+/// RFC 3394 AES key wrapping.
 pub struct NistAes;
 
-impl NistAes {
-    fn keysize(key_len: usize) -> Result<KeySize, Error> {
-        match key_len {
-            16 => Ok(KeySize::KeySize128),
-            24 => Ok(KeySize::KeySize192),
-            32 => Ok(KeySize::KeySize256),
-            _ => return Err(Error::InvalidAesKeywrapKeySize(key_len).into()),
-        }
-    }
-}
-
-pub fn ecb_encryptor<X: PaddingProcessor + Send + 'static>(
-    key_size: KeySize,
-    key: &[u8],
-    padding: X,
-) -> Box<dyn Encryptor> {
-    match key_size {
-        KeySize::KeySize128 => {
-            let aes_enc = aessafe::AesSafe128Encryptor::new(key);
-            let enc = Box::new(EcbEncryptor::new(aes_enc, padding));
-            enc
-        }
-        KeySize::KeySize192 => {
-            let aes_enc = aessafe::AesSafe192Encryptor::new(key);
-            let enc = Box::new(EcbEncryptor::new(aes_enc, padding));
-            enc
-        }
-        KeySize::KeySize256 => {
-            let aes_enc = aessafe::AesSafe256Encryptor::new(key);
-            let enc = Box::new(EcbEncryptor::new(aes_enc, padding));
-            enc
-        }
-    }
-}
-
-pub fn ecb_decryptor<X: PaddingProcessor + Send + 'static>(
-    key_size: KeySize,
-    key: &[u8],
-    padding: X,
-) -> Box<dyn Decryptor> {
-    match key_size {
-        KeySize::KeySize128 => {
-            let aes_dec = aessafe::AesSafe128Decryptor::new(key);
-            let dec = Box::new(EcbDecryptor::new(aes_dec, padding));
-            dec
-        }
-        KeySize::KeySize192 => {
-            let aes_dec = aessafe::AesSafe192Decryptor::new(key);
-            let dec = Box::new(EcbDecryptor::new(aes_dec, padding));
-            dec
-        }
-        KeySize::KeySize256 => {
-            let aes_dec = aessafe::AesSafe256Decryptor::new(key);
-            let dec = Box::new(EcbDecryptor::new(aes_dec, padding));
-            dec
-        }
-    }
-}
-
 impl Algorithm for NistAes {
-    // RFC 3394, 2.2.1 - Uses index based wrapping
+    /// RFC 3394, 2.2.1 AES key wrapping.
+    // NOTE: The IV is never used in this implementation.
     fn wrap_key(&self, key: &[u8], _iv: &[u8; 16], p: &[u8]) -> Result<Vec<u8>, Error> {
-        let n = p.len() / 8;
-        rsn_ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
-
-        let keysize = NistAes::keysize(key.len())?;
-        let mut b = vec![0u8; BLOCK_SIZE];
-
-        // 1) Initialize variables
-        // aes_block[:8] = A
-        // aes_block[:] = A | R[i]
-        let mut aes_block = vec![0u8; BLOCK_SIZE];
-        &aes_block[..8].copy_from_slice(&DEFAULT_IV[..]);
-        let mut c = vec![0u8; (n + 1) * 8];
-        {
-            let r = &mut c[8..];
-            r.copy_from_slice(p);
-
-            // 2) Calculate intermediate values
-            for j in 0..6 {
-                for i in 1..(n + 1) {
-                    let ri = &mut r[(i - 1) * 8..(i * 8)];
-                    &aes_block[8..16].copy_from_slice(ri);
-                    {
-                        let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
-                        let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
-                        let mut cipher = ecb_encryptor(keysize, key, blockmodes::NoPadding);
-                        cipher.encrypt(&mut read_buf, &mut write_buf, true).map_err(|e| {
-                            format_rsn_err!("AES keywrap encryption error: {:?}", e)
-                        })?;
-                    }
-                    let t = (n * j + i) as u64;
-                    BigEndian::write_u64(&mut aes_block, BigEndian::read_u64(&b[..8]) ^ t);
-
-                    ri.copy_from_slice(&b[8..]);
-                }
-            }
-        }
-
-        // 3) Output the results
-        let a = &aes_block[..8];
-        &c[..8].copy_from_slice(a);
-        Ok(c)
+        let key = SizedKey::try_from_slice(key)?;
+        let kio = KeyWrapIo::try_from_input(p)?;
+        let wrapped = aes::wrap_key(&key, None, kio)?;
+        Ok(wrapped)
     }
 
-    // RFC 3394, 2.2.2 - uses index based unwrapping
+    /// RFC 3394, 2.2.2 AES key unwrapping.
+    // NOTE: The IV is never used in this implementation.
     fn unwrap_key(&self, key: &[u8], _iv: &[u8; 16], c: &[u8]) -> Result<Vec<u8>, Error> {
-        let n = c.len() / 8 - 1;
-        rsn_ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
-
-        let keysize = NistAes::keysize(key.len())?;
-        let mut b = vec![0u8; BLOCK_SIZE];
-
-        // 1) Initialize variables
-        // aes_block[:8] = A
-        // aes_block[:] = (A ^ t) | R[i]
-        let mut aes_block = vec![0u8; BLOCK_SIZE];
-        &aes_block[..8].copy_from_slice(&c[..8]);
-        let mut r = vec![0u8; n * 8];
-        r.copy_from_slice(&c[8..]);
-
-        // 2) Calculate intermediate values
-        for j in (0..6).rev() {
-            for i in (1..n + 1).rev() {
-                let t = (n * j + i) as u64;
-                let v = BigEndian::read_u64(&aes_block[..8]) ^ t;
-                BigEndian::write_u64(&mut aes_block[..8], v);
-
-                let ri = &mut r[(i - 1) * 8..i * 8];
-                &aes_block[8..16].copy_from_slice(ri);
-                {
-                    let mut read_buf = buffer::RefReadBuffer::new(&aes_block[..]);
-                    let mut write_buf = buffer::RefWriteBuffer::new(&mut b[..]);
-                    let mut cipher = ecb_decryptor(keysize, key, blockmodes::NoPadding);
-                    cipher
-                        .decrypt(&mut read_buf, &mut write_buf, true)
-                        .map_err(|e| format_rsn_err!("AES keywrap decryption error: {:?}", e))?;
-                }
-
-                &aes_block[..8].copy_from_slice(&b[..8]);
-                ri.copy_from_slice(&b[8..16]);
-            }
-        }
-
-        // 3) Output the results
-        rsn_ensure!(&aes_block[..8] == DEFAULT_IV, Error::WrongAesKeywrapKey);
-
-        Ok(r)
+        let key = SizedKey::try_from_slice(key)?;
+        let kio = KeyUnwrapIo::try_from_input(c)?;
+        let unwrapped = aes::unwrap_key(&key, None, kio)?;
+        Ok(unwrapped)
     }
 }
 
+// TODO: Move some of these tests into the `rsn::aes` module.
 #[cfg(test)]
 mod tests {
     use super::*;

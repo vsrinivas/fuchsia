@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 // Remove once GtkProvider is used.
-#[allow(unused)]
-use crate::crypto_utils::prf;
 use crate::key::Tk;
-use crate::{rsn_ensure, Error};
+#[allow(unused)]
+use crate::{prf, rsn_ensure, Error};
 use mundane::bytes;
 use std::hash::{Hash, Hasher};
 use wlan_common::ie::rsn::cipher::Cipher;
@@ -78,7 +77,7 @@ impl Gtk {
         data[0..6].copy_from_slice(&aa[..]);
         data[6..].copy_from_slice(&gnonce[..]);
 
-        let gtk_bytes = prf(gmk, "Group key expansion", &data, tk_bits as usize)?;
+        let gtk_bytes = prf::prf(gmk, "Group key expansion", &data, tk_bits as usize)?;
         Ok(Gtk { gtk: gtk_bytes, key_id, tk_len: (tk_bits / 8) as usize, cipher, rsc })
     }
 

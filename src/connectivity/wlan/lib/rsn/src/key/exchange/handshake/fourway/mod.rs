@@ -5,8 +5,8 @@
 mod authenticator;
 mod supplicant;
 
-use crate::crypto_utils::nonce::NonceReader;
 use crate::key::{exchange, gtk::GtkProvider};
+use crate::nonce::NonceReader;
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocUpdate, UpdateSink};
 use crate::ProtectionInfo;
 use crate::{rsn_ensure, Error};

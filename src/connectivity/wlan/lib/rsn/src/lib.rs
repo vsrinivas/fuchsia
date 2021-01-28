@@ -12,16 +12,19 @@ use thiserror::{self, Error};
 
 // TODO(hahnr): Limit exports and rearrange modules.
 
+mod aes;
 pub mod auth;
-mod crypto_utils;
 mod integrity;
 pub mod key;
 mod key_data;
 mod keywrap;
+pub mod nonce;
+mod prf;
 pub mod rsna;
 
 use {
     crate::{
+        aes::AesError,
         key::exchange::{
             self,
             handshake::{fourway, group_key, HandshakeMessageNumber},
@@ -37,7 +40,6 @@ use {
 
 pub use crate::{
     auth::psk,
-    crypto_utils::nonce,
     key::gtk::{self, GtkProvider},
     rsna::NegotiatedProtection,
 };
@@ -270,12 +272,8 @@ pub enum Error {
     PtkHierarchyUnsupportedCipherError,
     #[error("error deriving GTK; unsupported cipher suite")]
     GtkHierarchyUnsupportedCipherError,
-    #[error("error invalid key size for AES keywrap: {}", _0)]
-    InvalidAesKeywrapKeySize(usize),
-    #[error("error data must be a multiple of 64-bit blocks and at least 128 bits: {}", _0)]
-    InvalidAesKeywrapDataLength(usize),
-    #[error("error wrong key for AES Keywrap unwrapping")]
-    WrongAesKeywrapKey,
+    #[error("AES operation failed: {}", _0)]
+    Aes(AesError),
     #[error("invalid key data length; must be at least 16 bytes and a multiple of 8: {}", _0)]
     InvaidKeyDataLength(usize),
     #[error("invalid key data; error code: {:?}", _0)]
@@ -384,6 +382,12 @@ pub enum Error {
     AuthError(auth::AuthError),
     #[error("error, {}", _0)]
     GenericError(String),
+}
+
+impl From<AesError> for Error {
+    fn from(error: AesError) -> Self {
+        Error::Aes(error)
+    }
 }
 
 #[macro_export]
