@@ -5,7 +5,7 @@
 use {
     crate::constants::{get_socket, CURRENT_EXE_HASH, MDNS_BROADCAST_INTERVAL_SECS},
     crate::discovery::{TargetFinder, TargetFinderConfig},
-    crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
+    crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::{client::Fastboot, spawn_fastboot_discovery},
     crate::logger::streamer::GenericDiagnosticsStreamer,
     crate::mdns::MdnsTargetFinder,
@@ -19,6 +19,7 @@ use {
     async_trait::async_trait,
     chrono::Utc,
     ffx_core::{build_info, TryStreamUtilExt},
+    ffx_daemon_core::events::{self, EventHandler},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError, FastbootError,
@@ -96,7 +97,7 @@ impl DaemonEventHandler {
 
     fn handle_mdns<'a>(
         &self,
-        t: events::TargetInfo,
+        t: TargetInfo,
         tc: &'a TargetCollection,
         cr: Weak<dyn ConfigReader>,
     ) -> impl Future<Output = ()> + 'a {
@@ -167,7 +168,7 @@ impl DaemonEventHandler {
         tc.merge_insert(target).then(|target| async move { target.run_logger().await }).await;
     }
 
-    async fn handle_fastboot(&self, t: events::TargetInfo, tc: &TargetCollection) {
+    async fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
         log::trace!("Found new target via fastboot: {}", t.nodename);
         tc.merge_insert(Target::from_target_info(self.ascendd.clone(), t.into()))
             .then(|target| async move {
@@ -629,7 +630,7 @@ mod test {
                 t.nodename().await.expect("Should not send mDns discovery for unnamed node.");
             let nodename_clone = nodename.clone();
             self.event_queue
-                .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
+                .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
                     nodename: nodename.clone(),
                     addresses: t.addrs().await.iter().cloned().collect(),
                     ..Default::default()
@@ -902,7 +903,7 @@ mod test {
             }),
         };
         assert!(!handler
-            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
+            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
                 nodename: t.nodename().await.expect("mdns target should always have a name."),
                 ..Default::default()
             })))
@@ -923,7 +924,7 @@ mod test {
 
         assert_eq!(
             t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe).await,
-            crate::task::TaskSnapshot::NotRunning
+            ffx_daemon_core::task::TaskSnapshot::NotRunning
         );
 
         // This handler will now return the value of the default target as
@@ -937,7 +938,7 @@ mod test {
             }),
         };
         assert!(!handler
-            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
+            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
                 nodename: t.nodename().await.expect("Handling Mdns traffic for unnamed node"),
                 ..Default::default()
             })))
@@ -946,7 +947,7 @@ mod test {
 
         assert_eq!(
             t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe).await,
-            crate::task::TaskSnapshot::Running
+            ffx_daemon_core::task::TaskSnapshot::Running
         );
 
         // TODO(awdavies): RCS, Fastboot, etc. events.

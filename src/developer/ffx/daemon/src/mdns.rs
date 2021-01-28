@@ -4,15 +4,16 @@
 
 use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
-    crate::events,
-    crate::events::TryIntoTargetInfo,
-    crate::net,
-    crate::net::IsLocalAddr,
+    crate::events::{DaemonEvent, TargetInfo, TryIntoTargetInfo, WireTrafficType},
     crate::target::*,
     ::mdns::protocol as dns,
     anyhow::{Context as _, Result},
     async_std::net::UdpSocket,
     async_std::sync::Mutex,
+    ffx_daemon_core::{
+        events,
+        net::{self, IsLocalAddr},
+    },
     fuchsia_async::{Task, Timer},
     futures::FutureExt,
     packet::{InnerPacketBuilder, ParseBuffer},
@@ -38,7 +39,7 @@ pub struct MdnsTargetFinder {
 // the socket_tasks if there is not already a task for that interface.
 async fn interface_discovery(
     socket_tasks: Arc<Mutex<HashMap<IpAddr, Task<()>>>>,
-    e: events::Queue<events::DaemonEvent>,
+    e: events::Queue<DaemonEvent>,
     discovery_interval: Duration,
     query_interval: Duration,
     ttl: u32,
@@ -187,7 +188,7 @@ async fn interface_discovery(
 // recv_loop reads packets from sock. If the packet is a Fuchsia mdns packet, a
 // corresponding mdns event is published to the queue. All other packets are
 // silently discarded.
-async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<events::DaemonEvent>) {
+async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
     loop {
         let mut buf = &mut [0u8; 1500][..];
         let addr = match sock.recv_from(&mut buf).await {
@@ -222,7 +223,7 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<events::DaemonEvent>) 
                 info.nodename,
                 sock.local_addr().unwrap()
             );
-            e.push(events::DaemonEvent::WireTraffic(events::WireTrafficType::Mdns(info)))
+            e.push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(info)))
                 .await
                 .unwrap_or_else(|err| log::debug!("mdns discovery was unable to publish: {}", err));
         }
@@ -276,7 +277,7 @@ async fn query_loop(sock: Arc<UdpSocket>, interval: Duration) {
 // mdns query to discover Fuchsia devices every interval.
 async fn query_recv_loop(
     sock: Arc<UdpSocket>,
-    e: events::Queue<events::DaemonEvent>,
+    e: events::Queue<DaemonEvent>,
     interval: Duration,
     tasks: Arc<Mutex<HashMap<IpAddr, Task<()>>>>,
 ) {
@@ -311,7 +312,7 @@ impl TargetFinder for MdnsTargetFinder {
         Ok(Self { socket_tasks: Arc::new(Mutex::new(HashMap::new())), config: config.clone() })
     }
 
-    fn start(&mut self, e: events::Queue<events::DaemonEvent>) -> Result<()> {
+    fn start(&mut self, e: events::Queue<DaemonEvent>) -> Result<()> {
         Task::spawn(interface_discovery(
             self.socket_tasks.clone(),
             e.clone(),
@@ -334,10 +335,10 @@ fn is_fuchsia_response<B: zerocopy::ByteSlice + Clone>(m: &dns::Message<B>) -> b
     m.answers.len() >= 1 && m.answers[0].domain == "_fuchsia._udp.local"
 }
 
-impl<B: ByteSlice + Clone> events::TryIntoTargetInfo for dns::Message<B> {
+impl<B: ByteSlice + Clone> TryIntoTargetInfo for dns::Message<B> {
     type Error = MdnsConvertError;
 
-    fn try_into_target_info(self, src: SocketAddr) -> Result<events::TargetInfo, Self::Error> {
+    fn try_into_target_info(self, src: SocketAddr) -> Result<TargetInfo, Self::Error> {
         let mut nodename = String::new();
         let mut addrs: HashSet<TargetAddr> = [src.into()].iter().cloned().collect();
         for record in self.additional.iter() {
@@ -356,11 +357,7 @@ impl<B: ByteSlice + Clone> events::TryIntoTargetInfo for dns::Message<B> {
         if nodename.len() == 0 {
             return Err(MdnsConvertError::NodenameMissing);
         }
-        Ok(events::TargetInfo {
-            nodename,
-            addresses: addrs.drain().collect(),
-            ..Default::default()
-        })
+        Ok(TargetInfo { nodename, addresses: addrs.drain().collect(), ..Default::default() })
     }
 }
 

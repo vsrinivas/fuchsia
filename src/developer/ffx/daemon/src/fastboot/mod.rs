@@ -4,13 +4,14 @@
 
 use {
     crate::constants::FASTBOOT_CHECK_INTERVAL_SECS,
-    crate::events::{self, DaemonEvent, WireTrafficType},
+    crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     anyhow::{bail, Context, Result},
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
         send, upload,
     },
+    ffx_daemon_core::events,
     fuchsia_async::Timer,
     std::{
         fs::read,
@@ -217,7 +218,7 @@ pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
                 // Add to target collection
                 let nodename = format!("{:?}", dev);
                 queue
-                    .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(events::TargetInfo {
+                    .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
                         nodename,
                         serial: Some(dev.serial),
                         ..Default::default()

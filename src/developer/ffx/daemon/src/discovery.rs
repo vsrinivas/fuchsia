@@ -1,8 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::events::{self, DaemonEvent};
+use crate::events::DaemonEvent;
 use anyhow::Result;
+use ffx_daemon_core::events;
 use std::time::Duration;
 
 pub trait TargetFinder: Sized {

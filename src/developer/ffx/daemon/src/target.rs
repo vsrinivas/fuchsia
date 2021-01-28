@@ -7,12 +7,10 @@ use {
         FASTBOOT_CHECK_INTERVAL_SECS, FASTBOOT_DROP_GRACE_PERIOD_SECS,
         MDNS_BROADCAST_INTERVAL_SECS, MDNS_TARGET_DROP_GRACE_PERIOD_SECS,
     },
-    crate::events::{self, DaemonEvent, EventSynthesizer},
+    crate::events::{DaemonEvent, TargetInfo},
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
-    crate::net::IsLocalAddr,
     crate::onet::HostPipeConnection,
-    crate::task::{SingleFlight, TaskSnapshot},
     anyhow::{anyhow, Context, Error, Result},
     ascendd::Ascendd,
     async_std::{
@@ -22,6 +20,9 @@ use {
     async_trait::async_trait,
     bridge::DaemonError,
     chrono::{DateTime, Utc},
+    ffx_daemon_core::events::{self, EventSynthesizer},
+    ffx_daemon_core::net::IsLocalAddr,
+    ffx_daemon_core::task::{SingleFlight, TaskSnapshot},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::{
@@ -521,7 +522,7 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub fn from_target_info(ascendd: Arc<Ascendd>, mut t: events::TargetInfo) -> Self {
+    pub fn from_target_info(ascendd: Arc<Ascendd>, mut t: TargetInfo) -> Self {
         if let Some(s) = t.serial {
             Self::new_with_serial(ascendd, t.nodename.as_ref(), &s)
         } else {
@@ -1773,15 +1774,18 @@ mod test {
 
         let events = tc.synthesize_events().await;
         assert_eq!(events.len(), 3);
-        assert!(events.iter().any(
-            |e| e == &events::DaemonEvent::NewTarget(Some("clam-chowder-is-tasty".to_string()))
-        ));
         assert!(events
             .iter()
-            .any(|e| e
-                == &events::DaemonEvent::NewTarget(Some("this-is-a-crunchy-falafel".to_string()))));
-        assert!(events.iter().any(|e| e
-            == &events::DaemonEvent::NewTarget(Some("i-should-probably-eat-lunch".to_string()))));
+            .any(|e| e == &DaemonEvent::NewTarget(Some("clam-chowder-is-tasty".to_string()))));
+        assert!(events
+            .iter()
+            .any(|e| e == &DaemonEvent::NewTarget(Some("this-is-a-crunchy-falafel".to_string()))));
+        assert!(
+            events
+                .iter()
+                .any(|e| e
+                    == &DaemonEvent::NewTarget(Some("i-should-probably-eat-lunch".to_string())))
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

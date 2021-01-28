@@ -20,6 +20,7 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-std",
+      "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:home",
       "//third_party/rust_crates:log",
@@ -28,6 +29,7 @@ if (is_host) {
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
     ]
+
     non_rust_deps = [ "//third_party/boringssl" ]
 
     sources = [ "src/lib.rs" ]
