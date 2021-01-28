@@ -2,17 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("mock_services") {
-  name = "shutdown_shim_mock_services"
+rustc_test("shutdown_shim_integration_test_bin") {
   edition = "2018"
-  source_root = "src/tests_and_mocks.rs"
+  source_root = "src/main.rs"
 
   deps = [
-    "fidl:fuchsia.test.shutdownshim-rustc",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -22,63 +19,44 @@ rustc_binary("mock_services") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/topology_builder",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
   ]
 
-  sources = [ "src/tests_and_mocks.rs" ]
+  sources = [
+    "src/main.rs",
+    "src/shutdown_mocks.rs",
+  ]
 }
 
-rustc_test("test_driver") {
-  name = "shutdown_shim_integration_test"
-  edition = "2018"
-  source_root = "src/main.rs"
-
-  deps = [
-    "fidl:fuchsia.test.shutdownshim-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//third_party/rust_crates:anyhow",
-  ]
-
-  sources = [ "src/main.rs" ]
+fuchsia_component("shutdown_shim_integration_test_component") {
+  manifest = "meta/shutdown-shim-integration-test.cml"
+  component_name = "shutdown-shim-integration-tests"
+  deps = [ ":shutdown_shim_integration_test_bin" ]
+  testonly = true
 }
 
-test_package("shutdown-shim-integration-test") {
-  deps = [
-    ":mock_services",
-    ":test_driver",
-    "..:shutdown-shim",
-  ]
-  v2_tests = [
-    {
-      name = "shutdown_shim_integration_test"
-      environments = basic_envs
-    },
-  ]
-  binaries = [
-    {
-      name = "shutdown-shim"
-    },
-    {
-      name = "shutdown_shim_mock_services"
-    },
-  ]
+# The shutdown shim runs from the ZBI in prod, so there isn't a
+# fuchsia_component target that exists yet that we can depend on. Let's define
+# one here so we can put the shim in our test package.
+fuchsia_component("shutdown_shim_component") {
+  manifest = "meta/shutdown-shim.cml"
+  component_name = "shutdown-shim"
+  deps = [ "..:shutdown-shim" ]
+  testonly = true
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/shutdown-shim.cml")
-      dest = "shutdown-shim.cm"
-    },
-    {
-      path = rebase_path("meta/test-driver.cml")
-      dest = "test-driver.cm"
-    },
+fuchsia_test_package("shutdown-shim-integration-tests") {
+  deps = [
+    ":shutdown_shim_component",
+    ":shutdown_shim_integration_test_component",
   ]
+  test_components = [ ":shutdown_shim_integration_test_component" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":shutdown-shim-integration-test" ]
+  deps = [ ":shutdown-shim-integration-tests" ]
 }

@@ -223,7 +223,9 @@ zx_status_t initiate_component_shutdown() {
   }
   auto system_controller_client = sys2_fidl::SystemController::SyncClient(std::move(local));
 
+  printf("[shutdown-shim]: calling system_controller_client.Shutdown()\n");
   auto resp = system_controller_client.Shutdown();
+  printf("[shutdown-shim]: status was returned: %s\n", zx_status_get_string(status));
   return resp.status();
 }
 
