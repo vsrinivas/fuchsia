@@ -10,6 +10,7 @@ group("drivers") {
 group("tests") {
   testonly = true
   deps = [
+    "bin/sysmem_connector:sysmem_connector_test",
     "drivers/sysmem:tests",
     "tests/sysmem/fuzz",
     "tools:tests",

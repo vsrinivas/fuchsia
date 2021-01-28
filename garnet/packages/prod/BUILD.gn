@@ -49,7 +49,6 @@ group("all") {
     "//garnet/packages/prod:scenic",
     "//garnet/packages/prod:sched",
     "//garnet/packages/prod:setui_client",
-    "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
     "//garnet/packages/prod:terminal",
@@ -309,7 +308,7 @@ group("magma-arm-mali-system") {
 
 group("magma-arm-mali-config") {
   public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
+    "//src/devices/sysmem/bin/sysmem_connector",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan-config",
   ]
 }
@@ -328,7 +327,7 @@ if (target_cpu == "x64") {
 
   group("magma-intel-gen-config") {
     public_deps = [
-      "//garnet/packages/prod:sysmem_connector",
+      "//src/devices/sysmem/bin/sysmem_connector",
       "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan-config",
     ]
   }
@@ -336,7 +335,7 @@ if (target_cpu == "x64") {
 
 group("magma-qcom-adreno") {
   public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
+    "//src/devices/sysmem/bin/sysmem_connector",
     "//src/graphics/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
   ]
 }
@@ -469,7 +468,7 @@ group("setui_client") {
 }
 
 group("sysmem_connector") {
-  public_deps = [ "//garnet/bin/sysmem_connector" ]
+  public_deps = [ "//src/devices/sysmem/bin/sysmem_connector" ]
 }
 
 group("tee_manager") {
@@ -529,7 +528,7 @@ group("usb_video") {
 
 group("vulkan") {
   public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
+    "//src/devices/sysmem/bin/sysmem_connector",
     "//src/graphics/bin/vulkan_loader",
   ]
 }

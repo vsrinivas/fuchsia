@@ -16,7 +16,7 @@ import("//src/ui/lib/escher/shaders/shaders.gni")
 group("runtime") {
   deps = [
     ":scenic",
-    "//garnet/bin/sysmem_connector",
+    "//src/devices/sysmem/bin/sysmem_connector",
     "//src/graphics/bin/vulkan_loader",
     "//src/sys/activity",
     "//src/ui/bin/ime:ime_service",

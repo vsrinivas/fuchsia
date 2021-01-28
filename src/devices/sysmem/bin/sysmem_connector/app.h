@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSMEM_CONNECTOR_APP_H_
-#define GARNET_BIN_SYSMEM_CONNECTOR_APP_H_
+#ifndef SRC_DEVICES_SYSMEM_BIN_SYSMEM_CONNECTOR_APP_H_
+#define SRC_DEVICES_SYSMEM_BIN_SYSMEM_CONNECTOR_APP_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -27,4 +27,4 @@ class App {
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
-#endif  // GARNET_BIN_SYSMEM_CONNECTOR_APP_H_
+#endif  // SRC_DEVICES_SYSMEM_BIN_SYSMEM_CONNECTOR_APP_H_
