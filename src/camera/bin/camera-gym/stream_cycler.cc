@@ -32,30 +32,27 @@ static void SetAbortOnError(fidl::InterfacePtr<T>& p, std::string message) {
   });
 }
 
-StreamCycler::StreamCycler(bool manual_mode)
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), manual_mode_(manual_mode) {
+StreamCycler::StreamCycler(async_dispatcher_t* dispatcher, bool manual_mode)
+    : dispatcher_(dispatcher), manual_mode_(manual_mode) {
   SetAbortOnError(watcher_, "fuchsia.camera3.DeviceWatcher disconnected.");
   SetAbortOnError(allocator_, "fuchsia.sysmem.Allocator disconnected.");
   SetAbortOnError(device_, "fuchsia.camera3.Device disconnected.");
 }
 
-StreamCycler::~StreamCycler() {
-  loop_.Quit();
-  loop_.JoinThreads();
-}
+StreamCycler::~StreamCycler() = default;
 
 fit::result<std::unique_ptr<StreamCycler>, zx_status_t> StreamCycler::Create(
     fuchsia::camera3::DeviceWatcherHandle watcher, fuchsia::sysmem::AllocatorHandle allocator,
-    bool manual_mode) {
-  auto cycler = std::unique_ptr<StreamCycler>(new StreamCycler(manual_mode));
+    async_dispatcher_t* dispatcher, bool manual_mode) {
+  auto cycler = std::unique_ptr<StreamCycler>(new StreamCycler(dispatcher, manual_mode));
 
-  zx_status_t status = cycler->watcher_.Bind(std::move(watcher), cycler->loop_.dispatcher());
+  zx_status_t status = cycler->watcher_.Bind(std::move(watcher), dispatcher);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
 
-  status = cycler->allocator_.Bind(std::move(allocator), cycler->loop_.dispatcher());
+  status = cycler->allocator_.Bind(std::move(allocator), dispatcher);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
@@ -63,12 +60,6 @@ fit::result<std::unique_ptr<StreamCycler>, zx_status_t> StreamCycler::Create(
 
   cycler->watcher_->WatchDevices(
       fit::bind_member(cycler.get(), &StreamCycler::WatchDevicesCallback));
-
-  status = cycler->loop_.StartThread("StreamCycler Thread");
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fit::error(status);
-  }
 
   return fit::ok(std::move(cycler));
 }
@@ -88,7 +79,7 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
     if (event.is_added()) {
       // Connect to device.
       // TODO(fxbug.dev/48506) Properly detect expected device id.
-      watcher_->ConnectToDevice(event.added(), device_.NewRequest(loop_.dispatcher()));
+      watcher_->ConnectToDevice(event.added(), device_.NewRequest(dispatcher_));
 
       // Watch for mute changes.
       device_->WatchMuteState(fit::bind_member(this, &StreamCycler::WatchMuteStateHandler));
@@ -132,7 +123,7 @@ void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
   // After a specified demo period, set the next stream configuration, which will end up cutting off
   // all existing streams.
   async::PostDelayedTask(
-      loop_.dispatcher(), [this]() { ForceNextStreamConfiguration(); }, kDemoTime);
+      dispatcher_, [this]() { ForceNextStreamConfiguration(); }, kDemoTime);
 
   // Be ready for configuration changes.
   device_->WatchCurrentConfiguration(
@@ -153,7 +144,7 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
   StreamInfo new_stream_info;
   stream_infos_.emplace(stream_index, std::move(new_stream_info));
   auto& stream = stream_infos_[stream_index].stream;
-  auto stream_request = stream.NewRequest(loop_.dispatcher());
+  auto stream_request = stream.NewRequest(dispatcher_);
   if (config_index == 1 || config_index == 2) {
     stream_infos_[stream_index].source_highlight = 0;
   }

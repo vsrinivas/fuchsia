@@ -79,14 +79,24 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Create the async::Loop to be used privately by StreamCycler.
+  async::Loop cycler_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
   // Create the cycler and attach it to the collage.
-  auto cycler_result =
-      camera::StreamCycler::Create(std::move(watcher), std::move(allocator), manual_mode);
+  auto cycler_result = camera::StreamCycler::Create(std::move(watcher), std::move(allocator),
+                                                    cycler_loop.dispatcher(), manual_mode);
   if (cycler_result.is_error()) {
     FX_PLOGS(ERROR, cycler_result.error()) << "Failed to create StreamCycler.";
     return EXIT_FAILURE;
   }
   auto cycler = cycler_result.take_value();
+
+  status = cycler_loop.StartThread("StreamCycler Thread");
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+    return EXIT_FAILURE;
+  }
+
   bool device_muted = false;
   std::set<uint32_t> collection_ids;
 
@@ -148,5 +158,7 @@ int main(int argc, char* argv[]) {
   context->outgoing()->AddPublicService(lifecycle.GetHandler());
 
   loop.Run();
+  cycler_loop.Quit();
+  cycler_loop.JoinThreads();
   return EXIT_SUCCESS;
 }

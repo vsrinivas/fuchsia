@@ -15,7 +15,7 @@ class CameraGymTest : public testing::Test {
 };
 
 TEST_F(CameraGymTest, PendingCollectionId) {
-  StreamCycler cycler{};
+  StreamCycler cycler(nullptr, false);
   cycler.current_config_index_ = 0;
   cycler.configurations_.push_back({});
   cycler.configurations_[0].streams.push_back({});
