@@ -198,6 +198,6 @@ To exit FEMU, run `dm poweroff` in the FEMU terminal.
 
  *  To learn more about how FEMU works, see the
     [Fuchsia emulator (FEMU) overview](/docs/concepts/emulator/index.md).
- *  To learn more about Fucshia device commands and Fuchsia workflows, see
+ *  To learn more about Fuchsia device commands and Fuchsia workflows, see
     [Explore Fuchsia](/docs/get-started/explore_fuchsia.md).
 
