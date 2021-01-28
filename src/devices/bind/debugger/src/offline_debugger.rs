@@ -5,6 +5,7 @@
 use crate::bind_program::{Condition, ConditionOp, Statement};
 use crate::compiler::{self, BindProgram, Symbol, SymbolTable, SymbolicInstruction};
 use crate::device_specification::{DeviceSpecification, Property};
+use crate::encode_bind_program_v1::encode_symbol;
 use crate::errors::UserError;
 use crate::instruction::{InstructionDebug, RawAstLocation};
 use crate::parser_common::{self, CompoundIdentifier, Span, Value};
@@ -65,7 +66,7 @@ impl<'a> AstLocation<'a> {
             AstLocation::AcceptStatementFailure { span, symbol, .. } => InstructionDebug {
                 line: span.line,
                 ast_location: RawAstLocation::AcceptStatementFailure,
-                extra: symbol.to_bytecode(),
+                extra: encode_symbol(symbol),
             },
             AstLocation::IfCondition(condition) => InstructionDebug {
                 line: condition.span.line,

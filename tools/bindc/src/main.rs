@@ -534,7 +534,12 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
         };
-        assert!(encode_to_bytecode(bind_program, true).is_empty());
+        assert_eq!(
+            encode_to_bytecode(bind_program, true),
+            vec![
+                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 0, 0, 0, 0
+            ]
+        );
     }
 
     #[test]

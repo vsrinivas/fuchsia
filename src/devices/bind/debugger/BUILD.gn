@@ -53,7 +53,6 @@ rustc_library("lib") {
   sources = [
     "src/bind_library.rs",
     "src/bind_program.rs",
-    "src/c_generation.rs",
     "src/compiler.rs",
     "src/ddk_bind_constants.rs",
     "src/debugger.rs",

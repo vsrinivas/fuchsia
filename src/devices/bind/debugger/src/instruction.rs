@@ -4,6 +4,7 @@
 
 //! Bind program instructions
 
+use crate::compiler::Symbol;
 use fidl_fuchsia_device_manager;
 use num_derive::FromPrimitive;
 use std::fmt;
@@ -30,8 +31,8 @@ impl From<fidl_fuchsia_device_manager::DeviceProperty> for DeviceProperty {
 #[derive(Clone, PartialEq, Eq)]
 pub enum Condition {
     Always,
-    Equal(u32, u32),
-    NotEqual(u32, u32),
+    Equal(Symbol, Symbol),
+    NotEqual(Symbol, Symbol),
 }
 
 #[derive(Clone)]

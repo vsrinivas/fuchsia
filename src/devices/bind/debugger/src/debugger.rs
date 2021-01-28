@@ -398,8 +398,8 @@ mod test {
         // Autobind is false (BIND_AUTOBIND has the value 0).
         let instructions = vec![
             RawInstruction::from(Instruction::Match(instruction::Condition::Equal(
-                BIND_AUTOBIND,
-                0,
+                Symbol::NumberValue(BIND_AUTOBIND.into()),
+                Symbol::NumberValue(0),
             ))),
             RawInstruction::from(Instruction::Abort(instruction::Condition::Always)),
         ];
@@ -409,18 +409,22 @@ mod test {
 
     #[test]
     fn bind_flags_not_supported() {
-        let instructions = vec![RawInstruction::from(Instruction::Abort(
-            instruction::Condition::Equal(BIND_FLAGS, 0),
-        ))];
+        let instructions =
+            vec![RawInstruction::from(Instruction::Abort(instruction::Condition::Equal(
+                Symbol::NumberValue(BIND_FLAGS.into()),
+                Symbol::NumberValue(0),
+            )))];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Err(DebuggerError::BindFlagsNotSupported));
     }
 
     #[test]
     fn missing_bind_protocol() {
-        let instructions = vec![RawInstruction::from(Instruction::Abort(
-            instruction::Condition::Equal(BIND_PROTOCOL, 5),
-        ))];
+        let instructions =
+            vec![RawInstruction::from(Instruction::Abort(instruction::Condition::Equal(
+                Symbol::NumberValue(BIND_PROTOCOL.into()),
+                Symbol::NumberValue(5),
+            )))];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Err(DebuggerError::MissingBindProtocol));
     }

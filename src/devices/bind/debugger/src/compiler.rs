@@ -126,24 +126,6 @@ pub enum Symbol {
     EnumValue,
 }
 
-impl Symbol {
-    #[allow(dead_code)]
-    pub fn to_bytecode(&self) -> u32 {
-        // We can only support numeric values until the bytecode representation is changed to handle
-        // strings.
-        match self {
-            Symbol::DeprecatedKey(value) => *value,
-            Symbol::NumberValue(value64) => match u32::try_from(*value64) {
-                Ok(value32) => value32,
-                _ => {
-                    unimplemented!("64 bit values are unsupported");
-                }
-            },
-            _ => unimplemented!("Unsupported symbol"),
-        }
-    }
-}
-
 /// Find the namespace of a qualified identifier from the library's includes. Or, if the identifier
 /// is unqualified, return the local qualified identifier.
 fn find_qualified_identifier(
@@ -433,25 +415,21 @@ pub enum SymbolicInstruction {
 impl SymbolicInstruction {
     pub fn to_instruction(self) -> instruction::Instruction {
         match self {
-            SymbolicInstruction::AbortIfEqual { lhs, rhs } => instruction::Instruction::Abort(
-                instruction::Condition::Equal(lhs.to_bytecode(), rhs.to_bytecode()),
-            ),
-            SymbolicInstruction::AbortIfNotEqual { lhs, rhs } => instruction::Instruction::Abort(
-                instruction::Condition::NotEqual(lhs.to_bytecode(), rhs.to_bytecode()),
-            ),
+            SymbolicInstruction::AbortIfEqual { lhs, rhs } => {
+                instruction::Instruction::Abort(instruction::Condition::Equal(lhs, rhs))
+            }
+            SymbolicInstruction::AbortIfNotEqual { lhs, rhs } => {
+                instruction::Instruction::Abort(instruction::Condition::NotEqual(lhs, rhs))
+            }
             SymbolicInstruction::Label(label_id) => instruction::Instruction::Label(label_id),
             SymbolicInstruction::UnconditionalJump { label } => {
                 instruction::Instruction::Goto(instruction::Condition::Always, label)
             }
-            SymbolicInstruction::JumpIfEqual { lhs, rhs, label } => instruction::Instruction::Goto(
-                instruction::Condition::Equal(lhs.to_bytecode(), rhs.to_bytecode()),
-                label,
-            ),
+            SymbolicInstruction::JumpIfEqual { lhs, rhs, label } => {
+                instruction::Instruction::Goto(instruction::Condition::Equal(lhs, rhs), label)
+            }
             SymbolicInstruction::JumpIfNotEqual { lhs, rhs, label } => {
-                instruction::Instruction::Goto(
-                    instruction::Condition::NotEqual(lhs.to_bytecode(), rhs.to_bytecode()),
-                    label,
-                )
+                instruction::Instruction::Goto(instruction::Condition::NotEqual(lhs, rhs), label)
             }
             SymbolicInstruction::UnconditionalAbort => {
                 instruction::Instruction::Abort(instruction::Condition::Always)

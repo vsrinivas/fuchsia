@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::compiler::BindProgram;
+use crate::compiler::{BindProgram, Symbol};
 use crate::instruction::{Condition, Instruction, InstructionInfo};
 use bitfield::bitfield;
 use num_derive::FromPrimitive;
+use std::convert::TryFrom;
 use std::fmt;
 
 /// Functions for encoding the old bytecode format. These functions need to be
@@ -97,8 +98,24 @@ impl From<Instruction> for RawInstruction<[u32; 3]> {
 fn encode_condition(condition: Condition) -> (u32, u32, u32) {
     match condition {
         Condition::Always => (RawCondition::Always as u32, 0, 0),
-        Condition::Equal(b, v) => (RawCondition::Equal as u32, b, v),
-        Condition::NotEqual(b, v) => (RawCondition::NotEqual as u32, b, v),
+        Condition::Equal(b, v) => (RawCondition::Equal as u32, encode_symbol(b), encode_symbol(v)),
+        Condition::NotEqual(b, v) => {
+            (RawCondition::NotEqual as u32, encode_symbol(b), encode_symbol(v))
+        }
+    }
+}
+
+pub fn encode_symbol(symbol: Symbol) -> u32 {
+    // The old bytecode format can only support numeric values.
+    match symbol {
+        Symbol::DeprecatedKey(value) => value,
+        Symbol::NumberValue(value64) => match u32::try_from(value64) {
+            Ok(value32) => value32,
+            _ => {
+                panic!("64 bit values are unsupported");
+            }
+        },
+        _ => panic!("Unsupported symbol"),
     }
 }
 
@@ -232,7 +249,10 @@ mod tests {
 
     #[test]
     fn test_complicated_value() {
-        let instruction = Instruction::Goto(Condition::Equal(23, 1234), 42);
+        let instruction = Instruction::Goto(
+            Condition::Equal(Symbol::NumberValue(23), Symbol::NumberValue(1234)),
+            42,
+        );
         let raw_instruction = RawInstruction::from(instruction);
         assert_eq!(raw_instruction.0[0], (1 << 28) | (2 << 24) | (42 << 16) | 23);
         assert_eq!(raw_instruction.0[1], 1234);

@@ -7,7 +7,6 @@
 
 pub mod bind_library;
 mod bind_program;
-mod c_generation;
 pub mod compiler;
 pub mod ddk_bind_constants;
 pub mod debugger;
