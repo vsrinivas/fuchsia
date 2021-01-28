@@ -68,8 +68,9 @@ First let's configure the build. To do this you need to make a few choices:
 * What [product configuration](#key-product-configurations) do you want?
   (unsure: try `workstation`)
 * What board are you building for? (unsure: try `x64`)
-* What extra [bundles](#key-bundles) do you want? (unsure: try `tools`, and if
-  you're working on features, you probably want `tests`)
+* What extra [test targets](#key-bundles) do you want? (unsure: try
+  `//bundles:tools`, and if you're working on features, you probably want
+  `//bundles:tests`)
 
 Armed with our above choices (if you didn't read above, do so now), you are
 ready to configure your build:
@@ -161,19 +162,23 @@ important configurations to be familiar with:
   for working on UI, media and many other high-level features. This is also
   the best environment for enthusiasts to play with and explore.
 
-### Key bundles {#key-bundles}
+### Key additional build targets {#key-bundles}
 
-As with products, there are many more, but the following bundles are most
-important to be familiar with:
+The `--with` flag for `fx set` takes in arbitrary
+[build targets](/docs/concepts/build_system/fuchsia_build_system_overview.md#build_targets).
+For convenience, a number of bundles are defined, which include a variety of
+commonly used build targets. It is important to be familiarized with the
+following bundles:
 
-* `tools` contains a broad array of the most common developer tools. This
-  includes tools for spawning components from command-line shells, tools for
-  reconfiguring and testing networks, making http requests, debugging
+* `//bundles:tools` contains a broad array of the most common developer tools.
+  This includes tools for spawning components from command-line shells, tools
+  for reconfiguring and testing networks, making http requests, debugging
   programs, changing audio volume, and so on. The core product includes
   `bundles:tools` in the universe package set by default.
-* `tests` causes all test programs to be built. Most test programs can be
-  invoked using `run-test-component` on the device, or via `fx run-test`.
-* `kitchen_sink` is a target that causes all other build targets to be
+* `//bundles:tests` causes all test programs to be built. Most test programs
+  can be invoked using `run-test-component` on the device, or via
+  `fx run-test`.
+* `//bundles:kitchen_sink` is a target that causes all other build targets to be
   included. It is useful when testing the impact of core changes, or when
   making large scale changes in the code base. It also may be a fun
   configuration for enthusiasts to play with, as it includes all software
