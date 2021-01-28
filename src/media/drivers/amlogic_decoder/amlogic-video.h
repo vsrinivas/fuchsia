@@ -211,7 +211,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   CodecMetrics default_nop_metrics_;
   CodecMetrics* metrics_ = &default_nop_metrics_;
 
-  DeviceType device_type_ = DeviceType::kUnknown;
+  DeviceType device_type_ = {};
   zx::resource secure_monitor_;
   std::optional<CbusRegisterIo> cbus_;
   std::optional<DosRegisterIo> dosbus_;
