@@ -15,6 +15,7 @@ group("camera") {
     "bin",
     "drivers",
     "lib",
+    "testing",
   ]
 }
 
