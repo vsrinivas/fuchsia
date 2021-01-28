@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{bail, format_err, Context, Error};
+use anyhow::{bail, Context, Error};
 use argh::FromArgs;
 use log::{error, info, LevelFilter};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -126,7 +126,7 @@ fn run(opt: Opt) -> Result<(), Error> {
 
     // Parse input files to get declarations, package set and fidl json map
     let FidlJsonPackageData { declarations, fidl_json_map } =
-        process_fidl_json_files(input_files.to_vec())?;
+        process_fidl_json_files(input_files.to_vec());
 
     // The table of contents lists all packages in alphabetical order.
     let table_of_contents = create_toc(&fidl_json_map);
@@ -247,19 +247,28 @@ fn read_fidldoc_config(config_path: &Path) -> Result<Value, Error> {
     Ok(serde_json::from_str(&fidl_config_str)?)
 }
 
-fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageData, Error> {
-    // Get table of contents as a HashSet of packages
-    let mut package_set: HashSet<String> = HashSet::new();
-    // Store all of the FidlJson values as we pass through.
-    // There should be one HashMap entry for each package.
-    // Multiple files will be merged together.
-    let mut fidl_json_map: HashMap<String, FidlJson> = HashMap::new();
-    // Store every `declaration_order` item to populate search
-    let mut declarations: Vec<String> = Vec::new();
+fn should_process_fidl_json(fidl_json: &FidlJson) -> bool {
+    if fidl_json.version != SUPPORTED_FIDLJSON {
+        error!(
+            "Error parsing {}: fidldoc does not support version {}, only {}",
+            fidl_json.name, fidl_json.version, SUPPORTED_FIDLJSON
+        );
+        return false;
+    }
 
+    if fidl_json.maybe_attributes.iter().any(|attr| attr["name"] == "NoDoc") {
+        info!("Skipping library with NoDoc attribute: {}", fidl_json.name);
+        return false;
+    }
+
+    true
+}
+
+fn process_fidl_json_files(input_files: Vec<PathBuf>) -> FidlJsonPackageData {
+    let mut package_data = FidlJsonPackageData::new();
     for file in input_files {
         let fidl_file_path = PathBuf::from(&file);
-        let mut fidl_json = match FidlJson::from_path(&fidl_file_path) {
+        let fidl_json = match FidlJson::from_path(&fidl_file_path) {
             Err(why) => {
                 error!("Error parsing {}: {}", file.display(), why);
                 continue;
@@ -267,56 +276,17 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
             Ok(json) => json,
         };
 
-        // Check version
-        if fidl_json.version != SUPPORTED_FIDLJSON {
-            error!(
-                "Error parsing {}: fidldoc does not support version {}, only {}",
-                file.display(),
-                fidl_json.version,
-                SUPPORTED_FIDLJSON
-            );
-            continue;
-        }
-
-        let package_name = fidl_json.name.clone();
-
-        if fidl_json.maybe_attributes.iter().any(|attr| attr["name"] == "NoDoc") {
-            info!("Skipping library with NoDoc attribute: {}", package_name);
-            continue;
-        }
-
-        declarations.append(&mut fidl_json.declaration_order);
-        if !package_set.contains(&package_name) {
-            package_set.insert(package_name.clone());
-            fidl_json_map.insert(package_name, fidl_json);
-        } else {
-            // Merge
-            let mut package_fidl_json: FidlJson = fidl_json_map
-                .get(&package_name)
-                .cloned()
-                .ok_or(format_err!("Package {} not found in FidlJson map", package_name))?;
-            package_fidl_json.maybe_attributes.append(&mut fidl_json.maybe_attributes);
-            package_fidl_json.bits_declarations.append(&mut fidl_json.bits_declarations);
-            package_fidl_json.const_declarations.append(&mut fidl_json.const_declarations);
-            package_fidl_json.enum_declarations.append(&mut fidl_json.enum_declarations);
-            package_fidl_json.interface_declarations.append(&mut fidl_json.interface_declarations);
-            package_fidl_json.struct_declarations.append(&mut fidl_json.struct_declarations);
-            package_fidl_json.table_declarations.append(&mut fidl_json.table_declarations);
-            package_fidl_json
-                .type_alias_declarations
-                .append(&mut fidl_json.type_alias_declarations);
-            package_fidl_json.union_declarations.append(&mut fidl_json.union_declarations);
-            package_fidl_json.declaration_order.append(&mut fidl_json.declaration_order);
-            fidl_json_map.insert(package_name, package_fidl_json);
+        if should_process_fidl_json(&fidl_json) {
+            package_data.insert(fidl_json);
         }
     }
 
     // Sort declarations inside each package
-    fidl_json_map.par_iter_mut().for_each(|(_, package_fidl_json)| {
+    package_data.fidl_json_map.par_iter_mut().for_each(|(_, package_fidl_json)| {
         package_fidl_json.sort_declarations();
     });
 
-    Ok(FidlJsonPackageData { declarations, fidl_json_map })
+    package_data
 }
 
 fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> Vec<TableOfContentsItem> {
@@ -539,5 +509,68 @@ mod test {
         ];
         normalize_input_files(&mut dup_input_files);
         assert_eq!(dup_input_files.len(), 2);
+    }
+
+    #[test]
+    fn should_process_test() {
+        let fidl_json = FidlJson {
+            name: "fuchsia.camera.common".to_string(),
+            version: SUPPORTED_FIDLJSON.to_string(),
+            maybe_attributes: vec![json!({"name": "not NoDoc", "value": ""})],
+            library_dependencies: Vec::new(),
+            bits_declarations: Vec::new(),
+            const_declarations: Vec::new(),
+            enum_declarations: Vec::new(),
+            interface_declarations: Vec::new(),
+            table_declarations: Vec::new(),
+            type_alias_declarations: Vec::new(),
+            struct_declarations: Vec::new(),
+            union_declarations: Vec::new(),
+            declaration_order: Vec::new(),
+            declarations: Map::new(),
+        };
+        assert_eq!(should_process_fidl_json(&fidl_json), true);
+    }
+
+    #[test]
+    fn check_version_test() {
+        let fidl_json = FidlJson {
+            name: "fuchsia.camera.common".to_string(),
+            version: "not a valid version string".to_string(),
+            maybe_attributes: vec![json!({"name": "not NoDoc", "value": ""})],
+            library_dependencies: Vec::new(),
+            bits_declarations: Vec::new(),
+            const_declarations: Vec::new(),
+            enum_declarations: Vec::new(),
+            interface_declarations: Vec::new(),
+            table_declarations: Vec::new(),
+            type_alias_declarations: Vec::new(),
+            struct_declarations: Vec::new(),
+            union_declarations: Vec::new(),
+            declaration_order: Vec::new(),
+            declarations: Map::new(),
+        };
+        assert_eq!(should_process_fidl_json(&fidl_json), false);
+    }
+
+    #[test]
+    fn check_nodoc_attribute_test() {
+        let fidl_json = FidlJson {
+            name: "fuchsia.camera.common".to_string(),
+            version: SUPPORTED_FIDLJSON.to_string(),
+            maybe_attributes: vec![json!({"name": "NoDoc", "value": ""})],
+            library_dependencies: Vec::new(),
+            bits_declarations: Vec::new(),
+            const_declarations: Vec::new(),
+            enum_declarations: Vec::new(),
+            interface_declarations: Vec::new(),
+            table_declarations: Vec::new(),
+            type_alias_declarations: Vec::new(),
+            struct_declarations: Vec::new(),
+            union_declarations: Vec::new(),
+            declaration_order: Vec::new(),
+            declarations: Map::new(),
+        };
+        assert_eq!(should_process_fidl_json(&fidl_json), false);
     }
 }

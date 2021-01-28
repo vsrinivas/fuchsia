@@ -96,6 +96,37 @@ pub struct FidlJsonPackageData {
     pub fidl_json_map: HashMap<String, FidlJson>,
 }
 
+impl FidlJsonPackageData {
+    pub fn new() -> Self {
+        FidlJsonPackageData { declarations: Vec::new(), fidl_json_map: HashMap::new() }
+    }
+
+    pub fn insert(&mut self, mut fidl_json: FidlJson) {
+        self.declarations.append(&mut fidl_json.declaration_order);
+        let package_name = fidl_json.name.clone();
+        self.fidl_json_map
+            .entry(package_name)
+            .and_modify(|package_fidl_json| {
+                // Merge
+                package_fidl_json.maybe_attributes.append(&mut fidl_json.maybe_attributes);
+                package_fidl_json.bits_declarations.append(&mut fidl_json.bits_declarations);
+                package_fidl_json.const_declarations.append(&mut fidl_json.const_declarations);
+                package_fidl_json.enum_declarations.append(&mut fidl_json.enum_declarations);
+                package_fidl_json
+                    .interface_declarations
+                    .append(&mut fidl_json.interface_declarations);
+                package_fidl_json.struct_declarations.append(&mut fidl_json.struct_declarations);
+                package_fidl_json.table_declarations.append(&mut fidl_json.table_declarations);
+                package_fidl_json
+                    .type_alias_declarations
+                    .append(&mut fidl_json.type_alias_declarations);
+                package_fidl_json.union_declarations.append(&mut fidl_json.union_declarations);
+                package_fidl_json.declaration_order.append(&mut fidl_json.declaration_order);
+            })
+            .or_insert(fidl_json);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
