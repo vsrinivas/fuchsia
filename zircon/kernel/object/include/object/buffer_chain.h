@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_BUFFER_CHAIN_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_BUFFER_CHAIN_H_
 
+#include <lib/page_cache.h>
 #include <lib/user_copy/user_ptr.h>
 #include <stdint.h>
 #include <string.h>
@@ -49,6 +50,10 @@
 // FreeUnusedBuffers(). The motivation for sometimes allocating more than needed and later
 // freeing is that the number of needed buffers is sometimes initially unknown and it is
 // presumed to be more efficient to do a single allocation than multiple allocations.
+//
+// BufferChain uses a private PageCache to improve performance under load by
+// avoiding contention on the PMM. The page cache is tunable by the kernel
+// command line parameter kernel.bufferchain.reserve-pages.
 //
 class BufferChain {
  public:
@@ -104,9 +109,9 @@ class BufferChain {
     const size_t num_buffers = (size + kRawDataSize - 1) / kRawDataSize;
 
     // Allocate a list of pages.
-    list_node unused_pages = LIST_INITIAL_VALUE(unused_pages);
-    zx_status_t status = pmm_alloc_pages(num_buffers, 0, &unused_pages);
-    if (unlikely(status != ZX_OK)) {
+    zx::status<page_cache::PageCache::AllocateResult> unused_pages_result =
+        page_cache_.Allocate(num_buffers);
+    if (unused_pages_result.is_error()) {
       return nullptr;
     }
 
@@ -114,11 +119,13 @@ class BufferChain {
     // BufferChain within it.
     BufferChain::BufferList temp;
     list_node used_pages = LIST_INITIAL_VALUE(used_pages);
-    status = AddNextBuffer(&unused_pages, &used_pages, &temp, temp.end());
+    zx_status_t status =
+        AddNextBuffer(&unused_pages_result->page_list, &used_pages, &temp, temp.end());
     if (unlikely(status != ZX_OK)) {
       return nullptr;
     }
-    BufferChain* chain = new (temp.front().data()) BufferChain(&temp, &unused_pages, &used_pages);
+    BufferChain* chain =
+        new (temp.front().data()) BufferChain(&temp, &unused_pages_result->page_list, &used_pages);
 
     return chain;
   }
@@ -137,18 +144,12 @@ class BufferChain {
       BufferChain::Buffer* buf = buffers.pop_front();
       buf->Buffer::~Buffer();
     }
-    pmm_free(&pages);
+    page_cache_.Free(ktl::move(pages));
   }
 
   // Free unused pages.
   void FreeUnusedBuffers() {
-    if (list_is_empty(&unused_pages_)) {
-      // Avoid calling pmm_free if not needed.
-      return;
-    }
-    list_node pages = LIST_INITIAL_VALUE(pages);
-    list_move(&unused_pages_, &pages);
-    pmm_free(&pages);
+    page_cache_.Free(ktl::move(unused_pages_));
   }
 
   // Skips the specified number of bytes, so they won't be consumed by Append or AppendKernel.
@@ -197,6 +198,8 @@ class BufferChain {
   static_assert(sizeof(BufferChain::Buffer) == BufferChain::kSizeOfBuffer, "");
 
   BufferList* buffers() { return &buffers_; }
+
+  static void InitializePageCache(uint32_t level);
 
  private:
   explicit BufferChain(BufferList* buffers, list_node* unused_pages, list_node* used_pages) {
@@ -294,6 +297,8 @@ class BufferChain {
   // not yet been used. These pages will be migrated to used_pages_ once they are needed for
   // the BufferList.
   list_node unused_pages_ = LIST_INITIAL_VALUE(unused_pages_);
+
+  inline static page_cache::PageCache page_cache_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(BufferChain);
 };
