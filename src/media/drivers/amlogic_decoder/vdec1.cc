@@ -24,6 +24,28 @@ constexpr uint32_t kReadOffsetAlignment = 512;
 
 }  // namespace
 
+uint32_t Vdec1::vdec_sleep_bits() {
+  switch (owner_->device_type()) {
+    case DeviceType::kG12A:
+    case DeviceType::kG12B:
+    case DeviceType::kGXM:
+      return 0xc;
+    case DeviceType::kSM1:
+      return 0x2;
+  }
+}
+
+uint32_t Vdec1::vdec_iso_bits() {
+  switch (owner_->device_type()) {
+    case DeviceType::kG12A:
+    case DeviceType::kG12B:
+    case DeviceType::kGXM:
+      return 0xc0;
+    case DeviceType::kSM1:
+      return 0x2;
+  }
+}
+
 std::optional<InternalBuffer> Vdec1::LoadFirmwareToBuffer(const uint8_t* data, uint32_t len) {
   TRACE_DURATION("media", "Vdec1::LoadFirmwareToBuffer");
   const uint32_t kBufferAlignShift = 16;
@@ -83,7 +105,7 @@ void Vdec1::PowerOn() {
   zx::nanosleep(powerup_deadline_);
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() & ~0xc);
+    temp.set_reg_value(temp.reg_value() & ~vdec_sleep_bits());
     temp.WriteTo(mmio()->aobus);
   }
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -122,10 +144,17 @@ void Vdec1::PowerOn() {
   // those. It's possible we have something else misconfigured, or have a timing-dependent SW bug,
   // but 285.7 is very likely to be fast enough (for now) assuming linear performance per clock
   // rate.
-  uint32_t clock_sel =
-      (owner_->device_type() == DeviceType::kG12A || owner_->device_type() == DeviceType::kG12B)
-          ? kG12xFclkDiv7
-          : kGxmFclkDiv7;
+  uint32_t clock_sel;
+  switch (owner_->device_type()) {
+    case DeviceType::kG12A:
+    case DeviceType::kG12B:
+    case DeviceType::kSM1:
+      clock_sel = kG12xFclkDiv7;
+      break;
+    case DeviceType::kGXM:
+      clock_sel = kGxmFclkDiv7;
+      break;
+  }
 
   HhiVdecClkCntl::Get()
       .ReadFrom(mmio()->hiubus)
@@ -135,10 +164,10 @@ void Vdec1::PowerOn() {
   owner_->ToggleClock(ClockType::kGclkVdec, true);
 
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
+
   {
-    // TODO(fxbug.dev/43520): Update for SM1.
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() & ~0xc0);
+    temp.set_reg_value(temp.reg_value() & ~vdec_iso_bits());
     temp.WriteTo(mmio()->aobus);
   }
   DosVdecMcrccStallCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
@@ -168,9 +197,8 @@ void Vdec1::PowerOff() {
   }
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
   {
-    // TODO(fxbug.dev/43520): Update for SM1.
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() | 0xc0);
+    temp.set_reg_value(temp.reg_value() | vdec_iso_bits());
     temp.WriteTo(mmio()->aobus);
   }
   DosMemPdVdec::Get().FromValue(~0u).WriteTo(mmio()->dosbus);
@@ -178,7 +206,7 @@ void Vdec1::PowerOff() {
 
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() | 0xc);
+    temp.set_reg_value(temp.reg_value() | vdec_sleep_bits());
     temp.WriteTo(mmio()->aobus);
   }
   owner_->GateClocks();

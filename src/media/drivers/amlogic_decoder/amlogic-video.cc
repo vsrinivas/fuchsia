@@ -792,6 +792,9 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     case PDEV_PID_AMLOGIC_T931:
       device_type_ = DeviceType::kG12B;
       break;
+    case PDEV_PID_AMLOGIC_S905D3:
+      device_type_ = DeviceType::kSM1;
+      break;
     default:
       DECODE_ERROR("Unknown soc pid: %d", info.pid);
       return ZX_ERR_INVALID_ARGS;

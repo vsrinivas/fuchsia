@@ -44,6 +44,9 @@ class HevcDec : public DecoderCore {
  private:
   MmioRegisters* mmio() const { return owner_->mmio(); }
 
+  uint32_t hevc_sleep_bits();
+  uint32_t hevc_iso_bits();
+
   Owner* owner_;
   bool powered_on_ = false;
   bool decoding_started_ = false;

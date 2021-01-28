@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+executable("amlogic-decoder-unittest-bin") {
+  testonly = true
+  output_name = "amlogic-decoder-unittest"
+  deps = [
+    "../..:sources",
+    "../..:test_support",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+  ]
+  sources = [ "test_vdec1.cc" ]
+}
+
+fuchsia_unittest_package("amlogic-decoder-unittest") {
+  deps = [ ":amlogic-decoder-unittest-bin" ]
+}

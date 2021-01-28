@@ -44,6 +44,8 @@ class Vdec1 : public DecoderCore {
 
  private:
   MmioRegisters* mmio() const { return owner_->mmio(); }
+  uint32_t vdec_sleep_bits();
+  uint32_t vdec_iso_bits();
 
   Owner* owner_;
   bool powered_on_ = false;

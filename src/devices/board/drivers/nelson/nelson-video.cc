@@ -10,7 +10,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <soc/aml-meson/sm1-clk.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
 
@@ -18,24 +18,24 @@ namespace nelson {
 
 constexpr pbus_mmio_t nelson_video_mmios[] = {
     {
-        .base = S905D2_CBUS_BASE,
-        .length = S905D2_CBUS_LENGTH,
+        .base = S905D3_CBUS_BASE,
+        .length = S905D3_CBUS_LENGTH,
     },
     {
-        .base = S905D2_DOS_BASE,
-        .length = S905D2_DOS_LENGTH,
+        .base = S905D3_DOS_BASE,
+        .length = S905D3_DOS_LENGTH,
     },
     {
-        .base = S905D2_HIU_BASE,
-        .length = S905D2_HIU_LENGTH,
+        .base = S905D3_HIU_BASE,
+        .length = S905D3_HIU_LENGTH,
     },
     {
-        .base = S905D2_AOBUS_BASE,
-        .length = S905D2_AOBUS_LENGTH,
+        .base = S905D3_AOBUS_BASE,
+        .length = S905D3_AOBUS_LENGTH,
     },
     {
-        .base = S905D2_DMC_BASE,
-        .length = S905D2_DMC_LENGTH,
+        .base = S905D3_DMC_BASE,
+        .length = S905D3_DMC_LENGTH,
     },
 };
 
@@ -48,23 +48,23 @@ constexpr pbus_bti_t nelson_video_btis[] = {
 
 constexpr pbus_irq_t nelson_video_irqs[] = {
     {
-        .irq = S905D2_DEMUX_IRQ,
+        .irq = S905D3_DEMUX_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = S905D2_PARSER_IRQ,
+        .irq = S905D3_PARSER_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = S905D2_DOS_MBOX_0_IRQ,
+        .irq = S905D3_DOS_MBOX_0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = S905D2_DOS_MBOX_1_IRQ,
+        .irq = S905D3_DOS_MBOX_1_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = S905D2_DOS_MBOX_2_IRQ,
+        .irq = S905D3_DOS_MBOX_2_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -120,7 +120,7 @@ constexpr device_fragment_part_t tee_fragment[] = {
 constexpr device_fragment_t fragments[] = {
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
     {"canvas", countof(canvas_fragment), canvas_fragment},
-    {"clock-doc-vdec", countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
+    {"clock-dos-vdec", countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
     {"clock-dos", countof(clk_dos_fragment), clk_dos_fragment},
     {"tee", countof(tee_fragment), tee_fragment},
 };
@@ -129,7 +129,7 @@ constexpr pbus_dev_t video_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-video";
   dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  dev.pid = PDEV_PID_AMLOGIC_S905D3;
   dev.did = PDEV_DID_AMLOGIC_VIDEO;
   dev.mmio_list = nelson_video_mmios;
   dev.mmio_count = countof(nelson_video_mmios);

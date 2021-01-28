@@ -18,6 +18,28 @@
 
 static constexpr uint32_t kFirmwareSize = 4 * 4096;
 
+uint32_t HevcDec::hevc_sleep_bits() {
+  switch (owner_->device_type()) {
+    case DeviceType::kG12A:
+    case DeviceType::kG12B:
+    case DeviceType::kGXM:
+      return 0xc0;
+    case DeviceType::kSM1:
+      return 0x4;
+  }
+}
+
+uint32_t HevcDec::hevc_iso_bits() {
+  switch (owner_->device_type()) {
+    case DeviceType::kG12A:
+    case DeviceType::kG12B:
+    case DeviceType::kGXM:
+      return 0xc00;
+    case DeviceType::kSM1:
+      return 0x4;
+  }
+}
+
 std::optional<InternalBuffer> HevcDec::LoadFirmwareToBuffer(const uint8_t* data, uint32_t len) {
   TRACE_DURATION("media", "HevcDec::LoadFirmwareToBuffer");
   const uint32_t kBufferAlignShift = 16;
@@ -74,7 +96,7 @@ void HevcDec::PowerOn() {
   ZX_DEBUG_ASSERT(!powered_on_);
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() & ~0xc0);
+    temp.set_reg_value(temp.reg_value() & ~hevc_sleep_bits());
     temp.WriteTo(mmio()->aobus);
   }
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -137,10 +159,17 @@ void HevcDec::PowerOn() {
   // The maximum frequency used in linux is 648 MHz, but that requires using GP0, which is already
   // being used by the GPU. The linux driver also uses 200MHz in some circumstances for videos <=
   // 1080p30.
-  uint32_t clock_sel =
-      (owner_->device_type() == DeviceType::kG12A || owner_->device_type() == DeviceType::kG12B)
-          ? kG12xFclkDiv7
-          : kGxmFclkDiv7;
+  uint32_t clock_sel;
+  switch (owner_->device_type()) {
+    case DeviceType::kG12A:
+    case DeviceType::kG12B:
+    case DeviceType::kSM1:
+      clock_sel = kG12xFclkDiv7;
+      break;
+    case DeviceType::kGXM:
+      clock_sel = kGxmFclkDiv7;
+      break;
+  }
 
   auto clock_cntl = HhiHevcClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(clock_sel);
   // GXM HEVC doesn't have a front half.
@@ -152,7 +181,7 @@ void HevcDec::PowerOn() {
   DosMemPdHevc::Get().FromValue(0).WriteTo(mmio()->dosbus);
   {
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() & ~0xc00);
+    temp.set_reg_value(temp.reg_value() & ~hevc_iso_bits());
     temp.WriteTo(mmio()->aobus);
   }
 
@@ -167,7 +196,7 @@ void HevcDec::PowerOff() {
   powered_on_ = false;
   {
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() | 0xc00);
+    temp.set_reg_value(temp.reg_value() | hevc_iso_bits());
     temp.WriteTo(mmio()->aobus);
   }
   // Power down internal memory
@@ -184,7 +213,7 @@ void HevcDec::PowerOff() {
   // Turn off power gates
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
-    temp.set_reg_value(temp.reg_value() | 0xc0);
+    temp.set_reg_value(temp.reg_value() | hevc_sleep_bits());
     temp.WriteTo(mmio()->aobus);
   }
   owner_->GateClocks();
