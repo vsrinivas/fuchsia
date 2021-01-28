@@ -7,6 +7,7 @@
 
 #include <lib/async/wait.h>
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include <utility>
 
@@ -183,7 +184,15 @@ class WaitMethod final : public WaitBase {
                       zx_signals_t trigger = ZX_SIGNAL_NONE, uint32_t options = 0)
       : WaitBase(object, trigger, options, &WaitMethod::CallHandler), instance_(instance) {}
 
-  ~WaitMethod() = default;
+  ~WaitMethod() {
+    // See comment in WaitBase::~WaitBase re. why Cancel() happens in sub-class.
+    //
+    // For WaitMethod, the Cancel() is here instead of in ~WaitBase just to keep the destruction
+    // sequencing consistent across WaitBase sub-classes.
+    (void)Cancel();
+    ZX_DEBUG_ASSERT(!is_pending());
+    // ~WaitBase
+  }
 
  private:
   static void CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
