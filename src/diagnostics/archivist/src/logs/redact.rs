@@ -3,9 +3,9 @@
 // found in the LICENSE file
 
 use futures::prelude::*;
-use regex::{Regex, RegexSet};
+use regex::{Error, Regex, RegexSet};
 use serde::Serialize;
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 
 mod serialize;
 pub use serialize::{Redacted, RedactedItem};
@@ -14,10 +14,11 @@ pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     Email: alice@website.tld, \
     IPv4: 8.8.8.8, \
     IPv6: 2001:503:eEa3:0:0:0:0:30, \
-    UUID: ddd0fA34-1016-11eb-adc1-0242ac120002";
+    UUID: ddd0fA34-1016-11eb-adc1-0242ac120002, \
+    MAC: de:ad:BE:EF:42:5a";
 
 pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
-    Email: <REDACTED>, IPv4: <REDACTED>, IPv6: <REDACTED>, UUID: <REDACTED>";
+    Email: <REDACTED-EMAIL>, IPv4: <REDACTED-IPV4>, IPv6: <REDACTED-IPV6>, UUID: <REDACTED-UUID>, MAC: <REDACTED-MAC>";
 
 pub fn emit_canary() {
     tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
@@ -30,21 +31,55 @@ pub struct Redactor {
 
     /// Used to replace substrings of matching text, each pattern has the same index as in
     /// `to_redact`.
-    replacements: Vec<Regex>,
+    replacements: Vec<PatternReplacer>,
 }
 
-const REPLACEMENT: &str = "<REDACTED>";
-const KNOWN_BAD_PATTERNS: &[&str] = &[
+struct PatternReplacer {
+    matcher: Regex,
+    replacement: &'static str,
+}
+
+impl TryFrom<&RedactionPattern> for PatternReplacer {
+    type Error = Error;
+
+    fn try_from(p: &RedactionPattern) -> Result<Self, Self::Error> {
+        Ok(Self { matcher: Regex::new(p.matcher)?, replacement: p.replacement })
+    }
+}
+
+struct RedactionPattern {
+    // A regex to find
+    matcher: &'static str,
+    // A replacement string for it
+    replacement: &'static str,
+}
+
+const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
     // Email stub alice@website.tld
-    r"[a-zA-Z0-9]*@[a-zA-Z0-9]*\.[a-zA-Z]*",
+    RedactionPattern {
+        matcher: r"[a-zA-Z0-9]*@[a-zA-Z0-9]*\.[a-zA-Z]*",
+        replacement: "<REDACTED-EMAIL>",
+    },
     // IPv4 Address
-    r"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])",
+    RedactionPattern {
+        matcher: r"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])",
+        replacement: "<REDACTED-IPV4>",
+    },
     // IPv6
-    r"(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}",
+    RedactionPattern {
+        matcher: r"(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}",
+        replacement: "<REDACTED-IPV6>",
+    },
     // uuid
-    r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-\b[0-9a-fA-F]{12}",
+    RedactionPattern {
+        matcher: r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-\b[0-9a-fA-F]{12}",
+        replacement: "<REDACTED-UUID>",
+    },
     // mac address
-    r"([0-9a-fA-F]{1,2}([\.:-])){5}[0-9a-fA-F]{1,2}",
+    RedactionPattern {
+        matcher: r"([0-9a-fA-F]{1,2}([\.:-])){5}[0-9a-fA-F]{1,2}",
+        replacement: "<REDACTED-MAC>",
+    },
 ];
 
 impl Redactor {
@@ -53,12 +88,14 @@ impl Redactor {
     }
 
     pub fn with_static_patterns() -> Self {
-        Self::new(KNOWN_BAD_PATTERNS).unwrap()
+        Self::new(DEFAULT_REDACTION_PATTERNS).unwrap()
     }
 
-    fn new(patterns: &[&str]) -> Result<Self, regex::Error> {
-        let replacements = patterns.iter().map(|p| Regex::new(p)).collect::<Result<Vec<_>, _>>()?;
-        let to_redact = RegexSet::new(patterns)?;
+    fn new(patterns: &[RedactionPattern]) -> Result<Self, regex::Error> {
+        let matchers = patterns.iter().map(|p| p.matcher).collect::<Vec<_>>();
+        let to_redact = RegexSet::new(matchers)?;
+        let replacements =
+            patterns.iter().map(PatternReplacer::try_from).collect::<Result<Vec<_>, _>>()?;
         Ok(Self { to_redact, replacements })
     }
 
@@ -66,8 +103,12 @@ impl Redactor {
     pub fn redact_text<'t>(&self, text: &'t str) -> Cow<'t, str> {
         let mut redacted = Cow::Borrowed(text);
         for idx in self.to_redact.matches(text) {
-            redacted =
-                Cow::Owned(self.replacements[idx].replace_all(&redacted, REPLACEMENT).to_string());
+            redacted = Cow::Owned(
+                self.replacements[idx]
+                    .matcher
+                    .replace_all(&redacted, self.replacements[idx].replacement)
+                    .to_string(),
+            );
         }
         redacted
     }
@@ -170,13 +211,13 @@ mod test {
     }
 
     test_redaction! {
-        email: "Email: alice@website.tld" => "Email: <REDACTED>",
-        ipv4: "IPv4: 8.8.8.8" => "IPv4: <REDACTED>",
-        ipv6: "IPv6: 2001:503:eEa3:0:0:0:0:30" => "IPv6: <REDACTED>",
-        uuid: "UUID: ddd0fA34-1016-11eb-adc1-0242ac120002" => "UUID: <REDACTED>",
-        mac_address: "MAC address: 00:0a:95:9F:68:16" => "MAC address: <REDACTED>",
+        email: "Email: alice@website.tld" => "Email: <REDACTED-EMAIL>",
+        ipv4: "IPv4: 8.8.8.8" => "IPv4: <REDACTED-IPV4>",
+        ipv6: "IPv6: 2001:503:eEa3:0:0:0:0:30" => "IPv6: <REDACTED-IPV6>",
+        uuid: "UUID: ddd0fA34-1016-11eb-adc1-0242ac120002" => "UUID: <REDACTED-UUID>",
+        mac_address: "MAC address: 00:0a:95:9F:68:16" => "MAC address: <REDACTED-MAC>",
         combined: "Combined: Email alice@website.tld, IPv4 8.8.8.8" =>
-                "Combined: Email <REDACTED>, IPv4 <REDACTED>",
+                "Combined: Email <REDACTED-EMAIL>, IPv4 <REDACTED-IPV4>",
         canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
     }
 }
