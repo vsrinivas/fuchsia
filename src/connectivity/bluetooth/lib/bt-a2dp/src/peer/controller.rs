@@ -100,7 +100,7 @@ impl Controller {
             }
             PeerControllerRequest::SuspendStream { responder } => {
                 let local_id: StreamEndpointId = SBC_SEID.try_into().expect("should work");
-                match a2dp.stream_suspend(local_id, endpoint_id.clone()).await {
+                match a2dp.stream_suspend(local_id).await {
                     Ok(_) => {
                         info!("SuspendStream was successful");
                         responder.send(&mut Ok(()))?;
@@ -183,7 +183,7 @@ impl Controller {
             }
             PeerControllerRequest::SuspendAndReconfigure { responder } => {
                 let local_id: StreamEndpointId = SBC_SEID.try_into().expect("should work");
-                match a2dp.stream_suspend(local_id, endpoint_id.clone()).await {
+                match a2dp.stream_suspend(local_id).await {
                     Ok(_) => {
                         info!("SuspendStream was successful");
                         // Only one frequency, channel mode, block length, subband,
