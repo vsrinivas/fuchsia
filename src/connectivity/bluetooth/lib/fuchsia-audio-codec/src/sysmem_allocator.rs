@@ -12,7 +12,8 @@ use {
         AllocatorProxy, BufferCollectionConstraints, BufferCollectionInfo2, BufferCollectionMarker,
         BufferCollectionProxy, BufferCollectionTokenMarker, BufferMemorySettings,
     },
-    fuchsia_zircon as zx,
+    fuchsia_runtime, fuchsia_zircon as zx,
+    fuchsia_zircon::AsHandleRef,
     futures::{
         future::{FusedFuture, Future},
         ready,
@@ -30,6 +31,35 @@ pub struct SysmemAllocatedBuffers {
     buffers: Vec<zx::Vmo>,
     settings: BufferMemorySettings,
     _buffer_collection: BufferCollectionProxy,
+}
+
+#[derive(Debug)]
+pub struct BufferName<'a> {
+    pub name: &'a str,
+    pub priority: u32,
+}
+
+#[derive(Debug)]
+pub struct AllocatorDebugInfo {
+    pub name: String,
+    pub id: u64,
+}
+
+fn default_allocator_name() -> Result<AllocatorDebugInfo, Error> {
+    let name = fuchsia_runtime::process_self().get_name()?;
+    let koid = fuchsia_runtime::process_self().get_koid()?;
+    Ok(AllocatorDebugInfo { name: name.to_str()?.to_string(), id: koid.raw_koid() })
+}
+
+fn set_allocator_name(
+    sysmem_client: &AllocatorProxy,
+    debug_info: Option<AllocatorDebugInfo>,
+) -> Result<(), Error> {
+    let unwrapped_debug_info = match debug_info {
+        Some(x) => x,
+        None => default_allocator_name()?,
+    };
+    Ok(sysmem_client.set_debug_client_info(&unwrapped_debug_info.name, unwrapped_debug_info.id)?)
 }
 
 impl SysmemAllocatedBuffers {
@@ -87,9 +117,13 @@ impl SysmemAllocation {
         F: FnOnce(ClientEnd<BufferCollectionTokenMarker>) -> () + 'static + Send + Sync,
     >(
         allocator: AllocatorProxy,
+        name: BufferName<'_>,
+        debug_info: Option<AllocatorDebugInfo>,
         constraints: BufferCollectionConstraints,
         token_target_fn: F,
     ) -> Result<Self, Error> {
+        // Ignore errors since only debug information is being sent.
+        set_allocator_name(&allocator, debug_info).context("Setting alloocator name")?;
         let (client_token, client_token_request) =
             fidl::endpoints::create_proxy::<BufferCollectionTokenMarker>()?;
         allocator
@@ -99,6 +133,10 @@ impl SysmemAllocation {
         // Duplicate to get another BufferCollectionToken to the same collection.
         let (token, token_request) = fidl::endpoints::create_endpoints()?;
         client_token.duplicate(std::u32::MAX, token_request)?;
+
+        client_token
+            .set_name(name.priority, name.name)
+            .context("set_name on BufferCollectionToken")?;
 
         let client_end_token =
             ClientEnd::new(client_token.into_channel().unwrap().into_zx_channel());
@@ -272,9 +310,18 @@ mod tests {
             sender.send(token).expect("should be able to send token");
         };
 
-        let mut allocation =
-            SysmemAllocation::allocate(proxy, BUFFER_COLLECTION_CONSTRAINTS_DEFAULT, token_fn)
-                .expect("starting should work");
+        let mut allocation = SysmemAllocation::allocate(
+            proxy,
+            BufferName { name: "audio-codec.allocate_future", priority: 100 },
+            None,
+            BUFFER_COLLECTION_CONSTRAINTS_DEFAULT,
+            token_fn,
+        )
+        .expect("starting should work");
+        match exec.run_until_stalled(&mut allocator_requests.next()) {
+            Poll::Ready(Some(Ok(AllocatorRequest::SetDebugClientInfo { .. }))) => (),
+            x => panic!("Expected debug client info, got {:?}", x),
+        };
 
         let mut token_requests_1 = match exec.run_until_stalled(&mut allocator_requests.next()) {
             Poll::Ready(Some(Ok(AllocatorRequest::AllocateSharedCollection {
@@ -305,6 +352,11 @@ mod tests {
                 buffer_collection_request.into_stream().expect("collection request into stream"),
             ),
             x => panic!("Expected Bind Shared Collection, got: {:?}", x),
+        };
+
+        match exec.run_until_stalled(&mut token_requests_1.next()) {
+            Poll::Ready(Some(Ok(BufferCollectionTokenRequest::SetName { .. }))) => {}
+            x => panic!("Expected setname {:?}", x),
         };
 
         // The token turned into the allocator for binding should be connected to the server on allocating.
@@ -403,9 +455,14 @@ mod tests {
             sender.send(token).expect("should be able to send token");
         };
 
-        let mut allocation =
-            SysmemAllocation::allocate(sysmem_client.clone(), buffer_constraints, token_fn)
-                .expect("start allocator");
+        let mut allocation = SysmemAllocation::allocate(
+            sysmem_client.clone(),
+            BufferName { name: "audio-codec.allocate_future", priority: 100 },
+            None,
+            buffer_constraints,
+            token_fn,
+        )
+        .expect("start allocator");
 
         // Receive the token.  From here on, using the token, the test becomes the other client to
         // the Allocator sharing the memory.
