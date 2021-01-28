@@ -234,6 +234,13 @@ If the event stream is enabled, specifies the frequency at which it will attempt
 to run. The resolution is limited, so the driver will only be able to pick the
 nearest power of 2 from the cpu timer counter. The default is 10000.
 
+## kernel.bufferchain.reserve-pages=\<num>
+
+Specifies the number of pages per CPU to reserve for buffer chain allocations
+(channel messages). Higher values reduce contention on the PMM when the
+system is under load at the cost of using more memory when the system is
+idle.
+
 ## kernel.bypass-debuglog=\<bool>
 
 When enabled, forces output to the console instead of buffering it. The reason
