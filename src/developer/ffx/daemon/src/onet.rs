@@ -15,17 +15,13 @@ use {
     futures::future::FutureExt,
     futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     hoist::OvernetInstance,
+    smol::Async,
     std::future::Future,
     std::io,
-    std::os::unix::io::{FromRawFd, IntoRawFd},
     std::process::{Child, Stdio},
     std::sync::Arc,
     std::time::Duration,
 };
-
-fn async_from_sync<S: IntoRawFd>(sync: S) -> async_std::fs::File {
-    unsafe { async_std::fs::File::from_raw_fd(sync.into_raw_fd()) }
-}
 
 struct HostPipeChild {
     inner: Child,
@@ -66,8 +62,9 @@ impl HostPipeChild {
 
         let stdout_pipe =
             inner.stdout.take().ok_or(anyhow!("unable to get stdout from target pipe"))?;
+        let mut stdout_pipe = Async::new(stdout_pipe)?;
         let writer = async move {
-            match latency_sensitive_copy(&mut async_from_sync(stdout_pipe), &mut pipe_tx).await {
+            match latency_sensitive_copy(&mut stdout_pipe, &mut pipe_tx).await {
                 Ok(()) => log::info!("exiting onet pipe writer task (client -> ascendd)"),
                 Err(e) => log::info!("exiting onet pipe writer (client -> ascendd) due to {:?}", e),
             }
@@ -75,8 +72,8 @@ impl HostPipeChild {
 
         let stdin_pipe =
             inner.stdin.take().ok_or(anyhow!("unable to get stdin from target pipe"))?;
+        let mut stdin_pipe = Async::new(stdin_pipe)?;
         let reader = async move {
-            let mut stdin_pipe = async_from_sync(stdin_pipe);
             let mut cancel_rx = cancel_rx.fuse();
             futures::select! {
                 copy_res = latency_sensitive_copy(&mut pipe_rx, &mut stdin_pipe).fuse() => match copy_res {
@@ -89,8 +86,8 @@ impl HostPipeChild {
 
         let stderr_pipe =
             inner.stderr.take().ok_or(anyhow!("unable to stderr from target pipe"))?;
+        let stderr_pipe = Async::new(stderr_pipe)?;
         let logger = async move {
-            let stderr_pipe = async_from_sync(stderr_pipe);
             let mut stderr_lines = async_std::io::BufReader::new(stderr_pipe).lines();
             while let Some(result) = stderr_lines.next().await {
                 match result {
