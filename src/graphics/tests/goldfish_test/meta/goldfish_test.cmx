@@ -1,9 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
-            }
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
         }
     },
     "include": [

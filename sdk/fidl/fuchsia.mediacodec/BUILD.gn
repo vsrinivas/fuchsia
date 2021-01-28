@@ -6,15 +6,14 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.mediacodec") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "invalid-case-for-decl-name",
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
+  excluded_checks = [ "invalid-case-for-decl-name" ]
 
   sdk_category = "partner"
 
   sources = [ "codec_factory.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.media" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//zircon/vdso/zx",
+  ]
 }

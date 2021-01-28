@@ -5,6 +5,7 @@
                 "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx"
             },
             "system-services": [
+                "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator"
             ]
         }
@@ -27,6 +28,7 @@
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"
         ]

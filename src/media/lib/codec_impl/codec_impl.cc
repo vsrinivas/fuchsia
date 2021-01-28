@@ -218,6 +218,12 @@ CodecImpl::~CodecImpl() {
 
 std::mutex& CodecImpl::lock() { return lock_; }
 
+void CodecImpl::SetLifetimeTracking(std::vector<zx::eventpair> lifetime_tracking_eventpair) {
+  ZX_DEBUG_ASSERT(lifetime_tracking_eventpair.size() <=
+                  fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX);
+  lifetime_tracking_ = std::move(lifetime_tracking_eventpair);
+}
+
 void CodecImpl::SetCodecMetrics(CodecMetrics* codec_metrics) {
   ZX_DEBUG_ASSERT(codec_metrics);
   codec_metrics_ = codec_metrics;

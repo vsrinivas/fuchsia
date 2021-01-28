@@ -5,9 +5,12 @@
 #include "codec_factory_impl.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <algorithm>
+
+#include "lib/zx/eventpair.h"
 
 namespace {
 
@@ -148,8 +151,6 @@ void ForwardToIsolate(std::string component_url, sys::ComponentContext* componen
 
 }  // namespace
 
-namespace codec_factory {
-
 // TODO(dustingreen): Currently we assume, potentially incorrectly, that clients
 // of CodecFactory won't spam CodecFactory channel creation.  Rather than trying
 // to mitigate that problem locally in this class, it seems better to intergrate
@@ -221,10 +222,14 @@ void CodecFactoryImpl::CreateDecoder(
           return (codec_type == hw_codec_description.codec_type) &&
                  (params.input_details().mime_type() == hw_codec_description.mime_type);
         });
+    if (factory && (!params.has_require_hw() || !params.require_hw()) && !AdmitHwDecoder(params)) {
+      factory = nullptr;
+    }
     if (factory) {
       // prefer HW-accelerated
       FX_LOGS(INFO) << "CreateDecoder() found HW decoder for: "
                     << params.input_details().mime_type();
+      AttachLifetimeTrackingEventpairDownstream(factory);
       (*factory)->CreateDecoder(std::move(params), std::move(decoder));
       return;
     }
@@ -250,7 +255,7 @@ void CodecFactoryImpl::CreateDecoder(
   FX_LOGS(INFO) << "CreateDecoder() found SW decoder for: " << params.input_details().mime_type();
   ForwardToIsolate(
       *maybe_decoder_isolate_url, component_context_,
-      [&params, &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
+      [this, &params, &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
         // Forward the request to the factory_delegate_ as-is. This
         // avoids conversion to command-line parameters and back,
         // and avoids creating a separate interface definition for
@@ -259,7 +264,9 @@ void CodecFactoryImpl::CreateDecoder(
         // but we can comment why.  The presently-running
         // implementation is the main implementation that clients
         // use directly.
+        AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
         factory_delegate->CreateDecoder(std::move(params), std::move(decoder));
+        ZX_DEBUG_ASSERT(lifetime_tracking_.empty());
       });
 }
 
@@ -292,8 +299,13 @@ void CodecFactoryImpl::CreateEncoder(
                (encoder_params.input_details().mime_type() == hw_codec_description.mime_type);
       });
 
+  if (factory && !AdmitHwEncoder(encoder_params)) {
+    factory = nullptr;
+  }
+
   if (factory) {
     // prefer HW-accelerated
+    AttachLifetimeTrackingEventpairDownstream(factory);
     (*factory)->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
     return;
   }
@@ -315,10 +327,55 @@ void CodecFactoryImpl::CreateEncoder(
 
   ForwardToIsolate(
       *maybe_encoder_isolate_url, component_context_,
-      [&encoder_params,
+      [this, &encoder_params,
        &encoder_request](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
+        AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
         factory_delegate->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
       });
 }
 
-}  // namespace codec_factory
+void CodecFactoryImpl::AttachLifetimeTracking(zx::eventpair codec_end) {
+  ZX_DEBUG_ASSERT(lifetime_tracking_.size() <=
+                  fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX);
+  if (lifetime_tracking_.size() >=
+      fuchsia::mediacodec::CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX) {
+    binding_->Close(ZX_ERR_BAD_STATE);
+    // This call will delete this.
+    binding_.reset(nullptr);
+    return;
+  }
+  lifetime_tracking_.emplace_back(std::move(codec_end));
+}
+
+void CodecFactoryImpl::AttachLifetimeTrackingEventpairDownstream(
+    const fuchsia::mediacodec::CodecFactoryPtr* factory) {
+  while (!lifetime_tracking_.empty()) {
+    zx::eventpair lifetime_tracking_eventpair = std::move(lifetime_tracking_.back());
+    lifetime_tracking_.pop_back();
+    (*factory)->AttachLifetimeTracking(std::move(lifetime_tracking_eventpair));
+  }
+}
+
+bool CodecFactoryImpl::AdmitHwDecoder(const fuchsia::mediacodec::CreateDecoder_Params& params) {
+  std::vector<zx::eventpair> lifetime_eventpairs;
+  if (app_->policy().AdmitHwDecoder(params, &lifetime_eventpairs)) {
+    for (auto& eventpair : lifetime_eventpairs) {
+      lifetime_tracking_.emplace_back(std::move(eventpair));
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool CodecFactoryImpl::AdmitHwEncoder(const fuchsia::mediacodec::CreateEncoder_Params& params) {
+  std::vector<zx::eventpair> lifetime_eventpairs;
+  if (app_->policy().AdmitHwEncoder(params, &lifetime_eventpairs)) {
+    for (auto& eventpair : lifetime_eventpairs) {
+      lifetime_tracking_.emplace_back(std::move(eventpair));
+    }
+    return true;
+  } else {
+    return false;
+  }
+}

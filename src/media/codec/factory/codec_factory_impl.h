@@ -10,11 +10,12 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "codec_factory_app.h"
-
-namespace codec_factory {
+#include "codec_factory_policy.h"
 
 // There's an instance of CodecFactoryImpl per interface instance, to allow the
-// implementation of this class to be stateful.
+// implementation of this class to be stateful.  In particular, the state set up
+// by AttachLifetimeTracking() calls applies to the next
+// create.
 class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  public:
   static void CreateSelfOwned(CodecFactoryApp* app, sys::ComponentContext* component_context,
@@ -24,14 +25,21 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   void CreateDecoder(fuchsia::mediacodec::CreateDecoder_Params params,
                      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) override;
 
-  virtual void CreateEncoder(
+  void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
       fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override;
+
+  void AttachLifetimeTracking(zx::eventpair codec_end) override;
 
  private:
   CodecFactoryImpl(CodecFactoryApp* app, sys::ComponentContext* component_context,
                    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
   void OwnSelf(std::unique_ptr<CodecFactoryImpl> self);
+  void AttachLifetimeTrackingEventpairDownstream(
+      const fuchsia::mediacodec::CodecFactoryPtr* factory);
+
+  bool AdmitHwDecoder(const fuchsia::mediacodec::CreateDecoder_Params& params);
+  bool AdmitHwEncoder(const fuchsia::mediacodec::CreateEncoder_Params& params);
 
   // We don't have a lock_ in here - we rely on FIDL message dispatch being
   // one-at-a-time.
@@ -55,8 +63,8 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   using BindingType =
       fidl::Binding<fuchsia::mediacodec::CodecFactory, std::unique_ptr<CodecFactoryImpl>>;
   std::unique_ptr<BindingType> binding_;
-};
 
-}  // namespace codec_factory
+  std::vector<zx::eventpair> lifetime_tracking_;
+};
 
 #endif  // SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_

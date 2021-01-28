@@ -5,6 +5,7 @@
 library fuchsia.mediacodec;
 
 using fuchsia.media;
+using zx;
 
 // CreateDecoder_Params
 //
@@ -240,20 +241,23 @@ enum CodecType {
     ENCODER = 1;
 };
 
+/// Constrain the mime_type to a size that won't cause problems.
+const uint32 CODEC_FACTORY_MAX_MIME_TYPE_LENGTH = 256;
+
 struct CodecDescription {
-    // Decoder or encoder.
+    /// Decoder or encoder.
     CodecType codec_type;
-    // The mime type of the compressed format.  For decoders this is the mime
-    // type of the input.  For encoders, this is the mime type of the output.
-    string mime_type;
+    /// The mime type of the compressed format.  For decoders this is the mime
+    /// type of the input.  For encoders, this is the mime type of the output.
+    string:CODEC_FACTORY_MAX_MIME_TYPE_LENGTH mime_type;
 
     // TODO(dustingreen): All these fields should be optional.
     //
     // TODO(dustingreen): Re-evaluate this for encoders.
     //
-    // For each of these fields, the default is the most-capable setting, but if a
-    // codec doesn't support the most-capable behavior, then the codec must
-    // override the default.
+    /// For each of these fields, the default is the most-capable setting, but
+    /// if a codec doesn't support the most-capable behavior, then the codec
+    /// must override the default.
     bool can_stream_bytes_input = true;
     bool can_find_start = true;
     bool can_re_sync = true;
@@ -262,69 +266,112 @@ struct CodecDescription {
     bool split_header_handling = true;
 };
 
-// CodecFactory
-//
-// The purpose of the media::CodecFactory interface is to create media::Codec
-// instances.
-//
-// The interface methods don't attempt to homogenize all codec types, preferring
-// to have a separate dedicated message for decoders.  TBD whether calls for
-// creating encoders will split up audio vs. video encoders, or be combined.
-//
+/// More than this many calls to AttachLifetimeTracking()
+/// without a Create{X}() call will result in CodecFactory channel closing from
+/// the server end.
+const uint32 CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX = 16;
 
-// Each create request is self-contained, in the sense that the interface is not
-// stateful between create requests.
+/// Constrain the length of the codec list.
+const uint32 CODEC_FACTORY_CODEC_LIST_SIZE_MAX = 256;
+
+/// CodecFactory
+///
+/// The purpose of the media::CodecFactory interface is to create
+/// media::StreamProcessor instances for decoders and encoders.
+///
+/// The interface methods don't attempt to homogenize all codec types,
+/// preferring to have a separate dedicated message for decoders.
 [Discoverable]
 protocol CodecFactory {
-    // Driver-based local CodecFactory(s) will send this once shortly after the
-    // main CodecFactory connects to the driver-local CodecFactory.
-    //
-    // For now, the main CodecFactory will not send this.
-    //
-    // A SW-based local CodecFactory(s) will not send this event.
-    //
-    // Each codec in the list must be separately-described, for clean aggregation.
-    -> OnCodecList(vector<CodecDescription> codecs);
-
-    // Rough sequence to create a decoder:
-    //
-    // factory = ConnectToEnvironmentService(CodecFactory);
-    // CreateDecoder_Params params;
-    // [fill out params]
-    // CreateDecoder(params, decoder_request);
-    //
-    // See use_media_decoder code for more detail.
-    //
-    // TODO(dustingreen): More detail in this comment block.
+    /// Driver-based local CodecFactory(s) will send this once shortly after the
+    /// main CodecFactory connects to the driver-local CodecFactory.
+    ///
+    /// For now, the main CodecFactory will not send this.
+    ///
+    /// A SW-based local CodecFactory(s) will not send this event.
+    ///
+    /// Each codec in the list must be separately-described, for clean aggregation.
+    -> OnCodecList(vector<CodecDescription>:CODEC_FACTORY_CODEC_LIST_SIZE_MAX codecs);
 
     // Requests:
 
-    // CreateDecoder:
-    //
-    // decoder_params - See CreateDecoder_Params comments for required
-    // and optional parameters for creating a decoder.
-    //
-    // decoder - a Codec.NewRequest() which will hopefully be connected to
-    // a Codec server, or the Codec channel will get closed if no suitable codec
-    // can be found.  We don't return any additional Codec-specific status here
-    // because finding the Codec is allowed to be fully async, so we don't
-    // necessarily yet know on return from this method which Codec will be
-    // selected, if any.
+    /// CreateDecoder:
+    ///
+    /// decoder_params - See CreateDecoder_Params comments for required
+    /// and optional parameters for creating a decoder.
+    ///
+    /// decoder - a Codec.NewRequest() which will hopefully be connected to
+    /// a Codec server, or the Codec channel will get closed if no suitable
+    /// codec can be found.  We don't return any additional Codec-specific
+    /// status here because finding the Codec is allowed to be fully async, so
+    /// we don't necessarily yet know on return from this method which Codec
+    /// will be selected, if any.
+    ///
+    /// Rough sequence to create a decoder:
+    ///
+    /// factory = ConnectToEnvironmentService(CodecFactory);
+    /// CreateDecoder_Params params;
+    /// [fill out params]
+    /// CreateDecoder(params, decoder_request);
+    ///
+    /// See use_media_decoder code for more detail.
     CreateDecoder(
         CreateDecoder_Params decoder_params,
         request<fuchsia.media.StreamProcessor> decoder);
 
-    // CreateEncoder:
-    //
-    // encoder_params - See CreateEncoder_Params comments for required
-    // and optional parameters for creating a decoder.
-    //
-    // encoder - a Codec.NewRequest() which will hopefully be connected to
-    // a Codec server, or the Codec channel will get closed if no suitable codec
-    // can be found.  We don't return any additional Codec-specific status here
-    // because finding the Codec is allowed to be fully async, so we don't
-    // necessarily yet know on return from this method which Codec will be
-    // selected, if any.
+    /// CreateEncoder:
+    ///
+    /// encoder_params - See CreateEncoder_Params comments for required
+    /// and optional parameters for creating a decoder.
+    ///
+    /// encoder - a Codec.NewRequest() which will hopefully be connected to
+    /// a Codec server, or the Codec channel will get closed if no suitable
+    /// codec can be found.  We don't return any additional Codec-specific
+    /// status here because finding the Codec is allowed to be fully async, so
+    /// we don't necessarily yet know on return from this method which Codec
+    /// will be selected, if any.
     CreateEncoder(CreateEncoder_Params encoder_params,
                   request<fuchsia.media.StreamProcessor> encoder);
+
+    /// AttachLifetimeTracking:
+    ///
+    /// Attach an eventpair endpoint to the next Create{X}(), so that the
+    /// codec_end will signal ZX_EVENTPAIR_PEER_CLOSED on the peer of codec_end
+    /// shortly after the created codec is gone.  Multiple eventpair endpoints
+    /// can be attached per create, with an enforced limit of
+    /// CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX.
+    ///
+    /// The lifetime signalled by this event is intended to track all resources
+    /// used by the codec, including sysmem-allocated buffers.
+    ///
+    /// In the case of server process crashes, or failure of a codec to plumb
+    /// codec_end to sysmem, ZX_EVENTPAIR_PEER_CLOSED signalled on the peer of
+    /// codec_end may occur shortly before all resources are freed.
+    ///
+    /// A maximum of CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX
+    /// calls to AttachLifetimeTracking() are allowed
+    /// before any Create{X}().  There is no way to cancel an attach short of
+    /// closing the CodecFactory channel.  Closing the client end of the
+    /// eventpair doesn't subtract from the number of pending attach(es).  For
+    /// this reason, it can be good to only send attach message(s) immediately
+    /// before the relevant Create{X}(), when it's known by the client that both
+    /// the attach message(s) and the Create{X}() messages will be sent.
+    ///
+    /// Closing the client's end doesn't result in any action by the server.
+    /// If the server listens to events from the client end at all, it is for
+    /// debug logging only.
+    ///
+    /// The server intentionally doesn't "trust" any bits signalled by the
+    /// client.  This mechanism intentionally uses only ZX_EVENTPAIR_PEER_CLOSED
+    /// which can't be triggered early, and is only triggered when all handles
+    /// to codec_end are closed.  No meaning is associated with any of the other
+    /// signal bits, and clients should functionally ignore any other signal
+    /// bits on either end of the eventpair or its peer.
+    ///
+    /// The codec_end may lack ZX_RIGHT_SIGNAL or ZX_RIGHT_SIGNAL_PEER, but must
+    /// have ZX_RIGHT_DUPLICATE (and must have ZX_RIGHT_TRANSFER to transfer
+    /// without causing CodecFactory channel failure).
+    [Transitional = "AttachLifetimeTracking() not yet implemented"]
+    AttachLifetimeTracking(
+        zx.handle:EVENTPAIR codec_end);
 };

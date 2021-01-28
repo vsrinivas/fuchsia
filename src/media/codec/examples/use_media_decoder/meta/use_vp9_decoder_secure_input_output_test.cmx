@@ -7,7 +7,10 @@
                 "fuchsia.tee.Application.41fe9859-71e4-4bf4-bbaa-d71435b127ae": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
                 "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
                 "fuchsia.tee.DeviceInfo": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
-            }
+            },
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
         }
     },
     "include": [
@@ -26,6 +29,7 @@
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tee.Application.41fe9859-71e4-4bf4-bbaa-d71435b127ae",
             "fuchsia.tee.Device",

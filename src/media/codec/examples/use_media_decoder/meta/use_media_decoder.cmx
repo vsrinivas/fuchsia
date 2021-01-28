@@ -11,6 +11,7 @@
         ],
         "services": [
             "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.ui.scenic.Scenic"
         ]

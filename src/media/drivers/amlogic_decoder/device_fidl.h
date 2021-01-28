@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_FIDL_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_FIDL_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_FIDL_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_FIDL_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
@@ -39,6 +39,10 @@ class DeviceFidl {
   //
   // This runs on shared_fidl_thread().
   void BindCodecImpl(std::unique_ptr<CodecImpl> codec);
+
+  // Delete CodecFactory channel.  The caller can send an epitaph before calling
+  // this if desired.
+  void DeleteFactory(LocalCodecFactory* raw_factory_ptr);
 
  private:
   DeviceCtx* device_ = nullptr;
@@ -78,4 +82,4 @@ class DeviceFidl {
   std::map<CodecImpl*, std::unique_ptr<CodecImpl>> codecs_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_FIDL_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_FIDL_H_

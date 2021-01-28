@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     const UseVideoDecoderTestParams test_params{
         .keep_stream_modulo = 4,
         .loop_stream_count = 20,
-        .mime_type = "video/h264-multi",
+        .mime_type = "video/h264",
     };
     int result[kThreadCount] = {};
     std::atomic_bool go = false;

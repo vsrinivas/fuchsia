@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
@@ -11,6 +18,7 @@
         ],
         "services": [
             "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry"
         ]
     }

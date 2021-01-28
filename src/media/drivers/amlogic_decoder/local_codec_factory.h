@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <fbl/macros.h>
+
+#include "lib/zx/eventpair.h"
 
 // TODO(dustingreen): Concider pulling LocalCodecFactory out into a source_set
 // that can be used by other HW codec drivers (in contrast to CodecImpl source
@@ -73,9 +75,11 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       fuchsia::mediacodec::CreateDecoder_Params video_decoder_params,
       ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> video_decoder) override;
 
-  virtual void CreateEncoder(
+  void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
       ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override;
+
+  void AttachLifetimeTracking(zx::eventpair codec_end) override;
 
  private:
   DeviceCtx* device_ = nullptr;
@@ -87,7 +91,9 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
 
   bool is_error_handler_set_ = false;
 
+  std::vector<zx::eventpair> lifetime_tracking_;
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(LocalCodecFactory);
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_

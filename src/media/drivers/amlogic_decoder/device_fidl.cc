@@ -25,12 +25,8 @@ DeviceFidl::~DeviceFidl() {
 
 void DeviceFidl::ConnectChannelBoundCodecFactory(zx::channel request) {
   auto factory = std::make_unique<LocalCodecFactory>(device_);
-  factory->SetErrorHandler([this, raw_factory_ptr = factory.get()] {
-    ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
-    auto iter = factories_.find(raw_factory_ptr);
-    ZX_DEBUG_ASSERT(iter != factories_.end());
-    factories_.erase(iter);
-  });
+  factory->SetErrorHandler(
+      [this, raw_factory_ptr = factory.get()] { DeleteFactory(raw_factory_ptr); });
   // Any destruction of "this" is also posted over to shared_fidl_thread(), and
   // will run after the work posted here runs.
   //
@@ -61,4 +57,11 @@ void DeviceFidl::BindCodecImpl(std::unique_ptr<CodecImpl> codec) {
     ZX_DEBUG_ASSERT(iter != codecs_.end());
     codecs_.erase(iter);
   });
+}
+
+void DeviceFidl::DeleteFactory(LocalCodecFactory* raw_factory_ptr) {
+  ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
+  auto iter = factories_.find(raw_factory_ptr);
+  ZX_DEBUG_ASSERT(iter != factories_.end());
+  factories_.erase(iter);
 }
