@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::compiler::CompilerError;
+use crate::compiler::{BindProgramEncodeError, CompilerError};
 use crate::debugger;
 use crate::dependency_graph::DependencyError;
 use crate::linter::LinterError;
@@ -346,6 +346,37 @@ impl From<debugger::DebuggerError> for UserError {
                 None,
                 true,
             ),
+        }
+    }
+}
+
+impl From<BindProgramEncodeError> for UserError {
+    fn from(error: BindProgramEncodeError) -> Self {
+        match error {
+            BindProgramEncodeError::InvalidStringLength(str) => UserError::new(
+                "E600",
+                &format!(
+                    "The bind program contains a string that exceeds 255 characters: {}.",
+                    str
+                ),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::DuplicateSymbol(str) => UserError::new(
+                "E601",
+                &format!("The bind program contains a duplicate symbol: {}.", str),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::UnsupportedSymbol => UserError::new(
+                "E602",
+                &format!("Symbol is not supported in the old bytecode format."),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::IntegerOutOfRange => {
+                UserError::new("E603", &format!("Integer out of range"), None, true)
+            }
         }
     }
 }

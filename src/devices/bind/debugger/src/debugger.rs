@@ -369,8 +369,8 @@ fn condition_needs_actual_value(
 mod test {
     use super::*;
     use crate::bind_program::{Condition, ConditionOp, Statement};
-    use crate::compiler::{self, Symbol, SymbolTable};
-    use crate::encode_bind_program_v1::encode_instruction;
+    use crate::compiler::{self, BindProgramEncodeError, Symbol, SymbolTable};
+    use crate::encode_bind_program_v1::{encode_instruction, to_raw_instruction};
     use crate::instruction::{self, Instruction};
     use crate::make_identifier;
     use crate::parser_common::{CompoundIdentifier, Span, Value};
@@ -384,7 +384,8 @@ mod test {
             .instructions
             .into_iter()
             .map(|symbolic| encode_instruction(symbolic.to_instruction()))
-            .collect()
+            .collect::<Result<Vec<_>, BindProgramEncodeError>>()
+            .unwrap()
     }
 
     fn span_with_line(line: u32) -> Span<'static> {
@@ -397,11 +398,12 @@ mod test {
     fn autobind() {
         // Autobind is false (BIND_AUTOBIND has the value 0).
         let instructions = vec![
-            RawInstruction::from(Instruction::Match(instruction::Condition::Equal(
+            to_raw_instruction(Instruction::Match(instruction::Condition::Equal(
                 Symbol::NumberValue(BIND_AUTOBIND.into()),
                 Symbol::NumberValue(0),
-            ))),
-            RawInstruction::from(Instruction::Abort(instruction::Condition::Always)),
+            )))
+            .unwrap(),
+            to_raw_instruction(Instruction::Abort(instruction::Condition::Always)).unwrap(),
         ];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Ok(true));
@@ -410,10 +412,11 @@ mod test {
     #[test]
     fn bind_flags_not_supported() {
         let instructions =
-            vec![RawInstruction::from(Instruction::Abort(instruction::Condition::Equal(
+            vec![to_raw_instruction(Instruction::Abort(instruction::Condition::Equal(
                 Symbol::NumberValue(BIND_FLAGS.into()),
                 Symbol::NumberValue(0),
-            )))];
+            )))
+            .unwrap()];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Err(DebuggerError::BindFlagsNotSupported));
     }
@@ -421,10 +424,11 @@ mod test {
     #[test]
     fn missing_bind_protocol() {
         let instructions =
-            vec![RawInstruction::from(Instruction::Abort(instruction::Condition::Equal(
+            vec![to_raw_instruction(Instruction::Abort(instruction::Condition::Equal(
                 Symbol::NumberValue(BIND_PROTOCOL.into()),
                 Symbol::NumberValue(5),
-            )))];
+            )))
+            .unwrap()];
         let properties = Vec::new();
         assert_eq!(debug(&instructions, &properties), Err(DebuggerError::MissingBindProtocol));
     }

@@ -66,7 +66,7 @@ impl<'a> AstLocation<'a> {
             AstLocation::AcceptStatementFailure { span, symbol, .. } => InstructionDebug {
                 line: span.line,
                 ast_location: RawAstLocation::AcceptStatementFailure,
-                extra: encode_symbol(symbol),
+                extra: encode_symbol(symbol).unwrap_or(0),
             },
             AstLocation::IfCondition(condition) => InstructionDebug {
                 line: condition.span.line,

@@ -41,13 +41,30 @@ impl fmt::Display for CompilerError {
     }
 }
 
+#[derive(Debug, Error, Clone, PartialEq)]
+pub enum BindProgramEncodeError {
+    InvalidStringLength(String),
+    DuplicateSymbol(String),
+    UnsupportedSymbol,
+    IntegerOutOfRange,
+}
+
+impl fmt::Display for BindProgramEncodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", UserError::from(self.clone()))
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct BindProgram<'a> {
     pub symbol_table: SymbolTable,
     pub instructions: Vec<SymbolicInstructionInfo<'a>>,
 }
 
-pub fn encode_to_bytecode(bind_program: BindProgram, use_new_bytecode: bool) -> Vec<u8> {
+pub fn encode_to_bytecode(
+    bind_program: BindProgram,
+    use_new_bytecode: bool,
+) -> Result<Vec<u8>, BindProgramEncodeError> {
     if use_new_bytecode {
         return encode_to_bytecode_v2(bind_program);
     }
@@ -55,7 +72,10 @@ pub fn encode_to_bytecode(bind_program: BindProgram, use_new_bytecode: bool) -> 
     encode_to_bytecode_v1(bind_program)
 }
 
-pub fn encode_to_string(bind_program: BindProgram, use_new_bytecode: bool) -> String {
+pub fn encode_to_string(
+    bind_program: BindProgram,
+    use_new_bytecode: bool,
+) -> Result<String, BindProgramEncodeError> {
     if use_new_bytecode {
         return encode_to_string_v2(bind_program);
     }

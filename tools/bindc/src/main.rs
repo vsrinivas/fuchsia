@@ -142,7 +142,7 @@ fn write_bind_template<'a>(
     use_new_bytecode: bool,
 ) -> Result<String, Error> {
     let bind_count = bind_program.instructions.len();
-    let binding = encode_to_string(bind_program, use_new_bytecode);
+    let binding = encode_to_string(bind_program, use_new_bytecode)?;
     let mut output = String::new();
     output
         .write_fmt(format_args!(
@@ -278,7 +278,7 @@ fn handle_compile(
     };
 
     if output_bytecode {
-        let bytecode = encode_to_bytecode(bind_program, use_new_bytecode);
+        let bytecode = encode_to_bytecode(bind_program, use_new_bytecode)?;
         output_writer.write_all(bytecode.as_slice()).context("Failed to write to output file")?;
     } else {
         let template = write_bind_template(bind_program, use_new_bytecode)?;
@@ -448,7 +448,7 @@ mod tests {
     fn zero_instructions() {
         let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
 
-        let bytecode = encode_to_bytecode(bind_program, false);
+        let bytecode = encode_to_bytecode(bind_program, false).unwrap();
         assert!(bytecode.is_empty());
 
         let bind_program = BindProgram { instructions: vec![], symbol_table: HashMap::new() };
@@ -466,7 +466,7 @@ mod tests {
             symbol_table: HashMap::new(),
         };
 
-        let bytecode = encode_to_bytecode(bind_program, false);
+        let bytecode = encode_to_bytecode(bind_program, false).unwrap();
         assert_eq!(bytecode, vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
 
         let bind_program = BindProgram {
@@ -494,7 +494,7 @@ mod tests {
             symbol_table: HashMap::new(),
         };
 
-        let bytecode = encode_to_bytecode(bind_program, false);
+        let bytecode = encode_to_bytecode(bind_program, false).unwrap();
         assert_eq!(bytecode[..12], [2, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0]);
 
         let bind_program = BindProgram {
@@ -523,7 +523,7 @@ mod tests {
         };
 
         assert_eq!(
-            encode_to_bytecode(bind_program, false),
+            encode_to_bytecode(bind_program, false).unwrap(),
             vec![0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
         );
 
@@ -535,7 +535,7 @@ mod tests {
             symbol_table: HashMap::new(),
         };
         assert_eq!(
-            encode_to_bytecode(bind_program, true),
+            encode_to_bytecode(bind_program, true).unwrap(),
             vec![
                 66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 0, 0, 0, 0
             ]

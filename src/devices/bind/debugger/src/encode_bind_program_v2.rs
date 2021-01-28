@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::compiler::{BindProgram, Symbol, SymbolTable};
+use crate::compiler::{BindProgram, BindProgramEncodeError, Symbol, SymbolTable};
 use std::collections::HashMap;
 
 /// Functions for encoding the new bytecode format. When the
@@ -41,7 +41,7 @@ impl Encoder {
         }
     }
 
-    pub fn encode_to_bytecode(mut self) -> Vec<u8> {
+    pub fn encode_to_bytecode(mut self) -> Result<Vec<u8>, BindProgramEncodeError> {
         let mut bytecode: Vec<u8> = vec![];
 
         // Encode the header.
@@ -49,31 +49,33 @@ impl Encoder {
         bytecode.extend_from_slice(&BYTECODE_VERSION.to_le_bytes());
 
         // Encode the symbol table.
-        let mut symbol_table = section_with_header(SYMB_MAGIC_NUM, &mut self.encode_symbol_table());
-        bytecode.append(&mut symbol_table);
+        let mut symbol_table = self.encode_symbol_table()?;
+        bytecode.append(&mut section_with_header(SYMB_MAGIC_NUM, &mut symbol_table));
 
         // Encode the instruction section.
         let mut instruction_section = section_with_header(INSTRUCTION_MAGIC_NUM, &mut vec![]);
         bytecode.append(&mut instruction_section);
 
-        bytecode
+        Ok(bytecode)
     }
 
-    fn encode_symbol_table(&mut self) -> Vec<u8> {
+    fn encode_symbol_table(&mut self) -> Result<Vec<u8>, BindProgramEncodeError> {
         let mut bytecode: Vec<u8> = vec![];
         let mut unique_id: u32 = 1;
 
         // TODO(fxb/67919): Add support for enum values.
-        // TODO(fxb/67920): Add error handling to encode_to_bytecode(). Return an error if
-        // the string exceeds the max length of 255.
         for value in self.symbol_table.values() {
             if let Symbol::StringValue(str) = value {
+                // The max string length is 255 characters.
+                if str.len() > 255 {
+                    return Err(BindProgramEncodeError::InvalidStringLength(str.to_string()));
+                }
+
                 // The strings in the symbol table contain fully qualified namespace, so
                 // it's safe to assume that it won't contain duplicates in production.
                 // However, as a precaution, panic if that happens.
-                // TODO(fxb/67920): Return an error if a duplicate string is found.
                 if self.encoded_symbols.contains_key(&str.to_string()) {
-                    panic!("duplicate string in symbol table");
+                    return Err(BindProgramEncodeError::DuplicateSymbol(str.to_string()));
                 }
 
                 self.encoded_symbols.insert(str.to_string(), unique_id);
@@ -87,17 +89,17 @@ impl Encoder {
             }
         }
 
-        bytecode
+        Ok(bytecode)
     }
 }
 
-pub fn encode_to_bytecode_v2(bind_program: BindProgram) -> Vec<u8> {
+pub fn encode_to_bytecode_v2(bind_program: BindProgram) -> Result<Vec<u8>, BindProgramEncodeError> {
     Encoder::new(bind_program).encode_to_bytecode()
 }
 
-pub fn encode_to_string_v2(_bind_program: BindProgram) -> String {
+pub fn encode_to_string_v2(_bind_program: BindProgram) -> Result<String, BindProgramEncodeError> {
     // Unimplemented, new bytecode is not implemented yet. See fxb/67440.
-    "".to_string()
+    Ok("".to_string())
 }
 
 #[cfg(test)]
@@ -120,8 +122,7 @@ mod test {
     }
 
     impl BytecodeChecker {
-        pub fn new(bind_program: BindProgram) -> Self {
-            let bytecode = encode_to_bytecode_v2(bind_program);
+        pub fn new(bytecode: Vec<u8>) -> Self {
             BytecodeChecker { iter: bytecode.into_iter() }
         }
 
@@ -182,7 +183,7 @@ mod test {
             symbol_table: symbol_table,
         };
 
-        let mut checker = BytecodeChecker::new(bind_program);
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
 
         // Verify the header.
         checker.verify_next_u32(BIND_MAGIC_NUM_BYTECODE);
@@ -217,7 +218,7 @@ mod test {
             symbol_table: HashMap::new(),
         };
 
-        let mut checker = BytecodeChecker::new(bind_program);
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
 
         // Verify the header.
         checker.verify_next_u32(BIND_MAGIC_NUM_BYTECODE);
@@ -233,5 +234,60 @@ mod test {
         checker.verify_next_u32([0, 0, 0, 0]);
 
         checker.verify_end();
+    }
+
+    #[test]
+    fn test_duplicates_in_symbol_table() {
+        let mut symbol_table: SymbolTable = HashMap::new();
+
+        symbol_table
+            .insert(make_identifier!("curlew"), Symbol::StringValue("sandpiper".to_string()));
+        symbol_table
+            .insert(make_identifier!("turnstone"), Symbol::StringValue("sandpiper".to_string()));
+
+        let bind_program = BindProgram {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::UnconditionalAbort,
+            }],
+            symbol_table: symbol_table,
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::DuplicateSymbol("sandpiper".to_string())),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_long_string_in_symbol_table() {
+        let mut symbol_table: SymbolTable = HashMap::new();
+
+        let long_str = "loooooooooooooooooooooooooo\
+                        oooooooooooooooooooooooooooo\
+                        ooooooooooooooooooooooooooo\
+                        ooooooooooooooooooooooong, \
+                        loooooooooooooooooooooooooo\
+                        ooooooooooooooooooooooooooo\
+                        ooooooooooooooooooooooooooo\
+                        ooooooooooooooooooooooooooo\
+                        ooooooooooooooooooooooooooo\
+                        oooooooong string";
+
+        symbol_table
+            .insert(make_identifier!("long"), Symbol::StringValue(long_str.clone().to_string()));
+
+        let bind_program = BindProgram {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::UnconditionalAbort,
+            }],
+            symbol_table: symbol_table,
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::InvalidStringLength(long_str.to_string())),
+            encode_to_bytecode_v2(bind_program)
+        );
     }
 }

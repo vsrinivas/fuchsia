@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::compiler::{BindProgram, Symbol};
+use crate::compiler::{BindProgram, BindProgramEncodeError, Symbol};
 use crate::instruction::{Condition, Instruction, InstructionInfo};
 use bitfield::bitfield;
 use num_derive::FromPrimitive;
@@ -67,92 +67,106 @@ impl fmt::Display for RawInstruction<[u32; 3]> {
     }
 }
 
-impl From<Instruction> for RawInstruction<[u32; 3]> {
-    fn from(instruction: Instruction) -> Self {
-        let (c, o, a, b, v) = match instruction {
-            Instruction::Abort(condition) => {
-                let (c, b, v) = encode_condition(condition);
-                (c, RawOp::Abort as u32, 0, b, v)
-            }
-            Instruction::Match(condition) => {
-                let (c, b, v) = encode_condition(condition);
-                (c, RawOp::Match as u32, 0, b, v)
-            }
-            Instruction::Goto(condition, a) => {
-                let (c, b, v) = encode_condition(condition);
-                (c, RawOp::Goto as u32, a, b, v)
-            }
-            Instruction::Label(a) => (RawCondition::Always as u32, RawOp::Label as u32, a, 0, 0),
-        };
+pub fn to_raw_instruction(
+    instruction: Instruction,
+) -> Result<RawInstruction<[u32; 3]>, BindProgramEncodeError> {
+    let (c, o, a, b, v) = match instruction {
+        Instruction::Abort(condition) => {
+            let (c, b, v) = encode_condition(condition)?;
+            Ok((c, RawOp::Abort as u32, 0, b, v))
+        }
+        Instruction::Match(condition) => {
+            let (c, b, v) = encode_condition(condition)?;
+            Ok((c, RawOp::Match as u32, 0, b, v))
+        }
+        Instruction::Goto(condition, a) => {
+            let (c, b, v) = encode_condition(condition)?;
+            Ok((c, RawOp::Goto as u32, a, b, v))
+        }
+        Instruction::Label(a) => Ok((RawCondition::Always as u32, RawOp::Label as u32, a, 0, 0)),
+    }?;
 
-        let mut raw_instruction = RawInstruction([0, 0, 0]);
-        raw_instruction.set_condition(c);
-        raw_instruction.set_operation(o);
-        raw_instruction.set_parameter_a(a);
-        raw_instruction.set_parameter_b(b);
-        raw_instruction.set_value(v);
-        raw_instruction
-    }
+    let mut raw_instruction = RawInstruction([0, 0, 0]);
+    raw_instruction.set_condition(c);
+    raw_instruction.set_operation(o);
+    raw_instruction.set_parameter_a(a);
+    raw_instruction.set_parameter_b(b);
+    raw_instruction.set_value(v);
+    Ok(raw_instruction)
 }
 
-fn encode_condition(condition: Condition) -> (u32, u32, u32) {
+fn encode_condition(condition: Condition) -> Result<(u32, u32, u32), BindProgramEncodeError> {
     match condition {
-        Condition::Always => (RawCondition::Always as u32, 0, 0),
-        Condition::Equal(b, v) => (RawCondition::Equal as u32, encode_symbol(b), encode_symbol(v)),
+        Condition::Always => Ok((RawCondition::Always as u32, 0, 0)),
+        Condition::Equal(b, v) => {
+            let b_sym = encode_symbol(b)?;
+            let v_sym = encode_symbol(v)?;
+            Ok((RawCondition::Equal as u32, b_sym, v_sym))
+        }
         Condition::NotEqual(b, v) => {
-            (RawCondition::NotEqual as u32, encode_symbol(b), encode_symbol(v))
+            let b_sym = encode_symbol(b)?;
+            let v_sym = encode_symbol(v)?;
+            Ok((RawCondition::NotEqual as u32, b_sym, v_sym))
         }
     }
 }
 
-pub fn encode_symbol(symbol: Symbol) -> u32 {
+pub fn encode_symbol(symbol: Symbol) -> Result<u32, BindProgramEncodeError> {
     // The old bytecode format can only support numeric values.
     match symbol {
-        Symbol::DeprecatedKey(value) => value,
+        Symbol::DeprecatedKey(value) => Ok(value),
         Symbol::NumberValue(value64) => match u32::try_from(value64) {
-            Ok(value32) => value32,
-            _ => {
-                panic!("64 bit values are unsupported");
-            }
+            Ok(value32) => Ok(value32),
+            _ => Err(BindProgramEncodeError::IntegerOutOfRange),
         },
-        _ => panic!("Unsupported symbol"),
+        _ => Err(BindProgramEncodeError::UnsupportedSymbol),
     }
 }
 
-pub fn encode_instruction(info: InstructionInfo) -> RawInstruction<[u32; 3]> {
-    let mut raw_instruction = RawInstruction::from(info.instruction);
+pub fn encode_instruction(
+    info: InstructionInfo,
+) -> Result<RawInstruction<[u32; 3]>, BindProgramEncodeError> {
+    let mut raw_instruction = to_raw_instruction(info.instruction)?;
     raw_instruction.set_line(info.debug.line);
     raw_instruction.set_ast_location(info.debug.ast_location as u32);
     raw_instruction.set_extra(info.debug.extra);
-    raw_instruction
+    Ok(raw_instruction)
 }
 
-pub fn encode_to_bytecode_v1(bind_program: BindProgram) -> Vec<u8> {
-    bind_program
+pub fn encode_to_bytecode_v1(bind_program: BindProgram) -> Result<Vec<u8>, BindProgramEncodeError> {
+    let result = bind_program
         .instructions
         .into_iter()
         .map(|inst| encode_instruction(inst.to_instruction()))
+        .collect::<Result<Vec<_>, BindProgramEncodeError>>()?;
+    Ok(result
+        .into_iter()
         .flat_map(|RawInstruction([a, b, c])| {
             [a.to_le_bytes(), b.to_le_bytes(), c.to_le_bytes()].concat()
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>())
 }
 
-pub fn encode_to_string_v1(bind_program: BindProgram) -> String {
-    bind_program
+pub fn encode_to_string_v1(bind_program: BindProgram) -> Result<String, BindProgramEncodeError> {
+    let result = bind_program
         .instructions
         .into_iter()
         .map(|inst| encode_instruction(inst.to_instruction()))
+        .collect::<Result<Vec<_>, BindProgramEncodeError>>()?;
+    Ok(result
+        .into_iter()
         .map(|RawInstruction([word0, word1, word2])| {
             format!("{{{:#x},{:#x},{:#x}}},", word0, word1, word2)
         })
-        .collect::<String>()
+        .collect::<String>())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
     use crate::encode_bind_program_v1::RawInstruction;
+    use std::collections::HashMap;
 
     #[test]
     fn test_raw_instruction() {
@@ -214,7 +228,7 @@ mod tests {
     #[test]
     fn test_abort_value() {
         let instruction = Instruction::Abort(Condition::Always);
-        let raw_instruction = RawInstruction::from(instruction);
+        let raw_instruction = to_raw_instruction(instruction).unwrap();
         assert_eq!(raw_instruction.0[0], 0 << 4);
         assert_eq!(raw_instruction.0[1], 0);
         assert_eq!(raw_instruction.operation(), 0)
@@ -223,7 +237,7 @@ mod tests {
     #[test]
     fn test_match_value() {
         let instruction = Instruction::Match(Condition::Always);
-        let raw_instruction = RawInstruction::from(instruction);
+        let raw_instruction = to_raw_instruction(instruction).unwrap();
         assert_eq!(raw_instruction.0[0], 1 << 24);
         assert_eq!(raw_instruction.0[1], 0);
         assert_eq!(raw_instruction.operation(), 1)
@@ -232,7 +246,7 @@ mod tests {
     #[test]
     fn test_goto_value() {
         let instruction = Instruction::Goto(Condition::Always, 0);
-        let raw_instruction = RawInstruction::from(instruction);
+        let raw_instruction = to_raw_instruction(instruction).unwrap();
         assert_eq!(raw_instruction.0[0], 2 << 24);
         assert_eq!(raw_instruction.0[1], 0);
         assert_eq!(raw_instruction.operation(), 2)
@@ -241,7 +255,7 @@ mod tests {
     #[test]
     fn test_label_value() {
         let instruction = Instruction::Label(0);
-        let raw_instruction = RawInstruction::from(instruction);
+        let raw_instruction = to_raw_instruction(instruction).unwrap();
         assert_eq!(raw_instruction.0[0], 5 << 24);
         assert_eq!(raw_instruction.0[1], 0);
         assert_eq!(raw_instruction.operation(), 5)
@@ -253,7 +267,7 @@ mod tests {
             Condition::Equal(Symbol::NumberValue(23), Symbol::NumberValue(1234)),
             42,
         );
-        let raw_instruction = RawInstruction::from(instruction);
+        let raw_instruction = to_raw_instruction(instruction).unwrap();
         assert_eq!(raw_instruction.0[0], (1 << 28) | (2 << 24) | (42 << 16) | 23);
         assert_eq!(raw_instruction.0[1], 1234);
         assert_eq!(raw_instruction.condition(), 1);
@@ -261,5 +275,40 @@ mod tests {
         assert_eq!(raw_instruction.parameter_a(), 42);
         assert_eq!(raw_instruction.parameter_b(), 23);
         assert_eq!(raw_instruction.value(), 1234);
+    }
+
+    #[test]
+    fn test_unsupported_symbols() {
+        let bind_program = BindProgram {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::StringValue("kingbird".to_string()),
+                    rhs: Symbol::StringValue("flycatcher".to_string()),
+                },
+            }],
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::UnsupportedSymbol),
+            encode_to_bytecode_v1(bind_program)
+        );
+
+        let bind_program = BindProgram {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::NumberValue(u64::MAX),
+                    rhs: Symbol::NumberValue(0),
+                },
+            }],
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::IntegerOutOfRange),
+            encode_to_bytecode_v1(bind_program)
+        );
     }
 }
