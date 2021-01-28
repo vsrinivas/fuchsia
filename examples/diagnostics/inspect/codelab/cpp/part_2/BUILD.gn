@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
+import("//src/sys/build/components.gni")
 
 # [START part_1_solution_build_dep]
 source_set("lib") {
@@ -19,17 +19,6 @@ source_set("lib") {
 
 # [END part_1_solution_build_dep]
 
-test("reverser_unittests_part_2") {
-  sources = [ "reverser_unittests.cc" ]
-
-  deps = [
-    ":lib",
-    "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
 executable("bin") {
   output_name = "inspect_cpp_codelab_part_2_bin"
   sources = [ "main.cc" ]
@@ -41,4 +30,32 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_component("inspect_cpp_codelab_part_2") {
+  manifest = "meta/inspect_cpp_codelab_part_2.cmx"
+  deps = [ ":bin" ]
+}
+
+executable("unittests") {
+  testonly = true
+  output_name = "inspect_cpp_codelab_part_2_unittests"
+  sources = [ "reverser_unittests.cc" ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_component("inspect_cpp_codelab_part_2_unittests") {
+  deps = [ ":unittests" ]
+}
+
+fuchsia_test("test_spec") {
+  package =
+      "//examples/diagnostics/inspect/codelab/cpp:inspect_cpp_codelab_unittests"
+  component = ":inspect_cpp_codelab_part_2_unittests"
 }

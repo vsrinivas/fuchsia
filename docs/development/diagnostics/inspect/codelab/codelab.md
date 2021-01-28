@@ -1569,7 +1569,7 @@ This section is under construction.
 [cpp-part2-meta]: /examples/diagnostics/inspect/codelab/cpp/part_2/meta/inspect_cpp_codelab_part_2.cmx
 [cpp-part3-unittest]: /examples/diagnostics/inspect/codelab/cpp/part_3/reverser_unittests.cc
 [cpp-part4-integration]: /examples/diagnostics/inspect/codelab/cpp/part_4/tests/integration_test.cc
-[cpp-part4-integration-meta]: /examples/diagnostics/inspect/codelab/cpp/meta/integration_part_4.cmx
+[cpp-part4-integration-meta]: /examples/diagnostics/inspect/codelab/cpp/part_4/tests/integration_part_4.cmx
 
 [inspect-rust-codelab]: /examples/diagnostics/inspect/codelab/rust
 [rust-part1]: /examples/diagnostics/inspect/codelab/rust/part_1

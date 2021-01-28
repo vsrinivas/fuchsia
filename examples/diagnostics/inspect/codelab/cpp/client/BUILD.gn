@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/components.gni")
+import("//src/sys/component_index/component_index.gni")
+
 executable("bin") {
   output_name = "inspect_cpp_codelab_client"
   sources = [ "main.cc" ]
@@ -10,4 +13,18 @@ executable("bin") {
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
     "//sdk/lib/sys/cpp",
   ]
+}
+
+fuchsia_component("inspect_cpp_codelab_client") {
+  manifest = "meta/inspect_cpp_codelab_client.cmx"
+  deps = [
+    ":bin",
+    ":component_index",
+  ]
+}
+
+# Enables the ability to `fx shell run inspect_cpp_codelab_client` instead of using the full URL.
+add_to_component_index("component_index") {
+  package_name = "inspect_cpp_codelab"
+  manifest = "meta/inspect_cpp_codelab_client.cmx"
 }

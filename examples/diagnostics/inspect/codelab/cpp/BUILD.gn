@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("cpp") {
   deps = [ ":inspect_cpp_codelab" ]
@@ -14,194 +13,61 @@ group("tests") {
   deps = [
     ":inspect_cpp_codelab_integration_tests",
     ":inspect_cpp_codelab_unittests",
+
+    # Test specs for integration tests
+    "part_1/tests:test_spec",
+    "part_2/tests:test_spec",
+    "part_3/tests:test_spec",
+    "part_4/tests:test_spec",
+    "part_5/tests:test_spec",
+
+    # Test specs for unit tests
+    "part_1:test_spec",
+    "part_2:test_spec",
+    "part_3:test_spec",
+    "part_4:test_spec",
+    "part_5:test_spec",
   ]
 }
 
-package("inspect_cpp_codelab") {
+fuchsia_package("inspect_cpp_codelab") {
   deps = [
-    "client:bin",
-    "fizzbuzz:bin",
-    "part_1:bin",
-    "part_2:bin",
-    "part_3:bin",
-    "part_4:bin",
-    "part_5:bin",
-  ]
-
-  binaries = [
-    {
-      name = "inspect_cpp_codelab_client"
-    },
-    {
-      name = "inspect_cpp_codelab_fizzbuzz_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_1_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_2_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_3_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_4_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_5_bin"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("client/meta/inspect_cpp_codelab_client.cmx")
-      dest = "inspect_cpp_codelab_client.cmx"
-    },
-    {
-      path = rebase_path("fizzbuzz/meta/inspect_cpp_codelab_fizzbuzz.cmx")
-      dest = "inspect_cpp_codelab_fizzbuzz.cmx"
-    },
-    {
-      path = rebase_path("part_1/meta/inspect_cpp_codelab_part_1.cmx")
-      dest = "inspect_cpp_codelab_part_1.cmx"
-    },
-    {
-      path = rebase_path("part_2/meta/inspect_cpp_codelab_part_2.cmx")
-      dest = "inspect_cpp_codelab_part_2.cmx"
-    },
-    {
-      path = rebase_path("part_3/meta/inspect_cpp_codelab_part_3.cmx")
-      dest = "inspect_cpp_codelab_part_3.cmx"
-    },
-    {
-      path = rebase_path("part_4/meta/inspect_cpp_codelab_part_4.cmx")
-      dest = "inspect_cpp_codelab_part_4.cmx"
-    },
-    {
-      path = rebase_path("part_5/meta/inspect_cpp_codelab_part_5.cmx")
-      dest = "inspect_cpp_codelab_part_5.cmx"
-    },
+    "client:inspect_cpp_codelab_client",
+    "fizzbuzz:inspect_cpp_codelab_fizzbuzz",
+    "part_1:inspect_cpp_codelab_part_1",
+    "part_2:inspect_cpp_codelab_part_2",
+    "part_3:inspect_cpp_codelab_part_3",
+    "part_4:inspect_cpp_codelab_part_4",
+    "part_5:inspect_cpp_codelab_part_5",
   ]
 }
 
-test_package("inspect_cpp_codelab_unittests") {
+fuchsia_package("inspect_cpp_codelab_unittests") {
+  testonly = true
   deps = [
-    "part_1:reverser_unittests_part_1",
-    "part_2:reverser_unittests_part_2",
-    "part_3:reverser_unittests_part_3",
-    "part_4:reverser_unittests_part_4",
-    "part_5:reverser_unittests_part_5",
-  ]
-
-  tests = [
-    {
-      name = "reverser_unittests_part_1"
-      environments = basic_envs
-    },
-    {
-      name = "reverser_unittests_part_2"
-      environments = basic_envs
-    },
-    {
-      name = "reverser_unittests_part_3"
-      environments = basic_envs
-    },
-    {
-      name = "reverser_unittests_part_4"
-      environments = basic_envs
-    },
-    {
-      name = "reverser_unittests_part_5"
-      environments = basic_envs
-    },
+    "part_1:inspect_cpp_codelab_part_1_unittests",
+    "part_2:inspect_cpp_codelab_part_2_unittests",
+    "part_3:inspect_cpp_codelab_part_3_unittests",
+    "part_4:inspect_cpp_codelab_part_4_unittests",
+    "part_5:inspect_cpp_codelab_part_5_unittests",
   ]
 }
 
-test_package("inspect_cpp_codelab_integration_tests") {
+fuchsia_package("inspect_cpp_codelab_integration_tests") {
+  testonly = true
   deps = [
     # Include the components under test in this package. This ensures
     # that our test is hermetic; we don't have cross-package dependencies.
-    "fizzbuzz:bin",
-    "part_1:bin",
-    "part_1/tests:integration_part_1",
-    "part_2:bin",
-    "part_2/tests:integration_part_2",
-    "part_3:bin",
-    "part_3/tests:integration_part_3",
-    "part_4:bin",
-    "part_4/tests:integration_part_4",
-    "part_5:bin",
-    "part_5/tests:integration_part_5",
-  ]
-
-  binaries = [
-    {
-      name = "inspect_cpp_codelab_fizzbuzz_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_1_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_2_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_3_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_4_bin"
-    },
-    {
-      name = "inspect_cpp_codelab_part_5_bin"
-    },
-  ]
-
-  tests = [
-    {
-      name = "integration_part_1"
-      environments = basic_envs
-    },
-    {
-      name = "integration_part_2"
-      environments = basic_envs
-    },
-    {
-      name = "integration_part_3"
-      environments = basic_envs
-    },
-    {
-      name = "integration_part_4"
-      environments = basic_envs
-    },
-    {
-      name = "integration_part_5"
-      environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("fizzbuzz/meta/inspect_cpp_codelab_fizzbuzz.cmx")
-      dest = "inspect_cpp_codelab_fizzbuzz.cmx"
-    },
-    {
-      path = rebase_path("part_1/meta/inspect_cpp_codelab_part_1.cmx")
-      dest = "inspect_cpp_codelab_part_1.cmx"
-    },
-    {
-      path = rebase_path("part_2/meta/inspect_cpp_codelab_part_2.cmx")
-      dest = "inspect_cpp_codelab_part_2.cmx"
-    },
-    {
-      path = rebase_path("part_3/meta/inspect_cpp_codelab_part_3.cmx")
-      dest = "inspect_cpp_codelab_part_3.cmx"
-    },
-    {
-      path = rebase_path("part_4/meta/inspect_cpp_codelab_part_4.cmx")
-      dest = "inspect_cpp_codelab_part_4.cmx"
-    },
-    {
-      path = rebase_path("part_5/meta/inspect_cpp_codelab_part_5.cmx")
-      dest = "inspect_cpp_codelab_part_5.cmx"
-    },
+    "fizzbuzz:inspect_cpp_codelab_fizzbuzz",
+    "part_1:inspect_cpp_codelab_part_1",
+    "part_1/tests:inspect_cpp_codelab_part_1_integration_test",
+    "part_2:inspect_cpp_codelab_part_2",
+    "part_2/tests:inspect_cpp_codelab_part_2_integration_test",
+    "part_3:inspect_cpp_codelab_part_3",
+    "part_3/tests:inspect_cpp_codelab_part_3_integration_test",
+    "part_4:inspect_cpp_codelab_part_4",
+    "part_4/tests:inspect_cpp_codelab_part_4_integration_test",
+    "part_5:inspect_cpp_codelab_part_5",
+    "part_5/tests:inspect_cpp_codelab_part_5_integration_test",
   ]
 }

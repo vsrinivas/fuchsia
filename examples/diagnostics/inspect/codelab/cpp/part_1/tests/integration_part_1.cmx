@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/integration_part_1"
+        "binary": "bin/inspect_cpp_codelab_part_1_integration_test"
     },
     "sandbox": {
         "services": [

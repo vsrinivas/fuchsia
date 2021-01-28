@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-test("integration_part_4") {
+executable("integration_test") {
+  testonly = true
+  output_name = "inspect_cpp_codelab_part_4_integration_test"
   sources = [ "integration_test.cc" ]
 
   deps = [
@@ -18,4 +18,15 @@ test("integration_part_4") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
   ]
+}
+
+fuchsia_component("inspect_cpp_codelab_part_4_integration_test") {
+  testonly = true
+  manifest = "integration_part_4.cmx"
+  deps = [ ":integration_test" ]
+}
+
+fuchsia_test("test_spec") {
+  package = "//examples/diagnostics/inspect/codelab/cpp:inspect_cpp_codelab_integration_tests"
+  component = ":inspect_cpp_codelab_part_4_integration_test"
 }

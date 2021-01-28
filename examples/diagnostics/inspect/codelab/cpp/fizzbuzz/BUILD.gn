@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/components.gni")
+
 executable("bin") {
   output_name = "inspect_cpp_codelab_fizzbuzz_bin"
   sources = [ "main.cc" ]
@@ -14,4 +16,9 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_component("inspect_cpp_codelab_fizzbuzz") {
+  manifest = "meta/inspect_cpp_codelab_fizzbuzz.cmx"
+  deps = [ ":bin" ]
 }

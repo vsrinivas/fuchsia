@@ -102,7 +102,6 @@ group("deprecated_package") {
     "//build/info/*",
     "//examples/cowsay/*",
     "//examples/criterion_bench/*",
-    "//examples/diagnostics/inspect/codelab/cpp/*",
     "//examples/diagnostics/inspect/codelab/rust/*",
     "//examples/diagnostics/inspect/cpp/*",
     "//examples/diagnostics/inspect/rust-ergonomic/*",
