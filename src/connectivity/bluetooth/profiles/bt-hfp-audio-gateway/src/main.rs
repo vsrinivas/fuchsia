@@ -10,10 +10,18 @@ use {
     log::warn,
 };
 
-use crate::{config::AudioGatewayFeatureSupport, hfp::Hfp, profile::Profile};
+use crate::{
+    call_manager::CallManager,
+    config::AudioGatewayFeatureSupport,
+    fidl_service::{handle_hfp_client_connection, Services},
+    hfp::Hfp,
+    profile::Profile,
+};
 
+mod call_manager;
 mod config;
 mod error;
+mod fidl_service;
 mod hfp;
 mod profile;
 mod service_definitions;
@@ -24,10 +32,14 @@ async fn main() -> Result<(), Error> {
 
     let feature_support = AudioGatewayFeatureSupport::load()?;
     let profile = Profile::register_audio_gateway(feature_support)?;
-    let hfp = Hfp::new(profile).run();
+    let mut call_manager = CallManager::new();
+    let service_provider =
+        call_manager.service_provider().expect("A valid call manager service provider");
+    let hfp = Hfp::new(profile, call_manager).run();
     pin_mut!(hfp);
 
     let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(Services::Hfp);
 
     let inspector = fuchsia_inspect::Inspector::new();
     if let Err(e) = inspector.serve(&mut fs) {
@@ -35,9 +47,24 @@ async fn main() -> Result<(), Error> {
     }
 
     fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
-    let fs = fs.collect::<()>();
+    let fs = fs.for_each_concurrent(10_000, move |Services::Hfp(stream)| {
+        handle_hfp_client_connection(stream, service_provider.clone())
+    });
+    pin_mut!(fs);
 
-    future::select(fs, hfp).await;
+    match future::select(fs, hfp).await {
+        future::Either::Left(((), _)) => {
+            log::warn!("Service FS directory handle closed. Exiting.");
+        }
+        future::Either::Right((Ok(()), _)) => {
+            log::warn!(
+                "All Hfp related connections to this component have been disconnected. Exiting."
+            );
+        }
+        future::Either::Right((Err(e), _)) => {
+            log::warn!("Error encountered running main Hfp loop: {}. Exiting.", e);
+        }
+    }
 
     Ok(())
 }
