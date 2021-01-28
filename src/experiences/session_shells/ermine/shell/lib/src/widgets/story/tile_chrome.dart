@@ -147,6 +147,7 @@ class TileChrome extends StatelessWidget {
   }) =>
       GestureDetector(
         child: Container(
+          key: ValueKey(maximize ? 'maximize' : 'close'),
           width: ErmineStyle.kStoryTitleHeight,
           height: ErmineStyle.kStoryTitleHeight,
           color: ErmineStyle.kStoryTitleBackgroundColor,

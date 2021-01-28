@@ -186,6 +186,7 @@ class AppModel {
         'fullscreen': onFullscreen,
         'cancel': onCancel,
         'close': onClose,
+        'closeAll': onCloseAll,
         'status': onStatus,
         'nextCluster': clustersModel.nextCluster,
         'previousCluster': clustersModel.previousCluster,
@@ -275,6 +276,13 @@ class AppModel {
     // Close is allowed when not in Overview.
     if (overviewVisibility.value == false) {
       clustersModel.focusedStory?.delete();
+    }
+  }
+
+  /// Called on 'closeAll' action.
+  void onCloseAll() {
+    while (clustersModel.focusedStory != null) {
+      onClose();
     }
   }
 

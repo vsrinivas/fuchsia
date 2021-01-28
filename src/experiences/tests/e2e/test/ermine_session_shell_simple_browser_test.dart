@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -16,7 +17,7 @@ void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
 
-  setUp(() async {
+  setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
 

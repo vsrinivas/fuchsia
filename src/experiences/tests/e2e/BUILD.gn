@@ -16,6 +16,7 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "ermine_session_shell_simple_browser_test.dart",
     "ermine_smoke_test.dart",
     "ermine_spinning_square_view_test.dart",
+    "ermine_terminal_test.dart",
   ]
 
   deps = [

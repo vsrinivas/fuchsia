@@ -162,8 +162,12 @@ class ErmineDriver {
 
   /// Returns [Inspect] data for all launched views.
   Future<List<Map<String, dynamic>>> launchedViews() async {
+    final views = <Map<String, dynamic>>[];
     final snapshot = await Inspect(sl4f).snapshotRoot('ermine.cmx');
     final workspace = snapshot['workspaces'];
+    if (workspace == null) {
+      return views;
+    }
 
     final clusters = <Map<String, dynamic>>[];
     int instance = 0;
@@ -171,7 +175,6 @@ class ErmineDriver {
       clusters.add(workspace['cluster-${instance++}']);
     }
 
-    final views = <Map<String, dynamic>>[];
     for (final cluster in clusters) {
       int instance = 0;
       while (cluster['component-$instance'] != null) {
