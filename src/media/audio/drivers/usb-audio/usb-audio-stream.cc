@@ -20,9 +20,9 @@
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
 #include <digest/digest.h>
-#include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 
 #include "usb-audio-device.h"
@@ -34,16 +34,16 @@ namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQ = 3;
 
-UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc,
-                               fbl::RefPtr<dispatcher::ExecutionDomain> default_domain)
+UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc)
     : UsbAudioStreamBase(parent->zxdev()),
       AudioStreamProtocol(ifc->direction() == Direction::Input),
       parent_(*parent),
       ifc_(std::move(ifc)),
-      default_domain_(std::move(default_domain)),
-      create_time_(zx::clock::get_monotonic().get()) {
+      create_time_(zx::clock::get_monotonic().get()),
+      loop_(&kAsyncLoopConfigNeverAttachToThread) {
   snprintf(log_prefix_, sizeof(log_prefix_), "UsbAud %04hx:%04hx %s-%03d", parent_.vid(),
            parent_.pid(), is_input() ? "input" : "output", ifc_->term_link());
+  loop_.StartThread("usb-audio-stream-loop");
 }
 
 UsbAudioStream::~UsbAudioStream() {
@@ -60,15 +60,8 @@ fbl::RefPtr<UsbAudioStream> UsbAudioStream::Create(UsbAudioDevice* parent,
   ZX_DEBUG_ASSERT(parent != nullptr);
   ZX_DEBUG_ASSERT(ifc != nullptr);
 
-  auto domain = dispatcher::ExecutionDomain::Create();
-  if (domain == nullptr) {
-    LOG_EX(ERROR, *parent,
-           "Failed to create execution domain while trying to create UsbAudioStream\n");
-    return nullptr;
-  }
-
   fbl::AllocChecker ac;
-  auto stream = fbl::AdoptRef(new (&ac) UsbAudioStream(parent, std::move(ifc), std::move(domain)));
+  auto stream = fbl::AdoptRef(new (&ac) UsbAudioStream(parent, std::move(ifc)));
   if (!ac.check()) {
     LOG_EX(ERROR, *parent, "Out of memory while attempting to allocate UsbAudioStream\n");
     return nullptr;
@@ -231,45 +224,65 @@ void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   // connection (The connection which is allowed to do things like change
   // formats).
   bool privileged = (stream_channel_ == nullptr);
-  auto channel = dispatcher::Channel::Create();
-  if (channel == nullptr) {
+
+  zx::channel stream_channel_local;
+  zx::channel stream_channel_remote;
+  auto status = zx::channel::create(0, &stream_channel_local, &stream_channel_remote);
+  if (status != ZX_OK) {
     completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
 
-  dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-        return stream->ProcessStreamChannel(channel, privileged);
-      });
-
-  dispatcher::Channel::ChannelClosedHandler chandler;
-  if (privileged) {
-    chandler = dispatcher::Channel::ChannelClosedHandler(
-        [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-          OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-          stream->DeactivateStreamChannel(channel);
-        });
-  }
-
-  zx::channel client_endpoint;
-  zx_status_t res = channel->Activate(&client_endpoint, default_domain_, std::move(phandler),
-                                      std::move(chandler));
-  if (res == ZX_OK) {
-    if (privileged) {
-      ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
-      stream_channel_ = channel;
-    }
-
-    completer.Reply(std::move(client_endpoint));
+  auto stream_channel = Channel::Create<Channel>(std::move(stream_channel_local));
+  if (stream_channel == nullptr) {
+    completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
-  completer.Close(ZX_ERR_INTERNAL);
+  stream_channel->SetHandler([stream = fbl::RefPtr(this), channel = stream_channel.get(),
+                              privileged](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                          zx_status_t status, const zx_packet_signal_t* signal) {
+    stream->StreamChannelSignalled(dispatcher, wait, status, signal, channel, privileged);
+  });
+  status = stream_channel->BeginWait(loop_.dispatcher());
+  if (status != ZX_OK) {
+    completer.Close(ZX_ERR_NO_MEMORY);
+    // We let stream_channel_remote go out of scope to trigger channel deactivation via peer close.
+    return;
+  }
+  if (privileged) {
+    ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
+    stream_channel_ = stream_channel;
+  }
+  completer.Reply(std::move(stream_channel_remote));
+}
+
+void UsbAudioStream::StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                            zx_status_t status, const zx_packet_signal_t* signal,
+                                            Channel* channel, bool priviledged) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    zx_status_t status = ProcessStreamChannel(channel, priviledged);
+    if (status != ZX_OK) {
+      return;
+    }
+    if (!peer_closed_asserted) {
+      wait->Begin(dispatcher);
+    }
+  }
+  if (peer_closed_asserted) {
+    DeactivateStreamChannel(channel);
+  }
 }
 
 void UsbAudioStream::DdkUnbind(ddk::UnbindTxn txn) {
-  // Close all of our client event sources if we have not already.
-  default_domain_->Deactivate();
+  // We stop the loop so we can safely deactivate channels via RAII via DdkRelease.
+  loop_.Shutdown();
 
   // Unpublish our device node.
   txn.Reply();
@@ -296,7 +309,7 @@ void UsbAudioStream::DdkRelease() {
       return ZX_ERR_INVALID_ARGS;                                                                \
     }                                                                                            \
     return _handler(channel, req._payload, ##__VA_ARGS__);
-zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, bool priv) {
+zx_status_t UsbAudioStream::ProcessStreamChannel(Channel* channel, bool priv) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   fbl::AutoLock lock(&lock_);
 
@@ -344,7 +357,7 @@ zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, b
   }
 }
 
-zx_status_t UsbAudioStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
+zx_status_t UsbAudioStream::ProcessRingBufferChannel(Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   fbl::AutoLock lock(&lock_);
 
@@ -384,7 +397,7 @@ zx_status_t UsbAudioStream::ProcessRingBufferChannel(dispatcher::Channel* channe
 }
 #undef HREQ
 
-zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(Channel* channel,
                                                      const audio_proto::StreamGetFmtsReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   audio_proto::StreamGetFmtsResp resp = {};
@@ -426,12 +439,11 @@ zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channe
   return ZX_OK;
 }
 
-zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnSetStreamFormatLocked(Channel* channel,
                                                     const audio_proto::StreamSetFmtReq& req,
                                                     bool privileged) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
-  zx::channel client_rb_channel;
   audio_proto::StreamSetFmtResp resp = {};
   resp.hdr = req.hdr;
 
@@ -439,7 +451,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
   if (!privileged) {
     ZX_DEBUG_ASSERT(channel != stream_channel_.get());
     resp.result = ZX_ERR_ACCESS_DENIED;
-    goto finished;
+    return channel->Write(&resp, sizeof(resp));
   }
 
   // Look up the details about the interface and the endpoint which will be
@@ -448,7 +460,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
   resp.result =
       ifc_->LookupFormat(req.frames_per_second, req.channels, req.sample_format, &format_ndx);
   if (resp.result != ZX_OK) {
-    goto finished;
+    return channel->Write(&resp, sizeof(resp));
   }
 
   // Determine the frame size needed for this requested format, then compute
@@ -474,7 +486,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     LOG(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)\n", req.channels,
         req.sample_format);
     resp.result = ZX_ERR_INTERNAL;
-    goto finished;
+    return channel->Write(&resp, sizeof(resp));
   }
 
   static constexpr uint32_t iso_packet_rate = 1000;
@@ -486,7 +498,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
   ZX_DEBUG_ASSERT(format_ndx < ifc_->formats().size());
   if (long_payload_len > ifc_->formats()[format_ndx].max_req_size_) {
     resp.result = ZX_ERR_INVALID_ARGS;
-    goto finished;
+    return channel->Write(&resp, sizeof(resp));
   }
 
   // Deny the format change request if the ring buffer is not currently stopped.
@@ -496,14 +508,13 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     fbl::AutoLock req_lock(&req_lock_);
     if (ring_buffer_state_ != RingBufferState::STOPPED) {
       resp.result = ZX_ERR_BAD_STATE;
-      goto finished;
+      return channel->Write(&resp, sizeof(resp));
     }
   }
 
   // Looks like we are going ahead with this format change.  Tear down any
   // exiting ring buffer interface before proceeding.
   if (rb_channel_ != nullptr) {
-    rb_channel_->Deactivate();
     rb_channel_.reset();
   }
 
@@ -546,41 +557,61 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
 
   // Create a new ring buffer channel which can be used to move bulk data and
   // bind it to us.
-  rb_channel_ = dispatcher::Channel::Create();
-  if (rb_channel_ == nullptr) {
-    resp.result = ZX_ERR_NO_MEMORY;
-  } else {
-    dispatcher::Channel::ProcessHandler phandler(
-        [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-          OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-          return stream->ProcessRingBufferChannel(channel);
-        });
-
-    dispatcher::Channel::ChannelClosedHandler chandler(
-        [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-          OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
-          stream->DeactivateRingBufferChannel(channel);
-        });
-
-    resp.result = rb_channel_->Activate(&client_rb_channel, default_domain_, std::move(phandler),
-                                        std::move(chandler));
-    if (resp.result != ZX_OK) {
-      rb_channel_.reset();
-    }
+  zx::channel stream_channel_local;
+  zx::channel stream_channel_remote;
+  resp.result = zx::channel::create(0, &stream_channel_local, &stream_channel_remote);
+  if (resp.result != ZX_OK) {
+    return channel->Write(&resp, sizeof(resp));
   }
 
-finished:
-  if (resp.result == ZX_OK) {
-    // TODO(johngro): Report the actual external delay.
-    resp.external_delay_nsec = 0;
-    return channel->Write(&resp, sizeof(resp), std::move(client_rb_channel));
-  } else {
+  rb_channel_ = Channel::Create<Channel>(std::move(stream_channel_local));
+  if (rb_channel_ == nullptr) {
+    resp.result = ZX_ERR_NO_MEMORY;
     return channel->Write(&resp, sizeof(resp));
+  }
+
+  rb_channel_->SetHandler([rb = fbl::RefPtr(this), channel = rb_channel_.get()](
+                              async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                              zx_status_t status, const zx_packet_signal_t* signal) {
+    rb->RingBufferChannelSignalled(dispatcher, wait, status, signal, channel);
+  });
+  resp.result = rb_channel_->BeginWait(loop_.dispatcher());
+  if (resp.result != ZX_OK) {
+    rb_channel_.reset();
+    return channel->Write(&resp, sizeof(resp));
+  }
+
+  // TODO(johngro): Report the actual external delay.
+  resp.external_delay_nsec = 0;
+  return channel->Write(&resp, sizeof(resp), std::move(stream_channel_remote));
+}
+
+void UsbAudioStream::RingBufferChannelSignalled(async_dispatcher_t* dispatcher,
+                                                async::WaitBase* wait, zx_status_t status,
+                                                const zx_packet_signal_t* signal,
+                                                Channel* channel) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      return;
+    }
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    zx_status_t status = ProcessRingBufferChannel(channel);
+    if (status != ZX_OK) {
+      return;
+    }
+    if (!peer_closed_asserted) {
+      wait->Begin(dispatcher);
+    }
+  }
+  if (peer_closed_asserted) {
+    DeactivateRingBufferChannel(channel);
   }
 }
 
-zx_status_t UsbAudioStream::OnGetGainLocked(dispatcher::Channel* channel,
-                                            const audio_proto::GetGainReq& req) {
+zx_status_t UsbAudioStream::OnGetGainLocked(Channel* channel, const audio_proto::GetGainReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   audio_proto::GetGainResp resp = {};
   resp.hdr = req.hdr;
@@ -600,8 +631,7 @@ zx_status_t UsbAudioStream::OnGetGainLocked(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbAudioStream::OnSetGainLocked(dispatcher::Channel* channel,
-                                            const audio_proto::SetGainReq& req) {
+zx_status_t UsbAudioStream::OnSetGainLocked(Channel* channel, const audio_proto::SetGainReq& req) {
   // TODO(johngro): Actually perform the set operation on our audio path.
   ZX_DEBUG_ASSERT(channel != nullptr);
 
@@ -642,7 +672,7 @@ zx_status_t UsbAudioStream::OnSetGainLocked(dispatcher::Channel* channel,
   return (req.hdr.cmd & AUDIO_FLAG_NO_ACK) ? ZX_OK : channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbAudioStream::OnPlugDetectLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnPlugDetectLocked(Channel* channel,
                                                const audio_proto::PlugDetectReq& req) {
   if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
     return ZX_OK;
@@ -655,7 +685,7 @@ zx_status_t UsbAudioStream::OnPlugDetectLocked(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbAudioStream::OnGetUniqueIdLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnGetUniqueIdLocked(Channel* channel,
                                                 const audio_proto::GetUniqueIdReq& req) {
   audio_proto::GetUniqueIdResp resp;
 
@@ -667,7 +697,7 @@ zx_status_t UsbAudioStream::OnGetUniqueIdLocked(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbAudioStream::OnGetStringLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnGetStringLocked(Channel* channel,
                                               const audio_proto::GetStringReq& req) {
   audio_proto::GetStringResp resp;
   const fbl::Array<uint8_t>* str;
@@ -706,7 +736,7 @@ zx_status_t UsbAudioStream::OnGetStringLocked(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbAudioStream::OnGetClockDomainLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnGetClockDomainLocked(Channel* channel,
                                                    const audio_proto::GetClockDomainReq& req) {
   audio_proto::GetClockDomainResp resp;
 
@@ -716,7 +746,7 @@ zx_status_t UsbAudioStream::OnGetClockDomainLocked(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbAudioStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnGetFifoDepthLocked(Channel* channel,
                                                  const audio_proto::RingBufGetFifoDepthReq& req) {
   audio_proto::RingBufGetFifoDepthResp resp = {};
 
@@ -727,7 +757,7 @@ zx_status_t UsbAudioStream::OnGetFifoDepthLocked(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnGetBufferLocked(Channel* channel,
                                               const audio_proto::RingBufGetBufferReq& req) {
   audio_proto::RingBufGetBufferResp resp = {};
   zx::vmo client_rb_handle;
@@ -813,7 +843,7 @@ finished:
   return res;
 }
 
-zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
+zx_status_t UsbAudioStream::OnStartLocked(Channel* channel,
                                           const audio_proto::RingBufStartReq& req) {
   audio_proto::RingBufStartResp resp = {};
   resp.hdr = req.hdr;
@@ -872,8 +902,7 @@ zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
   return ZX_OK;
 }
 
-zx_status_t UsbAudioStream::OnStopLocked(dispatcher::Channel* channel,
-                                         const audio_proto::RingBufStopReq& req) {
+zx_status_t UsbAudioStream::OnStopLocked(Channel* channel, const audio_proto::RingBufStopReq& req) {
   fbl::AutoLock req_lock(&req_lock_);
 
   // TODO(johngro): Fix this to use the cancel transaction capabilities added
@@ -1020,12 +1049,10 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
 
       case Action::HANDLE_UNPLUG:
         if (rb_channel_ != nullptr) {
-          rb_channel_->Deactivate();
           rb_channel_.reset();
         }
 
         if (stream_channel_ != nullptr) {
-          stream_channel_->Deactivate();
           stream_channel_.reset();
         }
 
@@ -1163,7 +1190,7 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
   ZX_DEBUG_ASSERT(free_req_cnt_ <= allocated_req_cnt_);
 }
 
-void UsbAudioStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
+void UsbAudioStream::DeactivateStreamChannel(const Channel* channel) {
   fbl::AutoLock lock(&lock_);
 
   ZX_DEBUG_ASSERT(stream_channel_.get() == channel);
@@ -1171,7 +1198,7 @@ void UsbAudioStream::DeactivateStreamChannel(const dispatcher::Channel* channel)
   stream_channel_.reset();
 }
 
-void UsbAudioStream::DeactivateRingBufferChannel(const dispatcher::Channel* channel) {
+void UsbAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
   fbl::AutoLock lock(&lock_);
 
   ZX_DEBUG_ASSERT(stream_channel_.get() != channel);

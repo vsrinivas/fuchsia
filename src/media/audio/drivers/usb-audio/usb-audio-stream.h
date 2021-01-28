@@ -6,6 +6,8 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_H_
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
@@ -16,8 +18,6 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -50,9 +50,56 @@ class UsbAudioStream : public UsbAudioStreamBase,
                        public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>>,
                        public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
+  class Channel : public fbl::DoublyLinkedListable<fbl::RefPtr<Channel>>,
+                  public fbl::RefCounted<Channel> {
+   public:
+    template <typename T = Channel, typename... ConstructorSignature>
+    static fbl::RefPtr<T> Create(ConstructorSignature&&... args) {
+      fbl::AllocChecker ac;
+      auto ptr = fbl::AdoptRef(new (&ac) T(std::forward<ConstructorSignature>(args)...));
+
+      if (!ac.check()) {
+        return nullptr;
+      }
+
+      return ptr;
+    }
+
+    void SetHandler(async::Wait::Handler handler) { wait_.set_handler(std::move(handler)); }
+    zx_status_t BeginWait(async_dispatcher_t* dispatcher) { return wait_.Begin(dispatcher); }
+    zx_status_t Write(const void* buffer, uint32_t length) {
+      return channel_.write(0, buffer, length, nullptr, 0);
+    }
+    zx_status_t Write(const void* buffer, uint32_t length, zx::handle&& handle) {
+      zx_handle_t h = handle.release();
+      return channel_.write(0, buffer, length, &h, 1);
+    }
+    zx_status_t Read(void* buffer, uint32_t length, uint32_t* out_length) {
+      return channel_.read(0, buffer, nullptr, length, 0, out_length, nullptr);
+    }
+
+   protected:
+    explicit Channel(zx::channel channel) : channel_(std::move(channel)) {
+      wait_.set_object(channel_.get());
+      wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    }
+    ~Channel() = default;  // Deactivates (automatically cancels the wait from its RAII semantics).
+
+   private:
+    friend class fbl::RefPtr<Channel>;
+
+    zx::channel channel_;
+    async::Wait wait_;
+  };
   static fbl::RefPtr<UsbAudioStream> Create(UsbAudioDevice* parent,
                                             std::unique_ptr<UsbAudioStreamInterface> ifc);
   zx_status_t Bind();
+  void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                              zx_status_t status, const zx_packet_signal_t* signal,
+                              Channel* channel, bool priviledged);
+  void RingBufferChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal,
+                                  Channel* channel);
 
   const char* log_prefix() const { return log_prefix_; }
 
@@ -76,8 +123,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
     STARTED,
   };
 
-  UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc,
-                 fbl::RefPtr<dispatcher::ExecutionDomain> default_domain);
+  UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc);
   virtual ~UsbAudioStream();
 
   void ComputePersistentUniqueId();
@@ -88,43 +134,39 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void GetChannel(GetChannelCompleter::Sync& completer) override;
 
   // Thunks for dispatching stream channel events.
-  zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);
-  void DeactivateStreamChannel(const dispatcher::Channel* channel);
+  zx_status_t ProcessStreamChannel(Channel* channel, bool privileged);
+  void DeactivateStreamChannel(const Channel* channel);
 
-  zx_status_t OnGetStreamFormatsLocked(dispatcher::Channel* channel,
-                                       const audio_proto::StreamGetFmtsReq& req)
+  zx_status_t OnGetStreamFormatsLocked(Channel* channel, const audio_proto::StreamGetFmtsReq& req)
       __TA_REQUIRES(lock_);
-  zx_status_t OnSetStreamFormatLocked(dispatcher::Channel* channel,
-                                      const audio_proto::StreamSetFmtReq& req, bool privileged)
+  zx_status_t OnSetStreamFormatLocked(Channel* channel, const audio_proto::StreamSetFmtReq& req,
+                                      bool privileged) __TA_REQUIRES(lock_);
+  zx_status_t OnGetGainLocked(Channel* channel, const audio_proto::GetGainReq& req)
       __TA_REQUIRES(lock_);
-  zx_status_t OnGetGainLocked(dispatcher::Channel* channel, const audio_proto::GetGainReq& req)
+  zx_status_t OnSetGainLocked(Channel* channel, const audio_proto::SetGainReq& req)
       __TA_REQUIRES(lock_);
-  zx_status_t OnSetGainLocked(dispatcher::Channel* channel, const audio_proto::SetGainReq& req)
+  zx_status_t OnPlugDetectLocked(Channel* channel, const audio_proto::PlugDetectReq& req)
       __TA_REQUIRES(lock_);
-  zx_status_t OnPlugDetectLocked(dispatcher::Channel* channel,
-                                 const audio_proto::PlugDetectReq& req) __TA_REQUIRES(lock_);
-  zx_status_t OnGetUniqueIdLocked(dispatcher::Channel* channel,
-                                  const audio_proto::GetUniqueIdReq& req) __TA_REQUIRES(lock_);
-  zx_status_t OnGetStringLocked(dispatcher::Channel* channel, const audio_proto::GetStringReq& req)
+  zx_status_t OnGetUniqueIdLocked(Channel* channel, const audio_proto::GetUniqueIdReq& req)
       __TA_REQUIRES(lock_);
-  zx_status_t OnGetClockDomainLocked(dispatcher::Channel* channel,
-                                     const audio_proto::GetClockDomainReq& req)
+  zx_status_t OnGetStringLocked(Channel* channel, const audio_proto::GetStringReq& req)
+      __TA_REQUIRES(lock_);
+  zx_status_t OnGetClockDomainLocked(Channel* channel, const audio_proto::GetClockDomainReq& req)
       __TA_REQUIRES(lock_);
 
   // Thunks for dispatching ring buffer channel events.
-  zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
-  void DeactivateRingBufferChannel(const dispatcher::Channel* channel);
+  zx_status_t ProcessRingBufferChannel(Channel* channel);
+  void DeactivateRingBufferChannel(const Channel* channel);
 
   // Stream command handlers
   // Ring buffer command handlers
-  zx_status_t OnGetFifoDepthLocked(dispatcher::Channel* channel,
-                                   const audio_proto::RingBufGetFifoDepthReq& req)
+  zx_status_t OnGetFifoDepthLocked(Channel* channel, const audio_proto::RingBufGetFifoDepthReq& req)
       __TA_REQUIRES(lock_);
-  zx_status_t OnGetBufferLocked(dispatcher::Channel* channel,
-                                const audio_proto::RingBufGetBufferReq& req) __TA_REQUIRES(lock_);
-  zx_status_t OnStartLocked(dispatcher::Channel* channel, const audio_proto::RingBufStartReq& req)
+  zx_status_t OnGetBufferLocked(Channel* channel, const audio_proto::RingBufGetBufferReq& req)
       __TA_REQUIRES(lock_);
-  zx_status_t OnStopLocked(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
+  zx_status_t OnStartLocked(Channel* channel, const audio_proto::RingBufStartReq& req)
+      __TA_REQUIRES(lock_);
+  zx_status_t OnStopLocked(Channel* channel, const audio_proto::RingBufStopReq& req)
       __TA_REQUIRES(lock_);
 
   void RequestComplete(usb_request_t* req);
@@ -142,9 +184,8 @@ class UsbAudioStream : public UsbAudioStreamBase,
   fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
 
   // Dispatcher framework state
-  fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
-  fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(lock_);
-  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
+  fbl::RefPtr<Channel> stream_channel_ __TA_GUARDED(lock_);
+  fbl::RefPtr<Channel> rb_channel_ __TA_GUARDED(lock_);
 
   int32_t clock_domain_;
 
@@ -181,6 +222,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   // TODO(johngro) : See MG-940.  eliminate this ASAP
   bool req_complete_prio_bumped_ = false;
   zx::profile profile_handle_;
+  async::Loop loop_;
 };
 
 }  // namespace usb

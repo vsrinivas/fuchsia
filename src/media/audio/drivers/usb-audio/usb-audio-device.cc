@@ -9,7 +9,6 @@
 #include <memory>
 #include <utility>
 
-#include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -491,13 +490,10 @@ static zx_status_t usb_audio_device_bind(void* ctx, zx_device_t* device) {
   return UsbAudioDevice::DriverBind(device);
 }
 
-static void usb_audio_driver_release(void*) { dispatcher::ThreadPool::ShutdownAll(); }
-
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = usb_audio_device_bind;
-  ops.release = usb_audio_driver_release;
   return ops;
 }();
 
