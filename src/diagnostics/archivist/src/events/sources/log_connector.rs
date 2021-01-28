@@ -32,23 +32,17 @@ impl EventSource for LogConnectorEventSource {
     async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
         match self.connector.take() {
             None => Err(EventError::StreamAlreadyTaken),
-            Some(connector) => {
-                fasync::Task::spawn(async move {
-                    match connector.take_log_connection_listener().await {
-                        Ok(None) => {
-                            warn!(
-                                "local realm already gave out LogConnectionListener, skipping logs"
-                            );
-                        }
-                        Err(err) => error!(%err, "Error occurred during LogConnectorEventSource initialization"),
-                        Ok(Some(connection)) => {
-                            listen_for_log_connections(connection, sender).await
-                        }
-                    }
-                })
-                .detach();
-                Ok(())
-            }
+            Some(connector) => match connector.take_log_connection_listener().await {
+                Ok(None) => {
+                    warn!("local realm already gave out LogConnectionListener, skipping logs");
+                    Ok(())
+                }
+                Err(e) => Err(EventError::RetrieveLogConnection(e)),
+                Ok(Some(connection)) => {
+                    fasync::Task::spawn(listen_for_log_connections(connection, sender)).detach();
+                    Ok(())
+                }
+            },
         }
     }
 }

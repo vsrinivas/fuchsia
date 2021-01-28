@@ -8,8 +8,5 @@ group("bootstrap") {
 }
 
 group("dev-tools") {
-  deps = [
-    "//src/diagnostics/iquery",
-    "//src/diagnostics/validator/logs/ddk/log-test-driver",
-  ]
+  deps = [ "//src/diagnostics/iquery" ]
 }
