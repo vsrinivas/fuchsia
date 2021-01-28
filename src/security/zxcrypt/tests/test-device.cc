@@ -38,10 +38,10 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zxcrypt/fdio-volume.h>
-#include <zxcrypt/volume.h>
 #include <zxtest/zxtest.h>
 
+#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/volume.h"
 #include "src/storage/fvm/format.h"
 
 #define ZXDEBUG 0

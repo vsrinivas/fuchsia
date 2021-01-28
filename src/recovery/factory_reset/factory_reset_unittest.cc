@@ -23,7 +23,8 @@
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zxcrypt/fdio-volume.h>
+
+#include "src/security/zxcrypt/fdio-volume.h"
 
 namespace {
 

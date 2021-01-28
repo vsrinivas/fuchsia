@@ -16,7 +16,8 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <zxcrypt/volume.h>
+
+#include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

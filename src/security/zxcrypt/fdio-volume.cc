@@ -26,8 +26,9 @@
 #include <fbl/vector.h>
 #include <kms-stateless/kms-stateless.h>
 #include <ramdevice-client/ramdisk.h>  // Why does wait_for_device_at() come from here?
-#include <zxcrypt/fdio-volume.h>
-#include <zxcrypt/volume.h>
+
+#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/volume.h"
 
 #define ZXDEBUG 0
 

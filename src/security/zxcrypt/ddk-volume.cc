@@ -15,8 +15,8 @@
 #include <utility>
 
 #include <fbl/alloc_checker.h>
-#include <zxcrypt/ddk-volume.h>
-#include <zxcrypt/volume.h>
+#include "src/security/zxcrypt/ddk-volume.h"
+#include "src/security/zxcrypt/volume.h"
 
 #define ZXDEBUG 0
 

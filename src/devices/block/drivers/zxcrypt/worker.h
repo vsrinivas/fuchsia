@@ -14,9 +14,9 @@
 #include <atomic>
 
 #include <crypto/cipher.h>
-#include <zxcrypt/ddk-volume.h>
 
 #include "src/devices/block/drivers/zxcrypt/extra.h"
+#include "src/security/zxcrypt/ddk-volume.h"
 
 namespace zxcrypt {
 

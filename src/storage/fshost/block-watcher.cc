@@ -45,8 +45,8 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
-#include <zxcrypt/fdio-volume.h>
 
+#include "src/security/zxcrypt/fdio-volume.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/fs-manager.h"

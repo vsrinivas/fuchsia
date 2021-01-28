@@ -21,7 +21,8 @@
 #include <crypto/hkdf.h>
 #include <crypto/secret.h>
 #include <fbl/algorithm.h>
-#include <zxcrypt/volume.h>
+
+#include "src/security/zxcrypt/volume.h"
 
 #define ZXDEBUG 0
 

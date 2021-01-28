@@ -11,9 +11,9 @@
 #include <ddk/debug.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <zxcrypt/volume.h>
 
 #include "src/devices/block/drivers/zxcrypt/extra.h"
+#include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

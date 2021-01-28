@@ -20,11 +20,11 @@
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <fbl/unique_fd.h>
-#include <zxcrypt/volume.h>
 #include <zxtest/zxtest.h>
 
 #include "src/storage/fvm/format.h"
-#include "test-device.h"
+#include "src/security/zxcrypt/volume.h"
+#include "src/security/zxcrypt/tests/test-device.h"
 
 namespace zxcrypt {
 namespace testing {

@@ -14,7 +14,8 @@
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <zxcrypt/volume.h>
+
+#include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

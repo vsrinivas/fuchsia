@@ -25,8 +25,8 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zxcrypt/fdio-volume.h>
 
+#include "src/security/zxcrypt/fdio-volume.h"
 #include "src/storage/fvm/format.h"
 
 // TODO(fxbug.dev/34273): Replace these with *_STATUS in zxtest.

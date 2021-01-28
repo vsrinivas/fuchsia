@@ -20,12 +20,12 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
-#include <zxcrypt/ddk-volume.h>
-#include <zxcrypt/volume.h>
 
 #include "src/devices/block/drivers/zxcrypt/device-info.h"
 #include "src/devices/block/drivers/zxcrypt/device.h"
 #include "src/devices/block/drivers/zxcrypt/zxcrypt-bind.h"
+#include "src/security/zxcrypt/ddk-volume.h"
+#include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

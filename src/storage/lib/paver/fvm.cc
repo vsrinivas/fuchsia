@@ -31,10 +31,10 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zxcrypt/fdio-volume.h>
 
 #include "pave-logging.h"
 #include "src/lib/uuid/uuid.h"
+#include "src/security/zxcrypt/fdio-volume.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm.h"
 #include "src/storage/fvm/fvm_sparse.h"

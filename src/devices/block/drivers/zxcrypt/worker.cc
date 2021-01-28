@@ -21,12 +21,12 @@
 #include <crypto/cipher.h>
 #include <ddk/debug.h>
 #include <fbl/auto_call.h>
-#include <zxcrypt/ddk-volume.h>
-#include <zxcrypt/volume.h>
 
 #include "src/devices/block/drivers/zxcrypt/debug.h"
 #include "src/devices/block/drivers/zxcrypt/device.h"
 #include "src/devices/block/drivers/zxcrypt/extra.h"
+#include "src/security/zxcrypt/ddk-volume.h"
+#include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

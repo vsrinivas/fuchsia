@@ -25,7 +25,8 @@
 #include <fbl/string_piece.h>
 #include <fs-management/mount.h>
 #include <kms-stateless/kms-stateless.h>
-#include <zxcrypt/fdio-volume.h>
+
+#include "src/security/zxcrypt/fdio-volume.h"
 
 namespace factory_reset {
 

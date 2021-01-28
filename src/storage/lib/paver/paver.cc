@@ -32,8 +32,8 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <zxcrypt/fdio-volume.h>
 
+#include "src/security/zxcrypt/fdio-volume.h"
 #include "src/storage/lib/paver/fvm.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/stream-reader.h"

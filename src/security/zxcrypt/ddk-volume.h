@@ -9,7 +9,8 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <zxcrypt/volume.h>
+
+#include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
 

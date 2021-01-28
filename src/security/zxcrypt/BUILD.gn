@@ -2,14 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zx_library.gni")
-
-zx_library("zxcrypt-dev") {
-  static = true
-  sdk = "source"
-  sdk_headers = [
-    "zxcrypt/ddk-volume.h",
-    "zxcrypt/volume.h",
+static_library("zxcrypt-dev") {
+  public = [
+    "ddk-volume.h",
+    "volume.h",
   ]
   sources = [
     "ddk-volume.cc",
@@ -17,10 +13,10 @@ zx_library("zxcrypt-dev") {
   ]
 
   public_deps = [
-    # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
+    # volume.h has #include <crypto/aead.h> (among others).
     "//zircon/system/ulib/zircon-crypto:zircon-crypto-static",
 
-    # <zxcrypt/ddk-volume.h> has #include <ddk/device.h>.
+    # ddk-volume.h has #include <ddk/device.h>.
     "//src/lib/ddk",
   ]
 
@@ -41,24 +37,20 @@ zx_library("zxcrypt-dev") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-zx_library("zxcrypt-fdio") {
-  shared = true
-
-  # TODO(fxbug.dev/36548): turn to shared library after migration to GN build.
-  sdk = "source"
-  sdk_headers = [
-    "zxcrypt/fdio-volume.h",
-    "zxcrypt/volume.h",
+shared_library("zxcrypt-fdio") {
+  public = [
+    "fdio-volume.h",
+    "volume.h",
   ]
   sources = [
     "fdio-volume.cc",
     "volume.cc",
   ]
   public_deps = [
-    # <zxcrypt/fdio-volume.h> has #include <lib/fdio/cpp/caller.h>
+    # fdio-volume.h has #include <lib/fdio/cpp/caller.h>
     "//zircon/system/ulib/fdio-caller",
 
-    # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
+    # volume.h has #include <crypto/aead.h> (among others).
     "//zircon/system/ulib/zircon-crypto",
   ]
   configs += [ "//build/config/fuchsia:integer-paranoia" ]

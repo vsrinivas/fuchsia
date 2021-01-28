@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <zircon/status.h>
 
-#include <zxcrypt/fdio-volume.h>
+#include "src/security/zxcrypt/fdio-volume.h"
 
 namespace devmgr {
 

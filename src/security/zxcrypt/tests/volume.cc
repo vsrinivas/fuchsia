@@ -18,11 +18,11 @@
 #include <crypto/cipher.h>
 #include <crypto/secret.h>
 #include <kms-stateless/kms-stateless.h>
-#include <zxcrypt/fdio-volume.h>
-#include <zxcrypt/volume.h>
 #include <zxtest/zxtest.h>
 
-#include "test-device.h"
+#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/volume.h"
+#include "src/security/zxcrypt/tests/test-device.h"
 
 namespace zxcrypt {
 namespace testing {
