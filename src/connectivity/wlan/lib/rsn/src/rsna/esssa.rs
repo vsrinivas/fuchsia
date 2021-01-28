@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -197,7 +197,11 @@ impl EssSa {
     }
 
     pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
-        self.reset();
+        // This function will not succeed unless called on a new Esssa or one that was reset.
+        match (self.ptksa.as_ref(), self.gtksa.as_ref(), self.igtksa.as_ref()) {
+            (Ptksa::Uninitialized { .. }, Gtksa::Uninitialized { .. }, Igtksa::Uninitialized) => (),
+            _ => return Err(Error::UnexpectedInitiationRequest),
+        };
         info!("establishing ESSSA...");
 
         match self.pmksa.as_ref() {

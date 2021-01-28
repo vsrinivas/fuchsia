@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -395,6 +395,7 @@ pub fn handle_tx_event(
                     send_association_response(&CHANNEL, bssid, mac::StatusCode::SUCCESS, &phy)
                         .expect("Error sending fake association response frame.");
                     if let Some(authenticator) = authenticator {
+                        authenticator.reset();
                         let mut updates = wlan_rsn::rsna::UpdateSink::default();
                         authenticator.initiate(&mut updates).expect("initiating authenticator");
                         process_auth_update(&mut updates, &CHANNEL, bssid, &phy)

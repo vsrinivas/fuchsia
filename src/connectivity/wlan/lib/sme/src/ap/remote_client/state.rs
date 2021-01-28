@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -283,6 +283,7 @@ impl RsnaLinkState {
         ctx: &mut Context,
     ) -> Result<(), anyhow::Error> {
         let mut update_sink = vec![];
+        self.authenticator.reset();
         self.authenticator.initiate(&mut update_sink)?;
         self.process_authenticator_updates(r_sta, ctx, &update_sink);
 
