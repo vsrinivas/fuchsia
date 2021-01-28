@@ -36,7 +36,6 @@ use {
     crate::inspect::inspect_broker::InspectBroker,
     crate::inspect::policy_inspect_broker::PolicyInspectBroker,
     crate::internal::core::message as core_message,
-    crate::internal::policy::message as policy_message,
     crate::intl::intl_controller::IntlController,
     crate::intl::types::IntlInfo,
     crate::light::light_controller::LightController,
@@ -600,14 +599,9 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // Mapping from core message hub signature to setting type.
     let mut policy_core_signatures: HashMap<core_message::Signature, SettingType> = HashMap::new();
 
-    // Mapping from the policy proxy's signature on the policy message hub to its policy type for
-    // use by the policy inspect broker.
-    let mut policy_proxy_signatures: HashMap<policy_message::Signature, SettingType> =
-        HashMap::new();
-
     for policy_type in policy_types {
         if components.contains(&policy_type) {
-            let (core_signature, proxy_signature) = PolicyProxy::create(
+            let core_signature = PolicyProxy::create(
                 policy_type,
                 policy_handler_factory.clone(),
                 core_messenger_factory.clone(),
@@ -619,20 +613,15 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             )
             .await?;
             policy_core_signatures.insert(core_signature, policy_type);
-            policy_proxy_signatures.insert(proxy_signature, policy_type);
         }
     }
 
     // Attach the policy inspect broker, which watches messages to the policy layer and records
     // policy state to inspect.
     let policy_inspect_node = component::inspector().root().create_child("policy_values");
-    PolicyInspectBroker::create(
-        policy_messenger_factory.clone(),
-        policy_proxy_signatures,
-        policy_inspect_node,
-    )
-    .await
-    .expect("could not create inspect");
+    PolicyInspectBroker::create(policy_messenger_factory.clone(), policy_inspect_node)
+        .await
+        .expect("could not create inspect");
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.

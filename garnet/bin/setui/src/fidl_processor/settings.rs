@@ -12,6 +12,7 @@ use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
 use crate::handler::base::{Error, Request as SettingRequest, Response};
 use crate::internal::switchboard::{self, Action, Address, Payload};
+use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::{self, Audience};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
@@ -192,7 +193,8 @@ where
     }
 }
 
-impl<S, T, ST, K, P, A> ProcessingUnit<S, P, A> for SettingProcessingUnit<S, T, ST, K, P, A>
+impl<S, T, ST, K, P, A> ProcessingUnit<S, P, A, DefaultRole>
+    for SettingProcessingUnit<S, T, ST, K, P, A>
 where
     S: ServiceMarker,
     T: From<SettingInfo> + Send + Sync + 'static,

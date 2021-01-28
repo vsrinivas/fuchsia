@@ -5,6 +5,7 @@
 use crate::fidl_processor::processor::{BaseFidlProcessor, ProcessingUnit, RequestResultCreator};
 use crate::internal::switchboard;
 use crate::message::base;
+use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::MessengerType;
 use crate::message::messenger::MessengerClient;
 use crate::{internal, ExitSender};
@@ -38,15 +39,16 @@ where
     }
 }
 
-impl<S, P, A> ProcessingUnit<S, P, A> for TestProcessingUnit<S>
+impl<S, P, A, R> ProcessingUnit<S, P, A, R> for TestProcessingUnit<S>
 where
     S: ServiceMarker,
     P: base::Payload + 'static,
     A: base::Address + 'static,
+    R: base::Role + 'static,
 {
     fn process(
         &self,
-        _messenger: MessengerClient<P, A>,
+        _messenger: MessengerClient<P, A, R>,
         request: Request<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
@@ -58,7 +60,14 @@ where
 /// proxy to make FIDL calls on.
 async fn create_processor(
     processing_units: Vec<
-        Box<dyn ProcessingUnit<PrivacyMarker, switchboard::Payload, switchboard::Address>>,
+        Box<
+            dyn ProcessingUnit<
+                PrivacyMarker,
+                switchboard::Payload,
+                switchboard::Address,
+                DefaultRole,
+            >,
+        >,
     >,
 ) -> PrivacyProxy {
     let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<PrivacyMarker>().unwrap();
@@ -71,6 +80,7 @@ async fn create_processor(
         PrivacyMarker,
         switchboard::Payload,
         switchboard::Address,
+        DefaultRole,
     >::with_processing_units(
         stream, switchboard_messenger, processing_units
     );

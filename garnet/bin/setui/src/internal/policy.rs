@@ -18,4 +18,11 @@ pub enum Payload {
     Response(Response),
 }
 
-message_hub_definition!(Payload, Address);
+/// `Role` defines grouping for responsibilities on the policy message hub.
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+pub enum Role {
+    /// This role indicates that the messenger handles and enacts policy requests.
+    PolicyHandler,
+}
+
+message_hub_definition!(Payload, Address, Role);

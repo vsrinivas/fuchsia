@@ -10,8 +10,8 @@ use crate::base::SettingType;
 use crate::handler::base::Request;
 use crate::internal::core;
 use crate::internal::policy;
-use crate::internal::policy::Address;
-use crate::message::base::{filter, MessageEvent, MessengerType};
+use crate::internal::policy::{Address, Role};
+use crate::message::base::{filter, role, MessageEvent, MessengerType};
 use crate::policy::base::{PolicyHandlerFactory, Request as PolicyRequest};
 use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
@@ -27,15 +27,15 @@ pub struct PolicyProxy {
 }
 
 impl PolicyProxy {
-    /// Creates a policy proxy and returns the signatures it uses to communicate in the core and
-    /// policy message hubs.
+    /// Creates a policy proxy and returns the signatures it uses to communicate in the core message
+    /// hub.
     pub async fn create(
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         core_messenger_factory: core::message::Factory,
         policy_messenger_factory: policy::message::Factory,
         setting_proxy_signature: core::message::Signature,
-    ) -> Result<(core::message::Signature, policy::message::Signature), Error> {
+    ) -> Result<core::message::Signature, Error> {
         let (_, switchboard_receptor) = core_messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
@@ -67,10 +67,11 @@ impl PolicyProxy {
             .map_err(Error::new)?;
 
         let (_, policy_receptor) = policy_messenger_factory
-            .create(MessengerType::Addressable(Address::Policy(setting_type)))
+            .messenger_builder(MessengerType::Addressable(Address::Policy(setting_type)))
+            .add_role(role::Signature::role(Role::PolicyHandler))
+            .build()
             .await
             .map_err(Error::new)?;
-        let policy_signature = policy_receptor.get_signature();
 
         let (handler_messenger, handler_receptor) =
             core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
@@ -137,7 +138,7 @@ impl PolicyProxy {
         })
         .detach();
 
-        Ok((handler_receptor.get_signature(), policy_signature))
+        Ok(handler_receptor.get_signature())
     }
 
     async fn process_policy_request(

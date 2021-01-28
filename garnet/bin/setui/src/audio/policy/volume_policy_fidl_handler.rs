@@ -21,7 +21,7 @@ use crate::fidl_process_policy;
 use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
 use crate::handler::base::Error;
-use crate::internal::policy::{Address, Payload};
+use crate::internal::policy::{Address, Payload, Role};
 use crate::policy::base::{response, PolicyInfo, Request};
 use crate::shutdown_responder_with_error;
 use crate::switchboard::base::FidlResponseErrorLogger;
@@ -84,7 +84,7 @@ impl From<response::Payload> for VolumePolicyControllerRemovePolicyResult {
 fidl_process_policy!(VolumePolicyController, process_request);
 
 async fn process_request(
-    context: RequestContext<Payload, Address>,
+    context: RequestContext<Payload, Address, Role>,
     request: VolumePolicyControllerRequest,
 ) -> Result<Option<VolumePolicyControllerRequest>, anyhow::Error> {
     match request {

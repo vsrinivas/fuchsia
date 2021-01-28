@@ -13,12 +13,10 @@ use fuchsia_inspect::Property;
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
-use crate::base::SettingType;
 use crate::clock;
-use crate::internal::policy;
 use crate::internal::policy::message::{Audience, Factory, MessageClient, Messenger, Signature};
-use crate::internal::policy::Payload;
-use crate::message::base::{MessageEvent, MessengerType};
+use crate::internal::policy::{Address, Payload, Role};
+use crate::message::base::{role, MessageEvent, MessengerType};
 use crate::policy::base as policy_base;
 use crate::policy::base::Request;
 
@@ -48,11 +46,10 @@ struct PolicyInspectInfo {
 impl PolicyInspectBroker {
     pub async fn create(
         messenger_factory: Factory,
-        policy_proxies: HashMap<policy::message::Signature, SettingType>,
         inspect_node: inspect::Node,
     ) -> Result<(), Error> {
         // Create broker to listen in on all messages on the policy message hub.
-        let (messenger_client, mut receptor) =
+        let (messenger_client, broker_receptor) =
             messenger_factory.create(MessengerType::Broker(None)).await.unwrap();
 
         let mut broker = Self {
@@ -62,45 +59,74 @@ impl PolicyInspectBroker {
         };
 
         fasync::Task::spawn(async move {
-            // Request initial values from all policy types.
-            // TODO(fxbug.dev/68266): consider how to get initial policy values without needing
-            // explicit mapping of policy proxies.
-            for (signature, policy_type) in policy_proxies.iter() {
-                if let Err(err) = broker.request_and_write_to_inspect(signature.clone()).await {
-                    return fx_log_err!(
-                        "Failed request initial value from policy type {:?}: {:?}",
-                        policy_type,
-                        err
-                    );
-                }
-            }
+            // Request initial values from all policy handlers.
+            let initial_get_receptor = broker
+                .messenger_client
+                .message(
+                    Payload::Request(Request::Get),
+                    Audience::Role(role::Signature::role(Role::PolicyHandler)),
+                )
+                .send();
 
-            while let Some(message_event) = receptor.next().await {
-                if let MessageEvent::Message(Payload::Request(_), client) = message_event {
-                    // When we see a request to a policy proxy, we assume that the policy will be
-                    // modified, so we wait for the reply to get the signature of the proxy, then
-                    // ask the proxy for its latest value.
-                    match PolicyInspectBroker::watch_reply(client).await {
-                        Ok(reply_signature) => {
-                            if let Err(err) =
-                                broker.request_and_write_to_inspect(reply_signature).await
-                            {
-                                return fx_log_err!(
-                                    "Failed request value from policy proxy: {:?}",
-                                    err
-                                );
-                            }
-                        }
-                        Err(err) => {
-                            fx_log_err!("Failed to watch reply to request: {:?}", err)
-                        }
+            let initial_get_fuse = initial_get_receptor.fuse();
+            let broker_fuse = broker_receptor.fuse();
+            futures::pin_mut!(initial_get_fuse, broker_fuse);
+
+            loop {
+                futures::select! {
+                    initial_get_message = initial_get_fuse.select_next_some() => {
+                        // Received a reply to our initial broadcast to all policy handlers asking
+                        // for their value.
+                        broker.handle_initial_get(initial_get_message).await;
                     }
+
+                    intercepted_message = broker_fuse.select_next_some() => {
+                        // Intercepted a policy request.
+                        broker.handle_intercepted_message(intercepted_message).await;
+                    }
+
+                    // This shouldn't ever be triggered since the inspect broker (and its receptors)
+                    // should be active for the duration of the service. This is just a safeguard to
+                    // ensure this detached task doesn't run forever if the receptors stop somehow.
+                    complete => break,
                 }
             }
         })
         .detach();
 
         return Ok(());
+    }
+
+    /// Handles responses to the initial broadcast by the inspect broker to all policy handlers that
+    /// requests their state.
+    async fn handle_initial_get(&mut self, message: MessageEvent<Payload, Address, Role>) {
+        if let MessageEvent::Message(payload, _) = message {
+            // Since the order for these events isn't guaranteed, don't overwrite responses obtained
+            // after intercepting a request with these initial values.
+            if let Err(err) = self.write_response_to_inspect(payload, true).await {
+                fx_log_err!("Failed write initial get response to inspect: {:?}", err);
+            }
+        }
+    }
+
+    /// Handles messages seen over the policy message hub and requests policy state from handlers as
+    /// needed.
+    async fn handle_intercepted_message(&mut self, message: MessageEvent<Payload, Address, Role>) {
+        if let MessageEvent::Message(Payload::Request(_), client) = message {
+            // When we see a request to a policy proxy, we assume that the policy will be modified,
+            // so we wait for the reply to get the signature of the proxy, then ask the proxy for
+            // its latest value.
+            match PolicyInspectBroker::watch_reply(client).await {
+                Ok(reply_signature) => {
+                    if let Err(err) = self.request_and_write_to_inspect(reply_signature).await {
+                        fx_log_err!("Failed request value from policy proxy: {:?}", err);
+                    }
+                }
+                Err(err) => {
+                    fx_log_err!("Failed to watch reply to request: {:?}", err);
+                }
+            }
+        }
     }
 
     /// Watches for the reply to a sent message and returns the author of the reply.
@@ -122,10 +148,18 @@ impl PolicyInspectBroker {
         // Wait for a response from the policy proxy.
         let (payload, _) = send_receptor.next_payload().await?;
 
-        self.write_response_to_inspect(payload).await
+        self.write_response_to_inspect(payload, false).await
     }
 
-    async fn write_response_to_inspect(&mut self, payload: Payload) -> Result<(), Error> {
+    /// Writes a policy payload response to inspect.
+    ///
+    /// ignore_if_present will silently not write the response to inspect if a value already exists
+    /// for the policy.
+    async fn write_response_to_inspect(
+        &mut self,
+        payload: Payload,
+        ignore_if_present: bool,
+    ) -> Result<(), Error> {
         let policy_info =
             if let Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(policy_info))) =
                 payload
@@ -146,6 +180,10 @@ impl PolicyInspectBroker {
 
         match self.policy_values.get_mut(&policy_name.to_string()) {
             Some(policy_info) => {
+                if ignore_if_present {
+                    // Value already present in inspect, ignore this response.
+                    return Ok(());
+                }
                 // Value already known, just update its fields.
                 policy_info.timestamp.set(&timestamp.to_string());
                 policy_info.value.set(&inspect_str);
@@ -172,21 +210,19 @@ mod tests {
     use fuchsia_inspect::assert_inspect_tree;
     use futures::future::BoxFuture;
     use futures::StreamExt;
-    use std::collections::HashMap;
     use std::time::SystemTime;
 
-    use crate::internal::policy::message::{create_hub, Audience, Signature};
-    use crate::internal::policy::Payload;
+    use crate::internal::policy::message::{create_hub, Audience};
+    use crate::internal::policy::{Payload, Role};
 
     use crate::audio::policy as audio_policy;
     use crate::audio::policy::{PolicyId, StateBuilder, TransformFlags};
     use crate::audio::types::AudioStreamType;
-    use crate::base::SettingType;
     use crate::clock;
     use crate::inspect::policy_inspect_broker::PolicyInspectBroker;
-    use crate::message::base::{MessageEvent, MessengerType, Status};
+    use crate::message::base::{role, MessageEvent, MessengerType, Status};
     use crate::policy::base as policy_base;
-    use crate::policy::base::PolicyInfo;
+    use crate::policy::base::{PolicyInfo, UnknownInfo};
     use crate::tests::message_utils::verify_payload;
 
     const GET_REQUEST: Payload = Payload::Request(policy_base::Request::Get);
@@ -199,17 +235,18 @@ mod tests {
 
         let messenger_factory = create_hub();
 
-        // Create a receptor representing the policy proxy.
-        let (_, mut policy_receptor) =
-            messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        // Create a receptor representing the policy proxy, with an appropriate role.
+        let (_, mut policy_receptor) = messenger_factory
+            .messenger_builder(MessengerType::Unbound)
+            .add_role(role::Signature::role(Role::PolicyHandler))
+            .build()
+            .await
+            .unwrap();
 
         // Create the inspect broker.
-        let mut policy_proxy_signatures: HashMap<Signature, SettingType> = HashMap::new();
-        policy_proxy_signatures.insert(policy_receptor.get_signature(), SettingType::Audio);
-
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("policy_values");
-        PolicyInspectBroker::create(messenger_factory, policy_proxy_signatures, inspect_node)
+        PolicyInspectBroker::create(messenger_factory, inspect_node)
             .await
             .expect("could not create policy inspect broker");
 
@@ -263,21 +300,22 @@ mod tests {
 
         let messenger_factory = create_hub();
 
-        // Create a receptor representing the policy proxy.
-        let (_, mut policy_receptor) =
-            messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        // Create a receptor representing the policy proxy, with an appropriate role.
+        let (_, mut policy_receptor) = messenger_factory
+            .messenger_builder(MessengerType::Unbound)
+            .add_role(role::Signature::role(Role::PolicyHandler))
+            .build()
+            .await
+            .unwrap();
 
         // Create a messenger on the policy message hub to send requests for the inspect broker to
         // intercept.
         let (policy_sender, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         // Create the inspect broker.
-        let mut policy_proxy_signatures: HashMap<Signature, SettingType> = HashMap::new();
-        policy_proxy_signatures.insert(policy_receptor.get_signature(), SettingType::Audio);
-
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("policy_values");
-        PolicyInspectBroker::create(messenger_factory, policy_proxy_signatures, inspect_node)
+        PolicyInspectBroker::create(messenger_factory, inspect_node)
             .await
             .expect("could not create policy inspect broker");
 
@@ -308,21 +346,24 @@ mod tests {
         )
         .await;
 
-        // Send a message to the policy proxy.
+        // Send a message to the policy proxy. Inspect broker acts on any request and waits for a
+        // reply to know where to ask for the policy state so send a nonsensical request + reply.
+        let test_request = Payload::Request(policy_base::Request::Audio(
+            audio_policy::Request::RemovePolicy(PolicyId::create(0)),
+        ));
         policy_sender
-            .message(GET_REQUEST.clone(), Audience::Messenger(policy_receptor.get_signature()))
+            .message(test_request.clone(), Audience::Messenger(policy_receptor.get_signature()))
             .send();
 
-        // Policy proxy receives the request from the policy_sender. Inspect broker waits for a
-        // reply to know where to ask for the policy state so send a nonsensical reply.
+        // Policy proxy receives a request from the policy_sender.
         verify_payload(
-            GET_REQUEST.clone(),
+            test_request.clone(),
             &mut policy_receptor,
             Some(Box::new(|client| -> BoxFuture<'_, ()> {
                 Box::pin(async move {
                     client
-                        .reply(Payload::Response(Ok(policy_base::response::Payload::Audio(
-                            audio_policy::Response::Policy(PolicyId::create(0)),
+                        .reply(Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(
+                            PolicyInfo::Unknown(UnknownInfo(true)),
                         ))))
                         .send();
                 })

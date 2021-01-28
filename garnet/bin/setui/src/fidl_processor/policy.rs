@@ -6,7 +6,7 @@ use fidl::endpoints::{Request, ServiceMarker};
 
 use crate::base::SettingType;
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
-use crate::internal::policy::{Address, Payload};
+use crate::internal::policy::{Address, Payload, Role};
 use crate::message::base::{self, Audience};
 use crate::ExitSender;
 use fuchsia_syslog::fx_log_err;
@@ -27,20 +27,21 @@ macro_rules! policy_request_respond {
 /// request is processed. The returned value is a result with an optional
 /// request, containing None if not processed and the original request
 /// otherwise.
-pub type RequestCallback<S, P, A> =
-    Box<dyn Fn(RequestContext<P, A>, Request<S>) -> RequestResultCreator<'static, S>>;
+pub type RequestCallback<S, P, A, R> =
+    Box<dyn Fn(RequestContext<P, A, R>, Request<S>) -> RequestResultCreator<'static, S>>;
 
 /// `RequestContext` is passed to each request callback to provide resources for policy requests.
 #[derive(Clone)]
-pub struct RequestContext<P, A>
+pub struct RequestContext<P, A, R>
 where
     P: base::Payload + 'static,
     A: base::Address + 'static,
+    R: base::Role + 'static,
 {
-    messenger: crate::message::messenger::MessengerClient<P, A>,
+    messenger: crate::message::messenger::MessengerClient<P, A, R>,
 }
 
-impl RequestContext<Payload, Address> {
+impl RequestContext<Payload, Address, Role> {
     pub async fn request(
         &self,
         setting_type: SettingType,
@@ -68,34 +69,36 @@ impl RequestContext<Payload, Address> {
 /// to the constructed type.
 ///
 /// [`RequestCallback`]: type.RequestCallback.html
-pub struct PolicyProcessingUnit<S, P = Payload, A = Address>
+pub struct PolicyProcessingUnit<S, P = Payload, A = Address, R = Role>
 where
     S: ServiceMarker,
     // Messenger type for the message hub this processing unit talks to.
     P: base::Payload + 'static,
     A: base::Address + 'static,
+    R: base::Role + 'static,
 {
-    callback: RequestCallback<S, P, A>,
+    callback: RequestCallback<S, P, A, R>,
 }
 
 impl<S> PolicyProcessingUnit<S, Payload, Address>
 where
     S: ServiceMarker,
 {
-    pub(crate) fn new(callback: RequestCallback<S, Payload, Address>) -> Self {
+    pub(crate) fn new(callback: RequestCallback<S, Payload, Address, Role>) -> Self {
         Self { callback }
     }
 }
 
-impl<S, P, A> ProcessingUnit<S, P, A> for PolicyProcessingUnit<S, P, A>
+impl<S, P, A, R> ProcessingUnit<S, P, A, R> for PolicyProcessingUnit<S, P, A, R>
 where
     S: ServiceMarker,
     P: base::Payload + 'static,
     A: base::Address + 'static,
+    R: base::Role + 'static,
 {
     fn process(
         &self,
-        messenger: crate::message::messenger::MessengerClient<P, A>,
+        messenger: crate::message::messenger::MessengerClient<P, A, R>,
         request: Request<S>,
         // Policy requests don't use hanging gets, so the exit sender is unused.
         _exit_tx: ExitSender,

@@ -16,7 +16,8 @@ use crate::fidl_processor::settings::{
 };
 use crate::internal::policy;
 use crate::internal::switchboard;
-use crate::message::base::{Address, Payload};
+use crate::message::base::default::Role as DefaultRole;
+use crate::message::base::{Address, Payload, Role};
 use crate::message::messenger::MessengerClient;
 use crate::switchboard::hanging_get_handler::Sender;
 use crate::ExitSender;
@@ -27,11 +28,12 @@ pub type RequestStream<S> = <S as ServiceMarker>::RequestStream;
 
 /// `ProcessingUnit` is an entity that is able to process a stream request and indicate whether the
 /// request was consumed.
-pub trait ProcessingUnit<S, P, A>
+pub trait ProcessingUnit<S, P, A, R>
 where
     S: ServiceMarker,
     P: Payload,
     A: Address,
+    R: Role,
 {
     /// Processes a request provided by the fidl processor.
     ///
@@ -45,7 +47,7 @@ where
     /// `exit_tx`: a channel to indicate that the connection is closed and for processing to stop
     fn process(
         &self,
-        messenger: MessengerClient<P, A>,
+        messenger: MessengerClient<P, A, R>,
         request: Request<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S>;
@@ -53,32 +55,34 @@ where
 
 /// `BaseFidlProcessor` delegates request processing for setting requests across a number of
 /// processing units. There should be a single FidlProcessor per stream.
-pub struct BaseFidlProcessor<S, P, A>
+pub struct BaseFidlProcessor<S, P, A, R>
 where
     S: ServiceMarker,
     P: Payload + 'static,
     A: Address + 'static,
+    R: Role + 'static,
 {
     request_stream: RequestStream<S>,
-    messenger: MessengerClient<P, A>,
-    processing_units: Vec<Box<dyn ProcessingUnit<S, P, A>>>,
+    messenger: MessengerClient<P, A, R>,
+    processing_units: Vec<Box<dyn ProcessingUnit<S, P, A, R>>>,
 }
 
-impl<S, P, A> BaseFidlProcessor<S, P, A>
+impl<S, P, A, R> BaseFidlProcessor<S, P, A, R>
 where
     S: ServiceMarker,
     P: Payload,
     A: Address,
+    R: Role,
 {
-    pub fn new(request_stream: RequestStream<S>, messenger: MessengerClient<P, A>) -> Self {
+    pub fn new(request_stream: RequestStream<S>, messenger: MessengerClient<P, A, R>) -> Self {
         Self { request_stream, messenger, processing_units: Vec::new() }
     }
 
     #[cfg(test)]
     pub(crate) fn with_processing_units(
         request_stream: RequestStream<S>,
-        messenger: MessengerClient<P, A>,
-        processing_units: Vec<Box<dyn ProcessingUnit<S, P, A>>>,
+        messenger: MessengerClient<P, A, R>,
+        processing_units: Vec<Box<dyn ProcessingUnit<S, P, A, R>>>,
     ) -> Self {
         Self { request_stream, messenger, processing_units }
     }
@@ -132,7 +136,7 @@ pub struct SettingsFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    base_processor: BaseFidlProcessor<S, switchboard::Payload, switchboard::Address>,
+    base_processor: BaseFidlProcessor<S, switchboard::Payload, switchboard::Address, DefaultRole>,
 }
 
 impl<S> SettingsFidlProcessor<S>
@@ -177,7 +181,7 @@ pub struct PolicyFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    base_processor: BaseFidlProcessor<S, policy::Payload, policy::Address>,
+    base_processor: BaseFidlProcessor<S, policy::Payload, policy::Address, policy::Role>,
 }
 
 impl<S> PolicyFidlProcessor<S>
@@ -191,7 +195,7 @@ where
     /// Registers a fidl processing unit for policy requests.
     pub async fn register(
         &mut self,
-        callback: PolicyRequestCallback<S, policy::Payload, policy::Address>,
+        callback: PolicyRequestCallback<S, policy::Payload, policy::Address, policy::Role>,
     ) {
         let processing_unit = Box::new(PolicyProcessingUnit::<S>::new(callback));
         self.base_processor.processing_units.push(processing_unit);
