@@ -27,9 +27,15 @@ print_usage_and_exit() {
   echo "Note: This script requires a valid ChromeOS source tree. Instructions"
   echo "for setting that up can be found at:"
   echo "    https://sites.google.com/a/chromium.org/dev/chromium-os/quick-start-guide"
+  echo "and it's recommended to run the following inside cros_sdk prior to"
+  echo "using this script:"
+  echo "    ./setup_board --board=tatl"
+  echo "    ./build_packages --board=tatl"
+  echo "    ./build_image --board=tatl test"
   echo ""
   echo "Usage:"
   echo "  update_cipd_prebuilts.sh -c [CROS_WORKSPACE_PATH] -r [TERMINA_REVISION]"
+  echo "      -k [KERNEL_OVERLAY_DIR] [-n] [-f]"
   echo ""
   echo "Where:"
   echo "   -c [CROS_WORKSPACE_PATH] - path to a ChromeOS work tree. Instructions"
@@ -52,6 +58,11 @@ print_usage_and_exit() {
   echo "      These kernels will be used in lieu of the prebuilt kernels from the"
   echo "      Chrome image archive. If the kernel does not exist in the overlay, "
   echo "      then the Chrome prebuilt will still be used."
+  echo ""
+  echo "   -n - Dry run. Don't actually upload anything, just show what would be"
+  echo "      uploaded."
+  echo ""
+  echo "   -f - Force. Script will refuse to upload unless this flag is specified."
 
   exit $1
 }
@@ -74,21 +85,6 @@ board_for_arch() {
       echo tatl-full ;;
     *)
       >&2 echo "Unsupported arch ${1}; should be one of x64, arm64";
-      exit -1;;
-  esac
-}
-
-# Converts a Fuchsia architecture string into one understood by ChromeOS.
-#
-# Ex; Fuchsia uses x64 and amd64 while cros uses amd64 and arm.
-cros_arch_from_fuchsia_arch() {
-  case "${1}" in
-    arm64)
-      echo arm;;
-    x64)
-      echo amd64 ;;
-    *)
-      echo "Unsupported arch ${1}; should be one of x64, arm64";
       exit -1;;
   esac
 }
@@ -132,7 +128,6 @@ termina_build_image() {
   local -r cros_dir="$2"
 
   local -r board="`board_for_arch ${arch}`"
-  local -r cros_arch="`cros_arch_from_fuchsia_arch ${arch}`"
   # Note that the references to $HOME here will be resoved inside the ChromeOS
   # chroot and not the current users $HOME. This is because the ChromeOS build
   # system relies on doing a chroot into a sysroot to support the build. This
@@ -141,7 +136,7 @@ termina_build_image() {
   local -r input_image="~/${board}/chromiumos_base_image.bin"
 
   pushd "${cros_dir}"
-  cros_sdk bash -c "rm -rf ${chroot_outdir} && ~/trunk/src/scripts/termina_build_image --arch ${cros_arch} --image ${input_image} -t --output ${chroot_outdir}"
+  cros_sdk bash -c "rm -rf ${chroot_outdir} && ~/trunk/src/platform/container-guest-tools/termina/termina_build_image.py ${input_image} ${chroot_outdir}"
   popd
 }
 
@@ -154,11 +149,13 @@ latest_revision_for_board() {
 }
 
 main() {
-  while getopts "c:r:hk:" FLAG; do
+  while getopts "c:r:k:nfh" FLAG; do
     case "${FLAG}" in
     c) cros_dir="${OPTARG}" ;;
     r) termina_revision_requested="${OPTARG}" ;;
     k) kernel_overlay_dir="${OPTARG}" ;;
+    n) dry_run=true ;;
+    f) force=true ;;
     h) print_usage_and_exit 0 ;;
     *) print_usage_and_exit 1 ;;
     esac
@@ -169,9 +166,16 @@ main() {
   declare -r cros_dir=${cros_dir}
   declare -r termina_revision_requested=${termina_revision_requested}
   declare -r kernel_overlay_dir=${kernel_overlay_dir}
+  declare -r dry_run=${dry_run}
+  declare -r force=${force}
   declare jiri_entries="    <!-- termina guest images -->"
 
   if [[ -z "${cros_dir}" ]];
+  then
+    print_usage_and_exit 1
+  fi
+
+  if [ "$dry_run" == "$force" ];
   then
     print_usage_and_exit 1
   fi
@@ -212,12 +216,17 @@ main() {
       cp "${kernel_override}" "${cros_dir}/chroot/home/${USER}/${board}/output/vm_kernel"
     fi
 
-    # TODO(fxbug.dev/23166): remove termina kernel image
-    ${cipd} create \
-        -in "${cros_dir}/chroot/home/${USER}/${board}/output" \
-        -name "fuchsia_internal/linux/termina-${arch}" \
-        -install-mode copy \
-        -tag "termina-rev:${termina_revision}"
+    options=()
+    options+=("create")
+    options+=("-in" "${cros_dir}/chroot/home/${USER}/${board}/output")
+    options+=("-name" "fuchsia_internal/linux/termina-${arch}")
+    options+=("-install-mode" "copy")
+    options+=("-tag" "termina-rev:${termina_revision}")
+
+    echo cipd ${options[*]}
+    if [ "$dry_run" != true ] ; then
+      ${cipd} ${options[*]}
+    fi
   done
 
   echo "Update //integration/fuchsia/prebuilts with the following:"
