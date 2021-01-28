@@ -5,9 +5,12 @@
 package checklicenses
 
 import (
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -31,9 +34,47 @@ func TestConfigNew(t *testing.T) {
 }
 
 func TestConfigDefault(t *testing.T) {
-	p := filepath.Join(*testDataDir, "config", "config.json")
+	p := filepath.Join(*testDataDir, "config", "new", "config.json")
 	_, err := NewConfig(p)
 	if err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
+	}
+}
+
+func TestConfigMerge(t *testing.T) {
+	// Find the right testdata directory for this test.
+	testDir, err := filepath.Abs(filepath.Join(*testDataDir, "config", "merge"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the want.json file into a string.
+	wantJsonPath := filepath.Join(testDir, "want.json")
+	b, err := ioutil.ReadFile(wantJsonPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantJson := string(b)
+
+	// Create a config object from the want.json file.
+	d := json.NewDecoder(strings.NewReader(wantJson))
+	d.DisallowUnknownFields()
+	var expected Config
+	if err := d.Decode(&expected); err != nil {
+		t.Fatal(err)
+	}
+
+	left, err := NewConfig(filepath.Join(testDir, "merge_left.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := NewConfig(filepath.Join(testDir, "merge_right.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	left.Merge(right)
+
+	if !reflect.DeepEqual(*left, expected) {
+		t.Fatalf("got: %v, want:%v\n", *left, expected)
 	}
 }

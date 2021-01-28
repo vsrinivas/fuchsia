@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	configFile = flag.String("config_file", "tools/check-licenses/config/config.json", "Location of config.json.")
+	configFile = flag.String("config_file", "tools/check-licenses/config/config.json", "Comma separated list of paths to json files.")
 
 	skipDirs                     = flag.String("skip_dirs", "", "Comma separated list of directory names to skip when traversing a directory tree. This arg is added to the list of skipdirs in the config file.")
 	skipFiles                    = flag.String("skip_files", "", "Comma separated list of file names to skip when traversing a directory tree. This arg is added to the list of skipfiles in the config file.")
@@ -68,9 +68,19 @@ func mainImpl() error {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	config, err := checklicenses.NewConfig(*configFile)
-	if err != nil {
-		return fmt.Errorf("failed to initialize config: %s", err)
+	config := &checklicenses.Config{}
+
+	if *configFile != "" {
+		split := strings.Split(*configFile, ",")
+		for _, path := range split {
+			if path != "" {
+				c, err := checklicenses.NewConfig(path)
+				if err != nil {
+					return fmt.Errorf("failed to initialize config %s: %s", path, err)
+				}
+				config.Merge(c)
+			}
+		}
 	}
 
 	if *skipDirs != "" {
