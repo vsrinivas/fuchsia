@@ -38,9 +38,9 @@ void Mdns::SetVerbose(bool verbose) {
 #endif  // MDNS_TRACE
 }
 
-void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& host_name,
-                 const MdnsAddresses& addresses, bool perform_address_probe,
-                 fit::closure ready_callback) {
+void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
+                 const std::string& host_name, const MdnsAddresses& addresses,
+                 bool perform_address_probe, fit::closure ready_callback) {
   FX_DCHECK(!host_name.empty());
   FX_DCHECK(ready_callback);
   FX_DCHECK(state_ == State::kNotStarted);
@@ -58,7 +58,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
   AddAgent(std::make_shared<AddressResponder>(this));
 
   transceiver_.Start(
-      std::move(netstack), *addresses_,
+      std::move(interfaces_watcher), *addresses_,
       [this, perform_address_probe]() {
         // TODO(dalesat): Link changes that create host name conflicts.
         // Once we have a NIC and we've decided on a unique host name, we
@@ -114,7 +114,8 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
         defer_flush_ = false;
 
         SendMessages();
-      });
+      },
+      MdnsInterfaceTransceiver::Create);
 
   // The interface monitor may have already found interfaces. In that case,
   // start the address probe in case we don't get any link change notifications.

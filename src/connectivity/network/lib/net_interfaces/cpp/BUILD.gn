@@ -1,0 +1,38 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("cpp") {
+  public_deps = [ ":net-interfaces" ]
+}
+
+source_set("net-interfaces") {
+  sources = [
+    "net_interfaces.cc",
+    "net_interfaces.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
+    "//sdk/fidl/fuchsia.net.interfaces",
+  ]
+}
+
+executable("net_interfaces_test") {
+  testonly = true
+
+  sources = [ "net_interfaces_test.cc" ]
+
+  deps = [
+    ":net-interfaces",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/lib/testing/predicates",
+  ]
+}
+
+fuchsia_unittest_package("net-interfaces-test") {
+  deps = [ ":net_interfaces_test" ]
+}

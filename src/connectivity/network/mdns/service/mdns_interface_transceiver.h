@@ -37,7 +37,6 @@ class MdnsInterfaceTransceiver {
   static std::unique_ptr<MdnsInterfaceTransceiver> Create(inet::IpAddress address,
                                                           const std::string& name, uint32_t index,
                                                           Media media);
-
   virtual ~MdnsInterfaceTransceiver();
 
   const inet::IpAddress& address() const { return address_; }
@@ -49,10 +48,10 @@ class MdnsInterfaceTransceiver {
   Media media() const { return media_; }
 
   // Starts the interface transceiver.
-  bool Start(const MdnsAddresses& addresses, InboundMessageCallback callback);
+  virtual bool Start(const MdnsAddresses& addresses, InboundMessageCallback callback);
 
   // Stops the interface transceiver.
-  void Stop();
+  virtual void Stop();
 
   // Sets an alternate address for the interface.
   void SetAlternateAddress(const inet::IpAddress& alternate_address);

@@ -23,9 +23,9 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
   MdnsUnitTests() : under_test_(*this) {}
 
   //  Mdns::Transceiver implementation.
-  void Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
-             fit::closure link_change_callback,
-             InboundMessageCallback inbound_message_callback) override {
+  void Start(fuchsia::net::interfaces::WatcherPtr watcher, const MdnsAddresses& addresses,
+             fit::closure link_change_callback, InboundMessageCallback inbound_message_callback,
+             InterfaceTransceiverCreateFunction transceiver_factory) override {
     start_called_ = true;
     link_change_callback_ = std::move(link_change_callback);
     inbound_message_callback_ = std::move(inbound_message_callback);

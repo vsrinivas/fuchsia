@@ -4,8 +4,8 @@
 
 // TODO(fxbug.dev/49875): rewrite this test in Rust.
 
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netemul/sync/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -68,14 +68,19 @@ class TestAgent {
       : client_name_(client_name),
         component_context_(component_context),
         quit_callback_(std::move(quit_callback)) {
-    auto ns = component_context_->svc()->Connect<fuchsia::netstack::Netstack>();
-    ns.set_error_handler([this](zx_status_t status) {
-      std::cerr << "FAILED: Netstack channel disconnected unexpectedly, status " << status << ".\n";
+    auto net_interfaces_state =
+        component_context_->svc()->Connect<fuchsia::net::interfaces::State>();
+    fuchsia::net::interfaces::WatcherPtr watcher;
+    net_interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(),
+                                     watcher.NewRequest());
+    watcher.set_error_handler([this](zx_status_t status) {
+      std::cerr << "FAILED: interface watcher channel disconnected unexpectedly, status " << status
+                << ".\n";
       Quit(1);
     });
 
     transceiver_.Start(
-        std::move(ns), addresses_,
+        std::move(watcher), addresses_,
         // This lambda is called when interface changes are detected.
         [this]() {
           if (sending_) {
@@ -142,7 +147,8 @@ class TestAgent {
           if (response_count_ >= int(Addrs().size()) * iterations) {
             Quit(0);
           }
-        });
+        },
+        MdnsInterfaceTransceiver::Create);
   }
 
   const std::vector<inet::IpAddress>& Addrs() {

@@ -75,24 +75,15 @@ fuchsia::net::Ipv6SocketAddress MdnsFidlUtil::CreateSocketAddressV6(
 }
 
 // static
-inet::IpAddress MdnsFidlUtil::IpAddressFrom(const fuchsia::net::IpAddress* addr) {
-  FX_DCHECK(addr != nullptr);
-  switch (addr->Which()) {
+inet::IpAddress MdnsFidlUtil::IpAddressFrom(const fuchsia::net::IpAddress& addr) {
+  switch (addr.Which()) {
     case fuchsia::net::IpAddress::Tag::kIpv4:
-      if (!addr->is_ipv4()) {
-        return inet::IpAddress();
-      }
-
-      FX_DCHECK(addr->ipv4().addr.size() == sizeof(in_addr));
-      return inet::IpAddress(*reinterpret_cast<const in_addr*>(addr->ipv4().addr.data()));
+      FX_DCHECK(addr.ipv4().addr.size() == sizeof(in_addr));
+      return inet::IpAddress(*reinterpret_cast<const in_addr*>(addr.ipv4().addr.data()));
     case fuchsia::net::IpAddress::Tag::kIpv6:
-      if (!addr->is_ipv6()) {
-        return inet::IpAddress();
-      }
-
-      FX_DCHECK(addr->ipv6().addr.size() == sizeof(in6_addr));
-      return inet::IpAddress(*reinterpret_cast<const in6_addr*>(addr->ipv6().addr.data()));
-    default:
+      FX_DCHECK(addr.ipv6().addr.size() == sizeof(in6_addr));
+      return inet::IpAddress(*reinterpret_cast<const in6_addr*>(addr.ipv6().addr.data()));
+    case fuchsia::net::IpAddress::Tag::Invalid:
       return inet::IpAddress();
   }
 }

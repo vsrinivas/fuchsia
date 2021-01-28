@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_TRANSCEIVER_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_TRANSCEIVER_H_
 
-#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <netinet/in.h>
 
@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/connectivity/network/lib/net_interfaces/cpp/net_interfaces.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
 
@@ -26,9 +27,9 @@ class MdnsTransceiver : public Mdns::Transceiver {
   ~MdnsTransceiver();
 
   //  Mdns::Transceiver implementation.
-  void Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
-             fit::closure link_change_callback,
-             InboundMessageCallback inbound_message_callback) override;
+  void Start(fuchsia::net::interfaces::WatcherPtr watcher, const MdnsAddresses& addresses,
+             fit::closure link_change_callback, InboundMessageCallback inbound_message_callback,
+             InterfaceTransceiverCreateFunction transceiver_factory) override;
 
   void Stop() override;
 
@@ -45,26 +46,41 @@ class MdnsTransceiver : public Mdns::Transceiver {
   MdnsInterfaceTransceiver* GetInterfaceTransceiver(const inet::IpAddress& address);
 
  private:
-  // Handles |OnInterfaceChanged| events from |Netstack|.
-  void InterfacesChanged(std::vector<fuchsia::netstack::NetInterface> interfaces);
+  // Starts an interface transceiver for every address in |properties|.
+  // Returns true iff at least one interface transceiver was started.
+  bool StartInterfaceTransceivers(const net::interfaces::Properties& properties);
+
+  // Stops the interface transceiver on |address| if it exists.
+  // Returns true iff at least one interface transceiver was stopped.
+  bool StopInterfaceTransceiver(const inet::IpAddress& address);
+
+  // Handles a fuchsia.net.interfaces |Added| or |Existing| event (indicated by |event_type|) by
+  // starting interface transceivers if |discovered| indicates that the interface is online and not
+  // loopback.  Returns true iff at least one interface transceiver was started.
+  bool OnInterfaceDiscovered(fuchsia::net::interfaces::Properties discovered,
+                             const char* event_type);
+
+  // Handles a |fuchsia::net::interfaces::Event|.
+  void OnInterfacesEvent(fuchsia::net::interfaces::Event event);
 
   // Ensures that an interface transceiver exists for |address| if |address|
   // is valid. Returns true if a change was made, false otherwise.
-  bool EnsureInterfaceTransceiver(
-      const inet::IpAddress& address, const inet::IpAddress& alternate_address, uint32_t id,
-      Media media, const std::string& name,
-      std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
+  bool EnsureInterfaceTransceiver(const inet::IpAddress& address,
+                                  const inet::IpAddress& alternate_address, uint32_t id,
+                                  Media media, const std::string& name);
 
   // Determines if |address| identifies one of the NICs in |interface_transceivers_by_address_|.
   bool IsLocalInterfaceAddress(const inet::IpAddress& address);
 
-  fuchsia::netstack::NetstackPtr netstack_;
+  fuchsia::net::interfaces::WatcherPtr interface_watcher_;
   const MdnsAddresses* addresses_;
   fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
+  InterfaceTransceiverCreateFunction transceiver_factory_;
   std::string host_full_name_;
   std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>
       interface_transceivers_by_address_;
+  std::unordered_map<uint64_t, net::interfaces::Properties> interface_properties_;
 
  public:
   // Disallow copy, assign and move.

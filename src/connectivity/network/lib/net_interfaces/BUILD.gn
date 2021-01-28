@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("net_interfaces") {
+  deps = [ "cpp" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [
-    "dns_server_watcher:tests",
-    "net_interfaces:tests",
-  ]
+  deps = [ "cpp:net-interfaces-test" ]
 }

@@ -5,7 +5,7 @@
 #include "src/connectivity/network/mdns/service/mdns_service_impl.h"
 
 #include <fuchsia/device/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
@@ -126,8 +126,10 @@ void MdnsServiceImpl::Start() {
     return;
   }
 
-  mdns_.Start(component_context_->svc()->Connect<fuchsia::netstack::Netstack>(), host_name,
-              config_.addresses(), config_.perform_host_name_probe(),
+  auto interfaces_state = component_context_->svc()->Connect<fuchsia::net::interfaces::State>();
+  fuchsia::net::interfaces::WatcherPtr watcher;
+  interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(), watcher.NewRequest());
+  mdns_.Start(std::move(watcher), host_name, config_.addresses(), config_.perform_host_name_probe(),
               fit::bind_member(this, &MdnsServiceImpl::OnReady));
 }
 

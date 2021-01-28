@@ -95,10 +95,12 @@ source_set("source_set") {
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/connectivity/network/lib/net_interfaces/cpp",
     "//src/lib/fsl",
     "//src/lib/inet",
     "//src/lib/json_parser",
@@ -123,13 +125,16 @@ test("mdns_test") {
     "test/dns_reading_test.cc",
     "test/instance_responder_test.cc",
     "test/interface_transceiver_test.cc",
+    "test/mdns_transceiver_test.cc",
     "test/mdns_unit_tests.cc",
   ]
 
   deps = [
     ":source_set",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/lib/testing/predicates",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

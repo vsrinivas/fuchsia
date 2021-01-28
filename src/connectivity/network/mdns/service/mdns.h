@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_H_
 
-#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/clock.h>
@@ -19,6 +19,7 @@
 
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
+#include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {
@@ -36,13 +37,17 @@ class Mdns : public MdnsAgent::Host {
    public:
     using InboundMessageCallback =
         fit::function<void(std::unique_ptr<DnsMessage>, const ReplyAddress&)>;
+    using InterfaceTransceiverCreateFunction =
+        fit::function<std::unique_ptr<MdnsInterfaceTransceiver>(inet::IpAddress, const std::string&,
+                                                                uint32_t, Media)>;
 
     virtual ~Transceiver() {}
 
     // Starts the transceiver.
-    virtual void Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
+    virtual void Start(fuchsia::net::interfaces::WatcherPtr watcher, const MdnsAddresses& addresses,
                        fit::closure link_change_callback,
-                       InboundMessageCallback inbound_message_callback) = 0;
+                       InboundMessageCallback inbound_message_callback,
+                       InterfaceTransceiverCreateFunction transceiver_factory) = 0;
 
     // Stops the transceiver.
     virtual void Stop() = 0;
@@ -187,7 +192,7 @@ class Mdns : public MdnsAgent::Host {
   // Starts the transceiver. |ready_callback| is called once we're is ready for
   // calls to |ResolveHostName|, |SubscribeToService| and
   // |PublishServiceInstance|.
-  void Start(fuchsia::netstack::NetstackPtr, const std::string& host_name,
+  void Start(fuchsia::net::interfaces::WatcherPtr, const std::string& host_name,
              const MdnsAddresses& addresses, bool perform_address_probe,
              fit::closure ready_callback);
 

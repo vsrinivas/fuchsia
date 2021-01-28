@@ -223,8 +223,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
   } else {
 #ifdef MDNS_TRACE
     FX_LOGS(WARNING) << "Couldn't parse message from " << reply_address << ", " << result
-                     << " bytes: "
-                     << fostr::HexDump(inbound_buffer_.data(), result, 0);
+                     << " bytes: " << fostr::HexDump(inbound_buffer_.data(), result, 0);
 #else
     FX_LOGS(WARNING) << "Couldn't parse message from " << reply_address << ", " << result
                      << " bytes";
