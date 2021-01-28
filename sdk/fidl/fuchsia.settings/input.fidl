@@ -41,10 +41,15 @@ protocol Input {
 
 /// A series of flags determining the state of an input device mute toggle.
 bits ToggleStateFlags : uint64 {
+    /// The input device exists and is neither muted nor disabled.
     AVAILABLE = 0x01;
+    /// The input device is being used.
     ACTIVE = 0x02;
+    /// The input device could be available if it was enabled, but it is muted.
     MUTED = 0x04;
+    /// The input device is permanently disabled, e.g. by policy.
     DISABLED = 0x08;
+    /// The state cannot be determined.
     ERROR = 0x10;
 };
 
