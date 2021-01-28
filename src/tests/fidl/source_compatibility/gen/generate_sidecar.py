@@ -22,7 +22,7 @@ GN_SIDECAR = 'test_gn_sidecar.json'
 
 def write_gn_sidecar(test_root: Path, test: CompatTest):
     test_name = test_root.name.replace('-', '_')
-    with open(test_root / GN_SIDECAR, 'w+') as f:
+    with open(test_root / GN_SIDECAR, 'w') as f:
         json.dump(create_sidecar(test, test_name), f, indent=4)
 
 

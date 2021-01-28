@@ -175,5 +175,5 @@ def generate_docs(test_root: Path, test: CompatTest, out: IO) -> str:
 
 
 def write_docs(test_root: Path, test: CompatTest):
-    with open(test_root / DOC_FILE, 'w+') as f:
+    with open(test_root / DOC_FILE, 'w') as f:
         generate_docs(test_root, test, f)

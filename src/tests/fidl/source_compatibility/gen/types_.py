@@ -4,7 +4,8 @@
 """ The types in this file correspond directly to the test.json structure. """
 
 from dataclasses import asdict, dataclass
-from typing import Dict, List, Union
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 # These string values are not only used in the JSON, but also as the test
 # subdirectory names.
@@ -111,3 +112,7 @@ class CompatTest:
 
     def todict(self):
         return asdict(self)
+
+    def save(self, path: Path):
+        with open(path, 'w') as f:
+            json.dump(self.todict(), f, indent=4)

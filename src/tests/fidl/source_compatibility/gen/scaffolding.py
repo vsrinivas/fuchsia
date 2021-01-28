@@ -128,7 +128,7 @@ def initialize_src(path: Path, binding: str, fidl_library_name: str):
 def initialize_file(path: Path, contents: str):
     if path.exists():
         return
-    with open(path, 'w+') as f:
+    with open(path, 'w') as f:
         f.write(contents)
     block_on_prompt(
         f'Add starter code to {path.name} as desired, then press enter to continue '

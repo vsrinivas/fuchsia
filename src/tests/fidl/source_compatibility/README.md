@@ -96,6 +96,28 @@ From this, you can deduce that the files in question are
 `protocol-event-remove/fidl/step_02_during.dart`, and use that to debug the
 compile error.
 
+
+### "Reverse" tests:
+
+Many tests are symmetrical: for example, removing a method consists of the
+same steps as adding a method, but backwards. Currently, the source
+compatibility tool provides a way to "bootstrap" a new test based on an
+existing one, by running it in reverse. For example, if you have a test
+`protocol-method-add` and want to generate the symmetric
+`protocol-method-remove` test based on it, you can run:
+
+  scompat generate_reverse protocol-method-add protocol-method-remove
+
+This will create a copy of the method add test but in reverse. After generating
+the test, there are two additional manual steps:
+
+* Rename the FIDL library used in the test. For example,
+  replace all instances of `protocolmethoadd` with `protocolmethodremove` inside
+  of of the `protocol-method-remove/` test.
+* Update the transition instructions for the test. Generally, this will involve
+  negating any existing instructions. For example, an instruction of
+  `"add method foo"`, would become `"remove method foo"` in the reversed test.
+
 ## Transition terminology
 
 We sometimes give transitions that follow a specific pattern a name to make it

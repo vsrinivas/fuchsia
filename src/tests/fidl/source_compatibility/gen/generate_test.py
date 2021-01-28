@@ -15,7 +15,7 @@ from generate_gn import write_gn
 from generate_sidecar import write_gn_sidecar
 import scaffolding
 from types_ import *
-from util import test_name_to_fidl_name, pink, print_err, print_warning, white, TEST_FILE
+from util import test_name_to_fidl_name, pink, print_err, print_warning, white, TEST_FILE, prepend_step
 
 FIDL_DIR = 'fidl'
 EXTENSIONS = {
@@ -236,8 +236,7 @@ def run_test_setup(test_root: Path) -> (CompatTest, str):
 
 def maybe_save_state(test_root: Path, state: State):
     if state.test is not None:
-        with open(test_root / TEST_FILE, 'w+') as f:
-            json.dump(state.test.todict(), f, indent=4)
+        state.test.save(test_root / TEST_FILE)
         regen_files(test_root, state.test)
 
 
@@ -274,7 +273,3 @@ def stem(p: str) -> str:
     while Path(p).stem != p:
         p = Path(p).stem
     return p
-
-
-def prepend_step(s: str, step: int) -> str:
-    return f'step_{step:02}_{s}'

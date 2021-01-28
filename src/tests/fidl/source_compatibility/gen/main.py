@@ -8,9 +8,11 @@ import json
 from pathlib import Path
 import os
 import signal
+import shutil
 import sys
 
 import generate_test
+from reverse_test import reverse_test
 from util import print_err, TEST_FILE, white
 from types_ import CompatTest
 
@@ -38,6 +40,24 @@ def gen_test(args):
         generate_test.run(test_dir, state)
     else:
         generate_test.run(test_dir, None)
+
+
+def gen_reverse(args):
+    src_dir = Path(os.path.join(args.root, args.source))
+    with open(src_dir / TEST_FILE, 'r') as f:
+        src_test = CompatTest.fromdict(json.load(f))
+
+    new_test, old_to_new_files = reverse_test(src_test)
+
+    target_dir = Path(os.path.join(args.root, args.target))
+    os.makedirs(target_dir, exist_ok=True)
+    for old, new in old_to_new_files.items():
+        old = src_dir / old
+        new = target_dir / new
+        os.makedirs(new.parent, exist_ok=True)
+        shutil.copyfile(old, new)
+    new_test.save(target_dir / TEST_FILE)
+    generate_test.regen_files(target_dir, new_test)
 
 
 def regen(args):
@@ -92,6 +112,16 @@ regen_parser.add_argument(
     help=
     'Tests to regen (i.e. their paths relative to the --root, like "protocol-method-add"). Tries to regen all tests in the --root directory if none are provided'
 )
+
+gen_reverse_parser = subparsers.add_parser(
+    "generate_reverse",
+    help=
+    "Generate a source compatibility test that runs an existing one in reverse. See tool README for details."
+)
+gen_reverse_parser.set_defaults(func=gen_reverse)
+gen_reverse_parser.add_argument('source', help='Name of the test to reverse.')
+gen_reverse_parser.add_argument(
+    'target', help='Name of the (new) reversed test.')
 
 if __name__ == '__main__':
     args = parser.parse_args()
