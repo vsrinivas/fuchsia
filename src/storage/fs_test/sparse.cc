@@ -63,8 +63,9 @@ TEST_P(SparseTest, ReadAfterSparseWriteReturnsCorrectData) {
   ASSERT_EQ(pread(fd.get(), &rbuf[0], bytes_to_read, read_offset()),
             static_cast<ssize_t>(bytes_to_read));
 
-  const size_t sparse_length =
-      (read_offset() < write_offset()) ? write_offset() - read_offset() : 0;
+  const size_t sparse_length = (read_offset() < write_offset())
+                                   ? std::min(bytes_to_read, write_offset() - read_offset())
+                                   : 0;
 
   if (sparse_length > 0) {
     for (size_t i = 0; i < sparse_length; i++) {
@@ -94,9 +95,11 @@ std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) 
   return s.str();
 }
 
-std::vector<TestFilesystemOptions> AllTestFilesystemsWithCustomDisk() {
+std::vector<TestFilesystemOptions> AllTestFilesystemsThatSupportSparseFilesWithCustomDisk() {
   std::vector<TestFilesystemOptions> filesystems;
   for (TestFilesystemOptions options : AllTestFilesystems()) {
+    if (!options.filesystem->GetTraits().supports_sparse_files)
+      continue;
     options.device_block_count = 1LLU << 24;
     options.device_block_size = 1LLU << 9;
     options.fvm_slice_size = 1LLU << 23;
@@ -112,7 +115,7 @@ constexpr size_t kDirectBlocks = 16;
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, SparseTest,
     testing::Combine(
-        testing::ValuesIn(AllTestFilesystemsWithCustomDisk()),
+        testing::ValuesIn(AllTestFilesystemsThatSupportSparseFilesWithCustomDisk()),
         testing::Values(std::make_tuple(0, 0, kBlockSize),
                         std::make_tuple(kBlockSize / 2, 0, kBlockSize),
                         std::make_tuple(kBlockSize / 2, kBlockSize, kBlockSize),
@@ -127,6 +130,25 @@ INSTANTIATE_TEST_SUITE_P(
                         std::make_tuple(kBlockSize* kDirectBlocks + kBlockSize,
                                         kBlockSize* kDirectBlocks + 2 * kBlockSize,
                                         kBlockSize * 32))),
+    GetParamDescription);
+
+// For filesystems that don't support sparse files, run with a reduced set of tests because
+// they will run more slowly.
+INSTANTIATE_TEST_SUITE_P(
+    NonSparseFilesystems, SparseTest,
+    testing::Combine(
+        testing::ValuesIn(MapAndFilterAllTestFilesystems(
+            [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+              if (options.filesystem->GetTraits().supports_sparse_files) {
+                return std::nullopt;
+              } else {
+                return options;
+              }
+            })),
+        testing::Values(std::make_tuple(0, 0, 100), std::make_tuple(500, 100, 100),
+                        std::make_tuple(500, 550, 100), std::make_tuple(0, 0, 10000),
+                        std::make_tuple(5000, 0, 10000), std::make_tuple(5000, 10000, 10000),
+                        std::make_tuple(10000, 0, 10000), std::make_tuple(10000, 5000, 10000))),
     GetParamDescription);
 
 }  // namespace
