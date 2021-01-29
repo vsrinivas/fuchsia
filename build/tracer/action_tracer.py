@@ -438,6 +438,11 @@ def main_arg_parser() -> argparse.ArgumentParser:
         argument_default=[],
     )
     parser.add_argument(
+        "--fsatrace-path",
+        default="fsatrace",
+        help=
+        "Path to fsatrace binary.  If omitted, it will search for one in PATH.")
+    parser.add_argument(
         "--label", required=True, help="The wrapped target's label")
     parser.add_argument(
         "--trace-output", required=True, help="Where to store the trace")
@@ -511,7 +516,7 @@ def main():
     os.environ["FSAT_BUF_SIZE"] = "5000000"
     retval = subprocess.call(
         [
-            "../../prebuilt/fsatrace/fsatrace",
+            args.fsatrace_path,
             "erwmdt",
             args.trace_output,
             "--",
