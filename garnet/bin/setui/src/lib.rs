@@ -140,6 +140,17 @@ impl EnabledServicesConfiguration {
     }
 }
 
+#[derive(PartialEq, Debug, Clone, Deserialize)]
+pub struct EnabledPoliciesConfiguration {
+    pub policies: HashSet<PolicyType>,
+}
+
+impl EnabledPoliciesConfiguration {
+    pub fn with_policies(policies: HashSet<PolicyType>) -> Self {
+        Self { policies }
+    }
+}
+
 #[derive(Default, Debug, Clone, Deserialize)]
 pub struct ServiceFlags {
     pub controller_flags: HashSet<ControllerFlag>,
@@ -149,6 +160,7 @@ pub struct ServiceFlags {
 pub struct ServiceConfiguration {
     pub agent_types: HashSet<AgentType>,
     pub services: HashSet<SettingType>,
+    pub policies: HashSet<PolicyType>,
     pub controller_flags: HashSet<ControllerFlag>,
 }
 
@@ -156,11 +168,13 @@ impl ServiceConfiguration {
     pub fn from(
         agent_types: AgentConfiguration,
         services: EnabledServicesConfiguration,
+        policies: EnabledPoliciesConfiguration,
         flags: ServiceFlags,
     ) -> Self {
         Self {
             agent_types: agent_types.agent_types,
             services: services.services,
+            policies: policies.policies,
             controller_flags: flags.controller_flags,
         }
     }
@@ -333,11 +347,14 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         // Define top level MessageHub for service communication.
         let messenger_factory = service::message::create_hub();
 
-        let (agent_types, settings, flags) = match self.configuration {
-            Some(configuration) => {
-                (configuration.agent_types, configuration.services, configuration.controller_flags)
-            }
-            _ => (HashSet::new(), HashSet::new(), HashSet::new()),
+        let (agent_types, settings, _policies, flags) = match self.configuration {
+            Some(configuration) => (
+                configuration.agent_types,
+                configuration.services,
+                configuration.policies,
+                configuration.controller_flags,
+            ),
+            _ => (HashSet::new(), HashSet::new(), HashSet::new(), HashSet::new()),
         };
 
         let event_messenger_factory = internal::event::message::create_hub();
@@ -353,12 +370,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             context_id_counter.clone(),
         );
 
-        // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
-        // configured policy types.
-        let policy_types: HashSet<PolicyType> = [PolicyType::Audio].iter().copied().collect();
+        // TODO(fxbug.dev/60925): use provided configuration for policy API
+        let policies: HashSet<PolicyType> = [PolicyType::Audio].iter().copied().collect();
         // Create the policy handler factory and register policy handlers.
         let mut policy_handler_factory = PolicyHandlerFactoryImpl::new(
-            policy_types.clone(),
+            policies.clone(),
             settings.clone(),
             self.storage_factory.clone(),
             context_id_counter,
@@ -387,7 +403,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_dir,
             messenger_factory,
             settings,
-            policy_types,
+            policies,
             agent_blueprints,
             self.resource_monitors,
             self.event_subscriber_blueprints,

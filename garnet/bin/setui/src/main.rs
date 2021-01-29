@@ -14,10 +14,12 @@ use {
     settings::handler::device_storage::StashDeviceStorageFactory,
     settings::switchboard::base::get_default_setting_types,
     settings::AgentConfiguration,
+    settings::EnabledPoliciesConfiguration,
     settings::EnabledServicesConfiguration,
     settings::EnvironmentBuilder,
     settings::ServiceConfiguration,
     settings::ServiceFlags,
+    std::collections::HashSet,
     std::sync::Arc,
 };
 
@@ -34,13 +36,26 @@ fn main() -> Result<(), Error> {
         connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );
 
-    let default_configuration =
+    let default_enabled_service_configuration =
         EnabledServicesConfiguration::with_services(get_default_setting_types());
 
-    let configuration =
-        DefaultSetting::new(Some(default_configuration), "/config/data/service_configuration.json")
-            .get_default_value()
-            .expect("no default enabled service configuration");
+    // By default, no policies are enabled.
+    let default_enabled_policy_configuration =
+        EnabledPoliciesConfiguration::with_policies(HashSet::default());
+
+    let enabled_service_configuration = DefaultSetting::new(
+        Some(default_enabled_service_configuration),
+        "/config/data/service_configuration.json",
+    )
+    .get_default_value()
+    .expect("no default enabled service configuration");
+
+    let enabled_policy_configuration = DefaultSetting::new(
+        Some(default_enabled_policy_configuration),
+        "/config/data/policy_configuration.json",
+    )
+    .get_default_value()
+    .expect("no default enabled policy configuration");
 
     let flags =
         DefaultSetting::new(Some(ServiceFlags::default()), "/config/data/service_flags.json")
@@ -54,7 +69,12 @@ fn main() -> Result<(), Error> {
     .get_default_value()
     .expect("no default agent types");
 
-    let configuration = ServiceConfiguration::from(agent_types, configuration, flags);
+    let configuration = ServiceConfiguration::from(
+        agent_types,
+        enabled_service_configuration,
+        enabled_policy_configuration,
+        flags,
+    );
 
     // EnvironmentBuilder::spawn returns a future that can be awaited for the
     // result of the startup. Since main is a synchronous function, we cannot

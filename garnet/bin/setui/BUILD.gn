@@ -298,6 +298,7 @@ config_data("tests_config") {
     "src/tests/testdata/display_configuration.json",
     "src/tests/testdata/fake_config_data.json",
     "src/tests/testdata/fake_invalid_config_data.json",
+    "src/tests/testdata/policy_configuration.json",
     "src/tests/testdata/service_configuration.json",
     "src/tests/testdata/service_flags.json",
     "src/tests/testdata/volume-changed.wav",
@@ -387,6 +388,10 @@ unittest_package("sample-setui-config-test") {
       dest = "service_configuration.json"
     },
     {
+      path = rebase_path("src/tests/testdata/policy_configuration.json")
+      dest = "policy_configuration.json"
+    },
+    {
       path = rebase_path("src/tests/testdata/service_flags.json")
       dest = "service_flags.json"
     },
@@ -415,6 +420,8 @@ unittest_package("sample-setui-config-test") {
       args = [
         "--service-config",
         "/pkg/data/service_configuration.json",
+        "--policy-config",
+        "/pkg/data/policy_configuration.json",
         "--controller-flags",
         "/pkg/data/service_flags.json",
         "--input-device-config",
@@ -433,6 +440,8 @@ unittest_package("sample-setui-config-test") {
       args = [
         "-s",
         "/pkg/data/service_configuration.json",
+        "-p",
+        "/pkg/data/policy_configuration.json",
         "-f",
         "/pkg/data/service_flags.json",
         "-i",
