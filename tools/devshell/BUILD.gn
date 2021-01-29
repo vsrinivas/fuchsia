@@ -16,6 +16,7 @@ if (!is_host) {
       "//src/developer/ffx:host",
       "//src/sys/pkg/bin/pm:host",
       "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config($default_toolchain)",
+      "//tools/bootserver_old:host",
       "//tools/debug/symbolize",
       "//tools/net/device-finder:host",
       "//tools/symbol-index:symbol-index",
