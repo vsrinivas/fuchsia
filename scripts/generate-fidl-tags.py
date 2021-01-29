@@ -469,6 +469,370 @@ def extract_name_and_members(json):
      Tag(capability, src/sys/component_manager/tests/fidl/breakpoints.fidl, 74, 37),
      Tag(UseCapabilityPayload, src/sys/component_manager/tests/fidl/breakpoints.fidl, 78, 7),
      Tag(capability, src/sys/component_manager/tests/fidl/breakpoints.fidl, 80, 37)]
+
+    Bits declarations:
+
+    >>> extract_name_and_members([
+    ... {
+    ...  "name": "fuchsia.io2/ConnectionInfoQuery",
+    ...  "location": {
+    ...    "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...    "line": 33,
+    ...    "column": 6,
+    ...    "length": 19
+    ...  },
+    ...  "maybe_attributes": [
+    ...    {
+    ...      "name": "Doc",
+    ...      "value": ""
+    ...    }
+    ...  ],
+    ...  "type": {
+    ...    "kind": "primitive",
+    ...    "subtype": "uint64"
+    ...  },
+    ...  "mask": "7",
+    ...  "members": [
+    ...    {
+    ...      "name": "REPRESENTATION",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 35,
+    ...        "column": 5,
+    ...        "length": 14
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "1",
+    ...        "expression": "0x1",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "1",
+    ...          "expression": "0x1"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": " Requests [`ConnectionInfo.representation`]."
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "RIGHTS",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 38,
+    ...        "column": 5,
+    ...        "length": 6
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "2",
+    ...        "expression": "0x2",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "2",
+    ...          "expression": "0x2"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": " Requests [`ConnectionInfo.rights`]."
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "AVAILABLE_OPERATIONS",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 41,
+    ...        "column": 5,
+    ...        "length": 20
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "4",
+    ...        "expression": "0x4",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "4",
+    ...          "expression": "0x4"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    }
+    ...  ],
+    ...  "strict": True
+    ... },
+    ... {
+    ...  "name": "fuchsia.io2/NodeProtocols",
+    ...  "location": {
+    ...    "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...    "line": 102,
+    ...    "column": 6,
+    ...    "length": 13
+    ...  },
+    ...  "maybe_attributes": [
+    ...    {
+    ...      "name": "Doc",
+    ...      "value": ""
+    ...    }
+    ...  ],
+    ...  "type": {
+    ...    "kind": "primitive",
+    ...    "subtype": "uint64"
+    ...  },
+    ...  "mask": "805306495",
+    ...  "members": [
+    ...    {
+    ...      "name": "CONNECTOR",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 106,
+    ...        "column": 5,
+    ...        "length": 9
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "1",
+    ...        "expression": "0x1",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "1",
+    ...          "expression": "0x1"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "DIRECTORY",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 110,
+    ...        "column": 5,
+    ...        "length": 9
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "2",
+    ...        "expression": "0x2",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "2",
+    ...          "expression": "0x2"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "FILE",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 114,
+    ...        "column": 5,
+    ...        "length": 4
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "4",
+    ...        "expression": "0x4",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "4",
+    ...          "expression": "0x4"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "MEMORY",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 121,
+    ...        "column": 5,
+    ...        "length": 6
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "8",
+    ...        "expression": "0x8",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "8",
+    ...          "expression": "0x8"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "POSIX_SOCKET",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 125,
+    ...        "column": 5,
+    ...        "length": 12
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "16",
+    ...        "expression": "0x10",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "16",
+    ...          "expression": "0x10"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "PIPE",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 129,
+    ...        "column": 5,
+    ...        "length": 4
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "32",
+    ...        "expression": "0x20",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "32",
+    ...          "expression": "0x20"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "DEBUGLOG",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 133,
+    ...        "column": 5,
+    ...        "length": 8
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "64",
+    ...        "expression": "0x40",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "64",
+    ...          "expression": "0x40"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Doc",
+    ...          "value": ""
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "DEVICE",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 136,
+    ...        "column": 5,
+    ...        "length": 6
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "268435456",
+    ...        "expression": "0x10000000",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "268435456",
+    ...          "expression": "0x10000000"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Deprecated",
+    ...          "value": "devices will be services in the future"
+    ...        }
+    ...      ]
+    ...    },
+    ...    {
+    ...      "name": "TTY",
+    ...      "location": {
+    ...        "filename": "../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    ...        "line": 139,
+    ...        "column": 5,
+    ...        "length": 3
+    ...      },
+    ...      "value": {
+    ...        "kind": "literal",
+    ...        "value": "536870912",
+    ...        "expression": "0x20000000",
+    ...        "literal": {
+    ...          "kind": "numeric",
+    ...          "value": "536870912",
+    ...          "expression": "0x20000000"
+    ...        }
+    ...      },
+    ...      "maybe_attributes": [
+    ...        {
+    ...          "name": "Deprecated",
+    ...          "value": "tty functionalities may be covered by a tty service"
+    ...        }
+    ...      ]
+    ...    }
+    ...  ],
+    ...  "strict": True
+    ... }])
+    [Tag(ConnectionInfoQuery, sdk/fidl/fuchsia.io2/connection-info.fidl, 33, 6),
+     Tag(REPRESENTATION, sdk/fidl/fuchsia.io2/connection-info.fidl, 35, 5),
+     Tag(RIGHTS, sdk/fidl/fuchsia.io2/connection-info.fidl, 38, 5),
+     Tag(AVAILABLE_OPERATIONS, sdk/fidl/fuchsia.io2/connection-info.fidl, 41, 5),
+     Tag(NodeProtocols, sdk/fidl/fuchsia.io2/connection-info.fidl, 102, 6),
+     Tag(CONNECTOR, sdk/fidl/fuchsia.io2/connection-info.fidl, 106, 5),
+     Tag(DIRECTORY, sdk/fidl/fuchsia.io2/connection-info.fidl, 110, 5),
+     Tag(FILE, sdk/fidl/fuchsia.io2/connection-info.fidl, 114, 5),
+     Tag(MEMORY, sdk/fidl/fuchsia.io2/connection-info.fidl, 121, 5),
+     Tag(POSIX_SOCKET, sdk/fidl/fuchsia.io2/connection-info.fidl, 125, 5),
+     Tag(PIPE, sdk/fidl/fuchsia.io2/connection-info.fidl, 129, 5),
+     Tag(DEBUGLOG, sdk/fidl/fuchsia.io2/connection-info.fidl, 133, 5),
+     Tag(DEVICE, sdk/fidl/fuchsia.io2/connection-info.fidl, 136, 5),
+     Tag(TTY, sdk/fidl/fuchsia.io2/connection-info.fidl, 139, 5)]
     """
     result = []
     for x in json:
@@ -632,6 +996,7 @@ def extract_interfaces(json):
 
 
 def get_tags(json, tags):
+    tags.extend(extract_name_and_members(json['bits_declarations']))
     tags.extend(extract_consts(json['const_declarations']))
     tags.extend(extract_name_and_members(json['enum_declarations']))
     tags.extend(extract_interfaces(json['interface_declarations']))
