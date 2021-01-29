@@ -499,6 +499,12 @@ This option, false by default, triggers eviction of file pages at the Warning
 pressure state, in addition to the default behavior, which is to evict at the
 Critical and OOM states.
 
+## kernel.portobserver.reserve-pages=\<num>
+
+Specifies the number of pages per CPU to reserve for port observer (async
+wait) allocations. Higher values reduce contention on the PMM when the system
+is under load at the cost of using more memory when the system is idle.
+
 ## kernel.root-job.behavior=\<string>
 
 This option specifies what action the kernel should take when the root job is
