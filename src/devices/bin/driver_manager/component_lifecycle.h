@@ -12,7 +12,7 @@
 #include "coordinator.h"
 
 namespace devmgr {
-using SuspendCallback = fit::function<void(zx_status_t)>;
+using SuspendCallback = fit::callback<void(zx_status_t)>;
 class ComponentLifecycleServer final
     : public llcpp::fuchsia::process::lifecycle::Lifecycle::Interface {
  public:

@@ -35,7 +35,6 @@ class DriverHost;
 struct Devnode;
 class InitTask;
 class RemoveTask;
-class SuspendContext;
 class SuspendTask;
 class ResumeTask;
 class UnbindTask;

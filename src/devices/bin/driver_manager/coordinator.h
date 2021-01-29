@@ -42,7 +42,7 @@
 #include "metadata.h"
 #include "package_resolver.h"
 #include "resume_task.h"
-#include "suspend_context.h"
+#include "suspend_handler.h"
 #include "suspend_task.h"
 #include "system_state_manager.h"
 #include "unbind_task.h"
@@ -111,7 +111,6 @@ class ResumeContext {
 };
 
 using ResumeCallback = std::function<void(zx_status_t)>;
-using SuspendCallback = fit::function<void(zx_status_t)>;
 
 struct CoordinatorConfig {
   // Initial root resource from the kernel.
@@ -148,11 +147,6 @@ struct CoordinatorConfig {
   // environments this might be different.
   std::string path_prefix = "/boot/";
   std::vector<fbl::String> eager_fallback_drivers;
-};
-
-struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
-  SuspendCallbackInfo(SuspendCallback callback) : callback(std::move(callback)) {}
-  SuspendCallback callback;
 };
 
 class Coordinator : public device_manager_fidl::BindDebugger::Interface,
@@ -295,14 +289,14 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
   const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
-  void Suspend(uint32_t flags);
-  void Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> callback);
+  void Suspend(
+      uint32_t flags, SuspendCallback = [](zx_status_t status) {});
 
   void Resume(
       SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
 
-  SuspendContext& suspend_context() { return suspend_context_; }
-  const SuspendContext& suspend_context() const { return suspend_context_; }
+  SuspendHandler& suspend_handler() { return suspend_handler_; }
+  const SuspendHandler& suspend_handler() const { return suspend_handler_; }
 
   ResumeContext& resume_context() { return resume_context_; }
   const ResumeContext& resume_context() const { return resume_context_; }
@@ -333,9 +327,6 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   zx_status_t RegisterWithPowerManager(zx::channel power_manager_client,
                                        zx::channel system_state_transition_client,
                                        zx::channel devfs_handle);
-
- protected:
-  std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
 
  private:
   CoordinatorConfig config_;
@@ -371,7 +362,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   fbl::RefPtr<Device> sys_device_;
   fbl::RefPtr<Device> test_device_;
 
-  SuspendContext suspend_context_ = {};
+  SuspendHandler suspend_handler_;
   ResumeContext resume_context_;
 
   InspectManager inspect_manager_;
@@ -423,13 +414,6 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
 
   zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                  size_t buflen, size_t* size);
-
-  // Shut down all filesystems (and fshost itself) by calling
-  // fuchsia.fshost.Admin.Shutdown(). Note that this is called from multiple
-  // different locations; during suspension, and in a low-memory situation.
-  // Currently, both of these calls happen on the same dispatcher thread, but
-  // consider thread safety when refactoring.
-  void ShutdownFilesystems();
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,

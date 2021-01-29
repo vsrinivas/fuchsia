@@ -66,7 +66,6 @@ constexpr char kDriverHostPath[] = "bin/driver_host";
 constexpr char kBootFirmwarePath[] = "lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
-constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
 
 // The driver_host doesn't just define its own __asan_default_options()
 // function because that conflicts with the build-system feature of injecting
@@ -90,39 +89,15 @@ constexpr char kAsanEnvironment[] =
     // within a single C++ driver won't be caught either.
     "detect_odr_violation=0";
 
-std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> ConnectToFshostAdminServer() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
-  }
-  status = fdio_service_connect(kFshostAdminPath, remote.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", zx_status_get_string(status));
-    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
-  }
-  return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(local));
-}
-
-void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
-  LOGF(INFO, "Suspend fallback with flags %#08x", flags);
-  if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
-  } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, nullptr);
-  } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, nullptr);
-  } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
-  }
-}
-
 }  // namespace
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 Coordinator::Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatcher)
-    : config_(std::move(config)), dispatcher_(dispatcher), inspect_manager_(dispatcher) {
+    : config_(std::move(config)),
+      dispatcher_(dispatcher),
+      suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
+      inspect_manager_(dispatcher) {
   if (config_.oom_event) {
     wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
@@ -134,28 +109,11 @@ Coordinator::Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatche
 Coordinator::~Coordinator() {}
 
 bool Coordinator::InSuspend() const {
-  return suspend_context().flags() == SuspendContext::Flags::kSuspend;
+  return suspend_handler().flags() == SuspendHandler::Flags::kSuspend;
 }
 
 bool Coordinator::InResume() const {
   return (resume_context().flags() == ResumeContext::Flags::kResume);
-}
-
-void Coordinator::ShutdownFilesystems() {
-  // TODO(dgonyeo): we should connect to this service eagerly when Coordinator
-  // is created, since we want to do as little work here as possible
-  if (fshost_admin_client_.get() == nullptr) {
-    fshost_admin_client_ = ConnectToFshostAdminServer();
-  }
-  auto result = fshost_admin_client_->Shutdown();
-  if (result.status() != ZX_OK) {
-    LOGF(WARNING,
-         "Failed to cause VFS exit ourselves, this is expected during orderly shutdown: %s",
-         zx_status_get_string(result.status()));
-    return;
-  }
-
-  LOGF(INFO, "Successfully waited for VFS exit completion");
 }
 
 zx_status_t Coordinator::RegisterWithPowerManager(zx::channel devfs_handle) {
@@ -1264,45 +1222,7 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
   BindDevice(dev, {} /* libdrvname */, true /* new device */);
 }
 
-static void dump_suspend_task_dependencies(const SuspendTask* task, int depth = 0) {
-  if (!task) {
-    return;
-  }
-  const char* task_status = "";
-  if (task->is_completed()) {
-    task_status = zx_status_get_string(task->status());
-  } else {
-    bool dependence = false;
-    for (const auto* dependency : task->Dependencies()) {
-      if (!dependency->is_completed()) {
-        dependence = true;
-        break;
-      }
-    }
-    task_status = dependence ? "<dependence>" : "Stuck <suspending>";
-    if (!dependence) {
-      zx_koid_t pid = task->device().host()->koid();
-      if (!pid) {
-        return;
-      }
-      zx::unowned_process process = task->device().host()->proc();
-      char process_name[ZX_MAX_NAME_LEN];
-      zx_status_t status = process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
-      if (status != ZX_OK) {
-        strlcpy(process_name, "unknown", sizeof(process_name));
-      }
-      printf("Backtrace of threads of process %lu:%s\n", pid, process_name);
-      inspector_print_debug_info_for_all_threads(stdout, process->get());
-      fflush(stdout);
-    }
-  }
-  LOGF(INFO, "%*cSuspend %s: %s", 2 * depth, ' ', task->device().name().data(), task_status);
-  for (const auto* dependency : task->Dependencies()) {
-    dump_suspend_task_dependencies(reinterpret_cast<const SuspendTask*>(dependency), depth + 1);
-  }
-}
-
-void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> callback) {
+void Coordinator::Suspend(uint32_t flags, SuspendCallback callback) {
   // TODO(ravoorir) : Change later to queue the suspend when resume is in progress.
   // Similarly, when Suspend is in progress, resume should be queued. When a resume is
   // in queue, and another suspend request comes in, we should nullify the resume that
@@ -1315,95 +1235,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
     return;
   }
 
-  // A suspend is already in progress.
-  if (InSuspend()) {
-    LOGF(ERROR, "Aborting system-suspend, a system suspend is already in progress");
-    if (callback) {
-      callback(ZX_ERR_ALREADY_EXISTS);
-    }
-    return;
-  }
-
-  // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
-  // cannot go to suspend.
-  if (!sys_device_->proxy()) {
-    LOGF(ERROR, "Aborting system-suspend, system is not fully initialized yet");
-    if (callback) {
-      callback(ZX_ERR_UNAVAILABLE);
-    }
-    return;
-  }
-
-  suspend_context() = std::move(ctx);
-  if ((suspend_context().sflags() & DEVICE_SUSPEND_REASON_MASK) !=
-      DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
-    log_to_debuglog();
-    LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");
-    ShutdownFilesystems();
-  }
-  LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog");
-
-  auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
-  auto watchdog_task = std::make_unique<async::TaskClosure>([this, callback_info] {
-    if (!InSuspend()) {
-      return;  // Suspend failed to complete.
-    }
-    auto& ctx = suspend_context();
-    LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", ctx.sflags());
-    if (ctx.task() != nullptr) {
-      dump_suspend_task_dependencies(ctx.task());
-    }
-    if (suspend_fallback()) {
-      ::suspend_fallback(root_resource(), ctx.sflags());
-      // Unless in test env, we should not reach here.
-      if (callback_info->callback) {
-        callback_info->callback(ZX_ERR_TIMED_OUT);
-        callback_info->callback = nullptr;
-      }
-    }
-  });
-  suspend_context().set_suspend_watchdog_task(std::move(watchdog_task));
-  zx_status_t status =
-      suspend_context().watchdog_task()->PostDelayed(dispatcher(), config_.suspend_timeout);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create timeout watchdog for suspend: %s\n",
-         zx_status_get_string(status));
-  }
-  auto completion = [this, callback_info = std::move(callback_info)](zx_status_t status) {
-    auto& ctx = suspend_context();
-    ctx.watchdog_task()->Cancel();
-    if (status != ZX_OK) {
-      // TODO: unroll suspend
-      // do not continue to suspend as this indicates a driver suspend
-      // problem and should show as a bug
-      LOGF(ERROR, "Failed to suspend: %s", zx_status_get_string(status));
-      ctx.set_flags(SuspendContext::Flags::kRunning);
-      if (callback_info->callback) {
-        callback_info->callback(status);
-        callback_info->callback = nullptr;
-      }
-      return;
-    }
-    if (ctx.sflags() != DEVICE_SUSPEND_FLAG_MEXEC) {
-      // should never get here on x86
-      // on arm, if the platform driver does not implement
-      // suspend go to the kernel fallback
-      ::suspend_fallback(root_resource(), ctx.sflags());
-      // if we get here the system did not suspend successfully
-      ctx.set_flags(SuspendContext::Flags::kRunning);
-    }
-
-    if (callback_info->callback) {
-      callback_info->callback(ZX_OK);
-      callback_info->callback = nullptr;
-    }
-  };
-  // We don't need to suspend anything except sys_device and it's children,
-  // since we do not run suspend hooks for children of test or misc
-
-  auto task = SuspendTask::Create(sys_device(), suspend_context().sflags(), std::move(completion));
-  suspend_context().set_task(std::move(task));
-  LOGF(INFO, "Successfully created suspend task on device 'sys'");
+  suspend_handler_.Suspend(flags, std::move(callback));
 }
 
 void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback) {
@@ -1476,10 +1308,6 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
   if (status != ZX_OK) {
     LOGF(ERROR, "Failure to create resume timeout watchdog");
   }
-}
-
-void Coordinator::Suspend(uint32_t flags) {
-  Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags), [](zx_status_t) {});
 }
 
 void Coordinator::Resume(SystemPowerState target_state, ResumeCallback callback) {
@@ -1877,13 +1705,11 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
         .Suspend =
             [](void* ctx, uint32_t flags, fidl_txn_t* txn) {
               auto* async_txn = fidl_async_txn_create(txn);
-              static_cast<Coordinator*>(ctx)->Suspend(
-                  SuspendContext(SuspendContext::Flags::kSuspend, flags),
-                  [async_txn](zx_status_t status) {
-                    fuchsia_device_manager_AdministratorSuspend_reply(
-                        fidl_async_txn_borrow(async_txn), status);
-                    fidl_async_txn_complete(async_txn, true);
-                  });
+              static_cast<Coordinator*>(ctx)->Suspend(flags, [async_txn](zx_status_t status) {
+                fuchsia_device_manager_AdministratorSuspend_reply(fidl_async_txn_borrow(async_txn),
+                                                                  status);
+                fidl_async_txn_complete(async_txn, true);
+              });
               return ZX_ERR_ASYNC;
             },
     };
@@ -2001,7 +1827,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {
-  this->ShutdownFilesystems();
+  suspend_handler_.ShutdownFilesystems();
 }
 
 std::string Coordinator::GetFragmentDriverPath() const {

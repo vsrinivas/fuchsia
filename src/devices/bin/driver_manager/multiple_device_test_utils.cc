@@ -146,7 +146,7 @@ void MultipleDeviceTestCase::SetUp() {
     coordinator_loop()->RunUntilIdle();
   }
 
-  coordinator_.SetFshostAdminClient(
+  coordinator_.set_fshost_admin_client(
       coordinator_.admin_server_.CreateClient(mock_server_loop_.dispatcher()));
 }
 
@@ -282,8 +282,7 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
 void MultipleDeviceTestCase::DoSuspendWithCallback(
     uint32_t flags, fit::function<void(zx_status_t status)> suspend_complete_cb) {
   DoSuspend(flags, [this, suspend_cb = std::move(suspend_complete_cb)](uint32_t flags) mutable {
-    coordinator()->Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags),
-                           std::move(suspend_cb));
+    coordinator()->Suspend(flags, std::move(suspend_cb));
   });
 }
 

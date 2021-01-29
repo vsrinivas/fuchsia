@@ -51,8 +51,8 @@ class CoordinatorForTest : public Coordinator {
   CoordinatorForTest(CoordinatorConfig config, async_dispatcher_t* dispatcher)
       : Coordinator(std::move(config), dispatcher) {}
 
-  void SetFshostAdminClient(std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> client) {
-    fshost_admin_client_ = std::move(client);
+  void set_fshost_admin_client(std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> client) {
+    suspend_handler().set_fshost_admin_client(std::move(client));
   }
 
   MockFshostAdminServer admin_server_;
