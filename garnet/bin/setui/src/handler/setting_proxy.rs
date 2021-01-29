@@ -5,7 +5,8 @@
 // TODO(fxb/68069): Add module documentation describing Setting Proxy's role in
 // setting handling.
 use crate::handler::base::{
-    Command, Event, ExitResult, SettingHandlerFactory, SettingHandlerResult, State,
+    Command, Error as HandlerError, Event, ExitResult, Payload as HandlerPayload,
+    Request as HandlerRequest, SettingHandlerFactory, SettingHandlerResult, State,
 };
 use crate::handler::setting_handler::ControllerError;
 use std::collections::VecDeque;
@@ -19,12 +20,13 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::Request;
+use crate::handler::base::{Payload, Request};
 use crate::internal::core;
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service;
+use crate::service::TryFromWithClient;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use fuchsia_zircon::Duration;
 
@@ -36,6 +38,8 @@ enum Client {
     /// The first element represents the id of the action while the second
     /// element is the client to communicate back responses to.
     Core(u64, core::message::MessageClient),
+    /// A client from the Unified (service) MessageHub
+    Service(service::message::MessageClient),
 }
 
 /// A container for associating a Handler Request with a given [`Client`].
@@ -51,6 +55,16 @@ impl RequestInfo {
         match &self.client {
             Client::Core(id, client) => {
                 client.reply(core::Payload::Event(SettingEvent::Response(*id, result))).send();
+            }
+            Client::Service(client) => {
+                // While the switchboard is still being used, we must manually
+                // convert the ControllerError into a HandlerError if present.
+                // Once switchboard has been removed, we can move SettingProxy
+                // and controller implementations to report back HandlerErrors
+                // directly.
+                client
+                    .reply(HandlerPayload::Response(result.map_err(HandlerError::from)).into())
+                    .send();
             }
         }
     }
@@ -204,8 +218,11 @@ impl SettingProxy {
 
                 futures::select! {
                     event = receptor_fuse => {
-                        // TODO(fxbug.dev/67536): Add logic here as more
-                        // messages are moved to the main MessageHub.
+                        if let Ok((Payload::Request(request), client)) =
+                                event.map_or(Err("no event"),
+                                Payload::try_from_with_client) {
+                            proxy.process_service_request(request, client).await;
+                        }
                     }
                     // Handle top level message from controllers.
                     controller_event = controller_fuse => {
@@ -271,6 +288,18 @@ impl SettingProxy {
         })
         .detach();
         Ok((signature, handler_signature))
+    }
+
+    async fn process_service_request(
+        &mut self,
+        request: HandlerRequest,
+        message_client: service::message::MessageClient,
+    ) {
+        self.process_request(RequestInfo {
+            setting_request: request,
+            client: Client::Service(message_client),
+        })
+        .await;
     }
 
     /// Interpret action from switchboard into proxy actions.

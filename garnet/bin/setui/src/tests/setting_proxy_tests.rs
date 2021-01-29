@@ -17,17 +17,18 @@ use async_trait::async_trait;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{
-    Command, Event, ExitResult, Request, SettingHandlerFactory, SettingHandlerFactoryError,
-    SettingHandlerResult, State,
+    Command, Error as HandlerError, Event, ExitResult, Payload as HandlerPayload, Request,
+    Response, SettingHandlerFactory, SettingHandlerFactoryError, SettingHandlerResult, State,
 };
 use crate::handler::setting_handler::ControllerError;
 use crate::handler::setting_proxy::SettingProxy;
-use crate::internal::core::message::{create_hub, Messenger};
+use crate::internal::core::message::create_hub;
 use crate::internal::core::{self, Address, Payload};
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
+use crate::service::TryFromWithClient;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
@@ -245,10 +246,12 @@ impl TestEnvironmentBuilder {
         )
         .await
         .expect("proxy creation should succeed");
-        let (messenger_client, _) = core_messenger_factory
+        let (switchboard_client, _) = core_messenger_factory
             .create(MessengerType::Addressable(Address::Switchboard))
             .await
             .unwrap();
+
+        let (service_client, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         let (handler_messenger, handler_receptor) =
             handler_factory.lock().await.create(self.setting_type).await;
@@ -265,7 +268,8 @@ impl TestEnvironmentBuilder {
         TestEnvironment {
             proxy_signature,
             proxy_handler_signature,
-            messenger_client,
+            service_client,
+            switchboard_client,
             handler_factory,
             setting_handler_rx: state_rx,
             setting_handler: handler,
@@ -279,7 +283,8 @@ impl TestEnvironmentBuilder {
 pub struct TestEnvironment {
     proxy_signature: core::message::Signature,
     proxy_handler_signature: handler::message::Signature,
-    messenger_client: Messenger,
+    service_client: service::message::Messenger,
+    switchboard_client: core::message::Messenger,
     handler_factory: Arc<Mutex<FakeFactory>>,
     setting_handler_rx: UnboundedReceiver<State>,
     setting_handler: Arc<Mutex<SettingHandler>>,
@@ -319,15 +324,17 @@ async fn test_message_hub_presence() {
         .expect("should have result"));
 }
 
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_notify() {
+async fn test_notify_switchboard() {
     let setting_type = SettingType::Unknown;
     let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
     // Send a listen state and make sure sink is notified.
     {
         assert!(environment
-            .messenger_client
+            .switchboard_client
             .message(
                 Payload::Action(SettingAction {
                     id: 1,
@@ -353,7 +360,7 @@ async fn test_notify() {
     // Send an end listen state and make sure sink is notified.
     {
         environment
-            .messenger_client
+            .switchboard_client
             .message(
                 Payload::Action(SettingAction {
                     id: 1,
@@ -382,6 +389,39 @@ async fn test_notify() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_request() {
     let setting_type = SettingType::Unknown;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    environment
+        .setting_handler
+        .lock()
+        .await
+        .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
+
+    // Send initial request.
+    let mut receptor = environment
+        .service_client
+        .message(
+            HandlerPayload::Request(Request::Get).into(),
+            Audience::Address(service::Address::Handler(setting_type)),
+        )
+        .send();
+
+    while let Some(event) = receptor.next().await {
+        if let Ok((HandlerPayload::Response(response), _)) =
+            HandlerPayload::try_from_with_client(event)
+        {
+            assert!(response.is_ok());
+            assert_eq!(None, response.unwrap());
+            return;
+        }
+    }
+}
+
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_switchboard_request() {
+    let setting_type = SettingType::Unknown;
     let request_id = 42;
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
@@ -393,7 +433,7 @@ async fn test_request() {
 
     // Send initial request.
     let mut receptor = environment
-        .messenger_client
+        .switchboard_client
         .message(
             Payload::Action(SettingAction {
                 id: request_id,
@@ -421,6 +461,71 @@ async fn test_request() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_request_order() {
     let setting_type = SettingType::Unknown;
+    let request_id_1 = 0;
+    let request_id_2 = 1;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    environment
+        .setting_handler
+        .lock()
+        .await
+        .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
+
+    // Send multiple requests.
+    let receptor_1 = environment
+        .service_client
+        .message(
+            HandlerPayload::Request(Request::Get).into(),
+            Audience::Address(service::Address::Handler(setting_type)),
+        )
+        .send();
+    let receptor_2 = environment
+        .service_client
+        .message(
+            HandlerPayload::Request(Request::Get).into(),
+            Audience::Address(service::Address::Handler(setting_type)),
+        )
+        .send();
+
+    // Wait for both requests to finish and add them to the list as they finish so we can verify the
+    // order.
+    let mut completed_request_ids = Vec::<u64>::new();
+    let mut receptor_1_fuse = receptor_1.fuse();
+    let mut receptor_2_fuse = receptor_2.fuse();
+    loop {
+        environment
+            .setting_handler
+            .lock()
+            .await
+            .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
+        futures::select! {
+            payload_1 = receptor_1_fuse.next() => {
+                if let Ok((HandlerPayload::Response(response), _)) =
+                        payload_1.map_or(Err("no event"),
+                        HandlerPayload::try_from_with_client) {
+                    // First request finishes first.
+                    assert_eq!(completed_request_ids.len(), 0);
+                    completed_request_ids.push(request_id_1);
+                }
+            },
+            payload_2 = receptor_2_fuse.next() => {
+                if let Ok((HandlerPayload::Response(response), _)) =
+                        payload_2.map_or(Err("no event"),
+                        HandlerPayload::try_from_with_client) {
+                    assert_eq!(completed_request_ids.len(), 1);
+                    completed_request_ids.push(request_id_2);
+                }
+            },
+            complete => break,
+        }
+    }
+}
+
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_request_order_switchboard() {
+    let setting_type = SettingType::Unknown;
     let request_id_1 = 42;
     let request_id_2 = 43;
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
@@ -433,7 +538,7 @@ async fn test_request_order() {
 
     // Send multiple requests.
     let receptor_1 = environment
-        .messenger_client
+        .switchboard_client
         .message(
             Payload::Action(SettingAction {
                 id: request_id_1,
@@ -444,7 +549,7 @@ async fn test_request_order() {
         )
         .send();
     let receptor_2 = environment
-        .messenger_client
+        .switchboard_client
         .message(
             Payload::Action(SettingAction {
                 id: request_id_2,
@@ -500,17 +605,19 @@ async fn test_request_order() {
     assert_eq!(completed_request_ids[1], request_id_2);
 }
 
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
 /// Ensures setting handler is only generated once if never torn down.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_generation() {
+async fn test_generation_switchboard() {
     let setting_type = SettingType::Unknown;
     let request_id = 42;
     let environment = TestEnvironmentBuilder::new(setting_type).build().await;
 
     // Send initial request.
-    let _ = get_response(
+    let _ = get_switchboard_response(
         environment
-            .messenger_client
+            .switchboard_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
@@ -527,9 +634,9 @@ async fn test_generation() {
     assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
 
     // Send followup request.
-    let _ = get_response(
+    let _ = get_switchboard_response(
         environment
-            .messenger_client
+            .switchboard_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
@@ -546,11 +653,9 @@ async fn test_generation() {
     assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
 }
 
-/// Ensures setting handler is generated multiple times successfully if torn down.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_regeneration() {
     let setting_type = SettingType::Unknown;
-    let request_id = 42;
     let (done_tx, done_rx) = oneshot::channel();
     let mut environment =
         TestEnvironmentBuilder::new(setting_type).set_done_tx(Some(done_tx)).build().await;
@@ -559,7 +664,93 @@ async fn test_regeneration() {
     assert!(
         get_response(
             environment
-                .messenger_client
+                .service_client
+                .message(
+                    HandlerPayload::Request(Request::Get).into(),
+                    Audience::Address(service::Address::Handler(setting_type)),
+                )
+                .send()
+        )
+        .await
+        .is_some(),
+        "response should have been received"
+    );
+
+    // Ensure the handler was only created once.
+    assert_eq!(1, environment.handler_factory.lock().await.get_request_count(setting_type));
+
+    // The subsequent teardown should happen here.
+    done_rx.await.ok();
+    let mut hit_teardown = false;
+    loop {
+        let state = environment.setting_handler_rx.next().await;
+        match state {
+            Some(State::Teardown) => {
+                hit_teardown = true;
+                break;
+            }
+            None => break,
+            _ => {}
+        }
+    }
+    assert!(hit_teardown, "Handler should have torn down");
+    drop(environment.setting_handler);
+
+    // Now that the handler is dropped, the setting_handler_tx should be dropped too and the rx end
+    // will return none.
+    assert!(
+        environment.setting_handler_rx.next().await.is_none(),
+        "There should be no more states after teardown"
+    );
+
+    let (handler_messenger, handler_receptor) =
+        environment.handler_factory.lock().await.create(setting_type).await;
+    let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
+    let _handler = SettingHandler::create(
+        handler_messenger,
+        handler_receptor,
+        environment.proxy_handler_signature,
+        setting_type,
+        state_tx,
+        None,
+    );
+
+    // Send followup request.
+    assert!(
+        get_response(
+            environment
+                .service_client
+                .message(
+                    HandlerPayload::Request(Request::Get).into(),
+                    Audience::Address(service::Address::Handler(setting_type)),
+                )
+                .send()
+        )
+        .await
+        .is_some(),
+        "response should have been received"
+    );
+
+    // Check that the handler was re-generated.
+    assert_eq!(2, environment.handler_factory.lock().await.get_request_count(setting_type));
+}
+
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
+/// Ensures setting handler is generated multiple times successfully if torn down.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_regeneration_switchboard() {
+    let setting_type = SettingType::Unknown;
+    let request_id = 42;
+    let (done_tx, done_rx) = oneshot::channel();
+    let mut environment =
+        TestEnvironmentBuilder::new(setting_type).set_done_tx(Some(done_tx)).build().await;
+
+    // Send initial request.
+    assert!(
+        get_switchboard_response(
+            environment
+                .switchboard_client
                 .message(
                     Payload::Action(SettingAction {
                         id: request_id,
@@ -616,9 +807,9 @@ async fn test_regeneration() {
 
     // Send followup request.
     assert!(
-        get_response(
+        get_switchboard_response(
             environment
-                .messenger_client
+                .switchboard_client
                 .message(
                     Payload::Action(SettingAction {
                         id: request_id,
@@ -663,13 +854,115 @@ async fn test_retry() {
         );
     }
 
+    let request = Request::Get;
+
+    // Send request.
+    let handler_result = get_response(
+        environment
+            .service_client
+            .message(
+                HandlerPayload::Request(request.clone()).into(),
+                Audience::Address(service::Address::Handler(setting_type)),
+            )
+            .send(),
+    )
+    .await
+    .expect("result should be present");
+
+    // Make sure the result is an `ControllerError::IrrecoverableError`
+    if let Err(error) = handler_result {
+        assert_eq!(error, HandlerError::IrrecoverableError);
+    } else {
+        panic!("error should have been encountered");
+    }
+
+    // For each failed attempt, make sure a retry event was broadcasted
+    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
+        );
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
+        );
+    }
+
+    // Ensure that the final event reports that attempts were exceeded
+    verify_handler_event(
+        setting_type,
+        event_receptor.next().await.expect("should be notified of external failure"),
+        event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request.clone()),
+    );
+
+    // Regenerate setting handler
+    environment.regenerate_handler(None).await;
+
+    // Queue successful response
+    environment
+        .setting_handler
+        .lock()
+        .await
+        .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
+
+    // Ensure subsequent request succeeds
+    assert!(get_response(
+        environment
+            .service_client
+            .message(
+                HandlerPayload::Request(request.clone()).into(),
+                Audience::Address(service::Address::Handler(setting_type)),
+            )
+            .send(),
+    )
+    .await
+    .expect("result should be present")
+    .is_ok());
+
+    // Make sure SettingHandler tears down
+    verify_handler_event(
+        setting_type,
+        event_receptor.next().await.expect("should be notified of teardown"),
+        event::handler::Event::Teardown,
+    );
+}
+
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
+/// Exercises the retry flow, ensuring the setting proxy goes through the
+/// defined number of tests and correctly reports back activity.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_retry_switchboard() {
+    let setting_type = SettingType::Unknown;
+    let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    let (_, mut event_receptor) = environment
+        .event_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("Should be able to retrieve receptor");
+
+    // Queue up external failure responses in the handler.
+    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+        environment.setting_handler.lock().await.queue_action(
+            Request::Get,
+            HandlerAction::Respond(Err(ControllerError::ExternalFailure(
+                setting_type,
+                "test_component".into(),
+                "connect".into(),
+            ))),
+        );
+    }
+
     let request_id = 2;
     let request = Request::Get;
 
     // Send request.
-    let (returned_request_id, handler_result) = get_response(
+    let (returned_request_id, handler_result) = get_switchboard_response(
         environment
-            .messenger_client
+            .switchboard_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
@@ -725,9 +1018,9 @@ async fn test_retry() {
         .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
 
     // Ensure subsequent request succeeds
-    assert!(get_response(
+    assert!(get_switchboard_response(
         environment
-            .messenger_client
+            .switchboard_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
@@ -773,13 +1066,86 @@ async fn test_early_exit() {
             .queue_action(Request::Get, HandlerAction::Exit(exit_result.clone()));
     }
 
+    let request = Request::Get;
+
+    // Send request.
+    let handler_result = get_response(
+        environment
+            .service_client
+            .message(
+                HandlerPayload::Request(request.clone()).into(),
+                Audience::Address(service::Address::Handler(setting_type)),
+            )
+            .send(),
+    )
+    .await
+    .expect("result should be present");
+
+    // Make sure the result is an `ControllerError::IrrecoverableError`
+    if let Err(error) = handler_result {
+        assert_eq!(error, HandlerError::IrrecoverableError);
+    } else {
+        panic!("error should have been encountered");
+    }
+
+    //For each failed attempt, make sure a retry event was broadcasted
+    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
+        );
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Exit(exit_result.clone()),
+        );
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of external failure"),
+            event::handler::Event::Request(event::handler::Action::Retry, request.clone()),
+        );
+    }
+
+    // Ensure that the final event reports that attempts were exceeded
+    verify_handler_event(
+        setting_type,
+        event_receptor.next().await.expect("should be notified of external failure"),
+        event::handler::Event::Request(event::handler::Action::AttemptsExceeded, request.clone()),
+    );
+}
+
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
+/// Ensures early exit triggers retry flow.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_early_exit_switchboard() {
+    let exit_result = Ok(());
+    let setting_type = SettingType::Unknown;
+    let environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    let (_, mut event_receptor) = environment
+        .event_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("Should be able to retrieve receptor");
+
+    // Queue up external failure responses in the handler.
+    for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {
+        environment
+            .setting_handler
+            .lock()
+            .await
+            .queue_action(Request::Get, HandlerAction::Exit(exit_result.clone()));
+    }
+
     let request_id = 2;
     let request = Request::Get;
 
     // Send request.
-    let (returned_request_id, handler_result) = get_response(
+    let (returned_request_id, handler_result) = get_switchboard_response(
         environment
-            .messenger_client
+            .switchboard_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
@@ -862,9 +1228,9 @@ fn test_timeout() {
         let request = Request::Get;
 
         // Send request.
-        let (returned_request_id, handler_result) = get_response(
+        let (returned_request_id, handler_result) = get_switchboard_response(
             environment
-                .messenger_client
+                .switchboard_client
                 .message(
                     Payload::Action(SettingAction {
                         id: request_id,
@@ -960,13 +1326,91 @@ fn test_timeout_no_retry() {
             .await
             .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
 
+        let request = Request::Get;
+
+        // Send request.
+        let handler_result = get_response(
+            environment
+                .service_client
+                .message(
+                    HandlerPayload::Request(request.clone()).into(),
+                    Audience::Address(service::Address::Handler(setting_type)),
+                )
+                .send(),
+        )
+        .await
+        .expect("result should be present");
+
+        // Make sure the result is an `ControllerError::TimeoutError`
+        assert!(
+            matches!(handler_result, Err(HandlerError::TimeoutError)),
+            "error should have been encountered"
+        );
+
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of execution"),
+            event::handler::Event::Request(event::handler::Action::Execute, request.clone()),
+        );
+        verify_handler_event(
+            setting_type,
+            event_receptor.next().await.expect("should be notified of timeout"),
+            event::handler::Event::Request(event::handler::Action::Timeout, request),
+        );
+    };
+
+    pin_utils::pin_mut!(fut);
+    let _result = loop {
+        executor.wake_main_future();
+        let new_time = fuchsia_async::Time::from_nanos(
+            executor.now().into_nanos()
+                + fuchsia_zircon::Duration::from_millis(SETTING_PROXY_TIMEOUT_MS).into_nanos(),
+        );
+        match executor.run_one_step(&mut fut) {
+            Some(Poll::Ready(x)) => break x,
+            None => panic!("Executor stalled"),
+            Some(Poll::Pending) => {
+                executor.set_fake_time(new_time);
+            }
+        }
+    };
+}
+
+// TODO(fxbug.dev//67967): Remove when all communication has switched over to
+// the unified MessageHub.
+/// Ensures that timeouts cause an error when retry is not enabled for them.
+#[test]
+fn test_timeout_no_retry_switchboard() {
+    let mut executor =
+        fuchsia_async::Executor::new_with_fake_time().expect("Failed to create executor");
+
+    let fut = async move {
+        let setting_type = SettingType::Unknown;
+        let environment = TestEnvironmentBuilder::new(setting_type)
+            .set_timeout(SETTING_PROXY_TIMEOUT_MS.millis(), false)
+            .build()
+            .await;
+
+        let (_, mut event_receptor) = environment
+            .event_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("Should be able to retrieve receptor");
+
+        // Queue up to ignore resquests
+        environment
+            .setting_handler
+            .lock()
+            .await
+            .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
+
         let request_id = 2;
         let request = Request::Get;
 
         // Send request.
-        let (returned_request_id, handler_result) = get_response(
+        let (returned_request_id, handler_result) = get_switchboard_response(
             environment
-                .messenger_client
+                .switchboard_client
                 .message(
                     Payload::Action(SettingAction {
                         id: request_id,
@@ -1037,7 +1481,19 @@ fn verify_handler_event(
     panic!("should have matched the provided event");
 }
 
-async fn get_response(
+async fn get_response(mut receptor: service::message::Receptor) -> Option<Response> {
+    while let Some(event) = receptor.next().await {
+        if let Ok((HandlerPayload::Response(response), _)) =
+            HandlerPayload::try_from_with_client(event)
+        {
+            return Some(response);
+        }
+    }
+
+    return None;
+}
+
+async fn get_switchboard_response(
     mut receptor: core::message::Receptor,
 ) -> Option<(u64, SettingHandlerResult)> {
     while let Some(event) = receptor.next().await {

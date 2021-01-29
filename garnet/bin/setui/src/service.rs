@@ -21,6 +21,7 @@
 //! should migrate here over time.
 
 use crate::base::SettingType;
+use crate::handler::base as handler;
 use crate::message_hub_definition;
 
 message_hub_definition!(Payload, Address, Role);
@@ -39,10 +40,83 @@ pub enum Address {
 /// enumeration is meant to provide a top level definition. Further definitions
 /// for particular domains should be located in the appropriate mod.
 #[derive(Clone, Debug)]
-pub enum Payload {}
+pub enum Payload {
+    /// The Setting type captures communication pertaining to settings,
+    /// including requests to access/change settings and the associated
+    /// responses.
+    Setting(handler::Payload),
+}
+
+/// A trait implemented by payloads for extracting the payload and associated
+/// [`message::MessageClient`] from a [`crate::message::base::MesageEvent`].
+pub trait TryFromWithClient<T>: Sized {
+    type Error;
+
+    fn try_from_with_client(value: T) -> Result<(Self, message::MessageClient), Self::Error>;
+}
 
 /// `Role` defines grouping for responsibilities within the service. Roles allow
 /// for addressing a particular audience space. Similar to the other
 /// enumerations, details about each role should be defined near to the domain.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Role {}
+
+/// The payload_convert macro helps convert between the domain-specific payloads
+/// (variants of [`Payload`]) and the [`Payload`] container(to/from) & MessageHub
+/// MessageEvent (from). The first matcher is the [`Payload`] variant name where
+/// the payload type can be found. Note that this is the direct variant name
+/// and not fully qualified. The second matcher is the domain-specific payload
+/// type.
+///
+/// The macro implements the following in a mod called convert:
+/// - Into from domain Payload to service MessageHub Payload
+/// - TryFrom from service MessageHub Payload to domain Payload
+/// - TryFromWithClient from service MessageHub MessageEvent to domain Payload
+///   and client.
+/// - TryFromWithClient from a service MessageHub MessageEvent option to domain
+///   Payload and client.
+#[macro_export]
+macro_rules! payload_convert {
+    ($service_payload_type:ident, $payload_type:ty) => {
+        pub mod convert {
+            use super::*;
+            use crate::service;
+            use crate::service::TryFromWithClient;
+            use std::convert::TryFrom;
+
+            impl Into<service::Payload> for $payload_type {
+                fn into(self) -> service::Payload {
+                    paste::paste! {
+                        service::Payload::[<$service_payload_type>](self)
+                    }
+                }
+            }
+
+            impl TryFrom<service::Payload> for $payload_type {
+                type Error = &'static str;
+
+                fn try_from(value: service::Payload) -> Result<Self, Self::Error> {
+                    paste::paste! {
+                        match value {
+                            service::Payload::[<$service_payload_type>](payload) => Ok(payload),
+                        }
+                    }
+                }
+            }
+
+            impl TryFromWithClient<service::message::MessageEvent> for $payload_type {
+                type Error = &'static str;
+
+                fn try_from_with_client(
+                    value: service::message::MessageEvent,
+                ) -> Result<(Self, service::message::MessageClient), Self::Error> {
+                    if let service::message::MessageEvent::Message(payload, client) = value {
+                        Ok((Payload::try_from(payload)?, client))
+                    } else {
+                        Err("wrong message type")
+                    }
+                }
+            }
+        }
+    };
+}

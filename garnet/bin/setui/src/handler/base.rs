@@ -15,6 +15,7 @@ use crate::internal::handler::message;
 use crate::intl::types::IntlInfo;
 use crate::light::types::LightState;
 use crate::night_mode::types::NightModeInfo;
+use crate::payload_convert;
 use crate::service_context::ServiceContextHandle;
 use crate::setup::types::ConfigurationInterfaceFlags;
 use async_trait::async_trait;
@@ -99,6 +100,26 @@ pub enum Request {
     // Setup info requests.
     SetConfigurationInterfaces(ConfigurationInterfaceFlags),
 }
+
+/// The data that is sent to and from setting handlers through the service
+/// MessageHub.
+#[derive(Clone, Debug)]
+pub enum Payload {
+    /// The `Request` payload communicates actions to be taken upon the setting.
+    /// These actions can be around access (get/listen) and changes (set). Note
+    /// that there is not necessarily a 1:1 relationship between `Request` and
+    /// [`Response`] defined later. It is possible a single `Request` will
+    /// result into multiple [`Response`] that are delivered on the same
+    /// MessageHub receptor.
+    Request(Request),
+    /// The `Response` payload represents the result of a `Request` action. Note
+    /// that Response is a Result; receipients should confirm whether an error
+    /// was returned and if a successful result (wich is an Option) has a value.
+    Response(Response),
+}
+
+// Conversions for Handler Payload.
+payload_convert!(Setting, Payload);
 
 impl Request {
     /// Returns the name of the enum, for writing to inspect.
