@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{keyboard, mouse, touch},
+    crate::{keyboard, media_buttons, mouse, touch},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
     fdio,
     fidl::endpoints::Proxy,
+    fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, stream::StreamExt},
@@ -48,6 +49,7 @@ pub struct InputEvent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceEvent {
     Keyboard(keyboard::KeyboardEvent),
+    MediaButtons(media_buttons::MediaButtonsEvent),
     Mouse(mouse::MouseEvent),
     Touch(touch::TouchEvent),
 }
@@ -64,6 +66,7 @@ pub enum InputDeviceEvent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceDescriptor {
     Keyboard(keyboard::KeyboardDeviceDescriptor),
+    MediaButtons(media_buttons::MediaButtonsDeviceDescriptor),
     Mouse(mouse::MouseDeviceDescriptor),
     Touch(touch::TouchDeviceDescriptor),
 }
@@ -71,6 +74,7 @@ pub enum InputDeviceDescriptor {
 #[derive(Clone, Copy)]
 pub enum InputDeviceType {
     Keyboard,
+    MediaButtons,
     Mouse,
     Touch,
 }
@@ -105,7 +109,7 @@ pub trait InputDeviceBinding: Send {
 ///                      InputReport that precedes it. Each type of input device defines how it
 ///                      processes InputReports.
 pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
-    device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
+    device_proxy: fidl_input_report::InputDeviceProxy,
     device_descriptor: InputDeviceDescriptor,
     mut event_sender: Sender<InputEvent>,
     mut process_reports: InputDeviceProcessReportsFn,
@@ -159,7 +163,7 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
 /// - `input_device`: The InputDevice to check the type of.
 /// - `device_type`: The type of the device to compare to.
 pub async fn is_device_type(
-    input_device: &fidl_fuchsia_input_report::InputDeviceProxy,
+    input_device: &fidl_input_report::InputDeviceProxy,
     device_type: InputDeviceType,
 ) -> bool {
     let device_descriptor = match input_device.get_descriptor().await {
@@ -171,6 +175,20 @@ pub async fn is_device_type(
 
     // Return if the device type matches the desired `device_type`.
     match device_type {
+        InputDeviceType::MediaButtons => {
+            let supported_buttons = media_buttons::MediaButtonsBinding::supported_buttons();
+            if let Some(fidl_input_report::ConsumerControlDescriptor {
+                input: Some(input), ..
+            }) = device_descriptor.consumer_control
+            {
+                input
+                    .buttons
+                    .map(|buttons| buttons.iter().any(|button| supported_buttons.contains(button)))
+                    .unwrap_or(false)
+            } else {
+                false
+            }
+        }
         InputDeviceType::Mouse => device_descriptor.mouse.is_some(),
         InputDeviceType::Touch => device_descriptor.touch.is_some(),
         InputDeviceType::Keyboard => device_descriptor.keyboard.is_some(),
@@ -185,10 +203,13 @@ pub async fn is_device_type(
 /// - `input_event_sender`: The channel to send generated InputEvents to.
 pub async fn get_device_binding(
     device_type: InputDeviceType,
-    device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
+    device_proxy: fidl_input_report::InputDeviceProxy,
     input_event_sender: Sender<InputEvent>,
 ) -> Result<Box<dyn InputDeviceBinding>, Error> {
     match device_type {
+        InputDeviceType::MediaButtons => Ok(Box::new(
+            media_buttons::MediaButtonsBinding::new(device_proxy, input_event_sender).await?,
+        )),
         InputDeviceType::Mouse => {
             Ok(Box::new(mouse::MouseBinding::new(device_proxy, input_event_sender).await?))
         }
@@ -212,7 +233,7 @@ pub async fn get_device_binding(
 pub fn get_device_from_dir_entry_path(
     dir_proxy: &fidl_fuchsia_io::DirectoryProxy,
     entry_path: &PathBuf,
-) -> Result<fidl_fuchsia_input_report::InputDeviceProxy, Error> {
+) -> Result<fidl_input_report::InputDeviceProxy, Error> {
     let input_device_path = entry_path.to_str();
     if input_device_path.is_none() {
         return Err(format_err!("Failed to get entry path as a string."));
@@ -241,12 +262,9 @@ pub fn event_time_or_now(event_time: Option<i64>) -> EventTime {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, fidl::endpoints::create_proxy_and_stream, fuchsia_async as fasync,
-        futures::TryStreamExt,
-    };
+    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
 
-    /// Spawns a local `fidl_fuchsia_input_report::InputDevice` server, and returns a proxy to the
+    /// Spawns a local `fidl_input_report::InputDevice` server, and returns a proxy to the
     /// spawned server.
     /// The provided `request_handler` is notified when an incoming request is received.
     ///
@@ -257,12 +275,12 @@ mod tests {
     /// A `InputDeviceProxy` to the spawned server.
     fn spawn_input_device_server<F: 'static>(
         request_handler: F,
-    ) -> fidl_fuchsia_input_report::InputDeviceProxy
+    ) -> fidl_input_report::InputDeviceProxy
     where
-        F: Fn(fidl_fuchsia_input_report::InputDeviceRequest) + Send,
+        F: Fn(fidl_input_report::InputDeviceRequest) + Send,
     {
         let (input_device_proxy, mut input_device_server) =
-            create_proxy_and_stream::<fidl_fuchsia_input_report::InputDeviceMarker>()
+            create_proxy_and_stream::<fidl_input_report::InputDeviceMarker>()
                 .expect("Failed to create InputDevice proxy and server.");
 
         fasync::Task::spawn(async move {
@@ -287,16 +305,83 @@ mod tests {
         assert_eq!(event_time, std::i64::MIN as EventTime);
     }
 
+    // Tests that is_device_type() returns true for InputDeviceType::MediaButtons when a media
+    // button device exists.
+    #[fasync::run_singlethreaded(test)]
+    async fn media_buttons_input_device_exists() {
+        let input_device_proxy =
+            spawn_input_device_server(move |input_device_request| match input_device_request {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
+                        device_info: None,
+                        mouse: None,
+                        sensor: None,
+                        touch: None,
+                        keyboard: None,
+                        consumer_control: Some(fidl_input_report::ConsumerControlDescriptor {
+                            input: Some(fidl_input_report::ConsumerControlInputDescriptor {
+                                buttons: Some(vec![
+                                    fidl_input_report::ConsumerControlButton::VolumeUp,
+                                    fidl_input_report::ConsumerControlButton::VolumeDown,
+                                ]),
+                                ..fidl_input_report::ConsumerControlInputDescriptor::EMPTY
+                            }),
+                            ..fidl_input_report::ConsumerControlDescriptor::EMPTY
+                        }),
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
+                    });
+                }
+                _ => {
+                    assert!(false);
+                }
+            });
+
+        assert!(is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
+    }
+
+    // Tests that is_device_type() returns true for InputDeviceType::MediaButtons when a media
+    // button device doesn't exist.
+    #[fasync::run_singlethreaded(test)]
+    async fn media_buttons_input_device_doesnt_exists() {
+        let input_device_proxy =
+            spawn_input_device_server(move |input_device_request| match input_device_request {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
+                        device_info: None,
+                        mouse: None,
+                        sensor: None,
+                        touch: None,
+                        keyboard: None,
+                        consumer_control: Some(fidl_input_report::ConsumerControlDescriptor {
+                            input: Some(fidl_input_report::ConsumerControlInputDescriptor {
+                                buttons: Some(vec![
+                                    fidl_input_report::ConsumerControlButton::Reboot,
+                                ]),
+                                ..fidl_input_report::ConsumerControlInputDescriptor::EMPTY
+                            }),
+                            ..fidl_input_report::ConsumerControlDescriptor::EMPTY
+                        }),
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
+                    });
+                }
+                _ => {
+                    assert!(false);
+                }
+            });
+
+        assert!(!is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
+    }
+
     // Tests that is_device_type() returns true for InputDeviceType::Mouse when a mouse exists.
     #[fasync::run_singlethreaded(test)]
     async fn mouse_input_device_exists() {
         let input_device_proxy =
             spawn_input_device_server(move |input_device_request| match input_device_request {
-                fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
-                        mouse: Some(fidl_fuchsia_input_report::MouseDescriptor {
-                            input: Some(fidl_fuchsia_input_report::MouseInputDescriptor {
+                        mouse: Some(fidl_input_report::MouseDescriptor {
+                            input: Some(fidl_input_report::MouseInputDescriptor {
                                 movement_x: None,
                                 movement_y: None,
                                 position_x: None,
@@ -304,15 +389,15 @@ mod tests {
                                 scroll_v: None,
                                 scroll_h: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::MouseInputDescriptor::EMPTY
+                                ..fidl_input_report::MouseInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::MouseDescriptor::EMPTY
+                            ..fidl_input_report::MouseDescriptor::EMPTY
                         }),
                         sensor: None,
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -329,15 +414,15 @@ mod tests {
     async fn mouse_input_device_doesnt_exist() {
         let input_device_proxy =
             spawn_input_device_server(move |input_device_request| match input_device_request {
-                fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
                         mouse: None,
                         sensor: None,
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -354,24 +439,24 @@ mod tests {
     async fn touch_input_device_exists() {
         let input_device_proxy =
             spawn_input_device_server(move |input_device_request| match input_device_request {
-                fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
                         mouse: None,
                         sensor: None,
-                        touch: Some(fidl_fuchsia_input_report::TouchDescriptor {
-                            input: Some(fidl_fuchsia_input_report::TouchInputDescriptor {
+                        touch: Some(fidl_input_report::TouchDescriptor {
+                            input: Some(fidl_input_report::TouchInputDescriptor {
                                 contacts: None,
                                 max_contacts: None,
                                 touch_type: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::TouchInputDescriptor::EMPTY
+                                ..fidl_input_report::TouchInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::TouchDescriptor::EMPTY
+                            ..fidl_input_report::TouchDescriptor::EMPTY
                         }),
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -388,15 +473,15 @@ mod tests {
     async fn touch_input_device_doesnt_exist() {
         let input_device_proxy =
             spawn_input_device_server(move |input_device_request| match input_device_request {
-                fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
                         mouse: None,
                         sensor: None,
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -413,23 +498,23 @@ mod tests {
     async fn keyboard_input_device_exists() {
         let input_device_proxy =
             spawn_input_device_server(move |input_device_request| match input_device_request {
-                fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
                         mouse: None,
                         sensor: None,
                         touch: None,
-                        keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {
-                            input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
+                        keyboard: Some(fidl_input_report::KeyboardDescriptor {
+                            input: Some(fidl_input_report::KeyboardInputDescriptor {
                                 keys: None,
                                 keys3: None,
-                                ..fidl_fuchsia_input_report::KeyboardInputDescriptor::EMPTY
+                                ..fidl_input_report::KeyboardInputDescriptor::EMPTY
                             }),
                             output: None,
-                            ..fidl_fuchsia_input_report::KeyboardDescriptor::EMPTY
+                            ..fidl_input_report::KeyboardDescriptor::EMPTY
                         }),
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -446,15 +531,15 @@ mod tests {
     async fn keyboard_input_device_doesnt_exist() {
         let input_device_proxy =
             spawn_input_device_server(move |input_device_request| match input_device_request {
-                fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
                         mouse: None,
                         sensor: None,
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -470,11 +555,11 @@ mod tests {
     async fn no_input_device_match() {
         let input_device_proxy =
             spawn_input_device_server(move |input_device_request| match input_device_request {
-                fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
+                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
+                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
                         device_info: None,
-                        mouse: Some(fidl_fuchsia_input_report::MouseDescriptor {
-                            input: Some(fidl_fuchsia_input_report::MouseInputDescriptor {
+                        mouse: Some(fidl_input_report::MouseDescriptor {
+                            input: Some(fidl_input_report::MouseInputDescriptor {
                                 movement_x: None,
                                 movement_y: None,
                                 position_x: None,
@@ -482,32 +567,41 @@ mod tests {
                                 scroll_v: None,
                                 scroll_h: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::MouseInputDescriptor::EMPTY
+                                ..fidl_input_report::MouseInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::MouseDescriptor::EMPTY
+                            ..fidl_input_report::MouseDescriptor::EMPTY
                         }),
                         sensor: None,
-                        touch: Some(fidl_fuchsia_input_report::TouchDescriptor {
-                            input: Some(fidl_fuchsia_input_report::TouchInputDescriptor {
+                        touch: Some(fidl_input_report::TouchDescriptor {
+                            input: Some(fidl_input_report::TouchInputDescriptor {
                                 contacts: None,
                                 max_contacts: None,
                                 touch_type: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::TouchInputDescriptor::EMPTY
+                                ..fidl_input_report::TouchInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::TouchDescriptor::EMPTY
+                            ..fidl_input_report::TouchDescriptor::EMPTY
                         }),
-                        keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {
-                            input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
+                        keyboard: Some(fidl_input_report::KeyboardDescriptor {
+                            input: Some(fidl_input_report::KeyboardInputDescriptor {
                                 keys: None,
                                 keys3: None,
-                                ..fidl_fuchsia_input_report::KeyboardInputDescriptor::EMPTY
+                                ..fidl_input_report::KeyboardInputDescriptor::EMPTY
                             }),
                             output: None,
-                            ..fidl_fuchsia_input_report::KeyboardDescriptor::EMPTY
+                            ..fidl_input_report::KeyboardDescriptor::EMPTY
                         }),
-                        consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
+                        consumer_control: Some(fidl_input_report::ConsumerControlDescriptor {
+                            input: Some(fidl_input_report::ConsumerControlInputDescriptor {
+                                buttons: Some(vec![
+                                    fidl_input_report::ConsumerControlButton::VolumeUp,
+                                    fidl_input_report::ConsumerControlButton::VolumeDown,
+                                ]),
+                                ..fidl_input_report::ConsumerControlInputDescriptor::EMPTY
+                            }),
+                            ..fidl_input_report::ConsumerControlDescriptor::EMPTY
+                        }),
+                        ..fidl_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -515,6 +609,7 @@ mod tests {
                 }
             });
 
+        assert!(is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Mouse).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Touch).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Keyboard).await);

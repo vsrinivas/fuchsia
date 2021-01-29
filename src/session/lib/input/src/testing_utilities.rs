@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::utils::Position,
-    crate::{input_device, keyboard, mouse, touch},
+    crate::{input_device, keyboard, media_buttons, mouse, touch},
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input2 as fidl_ui_input2, fidl_fuchsia_ui_input3 as fidl_ui_input3,
     fuchsia_zircon as zx,
@@ -83,6 +83,66 @@ pub fn create_keyboard_event(
             modifiers2,
             modifiers3,
         }),
+        device_descriptor: device_descriptor.clone(),
+        event_time,
+    }
+}
+
+/// Creates an [`input_device::InputDeviceDescriptor`] for a media button device.
+#[cfg(test)]
+pub fn media_buttons_device_descriptor() -> input_device::InputDeviceDescriptor {
+    input_device::InputDeviceDescriptor::MediaButtons(media_buttons::MediaButtonsDeviceDescriptor {
+        buttons: vec![
+            fidl_input_report::ConsumerControlButton::VolumeUp,
+            fidl_input_report::ConsumerControlButton::VolumeDown,
+            fidl_input_report::ConsumerControlButton::Pause,
+            fidl_input_report::ConsumerControlButton::MicMute,
+            fidl_input_report::ConsumerControlButton::CameraDisable,
+        ],
+    })
+}
+
+/// Creates a [`fidl_input_report::InputReport`] with a consumer control report.
+///
+/// # Parameters
+/// - `buttons`: The buttons in the consumer control report.
+/// - `event_time`: The time of event.
+#[cfg(test)]
+pub fn create_consumer_control_input_report(
+    buttons: Vec<fidl_input_report::ConsumerControlButton>,
+    event_time: i64,
+) -> fidl_input_report::InputReport {
+    fidl_input_report::InputReport {
+        event_time: Some(event_time),
+        keyboard: None,
+        mouse: None,
+        touch: None,
+        sensor: None,
+        consumer_control: Some(fidl_input_report::ConsumerControlInputReport {
+            pressed_buttons: Some(buttons),
+            ..fidl_input_report::ConsumerControlInputReport::EMPTY
+        }),
+        trace_id: None,
+        ..fidl_input_report::InputReport::EMPTY
+    }
+}
+
+/// Creates a [`media_buttons::MediaButtonEvent`] with the provided parameters.
+///
+/// # Parameters
+/// - `pressed_buttons`: The buttons to report in the event.
+/// - `event_time`: The time of event.
+/// - `device_descriptor`: The device descriptor to add to the event.
+#[cfg(test)]
+pub fn create_media_buttons_event(
+    pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
+    event_time: input_device::EventTime,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+) -> input_device::InputEvent {
+    input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::MediaButtons(
+            media_buttons::MediaButtonsEvent::new(pressed_buttons),
+        ),
         device_descriptor: device_descriptor.clone(),
         event_time,
     }
@@ -299,6 +359,55 @@ macro_rules! assert_input_event_sequence_generates_scenic_events {
                 }
                 _ => {
                     assert!(false);
+                }
+            }
+        }
+    };
+}
+
+/// Asserts that the given sequence of input events generates the provided media buttons events when
+/// the input events are processed by the given input handler.
+#[cfg(test)]
+#[macro_export]
+macro_rules! assert_input_event_sequence_generates_media_buttons_events {
+    (
+        // The input handler that will handle input events.
+        input_handler: $input_handler:expr,
+        // The InputEvents to handle.
+        input_events: $input_events:expr,
+        // The events the listeners should receive.
+        expected_events: $expected_events:expr,
+        // The media buttons listener request stream(s).
+        media_buttons_listener_request_stream: $media_buttons_listener_request_stream:expr,
+    ) => {
+        fasync::Task::spawn(async move {
+            for input_event in $input_events {
+                let events: Vec<input_device::InputEvent> =
+                    $input_handler.handle_input_event(input_event).await;
+                assert_eq!(events.len(), 0);
+            }
+        })
+        .detach();
+
+        for mut stream in $media_buttons_listener_request_stream {
+            let mut expected_command_iter = $expected_events.clone().into_iter().peekable();
+            while let Some(request) = stream.next().await {
+                match request {
+                    Ok(fidl_ui_policy::MediaButtonsListenerRequest::OnEvent {
+                        event,
+                        responder,
+                    }) => {
+                        let expected_command = expected_command_iter.next().unwrap();
+                        assert_eq!(event, expected_command);
+                        let _ = responder.send();
+
+                        // All the expected events have been received, so make sure no more
+                        // events are present before continuing to the next stream.
+                        if expected_command_iter.peek().is_none() {
+                            break;
+                        }
+                    }
+                    _ => assert!(false),
                 }
             }
         }
