@@ -45,7 +45,11 @@ pub type Response = Result<Option<SettingInfo>, Error>;
 /// The types are arranged alphabetically.
 #[derive(PartialEq, Debug, Clone)]
 pub enum Request {
+    /// Returns the current setting information.
     Get,
+
+    /// Requests ongoing updates when the setting changes.
+    Listen,
 
     // Input events.
     OnButton(ButtonType),
@@ -127,6 +131,7 @@ impl Request {
     pub fn for_inspect(self) -> &'static str {
         match self {
             Request::Get => "Get",
+            Request::Listen => "Listen",
             Request::OnButton(_) => "OnButton",
             Request::OnVolume(_) => "OnVolume",
             Request::SetAccessibilityInfo(_) => "SetAccessibilityInfo",

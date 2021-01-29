@@ -9,6 +9,7 @@ use crate::handler::base::{
     Request as HandlerRequest, SettingHandlerFactory, SettingHandlerResult, State,
 };
 use crate::handler::setting_handler::ControllerError;
+use crate::message::action_fuse::ActionFuseBuilder;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -17,7 +18,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
-use futures::{FutureExt, StreamExt};
+use futures::StreamExt;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Payload, Request};
@@ -47,6 +48,16 @@ enum Client {
 struct RequestInfo {
     setting_request: Request,
     client: Client,
+    // This identifier is unique within each setting proxy to identify a
+    // request. This can be used for removing a particular RequestInfo within a
+    // set, such as the active change listeners.
+    id: usize,
+}
+
+impl PartialEq for RequestInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl RequestInfo {
@@ -68,6 +79,42 @@ impl RequestInfo {
             }
         }
     }
+
+    /// Sends an acknowledge message back through the reply client. This used in
+    /// long running requests (such a listen) where acknowledge message ensures
+    /// the client the request was processed.
+    async fn acknowledge(&mut self) {
+        match &mut self.client {
+            Client::Core(_, client) => {
+                client.acknowledge().await;
+            }
+            Client::Service(client) => {
+                client.acknowledge().await;
+            }
+        }
+    }
+
+    /// Adds a closure that will be triggered when the recipient for a response
+    /// to the request goes out of scope. This allows for the message handler to
+    /// know when the recipient is no longer valid.
+    async fn bind_to_scope(&mut self, trigger_fn: Box<dyn FnOnce(RequestInfo) + Sync + Send>) {
+        let request = self.clone();
+
+        let fuse = ActionFuseBuilder::new()
+            .add_action(Box::new(move || {
+                (trigger_fn)(request);
+            }))
+            .build();
+
+        match &mut self.client {
+            Client::Core(_, client) => {
+                client.bind_to_recipient(fuse).await;
+            }
+            Client::Service(client) => {
+                client.bind_to_recipient(fuse).await;
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -82,6 +129,10 @@ impl ActiveRequest {
     pub fn get_request(&self) -> Request {
         self.request.setting_request.clone()
     }
+
+    pub fn get_info(&mut self) -> &mut RequestInfo {
+        &mut self.request
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -95,6 +146,8 @@ enum ProxyRequest {
     HandleResult(SettingHandlerResult),
     /// Request to remove the active request.
     RemoveActive,
+    /// Request to remove listen request.
+    EndListen(RequestInfo),
     /// Requests resources be torn down. Called when there are no more requests
     /// to process.
     Teardown,
@@ -118,7 +171,9 @@ pub struct SettingProxy {
     client_signature: Option<handler::message::Signature>,
     active_request: Option<ActiveRequest>,
     pending_requests: VecDeque<RequestInfo>,
-    has_active_listener: bool,
+    listen_requests: Vec<RequestInfo>,
+    has_active_switchboard_listener: bool,
+    next_request_id: usize,
 
     /// Handler factory.
     handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
@@ -159,7 +214,7 @@ impl SettingProxy {
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
     ) -> Result<(core::message::Signature, handler::message::Signature), Error> {
-        let (_, mut receptor) = messenger_factory
+        let (_, receptor) = messenger_factory
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
             .await
             .map_err(Error::new)?;
@@ -167,12 +222,12 @@ impl SettingProxy {
         // TODO(fxbug.dev/67536): Remove receptors below as their logic is
         // migrated to the MessageHub defined above.
 
-        let (core_client, mut core_receptor) =
+        let (core_client, core_receptor) =
             core_messenger_factory.create(MessengerType::Unbound).await.map_err(Error::new)?;
 
         let signature = core_receptor.get_signature();
 
-        let (controller_messenger_client, mut controller_receptor) = controller_messenger_factory
+        let (controller_messenger_client, controller_receptor) = controller_messenger_factory
             .create(MessengerType::Unbound)
             .await
             .map_err(Error::new)?;
@@ -185,7 +240,7 @@ impl SettingProxy {
 
         let handler_signature = controller_receptor.get_signature();
 
-        let (proxy_request_sender, mut proxy_request_receiver) =
+        let (proxy_request_sender, proxy_request_receiver) =
             futures::channel::mpsc::unbounded::<ProxyRequest>();
 
         // We must create handle here rather than return back the value as we
@@ -193,10 +248,12 @@ impl SettingProxy {
         let mut proxy = Self {
             setting_type,
             handler_factory,
+            next_request_id: 0,
             client_signature: None,
             active_request: None,
             pending_requests: VecDeque::new(),
-            has_active_listener: false,
+            listen_requests: Vec::new(),
+            has_active_switchboard_listener: false,
             core_messenger_client: core_client,
             controller_messenger_signature: handler_signature.clone(),
             controller_messenger_client,
@@ -210,78 +267,31 @@ impl SettingProxy {
 
         // Main task loop for receiving and processing incoming messages.
         fasync::Task::spawn(async move {
-            loop {
-                let receptor_fuse = receptor.next().fuse();
-                let controller_fuse = controller_receptor.next().fuse();
-                let core_fuse = core_receptor.next().fuse();
-                futures::pin_mut!(controller_fuse, core_fuse, receptor_fuse);
+            let receptor_fuse = receptor.fuse();
+            let controller_fuse = controller_receptor.fuse();
+            let core_fuse = core_receptor.fuse();
+            let proxy_request_fuse = proxy_request_receiver.fuse();
+            futures::pin_mut!(controller_fuse, core_fuse, receptor_fuse, proxy_request_fuse);
 
+            loop {
                 futures::select! {
-                    event = receptor_fuse => {
-                        if let Ok((Payload::Request(request), client)) =
-                                event.map_or(Err("no event"),
-                                Payload::try_from_with_client) {
-                            proxy.process_service_request(request, client).await;
-                        }
+                    event = receptor_fuse.select_next_some() => {
+                        proxy.process_service_event(event).await;
                     }
                     // Handle top level message from controllers.
-                    controller_event = controller_fuse => {
-                        if let Some(
-                            MessageEvent::Message(handler::Payload::Event(event), client)
-                        ) = controller_event {
-                            // Messages received after the client signature
-                            // has been changed will be ignored.
-                            if Some(client.get_author()) != proxy.client_signature {
-                                continue;
-                            }
-                            match event {
-                                Event::Changed(setting_info) => {
-                                    proxy.notify(setting_info);
-                                }
-                                Event::Exited(result) => {
-                                    proxy.process_exit(result);
-                                }
-                            }
-                        }
+                    controller_event = controller_fuse.select_next_some() => {
+                        proxy.process_controller_event(controller_event).await;
                     }
 
                     // Handle messages from the core messenger.
-                    core_event = core_fuse => {
-                        if let Some(
-                            MessageEvent::Message(core::Payload::Action(action), message_client)
-                        ) = core_event {
-                            proxy.process_action(action, message_client).await;
-                        }
+                    core_event = core_fuse.select_next_some() => {
+                        proxy.process_core_event(core_event).await;
                     }
 
                     // Handles messages for enqueueing requests and processing
                     // results on the main event loop for proxy.
-                    request = proxy_request_receiver.next() => {
-                        if let Some(request) = request {
-                            match request {
-                                ProxyRequest::Add(request) => {
-                                    proxy.add_request(request);
-                                }
-                                ProxyRequest::Execute(recreate_handler) => {
-                                    proxy.execute_next_request(recreate_handler).await;
-                                }
-                                ProxyRequest::RemoveActive => {
-                                    proxy.remove_active_request();
-                                }
-                                ProxyRequest::Teardown => {
-                                    proxy.teardown_if_needed().await
-                                }
-                                ProxyRequest::Retry => {
-                                    proxy.retry();
-                                }
-                                ProxyRequest::HandleResult(result) => {
-                                    proxy.handle_result(result);
-                                }
-                                ProxyRequest::Listen(event) => {
-                                    proxy.handle_listen(event).await;
-                                }
-                            }
-                        }
+                    request = proxy_request_fuse.select_next_some() => {
+                        proxy.process_proxy_request(request).await;
                     }
                 }
             }
@@ -290,13 +300,73 @@ impl SettingProxy {
         Ok((signature, handler_signature))
     }
 
+    async fn process_service_event(&mut self, event: service::message::MessageEvent) {
+        if let Ok((Payload::Request(request), client)) = Payload::try_from_with_client(event) {
+            self.process_service_request(request, client).await;
+        }
+    }
+
+    async fn process_controller_event(&mut self, event: handler::message::MessageEvent) {
+        if let MessageEvent::Message(handler::Payload::Event(event), client) = event {
+            // Messages received after the client signature
+            // has been changed will be ignored.
+            if Some(client.get_author()) != self.client_signature {
+                return;
+            }
+            match event {
+                Event::Changed(setting_info) => {
+                    self.notify(setting_info);
+                }
+                Event::Exited(result) => {
+                    self.process_exit(result);
+                }
+            }
+        }
+    }
+
+    async fn process_core_event(&mut self, event: core::message::MessageEvent) {
+        if let MessageEvent::Message(core::Payload::Action(action), message_client) = event {
+            self.process_action(action, message_client).await;
+        }
+    }
+
+    async fn process_proxy_request(&mut self, request: ProxyRequest) {
+        match request {
+            ProxyRequest::Add(request) => {
+                self.add_request(request);
+            }
+            ProxyRequest::Execute(recreate_handler) => {
+                self.execute_next_request(recreate_handler).await;
+            }
+            ProxyRequest::RemoveActive => {
+                self.remove_active_request();
+            }
+            ProxyRequest::Teardown => self.teardown_if_needed().await,
+            ProxyRequest::Retry => {
+                self.retry();
+            }
+            ProxyRequest::HandleResult(result) => {
+                self.handle_result(result);
+            }
+            ProxyRequest::Listen(event) => {
+                self.handle_listen(event).await;
+            }
+            ProxyRequest::EndListen(request_info) => {
+                self.handle_end_listen(request_info).await;
+            }
+        }
+    }
+
     async fn process_service_request(
         &mut self,
         request: HandlerRequest,
         message_client: service::message::MessageClient,
     ) {
+        let id = self.next_request_id;
+        self.next_request_id += 1;
         self.process_request(RequestInfo {
             setting_request: request,
+            id,
             client: Client::Service(message_client),
         })
         .await;
@@ -320,8 +390,11 @@ impl SettingProxy {
 
         match action.data {
             SettingActionData::Request(request) => {
+                let id = self.next_request_id;
+                self.next_request_id += 1;
                 self.process_request(RequestInfo {
                     setting_request: request,
+                    id,
                     client: Client::Core(action.id, message_client),
                 })
                 .await;
@@ -356,19 +429,30 @@ impl SettingProxy {
         self.client_signature
     }
 
+    /// Returns whether there is an active listener across the various
+    /// listening clients.
+    fn is_listening(&self) -> bool {
+        self.has_active_switchboard_listener || !self.listen_requests.is_empty()
+    }
+
     /// Informs the Switchboard when the controller has indicated the setting
     /// has changed.
     fn notify(&self, setting_info: SettingInfo) {
-        if !self.has_active_listener {
+        if !self.is_listening() {
             return;
         }
 
         self.core_messenger_client
             .message(
-                core::Payload::Event(SettingEvent::Changed(setting_info)),
+                core::Payload::Event(SettingEvent::Changed(setting_info.clone())),
                 Audience::Address(core::Address::Switchboard),
             )
             .send();
+
+        // Notify each listener on the service MessageHub.
+        for request in &self.listen_requests {
+            request.reply(Ok(Some(setting_info.clone())));
+        }
     }
 
     fn process_exit(&mut self, result: ExitResult) {
@@ -389,7 +473,7 @@ impl SettingProxy {
         }
 
         // If there is an active listener, forefully refetch
-        if self.has_active_listener {
+        if self.is_listening() {
             self.request(ProxyRequest::Listen(ListenEvent::Restart));
         }
     }
@@ -432,21 +516,16 @@ impl SettingProxy {
         self.proxy_request_sender.unbounded_send(request).ok();
     }
 
-    /// Notifies handler in the case the notification listener count is
-    /// non-zero and we aren't already listening for changes or there
-    /// are no more listeners and we are actively listening.
-    async fn handle_listen(&mut self, event: ListenEvent) {
-        if let ListenEvent::ListenerCount(size) = event {
-            let no_more_listeners = size == 0;
-            if no_more_listeners ^ self.has_active_listener {
-                return;
-            }
-
-            self.has_active_listener = size > 0;
-        }
-
+    /// Sends an update to the controller about whether or not it should be
+    /// listening.
+    ///
+    /// # Arguments
+    ///
+    /// * `force_recreate_controller` - a bool representing whether the
+    /// controller should be recreated regardless if it is currently running.
+    async fn send_listen_update(&mut self, force_recreate_controller: bool) {
         let optional_handler_signature =
-            self.get_handler_signature(ListenEvent::Restart == event).await;
+            self.get_handler_signature(force_recreate_controller).await;
         if optional_handler_signature.is_none() {
             return;
         }
@@ -456,7 +535,7 @@ impl SettingProxy {
 
         self.controller_messenger_client
             .message(
-                handler::Payload::Command(Command::ChangeState(if self.has_active_listener {
+                handler::Payload::Command(Command::ChangeState(if self.is_listening() {
                     State::Listen
                 } else {
                     State::EndListen
@@ -467,6 +546,41 @@ impl SettingProxy {
             .ack();
 
         self.request(ProxyRequest::Teardown);
+    }
+
+    // TODO(fxbug.dev/67536): Remove this method once no more communication
+    // happens over the core MessageHub.
+    /// Notifies handler in the case the notification listener count is
+    /// non-zero and we aren't already listening for changes or there
+    /// are no more listeners and we are actively listening.
+    async fn handle_listen(&mut self, event: ListenEvent) {
+        if let ListenEvent::ListenerCount(size) = event {
+            let no_more_listeners = size == 0;
+            if no_more_listeners ^ self.has_active_switchboard_listener {
+                return;
+            }
+
+            self.has_active_switchboard_listener = size > 0;
+        }
+
+        self.send_listen_update(ListenEvent::Restart == event).await;
+    }
+
+    /// Notifies handler in the case the notification listener count is
+    /// non-zero and we aren't already listening for changes or there
+    /// are no more listeners and we are actively listening.
+    async fn handle_end_listen(&mut self, request: RequestInfo) {
+        let was_listening = self.is_listening();
+
+        if let Some(pos) = self.listen_requests.iter().position(|target| *target == request) {
+            self.listen_requests.remove(pos);
+        } else {
+            return;
+        }
+
+        if was_listening != self.is_listening() {
+            self.send_listen_update(false).await;
+        }
     }
 
     /// Evaluates the supplied result for the current active request. Based
@@ -549,13 +663,45 @@ impl SettingProxy {
             .await
             .expect("failed to generate handler signature");
 
+        // since we borrow self as mutable for active_request, we must retrieve
+        // the listening state (which borrows immutable) before.
+        let was_listening = self.is_listening();
+
         let active_request =
             self.active_request.as_mut().expect("active request should be present");
+
         active_request.attempts += 1;
 
         // Note that we must copy these values as we are borrowing self for
         // active_requests and self is needed to remove active below.
         let request = active_request.get_request();
+
+        if matches!(request, Request::Listen) {
+            let info = active_request.get_info();
+
+            // Add a callback when the client side goes out of scope
+            let proxy_request_sender = self.proxy_request_sender.clone();
+            info.bind_to_scope(Box::new(move |request_info| {
+                proxy_request_sender.unbounded_send(ProxyRequest::EndListen(request_info)).ok();
+            }))
+            .await;
+
+            // Add the request to tracked listen requests.
+            self.listen_requests.push(info.clone());
+
+            // Listening requests must be acknowledged as they are long-living.
+            info.acknowledge().await;
+
+            // If listening state has changed, update state.
+            if was_listening != self.is_listening() {
+                self.send_listen_update(false).await;
+            }
+
+            // Request the active request be removed as it is now tracked
+            // elsewhere.
+            self.request(ProxyRequest::RemoveActive);
+            return;
+        }
 
         // If we have exceeded the maximum number of attempts, remove this
         // request from the queue.
@@ -636,7 +782,7 @@ impl SettingProxy {
     async fn teardown_if_needed(&mut self) {
         if self.active_request.is_some()
             || !self.pending_requests.is_empty()
-            || self.has_active_listener
+            || self.is_listening()
             || self.client_signature.is_none()
         {
             return;

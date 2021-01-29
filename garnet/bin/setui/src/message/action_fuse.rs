@@ -7,7 +7,7 @@ use futures::lock::Mutex;
 use std::sync::Arc;
 
 /// Closure definition for an action that can be triggered by ActionFuse.
-pub type TriggeredAction = Box<dyn Fn() + Send + Sync + 'static>;
+pub type TriggeredAction = Box<dyn FnOnce() + Send + Sync + 'static>;
 /// The reference-counted handle to an ActionFuse. When all references go out of
 /// scope, the action will be triggered (if not defused).
 pub type ActionFuseHandle = Arc<Mutex<ActionFuse>>;
@@ -91,7 +91,7 @@ impl ActionFuse {
 
 impl Drop for ActionFuse {
     fn drop(&mut self) {
-        for action in &self.actions {
+        while let Some(action) = self.actions.pop() {
             (action)();
         }
     }

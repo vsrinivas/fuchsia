@@ -324,6 +324,47 @@ async fn test_message_hub_presence() {
         .expect("should have result"));
 }
 
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_notify() {
+    let setting_type = SettingType::Unknown;
+    let mut environment = TestEnvironmentBuilder::new(setting_type).build().await;
+
+    {
+        // Send a listen state and make sure sink is notified.
+        let mut listen_receptor = environment
+            .service_client
+            .message(
+                service::Payload::Setting(HandlerPayload::Request(Request::Listen)),
+                Audience::Address(service::Address::Handler(setting_type)),
+            )
+            .send();
+
+        assert!(listen_receptor.wait_for_acknowledge().await.is_ok(), "ack should be sent");
+
+        environment.setting_handler.lock().await.notify();
+
+        if let Some(state) = environment.setting_handler_rx.next().await {
+            assert_eq!(state, State::Listen);
+        } else {
+            panic!("should have received state update");
+        }
+    }
+
+    // Let the receptor go out of scope
+
+    if let Some(state) = environment.setting_handler_rx.next().await {
+        assert_eq!(state, State::EndListen);
+    } else {
+        panic!("should have received EndListen state update");
+    }
+
+    if let Some(state) = environment.setting_handler_rx.next().await {
+        assert_eq!(state, State::Teardown);
+    } else {
+        panic!("should have received Teardown state update");
+    }
+}
+
 // TODO(fxbug.dev//67967): Remove when all communication has switched over to
 // the unified MessageHub.
 #[fuchsia_async::run_until_stalled(test)]
