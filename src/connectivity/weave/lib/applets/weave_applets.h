@@ -43,7 +43,8 @@ struct FuchsiaWeaveAppletsModuleV1 {
   bool (*delete_applet)(fuchsia_weave_applets_handle_t);
 
   // Handles weave device event.
-  void (*handle_event)(const nl::Weave::DeviceLayer::WeaveDeviceEvent *event);
+  void (*handle_event)(fuchsia_weave_applets_handle_t handle,
+                       const nl::Weave::DeviceLayer::WeaveDeviceEvent* event);
 };
 
 // Declare an exported module instance from a loadable plugin module:

@@ -50,7 +50,8 @@ zx_status_t ext_set_applet(TestAppletSpec applet) {
 
 uint32_t ext_num_instances() { return g_instance_count; }
 
-void handle_event(const nl::Weave::DeviceLayer::WeaveDeviceEvent *event) {
+void handle_event(fuchsia_weave_applets_handle_t applets_handle,
+                  const nl::Weave::DeviceLayer::WeaveDeviceEvent* event) {
   char** arg = (char**)(&event->Platform.arg);
   *arg = g_test_string;
 }
