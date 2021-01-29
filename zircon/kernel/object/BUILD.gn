@@ -75,6 +75,7 @@ zx_library("object") {
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/ktrace",
+    "$zx/kernel/lib/object_cache",
     "$zx/kernel/lib/page_cache",
     "$zx/kernel/lib/root_resource_filter",
     "$zx/system/ulib/pretty",
@@ -87,6 +88,9 @@ zx_library("object") {
   public_deps = [
     # <object/buffer_chain.h> has #include <ktl/move.h>.
     "$zx/kernel/lib/ktl:headers",
+
+    # <object/port_dispatcher.h> has <lib/object_cache.h>
+    "$zx/kernel/lib/object_cache:headers",
 
     # <object/buffer_chain.h> has <lib/page_cache.h>
     "$zx/kernel/lib/page_cache:headers",
