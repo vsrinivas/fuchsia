@@ -167,7 +167,8 @@ Using the `Change-ID` is preferred since:
 
 * The git SHA is only known after a change is merged, and while guidance
   could be given to use the `Change-Id` in one case, and the git SHA in the
-  other, we prefer a uniform guidance.
+  other, we prefer a uniform guidance. Furthermore, you cannot reference other
+  repositories using the git SHA.
 * The link to the change is assigned by Gerrit, and is not part of the
   persistent history of the repository. Should we change the review mechanism,
   the `Change-Id` will continue to be part of the recorded history, whereas
