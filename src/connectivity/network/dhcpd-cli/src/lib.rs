@@ -394,6 +394,7 @@ async fn test_start_succeeds() {
                 pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
+            fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["lo".to_string()]),
         ],
         vec![Command { args: vec!["start"], expected_stdout: "", expected_stderr: "" }],
     )

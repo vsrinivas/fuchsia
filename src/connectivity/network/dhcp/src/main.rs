@@ -10,8 +10,7 @@ use {
         configuration,
         protocol::{Message, SERVER_PORT},
         server::{
-            get_server_id_from, DataStore as _, Server, ServerAction, ServerDispatcher,
-            ServerError, DEFAULT_STASH_ID,
+            DataStore as _, Server, ServerAction, ServerDispatcher, ServerError, DEFAULT_STASH_ID,
         },
         stash::Stash,
     },
@@ -21,7 +20,6 @@ use {
     futures::{Future, SinkExt, StreamExt, TryFutureExt, TryStreamExt},
     std::{
         cell::RefCell,
-        collections::hash_map::Entry,
         collections::HashMap,
         net::{IpAddr, Ipv4Addr, SocketAddr},
         os::unix::io::AsRawFd,
@@ -143,14 +141,14 @@ async fn main() -> Result<(), Error> {
 trait SocketServerDispatcher: ServerDispatcher {
     type Socket;
 
-    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> std::io::Result<Self::Socket>;
+    fn create_socket(name: &str, src: Ipv4Addr) -> std::io::Result<Self::Socket>;
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError>;
 }
 
 impl SocketServerDispatcher for Server<Stash> {
     type Socket = UdpSocket;
 
-    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
+    fn create_socket(name: &str, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
         let socket = socket2::Socket::new(
             socket2::Domain::ipv4(),
             socket2::Type::dgram(),
@@ -160,22 +158,21 @@ impl SocketServerDispatcher for Server<Stash> {
         // SO_REUSEPORT so that binding the same (address, port) pair to each
         // interface can still succeed.
         let () = socket.set_reuse_port(true)?;
-        if let Some(name) = name {
-            // There are currently no safe Rust interfaces to set SO_BINDTODEVICE,
-            // so we must set it through libc.
-            if unsafe {
-                libc::setsockopt(
-                    socket.as_raw_fd(),
-                    libc::SOL_SOCKET,
-                    libc::SO_BINDTODEVICE,
-                    name.as_ptr() as *const libc::c_void,
-                    name.len() as libc::socklen_t,
-                )
-            } == -1
-            {
-                return Err(std::io::Error::last_os_error());
-            }
+        // There are currently no safe Rust interfaces to set SO_BINDTODEVICE,
+        // so we must set it through libc.
+        if unsafe {
+            libc::setsockopt(
+                socket.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_BINDTODEVICE,
+                name.as_ptr() as *const libc::c_void,
+                name.len() as libc::socklen_t,
+            )
+        } == -1
+        {
+            return Err(std::io::Error::last_os_error());
         }
+        log::info!("socket bound to device {}", name);
         let () = socket.set_broadcast(true)?;
         let () = socket.bind(&SocketAddr::new(IpAddr::V4(src), SERVER_PORT).into())?;
         Ok(UdpSocket::from_socket(socket.into_udp_socket())?)
@@ -293,30 +290,26 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
 fn create_sockets_from_params<S: SocketServerDispatcher>(
     params: &configuration::ServerParameters,
 ) -> std::io::Result<Vec<S::Socket>> {
-    Ok(if params.bound_device_names.len() > 0 {
-        params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, std::io::Result<_>>(
-            Vec::new(),
-            |mut acc, name| {
-                let sock = S::create_socket(Some(name), Ipv4Addr::UNSPECIFIED)?;
-                let () = acc.push(sock);
-                Ok(acc)
-            },
-        )?
-    } else {
-        vec![S::create_socket(None, Ipv4Addr::UNSPECIFIED)?]
-    })
+    let configuration::ServerParameters { bound_device_names, .. } = params;
+    bound_device_names.iter().map(String::as_str).try_fold::<_, _, std::io::Result<_>>(
+        Vec::new(),
+        |mut acc, name| {
+            let sock = S::create_socket(name, Ipv4Addr::UNSPECIFIED)?;
+            let () = acc.push(sock);
+            Ok(acc)
+        },
+    )
 }
 
 /// Helper struct to handle buffer data from sockets.
 struct MessageHandler<'a, S: SocketServerDispatcher> {
     server: &'a RefCell<ServerDispatcherRuntime<S>>,
-    send_socks: HashMap<Ipv4Addr, S::Socket>,
 }
 
 impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
     /// Creates a new `MessageHandler` for `server`.
     fn new(server: &'a RefCell<ServerDispatcherRuntime<S>>) -> Self {
-        Self { server, send_socks: HashMap::new() }
+        Self { server }
     }
 
     /// Handles `buf` from `sender`.
@@ -333,7 +326,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
         &mut self,
         buf: &[u8],
         mut sender: std::net::SocketAddr,
-    ) -> Result<Option<(&S::Socket, std::net::SocketAddr, Vec<u8>)>, Error> {
+    ) -> Result<Option<(std::net::SocketAddr, Vec<u8>)>, Error> {
         let msg = match Message::from_buffer(buf) {
             Ok(msg) => {
                 log::debug!("parsed message from {}: {:?}", sender, msg);
@@ -379,14 +372,8 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
                 } else {
                     log::info!("sending {:?} to {}", typ, message.chaddr);
                 }
-                let src =
-                    get_server_id_from(&message).ok_or(ServerError::MissingServerIdentifier)?;
                 let response_buffer = message.serialize();
-                let sock = match self.send_socks.entry(src) {
-                    Entry::Occupied(entry) => entry.into_mut(),
-                    Entry::Vacant(entry) => entry.insert(S::create_socket(None, src)?),
-                };
-                Ok(Some((sock, sender, response_buffer)))
+                Ok(Some((sender, response_buffer)))
             }
         }
     }
@@ -401,7 +388,7 @@ async fn define_msg_handling_loop_future(
     loop {
         let (received, sender) =
             sock.recv_from(&mut buf).await.context("failed to read from socket")?;
-        if let Some((sock, dst, response)) = handler
+        if let Some((dst, response)) = handler
             .handle_from_sender(&buf[..received], sender)
             .context("failed to handle buffer")?
         {
@@ -427,8 +414,8 @@ fn define_running_server_fut<'a, S>(
 ) -> impl Future<Output = Result<(), Error>> + 'a
 where
     S: futures::Stream<
-        Item = ServerSocketCollection<<Server<Stash> as SocketServerDispatcher>::Socket>,
-    > + 'static,
+            Item = ServerSocketCollection<<Server<Stash> as SocketServerDispatcher>::Socket>,
+        > + 'static,
 {
     socket_stream.map(Ok).try_for_each(move |socket_collection| async move {
         let ServerSocketCollection { sockets, abort_registration } = socket_collection;
@@ -559,7 +546,7 @@ mod tests {
 
     #[derive(Debug, Eq, PartialEq)]
     struct CannedSocket {
-        name: Option<String>,
+        name: String,
         src: Ipv4Addr,
     }
 
@@ -577,8 +564,9 @@ mod tests {
     impl SocketServerDispatcher for CannedDispatcher {
         type Socket = CannedSocket;
 
-        fn create_socket(name: Option<&str>, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
-            Ok(CannedSocket { name: name.map(|s| s.to_string()), src })
+        fn create_socket(name: &str, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
+            let name = name.to_string();
+            Ok(CannedSocket { name, src })
         }
 
         fn dispatch_message(&mut self, mut msg: Message) -> Result<ServerAction, ServerError> {
@@ -645,6 +633,8 @@ mod tests {
         }
     }
 
+    const DEFAULT_DEVICE_NAME: &str = "foo13";
+
     fn default_params() -> dhcp::configuration::ServerParameters {
         dhcp::configuration::ServerParameters {
             server_ips: vec![std_ip_v4!("192.168.0.1")],
@@ -662,7 +652,7 @@ mod tests {
             permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
             static_assignments: dhcp::configuration::StaticAssignments(HashMap::new()),
             arp_probe: false,
-            bound_device_names: vec![],
+            bound_device_names: vec![DEFAULT_DEVICE_NAME.to_string()],
         }
     }
 
@@ -834,7 +824,7 @@ mod tests {
         server.borrow_mut().mock_leases = 1;
 
         let test_fut = async {
-            for _ in 0..3 {
+            for () in std::iter::repeat(()).take(3) {
                 assert!(
                     !proxy.is_serving().await.context("query server status request")?,
                     "server should not be serving"
@@ -847,22 +837,25 @@ mod tests {
                     .map_err(fuchsia_zircon::Status::from_raw)
                     .context("start_serving returned an error")?;
 
-                let socket_collection = socket_stream
+                let ServerSocketCollection { sockets, abort_registration } = socket_stream
                     .next()
                     .await
                     .ok_or_else(|| anyhow::anyhow!("Socket stream ended unexpectedly"))?;
 
                 // Assert that the sockets that would be created are correct.
                 assert_eq!(
-                    socket_collection.sockets,
-                    vec![CannedSocket { name: None, src: Ipv4Addr::UNSPECIFIED }]
+                    sockets,
+                    vec![CannedSocket {
+                        name: DEFAULT_DEVICE_NAME.to_string(),
+                        src: Ipv4Addr::UNSPECIFIED
+                    }]
                 );
 
                 // Create a dummy future that should be aborted when we disable the
                 // server.
                 let dummy_fut = futures::future::Abortable::new(
                     futures::future::pending::<()>(),
-                    socket_collection.abort_registration,
+                    abort_registration,
                 );
 
                 assert!(
@@ -903,8 +896,38 @@ mod tests {
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.start_serving().fuse() => res.context("start_serving failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?.map_err(fuchsia_zircon::Status::from_raw);
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => {
+                Err(anyhow::Error::msg("server finished before request"))
+            },
+        }?
+        .map_err(fuchsia_zircon::Status::from_raw);
+
+        // Must have failed to start the server.
+        assert_eq!(res, Err(fuchsia_zircon::Status::INVALID_ARGS));
+        // No abort handler must've been set.
+        assert!(server.borrow().abort_handle.is_none());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn start_server_fails_on_missing_interface_names() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
+
+        let defaults = dhcp::configuration::ServerParameters {
+            bound_device_names: Vec::new(),
+            ..default_params()
+        };
+        server.borrow_mut().params = Some(defaults.clone());
+
+        let res = futures::select! {
+            res = proxy.start_serving().fuse() => res.context("start_serving failed"),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => {
+                Err(anyhow::Error::msg("server finished before request"))
+            },
+        }?
+        .map_err(fuchsia_zircon::Status::from_raw);
 
         // Must have failed to start the server.
         assert_eq!(res, Err(fuchsia_zircon::Status::INVALID_ARGS));

@@ -359,23 +359,6 @@ async fn test_dhcp<E: netemul::Endpoint>(
 // repetition.
 
 #[variants_test]
-async fn acquire_dhcp<E: netemul::Endpoint>(name: &str) -> Result {
-    test_dhcp::<E>(
-        name,
-        &mut [DhcpTestNetwork {
-            name: DEFAULT_NETWORK_NAME,
-            eps: &mut [DEFAULT_SERVER_ENDPOINT, DEFAULT_CLIENT_ENDPOINT],
-        }],
-        &mut [&mut [
-            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![DEFAULT_SERVER_IPV4]),
-            DEFAULT_SERVER_PARAMETER_ADDRESSPOOL,
-        ]],
-        3,
-    )
-    .await
-}
-
-#[variants_test]
 async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) -> Result {
     test_dhcp::<E>(
         name,
@@ -503,6 +486,7 @@ async fn acquire_dhcp_server_restart_consistent_state<E: netemul::Endpoint>(name
             &mut [
                 fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![DEFAULT_SERVER_IPV4]),
                 DEFAULT_SERVER_PARAMETER_ADDRESSPOOL,
+                fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),
             ],
         )
         .await?;

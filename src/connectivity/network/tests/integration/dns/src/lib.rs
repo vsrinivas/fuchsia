@@ -140,6 +140,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
                 pool_range_stop: Some(fidl_ip_v4!("192.168.0.5")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
+            fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),
         ]
         .iter_mut(),
     )

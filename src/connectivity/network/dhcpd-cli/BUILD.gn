@@ -55,12 +55,6 @@ rustc_test("dhcpd-cli-test") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("dhcpd-cli-test-component") {
-  testonly = true
-  deps = [ ":dhcpd-cli-test" ]
-  manifest = "meta/dhcpd_cli_test.cmx"
-}
-
 fuchsia_shell_package("dhcpd-cli") {
   deps = [
     ":bin",
@@ -68,14 +62,15 @@ fuchsia_shell_package("dhcpd-cli") {
   ]
 }
 
-fuchsia_test_package("dhcpd-cli-tests") {
-  test_components = [ ":dhcpd-cli-test-component" ]
+fuchsia_unittest_package("dhcpd-cli-tests") {
   deps = [
     ":component",
+    ":dhcpd-cli-test",
     "//src/connectivity/network/dhcp:component",
     "//src/connectivity/network/netstack:component-debug",
     "//src/sys/stash:stash_secure",
   ]
+  manifest = "meta/dhcpd_cli_test.cmx"
 }
 
 group("tests") {
