@@ -96,7 +96,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       return 0;
 #else
       const size_t min_size_ = {{ range $paramIdx, $param := $method.Request }}
-        {{- if $paramIdx }} + {{ end }}MinSize<{{ $param.Type.Decl }}>()
+        {{- if $paramIdx }} + {{ end }}MinSize<{{ $param.Type.NatDecl }}>()
       {{- end }};
 
       // Must have enough bytes for input.
@@ -112,9 +112,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
       size_t param_size_;
   {{- range $method.Request }}
-      param_size_ = MinSize<{{ .Type.Decl }}>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for {{ .Type.Decl }} {{ .Name }}\n", param_size_);
-      {{ .Type.Decl }} {{ .Name }} = Allocate<{{ .Type.Decl }}>{}(&src_, &param_size_);
+      param_size_ = MinSize<{{ .Type.NatDecl }}>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for {{ .Type.NatDecl }} {{ .Name }}\n", param_size_);
+      {{ .Type.NatDecl }} {{ .Name }} = Allocate<{{ .Type.NatDecl }}>{}(&src_, &param_size_);
   {{- end }}
 
       xprintf("Invoking method {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}.{{ $method.Name }}\n");
@@ -126,7 +126,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
           {{- if len $method.Request }}, {{ end -}}
           [signaller = fuzzer_.NewCallbackSignaller()]({{ range $paramIdx, $param := $method.Response }}
             {{- if $paramIdx }}, {{ end -}}
-            {{ $param.Type.Decl }} {{ $param.Name }}
+            {{ $param.Type.NatDecl }} {{ $param.Name }}
           {{- end }}) {
         xprintf("Invoked {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}.{{ $method.Name }}\n");
         zx_status_t status_ = signaller.SignalCallback();

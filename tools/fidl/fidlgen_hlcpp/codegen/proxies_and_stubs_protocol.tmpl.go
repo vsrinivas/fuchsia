@@ -30,19 +30,19 @@ constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal | printf "%#x" }}lu;
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.FullDecl }} {{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.NatFullDecl }} {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "OutParams" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.FullDecl }}* out_{{ $param.Name }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.NatFullDecl }}* out_{{ $param.Name }}
   {{- end -}}
 {{ end }}
 
 {{- define "ParamTypes" -}}
   {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.FullDecl }}
+    {{- if $index }}, {{ end -}}{{ $param.Type.NatFullDecl }}
   {{- end -}}
 {{ end }}
 
@@ -301,7 +301,7 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
         {{- end }}
       {{ .Name }}(
         {{- range $index, $param := .Response -}}
-          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.FullDecl }}>(&decoder, {{ .Offset }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.NatFullDecl }}>(&decoder, {{ .Offset }})
         {{- end -}}
       );
       break;
@@ -335,7 +335,7 @@ namespace {
       {{- end }}
         callback_(
       {{- range $index, $param := .Response -}}
-        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.FullDecl }}>(&decoder, {{ .Offset }})
+        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.NatFullDecl }}>(&decoder, {{ .Offset }})
       {{- end -}}
         );
         return ZX_OK;
@@ -428,7 +428,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
         {{- end }}
       impl_->{{ .Name }}(
         {{- range $index, $param := .Request -}}
-          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.FullDecl }}>(&decoder, {{ .Offset }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.NatFullDecl }}>(&decoder, {{ .Offset }})
         {{- end -}}
         {{- if .HasResponse -}}
           {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response))
@@ -484,7 +484,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
         {{- range $index, $param := .Response }}
-  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.FullDecl }}>(&decoder_, {{ .Offset }});
+  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.NatFullDecl }}>(&decoder_, {{ .Offset }});
         {{- end }}
       {{- end }}
   return ZX_OK;

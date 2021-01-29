@@ -11,7 +11,7 @@ struct {{ .Name }};
 
 {{- define "StructMemberCloseHandles" }}
   {{- if .Type.IsResource }}
-    {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false false }}
+    {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.WirePointer false false }}
   {{- end }}
 {{- end }}
 
@@ -46,7 +46,7 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.LLDecl }} {{ .Name }} = {};
+  {{ .Type.WireDecl }} {{ .Name }} = {};
   {{- end }}
 
   {{- if .IsResourceType }}

@@ -10,7 +10,7 @@ template<>
 struct MinSize<{{ .Name }}> {
   operator size_t() {
     return {{ range $index, $member := .Members }}
-      {{- if $index }} + {{ end }}MinSize<{{ $member.Type.Decl }}>()
+      {{- if $index }} + {{ end }}MinSize<{{ $member.Type.NatDecl }}>()
     {{- end }};
   }
 };
@@ -22,8 +22,8 @@ struct Allocate<{{ .Name }}> {
     {{ .Name }} out;
     size_t out_size;
     {{- range .Members }}
-    out_size = MinSize<{{ .Type.Decl }}>() + slack_per_member;
-    out.{{ .Name }} = Allocate<{{ .Type.Decl }}>{}(src, &out_size);
+    out_size = MinSize<{{ .Type.NatDecl }}>() + slack_per_member;
+    out.{{ .Name }} = Allocate<{{ .Type.NatDecl }}>{}(src, &out_size);
     {{- end }}
     return out;
   }

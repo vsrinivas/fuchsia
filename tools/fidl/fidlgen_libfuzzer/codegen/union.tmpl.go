@@ -9,7 +9,7 @@ const tmplUnion = `
 template<>
 struct MinSize<{{ .Name }}> {
   operator size_t() {
-    size_t sizes[] = {0{{ range  .Members }}, MinSize<{{ .Type.Decl }}>(){{ end }}};
+    size_t sizes[] = {0{{ range  .Members }}, MinSize<{{ .Type.NatDecl }}>(){{ end }}};
     return 1 + *std::max_element(sizes, sizes + {{ len .Members }} + 1);
   }
 };
@@ -28,7 +28,7 @@ struct Allocate<{{ .Name }}> {
     switch (selector % {{ len .Members }}) {
       {{- range $memberIdx, $member := .Members }}
       case {{ $memberIdx }}: {
-        out.set_{{ $member.Name }}(Allocate<{{ $member.Type.Decl }}>{}(src, size));
+        out.set_{{ $member.Name }}(Allocate<{{ $member.Type.NatDecl }}>{}(src, size));
         break;
       }
       {{- end }}

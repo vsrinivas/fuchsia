@@ -10,15 +10,15 @@ const fragmentConstTmpl = `
 //{{ . }}
 {{- end}}
 {{- if .Extern }}
-extern {{ .Decorator }} {{ .Type.LLDecl }} {{ .Name }};
+extern {{ .Decorator }} {{ .Type.WireDecl }} {{ .Name }};
 {{- else }}
-{{ .Decorator }} {{ .Type.LLDecl }} {{ .Name }} = {{ .Value }};
+{{ .Decorator }} {{ .Type.WireDecl }} {{ .Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
 
 {{- define "ConstDefinition" }}
 {{- if .Extern }}
-{{ .Decorator }} {{ .Type.LLDecl }} {{ .Name }} = {{ .Value }};
+{{ .Decorator }} {{ .Type.WireDecl }} {{ .Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
 `

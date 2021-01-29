@@ -12,7 +12,7 @@ class {{ .Name }};
 {{- define "UnionMemberCloseHandles" }}
   {{- if .Type.IsResource }}
     case Ordinal::{{ .TagName }}: {
-      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false true }}
+      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.WirePointer false true }}
       break;
     }
   {{- end }}
@@ -54,7 +54,7 @@ class {{ .Name }} {
 
   bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
 
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}>&& val) {
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}>&& val) {
     {{ $.Name }} result;
     result.set_{{ .Name }}(std::move(val));
     return result;
@@ -63,7 +63,7 @@ class {{ .Name }} {
   template <typename... Args>
   static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::AnyAllocator& allocator, Args&&... args) {
     {{ $.Name }} result;
-    result.set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator,
+    result.set_{{ .Name }}(::fidl::ObjectView<{{ .Type.WireDecl }}>(allocator,
                            std::forward<Args>(args)...));
     return result;
   }
@@ -71,7 +71,7 @@ class {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}>&& elem) {
+  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}>&& elem) {
     ordinal_ = Ordinal::{{ .TagName }};
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -79,19 +79,19 @@ class {{ .Name }} {
   template <typename... Args>
   void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::{{ .TagName }};
-    set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator, std::forward<Args>(args)...));
+    set_{{ .Name }}(::fidl::ObjectView<{{ .Type.WireDecl }}>(allocator, std::forward<Args>(args)...));
   }
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.LLDecl }}& mutable_{{ .Name }}() {
+  {{ .Type.WireDecl }}& mutable_{{ .Name }}() {
     ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
-    return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data.get());
+    return *static_cast<{{ .Type.WireDecl }}*>(envelope_.data.get());
   }
-  const {{ .Type.LLDecl }}& {{ .Name }}() const {
+  const {{ .Type.WireDecl }}& {{ .Name }}() const {
     ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
-    return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data.get());
+    return *static_cast<{{ .Type.WireDecl }}*>(envelope_.data.get());
   }
   {{- end }}
 
@@ -129,8 +129,8 @@ class {{ .Name }} {
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
     {{- range .Members }}
     case {{ .Ordinal }}: {
-      ::fidl::tracking_ptr<{{.Type.LLDecl}}> to_destroy =
-        static_cast<::fidl::tracking_ptr<{{.Type.LLDecl}}>>(std::move(envelope_.data));
+      ::fidl::tracking_ptr<{{.Type.WireDecl}}> to_destroy =
+        static_cast<::fidl::tracking_ptr<{{.Type.WireDecl}}>>(std::move(envelope_.data));
       break;
     }
     {{- end}}

@@ -29,7 +29,7 @@ class {{ .Name }} final {
   {{ .Name }}& operator=({{ .Name }}&&);
 
   {{ range .Members }}
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.FullDecl }}&&);
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.NatFullDecl }}&&);
   {{- end }}
 
   {{/* There are two different tag types here:
@@ -85,18 +85,18 @@ class {{ .Name }} final {
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  {{ .Type.FullDecl }}& {{ .Name }}() {
+  {{ .Type.NatFullDecl }}& {{ .Name }}() {
     EnsureStorageInitialized(Tag::{{ .TagName }});
     return {{ .StorageName }};
   }
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  const {{ .Type.FullDecl }}& {{ .Name }}() const {
+  const {{ .Type.NatFullDecl }}& {{ .Name }}() const {
     ZX_ASSERT(is_{{ .Name }}());
     return {{ .StorageName }};
   }
-  {{ $.Name }}& set_{{ .Name }}({{ .Type.FullDecl }} value);
+  {{ $.Name }}& set_{{ .Name }}({{ .Type.NatFullDecl }} value);
   {{- end }}
 
   {{- if .IsFlexible }}
@@ -188,7 +188,7 @@ class {{ .Name }} final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
   {{- range .Members }}
-    {{ .Type.FullDecl }} {{ .StorageName }};
+    {{ .Type.NatFullDecl }} {{ .StorageName }};
   {{- end }}
   {{- if .IsFlexible }}
     {{ if .IsResourceType }}::fidl::UnknownData{{ else }}std::vector<uint8_t>{{ end }} unknown_data_;
@@ -226,7 +226,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   {{- range .Members }}
     case Tag::{{ .TagName }}:
     {{- if .Type.NeedsDtor }}
-      new (&{{ .StorageName }}) {{ .Type.FullDecl }}();
+      new (&{{ .StorageName }}) {{ .Type.NatFullDecl }}();
     {{- end }}
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
       break;
@@ -250,7 +250,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     {{- range .Members }}
       case Tag::{{ .TagName }}:
         {{- if .Type.NeedsDtor }}
-        new (&{{ .StorageName }}) {{ .Type.FullDecl }}();
+        new (&{{ .StorageName }}) {{ .Type.NatFullDecl }}();
         {{- end }}
         {{ .StorageName }} = std::move(other.{{ .StorageName }});
         break;
@@ -269,7 +269,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 }
 
 {{ range .Members -}}
-{{ $.Name }} {{ $.Name }}::With{{ .UpperCamelCaseName }}({{ .Type.FullDecl }}&& val) {
+{{ $.Name }} {{ $.Name }}::With{{ .UpperCamelCaseName }}({{ .Type.NatFullDecl }}&& val) {
   {{ $.Name }} result;
   result.set_{{ .Name }}(std::move(val));
   return result;
@@ -285,7 +285,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (Which()) {
     {{- range .Members }}
     case Tag::{{ .TagName }}: {
-      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.FullDecl }}, ::fidl::Encoder>(encoder));
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.NatFullDecl }}, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset);
       break;
     }
@@ -337,7 +337,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   {{- range .Members }}
     case Tag::{{ .TagName }}:
       {{- if .Type.NeedsDtor }}
-      new (&value->{{ .StorageName }}) {{ .Type.FullDecl }}();
+      new (&value->{{ .StorageName }}) {{ .Type.NatFullDecl }}();
       {{- end }}
       ::fidl::Decode(decoder, &value->{{ .StorageName }}, envelope_offset);
       break;
@@ -367,7 +367,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
     {{- range .Members }}
     case Tag::{{ .TagName }}:
       {{- if .Type.NeedsDtor }}
-      new (&result->{{ .StorageName }}) {{ .Type.FullDecl }}();
+      new (&result->{{ .StorageName }}) {{ .Type.NatFullDecl }}();
       {{- end }}
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
     {{- end }}
@@ -382,7 +382,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 
 {{- range $member := .Members }}
 
-{{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type.FullDecl }} value) {
+{{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type.NatFullDecl }} value) {
   EnsureStorageInitialized(Tag::{{ .TagName }});
   {{ .StorageName }} = std::move(value);
   return *this;
@@ -435,7 +435,7 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
       {{- range .Members }}
       case Tag::{{ .TagName }}:
-        new (&{{ .StorageName }}) {{ .Type.FullDecl }}();
+        new (&{{ .StorageName }}) {{ .Type.NatFullDecl }}();
         break;
       {{- end }}
       default:

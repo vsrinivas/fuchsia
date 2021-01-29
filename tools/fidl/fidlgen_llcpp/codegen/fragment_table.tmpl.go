@@ -12,7 +12,7 @@ class {{ .Name }};
 {{- define "TableMemberCloseHandles" }}
   {{- if .Type.IsResource }}
     if (has_{{ .Name }}()) {
-      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer true false }}
+      {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.WirePointer true false }}
     }
   {{- end }}
 {{- end }}
@@ -37,11 +37,11 @@ public:
     {{- range .DocComments }}
   //{{ . }}
     {{- end }}
-  const {{ .Type.LLDecl }}& {{ .Name }}() const {
+  const {{ .Type.WireDecl }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
-  {{ .Type.LLDecl }}& {{ .Name }}() {
+  {{ .Type.WireDecl }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
@@ -49,7 +49,7 @@ public:
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
   {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type.LLDecl }}> elem) {
+  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type.WireDecl }}> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
@@ -62,7 +62,7 @@ public:
   void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->{{ .Name }}_.data =
-        ::fidl::ObjectView<{{ .Type.LLDecl }}>(allocator, std::forward<Args>(args)...);
+        ::fidl::ObjectView<{{ .Type.WireDecl }}>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
   }
   {{- end }}
@@ -232,7 +232,7 @@ public:
 
     {{- range $index, $item := .FrameItems }}
       {{- if $item }}
-    ::fidl::Envelope<{{ $item.Type.LLDecl }}> {{ $item.Name }}_;
+    ::fidl::Envelope<{{ $item.Type.WireDecl }}> {{ $item.Name }}_;
       {{- else }}
     ::fidl::Envelope<void> reserved_{{ $index }}_;
       {{- end }}
@@ -275,7 +275,7 @@ class {{ .Name }}::Builder final {
   //{{ . }}
     {{- end }}
     {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  Builder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}> elem) {
+  Builder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}> elem) {
     frame_ptr_->{{ .Name }}_.data = std::move(elem);
     if (max_ordinal_ < {{ .Ordinal }}) {
       // Note: the table size is not currently reduced if nullptr is set.
@@ -284,11 +284,11 @@ class {{ .Name }}::Builder final {
     }
     return std::move(*this);
   }
-  const {{ .Type.LLDecl }}& {{ .Name }}() const {
+  const {{ .Type.WireDecl }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
-  {{ .Type.LLDecl }}& {{ .Name }}() {
+  {{ .Type.WireDecl }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_ptr_->{{ .Name }}_.data;
   }
@@ -296,24 +296,24 @@ class {{ .Name }}::Builder final {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
   {{- if eq .Type.Kind TypeKinds.Table }}
-  {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
+  {{ .Type.WireDecl }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
+    return *reinterpret_cast<{{ .Type.WireDecl }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Array }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
+  ::fidl::Array<{{ .Type.ElementType.WireDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.WireDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Vector }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
+  ::fidl::VectorView<{{ .Type.ElementType.WireDecl }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.WireDecl }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
@@ -346,7 +346,7 @@ public:
   //{{ . }}
     {{- end }}
     {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  UnownedBuilder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}> elem) {
+  UnownedBuilder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.WireDecl }}> elem) {
     ZX_ASSERT(elem);
     frame_.{{ .Name }}_.data = std::move(elem);
     if (max_ordinal_ < {{ .Ordinal }}) {
@@ -354,11 +354,11 @@ public:
     }
     return std::move(*this);
   }
-  const {{ .Type.LLDecl }}& {{ .Name }}() const {
+  const {{ .Type.WireDecl }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_.{{ .Name }}_.data;
   }
-  {{ .Type.LLDecl }}& {{ .Name }}() {
+  {{ .Type.WireDecl }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *frame_.{{ .Name }}_.data;
   }
@@ -366,24 +366,24 @@ public:
     return max_ordinal_ >= {{ .Ordinal }} && frame_.{{ .Name }}_.data != nullptr;
   }
   {{- if eq .Type.Kind TypeKinds.Table }}
-  {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
+  {{ .Type.WireDecl }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_.{{ .Name }}_.data);
+    return *reinterpret_cast<{{ .Type.WireDecl }}::Builder*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Array }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
+  ::fidl::Array<{{ .Type.ElementType.WireDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.WireDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
   {{- if eq .Type.Kind TypeKinds.Vector }}
   {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
+  ::fidl::VectorView<{{ .Type.ElementType.WireDecl }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_.{{ .Name }}_.data);
+    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.WireDecl }}::Builder>*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}

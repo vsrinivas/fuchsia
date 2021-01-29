@@ -26,8 +26,8 @@ class {{ .Name }} final {
   {{ .Name }}() = default;
 
   {{- if eq 1 (len .Members) }}
-  explicit {{ .Name }}({{ (index .Members 0).Type.Decl }} v) : {{ (index .Members 0).Name }}(std::move(v)) {}
-  {{ (index .Members 0).Type.Decl }} ResultValue_() { return std::move({{ (index .Members 0).Name }}); }
+  explicit {{ .Name }}({{ (index .Members 0).Type.NatDecl }} v) : {{ (index .Members 0).Name }}(std::move(v)) {}
+  {{ (index .Members 0).Type.NatDecl }} ResultValue_() { return std::move({{ (index .Members 0).Name }}); }
   {{- end }}
   explicit {{ .Name }}({{ .Result.ValueTupleDecl }} _value_tuple) {
     {{- if .Result.ValueArity }}
@@ -55,7 +55,7 @@ class {{ .Name }} final {
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  {{ .Type.Decl }} {{ .Name }}{{ if .DefaultValue }} = {{ .DefaultValue }}{{ else }}{}{{ end }};
+  {{ .Type.NatDecl }} {{ .Name }}{{ if .DefaultValue }} = {{ .DefaultValue }}{{ else }}{}{{ end }};
   {{- end }}
 
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }

@@ -10,15 +10,15 @@ const constTemplate = `
 ///{{ . }}
 {{- end}}
 {{- if .Extern }}
-extern {{ .Decorator }} {{ .Type.Decl }} {{ .Name }};
+extern {{ .Decorator }} {{ .Type.NatDecl }} {{ .Name }};
 {{- else }}
-{{ .Decorator }} {{ .Type.Decl }} {{ .Name }} = {{ .Value }};
+{{ .Decorator }} {{ .Type.NatDecl }} {{ .Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
 
 {{- define "ConstDefinition" }}
 {{- if .Extern }}
-{{ .Decorator }} {{ .Type.Decl }} {{ .Name }} = {{ .Value }};
+{{ .Decorator }} {{ .Type.NatDecl }} {{ .Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
 `

@@ -6,14 +6,14 @@ package fidlgen_cpp
 
 // TODO(fxbug.dev/65212): Remove this file after the typed channel migration.
 
-// LLDeclNoTypedChannels returns the LLCPP declaration when the relevant
+// WireDeclNoTypedChannels returns the LLCPP declaration when the relevant
 // API would like to opt out of typed channels.
-// TODO(fxbug.dev/65212): Uses of this method should be be replaced by LLDecl.
-func (t *Type) LLDeclNoTypedChannels() string {
+// TODO(fxbug.dev/65212): Uses of this method should be be replaced by WireDecl.
+func (t *Type) WireDeclNoTypedChannels() string {
 	if t.Kind == TypeKinds.Protocol || t.Kind == TypeKinds.Request {
 		return "::zx::channel"
 	}
-	return t.LLDecl
+	return t.WireDecl
 }
 
 // ShouldEmitTypedChannelCascadingInheritance determines if the code generator

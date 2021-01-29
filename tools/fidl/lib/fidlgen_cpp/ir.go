@@ -86,18 +86,18 @@ type typeKinds struct {
 var TypeKinds = namespacedEnum(typeKinds{}).(typeKinds)
 
 type Type struct {
-	Decl string
+	NatDecl string
 
-	// Decl but with full type name
-	FullDecl string
+	// NatDecl but with full type name
+	NatFullDecl string
 
-	LLDecl    string
-	LLClass   string
-	LLPointer bool
+	WireDecl    string
+	WireClass   string
+	WirePointer bool
 
 	// Defines what operation we should use to pass a value without a move (LLCPP). It also
 	// defines the way we should initialize a field.
-	LLFamily familyKind
+	WireFamily familyKind
 
 	// NeedsDtor indicates whether this type needs to be destructed explicitely
 	// or not.
@@ -984,12 +984,12 @@ func (c *compiler) compileType(val fidl.Type) Type {
 	switch val.Kind {
 	case fidl.ArrayType:
 		t := c.compileType(*val.ElementType)
-		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
-		r.FullDecl = fmt.Sprintf("::std::array<%s, %v>", t.FullDecl, *val.ElementCount)
-		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
-		r.LLPointer = t.LLPointer
-		r.LLClass = t.LLClass
-		r.LLFamily = FamilyKinds.Reference
+		r.NatDecl = fmt.Sprintf("::std::array<%s, %v>", t.NatDecl, *val.ElementCount)
+		r.NatFullDecl = fmt.Sprintf("::std::array<%s, %v>", t.NatFullDecl, *val.ElementCount)
+		r.WireDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.WireDecl, *val.ElementCount)
+		r.WirePointer = t.WirePointer
+		r.WireClass = t.WireClass
+		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Array
 		r.IsResource = t.IsResource
@@ -997,56 +997,56 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.ElementCount = *val.ElementCount
 	case fidl.VectorType:
 		t := c.compileType(*val.ElementType)
-		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
-		r.LLFamily = FamilyKinds.Vector
+		r.WireDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.WireDecl)
+		r.WireFamily = FamilyKinds.Vector
 		if val.Nullable {
-			r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
-			r.FullDecl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.FullDecl)
+			r.NatDecl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.NatDecl)
+			r.NatFullDecl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.NatFullDecl)
 		} else {
-			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
-			r.FullDecl = fmt.Sprintf("::std::vector<%s>", t.FullDecl)
+			r.NatDecl = fmt.Sprintf("::std::vector<%s>", t.NatDecl)
+			r.NatFullDecl = fmt.Sprintf("::std::vector<%s>", t.NatFullDecl)
 		}
-		r.LLPointer = t.LLPointer
-		r.LLClass = t.LLClass
+		r.WirePointer = t.WirePointer
+		r.WireClass = t.WireClass
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Vector
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 	case fidl.StringType:
-		r.LLDecl = "::fidl::StringView"
-		r.LLFamily = FamilyKinds.String
+		r.WireDecl = "::fidl::StringView"
+		r.WireFamily = FamilyKinds.String
 		if val.Nullable {
-			r.Decl = "::fidl::StringPtr"
+			r.NatDecl = "::fidl::StringPtr"
 		} else {
-			r.Decl = "::std::string"
+			r.NatDecl = "::std::string"
 		}
-		r.FullDecl = r.Decl
+		r.NatFullDecl = r.NatDecl
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.String
 	case fidl.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
-		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
-		r.FullDecl = r.Decl
-		r.LLDecl = r.Decl
-		r.LLFamily = FamilyKinds.Reference
+		r.NatDecl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
+		r.NatFullDecl = r.NatDecl
+		r.WireDecl = r.NatDecl
+		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Handle
 		r.IsResource = true
 	case fidl.RequestType:
-		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
+		r.NatDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
 		marker := c.compileCompoundIdentifier(val.RequestSubtype, "", "", true)
-		r.FullDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", marker)
-		r.LLDecl = fmt.Sprintf("::fidl::ServerEnd<%s>", marker)
-		r.LLFamily = FamilyKinds.Reference
+		r.NatFullDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", marker)
+		r.WireDecl = fmt.Sprintf("::fidl::ServerEnd<%s>", marker)
+		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
 		r.IsResource = true
 	case fidl.PrimitiveType:
-		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
-		r.FullDecl = r.Decl
-		r.LLDecl = r.Decl
-		r.LLFamily = FamilyKinds.TrivialCopy
+		r.NatDecl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
+		r.NatFullDecl = r.NatDecl
+		r.WireDecl = r.NatDecl
+		r.WireFamily = FamilyKinds.TrivialCopy
 		r.Kind = TypeKinds.Primitive
 	case fidl.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
@@ -1057,10 +1057,10 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		}
 		declType := declInfo.Type
 		if declType == fidl.ProtocolDeclType {
-			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
-			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
-			r.LLDecl = fmt.Sprintf("::fidl::ClientEnd<%s>", ft)
-			r.LLFamily = FamilyKinds.Reference
+			r.NatDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
+			r.NatFullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
+			r.WireDecl = fmt.Sprintf("::fidl::ClientEnd<%s>", ft)
+			r.WireFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol
 			r.IsResource = true
@@ -1068,50 +1068,50 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			switch declType {
 			case fidl.BitsDeclType:
 				r.Kind = TypeKinds.Bits
-				r.LLFamily = FamilyKinds.TrivialCopy
+				r.WireFamily = FamilyKinds.TrivialCopy
 			case fidl.EnumDeclType:
 				r.Kind = TypeKinds.Enum
-				r.LLFamily = FamilyKinds.TrivialCopy
+				r.WireFamily = FamilyKinds.TrivialCopy
 			case fidl.ConstDeclType:
 				r.Kind = TypeKinds.Const
-				r.LLFamily = FamilyKinds.Reference
+				r.WireFamily = FamilyKinds.Reference
 			case fidl.StructDeclType:
 				r.Kind = TypeKinds.Struct
 				r.DeclarationName = val.Identifier
-				r.LLFamily = FamilyKinds.Reference
-				r.LLClass = ft
-				r.LLPointer = val.Nullable
+				r.WireFamily = FamilyKinds.Reference
+				r.WireClass = ft
+				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
 			case fidl.TableDeclType:
 				r.Kind = TypeKinds.Table
 				r.DeclarationName = val.Identifier
-				r.LLFamily = FamilyKinds.Reference
-				r.LLClass = ft
-				r.LLPointer = val.Nullable
+				r.WireFamily = FamilyKinds.Reference
+				r.WireClass = ft
+				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
 			case fidl.UnionDeclType:
 				r.Kind = TypeKinds.Union
 				r.DeclarationName = val.Identifier
-				r.LLFamily = FamilyKinds.Reference
-				r.LLClass = ft
+				r.WireFamily = FamilyKinds.Reference
+				r.WireClass = ft
 				r.IsResource = declInfo.IsResourceType()
 			default:
 				panic(fmt.Sprintf("unknown declaration type: %v", declType))
 			}
 
 			if val.Nullable {
-				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
-				r.FullDecl = fmt.Sprintf("::std::unique_ptr<%s>", ft)
+				r.NatDecl = fmt.Sprintf("::std::unique_ptr<%s>", t)
+				r.NatFullDecl = fmt.Sprintf("::std::unique_ptr<%s>", ft)
 				if declType == fidl.UnionDeclType {
-					r.LLDecl = fmt.Sprintf("%s", ft)
+					r.WireDecl = fmt.Sprintf("%s", ft)
 				} else {
-					r.LLDecl = fmt.Sprintf("::fidl::tracking_ptr<%s>", ft)
+					r.WireDecl = fmt.Sprintf("::fidl::tracking_ptr<%s>", ft)
 				}
 				r.NeedsDtor = true
 			} else {
-				r.Decl = t
-				r.FullDecl = ft
-				r.LLDecl = ft
+				r.NatDecl = t
+				r.NatFullDecl = ft
+				r.WireDecl = ft
 				r.NeedsDtor = true
 			}
 		}
@@ -1125,7 +1125,7 @@ func (c *compiler) compileBits(val fidl.Bits, appendNamespace string) Bits {
 	r := Bits{
 		Bits:      val,
 		Namespace: c.namespace,
-		Type:      c.compileType(val.Type).Decl,
+		Type:      c.compileType(val.Type).NatDecl,
 		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
 		Mask:      val.Mask,
 		MaskName:  c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace, false),
@@ -1147,8 +1147,8 @@ func (c *compiler) compileConst(val fidl.Const, appendNamespace string) Const {
 			Extern:     true,
 			Decorator:  "const",
 			Type: Type{
-				Decl:   "char",
-				LLDecl: "char",
+				NatDecl:  "char",
+				WireDecl: "char",
 			},
 			Name:  c.compileCompoundIdentifier(val.Name, "[]", appendNamespace, false),
 			Value: c.compileConstant(val.Value, nil, val.Type, appendNamespace),
@@ -1357,14 +1357,14 @@ func (c *compiler) compileStruct(val fidl.Struct, appendNamespace string) Struct
 		result.ValueMembers = r.Members
 		memberTypeDecls := []string{}
 		for _, m := range r.Members {
-			memberTypeDecls = append(memberTypeDecls, m.Type.Decl)
+			memberTypeDecls = append(memberTypeDecls, m.Type.NatDecl)
 		}
 		result.ValueTupleDecl = fmt.Sprintf("std::tuple<%s>", strings.Join(memberTypeDecls, ", "))
 
 		if len(r.Members) == 0 {
 			result.ValueDecl = "void"
 		} else if len(r.Members) == 1 {
-			result.ValueDecl = r.Members[0].Type.Decl
+			result.ValueDecl = r.Members[0].Type.NatDecl
 		} else {
 			result.ValueDecl = result.ValueTupleDecl
 		}
@@ -1386,11 +1386,11 @@ func (c *compiler) compileStruct(val fidl.Struct, appendNamespace string) Struct
 		// e.g. ::fidl::test::dangerous::struct::types::camel::Interface gives an
 		// "expected unqualified-id" error because of "struct".
 		// There isn't an easily accessible dangerous identifiers list to replace identifiers.
-		if strings.Contains(member.Type.FullDecl, "::fidl::test::dangerous::") {
+		if strings.Contains(member.Type.NatFullDecl, "::fidl::test::dangerous::") {
 			memcpyCompatibleDepMap = nil
 			break
 		}
-		memcpyCompatibleDepMap[member.Type.FullDecl] = struct{}{}
+		memcpyCompatibleDepMap[member.Type.NatFullDecl] = struct{}{}
 	}
 	for decl := range memcpyCompatibleDepMap {
 		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, decl)
@@ -1507,8 +1507,8 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		}
 		result := Result{
 			ResultDecl:      r.Name,
-			ValueStructDecl: r.Members[0].Type.Decl,
-			ErrorDecl:       r.Members[1].Type.Decl,
+			ValueStructDecl: r.Members[0].Type.NatDecl,
+			ErrorDecl:       r.Members[1].Type.NatDecl,
 		}
 		c.resultForStruct[val.Members[0].Type.Identifier] = &result
 		c.resultForUnion[val.Name] = &result

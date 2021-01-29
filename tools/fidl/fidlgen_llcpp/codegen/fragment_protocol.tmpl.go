@@ -6,14 +6,14 @@ package codegen
 
 const fragmentProtocolTmpl = `
 {{- define "ArgumentDeclaration" -}}
-  {{- if eq .Type.LLFamily FamilyKinds.TrivialCopy }}
-  {{ .Type.LLDecl }} {{ .Name }}
-  {{- else if eq .Type.LLFamily FamilyKinds.Reference }}
-  {{ .Type.LLDecl }}& {{ .Name }}
-  {{- else if eq .Type.LLFamily FamilyKinds.String }}
-  const {{ .Type.LLDecl }}& {{ .Name }}
-  {{- else if eq .Type.LLFamily FamilyKinds.Vector }}
-  {{ .Type.LLDecl }}& {{ .Name }}
+  {{- if eq .Type.WireFamily FamilyKinds.TrivialCopy }}
+  {{ .Type.WireDecl }} {{ .Name }}
+  {{- else if eq .Type.WireFamily FamilyKinds.Reference }}
+  {{ .Type.WireDecl }}& {{ .Name }}
+  {{- else if eq .Type.WireFamily FamilyKinds.String }}
+  const {{ .Type.WireDecl }}& {{ .Name }}
+  {{- else if eq .Type.WireFamily FamilyKinds.Vector }}
+  {{ .Type.WireDecl }}& {{ .Name }}
   {{- end }}
 {{- end }}
 
@@ -35,14 +35,14 @@ const fragmentProtocolTmpl = `
 {{- define "InitMessage" -}}
   {{- range $index, $param := . }}
   {{- if $index }}, {{- else }}: {{- end}}
-    {{- if eq $param.Type.LLFamily FamilyKinds.TrivialCopy }}
+    {{- if eq $param.Type.WireFamily FamilyKinds.TrivialCopy }}
       {{ $param.Name }}({{ $param.Name }})
-    {{- else if eq $param.Type.LLFamily FamilyKinds.Reference }}
+    {{- else if eq $param.Type.WireFamily FamilyKinds.Reference }}
       {{ $param.Name }}(std::move({{ $param.Name }}))
-    {{- else if eq $param.Type.LLFamily FamilyKinds.String }}
+    {{- else if eq $param.Type.WireFamily FamilyKinds.String }}
       {{ $param.Name }}(::fidl::unowned_ptr_t<const char>({{ $param.Name }}.data()), {{ $param.Name }}.size())
-    {{- else if eq $param.Type.LLFamily FamilyKinds.Vector }}
-      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType.LLDecl }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
+    {{- else if eq $param.Type.WireFamily FamilyKinds.Vector }}
+      {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType.WireDecl }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
     {{- end }}
   {{- end }}
 {{- end }}
@@ -172,7 +172,7 @@ class {{ .Name }} final {
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
         {{- range $index, $param := .Response }}
-    {{ $param.Type.LLDecl }} {{ $param.Name }};
+    {{ $param.Type.WireDecl }} {{ $param.Name }};
         {{- end }}
 
     {{- if .Response }}
@@ -368,7 +368,7 @@ class {{ .Name }} final {
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
         {{- range $index, $param := .Request }}
-    {{ $param.Type.LLDecl }} {{ $param.Name }};
+    {{ $param.Type.WireDecl }} {{ $param.Name }};
         {{- end }}
 
     {{- if .Request }}

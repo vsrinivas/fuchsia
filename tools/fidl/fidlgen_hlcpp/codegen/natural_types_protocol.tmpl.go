@@ -17,7 +17,7 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 
 {{- define "PointerParams" -}}
   {{- range $index, $param := . -}}
-    , {{ $param.Type.FullDecl }}* {{ $param.Name }}
+    , {{ $param.Type.NatFullDecl }}* {{ $param.Name }}
   {{- end -}}
 {{ end }}
 

@@ -27,7 +27,7 @@ class {{ .Name }} final {
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  const {{ .Type.Decl }}& {{ .Name }}() const {
+  const {{ .Type.NatDecl }}& {{ .Name }}() const {
     ZX_ASSERT({{ .FieldPresenceIsSet }});
     return {{ .FieldDataName }}.value;
   }
@@ -37,14 +37,14 @@ class {{ .Name }} final {
   {{range .DocComments}}
   ///{{ . }}
   {{- end}}
-  {{ .Type.Decl }}* mutable_{{ .Name }}() {
+  {{ .Type.NatDecl }}* mutable_{{ .Name }}() {
     if (!{{ .FieldPresenceIsSet }}) {
       {{ .FieldPresenceSet }};
       Construct(&{{ .FieldDataName }}.value);
     }
     return &{{ .FieldDataName }}.value;
   }
-  {{$.Name}}& set_{{ .Name }}({{ .Type.Decl }} _value) {
+  {{$.Name}}& set_{{ .Name }}({{ .Type.NatDecl }} _value) {
     if (!{{ .FieldPresenceIsSet }}) {
       {{ .FieldPresenceSet }};
       Construct(&{{ .FieldDataName }}.value, std::move(_value));
@@ -124,7 +124,7 @@ class {{ .Name }} final {
     {{ .ValueUnionName }}() {}
     ~{{ .ValueUnionName }}() {}
 
-    {{ .Type.Decl }} value;
+    {{ .Type.NatDecl }} value;
   };
   {{ .ValueUnionName }} {{ .FieldDataName }};
   {{- end }}
@@ -215,7 +215,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &{{ .FieldDataName }}.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Decl }}, ::fidl::Encoder>(_encoder)));
+        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.NatDecl }}, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + ({{ .Ordinal }} - 1) * sizeof(fidl_envelope_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
