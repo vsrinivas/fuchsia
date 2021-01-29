@@ -513,6 +513,7 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
   builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
   builder.AddService(admin_bindings.GetHandler(&mock_admin));
   builder.BuildAndRun(test_harness());
+  FX_LOGS(INFO) << "Waiting for session shell to startup.";
   RunLoopUntil([&] { return session_shell->is_running(); });
 
   // Connect to basemgr to call RestartSession
@@ -527,9 +528,12 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
   for (int i = 0; i < 4; i++) {
     bool session_restarted = false;
     basemgr->RestartSession([&] { session_restarted = true; });
+    FX_LOGS(INFO) << "Waiting for session shell to shutdown. Iteration: " << i;
     RunLoopUntil([&] { return !session_shell->is_running(); });
+    FX_LOGS(INFO) << "Waiting for confirmation from RestartSession().";
     RunLoopUntil([&] { return session_restarted; });
     ASSERT_FALSE(mock_admin.reboot_called()) << "Suspend called on iteration #" << i;
+    FX_LOGS(INFO) << "Waiting for session shell to start after restart.";
     RunLoopUntil([&] { return session_shell->is_running(); });
   }
   ASSERT_FALSE(mock_admin.reboot_called());
