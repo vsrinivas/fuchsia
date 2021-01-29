@@ -5,7 +5,7 @@
 use crate::base::SettingType;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::core::message;
-use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError};
+use crate::policy::base::{BoxedHandler, Context, PolicyHandlerFactoryError, PolicyType};
 use crate::policy::base::{GenerateHandler, PolicyHandlerFactory};
 use async_trait::async_trait;
 use futures::lock::Mutex;
@@ -17,9 +17,10 @@ use std::sync::Arc;
 /// PolicyHandlerFactoryImpl houses registered closures for generating setting
 /// handlers.
 pub struct PolicyHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
+    policies: HashSet<PolicyType>,
     settings: HashSet<SettingType>,
     storage_factory: Arc<Mutex<T>>,
-    generators: HashMap<SettingType, GenerateHandler<T>>,
+    generators: HashMap<PolicyType, GenerateHandler<T>>,
 
     /// Atomic counter used to generate new IDs, which uniquely identify a context.
     context_id_counter: Arc<AtomicU64>,
@@ -29,21 +30,26 @@ pub struct PolicyHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
 impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandlerFactoryImpl<T> {
     async fn generate(
         &mut self,
-        setting_type: SettingType,
+        policy_type: PolicyType,
         messenger: message::Messenger,
         setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError> {
+        let setting_type = policy_type.setting_type();
+        if !self.policies.contains(&policy_type) {
+            return Err(PolicyHandlerFactoryError::PolicyNotFound(policy_type));
+        }
+
         if !self.settings.contains(&setting_type) {
-            return Err(PolicyHandlerFactoryError::SettingNotFound(setting_type));
+            return Err(PolicyHandlerFactoryError::SettingNotFound(setting_type, policy_type));
         }
 
         let generate_function = self
             .generators
-            .get(&setting_type)
-            .ok_or(PolicyHandlerFactoryError::GeneratorNotFound(setting_type))?;
+            .get(&policy_type)
+            .ok_or(PolicyHandlerFactoryError::GeneratorNotFound(policy_type))?;
 
         let context = Context {
-            setting_type,
+            policy_type,
             messenger,
             setting_proxy_signature,
             storage_factory_handle: self.storage_factory.clone(),
@@ -52,7 +58,7 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
 
         let handler = (generate_function)(context)
             .await
-            .map_err(|_| PolicyHandlerFactoryError::HandlerStartupError(setting_type))?;
+            .map_err(|_| PolicyHandlerFactoryError::HandlerStartupError(policy_type))?;
 
         return Ok(handler);
     }
@@ -60,11 +66,13 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
 
 impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
     pub fn new(
+        policies: HashSet<PolicyType>,
         settings: HashSet<SettingType>,
         storage_factory_handle: Arc<Mutex<T>>,
         context_id_counter: Arc<AtomicU64>,
     ) -> PolicyHandlerFactoryImpl<T> {
         PolicyHandlerFactoryImpl {
+            policies,
             settings,
             storage_factory: storage_factory_handle,
             generators: HashMap::new(),
@@ -72,7 +80,7 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
         }
     }
 
-    pub fn register(&mut self, setting_type: SettingType, generate_function: GenerateHandler<T>) {
-        self.generators.insert(setting_type, generate_function);
+    pub fn register(&mut self, policy_type: PolicyType, generate_function: GenerateHandler<T>) {
+        self.generators.insert(policy_type, generate_function);
     }
 }

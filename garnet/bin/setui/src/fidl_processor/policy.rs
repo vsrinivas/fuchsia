@@ -4,18 +4,18 @@
 
 use fidl::endpoints::{Request, ServiceMarker};
 
-use crate::base::SettingType;
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
 use crate::internal::policy::{Address, Payload, Role};
 use crate::message::base::{self, Audience};
+use crate::policy::base::PolicyType;
 use crate::ExitSender;
 use fuchsia_syslog::fx_log_err;
 
 /// Convenience macro to make a policy request and send the result to a responder.
 #[macro_export]
 macro_rules! policy_request_respond {
-    ($context:ident, $responder:ident, $setting_type:expr, $request:expr) => {
-        match $context.request($setting_type, $request).await {
+    ($context:ident, $responder:ident, $policy_type:expr, $request:expr) => {
+        match $context.request($policy_type, $request).await {
             Ok(response) => $responder.send_response(response.into()),
             Err(err) => $responder.on_error(&anyhow::Error::new(err)),
         };
@@ -44,12 +44,12 @@ where
 impl RequestContext<Payload, Address, Role> {
     pub async fn request(
         &self,
-        setting_type: SettingType,
+        policy_type: PolicyType,
         request: crate::policy::base::Request,
     ) -> crate::policy::base::response::Response {
         let mut receptor = self
             .messenger
-            .message(Payload::Request(request), Audience::Address(Address::Policy(setting_type)))
+            .message(Payload::Request(request), Audience::Address(Address::Policy(policy_type)))
             .send();
 
         let response_payload = receptor.next_payload().await;

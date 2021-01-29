@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingType;
 use crate::message_hub_definition;
-use crate::policy::base::{response::Response, Request};
+use crate::policy::base::{response::Response, PolicyType, Request};
 use std::fmt::Debug;
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
-    Policy(SettingType),
+    Policy(PolicyType),
 }
 
 #[derive(PartialEq, Clone, Debug)]

@@ -21,7 +21,7 @@ use crate::internal::core;
 use crate::internal::core::message::Receptor;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::{Error as PolicyError, Payload};
-use crate::policy::base::{PolicyInfo, Request};
+use crate::policy::base::{PolicyInfo, PolicyType, Request};
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
@@ -100,7 +100,7 @@ async fn create_handler_test_environment() -> TestEnvironment {
         core_messenger,
         setting_proxy_receptor.get_signature(),
         store.clone(),
-        SettingType::Audio,
+        PolicyType::Audio,
     );
 
     let handler =
@@ -304,7 +304,7 @@ async fn test_handler_restore_persisted_state() {
         core_messenger,
         setting_proxy_receptor.get_signature(),
         store.clone(),
-        SettingType::Audio,
+        PolicyType::Audio,
     );
 
     // Write the "persisted" value to storage for the handler to read on start.
@@ -382,7 +382,7 @@ async fn test_handler_remove_unknown_policy() {
     assert_eq!(
         response,
         Err(PolicyError::InvalidArgument(
-            SettingType::Audio,
+            PolicyType::Audio,
             ARG_POLICY_ID.into(),
             format!("{:?}", invalid_policy_id).into()
         ))

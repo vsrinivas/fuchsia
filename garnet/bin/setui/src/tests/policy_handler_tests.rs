@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #[cfg(test)]
-use crate::base::SettingType;
 use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
@@ -11,7 +10,7 @@ use crate::handler::setting_handler::persist::Storage;
 use crate::internal::core;
 use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
-use crate::policy::base::{PolicyInfo, Request as PolicyRequest, UnknownInfo};
+use crate::policy::base::{PolicyInfo, PolicyType, Request as PolicyRequest, UnknownInfo};
 use crate::policy::policy_handler::{
     ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
 };
@@ -77,7 +76,7 @@ async fn test_write() {
         core_messenger,
         setting_proxy_receptor.get_signature(),
         store.clone(),
-        SettingType::Unknown,
+        PolicyType::Unknown,
     );
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is

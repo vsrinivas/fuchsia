@@ -12,7 +12,7 @@ use crate::internal::core;
 use crate::internal::policy;
 use crate::internal::policy::{Address, Role};
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
-use crate::policy::base::{PolicyHandlerFactory, Request as PolicyRequest};
+use crate::policy::base::{PolicyHandlerFactory, PolicyType, Request as PolicyRequest};
 use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use futures::lock::Mutex;
@@ -30,12 +30,13 @@ impl PolicyProxy {
     /// Creates a policy proxy and returns the signatures it uses to communicate in the core message
     /// hub.
     pub async fn create(
-        setting_type: SettingType,
+        policy_type: PolicyType,
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         core_messenger_factory: core::message::Factory,
         policy_messenger_factory: policy::message::Factory,
         setting_proxy_signature: core::message::Signature,
     ) -> Result<core::message::Signature, Error> {
+        let setting_type = policy_type.setting_type();
         let (_, switchboard_receptor) = core_messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
@@ -67,7 +68,7 @@ impl PolicyProxy {
             .map_err(Error::new)?;
 
         let (_, policy_receptor) = policy_messenger_factory
-            .messenger_builder(MessengerType::Addressable(Address::Policy(setting_type)))
+            .messenger_builder(MessengerType::Addressable(Address::Policy(policy_type)))
             .add_role(role::Signature::role(Role::PolicyHandler))
             .build()
             .await
@@ -79,7 +80,7 @@ impl PolicyProxy {
         let policy_handler = handler_factory
             .lock()
             .await
-            .generate(setting_type, handler_messenger, setting_proxy_signature)
+            .generate(policy_type, handler_messenger, setting_proxy_signature)
             .await?;
 
         let mut proxy = Self { policy_handler };

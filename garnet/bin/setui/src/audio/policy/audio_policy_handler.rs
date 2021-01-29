@@ -308,7 +308,7 @@ impl AudioPolicyHandler {
             .get_mut(&target)
             // TODO(fxbug.dev/60925): once policy targets are configurable, test this error case.
             .ok_or(PolicyError::InvalidArgument(
-                self.client_proxy.setting_type(),
+                self.client_proxy.policy_type(),
                 "target".into(),
                 format!("{:?}", target).into(),
             ))?
@@ -331,7 +331,7 @@ impl AudioPolicyHandler {
         // Find the target this policy ID is on.
         let target =
             self.state.find_policy_target(policy_id).ok_or(PolicyError::InvalidArgument(
-                self.client_proxy.setting_type(),
+                self.client_proxy.policy_type(),
                 ARG_POLICY_ID.into(),
                 format!("{:?}", policy_id).into(),
             ))?;
@@ -350,7 +350,7 @@ impl AudioPolicyHandler {
 
         // Attempt to remove the policy.
         self.state.remove_policy(policy_id).ok_or(PolicyError::InvalidArgument(
-            self.client_proxy.setting_type(),
+            self.client_proxy.policy_type(),
             ARG_POLICY_ID.into(),
             format!("{:?}", policy_id).into(),
         ))?;

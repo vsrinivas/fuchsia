@@ -8,7 +8,7 @@ use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::base::{Audience, MessengerType};
-use crate::policy::base::{response::Payload, PolicyInfo, Request};
+use crate::policy::base::{response::Payload, PolicyInfo, PolicyType, Request};
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::{internal, EnvironmentBuilder};
@@ -119,7 +119,7 @@ async fn remove_policy(env: &TestEnvironment, policy_id: u32) {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_message_hub() {
     let messenger_factory = internal::policy::message::create_hub();
-    let policy_handler_address = internal::policy::Address::Policy(SettingType::Audio);
+    let policy_handler_address = internal::policy::Address::Policy(PolicyType::Audio);
 
     // Create messenger to send request.
     let (messenger, receptor) = messenger_factory

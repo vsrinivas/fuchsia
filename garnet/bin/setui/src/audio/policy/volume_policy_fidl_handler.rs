@@ -16,13 +16,12 @@ use futures::FutureExt;
 use std::convert::TryInto;
 
 use crate::audio::policy::{self as audio, PolicyId, Response, Transform};
-use crate::base::SettingType;
 use crate::fidl_process_policy;
 use crate::fidl_processor::policy::RequestContext;
 use crate::fidl_result_sender_for_responder;
 use crate::handler::base::Error;
 use crate::internal::policy::{Address, Payload, Role};
-use crate::policy::base::{response, PolicyInfo, Request};
+use crate::policy::base::{response, PolicyInfo, PolicyType, Request};
 use crate::shutdown_responder_with_error;
 use crate::switchboard::base::FidlResponseErrorLogger;
 use crate::switchboard::hanging_get_handler::Sender;
@@ -89,7 +88,7 @@ async fn process_request(
 ) -> Result<Option<VolumePolicyControllerRequest>, anyhow::Error> {
     match request {
         VolumePolicyControllerRequest::GetProperties { responder } => {
-            policy_request_respond!(context, responder, SettingType::Audio, Request::Get);
+            policy_request_respond!(context, responder, PolicyType::Audio, Request::Get);
         }
         VolumePolicyControllerRequest::AddPolicy { target, parameters, responder } => {
             let transform: Transform = match parameters.try_into() {
@@ -104,11 +103,11 @@ async fn process_request(
             };
             let policy_request =
                 Request::Audio(audio::Request::AddPolicy(target.into(), transform));
-            policy_request_respond!(context, responder, SettingType::Audio, policy_request);
+            policy_request_respond!(context, responder, PolicyType::Audio, policy_request);
         }
         VolumePolicyControllerRequest::RemovePolicy { policy_id, responder } => {
             let policy_request = Request::Audio(audio::Request::RemovePolicy(PolicyId(policy_id)));
-            policy_request_respond!(context, responder, SettingType::Audio, policy_request);
+            policy_request_respond!(context, responder, PolicyType::Audio, policy_request);
         }
     };
     return Ok(None);

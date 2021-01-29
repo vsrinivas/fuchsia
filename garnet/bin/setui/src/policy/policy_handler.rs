@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::{SettingInfo, SettingType};
+use crate::base::SettingInfo;
 use crate::handler::base::{Request, SettingHandlerResult};
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::StorageFactory;
 use crate::internal::core::message::{Audience, Messenger, Receptor, Signature};
 use crate::internal::core::{Address, Payload};
 use crate::policy::base::response::{Error as PolicyError, Response};
-use crate::policy::base::{BoxedHandler, Context, GenerateHandlerResult, Request as PolicyRequest};
+use crate::policy::base::{
+    BoxedHandler, Context, GenerateHandlerResult, PolicyType, Request as PolicyRequest,
+};
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use anyhow::Error;
 use async_trait::async_trait;
@@ -101,13 +103,12 @@ where
 {
     Box::pin(async move {
         let storage = context.storage_factory_handle.lock().await.get_store::<S>(context.id);
-        let setting_type = context.setting_type;
 
         let proxy = ClientProxy::<S>::new(
             context.messenger.clone(),
             context.setting_proxy_signature,
             storage,
-            setting_type,
+            context.policy_type,
         );
         let handler_result = C::create(proxy).await;
 
@@ -124,7 +125,7 @@ pub struct ClientProxy<S: Storage + 'static> {
     messenger: Messenger,
     setting_proxy_signature: Signature,
     storage: Arc<Mutex<DeviceStorage<S>>>,
-    setting_type: SettingType,
+    policy_type: PolicyType,
 }
 
 impl<S: Storage + 'static> ClientProxy<S> {
@@ -134,7 +135,7 @@ impl<S: Storage + 'static> ClientProxy<S> {
             .message(
                 Payload::Action(SettingAction {
                     id: 0,
-                    setting_type: self.setting_type,
+                    setting_type: self.policy_type.setting_type(),
                     data: SettingActionData::Request(request),
                 }),
                 Audience::Messenger(self.setting_proxy_signature),
@@ -158,13 +159,13 @@ impl<S: Storage + 'static> ClientProxy<S> {
         messenger: Messenger,
         setting_proxy_signature: Signature,
         storage: Arc<Mutex<DeviceStorage<S>>>,
-        setting_type: SettingType,
+        policy_type: PolicyType,
     ) -> Self {
-        Self { messenger, setting_proxy_signature, storage, setting_type }
+        Self { messenger, setting_proxy_signature, storage, policy_type }
     }
 
-    pub fn setting_type(&self) -> SettingType {
-        self.setting_type
+    pub fn policy_type(&self) -> PolicyType {
+        self.policy_type
     }
 
     pub async fn read(&self) -> S {
@@ -181,7 +182,7 @@ impl<S: Storage + 'static> ClientProxy<S> {
 
         match self.storage.lock().await.write(&value, write_through).await {
             Ok(_) => Ok(()),
-            Err(_) => Err(PolicyError::WriteFailure(self.setting_type)),
+            Err(_) => Err(PolicyError::WriteFailure(self.policy_type)),
         }
     }
 }
@@ -189,13 +190,14 @@ impl<S: Storage + 'static> ClientProxy<S> {
 #[cfg(test)]
 mod tests {
     use super::ClientProxy;
-    use crate::base::{SettingInfo, SettingType};
+    use crate::base::SettingInfo;
     use crate::handler::base::Request;
     use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::handler::device_storage::DeviceStorageFactory;
     use crate::internal::core;
     use crate::internal::core::{Address, Payload};
     use crate::message::base::MessengerType;
+    use crate::policy::base::PolicyType;
     use crate::privacy::types::PrivacyInfo;
     use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
     use crate::tests::message_utils::verify_payload;
@@ -204,7 +206,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_client_proxy_send_setting_request() {
-        let setting_type = SettingType::Unknown;
+        let policy_type = PolicyType::Unknown;
         let setting_request = Request::Get;
 
         let core_messenger_factory = core::message::create_hub();
@@ -223,7 +225,7 @@ mod tests {
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage: store,
-            setting_type,
+            policy_type,
         };
 
         client_proxy.send_setting_request(setting_request.clone());
@@ -231,7 +233,7 @@ mod tests {
         verify_payload(
             Payload::Action(SettingAction {
                 id: 0,
-                setting_type,
+                setting_type: policy_type.setting_type(),
                 data: SettingActionData::Request(setting_request),
             }),
             &mut setting_proxy_receptor,
@@ -242,7 +244,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_client_proxy_send_changed_event() {
-        let setting_type = SettingType::Unknown;
+        let policy_type = PolicyType::Unknown;
         let setting_info = SettingInfo::Privacy(PrivacyInfo { user_data_sharing_consent: None });
 
         let core_messenger_factory = core::message::create_hub();
@@ -265,7 +267,7 @@ mod tests {
             messenger,
             setting_proxy_signature: setting_proxy_receptor.get_signature(),
             storage: store,
-            setting_type,
+            policy_type,
         };
 
         client_proxy.send_changed_event(setting_info.clone());

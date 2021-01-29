@@ -43,6 +43,7 @@ use {
     crate::monitor::base as monitor_base,
     crate::night_mode::night_mode_controller::NightModeController,
     crate::night_mode::types::NightModeInfo,
+    crate::policy::base::PolicyType,
     crate::policy::policy_handler,
     crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl,
     crate::policy::policy_proxy::PolicyProxy,
@@ -352,14 +353,18 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             context_id_counter.clone(),
         );
 
+        // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
+        // configured policy types.
+        let policy_types: HashSet<PolicyType> = [PolicyType::Audio].iter().copied().collect();
         // Create the policy handler factory and register policy handlers.
         let mut policy_handler_factory = PolicyHandlerFactoryImpl::new(
+            policy_types.clone(),
             settings.clone(),
             self.storage_factory.clone(),
             context_id_counter,
         );
         policy_handler_factory.register(
-            SettingType::Audio,
+            PolicyType::Audio,
             Box::new(policy_handler::create_handler::<State, AudioPolicyHandler, _>),
         );
 
@@ -382,6 +387,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_dir,
             messenger_factory,
             settings,
+            policy_types,
             agent_blueprints,
             self.resource_monitors,
             self.event_subscriber_blueprints,
@@ -539,6 +545,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     messenger_factory: service::message::Factory,
     components: HashSet<SettingType>,
+    policies: HashSet<PolicyType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
@@ -592,27 +599,24 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         );
     }
 
-    // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
-    // configured policy types.
-    let policy_types: HashSet<SettingType> = vec![SettingType::Audio].into_iter().collect();
-
     // Mapping from core message hub signature to setting type.
     let mut policy_core_signatures: HashMap<core_message::Signature, SettingType> = HashMap::new();
 
-    for policy_type in policy_types {
-        if components.contains(&policy_type) {
+    for policy_type in policies {
+        let setting_type = policy_type.setting_type();
+        if components.contains(&setting_type) {
             let core_signature = PolicyProxy::create(
                 policy_type,
                 policy_handler_factory.clone(),
                 core_messenger_factory.clone(),
                 policy_messenger_factory.clone(),
                 proxies
-                    .get(&policy_type)
+                    .get(&setting_type)
                     .expect(format!("{:?} proxy not found", policy_type).as_str())
                     .clone(),
             )
             .await?;
-            policy_core_signatures.insert(core_signature, policy_type);
+            policy_core_signatures.insert(core_signature, setting_type);
         }
     }
 

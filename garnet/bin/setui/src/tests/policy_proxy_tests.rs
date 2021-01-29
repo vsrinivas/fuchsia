@@ -10,7 +10,9 @@ use crate::internal::policy;
 use crate::internal::policy::Address;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::base as policy_base;
-use crate::policy::base::{BoxedHandler, PolicyHandlerFactory, PolicyInfo, UnknownInfo};
+use crate::policy::base::{
+    BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType, UnknownInfo,
+};
 use crate::policy::policy_handler::{EventTransform, PolicyHandler, RequestTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
@@ -24,7 +26,8 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 static REQUEST_ID: u64 = 100;
-static SETTING_TYPE: SettingType = SettingType::Privacy;
+static POLICY_TYPE: PolicyType = PolicyType::Unknown;
+static SETTING_TYPE: SettingType = SettingType::Unknown;
 static SETTING_REQUEST_PAYLOAD: core::Payload = core::Payload::Action(SettingAction {
     id: REQUEST_ID,
     setting_type: SETTING_TYPE,
@@ -89,12 +92,13 @@ fn create_handler_factory(
     policy_handler: FakePolicyHandler,
 ) -> Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>> {
     let mut handler_factory = PolicyHandlerFactoryImpl::new(
-        vec![SETTING_TYPE].into_iter().collect(),
+        [POLICY_TYPE].iter().copied().collect(),
+        [SETTING_TYPE].iter().copied().collect(),
         storage_factory_handler,
         Arc::new(AtomicU64::new(1)),
     );
     handler_factory.register(
-        SETTING_TYPE,
+        POLICY_TYPE,
         Box::new(move |_| {
             let handler_clone = policy_handler.clone();
             Box::pin(async move { Ok(Box::new(handler_clone) as BoxedHandler) })
@@ -124,7 +128,7 @@ async fn test_policy_proxy_creation() {
 
     // Create the policy proxy.
     let policy_proxy_result = PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory,
         policy_messenger_factory,
@@ -157,7 +161,7 @@ async fn test_policy_messages_passed_to_handler() {
     let policy_messenger_factory = policy::message::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory,
         policy_messenger_factory.clone(),
@@ -174,7 +178,7 @@ async fn test_policy_messages_passed_to_handler() {
     let mut policy_send_receptor = policy_messenger
         .message(
             policy::Payload::Request(policy_request),
-            Audience::Address(Address::Policy(SETTING_TYPE)),
+            Audience::Address(Address::Policy(POLICY_TYPE)),
         )
         .send();
 
@@ -204,7 +208,7 @@ async fn test_setting_message_pass_through() {
         FakePolicyHandler::create(Err(policy_base::response::Error::Unexpected), None, None),
     );
     PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
@@ -266,7 +270,7 @@ async fn test_setting_message_result_replacement() {
         ),
     );
     PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
@@ -354,7 +358,7 @@ async fn test_setting_message_payload_replacement() {
         ),
     );
     PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
@@ -411,7 +415,7 @@ async fn test_setting_event_pass_through() {
         FakePolicyHandler::create(Err(policy_base::response::Error::Unexpected), None, None),
     );
     PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
@@ -465,7 +469,7 @@ async fn test_setting_event_replace() {
         ),
     );
     PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory,
@@ -523,7 +527,7 @@ async fn test_multiple_messages() {
     );
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
-        SETTING_TYPE,
+        POLICY_TYPE,
         handler_factory,
         core_messenger_factory.clone(),
         policy_messenger_factory.clone(),
@@ -549,7 +553,7 @@ async fn test_multiple_messages() {
         let mut policy_send_receptor = policy_messenger
             .message(
                 policy::Payload::Request(policy_request.clone()),
-                Audience::Address(Address::Policy(SETTING_TYPE)),
+                Audience::Address(Address::Policy(POLICY_TYPE)),
             )
             .send();
 

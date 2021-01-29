@@ -17,10 +17,31 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use thiserror::Error;
 
+/// The policy types supported by the service.
+#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+pub enum PolicyType {
+    /// This type is reserved for testing purposes.
+    #[cfg(test)]
+    Unknown,
+    Audio,
+}
+
+impl PolicyType {
+    /// Returns the corresponding setting type that this policy controls.
+    pub fn setting_type(&self) -> SettingType {
+        match self {
+            #[cfg(test)]
+            PolicyType::Unknown => SettingType::Unknown,
+            PolicyType::Audio => SettingType::Audio,
+        }
+    }
+}
+
 /// Enumeration over the possible policy state information for all policies.
 #[derive(PartialEq, Debug, Clone)]
 pub enum PolicyInfo {
     /// This value is reserved for testing purposes.
+    #[cfg(test)]
     Unknown(UnknownInfo),
     Audio(State),
 }
@@ -29,6 +50,7 @@ pub enum PolicyInfo {
 impl PolicyInfo {
     pub fn name(&self) -> &'static str {
         match self {
+            #[cfg(test)]
             PolicyInfo::Unknown(_) => "Unknown",
             PolicyInfo::Audio(_) => "Audio",
         }
@@ -36,6 +58,7 @@ impl PolicyInfo {
 
     pub fn value_str(&self) -> String {
         match self {
+            #[cfg(test)]
             PolicyInfo::Unknown(info) => format!("{:?}", info),
             PolicyInfo::Audio(info) => format!("{:?}", info),
         }
@@ -44,6 +67,7 @@ impl PolicyInfo {
 
 /// This struct is reserved for testing purposes.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[cfg(test)]
 pub struct UnknownInfo(pub bool);
 
 /// `Request` defines the request space for all policies handled by
@@ -81,11 +105,11 @@ pub mod response {
         #[error("Communication error")]
         CommunicationError,
 
-        #[error("Invalid input argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
-        InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
+        #[error("Invalid input argument for policy: {0:?} argument:{1:?} value:{2:?}")]
+        InvalidArgument(PolicyType, Cow<'static, str>, Cow<'static, str>),
 
-        #[error("Write failed. setting type: {0:?}")]
-        WriteFailure(SettingType),
+        #[error("Write failed for policy: {0:?}")]
+        WriteFailure(PolicyType),
     }
 }
 
@@ -97,7 +121,7 @@ pub type GenerateHandler<T> =
 /// Context captures all details necessary for a policy handler to execute in a given
 /// settings service environment.
 pub struct Context<T: DeviceStorageFactory> {
-    pub setting_type: SettingType,
+    pub policy_type: PolicyType,
     pub messenger: message::Messenger,
     pub setting_proxy_signature: message::Signature,
     pub storage_factory_handle: Arc<Mutex<T>>,
@@ -110,7 +134,7 @@ pub struct Context<T: DeviceStorageFactory> {
 pub trait PolicyHandlerFactory {
     async fn generate(
         &mut self,
-        setting_type: SettingType,
+        policy_type: PolicyType,
         messenger: message::Messenger,
         setting_proxy_signature: message::Signature,
     ) -> Result<BoxedHandler, PolicyHandlerFactoryError>;
@@ -118,12 +142,15 @@ pub trait PolicyHandlerFactory {
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq)]
 pub enum PolicyHandlerFactoryError {
-    #[error("Setting type {0:?} not registered in environment")]
-    SettingNotFound(SettingType),
+    #[error("Policy type {0:?} not registered in environment")]
+    PolicyNotFound(PolicyType),
 
-    #[error("Cannot find setting handler generator for {0:?}")]
-    GeneratorNotFound(SettingType),
+    #[error("Setting type {0:?} for policy {0:?} not registered in environment")]
+    SettingNotFound(SettingType, PolicyType),
 
-    #[error("Policy handler for {0:?} failed to startup")]
-    HandlerStartupError(SettingType),
+    #[error("Cannot find policy handler generator for {0:?}")]
+    GeneratorNotFound(PolicyType),
+
+    #[error("Policy handler {0:?} failed to startup")]
+    HandlerStartupError(PolicyType),
 }
