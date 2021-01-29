@@ -918,6 +918,62 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
   }
 }
 
+bool ArmArchVmAspace::FreeUnaccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
+                                              uint index_shift, uint page_size_shift,
+                                              volatile pte_t* page_table, ConsistencyManager& cm) {
+  const vaddr_t block_size = 1UL << index_shift;
+  const vaddr_t block_mask = block_size - 1;
+
+  LTRACEF(
+      "vaddr 0x%lx, vaddr_rel 0x%lx, size 0x%lx, index shift %u, page_size_shift %u, page_table "
+      "%p\n",
+      vaddr, vaddr_rel, size, index_shift, page_size_shift, page_table);
+  bool have_accessed = false;
+
+  while (size) {
+    const vaddr_t vaddr_rem = vaddr_rel & block_mask;
+    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
+    const vaddr_t index = vaddr_rel >> index_shift;
+
+    pte_t pte = page_table[index];
+
+    if (index_shift > page_size_shift &&
+        (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
+      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+      volatile pte_t* next_page_table =
+          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+
+      // Recurse down and see if anything was accessed.
+      const bool accessed =
+          FreeUnaccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
+                                  page_size_shift, next_page_table, cm);
+      if (accessed) {
+        // We don't want to bail right now since there are other sub-hierarchies we might be able to
+        // reclaim, but we need to remember to tell our caller that we still have some accessed
+        // items.
+        have_accessed = true;
+      } else {
+        UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
+                       page_size_shift, next_page_table, cm);
+        DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
+        update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
+
+        // We can safely defer TLB flushing as the consistency manager will not return the backing
+        // page to the PMM until after the tlb is flushed.
+        cm.FlushEntry(vaddr, false);
+        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift, cm);
+      }
+    } else if (is_pte_valid(pte) && (pte & MMU_PTE_ATTR_AF)) {
+      // Found a recently accessed page, can immediately abort as we are processing a leaf node.
+      return true;
+    }
+    vaddr += chunk_size;
+    vaddr_rel += chunk_size;
+    size -= chunk_size;
+  }
+  return have_accessed;
+}
+
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                                   vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
                                   uint page_size_shift, ConsistencyManager& cm) {
@@ -1307,6 +1363,46 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
 
   MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
 
+  return ZX_OK;
+}
+
+zx_status_t ArmArchVmAspace::FreeUnaccessed(vaddr_t vaddr, size_t count) {
+  canary_.Assert();
+  LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
+
+  DEBUG_ASSERT(tt_virt_);
+
+  DEBUG_ASSERT(IsValidVaddr(vaddr));
+
+  if (!IsValidVaddr(vaddr)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
+  if (!IS_PAGE_ALIGNED(vaddr)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  vaddr_t vaddr_base;
+  uint top_size_shift, top_index_shift, page_size_shift;
+  MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift, &page_size_shift);
+
+  const vaddr_t vaddr_rel = vaddr - vaddr_base;
+  const vaddr_t vaddr_rel_max = 1UL << top_size_shift;
+  const size_t size = count * PAGE_SIZE;
+
+  LTRACEF("vaddr 0x%lx, size 0x%lx, asid 0x%x\n", vaddr, size, asid_);
+
+  if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
+    TRACEF("vaddr 0x%lx, size 0x%lx out of range vaddr 0x%lx, size 0x%lx\n", vaddr, size,
+           vaddr_base, vaddr_rel_max);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  Guard<Mutex> a{&lock_};
+  ConsistencyManager cm(*this);
+
+  FreeUnaccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
   return ZX_OK;
 }
 

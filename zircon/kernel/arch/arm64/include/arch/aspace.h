@@ -47,7 +47,7 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
                               const HarvestCallback& accessed_callback) override;
 
-  zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count) override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count) override;
 
   paddr_t arch_table_phys() const override { return tt_phys_; }
   uint16_t arch_asid() const { return asid_; }
@@ -91,6 +91,10 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   void MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size, uint index_shift,
                              uint page_size_shift, volatile pte_t* page_table,
                              ConsistencyManager& cm) TA_REQ(lock_);
+
+  bool FreeUnaccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size, uint index_shift,
+                               uint page_size_shift, volatile pte_t* page_table,
+                               ConsistencyManager& cm) TA_REQ(lock_);
 
   // Splits a descriptor block into a set of next-level-down page blocks/pages.
   //
