@@ -301,8 +301,8 @@ zx_status_t JournalWriter::WriteOperations(
 
   zx_status_t status = transaction_handler_->RunRequests(operations);
   if (status != ZX_OK) {
-    FX_LOGST(WARNING, "journal") << "WriteOperations: Failed to write requests: "
-                                 << zx_status_get_string(status) << ". Filesystem now read-only.";
+    FX_LOGST(ERROR, "journal") << "WriteOperations: Failed to write requests " << operations << ": "
+                               << zx_status_get_string(status) << ". Filesystem now read-only.";
     DisableWriteback();
     return status;
   }

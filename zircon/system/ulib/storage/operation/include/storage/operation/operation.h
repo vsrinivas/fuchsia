@@ -8,6 +8,7 @@
 #include <zircon/device/block.h>
 
 #include <cstdint>
+#include <ostream>
 
 #include <fbl/span.h>
 
@@ -19,6 +20,8 @@ enum class OperationType {
   kTrim,              // Unimplemented.
   kMaxValue = kTrim,  // For FuzzedDataProvider
 };
+
+const char* OperationTypeToString(OperationType type);
 
 using TraceFlowId = uint64_t;
 
@@ -45,6 +48,9 @@ struct BufferedOperation {
 #endif
   Operation op;
 };
+
+std::ostream& operator<<(std::ostream&, const BufferedOperation&);
+std::ostream& operator<<(std::ostream&, const fbl::Span<const BufferedOperation>&);
 
 // Sums the |length| of all requests. It will assert if overflow occurs; the caller is responsible
 // for making sure this does not happen.

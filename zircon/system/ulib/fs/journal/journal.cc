@@ -13,6 +13,7 @@
 
 #include "entry_view.h"
 #include "format_assertions.h"
+#include "storage/operation/unbuffered_operation.h"
 
 namespace fs {
 namespace {
@@ -148,8 +149,14 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
 zx_status_t Journal::CommitTransaction(Transaction transaction) {
   if (transaction.metadata_operations.empty()) {
     // For now, data must always be written with metadata and trim must come with metadata.
-    if (transaction.data_promise || !transaction.trim.empty())
+    if (transaction.data_promise) {
+      FX_LOGST(ERROR, "journal") << "data_promise specified, but no metadata operations added";
       return ZX_ERR_INVALID_ARGS;
+    }
+    if (!transaction.trim.empty()) {
+      FX_LOGST(ERROR, "journal") << "trim ops added without at least one metadata operation";
+      return ZX_ERR_INVALID_ARGS;
+    }
     if (transaction.commit_callback)
       transaction.commit_callback();
     if (transaction.complete_callback)
@@ -160,6 +167,7 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriteMetadata);
 
   if (!writer_.IsWritebackEnabled()) {
+    FX_LOGST(DEBUG, "journal") << "Not commiting; writeback disabled";
     return ZX_ERR_IO_REFUSED;
   }
 
@@ -171,6 +179,8 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   }
 
   if (block_count_or.value() > kMaxBlockDescriptors) {
+    FX_LOGST(ERROR, "journal") << "block_count (" << block_count_or.value() << ") exceeds maximum "
+                               << kMaxBlockDescriptors;
     return ZX_ERR_NO_SPACE;
   }
 

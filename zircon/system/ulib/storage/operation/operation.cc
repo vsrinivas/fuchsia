@@ -8,7 +8,22 @@
 #include <storage/operation/unbuffered_operation.h>
 #endif
 
+#include <ostream>
+
 namespace storage {
+
+const char* OperationTypeToString(OperationType type) {
+  switch (type) {
+    case OperationType::kRead:
+      return "kRead";
+    case OperationType::kWrite:
+      return "kWrite";
+    case OperationType::kTrim:
+      return "kTrim";
+    default:
+      return "<unknown>";
+  }
+}
 
 template <typename T>
 uint64_t BlockCountImpl(fbl::Span<const T> operations) {
@@ -28,5 +43,25 @@ uint64_t BlockCount(fbl::Span<const UnbufferedOperation> operations) {
   return BlockCountImpl(operations);
 }
 #endif
+
+std::ostream& operator<<(std::ostream& stream, const BufferedOperation& operation) {
+  stream << "BufferedOperation {type: " << OperationTypeToString(operation.op.type)
+         << " vmo_offset: " << operation.op.vmo_offset << " dev_offset: " << operation.op.dev_offset
+         << " length: " << operation.op.length << "}";
+  return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const fbl::Span<const BufferedOperation>& operations) {
+  stream << "[";
+  for (size_t i = 0; i < operations.size(); ++i) {
+    if (i < operations.size() - 1) {
+      stream << ", ";
+    }
+    stream << operations[i];
+  }
+  stream << "]";
+  return stream;
+}
 
 }  // namespace storage
