@@ -10,8 +10,13 @@ if (profile_source_files != []) {
   # express the deps to make GN accept the file in the inputs list if it's
   # the output of some target.
   _profile_source_files_file = "$root_out_dir/profile-source-files.list"
+  _profile_source_files_lines = []
+  foreach(file, profile_source_files) {
+    _profile_source_files_lines +=
+        [ "src:" + rebase_path(file, root_build_dir) ]
+  }
   write_file(_profile_source_files_file,
-             rebase_path(profile_source_files, root_build_dir),
+             _profile_source_files_lines,
              "list lines")
   profile_source_files_list_files += [ _profile_source_files_file ]
 }
