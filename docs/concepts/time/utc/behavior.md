@@ -73,7 +73,6 @@ the clock is generally within a few hundred milliseconds of the actual UTC time
 once running. Note that even when an RTC, network, or both are available, the
 UTC clock may never be synchronized as it must be retrieved over fallible
 protocols from fallible sources.
-<!-- TODO(fxbug.dev/65784): include secure time property once defined -->
 
 ## Observable behaviors
 
@@ -131,10 +130,21 @@ You may check or wait for the signal using one of:
 * [`zx_object_wait_many`](/docs/reference/syscalls/object_wait_many.md)
 * [`zx_object_wait_one`](/docs/reference/syscalls/object_wait_one.md)
 
-You may check details pertaining to the clock's current transform, error
-estimate, and static details such as the backstop time using
+You may check details such as the clock's error bound using
 [`zx_clock_get_details`](/docs/reference/syscalls/clock_get_details.md).
-<!-- TODO(fxbug.dev/65784): add error and secure property once defined -->
+For the UTC clock the error bound is defined as half of a 95% confidence
+interval. In other words, for a randomly selected time on a randomly selected
+Fuchsia device, there is a ≥95% probability that the true value of UTC is
+between `reported_utc - error_bound` and `reported_utc + error_bound`. Until
+the system has an estimate of `error_bound`, the `error_bound` is set to
+`ZX_CLOCK_UNKNOWN_ERROR`. In some cases, if a Fuchsia device is running
+abnormal workloads or has defective hardware, the true UTC time may fall
+outside the range defined by `error_bound`. See the
+[How can clock error be bounded?](algorithms.md#error_bound) section for
+details on how the error bound is calculated. If you require additional details
+about the UTC clock, see the
+[kernel clock reference](/docs/reference/kernel_objects/clock.md)
+for a list of details provided through `zx_clock_get_details`.
 
 Note that components are provided a read-only handle and are unable to use the
 provided handle to modify the clock.
