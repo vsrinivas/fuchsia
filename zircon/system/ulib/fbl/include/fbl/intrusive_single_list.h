@@ -752,13 +752,9 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
   template <class IterTraits>
   class iterator_impl {
    public:
-    iterator_impl() {}
-    iterator_impl(const iterator_impl& other) { node_ = other.node_; }
-
-    iterator_impl& operator=(const iterator_impl& other) {
-      node_ = other.node_;
-      return *this;
-    }
+    iterator_impl() = default;
+    iterator_impl(const iterator_impl& other) = default;
+    iterator_impl& operator=(const iterator_impl& other) = default;
 
     bool IsValid() const { return (node_ != nullptr) && !internal::is_sentinel_ptr(node_); }
     bool operator==(const iterator_impl& other) const { return node_ == other.node_; }

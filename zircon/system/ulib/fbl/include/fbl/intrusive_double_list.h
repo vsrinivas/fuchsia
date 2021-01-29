@@ -721,13 +721,9 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
   template <class IterTraits>
   class iterator_impl {
    public:
-    iterator_impl() {}
-    iterator_impl(const iterator_impl& other) { node_ = other.node_; }
-
-    iterator_impl& operator=(const iterator_impl& other) {
-      node_ = other.node_;
-      return *this;
-    }
+    iterator_impl() = default;
+    iterator_impl(const iterator_impl& other) = default;
+    iterator_impl& operator=(const iterator_impl& other) = default;
 
     bool IsValid() const { return !internal::is_sentinel_ptr(node_) && (node_ != nullptr); }
     bool operator==(const iterator_impl& other) const { return node_ == other.node_; }
