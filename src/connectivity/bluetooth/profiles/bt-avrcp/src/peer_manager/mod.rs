@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error as FailureError,
     bt_avctp::{AvcPeer, AvctpPeer},
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{Channel, PeerId},
@@ -93,13 +92,13 @@ impl Inspect for &mut PeerManager {
 }
 
 impl PeerManager {
-    pub fn new(profile_proxy: bredr::ProfileProxy) -> Result<Self, FailureError> {
-        Ok(Self {
+    pub fn new(profile_proxy: bredr::ProfileProxy) -> Self {
+        Self {
             profile_proxy,
             peers: RwLock::new(HashMap::new()),
             target_delegate: Arc::new(TargetDelegate::new()),
             inspect: inspect::Node::default(),
-        })
+        }
     }
 
     pub fn get_remote_peer(&self, peer_id: &PeerId) -> RemotePeerHandle {

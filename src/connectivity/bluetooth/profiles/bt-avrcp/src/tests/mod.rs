@@ -38,7 +38,7 @@ fn spawn_peer_manager() -> Result<
 
     let (profile_proxy, profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
 
-    let peer_manager = PeerManager::new(profile_proxy).expect("unable to create peer manager");
+    let peer_manager = PeerManager::new(profile_proxy);
 
     let (peer_manager_proxy, peer_manager_requests) =
         create_proxy_and_stream::<PeerManagerMarker>()?;
@@ -227,7 +227,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
     let remote_peer = AvcPeer::new(remote);
     let (profile_proxy, _requests) = create_proxy::<ProfileMarker>()?;
 
-    let mut peer_manager = PeerManager::new(profile_proxy).expect("unable to create peer manager");
+    let mut peer_manager = PeerManager::new(profile_proxy);
 
     peer_manager.services_found(
         &fake_peer_id,
