@@ -52,6 +52,15 @@ DEF_MESSAGE(role_slider, "Slider");
 // Spoken message that Describes a tab. For example, an element with the ARIA role tab.
 DEF_MESSAGE(role_tab, "Tab");
 
+// Spoken message that Describes a toggle switch.
+DEF_MESSAGE(role_toggle_switch, "Toggle Switch");
+
+// Spoken message that describes a switch in the on state.
+DEF_MESSAGE(element_toggled_on, "switch on");
+
+// Spoken message that describes a switch in the off or indeterminate state.
+DEF_MESSAGE(element_toggled_off, "switch off");
+
 // Spoken message that Describes a radio button. For example, an element with the ARIA role radio.
 DEF_MESSAGE(role_radiobutton, "Radio button");
 
