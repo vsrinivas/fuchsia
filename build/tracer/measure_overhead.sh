@@ -6,20 +6,24 @@
 # Script for measuring action tracing build overhead.
 # See usage() below.
 
-set -e
+set -Eeu
+set -o pipefail
 
 # Constants:
 
 # These files will be locally modified for this experiment:
-# Assume default output dir.
-args_gn=out/default/args.gn
-bcfg_gn=build/config/BUILDCONFIG.gn
+# Assume default output dir for now.
+readonly args_gn=out/default/args.gn
+readonly bcfg_gn=build/config/BUILDCONFIG.gn
 
 # The `time` binary has more options than the shell built-in.
 time=/usr/bin/time
 
 # Where locally patched files and logs will be saved.
-exp_dir="$(mktemp -t -d tmp.action_trace_overhead.XXXXXXXX)"
+date="$(date +%Y.%m.%d.%H.%M.%S)"
+readonly date
+exp_dir="$(mktemp -t -d tmp.action_trace_overhead.$date.XXXX)"
+readonly exp_dir
 
 function usage() {
   cat <<EOF
@@ -46,47 +50,47 @@ N="$1"
 
 # Disable tracing by patching the args.gn file.
 function disable_trace() {
-  local args_gn="$1"
-  if grep -q -w build_should_trace_actions "$args_gn"
+  local _args_gn="$1"
+  if grep -q -w build_should_trace_actions "$_args_gn"
   then
-    sed -e '/build_should_trace_actions/s|true|false|' "$args_gn"
+    sed -e '/build_should_trace_actions/s|true|false|' "$_args_gn"
   else
-    cat "$args_gn"
+    cat "$_args_gn"
     echo "build_should_trace_actions = false"
   fi
 }
 
 # Enable tracing by patching the args.gn file.
 function enable_trace() {
-  local args_gn="$1"
-  if grep -q -w build_should_trace_actions "$args_gn"
+  local _args_gn="$1"
+  if grep -q -w build_should_trace_actions "$_args_gn"
   then
-    sed -e '/build_should_trace_actions/s|false|true|' "$args_gn"
+    sed -e '/build_should_trace_actions/s|false|true|' "$_args_gn"
   else
-    cat "$args_gn"
+    cat "$_args_gn"
     echo "build_should_trace_actions = true"
   fi
 }
 
 function disable_checks() {
-  local bcfg_gn="$1"
+  local _bcfg_gn="$1"
   # Ignore trace errors, to let the build continue past trace errors.
   # Force --no-check-access-permissions and --no-check-output-freshness.
   sed -e 's|--failed-check-status=1|--failed-check-status=0|' \
     -e '/if (!defined(hermetic_deps))/,/}/s|hermetic_deps = true|hermetic_deps = false|' \
     -e '/if (!defined(all_outputs_fresh))/,/}/s|all_outputs_fresh = true|hermetic_deps = false|' \
-    "$bcfg_gn"
+    "$_bcfg_gn"
 }
 
 function enable_checks() {
-  local bcfg_gn="$1"
+  local _bcfg_gn="$1"
   # Ignore trace errors, to let the build continue past trace errors.
   # Let --check-access-permissions and --check-output-freshness run by default,
   # disregarding suppressions.
   sed -e 's|--failed-check-status=1|--failed-check-status=0|' \
     -e '/if (!defined(hermetic_deps))/,/}/s|hermetic_deps = false|hermetic_deps = true|' \
     -e '/if (!defined(all_outputs_fresh))/,/}/s|all_outputs_fresh = false|all_outputs_fresh = true|' \
-    "$bcfg_gn"
+    "$_bcfg_gn"
 }
 
 # 1. Generate experiment configurations.
@@ -111,8 +115,10 @@ function vdiff() {
 }
 
 function vcat() {
-  echo "### $1 ###"
+  echo ""
+  echo "<<< $1 <<<"
   cat "$1"
+  echo ">>> $1 >>>"
 }
 
 vdiff "$exp_dir"/"$args_gn".{orig,notrace}
@@ -125,7 +131,8 @@ function run_once() {
   local log="$1"
   # do `fx clean-build`, but only time the build part.
   fx clean
-  "$time" -a --output="$log" fx build
+  # time the build and ignore any build errors
+  "$time" -a --output="$log" fx build || :
 }
 
 ### Run benchmarks.
@@ -181,19 +188,25 @@ Raw time logs are in:
   $exp_dir/build.time.trace.allchecks (traced, all checks)
 
 EOF
-  vcat $exp_dir/build.time.notrace
-  vcat $exp_dir/build.time.trace.nochecks
-  vcat $exp_dir/build.time.trace.allchecks
+  echo "== Summary =="
+  {
+    vcat $exp_dir/"$args_gn".orig
+    vcat $exp_dir/build.time.notrace
+    vcat $exp_dir/build.time.trace.nochecks
+    vcat $exp_dir/build.time.trace.allchecks
+  } | grep -v pagefaults | \
+    sed -e '/CPU/s/\(user\|system\|elapsed\|\%CPU\)/ \1/g' \
+      -e 's|CPU.*|CPU|'
 }
 
 function restore_files() {
-echo "=== Restoring original configuration. ==="
-# Temporary files will still be left around for examination.
-cp experiment/"$args_gn".orig "$args_gn"
-cp experiment/"$bcfg_gn".orig "$bcfg_gn"
+  echo "=== Restoring original configuration. ==="
+  # Temporary files will still be left around for examination.
+  cp "$exp_dir/$args_gn".orig "$args_gn"
+  cp "$exp_dir/$bcfg_gn".orig "$bcfg_gn"
 }
 
-trap restores_files EXIT
+trap restore_files EXIT
 
 run_all "$N"
 
