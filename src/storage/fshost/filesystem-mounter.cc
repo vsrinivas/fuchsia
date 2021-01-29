@@ -4,11 +4,11 @@
 
 #include "filesystem-mounter.h"
 
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <zircon/status.h>
-
-#include <fs-management/mount.h>
 
 #include "fdio.h"
 #include "fshost-fs-provider.h"
@@ -17,6 +17,8 @@
 #include "src/storage/minfs/minfs.h"
 
 namespace devmgr {
+
+namespace fio = llcpp::fuchsia::io;
 
 zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t* hnd,
                                         uint32_t* ids, size_t len, uint32_t fs_flags) {
@@ -27,20 +29,20 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
                          fs_flags);
 }
 
-zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const char* binary,
-                                               const mount_options_t& options,
-                                               zx::channel block_device_client,
-                                               zx::channel diagnostics_dir, uint32_t fs_flags) {
+zx::status<zx::channel> FilesystemMounter::MountFilesystem(const char* mount_path,
+                                                           const char* binary,
+                                                           const mount_options_t& options,
+                                                           zx::channel block_device_client,
+                                                           uint32_t fs_flags) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  size_t num_handles = diagnostics_dir.is_valid() ? 3 : 2;
-  zx_handle_t handles[3] = {server.release(), block_device_client.release(),
-                            diagnostics_dir.release()};
-  uint32_t ids[3] = {FS_HANDLE_ROOT_ID, FS_HANDLE_BLOCK_DEVICE_ID, FS_HANDLE_DIAGNOSTICS_DIR};
+  size_t num_handles = 2;
+  zx_handle_t handles[2] = {server.release(), block_device_client.release()};
+  uint32_t ids[2] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID};
 
   fbl::Vector<const char*> argv;
   argv.push_back(binary);
@@ -68,9 +70,8 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
   argv.push_back(nullptr);
   status =
       LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, num_handles, fs_flags);
-
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   zx_signals_t observed = 0;
@@ -78,10 +79,21 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
       client.wait_one(ZX_USER_SIGNAL_0 | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed);
   if ((status != ZX_OK) || (observed & ZX_CHANNEL_PEER_CLOSED)) {
     status = (status != ZX_OK) ? status : ZX_ERR_BAD_STATE;
-    return status;
+    return zx::error(status);
   }
 
-  return InstallFs(mount_path, std::move(client));
+  zx::channel root;
+  status = fs_root_handle(client.get(), root.reset_and_get_address());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  status = InstallFs(mount_path, std::move(root));
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  return zx::success(std::move(client));
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_options_t& options) {
@@ -89,13 +101,10 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(fxbug.dev/54525): The Inspect API has not been connected for MinFS yet.
-  zx::channel diagnostics_dir;
-
-  zx_status_t status = MountFilesystem(PATH_DATA, "/pkg/bin/minfs", options,
-                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
-  if (status != ZX_OK) {
-    return status;
+  zx::status ret =
+      MountFilesystem(PATH_DATA, "/pkg/bin/minfs", options, std::move(block_device), FS_SVC);
+  if (ret.is_error()) {
+    return ret.error_value();
   }
 
   data_mounted_ = true;
@@ -108,13 +117,10 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(fxbug.dev/54525): The Inspect API has not been connected for MinFS yet.
-  zx::channel diagnostics_dir;
-
-  zx_status_t status = MountFilesystem(PATH_INSTALL, "/pkg/bin/minfs", options,
-                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
-  if (status != ZX_OK) {
-    return status;
+  zx::status ret =
+      MountFilesystem(PATH_INSTALL, "/pkg/bin/minfs", options, std::move(block_device), FS_SVC);
+  if (ret.is_error()) {
+    return ret.error_value();
   }
 
   install_mounted_ = true;
@@ -127,14 +133,10 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(fxbug.dev/54525): The Inspect API has not been connected for FactoryFs yet.
-  zx::channel diagnostics_dir;
-
-  zx_status_t status = MountFilesystem(PATH_FACTORY, "/pkg/bin/factoryfs", options,
-                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
-
-  if (status != ZX_OK) {
-    return status;
+  zx::status ret =
+      MountFilesystem(PATH_FACTORY, "/pkg/bin/factoryfs", options, std::move(block_device), FS_SVC);
+  if (ret.is_error()) {
+    return ret.error_value();
   }
 
   factory_mounted_ = true;
@@ -147,12 +149,10 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  // TODO(fxbug.dev/54525): The Inspect API has not been connected for durable partition yet.
-  zx::channel diagnostics_dir;
-  zx_status_t status = MountFilesystem(PATH_DURABLE, "/pkg/bin/minfs", options,
-                                       std::move(block_device), std::move(diagnostics_dir), FS_SVC);
-  if (status != ZX_OK) {
-    return status;
+  zx::status ret =
+      MountFilesystem(PATH_DURABLE, "/pkg/bin/minfs", options, std::move(block_device), FS_SVC);
+  if (ret.is_error()) {
+    return ret.error_value();
   }
 
   durable_mounted_ = true;
@@ -179,10 +179,21 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
                    << zx_status_get_string(status);
   }
 
-  status = MountFilesystem(PATH_BLOB, "/pkg/bin/blobfs", options, std::move(block_device),
-                           std::move(fs_diagnostics_dir_server), FS_SVC | FS_SVC_BLOBFS);
-  if (status != ZX_OK) {
-    return status;
+  zx::status ret = MountFilesystem(PATH_BLOB, "/pkg/bin/blobfs", options, std::move(block_device),
+                                   FS_SVC | FS_SVC_BLOBFS);
+  if (ret.is_error()) {
+    return ret.error_value();
+  }
+  zx::channel export_root = std::move(ret.value());
+
+  uint32_t flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DIRECTORY;
+  uint32_t mode = fio::MODE_TYPE_DIRECTORY;
+  std::string name_str = std::string("diagnostics/") + fuchsia::inspect::Tree::Name_;
+  auto name = fidl::StringView(fidl::unowned_ptr(name_str.c_str()), name_str.length());
+  auto resp = fio::Directory::Call::Open(zx::unowned_channel(export_root), flags, mode,
+                                         std::move(name), std::move(fs_diagnostics_dir_server));
+  if (!resp.ok()) {
+    return resp.status();
   }
 
   blob_mounted_ = true;

@@ -31,20 +31,16 @@ class FdioTest : public testing::Test {
  protected:
   async::Loop* loop() { return loop_.get(); }
 
+  int export_root_fd() const { return export_root_fd_.get(); }
+  // get a clone of the export root in handle form
+  zx_handle_t export_root();
   int root_fd() const { return root_fd_.get(); }
   block_client::FakeBlockDevice* block_device() { return block_device_; }
-
-  // The layout defaults to DataRootOnly. Call this from a derived class constructor to use a
-  // different layout.
-  void set_layout(ServeLayout layout) { layout_ = layout; }
 
   void set_mount_options(MountOptions options) { mount_options_ = options; }
 
   // The vmex resource defaults to empty. It only needs to be set if a test requires it.
   void set_vmex_resource(zx::resource resource) { vmex_resource_ = std::move(resource); }
-
-  // Returns a handle to the client side of the Inspect diagnostics directory
-  zx_handle_t diagnostics_dir() { return diagnostics_dir_client_.get(); }
 
   // Fetches a fresh Inspect snapshot from the running blobfs instance.
   fit::result<inspect::Hierarchy> TakeSnapshot();
@@ -70,11 +66,10 @@ class FdioTest : public testing::Test {
   block_client::FakeBlockDevice* block_device_ = nullptr;  // Owned by the runner_.
 
   MountOptions mount_options_;
-  ServeLayout layout_ = ServeLayout::kDataRootOnly;
   zx::resource vmex_resource_;
+  fbl::unique_fd export_root_fd_;
   fbl::unique_fd root_fd_;
   std::unique_ptr<Runner> runner_;
-  zx::channel diagnostics_dir_client_;
 
   std::unique_ptr<async::Loop> loop_;  // Must be destroyed after the runner.
 };

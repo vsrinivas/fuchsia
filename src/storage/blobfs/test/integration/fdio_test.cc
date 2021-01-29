@@ -12,6 +12,8 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 
+#include <fs-management/admin.h>
+
 #include "src/storage/blobfs/mkfs.h"
 
 namespace blobfs {
@@ -31,24 +33,27 @@ void FdioTest::SetUp() {
                              }),
             ZX_OK);
 
-  zx::channel root_client, root_server;
-  ASSERT_EQ(zx::channel::create(0, &root_client, &root_server), ZX_OK);
-
-  zx::channel diagnostics_dir_server;
-  ASSERT_EQ(zx::channel::create(0, &diagnostics_dir_client_, &diagnostics_dir_server), ZX_OK);
+  zx::channel export_root_client, export_root_server;
+  ASSERT_EQ(zx::channel::create(0, &export_root_client, &export_root_server), ZX_OK);
 
   std::unique_ptr<Runner> runner;
   ASSERT_EQ(Runner::Create(loop_.get(), std::move(device), mount_options_,
-                           std::move(vmex_resource_), std::move(diagnostics_dir_server), &runner),
+                           std::move(vmex_resource_), &runner),
             ZX_OK);
-  ASSERT_EQ(runner->ServeRoot(std::move(root_server), layout_), ZX_OK);
+  ASSERT_EQ(runner->ServeRoot(std::move(export_root_server), ServeLayout::kExportDirectory), ZX_OK);
   ASSERT_EQ(loop_->StartThread("blobfs test dispatcher"), ZX_OK);
 
   runner_ = std::move(runner);
 
+  zx::channel root_client;
+  ASSERT_EQ(fs_root_handle(export_root_client.get(), root_client.reset_and_get_address()), ZX_OK);
+
   // FDIO serving the root directory.
   ASSERT_EQ(fdio_fd_create(root_client.release(), root_fd_.reset_and_get_address()), ZX_OK);
   ASSERT_TRUE(root_fd_.is_valid());
+  ASSERT_EQ(fdio_fd_create(export_root_client.release(), export_root_fd_.reset_and_get_address()),
+            ZX_OK);
+  ASSERT_TRUE(export_root_fd_.is_valid());
 }
 
 void FdioTest::TearDown() {
@@ -59,6 +64,12 @@ void FdioTest::TearDown() {
       ZX_OK);
 }
 
+zx_handle_t FdioTest::export_root() {
+  zx::channel export_root;
+  fdio_fd_clone(export_root_fd_.get(), export_root.reset_and_get_address());
+  return export_root.release();
+}
+
 fit::result<inspect::Hierarchy> FdioTest::TakeSnapshot() {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("metric-collection-thread");
@@ -66,7 +77,7 @@ fit::result<inspect::Hierarchy> FdioTest::TakeSnapshot() {
 
   fuchsia::inspect::TreePtr tree;
   async_dispatcher_t* dispatcher = executor.dispatcher();
-  zx_status_t status = fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree",
+  zx_status_t status = fdio_service_connect_at(export_root(), "diagnostics/fuchsia.inspect.Tree",
                                                tree.NewRequest(dispatcher).TakeChannel().release());
   if (status != ZX_OK) {
     return fit::error();

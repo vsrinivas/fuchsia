@@ -76,7 +76,6 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
   // (outgoing directory) behaviors. once all clients are moved over to using the new behavior,
   // delete the old one.
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
-  zx::channel diagnostics_dir = zx::channel(zx_take_startup_handle(FS_HANDLE_DIAGNOSTICS_DIR));
 
   if (outgoing_server.is_valid() && root_server.is_valid()) {
     FX_LOGS(ERROR) << "both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
@@ -107,7 +106,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
   }
 
   return blobfs::Mount(std::move(device), options.mount_options, std::move(export_root), layout,
-                       std::move(vmex), std::move(diagnostics_dir));
+                       std::move(vmex));
 }
 
 zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, const Options& options) {

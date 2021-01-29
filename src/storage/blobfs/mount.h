@@ -22,10 +22,6 @@ namespace blobfs {
 
 using block_client::BlockDevice;
 
-// TODO(fxbug.dev/54521): This is a temporary measure. The diagnostics directory can
-// eventually be added to the outgoing dir passed via PA_DIRECTORY_REQUEST.
-#define FS_HANDLE_DIAGNOSTICS_DIR PA_HND(PA_USER0, 2)
-
 // Determines the kind of directory layout the filesystem server should expose to the outside world.
 // TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since
 // only |kExportDirectory| would be used.
@@ -81,8 +77,7 @@ struct MountOptions {
 //
 // This function blocks until the filesystem terminates.
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options,
-                  zx::channel root, ServeLayout layout, zx::resource vmex_resource,
-                  zx::channel diagnostics_dir);
+                  zx::channel root, ServeLayout layout, zx::resource vmex_resource);
 
 }  // namespace blobfs
 

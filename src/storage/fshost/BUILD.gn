@@ -167,6 +167,7 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/loader_service",

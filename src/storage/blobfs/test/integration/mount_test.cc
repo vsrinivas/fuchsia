@@ -39,10 +39,7 @@ namespace fio = ::llcpp::fuchsia::io;
 using DataMountTest = BlobfsTest;
 
 // Variant that sets the layout to kExportDirectory.
-class OutgoingMountTest : public FdioTest {
- public:
-  OutgoingMountTest() { set_layout(ServeLayout::kExportDirectory); }
-};
+using OutgoingMountTest = FdioTest;
 
 // merkle root for a file. in order to create a file on blobfs we need the filename to be a valid
 // merkle root whether or not we ever write the content.
@@ -65,18 +62,18 @@ TEST_F(DataMountTest, DataRootCanHaveBlobsCreated) {
 }
 
 TEST_F(OutgoingMountTest, OutgoingDirectoryHasRootDirectoryInIt) {
-  fbl::unique_fd no_fd(openat(root_fd(), kOutgoingDataRoot, O_DIRECTORY));
-  ASSERT_TRUE(no_fd.is_valid());
+  fbl::unique_fd foo_fd(openat(export_root_fd(), kOutgoingDataRoot, O_DIRECTORY));
+  ASSERT_TRUE(foo_fd.is_valid());
 }
 
 TEST_F(OutgoingMountTest, OutgoingDirectoryIsReadOnly) {
-  fbl::unique_fd foo_fd(openat(root_fd(), kFileName.data(), O_CREAT));
-  ASSERT_FALSE(foo_fd.is_valid());
+  fbl::unique_fd no_fd(openat(export_root_fd(), kFileName.data(), O_CREAT));
+  ASSERT_FALSE(no_fd.is_valid());
 }
 
 TEST_F(OutgoingMountTest, OutgoingDirectoryDataRootCanHaveBlobsCreated) {
-  std::string path = std::string("root/") + kFileName.data();
-  fbl::unique_fd foo_fd(openat(root_fd(), path.c_str(), O_CREAT));
+  std::string path = std::string(kOutgoingDataRoot) + "/" + kFileName.data();
+  fbl::unique_fd foo_fd(openat(export_root_fd(), path.c_str(), O_CREAT));
   ASSERT_TRUE(foo_fd.is_valid());
 }
 

@@ -17,7 +17,7 @@ namespace blobfs {
 // static.
 zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
                            const MountOptions& options, zx::resource vmex_resource,
-                           zx::channel diagnostics_dir_server, std::unique_ptr<Runner>* out) {
+                           std::unique_ptr<Runner>* out) {
   std::unique_ptr<Blobfs> fs;
   zx_status_t status =
       Blobfs::Create(loop->dispatcher(), std::move(device), options, std::move(vmex_resource), &fs);
@@ -25,39 +25,7 @@ zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> devic
     return status;
   }
 
-  // Setup the diagnostics directory for BlobFS
-  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-
-  auto vnode = fbl::AdoptRef(
-      // TODO(fxbug.dev/57330): Remove force_private_snapshot when we support requesting different
-      // consistency from servers.
-      new fs::Service([connector = inspect::MakeTreeHandler(
-                           fs->Metrics()->inspector(), loop->dispatcher(),
-                           inspect::TreeHandlerSettings{.force_private_snapshot = true})](
-                          zx::channel chan) mutable {
-        connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
-        return ZX_OK;
-      }));
-
-  status = diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, vnode);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to add Inspect vnode to diagnostics directory: "
-                   << zx_status_get_string(status);
-    return status;
-  }
-
   auto runner = std::unique_ptr<Runner>(new Runner(loop, std::move(fs)));
-
-  if (diagnostics_dir_server.is_valid()) {
-    status = runner->ServeDirectory(diagnostics_dir, std::move(diagnostics_dir_server));
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to serve diagnostics directory: " << zx_status_get_string(status);
-      return status;
-    }
-  } else {
-    FX_LOGS(WARNING) << "diagnostics directory server handle is invalid!";
-  }
-
   *out = std::move(runner);
   return ZX_OK;
 }
@@ -97,6 +65,17 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
     return status;
   }
 
+  // TODO(fxbug.dev/57330): Remove force_private_snapshot when we support requesting different
+  // consistency from servers.
+  auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
+      [connector =
+           inspect::MakeTreeHandler(blobfs_->Metrics()->inspector(), loop_->dispatcher(),
+                                    inspect::TreeHandlerSettings{.force_private_snapshot = true})](
+          zx::channel chan) mutable {
+        connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
+        return ZX_OK;
+      });
+
   fbl::RefPtr<fs::Vnode> export_root;
   switch (layout) {
     case ServeLayout::kDataRootOnly:
@@ -105,10 +84,16 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
     case ServeLayout::kExportDirectory:
       auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
       outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
+
+      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+      outgoing->AddEntry("diagnostics", diagnostics_dir);
+      diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
+
       auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
       outgoing->AddEntry("svc", svc_dir);
       query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), blobfs_.get(), this);
       svc_dir->AddEntry(::llcpp::fuchsia::fs::Query::Name, query_svc_);
+
       export_root = std::move(outgoing);
       break;
   }

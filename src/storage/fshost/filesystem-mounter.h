@@ -6,6 +6,7 @@
 #define SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_
 
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -79,9 +80,9 @@ class FilesystemMounter {
  private:
   // Performs the mechanical action of mounting a filesystem, without
   // validating the type of filesystem being mounted.
-  zx_status_t MountFilesystem(const char* mount_path, const char* binary,
-                              const mount_options_t& options, zx::channel block_device_client,
-                              zx::channel diagnostics_dir, uint32_t fs_flags);
+  zx::status<zx::channel> MountFilesystem(const char* mount_path, const char* binary,
+                                          const mount_options_t& options,
+                                          zx::channel block_device_client, uint32_t fs_flags);
 
   bool WaitForData() const { return config_.wait_for_data(); }
 

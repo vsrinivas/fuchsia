@@ -85,14 +85,7 @@ class TestMounter : public FilesystemMounter {
       case FilesystemType::kBlobfs:
         EXPECT_EQ(std::string_view(argv[0]), "/pkg/bin/blobfs");
         EXPECT_EQ(fs_flags, unsigned{FS_SVC | FS_SVC_BLOBFS});
-        EXPECT_EQ(len, 3ul);
-
-        // TODO(fxbug.dev/54521): This check is over-constraining.
-        // BlobFS does not *require* this handle to be
-        // passed in. However, filesystem-mounter will
-        // always pass this handle in. Remove this check
-        // once we migrate away from using this handle.
-        EXPECT_EQ(ids[2], FS_HANDLE_DIAGNOSTICS_DIR);
+        EXPECT_EQ(len, 2ul);
         break;
       case FilesystemType::kMinfs:
         EXPECT_EQ(std::string_view(argv[0]), "/pkg/bin/minfs");
@@ -109,7 +102,7 @@ class TestMounter : public FilesystemMounter {
 
     EXPECT_EQ(std::string_view(argv[1]), "mount");
 
-    EXPECT_EQ(ids[0], FS_HANDLE_ROOT_ID);
+    EXPECT_EQ(ids[0], PA_DIRECTORY_REQUEST);
     EXPECT_EQ(ids[1], FS_HANDLE_BLOCK_DEVICE_ID);
 
     zx::channel* server = nullptr;

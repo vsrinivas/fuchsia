@@ -147,6 +147,7 @@ test("external_decompressor_integration") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/id_allocator",
   ]
@@ -200,6 +201,7 @@ test("blobfs-integration") {
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/memfs",
@@ -246,6 +248,7 @@ test("executable_mount") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/id_allocator",
   ]
 }
