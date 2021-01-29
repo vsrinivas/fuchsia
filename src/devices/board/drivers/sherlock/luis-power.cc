@@ -33,15 +33,15 @@ constexpr aml_voltage_table_t kT931VoltageTable[] = {
 
 constexpr voltage_pwm_period_ns_t kT931PwmPeriodNs = 1250;
 
-constexpr pbus_metadata_t power_impl_metadata[] = {
+const pbus_metadata_t power_impl_metadata[] = {
     {
         .type = DEVICE_METADATA_AML_VOLTAGE_TABLE,
-        .data_buffer = &kT931VoltageTable,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&kT931VoltageTable),
         .data_size = sizeof(kT931VoltageTable),
     },
     {
         .type = DEVICE_METADATA_AML_PWM_PERIOD_NS,
-        .data_buffer = &kT931PwmPeriodNs,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&kT931PwmPeriodNs),
         .data_size = sizeof(kT931PwmPeriodNs),
     },
 };

@@ -66,12 +66,12 @@ static const amlspi_cs_map_t spi_cs_map[] = {
 static const pbus_metadata_t spi_metadata[] = {
     {
         .type = DEVICE_METADATA_SPI_CHANNELS,
-        .data_buffer = spi_channels,
+        .data_buffer = reinterpret_cast<const uint8_t*>(spi_channels),
         .data_size = sizeof spi_channels,
     },
     {
         .type = DEVICE_METADATA_AMLSPI_CS_MAPPING,
-        .data_buffer = &spi_cs_map,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_cs_map),
         .data_size = sizeof spi_cs_map,
     },
 };
@@ -109,15 +109,15 @@ static constexpr device_fragment_t fragments[] = {
 
 zx_status_t Nelson::SpiInit() {
   // setup pinmux for SPICC1 bus arbiter.
-  gpio_impl_.SetAltFunction(S905D2_GPIOH(4), 3);         // MOSI
+  gpio_impl_.SetAltFunction(S905D2_GPIOH(4), 3);  // MOSI
   gpio_impl_.SetDriveStrength(S905D2_GPIOH(4), 2500, nullptr);
 
-  gpio_impl_.SetAltFunction(S905D2_GPIOH(5), 3);         // MISO
+  gpio_impl_.SetAltFunction(S905D2_GPIOH(5), 3);  // MISO
   gpio_impl_.SetDriveStrength(S905D2_GPIOH(5), 2500, nullptr);
 
-  gpio_impl_.ConfigOut(GPIO_SPICC1_SS0, 1);              // SS0
+  gpio_impl_.ConfigOut(GPIO_SPICC1_SS0, 1);  // SS0
 
-  gpio_impl_.SetAltFunction(S905D2_GPIOH(7), 3);         // SCLK
+  gpio_impl_.SetAltFunction(S905D2_GPIOH(7), 3);  // SCLK
   gpio_impl_.SetDriveStrength(S905D2_GPIOH(7), 2500, nullptr);
 
   // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the

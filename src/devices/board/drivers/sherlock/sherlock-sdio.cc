@@ -118,15 +118,15 @@ constexpr wifi_config_t wifi_config = {
 #endif
 };
 
-constexpr pbus_metadata_t sd_emmc_metadata[] = {
+const pbus_metadata_t sd_emmc_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &sd_emmc_config,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&sd_emmc_config),
         .data_size = sizeof(sd_emmc_config),
     },
     {
         .type = DEVICE_METADATA_WIFI_CONFIG,
-        .data_buffer = &wifi_config,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&wifi_config),
         .data_size = sizeof(wifi_config),
     },
 };

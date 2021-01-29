@@ -31,7 +31,7 @@ class Mt8167Test : public Mt8167, public ddk::PBusProtocol<Mt8167Test> {
   // These stubs ensure the power device setup succeeds.
   zx_status_t PBusDeviceAdd(const pbus_dev_t* dev) { return ZX_OK; }
   zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) { return ZX_OK; }
-  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol_buffer,
+  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol_buffer,
                                    size_t protocol_size) {
     return ZX_OK;
   }

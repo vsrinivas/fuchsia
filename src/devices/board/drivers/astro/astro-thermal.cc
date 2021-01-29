@@ -102,7 +102,7 @@ fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr = {
 static const pbus_metadata_t thermal_metadata_pll[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &thermal_config_pll,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&thermal_config_pll),
         .data_size = sizeof(thermal_config_pll),
     },
 };
@@ -110,7 +110,7 @@ static const pbus_metadata_t thermal_metadata_pll[] = {
 static const pbus_metadata_t thermal_metadata_ddr[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &thermal_config_ddr,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&thermal_config_ddr),
         .data_size = sizeof(thermal_config_ddr),
     },
 };

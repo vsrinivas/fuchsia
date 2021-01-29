@@ -163,7 +163,7 @@ zx_status_t Nelson::DisplayInit() {
     display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
   }
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
-  display_panel_metadata[0].data_buffer = &display_panel_info;
+  display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
   auto status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {

@@ -287,7 +287,8 @@ zx_status_t Mt8167GpioDevice::Init() {
       .ops = &gpio_impl_protocol_ops_,
       .ctx = this,
   };
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto));
+  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL,
+                                  reinterpret_cast<uint8_t*>(&gpio_proto), sizeof(gpio_proto));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s pbus_register_protocol failed %d", __FUNCTION__, status);
     ShutDown();

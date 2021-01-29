@@ -185,14 +185,14 @@ zx_status_t Mt8167::I2cInit() {
   const pbus_metadata_t mt8167s_i2c_metadata[] = {
       {
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = &mt8167s_i2c_channels,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&mt8167s_i2c_channels),
           .data_size = sizeof(mt8167s_i2c_channels),
       },
   };
   const pbus_metadata_t cleo_i2c_metadata[] = {
       {
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = &cleo_i2c_channels,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&cleo_i2c_channels),
           .data_size = sizeof(cleo_i2c_channels),
       },
   };

@@ -23,7 +23,7 @@ static const pwm_id_t pwm_ids[] = {
 static const pbus_metadata_t pwm_metadata[] = {
     {
         .type = DEVICE_METADATA_PWM_IDS,
-        .data_buffer = &pwm_ids,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&pwm_ids),
         .data_size = sizeof(pwm_ids),
     },
 };

@@ -34,7 +34,8 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size) {
+  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol,
+                                   size_t protocol_size) {
     registered_proto_id_ = proto_id;
     return ZX_OK;
   }

@@ -43,10 +43,10 @@ constexpr clock_id_t clock_ids[] = {
     {g12a_clk::CLK_DOS},
 };
 
-constexpr pbus_metadata_t clock_metadata[] = {
+const pbus_metadata_t clock_metadata[] = {
     {
         .type = DEVICE_METADATA_CLOCK_IDS,
-        .data_buffer = &clock_ids,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&clock_ids),
         .data_size = sizeof(clock_ids),
     },
 };

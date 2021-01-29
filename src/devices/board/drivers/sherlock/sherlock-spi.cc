@@ -62,12 +62,12 @@ static const amlspi_cs_map_t spi_cs_map[] = {
 static const pbus_metadata_t spi_metadata[] = {
     {
         .type = DEVICE_METADATA_SPI_CHANNELS,
-        .data_buffer = spi_channels,
+        .data_buffer = reinterpret_cast<const uint8_t*>(spi_channels),
         .data_size = sizeof spi_channels,
     },
     {
         .type = DEVICE_METADATA_AMLSPI_CS_MAPPING,
-        .data_buffer = &spi_cs_map,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_cs_map),
         .data_size = sizeof spi_cs_map,
     },
 };

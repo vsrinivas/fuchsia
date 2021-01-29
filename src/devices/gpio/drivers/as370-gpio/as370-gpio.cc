@@ -205,7 +205,8 @@ zx_status_t As370Gpio::Bind() {
   }
 
   gpio_impl_protocol_t gpio_proto = {.ops = &gpio_impl_protocol_ops_, .ctx = this};
-  status = pbus.RegisterProtocol(ddk_proto_id_, &gpio_proto, sizeof(gpio_proto));
+  status = pbus.RegisterProtocol(ddk_proto_id_, reinterpret_cast<uint8_t*>(&gpio_proto),
+                                 sizeof(gpio_proto));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to register ZX_PROTOCOL_GPIO_IMPL: %d", __FILE__, __LINE__);
     return status;

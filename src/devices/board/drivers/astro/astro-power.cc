@@ -30,15 +30,15 @@ constexpr aml_voltage_table_t kS905D2VoltageTable[] = {
 
 constexpr voltage_pwm_period_ns_t kS905d2PwmPeriodNs = 1250;
 
-constexpr pbus_metadata_t power_impl_metadata[] = {
+const pbus_metadata_t power_impl_metadata[] = {
     {
         .type = DEVICE_METADATA_AML_VOLTAGE_TABLE,
-        .data_buffer = &kS905D2VoltageTable,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&kS905D2VoltageTable),
         .data_size = sizeof(kS905D2VoltageTable),
     },
     {
         .type = DEVICE_METADATA_AML_PWM_PERIOD_NS,
-        .data_buffer = &kS905d2PwmPeriodNs,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&kS905d2PwmPeriodNs),
         .data_size = sizeof(kS905d2PwmPeriodNs),
     },
 };

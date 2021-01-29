@@ -178,7 +178,7 @@ zx_status_t Mt8167::AudioInit() {
   pbus_metadata_t out_metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = &out_codec,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&out_codec),
           .data_size = sizeof(out_codec),
       },
   };

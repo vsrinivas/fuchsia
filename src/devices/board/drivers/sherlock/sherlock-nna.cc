@@ -61,7 +61,7 @@ static uint64_t s_external_sram_phys_base = T931_NNA_SRAM_BASE;
 static pbus_metadata_t nna_metadata[] = {
     {
         .type = 0,
-        .data_buffer = &s_external_sram_phys_base,
+        .data_buffer = reinterpret_cast<uint8_t*>(&s_external_sram_phys_base),
         .data_size = sizeof(s_external_sram_phys_base),
     },
 };

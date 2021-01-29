@@ -215,7 +215,7 @@ zx_status_t Astro::AudioInit() {
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &metadata,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
             .data_size = sizeof(metadata),
         },
     };
@@ -324,7 +324,7 @@ zx_status_t Astro::AudioInit() {
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &metadata,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
             .data_size = sizeof(metadata),
         },
     };
@@ -380,7 +380,7 @@ zx_status_t Astro::AudioInit() {
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &metadata,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
             .data_size = sizeof(metadata),
         },
     };
@@ -453,7 +453,7 @@ zx_status_t Astro::AudioInit() {
     pbus_metadata_t pdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
-            .data_buffer = &metadata,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
             .data_size = sizeof(metadata),
         },
     };

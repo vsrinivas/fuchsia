@@ -101,12 +101,12 @@ constexpr amlogic_cpu::perf_domain_t performance_domains[] = {
 static const pbus_metadata_t cpu_metadata[] = {
     {
         .type = DEVICE_METADATA_AML_OP_POINTS,
-        .data_buffer = operating_points,
+        .data_buffer = reinterpret_cast<const uint8_t*>(operating_points),
         .data_size = sizeof(operating_points),
     },
     {
         .type = DEVICE_METADATA_AML_PERF_DOMAINS,
-        .data_buffer = performance_domains,
+        .data_buffer = reinterpret_cast<const uint8_t*>(performance_domains),
         .data_size = sizeof(performance_domains),
     },
 };

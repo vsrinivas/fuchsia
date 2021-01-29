@@ -832,7 +832,8 @@ void AmlClock::Register(const ddk::PBusProtocolClient& pbus) {
       .ctx = this,
   };
 
-  pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
+  pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, reinterpret_cast<uint8_t*>(&clk_proto),
+                        sizeof(clk_proto));
 }
 
 zx_status_t AmlClock::GetMesonRateClock(const uint32_t clk, MesonRateClock** out) {

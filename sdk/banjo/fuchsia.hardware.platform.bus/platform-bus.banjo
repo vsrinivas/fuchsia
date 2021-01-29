@@ -42,7 +42,7 @@ struct PbusMetadata {
     /// Metadata type.
     uint32 type;
     /// Pointer to metadata.
-    vector<voidptr> data;
+    [Buffer] vector<uint8> data;
 };
 
 /// Device metadata to be passed from bootloader via a ZBI record.
@@ -107,7 +107,7 @@ protocol PBus {
     ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
     /// Called by protocol implementation drivers to register their protocol
     /// with the platform bus.
-    RegisterProtocol(uint32 proto_id, vector<voidptr> protocol) -> (zx.status s);
+    RegisterProtocol(uint32 proto_id, [Buffer] vector<uint8> protocol) -> (zx.status s);
     /// Board drivers may use this to get information about the board, and to
     /// differentiate between multiple boards that they support.
     GetBoardInfo() -> (zx.status s, fuchsia.hardware.platform.device.PdevBoardInfo info);
@@ -123,7 +123,7 @@ protocol PBus {
     /// The composite device is started in a the devhost of the fragment with index
     /// |coresident_device_index|, or a new devhost if |coresident_device_index| is UINT32_MAX.
     /// |coresident_device_index| is not allowed to be zero, since we don't want platform device
-    /// drivers running in the platform bus's devhost. 
+    /// drivers running in the platform bus's devhost.
     CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceFragment> fragments,
                        uint32 coresident_device_index) -> (zx.status s);
 };

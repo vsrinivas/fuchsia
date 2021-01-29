@@ -72,7 +72,7 @@ static pbus_metadata_t usb_metadata[] = {
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &dwc2_metadata,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&dwc2_metadata),
         .data_size = sizeof(dwc2_metadata),
     },
 };
@@ -182,7 +182,7 @@ static const uint32_t pll_settings[] = {
 static const pbus_metadata_t usb_phy_metadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = pll_settings,
+        .data_buffer = reinterpret_cast<const uint8_t*>(pll_settings),
         .data_size = sizeof(pll_settings),
     },
 };
@@ -267,7 +267,7 @@ zx_status_t Nelson::UsbInit() {
   config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
   config->functions[0].interface_protocol = 0;
   usb_metadata[0].data_size = config_size;
-  usb_metadata[0].data_buffer = config;
+  usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
   free(config);

@@ -73,7 +73,7 @@ static pbus_metadata_t usb_metadata[] = {
     },
     {
         .type = DEVICE_METADATA_MAC_ADDRESS,
-        .data_buffer = eth_mac_address,
+        .data_buffer = reinterpret_cast<const uint8_t*>(eth_mac_address),
         .data_size = sizeof(eth_mac_address),
     },
 };
@@ -152,7 +152,7 @@ zx_status_t Mt8167::UsbInit() {
   config->functions[1].interface_protocol = 0;
   config->functions[1].interface_subclass = 0;
   usb_metadata[0].data_size = config_size;
-  usb_metadata[0].data_buffer = config;
+  usb_metadata[0].data_buffer = reinterpret_cast<const uint8_t*>(config);
   usb_config_ = config;
 
   // Make sure the USB3v3 LDO voltage regulator is turned on.

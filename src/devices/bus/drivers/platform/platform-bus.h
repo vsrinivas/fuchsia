@@ -60,7 +60,8 @@ class PlatformBus : public PlatformBusType,
   // Platform bus protocol implementation.
   zx_status_t PBusDeviceAdd(const pbus_dev_t* dev);
   zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev);
-  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size);
+  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol,
+                                   size_t protocol_size);
   zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
   zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
   zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info);

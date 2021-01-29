@@ -50,7 +50,7 @@ zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::
   return bti->second.duplicate(ZX_RIGHT_SAME_RIGHTS, out_bti);
 }
 
-zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* protocol,
+zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol,
                                               size_t protocol_size) {
   if (!protocol || protocol_size < sizeof(ddk::AnyProtocol)) {
     return ZX_ERR_INVALID_ARGS;
@@ -62,23 +62,25 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
       // pinmuxing. IOMMU is for potential future use. CLOCK_IMPL and POWER_IMPL are needed by the
       // mt8167s board driver. Use of this mechanism for all other protocols has been deprecated.
     case ZX_PROTOCOL_CLOCK_IMPL: {
-      clock_ = ddk::ClockImplProtocolClient(static_cast<const clock_impl_protocol_t*>(protocol));
+      clock_ =
+          ddk::ClockImplProtocolClient(reinterpret_cast<const clock_impl_protocol_t*>(protocol));
       break;
     }
     case ZX_PROTOCOL_GPIO_IMPL: {
-      gpio_ = ddk::GpioImplProtocolClient(static_cast<const gpio_impl_protocol_t*>(protocol));
+      gpio_ = ddk::GpioImplProtocolClient(reinterpret_cast<const gpio_impl_protocol_t*>(protocol));
       break;
     }
     case ZX_PROTOCOL_IOMMU: {
-      iommu_ = ddk::IommuProtocolClient(static_cast<const iommu_protocol_t*>(protocol));
+      iommu_ = ddk::IommuProtocolClient(reinterpret_cast<const iommu_protocol_t*>(protocol));
       break;
     }
     case ZX_PROTOCOL_POWER_IMPL: {
-      power_ = ddk::PowerImplProtocolClient(static_cast<const power_impl_protocol_t*>(protocol));
+      power_ =
+          ddk::PowerImplProtocolClient(reinterpret_cast<const power_impl_protocol_t*>(protocol));
       break;
     }
     case ZX_PROTOCOL_SYSMEM: {
-      sysmem_ = ddk::SysmemProtocolClient(static_cast<const sysmem_protocol_t*>(protocol));
+      sysmem_ = ddk::SysmemProtocolClient(reinterpret_cast<const sysmem_protocol_t*>(protocol));
       break;
     }
     default:

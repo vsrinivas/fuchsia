@@ -145,7 +145,8 @@ void AmlAxgGpio::Bind(const pbus_protocol_t& pbus) {
       .ctx = this,
   };
 
-  pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto));
+  pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, reinterpret_cast<uint8_t*>(&gpio_proto),
+                         sizeof(gpio_proto));
 }
 
 zx_status_t AmlAxgGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,

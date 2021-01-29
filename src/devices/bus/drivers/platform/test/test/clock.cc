@@ -61,7 +61,8 @@ zx_status_t TestClockDevice::Init() {
       .ops = &clock_impl_protocol_ops_,
       .ctx = this,
   };
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clock_proto, sizeof(clock_proto));
+  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL,
+                                  reinterpret_cast<uint8_t*>(&clock_proto), sizeof(clock_proto));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s pbus_register_protocol failed %d", __func__, status);
     return status;

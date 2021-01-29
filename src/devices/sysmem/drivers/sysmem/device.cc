@@ -410,7 +410,8 @@ zx_status_t Device::Bind() {
     // ever being visible.
     // TODO(fxbug.dev/33536) Remove this after all clients have switched to using composite
     // protocol.
-    status = pbus.RegisterProtocol(ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
+    status = pbus.RegisterProtocol(ZX_PROTOCOL_SYSMEM,
+                                   reinterpret_cast<uint8_t*>(&in_proc_sysmem_protocol_),
                                    sizeof(in_proc_sysmem_protocol_));
     if (status != ZX_OK) {
       DdkAsyncRemove();

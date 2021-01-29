@@ -61,15 +61,15 @@ TiLp8556Metadata kDeviceMetadata = {
     .register_count = 14,
 };
 
-constexpr pbus_metadata_t backlight_metadata[] = {
+const pbus_metadata_t backlight_metadata[] = {
     {
         .type = DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
-        .data_buffer = &kMaxBrightnessInNits,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&kMaxBrightnessInNits),
         .data_size = sizeof(kMaxBrightnessInNits),
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &kDeviceMetadata,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&kDeviceMetadata),
         .data_size = sizeof(kDeviceMetadata),
     },
 };

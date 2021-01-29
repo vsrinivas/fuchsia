@@ -160,11 +160,11 @@ zx_status_t Sherlock::DisplayInit() {
       display_panel_info[0].panel_type = PANEL_TV101WXM_FT;
     }
     display_panel_metadata[0].data_size = sizeof(display_panel_info);
-    display_panel_metadata[0].data_buffer = &display_panel_info;
+    display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
   } else if (pid_ == PDEV_PID_LUIS) {
     display_panel_info[0].panel_type = PANEL_TV080WXM_FT;
     display_panel_metadata[0].data_size = sizeof(display_panel_info);
-    display_panel_metadata[0].data_buffer = &display_panel_info;
+    display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
   } else {
     zxlogf(ERROR, "%s: Unsupported board detected: pid = %u\n", __func__, pid_);
     return ZX_ERR_NOT_SUPPORTED;

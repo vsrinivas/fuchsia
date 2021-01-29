@@ -256,19 +256,19 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
 
   const pbus_metadata_t test_metadata_1[] = {{
       .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = &metadata_1,
+      .data_buffer = reinterpret_cast<uint8_t*>(&metadata_1),
       .data_size = sizeof(composite_test_metadata),
   }};
 
   const pbus_metadata_t test_metadata_2[] = {{
       .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = &metadata_2,
+      .data_buffer = reinterpret_cast<uint8_t*>(&metadata_2),
       .data_size = sizeof(composite_test_metadata),
   }};
 
   const pbus_metadata_t test_metadata_goldfish_control[] = {{
       .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = &metadata_goldfish_control,
+      .data_buffer = reinterpret_cast<uint8_t*>(&metadata_goldfish_control),
       .data_size = sizeof(composite_test_metadata),
   }};
 

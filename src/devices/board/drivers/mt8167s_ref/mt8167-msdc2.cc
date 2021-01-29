@@ -138,7 +138,7 @@ zx_status_t Mt8167::Msdc2Init() {
 
   static const pbus_metadata_t msdc2_metadata[] = {
       {.type = DEVICE_METADATA_PRIVATE,
-       .data_buffer = &msdc2_config,
+       .data_buffer = reinterpret_cast<const uint8_t*>(&msdc2_config),
        .data_size = sizeof(msdc2_config)},
   };
 

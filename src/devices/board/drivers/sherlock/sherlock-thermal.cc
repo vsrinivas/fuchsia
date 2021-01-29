@@ -216,12 +216,12 @@ aml_thermal_info_t aml_thermal_info = {
 const pbus_metadata_t thermal_metadata_pll[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &thermal_config_pll,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&thermal_config_pll),
         .data_size = sizeof(thermal_config_pll),
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &aml_thermal_info,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&aml_thermal_info),
         .data_size = sizeof(aml_thermal_info),
     },
 };
@@ -229,7 +229,7 @@ const pbus_metadata_t thermal_metadata_pll[] = {
 const pbus_metadata_t thermal_metadata_ddr[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &thermal_config_ddr,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&thermal_config_ddr),
         .data_size = sizeof(thermal_config_ddr),
     },
 };

@@ -85,12 +85,12 @@ zx_status_t Astro::ThermistorInit() {
   pbus_metadata_t therm_metadata[] = {
       {
           .type = NTC_CHANNELS_METADATA_PRIVATE,
-          .data_buffer = &ntc_channels,
+          .data_buffer = reinterpret_cast<uint8_t*>(&ntc_channels),
           .data_size = sizeof(ntc_channels),
       },
       {
           .type = NTC_PROFILE_METADATA_PRIVATE,
-          .data_buffer = &ntc_info,
+          .data_buffer = reinterpret_cast<uint8_t*>(&ntc_info),
           .data_size = sizeof(ntc_info),
       },
   };

@@ -166,7 +166,7 @@ zx_status_t Astro::DisplayInit() {
     display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
   }
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
-  display_panel_metadata[0].data_buffer = &display_panel_info;
+  display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
   // TODO(payamm): Change from 1 to UINT32_MAX to separate DSI and Display into two different
   // devhosts once support for it lands.

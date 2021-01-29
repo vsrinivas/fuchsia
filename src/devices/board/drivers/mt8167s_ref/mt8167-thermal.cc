@@ -70,9 +70,9 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo
                   [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = {
                       .opp = {}, .latency = 0, .count = 0}}};
 
-constexpr pbus_metadata_t thermal_metadata[] = {
+const pbus_metadata_t thermal_metadata[] = {
     {.type = DEVICE_METADATA_THERMAL_CONFIG,
-     .data_buffer = &thermal_dev_info,
+     .data_buffer = reinterpret_cast<const uint8_t*>(&thermal_dev_info),
      .data_size = sizeof(thermal_dev_info)},
 };
 

@@ -71,7 +71,8 @@ zx_status_t TestPowerDevice::Init() {
       .ops = &power_impl_protocol_ops_,
       .ctx = this,
   };
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL, &power_proto, sizeof(power_proto));
+  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL,
+                                  reinterpret_cast<uint8_t*>(&power_proto), sizeof(power_proto));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s pbus_register_protocol failed %d", __func__, status);
     return status;

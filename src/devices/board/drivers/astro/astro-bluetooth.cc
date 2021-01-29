@@ -44,7 +44,7 @@ static const serial_port_info_t bt_uart_serial_info = {
 static const pbus_metadata_t bt_uart_metadata[] = {
     {
         .type = DEVICE_METADATA_SERIAL_PORT_INFO,
-        .data_buffer = &bt_uart_serial_info,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&bt_uart_serial_info),
         .data_size = sizeof(bt_uart_serial_info),
     },
 };

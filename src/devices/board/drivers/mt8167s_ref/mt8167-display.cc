@@ -96,10 +96,10 @@ constexpr display_driver_t display_driver_info[] = {
     },
 };
 
-constexpr pbus_metadata_t display_metadata[] = {
+const pbus_metadata_t display_metadata[] = {
     {
         .type = DEVICE_METADATA_DISPLAY_DEVICE,
-        .data_buffer = &display_driver_info,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&display_driver_info),
         .data_size = sizeof(display_driver_t),
     },
 };
@@ -283,7 +283,7 @@ zx_status_t Mt8167::DisplayInit() {
     display_panel_info[0].panel_type = PANEL_ILI9881C;
   }
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
-  display_panel_metadata[0].data_buffer = &display_panel_info;
+  display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
   // Load display driver in same devhost as DSI driver.
   status = pbus_.CompositeDeviceAdd(&display_dev, fragments, std::size(fragments), 3);

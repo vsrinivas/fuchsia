@@ -91,7 +91,7 @@ fuchsia_hardware_thermal_ThermalDeviceInfo aml_luis_config = {
 static const pbus_metadata_t thermal_metadata[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &aml_luis_config,
+        .data_buffer = reinterpret_cast<uint8_t*>(&aml_luis_config),
         .data_size = sizeof(aml_luis_config),
     },
 };

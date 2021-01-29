@@ -31,7 +31,7 @@ zx_status_t Mt8167::SysmemInit() {
 
   static const pbus_metadata_t sysmem_metadata_list[] = {{
       .type = SYSMEM_METADATA,
-      .data_buffer = &sysmem_metadata,
+      .data_buffer = reinterpret_cast<const uint8_t*>(&sysmem_metadata),
       .data_size = sizeof(sysmem_metadata),
   }};
 

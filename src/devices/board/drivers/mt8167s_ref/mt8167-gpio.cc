@@ -77,7 +77,7 @@ zx_status_t Mt8167::GpioInit() {
 
   const pbus_metadata_t cleo_gpio_metadata[] = {{
       .type = DEVICE_METADATA_GPIO_PINS,
-      .data_buffer = &cleo_gpio_pins,
+      .data_buffer = reinterpret_cast<const uint8_t*>(&cleo_gpio_pins),
       .data_size = sizeof(cleo_gpio_pins),
   }};
 

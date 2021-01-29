@@ -53,7 +53,7 @@ static const i2c_channel_t i2c_channels[] = {
 
 static const pbus_metadata_t i2c_metadata[] = {{
     .type = DEVICE_METADATA_I2C_CHANNELS,
-    .data_buffer = &i2c_channels,
+    .data_buffer = reinterpret_cast<const uint8_t*>(&i2c_channels),
     .data_size = sizeof(i2c_channels),
 }};
 

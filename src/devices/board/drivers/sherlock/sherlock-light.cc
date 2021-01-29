@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <bind/fuchsia/ams/platform/cpp/fidl.h>
 #include <zircon/compiler.h>
 
+#include <bind/fuchsia/ams/platform/cpp/fidl.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -53,7 +53,7 @@ zx_status_t Sherlock::LightInit() {
   device_metadata_t metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data = &params,
+          .data = reinterpret_cast<uint8_t*>(&params),
           .length = sizeof(params),
       },
   };
@@ -94,12 +94,12 @@ zx_status_t Sherlock::LightInit() {
   static const pbus_metadata_t light_metadata[] = {
       {
           .type = DEVICE_METADATA_NAME,
-          .data_buffer = &kLightNames,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&kLightNames),
           .data_size = sizeof(kLightNames),
       },
       {
           .type = DEVICE_METADATA_LIGHTS,
-          .data_buffer = &kConfigs,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&kConfigs),
           .data_size = sizeof(kConfigs),
       },
   };
