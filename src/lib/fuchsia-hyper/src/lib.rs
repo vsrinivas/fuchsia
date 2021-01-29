@@ -32,7 +32,10 @@ pub use not_fuchsia::*;
 #[cfg(target_os = "fuchsia")]
 mod fuchsia;
 #[cfg(target_os = "fuchsia")]
-pub use fuchsia::*;
+pub use crate::fuchsia::*;
+
+#[cfg(target_os = "fuchsia")]
+mod happy_eyeballs;
 
 /// A Fuchsia-compatible hyper client configured for making HTTP requests.
 pub type HttpClient = Client<HyperConnector, Body>;
