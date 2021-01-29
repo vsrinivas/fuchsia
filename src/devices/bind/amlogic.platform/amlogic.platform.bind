@@ -57,6 +57,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RAM_CTL = 0x24,
   HEVC_ENC = 0x25,
   POWER = 0x26,
+  RADAR_SENSOR = 0x26,
   ASTRO_THERMISTOR = 0x27,
   THERMAL_DDR = 0x28,
 };
