@@ -116,7 +116,7 @@ const char* const kAnalyticsHelp = R"(  --analytics=enable|disable
       --analytics=disable          Disable collection of analytics and save the
                                    status in a configuration file.)";
 
-const char* const kShowAnalyticsHelp = R"(  --show-analytics
+const char* const kAnalyticsShowHelp = R"(  --analytics-show
       Show the opt-in/out status for collection of analytics and what we collect when opt-in.)";
 
 const char kVersionHelp[] = R"(  --version
@@ -179,7 +179,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
     }
     return cmdline::Status::Ok();
   });
-  parser.AddSwitch("show-analytics", 0, kShowAnalyticsHelp, &CommandLineOptions::show_analytics);
+  parser.AddSwitch("analytics-show", 0, kAnalyticsShowHelp, &CommandLineOptions::analytics_show);
   parser.AddSwitch("enable-debug-adapter", 0, kEnableDebugAdapterHelp,
                    &CommandLineOptions::enable_debug_adapter);
   parser.AddSwitch("debug-adapter-port", 0, kDebugAdapterPortHelp,

@@ -5,16 +5,20 @@
 #ifndef SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_ANALYTICS_H_
 #define SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_ANALYTICS_H_
 
+#include <memory>
 #include <string>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_internal.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_messages.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_status.h"
+#include "src/lib/analytics/cpp/core_dev_tools/general_parameters.h"
+#include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 #include "src/lib/analytics/cpp/core_dev_tools/persistent_status.h"
+#include "src/lib/analytics/cpp/core_dev_tools/system_info.h"
 #include "src/lib/analytics/cpp/google_analytics/client.h"
 #include "src/lib/analytics/cpp/google_analytics/event.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace analytics::core_dev_tools {
 
@@ -35,38 +39,32 @@ enum class SubLaunchStatus {
 // action of sending analytics itself is rather static, without interacting with any internal
 // status that changes from instance to instance.
 //
-// To use this class, one must inherit this class and specify required constants and static methods
-// as below:
+// To use this class, one must inherit this class and specify required constants like below:
 //
 //     class ToolAnalytics : public Analytics<ToolAnalytics> {
-//       friend class Analytics<ToolAnalytics>;
-//
 //      public:
 //       // ......
 //
 //      private:
+//       friend class Analytics<ToolAnalytics>;
 //       static constexpr char kToolName[] = "tool";
+//       static constexpr int64_t kQuitTimeoutMs = 500; // wait for at most 500 ms before quitting
 //       static constexpr char kTrackingId[] = "UA-XXXXX-Y";
 //       static constexpr char kEnableArgs[] = "--analytics=enable";
 //       static constexpr char kDisableArgs[] = "--analytics=disable";
 //       static constexpr char kStatusArgs[] = "--show-analytics";
 //       static constexpr char kAnalyticsList[] = R"(1. ...
 //     2. ...)";
-//
-//       static void SetRuntimeAnalyticsStatus(AnalyticsStatus status) {
-//       // ......
-//       }
-//
-//       static google_analytics::Client* CreateGoogleAnalyticsClient() {
-//         return new ToolGoogleAnalyticsClient();
-//       }
-//
-//       static void RunTask(fit::pending_task task) {
-//       // ...
-//       }
 //     }
 //
-// Then the derived class can define their own functions for sending analytics. For example
+// One also needs to (if not already) add the following lines to the main() function before any
+// threads are spawned and any use of Curl or Analytics:
+//     debug_ipc::Curl::GlobalInit();
+//     auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+//     auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
+// and include related headers, e.g. <lib/fit/defer.h> and "src/developer/debug/shared/curl.h".
+//
+// The derived class can also define their own functions for sending analytics. For example
 //
 //     // The definition of a static public function in ToolAnalytics
 //     void ToolAnalytics::IfEnabledSendExitEvent() {
@@ -94,29 +92,23 @@ class Analytics {
     }
   }
 
-  static void PersistentEnable(fit::callback<void()> callback = nullptr) {
+  static void PersistentEnable() {
     if (internal::PersistentStatus::IsEnabled()) {
       internal::ShowAlready(AnalyticsStatus::kEnabled);
-      if (callback) {
-        T::RunTask(fit::make_promise([callback = std::move(callback)]() mutable { callback(); }));
-      }
     } else {
       internal::PersistentStatus::Enable();
       internal::ShowChangedTo(AnalyticsStatus::kEnabled);
-      SendAnalyticsManualEnableEvent(std::move(callback));
+      SendAnalyticsManualEnableEvent();
     }
   }
 
-  static void PersistentDisable(fit::callback<void()> callback = nullptr) {
+  static void PersistentDisable() {
     if (internal::PersistentStatus::IsEnabled()) {
-      SendAnalyticsDisableEvent(std::move(callback));
+      SendAnalyticsDisableEvent();
       internal::PersistentStatus::Disable();
       internal::ShowChangedTo(AnalyticsStatus::kDisabled);
     } else {
       internal::ShowAlready(AnalyticsStatus::kDisabled);
-      if (callback) {
-        T::RunTask(fit::make_promise([callback = std::move(callback)]() mutable { callback(); }));
-      }
     }
   }
 
@@ -129,33 +121,52 @@ class Analytics {
                             T::kAnalyticsList);
   }
 
-  // Clean up the global pointer used by the Google Analytics client.
-  static void CleanUpGoogleAnalyticsClient() {
+  static void IfEnabledSendInvokeEvent() {
+    if (IsEnabled()) {
+      GeneralParameters parameters;
+      parameters.SetOsVersion(analytics::GetOsVersion());
+      parameters.SetApplicationVersion(zxdb::kBuildVersion);
+
+      // Set an empty application name (an) to make application version (av) usable. Otherwise, the
+      // hit will be treated as invalid by Google Analytics.
+      // See https://developers.google.com/analytics/devguides/collection/protocol/v1/parameters#an
+      // for more information.
+      parameters.SetApplicationName("");
+
+      GoogleAnalyticsEvent event(kEventCategoryGeneral, kEventActionInvoke);
+      event.AddGeneralParameters(parameters);
+      SendGoogleAnalyticsEvent(event);
+    }
+  }
+
+  static void CleanUp() {
+    delete client_;
+    client_ = nullptr;
     client_is_cleaned_up_ = true;
-    auto* client = GetGoogleAnalyticsClient().get();
-    delete client;
   }
 
  protected:
-  static void SendGoogleAnalyticsEvent(const google_analytics::Event& event,
-                                       fit::callback<void()> callback = nullptr) {
-    auto client = GetGoogleAnalyticsClient();
-    if (client) {
-      T::RunTask(client->AddEvent(event).then(
-          [callback =
-               std::move(callback)](fit::result<void, google_analytics::NetError>& result) mutable {
-            if (callback) {
-              callback();
-            }
-          }));
-    } else {
-      if (callback) {
-        T::RunTask(fit::make_promise([callback = std::move(callback)]() mutable { callback(); }));
+  static constexpr char kEventCategoryGeneral[] = "general";
+  static constexpr char kEventActionInvoke[] = "invoke";
+
+  static void SendGoogleAnalyticsEvent(const google_analytics::Event& event) {
+    if (!client_is_cleaned_up_) {
+      if (!client_) {
+        CreateAndPrepareGoogleAnalyticsClient();
       }
+      client_->AddEvent(event);
     }
   }
 
   static bool ClientIsCleanedUp() { return client_is_cleaned_up_; }
+
+  static void SetRuntimeAnalyticsStatus(AnalyticsStatus status) {
+    enabled_runtime_ = (status == AnalyticsStatus::kEnabled);
+  }
+
+  static bool IsEnabled() { return !ClientIsCleanedUp() && enabled_runtime_; }
+
+  inline static bool enabled_runtime_ = false;
 
  private:
   static constexpr char kEventCategoryAnalytics[] = "analytics";
@@ -195,34 +206,26 @@ class Analytics {
 
   static void InitSubLaunchedFirst() { T::SetRuntimeAnalyticsStatus(AnalyticsStatus::kDisabled); }
 
-  static std::unique_ptr<google_analytics::Client> CreateAndPrepareGoogleAnalyticsClient() {
-    std::unique_ptr<google_analytics::Client> client = T::CreateGoogleAnalyticsClient();
-    internal::PrepareGoogleAnalyticsClient(*client, T::kToolName, T::kTrackingId);
-    return client;
+  static void CreateAndPrepareGoogleAnalyticsClient() {
+    client_ = new GoogleAnalyticsClient(T::kQuitTimeoutMs);
+    internal::PrepareGoogleAnalyticsClient(*client_, T::kToolName, T::kTrackingId);
   };
 
-  static fxl::WeakPtr<google_analytics::Client> GetGoogleAnalyticsClient() {
-    // One can call CleanUpGoogleAnalyticsClient to free the pointer
-    static google_analytics::Client* client = nullptr;
-    if (!client_is_cleaned_up_ &&
-        (client != nullptr || (client = CreateAndPrepareGoogleAnalyticsClient().release()))) {
-      return client->GetWeakPtr();
-    }
-    client = nullptr;
-    return fxl::WeakPtr<google_analytics::Client>();
+  static void SendAnalyticsManualEnableEvent() {
+    SendGoogleAnalyticsEvent(google_analytics::Event(kEventCategoryAnalytics, kEventActionEnable));
   }
 
-  static void SendAnalyticsManualEnableEvent(fit::callback<void()> callback = nullptr) {
-    SendGoogleAnalyticsEvent(google_analytics::Event(kEventCategoryAnalytics, kEventActionEnable),
-                             std::move(callback));
-  }
-
-  static void SendAnalyticsDisableEvent(fit::callback<void()> callback = nullptr) {
-    SendGoogleAnalyticsEvent(google_analytics::Event(kEventCategoryAnalytics, kEventActionDisable),
-                             std::move(callback));
+  static void SendAnalyticsDisableEvent() {
+    SendGoogleAnalyticsEvent(google_analytics::Event(kEventCategoryAnalytics, kEventActionDisable));
   }
 
   inline static bool client_is_cleaned_up_ = false;
+  // Instead of using an fbl::NoDestructor<std::unique_ptr<google_analytics::Client>>, a raw pointer
+  // is used here, since
+  // (1) there is no ownership transfer
+  // (2) the life time of the pointed-to object is managed manually
+  // (3) using a raw pointer here makes code simpler and easier to read
+  inline static google_analytics::Client* client_ = nullptr;
 };
 
 }  // namespace analytics::core_dev_tools

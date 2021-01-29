@@ -29,40 +29,30 @@ bool IsResponseCodeSuccess(long response_code) {
   return response_code >= 200 && response_code < 300;
 }
 
-fit::promise<void, GoogleAnalyticsNetError> CurlPerformAsync(const fxl::RefPtr<Curl>& curl) {
+fit::promise<> CurlPerformAsync(const fxl::RefPtr<Curl>& curl) {
   FX_DCHECK(curl);
 
-  fit::bridge<void, GoogleAnalyticsNetError> bridge;
+  fit::bridge bridge;
   curl->Perform([completer = std::move(bridge.completer)](Curl* curl, Curl::Error result) mutable {
     auto response_code = curl->ResponseCode();
     if (!result && IsResponseCodeSuccess(response_code)) {
       completer.complete_ok();
-    } else if (result) {
-      completer.complete_error(GoogleAnalyticsNetError(
-          GoogleAnalyticsNetErrorType::kConnectionError, result.ToString()));
     } else {
-      completer.complete_error(GoogleAnalyticsNetError(
-          GoogleAnalyticsNetErrorType::kUnexpectedResponseCode, std::to_string(response_code)));
+      completer.complete_error();
     }
   });
-  return bridge.consumer.promise_or(
-      fit::error(GoogleAnalyticsNetError(GoogleAnalyticsNetErrorType::kAbandoned)));
+  return bridge.consumer.promise();
 }
 
 }  // namespace
 
-void GoogleAnalyticsClient::CurlGlobalInit() {
-  auto status = curl_global_init(CURL_GLOBAL_ALL);
-  FX_DCHECK(status == CURLE_OK);
-}
-
-void GoogleAnalyticsClient::CurlGlobalCleanup() { curl_global_cleanup(); }
-
-fit::promise<void, GoogleAnalyticsNetError> GoogleAnalyticsClient::SendData(
-    std::string_view user_agent, const std::map<std::string, std::string>& parameters) const {
-  auto curl = PrepareCurl(user_agent);
-  curl->set_post_data(parameters);
-  return CurlPerformAsync(curl);
+void GoogleAnalyticsClient::SendData(std::string_view user_agent,
+                                     std::map<std::string, std::string> parameters) {
+  executor_.schedule_task(fit::make_promise([user_agent, parameters{std::move(parameters)}] {
+    auto curl = PrepareCurl(user_agent);
+    curl->set_post_data(parameters);
+    return CurlPerformAsync(curl);
+  }));
 }
 
 }  // namespace analytics::core_dev_tools

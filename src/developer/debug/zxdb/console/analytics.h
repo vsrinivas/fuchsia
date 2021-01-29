@@ -7,7 +7,6 @@
 
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics.h"
-#include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 
 namespace zxdb {
 
@@ -19,32 +18,23 @@ class Analytics : public analytics::core_dev_tools::Analytics<Analytics> {
  private:
   friend class analytics::core_dev_tools::Analytics<Analytics>;
 
-  // Move base class Init() to private. Users of this class can only call Init(Session& session).
+  // Move some base class methods to private. Users of this class need to call "overloaded"
+  // version of these functions that take a session as an argument.
   using analytics::core_dev_tools::Analytics<Analytics>::Init;
+  using analytics::core_dev_tools::Analytics<Analytics>::IfEnabledSendInvokeEvent;
 
   static constexpr char kToolName[] = "zxdb";
+  static constexpr int64_t kQuitTimeoutMs = 500;
   static constexpr char kTrackingId[] = "UA-127897021-11";
   static constexpr char kEnableArgs[] = "--analytics=enable";
   static constexpr char kDisableArgs[] = "--analytics=disable";
-  static constexpr char kStatusArgs[] = "--show-analytics";
+  static constexpr char kStatusArgs[] = "--analytics-show";
   static constexpr char kAnalyticsList[] = R"(1. For invocation of zxdb:
    - The version of zxdb
    - The output of "uname -ms" (CPU architecture and kernel name)
 2. Event of opting in/out of collection of analytics)";
 
-  static void SetRuntimeAnalyticsStatus(analytics::core_dev_tools::AnalyticsStatus status) {
-    should_be_enabled_runtime_ = (status == analytics::core_dev_tools::AnalyticsStatus::kEnabled);
-  }
-
-  static std::unique_ptr<analytics::google_analytics::Client> CreateGoogleAnalyticsClient() {
-    return std::make_unique<analytics::core_dev_tools::GoogleAnalyticsClient>();
-  }
-
-  static void RunTask(fit::pending_task task);
-
   static bool IsEnabled(Session* session);
-
-  static bool should_be_enabled_runtime_;
 };
 
 }  // namespace zxdb

@@ -11,24 +11,8 @@
 
 #include "src/lib/analytics/cpp/google_analytics/event.h"
 #include "src/lib/analytics/cpp/google_analytics/general_parameters.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace analytics::google_analytics {
-
-enum class NetErrorType { kConnectionError, kUnexpectedResponseCode, kAbandoned };
-
-class NetError {
- public:
-  explicit NetError(NetErrorType type, std::string_view details = std::string_view())
-      : type_(type), details_(details) {}
-
-  NetErrorType type() const { return type_; }
-  const std::string& details() const { return details_; }
-
- private:
-  NetErrorType type_;
-  std::string details_;
-};
 
 // This is an abstract class for Google Analytics client, where the actual HTTP communications are
 // left unimplemented. This is because to provide non-blocking HTTP communications, we have to rely
@@ -43,8 +27,7 @@ class NetError {
 //     ga_client.SetUserAgent("Example Agent")
 //     int64_t value = 12345;
 //     auto event = Event("category", "action", "label", value);
-//     fit::promise<void, NetError> p = ga_client.AddEvent(event)
-//     // Run p in the executor and process the result
+//     ga_client.AddEvent(event)
 //
 // For an example implementation, please see
 // //src/developer/debug/zxdb/console/google_analytics_client.[cc,h]
@@ -65,19 +48,16 @@ class Client {
   // Add parameters shared by all metrics, for example, an (application name).
   void AddSharedParameters(const GeneralParameters& shared_parameters);
 
-  fit::promise<void, NetError> AddEvent(const Event& event) const;
-
-  fxl::WeakPtr<Client> GetWeakPtr() { return weak_factory_.GetWeakPtr(); };
+  void AddEvent(const Event& event);
 
  private:
   bool IsReady() const;
-  virtual fit::promise<void, NetError> SendData(
-      std::string_view user_agent, const std::map<std::string, std::string>& parameters) const = 0;
+  virtual void SendData(std::string_view user_agent,
+                        std::map<std::string, std::string> parameters) = 0;
 
   std::string user_agent_;
   // Stores shared parameters
   std::map<std::string, std::string> shared_parameters_;
-  fxl::WeakPtrFactory<Client> weak_factory_;
 };
 
 }  // namespace analytics::google_analytics

@@ -17,8 +17,7 @@ constexpr char kClientIdKey[] = "cid";
 
 }  // namespace
 
-Client::Client()
-    : shared_parameters_{{kProtocolVersionKey, kProtocolVersion}}, weak_factory_(this) {}
+Client::Client() : shared_parameters_{{kProtocolVersionKey, kProtocolVersion}} {}
 
 void Client::SetTrackingId(std::string_view tracking_id) {
   shared_parameters_[kTrackingIdKey] = tracking_id;
@@ -33,14 +32,14 @@ void Client::AddSharedParameters(const GeneralParameters& shared_parameters) {
   shared_parameters_.insert(parameters.begin(), parameters.end());
 }
 
-fit::promise<void, NetError> Client::AddEvent(const Event& event) const {
+void Client::AddEvent(const Event& event) {
   FX_DCHECK(IsReady());
 
   std::map<std::string, std::string> parameters(shared_parameters_);
   const auto& event_parameters = event.parameters();
   parameters.insert(event_parameters.begin(), event_parameters.end());
 
-  return SendData(user_agent_, parameters);
+  SendData(user_agent_, std::move(parameters));
 }
 
 bool Client::IsReady() const {

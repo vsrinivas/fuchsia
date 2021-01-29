@@ -32,7 +32,7 @@ struct CommandLineOptions {
   std::vector<std::string> symbol_servers;
   std::vector<std::string> build_dirs;
   AnalyticsMode analytics = AnalyticsMode::kUnspecified;
-  bool show_analytics = false;
+  bool analytics_show = false;
   bool requested_version = false;
   bool enable_debug_adapter = false;
   uint16_t debug_adapter_port = 15678;

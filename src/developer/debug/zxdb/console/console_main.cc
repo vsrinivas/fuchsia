@@ -178,16 +178,14 @@ void InitAnalytics(CommandLineOptions::AnalyticsMode analytics_option, Session& 
 bool EarlyProcessAnalyticsOptions(const CommandLineOptions& options) {
   bool should_exit_early = false;
   if (options.analytics == CommandLineOptions::AnalyticsMode::kEnable) {
-    Analytics::PersistentEnable([] { debug_ipc::MessageLoop::Current()->QuitNow(); });
+    Analytics::PersistentEnable();
     should_exit_early = true;
-    debug_ipc::MessageLoop::Current()->Run();
   } else if (options.analytics == CommandLineOptions::AnalyticsMode::kDisable) {
-    Analytics::PersistentDisable([] { debug_ipc::MessageLoop::Current()->QuitNow(); });
+    Analytics::PersistentDisable();
     should_exit_early = true;
-    debug_ipc::MessageLoop::Current()->Run();
   }
 
-  if (options.show_analytics) {
+  if (options.analytics_show) {
     Analytics::ShowAnalytics();
     should_exit_early = true;
   }
@@ -200,7 +198,7 @@ bool EarlyProcessAnalyticsOptions(const CommandLineOptions& options) {
 int ConsoleMain(int argc, const char* argv[]) {
   debug_ipc::Curl::GlobalInit();
   auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
-  auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUpGoogleAnalyticsClient);
+  auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
   std::vector<std::string> params;
   cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
@@ -211,6 +209,10 @@ int ConsoleMain(int argc, const char* argv[]) {
 
   if (options.requested_version) {
     printf("Version: %s\n", kBuildVersion);
+    return 0;
+  }
+
+  if (EarlyProcessAnalyticsOptions(options)) {
     return 0;
   }
 
@@ -226,11 +228,6 @@ int ConsoleMain(int argc, const char* argv[]) {
   if (!loop.Init(&error_message)) {
     fprintf(stderr, "%s", error_message.c_str());
     return 1;
-  }
-
-  if (EarlyProcessAnalyticsOptions(options)) {
-    loop.Cleanup();
-    return 0;
   }
 
   // This scope forces all the objects to be destroyed before the Cleanup() call which will mark the

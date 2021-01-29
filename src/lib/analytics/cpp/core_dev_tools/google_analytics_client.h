@@ -5,24 +5,28 @@
 #ifndef SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_GOOGLE_ANALYTICS_CLIENT_H_
 #define SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_GOOGLE_ANALYTICS_CLIENT_H_
 
+#include "src/lib/analytics/cpp/core_dev_tools/analytics_executor.h"
 #include "src/lib/analytics/cpp/google_analytics/client.h"
 
 namespace analytics::core_dev_tools {
 
 // Forwarding types from analytics::google_analytics
 using GoogleAnalyticsEvent = ::analytics::google_analytics::Event;
-using GoogleAnalyticsNetError = ::analytics::google_analytics::NetError;
-using GoogleAnalyticsNetErrorType = ::analytics::google_analytics::NetErrorType;
 
-class GoogleAnalyticsClient : public analytics::google_analytics::Client {
+// To use this client, one needs to (if not already) add the following lines to the main()
+// function before any threads are spawned and any use of Curl or this client:
+//     debug_ipc::Curl::GlobalInit();
+//     auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+// and include related headers, e.g. <lib/fit/defer.h> and "src/developer/debug/shared/curl.h".
+class GoogleAnalyticsClient : public google_analytics::Client {
  public:
-  static void CurlGlobalInit();
-  static void CurlGlobalCleanup();
+  explicit GoogleAnalyticsClient(int64_t quit_timeout_ms) : executor_(quit_timeout_ms) {}
+  GoogleAnalyticsClient() : GoogleAnalyticsClient(0) {}
 
  private:
-  fit::promise<void, GoogleAnalyticsNetError> SendData(
-      std::string_view user_agent,
-      const std::map<std::string, std::string>& parameters) const override;
+  void SendData(std::string_view user_agent,
+                std::map<std::string, std::string> parameters) override;
+  AnalyticsExecutor executor_;
 };
 
 }  // namespace analytics::core_dev_tools
