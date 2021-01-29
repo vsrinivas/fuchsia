@@ -43,7 +43,7 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
                                                             ddk_remover);
   if ((status = device->DdkAdd(ddk::DeviceAddArgs("brcmfmac-wlanphy")
                                    .set_flags(DEVICE_ADD_INVISIBLE)
-                                   .set_inspect_vmo(inspect_->inspector().DuplicateVmo()))) !=
+                                   .set_inspect_vmo(inspect->inspector().DuplicateVmo()))) !=
       ZX_OK) {
     delete device.release();
     return status;
