@@ -3,78 +3,71 @@
 // found in the LICENSE file.
 
 use crate::datatypes::{HttpsSample, Phase};
-use crate::diagnostics::Diagnostics;
+use crate::diagnostics::{Diagnostics, Event};
 use httpdate_hyper::HttpsDateError;
 use parking_lot::Mutex;
 
 /// A fake `Diagnostics` implementation useful for verifying unittests.
 pub struct FakeDiagnostics {
-    /// An ordered list of the successes received since the last reset.
-    successes: Mutex<Vec<HttpsSample>>,
-    /// An ordered list of the failures received since the last reset.
-    failures: Mutex<Vec<HttpsDateError>>,
-    /// An ordered list of phase updates received since the last reset.
-    phases: Mutex<Vec<Phase>>,
+    /// An ordered list of the events received since the last reset.
+    events: Mutex<Vec<OwnedEvent>>,
+}
+
+/// A copy of `Event` where all contents are owned.
+#[derive(PartialEq, Debug)]
+enum OwnedEvent {
+    Success(HttpsSample),
+    Failure(HttpsDateError),
+    Phase(Phase),
+}
+
+impl<'a> From<Event<'a>> for OwnedEvent {
+    fn from(event: Event<'a>) -> Self {
+        match event {
+            Event::Success(sample) => Self::Success(sample.clone()),
+            Event::Failure(error) => Self::Failure(error),
+            Event::Phase(phase) => Self::Phase(phase),
+        }
+    }
 }
 
 impl FakeDiagnostics {
     /// Constructs a new `FakeDiagnostics`.
     pub fn new() -> Self {
-        FakeDiagnostics {
-            successes: Mutex::new(Vec::new()),
-            failures: Mutex::new(Vec::new()),
-            phases: Mutex::new(Vec::new()),
-        }
+        FakeDiagnostics { events: Mutex::new(Vec::new()) }
     }
 
-    /// Returns a copy of the successes received since the last reset.
-    pub fn successes(&self) -> Vec<HttpsSample> {
-        self.successes.lock().clone()
+    /// Assert that the recorded events equals the provided events.
+    pub fn assert_events<'a, I: IntoIterator<Item = Event<'a>>>(&self, events: I) {
+        let owned_events =
+            events.into_iter().map(|event| OwnedEvent::from(event)).collect::<Vec<_>>();
+        assert_eq!(owned_events, *self.events.lock());
     }
 
-    /// Returns a copy of the failures received since the last reset.
-    pub fn failures(&self) -> Vec<HttpsDateError> {
-        self.failures.lock().clone()
-    }
-
-    /// Returns a copy of the phase updates received since the last reset.
-    pub fn phase_updates(&self) -> Vec<Phase> {
-        self.phases.lock().clone()
+    /// Assert that the recorded events starts with the provided events.
+    pub fn assert_events_starts_with<'a, I: IntoIterator<Item = Event<'a>>>(&self, events: I) {
+        let expected_events =
+            events.into_iter().map(|event| OwnedEvent::from(event)).collect::<Vec<_>>();
+        let actual_events = self.events.lock();
+        assert!(actual_events.len() >= expected_events.len());
+        assert_eq!(expected_events.as_slice(), &actual_events[..expected_events.len()]);
     }
 
     /// Clears all recorded interactions.
     pub fn reset(&self) {
-        self.successes.lock().clear();
-        self.failures.lock().clear();
-        self.phases.lock().clear();
+        self.events.lock().clear();
     }
 }
 
 impl Diagnostics for FakeDiagnostics {
-    fn success(&self, sample: &HttpsSample) {
-        self.successes.lock().push(sample.clone());
-    }
-
-    fn failure(&self, error: &HttpsDateError) {
-        self.failures.lock().push(*error);
-    }
-
-    fn phase_update(&self, phase: &Phase) {
-        self.phases.lock().push(*phase);
+    fn record<'a>(&self, event: Event<'a>) {
+        self.events.lock().push(event.into());
     }
 }
 
 impl<T: AsRef<FakeDiagnostics> + Send + Sync> Diagnostics for T {
-    fn success(&self, sample: &HttpsSample) {
-        self.as_ref().success(sample);
-    }
-
-    fn failure(&self, error: &HttpsDateError) {
-        self.as_ref().failure(error);
-    }
-
-    fn phase_update(&self, phase: &Phase) {
-        self.as_ref().phase_update(phase);
+    fn record<'a>(&self, event: Event<'a>) {
+        self.as_ref().record(event);
     }
 }
 
@@ -86,80 +79,70 @@ mod test {
     use lazy_static::lazy_static;
 
     lazy_static! {
-        static ref SUCCESS_1: HttpsSample = HttpsSample {
+        static ref TEST_SAMPLE: HttpsSample = HttpsSample {
             utc: zx::Time::from_nanos(111_111_111),
             monotonic: zx::Time::from_nanos(222_222_222),
             standard_deviation: zx::Duration::from_millis(235),
             final_bound_size: zx::Duration::from_millis(100),
-            polls: vec![
-                Poll::with_round_trip_time(zx::Duration::from_millis(25)),
-                Poll::with_round_trip_time(zx::Duration::from_millis(50)),
-            ],
+            polls: vec![Poll {
+                round_trip_time: zx::Duration::from_nanos(23),
+                center_offset: None
+            }],
         };
-        static ref SUCCESS_2: HttpsSample = HttpsSample {
-            utc: zx::Time::from_nanos(333_333_333),
-            monotonic: zx::Time::from_nanos(444_444_444),
-            standard_deviation: zx::Duration::from_millis(236),
-            final_bound_size: zx::Duration::from_millis(101),
-            polls: vec![
-                Poll {
-                    round_trip_time: zx::Duration::from_millis(26),
-                    center_offset: Some(zx::Duration::from_millis(168))
-                },
-                Poll {
-                    round_trip_time: zx::Duration::from_millis(51),
-                    center_offset: Some(zx::Duration::from_millis(-250))
-                },
-            ],
+        static ref TEST_SUCCESS: Event<'static> = Event::Success(&*TEST_SAMPLE);
+        static ref TEST_SAMPLE_2: HttpsSample = {
+            let mut new = TEST_SAMPLE.clone();
+            new.polls = vec![];
+            new
         };
+        static ref TEST_SUCCESS_2: Event<'static> = Event::Success(&*TEST_SAMPLE_2);
     }
-    const ERROR_1: HttpsDateError = HttpsDateError::NetworkError;
-    const ERROR_2: HttpsDateError = HttpsDateError::InvalidHostname;
-    const PHASE_1: Phase = Phase::Initial;
-    const PHASE_2: Phase = Phase::Maintain;
+    const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateError::NetworkError);
+    const TEST_PHASE: Event<'static> = Event::Phase(Phase::Converge);
 
     #[test]
-    fn log_and_reset_successes() {
+    fn log_and_reset_events() {
         let diagnostics = FakeDiagnostics::new();
-        assert_eq!(diagnostics.successes(), vec![]);
+        diagnostics.assert_events(vec![]);
 
-        diagnostics.success(&*SUCCESS_1);
-        assert_eq!(diagnostics.successes(), vec![SUCCESS_1.clone()]);
+        diagnostics.record(*TEST_SUCCESS);
+        diagnostics.assert_events(vec![*TEST_SUCCESS]);
 
-        diagnostics.success(&*SUCCESS_2);
-        assert_eq!(diagnostics.successes(), vec![SUCCESS_1.clone(), SUCCESS_2.clone()]);
+        diagnostics.record(TEST_FAILURE);
+        diagnostics.record(TEST_PHASE);
+        diagnostics.assert_events(vec![*TEST_SUCCESS, TEST_FAILURE, TEST_PHASE]);
 
         diagnostics.reset();
-        assert_eq!(diagnostics.successes(), vec![]);
-    }
-
-    #[test]
-    fn log_and_reset_failures() {
-        let diagnostics = FakeDiagnostics::new();
-        assert_eq!(diagnostics.failures(), vec![]);
-
-        diagnostics.failure(&ERROR_1);
-        assert_eq!(diagnostics.failures(), vec![ERROR_1]);
-
-        diagnostics.failure(&ERROR_2);
-        assert_eq!(diagnostics.failures(), vec![ERROR_1, ERROR_2]);
-
-        diagnostics.reset();
-        assert_eq!(diagnostics.failures(), vec![]);
+        diagnostics.assert_events(vec![]);
     }
 
     #[test]
-    fn log_and_reset_phases() {
+    #[should_panic]
+    fn log_events_wrong_event_type() {
         let diagnostics = FakeDiagnostics::new();
-        assert_eq!(diagnostics.phase_updates(), vec![]);
+        diagnostics.assert_events(vec![]);
 
-        diagnostics.phase_update(&PHASE_1);
-        assert_eq!(diagnostics.phase_updates(), vec![PHASE_1]);
+        diagnostics.record(*TEST_SUCCESS);
+        diagnostics.assert_events(vec![TEST_FAILURE]);
+    }
 
-        diagnostics.phase_update(&PHASE_2);
-        assert_eq!(diagnostics.phase_updates(), vec![PHASE_1, PHASE_2]);
+    #[test]
+    #[should_panic]
+    fn log_events_wrong_sample() {
+        let diagnostics = FakeDiagnostics::new();
+        diagnostics.assert_events(vec![]);
 
-        diagnostics.reset();
-        assert_eq!(diagnostics.phase_updates(), vec![]);
+        diagnostics.record(*TEST_SUCCESS);
+        diagnostics.assert_events(vec![*TEST_SUCCESS_2]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn log_events_wrong_event_count() {
+        let diagnostics = FakeDiagnostics::new();
+        diagnostics.assert_events(vec![]);
+
+        diagnostics.record(*TEST_SUCCESS);
+        diagnostics.assert_events(vec![*TEST_SUCCESS, *TEST_SUCCESS]);
     }
 }

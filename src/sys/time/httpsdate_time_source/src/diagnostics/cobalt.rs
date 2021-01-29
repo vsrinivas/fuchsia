@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use crate::datatypes::{HttpsSample, Phase, Poll};
-use crate::diagnostics::Diagnostics;
+use crate::diagnostics::{Diagnostics, Event};
 use fidl_fuchsia_cobalt::{CobaltEvent, HistogramBucket};
 use fuchsia_cobalt::{CobaltConnector, CobaltEventExt, CobaltSender, ConnectionType};
 use fuchsia_zircon as zx;
 use futures::Future;
-use httpdate_hyper::HttpsDateError;
 use parking_lot::Mutex;
 use time_metrics_registry::{
     HttpsdateBoundSizeMetricDimensionPhase as CobaltPhase, TimeMetricDimensionDirection,
@@ -77,9 +76,7 @@ impl CobaltDiagnostics {
             ((duration - underflow_floor).into_nanos() / bucket_size.into_nanos()) as u32 + 1
         }
     }
-}
 
-impl Diagnostics for CobaltDiagnostics {
     fn success(&self, sample: &HttpsSample) {
         let phase = self.phase.lock();
         let mut sender = self.sender.lock();
@@ -124,12 +121,18 @@ impl Diagnostics for CobaltDiagnostics {
         poll_offset_events.for_each(|event| sender.log_cobalt_event(event));
     }
 
-    fn failure(&self, _error: &HttpsDateError) {
-        // Currently, no failure events are registered with cobalt.
-    }
-
     fn phase_update(&self, phase: &Phase) {
         *self.phase.lock() = *phase;
+    }
+}
+
+impl Diagnostics for CobaltDiagnostics {
+    fn record<'a>(&self, event: Event<'a>) {
+        match event {
+            Event::Success(sample) => self.success(sample),
+            Event::Failure(_) => (), // currently, no failures are registered with cobalt
+            Event::Phase(phase) => self.phase_update(&phase),
+        }
     }
 }
 
@@ -226,13 +229,13 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn test_success_single_poll() {
         let (cobalt, event_recv) = diagnostics_for_test();
-        cobalt.success(&HttpsSample {
+        cobalt.record(Event::Success(&HttpsSample {
             utc: TEST_TIME,
             monotonic: TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
             polls: vec![Poll::with_round_trip_time(*TEST_RTT)],
-        });
+        }));
         assert_eq!(
             event_recv.take(2).collect::<Vec<_>>().await,
             vec![
@@ -261,24 +264,24 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn test_success_after_phase_update() {
         let (cobalt, mut event_recv) = diagnostics_for_test();
-        cobalt.success(&HttpsSample {
+        cobalt.record(Event::Success(&HttpsSample {
             utc: TEST_TIME,
             monotonic: TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
             polls: vec![Poll::with_round_trip_time(*TEST_RTT)],
-        });
+        }));
         let events = event_recv.by_ref().take(2).collect::<Vec<_>>().await;
         assert_eq!(events[0].event_codes, vec![*TEST_INITIAL_PHASE_COBALT as u32]);
 
-        cobalt.phase_update(&Phase::Converge);
-        cobalt.success(&HttpsSample {
+        cobalt.record(Event::Phase(Phase::Converge));
+        cobalt.record(Event::Success(&HttpsSample {
             utc: TEST_TIME,
             monotonic: TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
             final_bound_size: TEST_BOUND_SIZE,
             polls: vec![Poll::with_round_trip_time(*TEST_RTT_2)],
-        });
+        }));
         let events = event_recv.take(2).collect::<Vec<_>>().await;
         assert_eq!(events[0].event_codes, vec![CobaltPhase::Converge as u32]);
     }
@@ -286,7 +289,7 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn test_success_multiple_rtt() {
         let (cobalt, event_recv) = diagnostics_for_test();
-        cobalt.success(&HttpsSample {
+        cobalt.record(Event::Success(&HttpsSample {
             utc: TEST_TIME,
             monotonic: TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
@@ -296,7 +299,7 @@ mod test {
                 Poll::with_round_trip_time(*TEST_RTT_2),
                 Poll::with_round_trip_time(*TEST_RTT_2),
             ],
-        });
+        }));
         let mut events = event_recv.take(2).collect::<Vec<_>>().await;
         assert_eq!(
             events[0],
@@ -330,7 +333,7 @@ mod test {
         let (cobalt, event_recv) = diagnostics_for_test();
         let expected_offset = zx::Duration::from_micros(125);
 
-        cobalt.success(&HttpsSample {
+        cobalt.record(Event::Success(&HttpsSample {
             utc: TEST_TIME,
             monotonic: TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
@@ -339,7 +342,7 @@ mod test {
                 Poll { round_trip_time: *TEST_RTT, center_offset: Some(expected_offset) },
                 Poll { round_trip_time: *TEST_RTT_2, center_offset: Some(expected_offset * -1) },
             ],
-        });
+        }));
         let events = event_recv.take(4).collect::<Vec<_>>().await;
         // Here we rely on test_success_multiple_rtt to test the initial events and only verify
         // offset metrics.
@@ -377,7 +380,7 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn test_success_overflow_rtt() {
         let (cobalt, event_recv) = diagnostics_for_test();
-        cobalt.success(&HttpsSample {
+        cobalt.record(Event::Success(&HttpsSample {
             utc: TEST_TIME,
             monotonic: TEST_TIME,
             standard_deviation: TEST_STANDARD_DEVIATION,
@@ -386,7 +389,7 @@ mod test {
                 round_trip_time: OVERFLOW_RTT,
                 center_offset: Some(TEST_CENTER_OFFSET),
             }],
-        });
+        }));
         assert_eq!(
             event_recv.take(3).collect::<Vec<_>>().await,
             vec![

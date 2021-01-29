@@ -6,7 +6,7 @@ use crate::constants::{
     CONVERGE_SAMPLES, INITIAL_SAMPLE_POLLS, MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION, SAMPLE_POLLS,
 };
 use crate::datatypes::Phase;
-use crate::diagnostics::Diagnostics;
+use crate::diagnostics::{Diagnostics, Event};
 use crate::sampler::HttpsSampler;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -97,16 +97,16 @@ where
         let maintain_time_between_samples =
             mult_duration(self.retry_strategy.maintain_time_between_samples, random_factor);
 
-        self.diagnostics.phase_update(&Phase::Initial);
+        self.diagnostics.record(Event::Phase(Phase::Initial));
         self.try_generate_sample_until_successful(INITIAL_SAMPLE_POLLS, false, &mut sink).await?;
 
-        self.diagnostics.phase_update(&Phase::Converge);
+        self.diagnostics.record(Event::Phase(Phase::Converge));
         for _ in 0..CONVERGE_SAMPLES {
             fasync::Timer::new(fasync::Time::after(converge_time_between_samples)).await;
             self.try_generate_sample_until_successful(SAMPLE_POLLS, false, &mut sink).await?;
         }
 
-        self.diagnostics.phase_update(&Phase::Maintain);
+        self.diagnostics.record(Event::Phase(Phase::Maintain));
         loop {
             fasync::Timer::new(fasync::Time::after(maintain_time_between_samples)).await;
             self.try_generate_sample_until_successful(SAMPLE_POLLS, true, &mut sink).await?;
@@ -154,12 +154,12 @@ where
                         "Got a time sample - UTC {:?}, bound size {:?}, and polls {:?}",
                         sample.utc, sample.final_bound_size, sample.polls
                     );
-                    self.diagnostics.success(&sample);
+                    self.diagnostics.record(Event::Success(&sample));
                     sink.send(sample.into()).await?;
                     return Ok(());
                 }
                 Err(http_error) => {
-                    self.diagnostics.failure(&http_error);
+                    self.diagnostics.record(Event::Failure(http_error));
                     if Some(http_error) != last_error {
                         last_error = Some(http_error);
                         let status = match http_error {
@@ -344,8 +344,13 @@ mod test {
             })
             .collect::<Vec<_>>();
         assert_eq!(samples, expected_samples.iter().map(to_fidl_time_sample).collect::<Vec<_>>());
-        assert_eq!(diagnostics.successes(), expected_samples);
-        assert!(diagnostics.failures().is_empty());
+        let expected_events = vec![
+            Event::Phase(Phase::Initial),
+            Event::Success(&*TEST_SAMPLE_1),
+            Event::Phase(Phase::Converge),
+            Event::Success(&*TEST_SAMPLE_2),
+        ];
+        diagnostics.assert_events(expected_events);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -388,15 +393,16 @@ mod test {
             Update::Status(_) => panic!("Expected a sample but got an update"),
         }
 
-        assert_eq!(diagnostics.successes(), vec![TEST_SAMPLE_1.clone()]);
-        assert_eq!(
-            diagnostics.failures(),
-            vec![
-                HttpsDateError::NetworkError,
-                HttpsDateError::NetworkError,
-                HttpsDateError::NoCertificatesPresented
-            ]
-        );
+        let expected_events = vec![
+            Event::Phase(Phase::Initial),
+            Event::Failure(HttpsDateError::NetworkError),
+            Event::Failure(HttpsDateError::NetworkError),
+            Event::Failure(HttpsDateError::NoCertificatesPresented),
+            Event::Success(&TEST_SAMPLE_1),
+        ];
+        // depending on how futures get polled, there may or may not be an event to update the
+        // phase to converge.
+        diagnostics.assert_events_starts_with(expected_events);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -457,12 +463,17 @@ mod test {
             .filter(|update| update.is_status())
             .all(|update| *update == Update::Status(Status::Ok)));
 
-        assert_eq!(
-            diagnostics.phase_updates(),
-            vec![Phase::Initial, Phase::Converge, Phase::Maintain]
-        );
-        assert_eq!(diagnostics.successes(), expected_samples);
-        assert!(diagnostics.failures().is_empty());
+        let expected_events = vec![
+            vec![
+                Event::Phase(Phase::Initial),
+                Event::Success(&TEST_SAMPLE_1),
+                Event::Phase(Phase::Converge),
+            ],
+            vec![Event::Success(&TEST_SAMPLE_1); CONVERGE_SAMPLES],
+            vec![Event::Phase(Phase::Maintain), Event::Success(&TEST_SAMPLE_1)],
+        ]
+        .concat();
+        diagnostics.assert_events(expected_events);
 
         // Samples should be requested using the number of polls appropriate for the phase.
         // Samples should be requested with offset metrics only in the maintain phase.

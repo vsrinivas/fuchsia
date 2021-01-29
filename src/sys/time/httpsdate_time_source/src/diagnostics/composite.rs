@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::datatypes::{HttpsSample, Phase};
-use crate::diagnostics::Diagnostics;
-use httpdate_hyper::HttpsDateError;
+use crate::diagnostics::{Diagnostics, Event};
 
 /// A trivial `Diagnostics` implementation that simply sends every event it receives to two other
 /// `Diagnostics` implementations.
@@ -24,27 +22,19 @@ impl<L: Diagnostics, R: Diagnostics> CompositeDiagnostics<L, R> {
 }
 
 impl<L: Diagnostics, R: Diagnostics> Diagnostics for CompositeDiagnostics<L, R> {
-    fn success(&self, sample: &HttpsSample) {
-        self.left.success(sample);
-        self.right.success(sample);
-    }
-
-    fn failure(&self, error: &HttpsDateError) {
-        self.left.failure(error);
-        self.right.failure(error);
-    }
-
-    fn phase_update(&self, phase: &Phase) {
-        self.left.phase_update(phase);
-        self.right.phase_update(phase);
+    fn record<'a>(&self, event: Event<'a>) {
+        self.left.record(event);
+        self.right.record(event);
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::datatypes::{HttpsSample, Phase};
     use crate::diagnostics::FakeDiagnostics;
     use fuchsia_zircon as zx;
+    use httpdate_hyper::HttpsDateError;
     use lazy_static::lazy_static;
     use std::sync::Arc;
 
@@ -56,46 +46,23 @@ mod test {
             final_bound_size: zx::Duration::from_millis(100),
             polls: vec![],
         };
+        static ref TEST_SUCCESS: Event<'static> = Event::Success(&*TEST_SAMPLE);
     }
-    const TEST_ERROR: HttpsDateError = HttpsDateError::NetworkError;
-    const TEST_PHASE: Phase = Phase::Converge;
+    const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateError::NetworkError);
+    const TEST_PHASE: Event<'static> = Event::Phase(Phase::Converge);
 
     #[test]
-    fn log_successes() {
+    fn record_events() {
         let left = Arc::new(FakeDiagnostics::new());
         let right = Arc::new(FakeDiagnostics::new());
         let composite = CompositeDiagnostics::new(Arc::clone(&left), Arc::clone(&right));
-        assert!(left.successes().is_empty());
-        assert!(right.successes().is_empty());
+        left.assert_events(vec![]);
+        right.assert_events(vec![]);
 
-        composite.success(&*TEST_SAMPLE);
-        assert_eq!(left.successes(), vec![TEST_SAMPLE.clone()]);
-        assert_eq!(right.successes(), vec![TEST_SAMPLE.clone()]);
-    }
-
-    #[test]
-    fn log_failures() {
-        let left = Arc::new(FakeDiagnostics::new());
-        let right = Arc::new(FakeDiagnostics::new());
-        let composite = CompositeDiagnostics::new(Arc::clone(&left), Arc::clone(&right));
-        assert!(left.failures().is_empty());
-        assert!(right.failures().is_empty());
-
-        composite.failure(&TEST_ERROR);
-        assert_eq!(left.failures(), vec![TEST_ERROR]);
-        assert_eq!(right.failures(), vec![TEST_ERROR]);
-    }
-
-    #[test]
-    fn log_phase_updates() {
-        let left = Arc::new(FakeDiagnostics::new());
-        let right = Arc::new(FakeDiagnostics::new());
-        let composite = CompositeDiagnostics::new(Arc::clone(&left), Arc::clone(&right));
-        assert!(left.phase_updates().is_empty());
-        assert!(right.phase_updates().is_empty());
-
-        composite.phase_update(&TEST_PHASE);
-        assert_eq!(left.phase_updates(), vec![TEST_PHASE]);
-        assert_eq!(right.phase_updates(), vec![TEST_PHASE]);
+        composite.record(*TEST_SUCCESS);
+        composite.record(TEST_FAILURE);
+        composite.record(TEST_PHASE);
+        left.assert_events(vec![*TEST_SUCCESS, TEST_FAILURE, TEST_PHASE]);
+        right.assert_events(vec![*TEST_SUCCESS, TEST_FAILURE, TEST_PHASE]);
     }
 }

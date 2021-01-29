@@ -4,7 +4,7 @@
 
 use crate::constants::SAMPLE_POLLS;
 use crate::datatypes::{HttpsSample, Phase};
-use crate::diagnostics::Diagnostics;
+use crate::diagnostics::{Diagnostics, Event};
 use fuchsia_inspect::{
     ArrayProperty, IntArrayProperty, IntProperty, Node, NumericProperty, Property, StringProperty,
     UintProperty,
@@ -58,9 +58,7 @@ impl InspectDiagnostics {
                 .create_int("phase_update_time", zx::Time::get_monotonic().into_nanos()),
         }
     }
-}
 
-impl Diagnostics for InspectDiagnostics {
     fn success(&self, sample: &HttpsSample) {
         self.recent_successes_buffer.lock().update(sample);
     }
@@ -80,6 +78,16 @@ impl Diagnostics for InspectDiagnostics {
     fn phase_update(&self, phase: &Phase) {
         self.phase.set(&format!("{:?}", phase));
         self.phase_update_time.set(zx::Time::get_monotonic().into_nanos());
+    }
+}
+
+impl Diagnostics for InspectDiagnostics {
+    fn record<'a>(&self, event: Event<'a>) {
+        match event {
+            Event::Success(sample) => self.success(sample),
+            Event::Failure(error) => self.failure(&error),
+            Event::Phase(phase) => self.phase_update(&phase),
+        }
     }
 }
 
@@ -172,6 +180,7 @@ impl SampleMetric {
 mod test {
     use super::*;
     use crate::datatypes::Poll;
+    use crate::diagnostics::Event;
     use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector};
     use fuchsia_zircon as zx;
     use lazy_static::lazy_static;
@@ -213,12 +222,12 @@ mod test {
             }
         );
 
-        inspect.success(&sample_with_rtts(&[TEST_ROUND_TRIP_1, TEST_ROUND_TRIP_2]));
-        inspect.success(&sample_with_rtts(&[
+        inspect.record(Event::Success(&sample_with_rtts(&[TEST_ROUND_TRIP_1, TEST_ROUND_TRIP_2])));
+        inspect.record(Event::Success(&sample_with_rtts(&[
             TEST_ROUND_TRIP_1,
             TEST_ROUND_TRIP_2,
             TEST_ROUND_TRIP_3,
-        ]));
+        ])));
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -262,17 +271,17 @@ mod test {
         );
 
         for _ in 0..SAMPLES_RECORDED {
-            inspect.success(&sample_with_rtts(&[
+            inspect.record(Event::Success(&sample_with_rtts(&[
                 TEST_ROUND_TRIP_1,
                 TEST_ROUND_TRIP_2,
                 TEST_ROUND_TRIP_3,
                 TEST_ROUND_TRIP_1,
                 TEST_ROUND_TRIP_2,
-            ]));
+            ])));
         }
 
         // Recording a new success should wrap the buffer and zero out unused rtt entries.
-        inspect.success(&sample_with_rtts(&[TEST_ROUND_TRIP_2]));
+        inspect.record(Event::Success(&sample_with_rtts(&[TEST_ROUND_TRIP_2])));
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -312,7 +321,7 @@ mod test {
             }
         );
 
-        inspect.failure(&HttpsDateError::NoCertificatesPresented);
+        inspect.record(Event::Failure(HttpsDateError::NoCertificatesPresented));
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -323,8 +332,8 @@ mod test {
             }
         );
 
-        inspect.failure(&HttpsDateError::NoCertificatesPresented);
-        inspect.failure(&HttpsDateError::NetworkError);
+        inspect.record(Event::Failure(HttpsDateError::NoCertificatesPresented));
+        inspect.record(Event::Failure(HttpsDateError::NetworkError));
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -348,7 +357,7 @@ mod test {
                 phase_update_time: AnyProperty,
             }
         );
-        inspect.phase_update(&Phase::Maintain);
+        inspect.record(Event::Phase(Phase::Maintain));
         assert_inspect_tree!(
             inspector,
             root: contains {

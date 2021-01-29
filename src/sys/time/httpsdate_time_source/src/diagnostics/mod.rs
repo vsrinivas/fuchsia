@@ -19,10 +19,17 @@ use httpdate_hyper::HttpsDateError;
 
 /// A standard interface for recording sample production attempts for diagnostic purposes.
 pub trait Diagnostics: Send + Sync {
-    /// Records a successful attempt to produce a sample.
-    fn success(&self, sample: &HttpsSample);
-    /// Records a failed attempt to produce a sample.
-    fn failure(&self, error: &HttpsDateError);
-    /// Records a change in the phase.
-    fn phase_update(&self, phase: &Phase);
+    /// Records an event.
+    fn record<'a>(&self, event: Event<'a>);
+}
+
+/// An event reported for diagnostic purposes.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Event<'a> {
+    /// A successful attempt to produce a sample.
+    Success(&'a HttpsSample),
+    /// A failed attempt to produce a sample.
+    Failure(HttpsDateError),
+    /// A change in the phase.
+    Phase(Phase),
 }
