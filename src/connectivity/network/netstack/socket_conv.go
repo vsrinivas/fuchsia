@@ -328,11 +328,27 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 			return nil, err
 		}
 
-		return C.struct_tcp_info{
-			// Microseconds.
-			tcpi_rtt:    C.uint(v.RTT.Nanoseconds() / 1000),
-			tcpi_rttvar: C.uint(v.RTTVar.Nanoseconds() / 1000),
-		}, nil
+		info := C.struct_tcp_info{
+			tcpi_rto:          C.uint(v.RTO.Microseconds()),
+			tcpi_rtt:          C.uint(v.RTT.Microseconds()),
+			tcpi_rttvar:       C.uint(v.RTTVar.Microseconds()),
+			tcpi_snd_ssthresh: C.uint(v.SndSsthresh),
+			tcpi_snd_cwnd:     C.uint(v.SndCwnd),
+		}
+		switch v.CcState {
+		case tcpip.Open:
+			info.tcpi_ca_state = C.TCP_CA_Open
+		case tcpip.RTORecovery:
+			info.tcpi_ca_state = C.TCP_CA_Loss
+		case tcpip.FastRecovery, tcpip.SACKRecovery:
+			info.tcpi_ca_state = C.TCP_CA_Recovery
+		case tcpip.Disorder:
+			info.tcpi_ca_state = C.TCP_CA_Disorder
+		}
+		if v.ReorderSeen {
+			info.tcpi_reord_seen = 1
+		}
+		return info, nil
 
 	case C.TCP_SYNCNT:
 		v, err := ep.GetSockOptInt(tcpip.TCPSynCountOption)
