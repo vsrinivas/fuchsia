@@ -11,12 +11,26 @@ using fuchsia.ui.input;
 protocol DeviceListenerRegistry {
     /// Registers a listener to receive media button related events, such as
     /// changes from volume buttons and mute switches.
+    // TODO(fxbug.dev/41384): Remove when no longer used.
+    [Deprecated = "Use RegisterListener() "]
     RegisterMediaButtonsListener(MediaButtonsListener listener);
+
+    /// Registers a listener to receive media button related events, such as
+    /// changes from volume buttons and mute switches.
+    /// On registration, the `listener` receives the last media button event that
+    /// occured, if one exists, and all media button events going forward.
+    [Transitional]
+    RegisterListener(MediaButtonsListener listener) -> ();
 };
 
 /// A listener for media buttons events. `DeviceListenerRegistry.RegisterMediaButtonsListener`
 /// will consume this listener interface and call `OnMediaButtonsEvent` when the
 /// registered media buttons event occurs.
 protocol MediaButtonsListener {
+    // TODO(fxbug.dev/41384): Remove when no longer used.
+    [Deprecated = "Use OnEvent() "]
     OnMediaButtonsEvent(fuchsia.ui.input.MediaButtonsEvent event);
+
+    [Transitional]
+    OnEvent(fuchsia.ui.input.MediaButtonsEvent event) -> ();
 };
