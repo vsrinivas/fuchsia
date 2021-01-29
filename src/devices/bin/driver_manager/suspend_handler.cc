@@ -116,7 +116,7 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   sflags_ = flags;
   suspend_callback_ = std::move(callback);
 
-  if ((sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
+  if ((sflags_ & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
     log_to_debuglog();
     LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");
     ShutdownFilesystems([this](zx_status_t status) { SuspendAfterFilesystemShutdown(); });
@@ -132,12 +132,12 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
     if (!InSuspend()) {
       return;  // Suspend failed to complete.
     }
-    LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", sflags());
-    if (task() != nullptr) {
-      DumpSuspendTaskDependencies(task());
+    LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", sflags_);
+    if (task_.get() != nullptr) {
+      DumpSuspendTaskDependencies(task_.get());
     }
     if (suspend_fallback_) {
-      SuspendFallback(coordinator_->root_resource(), sflags());
+      SuspendFallback(coordinator_->root_resource(), sflags_);
       // Unless in test env, we should not reach here.
       if (suspend_callback_) {
         suspend_callback_(ZX_ERR_TIMED_OUT);
@@ -164,11 +164,11 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
       }
       return;
     }
-    if (sflags() != DEVICE_SUSPEND_FLAG_MEXEC) {
+    if (sflags_ != DEVICE_SUSPEND_FLAG_MEXEC) {
       // should never get here on x86
       // on arm, if the platform driver does not implement
       // suspend go to the kernel fallback
-      SuspendFallback(coordinator_->root_resource(), sflags());
+      SuspendFallback(coordinator_->root_resource(), sflags_);
       // if we get here the system did not suspend successfully
       flags_ = SuspendHandler::Flags::kRunning;
     }
@@ -180,7 +180,7 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
   // We don't need to suspend anything except sys_device and it's children,
   // since we do not run suspend hooks for children of test or misc
 
-  task_ = SuspendTask::Create(coordinator_->sys_device(), sflags(), std::move(completion));
+  task_ = SuspendTask::Create(coordinator_->sys_device(), sflags_, std::move(completion));
   LOGF(INFO, "Successfully created suspend task on device 'sys'");
 }
 

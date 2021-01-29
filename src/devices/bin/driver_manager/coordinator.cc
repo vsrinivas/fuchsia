@@ -108,9 +108,7 @@ Coordinator::Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatche
 
 Coordinator::~Coordinator() {}
 
-bool Coordinator::InSuspend() const {
-  return suspend_handler().flags() == SuspendHandler::Flags::kSuspend;
-}
+bool Coordinator::InSuspend() const { return suspend_handler().InSuspend(); }
 
 bool Coordinator::InResume() const {
   return (resume_context().flags() == ResumeContext::Flags::kResume);

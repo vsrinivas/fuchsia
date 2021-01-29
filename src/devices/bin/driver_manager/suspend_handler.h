@@ -37,10 +37,6 @@ class SuspendHandler {
     fshost_admin_client_ = std::move(client);
   }
 
-  const SuspendTask* task() const { return task_.get(); }
-  Flags flags() const { return flags_; }
-  uint32_t sflags() const { return sflags_; }
-
  private:
   void SuspendAfterFilesystemShutdown();
 
