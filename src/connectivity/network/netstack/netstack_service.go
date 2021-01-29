@@ -367,7 +367,7 @@ func (ni *netstackImpl) GetDhcpClient(ctx fidl.Context, id uint32, request dhcp.
 func (ns *netstackImpl) AddEthernetDevice(_ fidl.Context, topopath string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceWithCtxInterface) (netstack.NetstackAddEthernetDeviceResult, error) {
 	var result netstack.NetstackAddEthernetDeviceResult
 	if ifs, err := ns.ns.addEth(topopath, interfaceConfig, &device); err != nil {
-		var tcpipErr TcpIpError
+		var tcpipErr *TcpIpError
 		if errors.As(err, &tcpipErr) {
 			result.SetErr(int32(tcpipErr.ToZxStatus()))
 		} else {

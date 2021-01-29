@@ -14,23 +14,25 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
+var _ error = (*TcpIpError)(nil)
+
 // TcpIpError wraps a tcpip.Error.
 //
-// TcpIpError provides an Error implementation over tcpip.Error so that error
+// TcpIpError provides an error implementation over tcpip.Error so that error
 // wrapping and unwrapping can be used. It also provides utility methods to
 // convert it to Netstack FIDL API returns.
 type TcpIpError struct {
 	Err *tcpip.Error
 }
 
-func (e TcpIpError) Error() string {
+func (e *TcpIpError) Error() string {
 	return e.Err.String()
 }
 
 // WrapTcpIpError wraps a stack error into a type that implements the error
 // interface.
-func WrapTcpIpError(e *tcpip.Error) TcpIpError {
-	return TcpIpError{Err: e}
+func WrapTcpIpError(e *tcpip.Error) *TcpIpError {
+	return &TcpIpError{Err: e}
 }
 
 // ToStackError transforms the internal tcpip.Error into a FIDL

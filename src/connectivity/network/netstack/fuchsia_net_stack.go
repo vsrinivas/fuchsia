@@ -161,7 +161,7 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 		routes.Metric(config.GetMetricWithDefault(0)),
 	)
 	if err != nil {
-		var tcpipError TcpIpError
+		var tcpipError *TcpIpError
 		if errors.As(err, &tcpipError) {
 			return stack.StackAddInterfaceResultWithErr(tcpipError.ToStackError())
 		} else {
@@ -392,7 +392,7 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardi
 func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string, device fidlethernet.DeviceWithCtxInterface) (stack.StackAddEthernetInterfaceResult, error) {
 	var result stack.StackAddEthernetInterfaceResult
 	if ifs, err := ni.ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device); err != nil {
-		var tcpipErr TcpIpError
+		var tcpipErr *TcpIpError
 		if errors.As(err, &tcpipErr) {
 			result.SetErr(tcpipErr.ToStackError())
 		} else {
