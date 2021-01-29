@@ -171,7 +171,7 @@ mod test {
     // dance here, so the test is included, but not run by default.
     #[ignore]
     pub fn test_is_test_env() {
-        std::env::set(TEST_ENV_VAR, "somepath");
+        std::env::set_var(TEST_ENV_VAR, "somepath");
         assert_eq!(true, is_test_env());
         std::env::remove_var(TEST_ENV_VAR);
         assert_eq!(false, is_test_env());

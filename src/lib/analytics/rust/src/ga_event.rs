@@ -169,7 +169,7 @@ mod test {
         let mut map2 = BTreeMap::new();
         let val = "";
         let key = "key1";
-        insert_if_present(key, &mut map2, val);
+        insert_if_present(key, &mut map2, Some(val));
         assert_eq!(None, map2.get(key));
     }
 }
