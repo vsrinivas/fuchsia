@@ -32,8 +32,8 @@ const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
 };
 
 /// URI used to obtain time samples.
-// TODO(fxbug.dev/56875): Decide on correct endpoint and move to config data.
-const REQUEST_URI: &str = "https://clients1.google.com/generate_204";
+// TODO(fxbug.dev/68621): Allow configuration per product.
+const REQUEST_URI: &str = "https://clients3.google.com/generate_204";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
