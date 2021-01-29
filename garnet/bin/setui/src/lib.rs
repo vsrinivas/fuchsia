@@ -67,6 +67,7 @@ use {
     futures::StreamExt,
     serde::Deserialize,
     std::collections::{HashMap, HashSet},
+    std::sync::atomic::AtomicU64,
     std::sync::Arc,
 };
 
@@ -95,7 +96,6 @@ pub mod task;
 pub use display::LightSensorConfig;
 pub use input::input_device_configuration::InputConfiguration;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
-use std::sync::atomic::AtomicU64;
 
 pub mod agent;
 pub mod base;
