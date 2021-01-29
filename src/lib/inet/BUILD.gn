@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 static_library("inet") {
   sources = [
@@ -18,17 +17,11 @@ static_library("inet") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.net",
-    "//sdk/fidl/fuchsia.netstack",
     "//src/lib/fxl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
-test("tests_bin") {
-  output_name = "libinet_tests"
-
+test("libinet_test") {
   sources = [
     "test/ip_address_test.cc",
     "test/socket_address_test.cc",
@@ -40,19 +33,16 @@ test("tests_bin") {
   ]
 }
 
-test_package("libinet_tests") {
-  deps = [ ":tests_bin" ]
-
-  tests = [
-    {
-      name = "libinet_tests"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("libinet_tests") {
+  deps = [ ":libinet_test" ]
 }
 
 group("tests") {
   testonly = true
 
-  public_deps = [ ":libinet_tests" ]
+  deps = [ ":libinet_tests" ]
+
+  if (host_os == "linux") {
+    deps += [ ":libinet_test($host_toolchain)" ]
+  }
 }

@@ -75,23 +75,23 @@ TEST(IpAddressTest, Constructors) {
   sockaddr_storage sockaddr_v4{.ss_family = AF_INET};
   memcpy(reinterpret_cast<uint8_t*>(&sockaddr_v4) + sizeof(sa_family_t), v4.as_bytes(),
          v4.byte_count());
-  EXPECT_EQ(v4, IpAddress(reinterpret_cast<sockaddr*>(&sockaddr_v4)));
+  EXPECT_EQ(v4, IpAddress(*reinterpret_cast<sockaddr*>(&sockaddr_v4)));
   EXPECT_EQ(v4, IpAddress(sockaddr_v4));
   fuchsia::net::IpAddress fn_ip_address_v4;
   fn_ip_address_v4.set_ipv4(fuchsia::net::Ipv4Address{.addr = {1, 2, 3, 4}});
-  EXPECT_EQ(v4, IpAddress(&fn_ip_address_v4));
+  EXPECT_EQ(v4, IpAddress(fn_ip_address_v4));
 
   EXPECT_EQ(v6, IpAddress(0x1234, 0x5678));
   EXPECT_EQ(v6, IpAddress(v6.as_in6_addr()));
   sockaddr_storage sockaddr_v6{.ss_family = AF_INET6};
   memcpy(reinterpret_cast<uint8_t*>(&sockaddr_v6) + sizeof(sa_family_t), v6.as_bytes(),
          v6.byte_count());
-  EXPECT_EQ(v6, IpAddress(reinterpret_cast<sockaddr*>(&sockaddr_v6)));
+  EXPECT_EQ(v6, IpAddress(*reinterpret_cast<sockaddr*>(&sockaddr_v6)));
   EXPECT_EQ(v6, IpAddress(sockaddr_v6));
   fuchsia::net::IpAddress fn_ip_address_v6;
   fn_ip_address_v6.set_ipv6(fuchsia::net::Ipv6Address{
       .addr = {0x12, 0x34, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x56, 0x78}});
-  EXPECT_EQ(v6, IpAddress(&fn_ip_address_v6));
+  EXPECT_EQ(v6, IpAddress(fn_ip_address_v6));
 }
 
 // Tests is_loopback method.
@@ -186,14 +186,27 @@ TEST(IpAddressTest, FromString) {
 
 // Tests FromString and ToString against each other.
 TEST(IpAddressTest, StringRoundTrip) {
+#if !defined(__Fuchsia__)
+  std::srand(testing::UnitTest::GetInstance()->random_seed());
+#endif
+
   for (size_t i = 0; i < 1000; ++i) {
-    in_addr addr;
+    struct in_addr addr;
+    struct in6_addr addr6;
+
+#if defined(__Fuchsia__)
     zx_cprng_draw(&addr, sizeof(addr));
+    zx_cprng_draw(&addr6, sizeof(addr6));
+#else
+    addr.s_addr = std::rand();
+    for (auto& i : addr6.s6_addr32) {
+      i = std::rand();
+    }
+#endif
+
     IpAddress v4(addr);
     EXPECT_EQ(v4, IpAddress::FromString(v4.ToString()));
 
-    in6_addr addr6;
-    zx_cprng_draw(&addr6, sizeof(addr6));
     IpAddress v6(addr6);
     EXPECT_EQ(v6, IpAddress::FromString(v6.ToString()));
   }

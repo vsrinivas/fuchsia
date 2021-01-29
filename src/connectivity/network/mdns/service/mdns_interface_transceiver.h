@@ -37,6 +37,7 @@ class MdnsInterfaceTransceiver {
   static std::unique_ptr<MdnsInterfaceTransceiver> Create(inet::IpAddress address,
                                                           const std::string& name, uint32_t index,
                                                           Media media);
+
   virtual ~MdnsInterfaceTransceiver();
 
   const inet::IpAddress& address() const { return address_; }

@@ -10,14 +10,18 @@ group("tests") {
   testonly = true
   deps = [
     ":netstack-c-api-tests",
-    ":netstack_bsdsocket_c_api_test($host_toolchain)",
-    ":netstack_external_network_test_client($host_toolchain)",
-    ":netstack_if_nameindex_test($host_toolchain)",
     "benchmarks",
     "dhcp_interop:dhcp_integration_tests",
     "getifaddrs:tests",
     "integration:tests",
   ]
+  if (host_os == "linux") {
+    deps += [
+      ":netstack_bsdsocket_c_api_test($host_toolchain)",
+      ":netstack_external_network_test_client($host_toolchain)",
+      ":netstack_if_nameindex_test($host_toolchain)",
+    ]
+  }
 }
 
 fuchsia_component("device_name_provider") {
@@ -27,13 +31,11 @@ fuchsia_component("device_name_provider") {
 }
 
 test("netstack_bsdsocket_c_api_test") {
-  if (is_linux || is_fuchsia) {
-    sources = [
-      "bsdsocket_test.cc",
-      "util.cc",
-      "util.h",
-    ]
-  }
+  sources = [
+    "bsdsocket_test.cc",
+    "util.cc",
+    "util.h",
+  ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -42,17 +44,14 @@ test("netstack_bsdsocket_c_api_test") {
 }
 
 test("netstack_if_nameindex_test") {
-  if (is_linux || is_fuchsia) {
-    sources = [ "if_nameindex_test.cc" ]
-  }
+  sources = [ "if_nameindex_test.cc" ]
 
   deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 test("netstack_external_network_test_client") {
-  if (is_linux || is_fuchsia) {
-    sources = [ "external_network_test_client.cc" ]
-  }
+  sources = [ "external_network_test_client.cc" ]
+
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",

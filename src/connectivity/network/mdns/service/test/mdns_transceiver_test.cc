@@ -9,49 +9,67 @@
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
-#include "src/connectivity/network/mdns/service/mdns_fidl_util.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace mdns::test {
 
-constexpr uint8_t kID = 1;
-constexpr const char* kName = "test01";
-constexpr uint8_t kIPv4Address[4] = {1, 2, 3, 1};
-constexpr uint8_t kIPv4Address2[4] = {4, 5, 6, 1};
-constexpr uint8_t kIPv6Address[16] = {0x01, 0x23, 0x45, 0x67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-constexpr uint8_t kIPv6Address2[16] = {0x89, 0xAB, 0xCD, 0xEF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+constexpr std::array<uint8_t, 4> kIPv4Address1 = {1, 2, 3, 1};
+constexpr std::array<uint8_t, 4> kIPv4Address2 = {4, 5, 6, 1};
+constexpr std::array<uint8_t, 16> kIPv6Address1 = {0x01, 0x23, 0x45, 0x67, 0, 0, 0, 0,
+                                                   0,    0,    0,    0,    0, 0, 0, 1};
+constexpr std::array<uint8_t, 16> kIPv6Address2 = {0x89, 0xAB, 0xCD, 0xEF, 0, 0, 0, 0,
+                                                   0,    0,    0,    0,    0, 0, 0, 1};
 constexpr uint8_t kIPv4PrefixLength = 24;
 constexpr uint8_t kIPv6PrefixLength = 64;
+constexpr uint8_t kID = 1;
+constexpr const char kName[] = "test01";
 
 namespace {
 
-fuchsia::net::interfaces::Address NewV4Address(const uint8_t* bytes) {
-  fuchsia::net::Ipv4Address v4_addr;
-  std::copy_n(bytes, v4_addr.addr.size(), v4_addr.addr.begin());
-
-  fuchsia::net::Subnet v4_subnet;
-  v4_subnet.addr.set_ipv4(v4_addr);
-  v4_subnet.prefix_len = kIPv4PrefixLength;
-
-  fuchsia::net::interfaces::Address v4_if_addr;
-  v4_if_addr.set_addr(std::move(v4_subnet));
-  return v4_if_addr;
+fuchsia::net::Ipv4Address ToFIDL(const std::array<uint8_t, 4>& bytes) {
+  fuchsia::net::Ipv4Address addr;
+  std::copy(bytes.cbegin(), bytes.cend(), addr.addr.begin());
+  return addr;
 }
 
-fuchsia::net::interfaces::Address NewV6Address(const uint8_t* bytes) {
-  fuchsia::net::Ipv6Address v6_addr;
-  std::copy_n(bytes, v6_addr.addr.size(), v6_addr.addr.begin());
+fuchsia::net::Ipv6Address ToFIDL(const std::array<uint8_t, 16>& bytes) {
+  fuchsia::net::Ipv6Address addr;
+  std::copy(bytes.cbegin(), bytes.cend(), addr.addr.begin());
+  return addr;
+}
 
-  fuchsia::net::Subnet v6_subnet;
-  v6_subnet.addr.set_ipv6(v6_addr);
-  v6_subnet.prefix_len = kIPv6PrefixLength;
+void InitAddress(fuchsia::net::interfaces::Address& addr, const std::array<uint8_t, 4>& bytes) {
+  fuchsia::net::Subnet subnet{
+      .prefix_len = kIPv4PrefixLength,
+  };
+  subnet.addr.set_ipv4(ToFIDL(bytes));
+  addr.set_addr(std::move(subnet));
+}
 
-  fuchsia::net::interfaces::Address v6_if_addr;
-  v6_if_addr.set_addr(std::move(v6_subnet));
-  return v6_if_addr;
+void InitAddress(fuchsia::net::interfaces::Address& addr, const std::array<uint8_t, 16>& bytes) {
+  fuchsia::net::Subnet subnet{
+      .prefix_len = kIPv6PrefixLength,
+  };
+  subnet.addr.set_ipv6(ToFIDL(bytes));
+  addr.set_addr(std::move(subnet));
+}
+
+std::vector<fuchsia::net::interfaces::Address> Addresses1() {
+  std::vector<fuchsia::net::interfaces::Address> addresses;
+  addresses.reserve(2);
+  InitAddress(addresses.emplace_back(), kIPv4Address1);
+  InitAddress(addresses.emplace_back(), kIPv6Address1);
+  return addresses;
+}
+
+std::vector<fuchsia::net::interfaces::Address> Addresses2() {
+  std::vector<fuchsia::net::interfaces::Address> addresses;
+  addresses.reserve(2);
+  InitAddress(addresses.emplace_back(), kIPv4Address2);
+  InitAddress(addresses.emplace_back(), kIPv6Address2);
+  return addresses;
 }
 
 }  // namespace
@@ -63,7 +81,7 @@ class InterfacesWatcherImpl : public fuchsia::net::interfaces::testing::Watcher_
   }
 
   void Watch(WatchCallback callback) override {
-    FX_DCHECK(!watch_cb_.has_value());
+    ASSERT_FALSE(watch_cb_.has_value());
     watch_cb_ = std::move(callback);
   }
 
@@ -77,12 +95,7 @@ class InterfacesWatcherImpl : public fuchsia::net::interfaces::testing::Watcher_
     }
   }
 
-  std::optional<fuchsia::net::interfaces::Watcher::WatchCallback> GetWatchCallback() {
-    std::optional<fuchsia::net::interfaces::Watcher::WatchCallback> rtn;
-    rtn.swap(watch_cb_);
-    return rtn;
-  }
-
+ private:
   std::optional<WatchCallback> watch_cb_;
 };
 
@@ -118,7 +131,13 @@ class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
 
 class MdnsTransceiverTests : public gtest::TestLoopFixture {
  public:
-  MdnsTransceiverTests() {
+  MdnsTransceiverTests()
+      : binding_(std::make_unique<fidl::Binding<fuchsia::net::interfaces::Watcher>>(
+            &fake_watcher_impl_)),
+        v4_address1_(inet::IpAddress(ToFIDL(kIPv4Address1))),
+        v4_address2_(inet::IpAddress(ToFIDL(kIPv4Address2))),
+        v6_address1_(inet::IpAddress(ToFIDL(kIPv6Address1))),
+        v6_address2_(inet::IpAddress(ToFIDL(kIPv6Address2))) {
     properties_ = fuchsia::net::interfaces::Properties();
     properties_.set_id(kID);
     properties_.set_name(kName);
@@ -128,36 +147,10 @@ class MdnsTransceiverTests : public gtest::TestLoopFixture {
     properties_.set_has_default_ipv4_route(false);
     properties_.set_has_default_ipv6_route(false);
 
-    std::vector<fuchsia::net::interfaces::Address> addresses;
-    addresses.reserve(2);
-    addresses.push_back(NewV4Address(kIPv4Address));
-    addresses.push_back(NewV6Address(kIPv6Address));
-    properties_.set_addresses(std::move(addresses));
-
-    addresses_.reserve(2);
-    addresses_.push_back(NewV4Address(kIPv4Address));
-    addresses_.push_back(NewV6Address(kIPv6Address));
-
-    addresses2_.reserve(2);
-    addresses2_.push_back(NewV4Address(kIPv4Address2));
-    addresses2_.push_back(NewV6Address(kIPv6Address2));
-
-    fuchsia::net::Ipv4Address v4_addr, v4_addr2;
-    std::copy(std::begin(kIPv4Address), std::end(kIPv4Address), v4_addr.addr.begin());
-    std::copy(std::begin(kIPv4Address2), std::end(kIPv4Address2), v4_addr2.addr.begin());
-    v4_address_ = inet::IpAddress(&v4_addr);
-    v4_address2_ = inet::IpAddress(&v4_addr2);
-
-    fuchsia::net::Ipv6Address v6_addr, v6_addr2;
-    std::copy(std::begin(kIPv6Address), std::end(kIPv6Address), v6_addr.addr.begin());
-    std::copy(std::begin(kIPv6Address2), std::end(kIPv6Address2), v6_addr2.addr.begin());
-    v6_address_ = inet::IpAddress(&v6_addr);
-    v6_address2_ = inet::IpAddress(&v6_addr2);
-
-    binding_ =
-        std::make_unique<fidl::Binding<fuchsia::net::interfaces::Watcher>>(&fake_watcher_impl_);
+    properties_.set_addresses(Addresses1());
   }
 
+ protected:
   void SetUp() override {
     TestLoopFixture::SetUp();
 
@@ -174,18 +167,16 @@ class MdnsTransceiverTests : public gtest::TestLoopFixture {
     TestLoopFixture::TearDown();
   }
 
- protected:
   MdnsTransceiver transceiver_;
   InterfacesWatcherImpl fake_watcher_impl_;
-  std::unique_ptr<fidl::Binding<fuchsia::net::interfaces::Watcher>> binding_;
+  const std::unique_ptr<fidl::Binding<fuchsia::net::interfaces::Watcher>> binding_;
   fuchsia::net::interfaces::Properties properties_;
-  std::vector<fuchsia::net::interfaces::Address> addresses_, addresses2_;
-  inet::IpAddress v4_address_, v4_address2_, v6_address_, v6_address2_;
+  const inet::IpAddress v4_address1_, v4_address2_, v6_address1_, v6_address2_;
 };
 
 TEST_F(MdnsTransceiverTests, IgnoreLoopback) {
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
 
   properties_.set_device_class(
       fuchsia::net::interfaces::DeviceClass::WithLoopback(fuchsia::net::interfaces::Empty()));
@@ -197,13 +188,13 @@ TEST_F(MdnsTransceiverTests, IgnoreLoopback) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
 }
 
 TEST_F(MdnsTransceiverTests, OnlineChange) {
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
 
   RunLoopUntilIdle();
 
@@ -212,8 +203,8 @@ TEST_F(MdnsTransceiverTests, OnlineChange) {
 
   RunLoopUntilIdle();
 
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
 
   fuchsia::net::interfaces::Properties online_false;
   online_false.set_id(kID);
@@ -223,8 +214,8 @@ TEST_F(MdnsTransceiverTests, OnlineChange) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
 
   fuchsia::net::interfaces::Properties online_true;
   online_false.set_id(kID);
@@ -234,13 +225,13 @@ TEST_F(MdnsTransceiverTests, OnlineChange) {
 
   RunLoopUntilIdle();
 
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
 }
 
 TEST_F(MdnsTransceiverTests, AddressesChange) {
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
 
@@ -251,28 +242,28 @@ TEST_F(MdnsTransceiverTests, AddressesChange) {
 
   RunLoopUntilIdle();
 
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
 
   fuchsia::net::interfaces::Properties addresses_change;
   addresses_change.set_id(kID);
-  addresses_change.set_addresses(std::move(addresses2_));
+  addresses_change.set_addresses(Addresses2());
   ASSERT_TRUE(fake_watcher_impl_.CompleteWatchCallback(
       fuchsia::net::interfaces::Event::WithChanged(std::move(addresses_change))));
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
 }
 
 TEST_F(MdnsTransceiverTests, OnlineAndAddressesChange) {
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
 
@@ -283,37 +274,37 @@ TEST_F(MdnsTransceiverTests, OnlineAndAddressesChange) {
 
   RunLoopUntilIdle();
 
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
 
   fuchsia::net::interfaces::Properties offline_and_addresses_change;
   offline_and_addresses_change.set_id(kID);
   offline_and_addresses_change.set_online(false);
-  offline_and_addresses_change.set_addresses(std::move(addresses2_));
+  offline_and_addresses_change.set_addresses(Addresses2());
 
   ASSERT_TRUE(fake_watcher_impl_.CompleteWatchCallback(
       fuchsia::net::interfaces::Event::WithChanged(std::move(offline_and_addresses_change))));
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
 
   fuchsia::net::interfaces::Properties online_and_addresses_change;
   online_and_addresses_change.set_id(kID);
   online_and_addresses_change.set_online(true);
-  online_and_addresses_change.set_addresses(std::move(addresses_));
+  online_and_addresses_change.set_addresses(Addresses1());
   ASSERT_TRUE(fake_watcher_impl_.CompleteWatchCallback(
       fuchsia::net::interfaces::Event::WithChanged(std::move(online_and_addresses_change))));
 
   RunLoopUntilIdle();
 
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address_), nullptr);
-  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
+  EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
 }

@@ -146,12 +146,11 @@ bool MdnsTransceiver::StartInterfaceTransceivers(const net::interfaces::Properti
 }
 
 bool MdnsTransceiver::StopInterfaceTransceiver(const inet::IpAddress& address) {
-  auto it = interface_transceivers_by_address_.find(address);
-  if (it == interface_transceivers_by_address_.end()) {
+  auto nh = interface_transceivers_by_address_.extract(address);
+  if (nh.empty()) {
     return false;
   }
-  it->second->Stop();
-  interface_transceivers_by_address_.erase(it);
+  nh.mapped()->Stop();
   return true;
 }
 
@@ -251,15 +250,14 @@ void MdnsTransceiver::OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
       break;
     }
     case fuchsia::net::interfaces::Event::kRemoved: {
-      auto it = interface_properties_.find(event.removed());
-      if (it == interface_properties_.end()) {
+      auto nh = interface_properties_.extract(event.removed());
+      if (nh.empty()) {
         FX_LOGS(WARNING)
             << "Removed event for unknown interface from fuchsia.net.interfaces/Watcher";
       } else {
-        for (auto& address : it->second.addresses()) {
+        for (auto& address : nh.mapped().addresses()) {
           link_change |= StopInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(address.addr().addr));
         }
-        interface_properties_.erase(it);
       }
       break;
     }

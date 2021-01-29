@@ -108,35 +108,26 @@ SocketAddress::SocketAddress(const sockaddr_storage& addr) {
   }
 }
 
-SocketAddress::SocketAddress(const fuchsia::netstack::SocketAddress* addr)
-    : SocketAddress(IpAddress(&addr->addr), IpPort::From_uint16_t(addr->port)) {
-  FX_DCHECK(addr != nullptr);
-}
-
-SocketAddress::SocketAddress(const fuchsia::net::SocketAddress* addr) : SocketAddress() {
-  FX_DCHECK(addr != nullptr);
-  switch (addr->Which()) {
+SocketAddress::SocketAddress(const fuchsia::net::SocketAddress& addr) : SocketAddress() {
+  switch (addr.Which()) {
     case fuchsia::net::SocketAddress::kIpv4:
-      Build(IpAddress(&addr->ipv4().address), IpPort::From_uint16_t(addr->ipv4().port), 0);
+      Build(IpAddress(addr.ipv4().address), IpPort::From_uint16_t(addr.ipv4().port), 0);
       break;
     case fuchsia::net::SocketAddress::kIpv6:
-      Build(IpAddress(&addr->ipv6().address), IpPort::From_uint16_t(addr->ipv6().port),
-            static_cast<uint32_t>(addr->ipv6().zone_index));
+      Build(IpAddress(addr.ipv6().address), IpPort::From_uint16_t(addr.ipv6().port),
+            static_cast<uint32_t>(addr.ipv6().zone_index));
       break;
     case fuchsia::net::SocketAddress::Invalid:
       break;
   }
 }
 
-SocketAddress::SocketAddress(const fuchsia::net::Ipv4SocketAddress* addr)
-    : SocketAddress(IpAddress(&addr->address), IpPort::From_uint16_t(addr->port)) {
-  FX_DCHECK(addr != nullptr);
-}
+SocketAddress::SocketAddress(const fuchsia::net::Ipv4SocketAddress& addr)
+    : SocketAddress(IpAddress(addr.address), IpPort::From_uint16_t(addr.port)) {}
 
-SocketAddress::SocketAddress(const fuchsia::net::Ipv6SocketAddress* addr) {
-  FX_DCHECK(addr != nullptr);
-  Build(IpAddress(&addr->address), IpPort::From_uint16_t(addr->port),
-        static_cast<uint32_t>(addr->zone_index));
+SocketAddress::SocketAddress(const fuchsia::net::Ipv6SocketAddress& addr) {
+  Build(IpAddress(addr.address), IpPort::From_uint16_t(addr.port),
+        static_cast<uint32_t>(addr.zone_index));
 }
 
 std::string SocketAddress::ToString() const {

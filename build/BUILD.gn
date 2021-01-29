@@ -405,7 +405,6 @@ group("deprecated_package") {
     "//src/lib/http-sse/*",
     "//src/lib/http-uri-ext/*",
     "//src/lib/icu_data/rust/icu_data/*",
-    "//src/lib/inet/*",
     "//src/lib/intl/intl_property_provider_impl/*",
     "//src/lib/intl/lookup/cpp/*",
     "//src/lib/intl/lookup/rust/*",

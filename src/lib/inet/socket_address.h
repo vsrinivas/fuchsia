@@ -7,7 +7,6 @@
 
 #include <arpa/inet.h>
 #include <fuchsia/net/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
@@ -54,17 +53,14 @@ class SocketAddress {
   // Creates a socket address from an sockaddr_storage struct.
   explicit SocketAddress(const sockaddr_storage& addr);
 
-  // Creates a socket address from a fuchsia.netstack SocketAddress struct.
-  explicit SocketAddress(const fuchsia::netstack::SocketAddress* addr);
-
   // Creates a socket address from a fuchsia.net SocketAddress struct.
-  explicit SocketAddress(const fuchsia::net::SocketAddress* addr);
+  explicit SocketAddress(const fuchsia::net::SocketAddress& addr);
 
   // Creates a socket address from a fuchsia.net Ipv4SocketAddress struct.
-  explicit SocketAddress(const fuchsia::net::Ipv4SocketAddress* addr);
+  explicit SocketAddress(const fuchsia::net::Ipv4SocketAddress& addr);
 
   // Creates a socket address from a fuchsia.net Ipv6SocketAddress struct.
-  explicit SocketAddress(const fuchsia::net::Ipv6SocketAddress* addr);
+  explicit SocketAddress(const fuchsia::net::Ipv6SocketAddress& addr);
 
   bool is_valid() const { return family() != AF_UNSPEC; }
 

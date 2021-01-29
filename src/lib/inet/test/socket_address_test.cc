@@ -14,8 +14,8 @@ TEST(SocketAddressTest, BuildFromFIDL) {
       fuchsia::net::Ipv4SocketAddress{fuchsia::net::Ipv4Address{{192, 168, 0, 1}}, 80});
   SocketAddress sockaddr_v4(IpAddress(192, 168, 0, 1), IpPort::From_uint16_t(80));
 
-  EXPECT_EQ(SocketAddress(&fnet_v4), sockaddr_v4);
-  EXPECT_EQ(SocketAddress(&fnet_v4.ipv4()), sockaddr_v4);
+  EXPECT_EQ(SocketAddress(fnet_v4), sockaddr_v4);
+  EXPECT_EQ(SocketAddress(fnet_v4.ipv4()), sockaddr_v4);
 
   auto fnet_v6 = fuchsia::net::SocketAddress::WithIpv6(fuchsia::net::Ipv6SocketAddress{
       fuchsia::net::Ipv6Address{{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc4, 0xed, 0xaa,
@@ -25,8 +25,8 @@ TEST(SocketAddressTest, BuildFromFIDL) {
       IpAddress(0xfe80, 0x0000, 0x000, 0x0000, 0xc4ed, 0xaa12, 0x1678, 0xf679),
       IpPort::From_uint16_t(80), 1);
 
-  EXPECT_EQ(SocketAddress(&fnet_v6), sockaddr_v6);
-  EXPECT_EQ(SocketAddress(&fnet_v6.ipv6()), sockaddr_v6);
+  EXPECT_EQ(SocketAddress(fnet_v6), sockaddr_v6);
+  EXPECT_EQ(SocketAddress(fnet_v6.ipv6()), sockaddr_v6);
 }
 
 }  // namespace test

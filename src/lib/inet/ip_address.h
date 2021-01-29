@@ -45,19 +45,19 @@ class IpAddress {
   explicit IpAddress(const in6_addr& addr);
 
   // Creates an address from a sockaddr struct.
-  explicit IpAddress(const sockaddr* addr);
+  explicit IpAddress(const sockaddr& addr);
 
   // Creates an address from a sockaddr_storage struct.
   explicit IpAddress(const sockaddr_storage& addr);
 
   // Creates an address from a fuchsia.net Ipv4Address struct.
-  explicit IpAddress(const fuchsia::net::Ipv4Address* addr);
+  explicit IpAddress(const fuchsia::net::Ipv4Address& addr);
 
   // Creates an address from a fuchsia.net Ipv6Address struct.
-  explicit IpAddress(const fuchsia::net::Ipv6Address* addr);
+  explicit IpAddress(const fuchsia::net::Ipv6Address& addr);
 
   // Creates an address from a fuchsia.net IpAddress struct.
-  explicit IpAddress(const fuchsia::net::IpAddress* addr);
+  explicit IpAddress(const fuchsia::net::IpAddress& addr);
 
   // Indicates whether this address is valid.
   bool is_valid() const { return family_ != AF_UNSPEC; }

@@ -6,7 +6,6 @@
 
 #include <arpa/inet.h>
 #include <endian.h>
-#include <netdb.h>
 #include <sys/socket.h>
 
 #include <sstream>
@@ -254,13 +253,9 @@ IpAddress IpAddress::FromString(const std::string address_string, sa_family_t fa
   return kInvalid;
 }
 
-IpAddress::IpAddress() {
-  family_ = AF_UNSPEC;
-  std::memset(&v6_, 0, sizeof(v6_));
-}
+IpAddress::IpAddress() : family_(AF_UNSPEC) { std::memset(&v6_, 0, sizeof(v6_)); }
 
-IpAddress::IpAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) {
-  family_ = AF_INET;
+IpAddress::IpAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) : family_(AF_INET) {
   uint8_t* bytes = reinterpret_cast<uint8_t*>(&v4_.s_addr);
   bytes[0] = b0;
   bytes[1] = b1;
@@ -268,19 +263,13 @@ IpAddress::IpAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) {
   bytes[3] = b3;
 }
 
-IpAddress::IpAddress(in_addr_t addr) {
-  family_ = AF_INET;
-  v4_.s_addr = addr;
-}
+IpAddress::IpAddress(in_addr_t addr) : family_(AF_INET) { v4_.s_addr = addr; }
 
-IpAddress::IpAddress(const in_addr& addr) {
-  family_ = AF_INET;
-  v4_ = addr;
-}
+IpAddress::IpAddress(const in_addr& addr) : family_(AF_INET), v4_(addr) {}
 
 IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_t w4, uint16_t w5,
-                     uint16_t w6, uint16_t w7) {
-  family_ = AF_INET6;
+                     uint16_t w6, uint16_t w7)
+    : family_(AF_INET6) {
   uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);
   words[1] = htobe16(w1);
@@ -292,29 +281,24 @@ IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_
   words[7] = htobe16(w7);
 }
 
-IpAddress::IpAddress(uint16_t w0, uint16_t w7) {
-  family_ = AF_INET6;
+IpAddress::IpAddress(uint16_t w0, uint16_t w7) : family_(AF_INET6) {
   std::memset(&v6_, 0, sizeof(v6_));
   uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);
   words[7] = htobe16(w7);
 }
 
-IpAddress::IpAddress(const in6_addr& addr) {
-  family_ = AF_INET6;
-  v6_ = addr;
-}
+IpAddress::IpAddress(const in6_addr& addr) : family_(AF_INET6), v6_(addr) {}
 
-IpAddress::IpAddress(const sockaddr* addr) {
-  FX_DCHECK(addr != nullptr);
-  switch (addr->sa_family) {
+IpAddress::IpAddress(const sockaddr& addr) {
+  switch (addr.sa_family) {
     case AF_INET:
       family_ = AF_INET;
-      v4_ = *reinterpret_cast<const in_addr*>(addr->sa_data);
+      v4_ = *reinterpret_cast<const in_addr*>(addr.sa_data);
       break;
     case AF_INET6:
       family_ = AF_INET6;
-      v6_ = *reinterpret_cast<const in6_addr*>(addr->sa_data);
+      v6_ = *reinterpret_cast<const in6_addr*>(addr.sa_data);
       break;
     default:
       family_ = AF_UNSPEC;
@@ -342,41 +326,33 @@ IpAddress::IpAddress(const sockaddr_storage& addr) {
   }
 }
 
-IpAddress::IpAddress(const fuchsia::net::Ipv4Address* addr) {
-  FX_DCHECK(addr != nullptr);
-  family_ = AF_INET;
-  memcpy(&v4_, addr->addr.data(), 4);
+IpAddress::IpAddress(const fuchsia::net::Ipv4Address& addr) : family_(AF_INET) {
+  std::copy(addr.addr.cbegin(), addr.addr.cend(), reinterpret_cast<uint8_t*>(&v4_));
 }
 
-IpAddress::IpAddress(const fuchsia::net::Ipv6Address* addr) {
-  FX_DCHECK(addr != nullptr);
-  family_ = AF_INET6;
-  memcpy(&v6_, addr->addr.data(), 16);
+IpAddress::IpAddress(const fuchsia::net::Ipv6Address& addr) : family_(AF_INET6) {
+  std::copy(addr.addr.cbegin(), addr.addr.cend(), reinterpret_cast<uint8_t*>(&v6_));
 }
 
-IpAddress::IpAddress(const fuchsia::net::IpAddress* addr) {
-  FX_DCHECK(addr != nullptr);
-  switch (addr->Which()) {
+IpAddress::IpAddress(const fuchsia::net::IpAddress& addr) {
+  switch (addr.Which()) {
     case fuchsia::net::IpAddress::Tag::kIpv4:
       family_ = AF_INET;
-      memcpy(&v4_, addr->ipv4().addr.data(), 4);
+      std::copy(addr.ipv4().addr.cbegin(), addr.ipv4().addr.cend(),
+                reinterpret_cast<uint8_t*>(&v4_));
       break;
     case fuchsia::net::IpAddress::Tag::kIpv6:
       family_ = AF_INET6;
-      memcpy(&v6_, addr->ipv6().addr.data(), 16);
+      std::copy(addr.ipv6().addr.cbegin(), addr.ipv6().addr.cend(),
+                reinterpret_cast<uint8_t*>(&v6_));
       break;
-    default:
+    case fuchsia::net::IpAddress::Tag::Invalid:
       FX_DCHECK(false);
       break;
   }
 }
 
-bool IpAddress::is_mapped_from_v4() const {
-  // A V6 address mapped from a V4 address takes the form 0::ffff:xxxx:xxxx, where the x's make
-  // up the V4 address.
-  return is_v6() && v6_.s6_addr16[0] == 0 && v6_.s6_addr16[1] == 0 && v6_.s6_addr16[2] == 0 &&
-         v6_.s6_addr16[3] == 0 && v6_.s6_addr16[4] == 0 && v6_.s6_addr16[5] == 0xffff;
-}
+bool IpAddress::is_mapped_from_v4() const { return is_v6() && IN6_IS_ADDR_V4MAPPED(&v6_); }
 
 IpAddress IpAddress::mapped_v4_address() const {
   FX_DCHECK(is_mapped_from_v4());
@@ -388,8 +364,8 @@ IpAddress IpAddress::mapped_as_v6() const {
   FX_DCHECK(is_v4());
   auto bytes = as_bytes();
   // The words passed in to this constructor are stored in big-endian order.
-  return IpAddress(0, 0, 0, 0, 0, 0xffff, static_cast<uint16_t>(bytes[0]) << 8 | bytes[1],
-                   static_cast<uint16_t>(bytes[2]) << 8 | bytes[3]);
+  return IpAddress(0, 0, 0, 0, 0, 0xffff, static_cast<uint16_t>(bytes[0] << 8) | bytes[1],
+                   static_cast<uint16_t>(bytes[2] << 8) | bytes[3]);
 }
 
 bool IpAddress::is_loopback() const {
@@ -458,7 +434,7 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
     os << std::hex;
     for (uint8_t i = 0; i < 8; ++i) {
       if (i < start_of_best_zeros || i >= start_of_best_zeros + best_zeros_seen) {
-        os << betoh16(words[i]);
+        os << be16toh(words[i]);
         if (i != 7) {
           os << ":";
         }

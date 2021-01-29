@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/lib/net_interfaces/cpp/net_interfaces.h"
+#include "net_interfaces.h"
 
 namespace net::interfaces {
 

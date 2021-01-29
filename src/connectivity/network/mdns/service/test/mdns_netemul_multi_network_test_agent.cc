@@ -10,6 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/status.h>
 
 #include <iostream>
 #include <string>
@@ -74,8 +75,8 @@ class TestAgent {
     net_interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(),
                                      watcher.NewRequest());
     watcher.set_error_handler([this](zx_status_t status) {
-      std::cerr << "FAILED: interface watcher channel disconnected unexpectedly, status " << status
-                << ".\n";
+      std::cerr << "FAILED: interface watcher channel disconnected unexpectedly, status="
+                << zx_status_get_string(status) << std::endl;
       Quit(1);
     });
 
