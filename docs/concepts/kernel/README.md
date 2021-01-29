@@ -7,7 +7,7 @@ as well as a small set of userspace services, drivers, and libraries
 to boot, talk to hardware, load userspace processes and run them, etc.
 Fuchsia builds a much larger OS on top of this foundation.
 
-The canonical Zircon repository part of the Fuchsia project
+The canonical Zircon repository is part of the Fuchsia project
 at: [https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/](/zircon/)
 
 The Zircon Kernel provides syscalls to manage processes, threads,
