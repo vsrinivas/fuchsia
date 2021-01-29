@@ -16,8 +16,14 @@
     <string name="role_progressbar">Progress bar</string>
     <!-- Spoken message that Describes a slider. For example, an element with the ARIA role slider. -->
     <string name="role_slider">Slider</string>
-    <!-- Spoken message that Describes a tab. For example, an element with the ARIA role tab. -->
+    <!-- Spoken message that describes a tab. For example, an element with the ARIA role tab. -->
     <string name="role_tab">Tab</string>
+    <!-- Spoken message that describes a toggle switch. -->
+    <string name="role_toggleswitch">Toggle switch</string>
+    <!-- Spoken message that describes a switch in the on state. -->
+    <string name="element_toggled_on">Switch On</string>
+    <!-- Spoken message that describes a switch in the off or indeterminate state. -->
+    <string name="element_toggled_off">Switch Off</string>
     <!-- Spoken message that Describes a radio button. For example, an element with the ARIA role radio. -->
     <string name="role_radiobutton">Radio button</string>
     <!-- Describes a HTML radio button named |name| in the selected state. -->
