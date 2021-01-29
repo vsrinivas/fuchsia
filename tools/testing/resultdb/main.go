@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -26,6 +25,13 @@ var (
 )
 
 func main() {
+	if err := mainImpl(); err != nil {
+		fmt.Fprintf(os.Stderr, "ResultDB upload errored: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func mainImpl() error {
 	flag.Var(&summaries, "summary", "summary.json file location.")
 	flag.StringVar(&outputRoot, "output", "",
 		"Output root path to be joined with 'output_file' field in summary.json. If not set, current directory will be used.")
@@ -36,7 +42,7 @@ func main() {
 	for _, summaryFile := range summaries {
 		summary, err := ParseSummary(summaryFile)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		testResults := SummaryToResultSink(summary, outputRoot)
 		// Group 500 testResults per ReportTestResultsRequest. This reduces the number of HTTP calls
@@ -44,47 +50,59 @@ func main() {
 		requests = append(requests, createTestResultsRequests(testResults, 500)...)
 	}
 
-	ctx, err := resultSinkCtx()
-	if err != nil {
-		log.Fatal(err)
+	invocationRequest := &sinkpb.ReportInvocationLevelArtifactsRequest{
+		Artifacts: invocationLevelArtifacts(outputRoot),
 	}
-
-	url := fmt.Sprintf("http://%s/prpc/luci.resultsink.v1.Sink/ReportTestResults", ctx.ResultSinkAddr)
-	log.Printf("resultsink URL %q \n", url)
 
 	client := &http.Client{}
 	var eg errgroup.Group
+	m := jsonpb.Marshaler{}
+	ctx, err := resultSinkCtx()
+	if err != nil {
+		return err
+	}
 
 	for _, request := range requests {
-		m := jsonpb.Marshaler{}
 		testResult, err := m.MarshalToString(request)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		eg.Go(func() error {
-			req, err := http.NewRequest("POST", url, strings.NewReader(testResult))
-			if err != nil {
-				return err
-			}
-			// ResultSink HTTP authorization scheme is documented at
-			// https://fuchsia.googlesource.com/third_party/luci-go/+/HEAD/resultdb/sink/proto/v1/sink.proto#29
-			req.Header.Add("Authorization", fmt.Sprintf("ResultSink %s", ctx.AuthToken))
-			req.Header.Add("Accept", "application/json")
-			req.Header.Add("Content-Type", "application/json")
-			resp, err := client.Do(req)
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("ResultDB Http Request errored with status code %s", http.StatusText(resp.StatusCode))
-			}
-			return nil
+			return sendData(ctx, testResult, "ReportTestResults", client)
 		})
 	}
-	if err := eg.Wait(); err != nil {
-		log.Fatal(err)
+
+	testResult, err := m.MarshalToString(invocationRequest)
+	if err != nil {
+		return err
 	}
+	eg.Go(func() error {
+		return sendData(ctx, testResult, "ReportInvocationLevelArtifacts", client)
+	})
+
+	return eg.Wait()
+}
+
+func sendData(ctx *ResultSinkContext, data, endpoint string, client *http.Client) error {
+	url := fmt.Sprintf("http://%s/prpc/luci.resultsink.v1.Sink/%s", ctx.ResultSinkAddr, endpoint)
+	req, err := http.NewRequest("POST", url, strings.NewReader(data))
+	if err != nil {
+		return err
+	}
+	// ResultSink HTTP authorization scheme is documented at
+	// https://fuchsia.googlesource.com/third_party/luci-go/+/HEAD/resultdb/sink/proto/v1/sink.proto#29
+	req.Header.Add("Authorization", fmt.Sprintf("ResultSink %s", ctx.AuthToken))
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ResultDB Http Request errored with status code %s (%d)", http.StatusText(resp.StatusCode), resp.StatusCode)
+	}
+	return nil
 }
 
 // createTestResultsRequests breaks an array of resultpb.TestResult into an array of resultpb.ReportTestResultsRequest

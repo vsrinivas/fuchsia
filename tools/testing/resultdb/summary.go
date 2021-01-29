@@ -54,6 +54,26 @@ func SummaryToResultSink(s *runtests.TestSummary, outputRoot string) []*sinkpb.T
 	return r
 }
 
+// invocationLevelArtifacts creates resultdb artifacts for syslog and serial log to be sent to ResultDB.
+func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
+	if len(outputRoot) == 0 {
+		outputRoot, _ = os.Getwd()
+	}
+	rootPath, _ := filepath.Abs(outputRoot)
+	artifacts := map[string]*sinkpb.Artifact{}
+
+	for _, invocationLog := range [2]string{"syslog.txt", "serial_log.log"} {
+		logFile := filepath.Join(rootPath, invocationLog)
+		if isReadable(logFile) {
+			artifacts[invocationLog] = &sinkpb.Artifact{
+				Body:        &sinkpb.Artifact_FilePath{FilePath: logFile},
+				ContentType: "text/plain",
+			}
+		}
+	}
+	return artifacts
+}
+
 // testCaseToResultSink converts TestCaseResult defined in //tools/testing/testparser/result.go
 // to ResultSink's TestResult. A testcase will not be converted if test result cannot be
 // mapped to result_sink.Status.
@@ -89,7 +109,7 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 }
 
 // testCaseToResultSink converts TestDetail defined in /tools/testing/runtests/runtests.go
-// to ResultSink's TestResult. Returns (nil, error) is a test result cannot be mapped to
+// to ResultSink's TestResult. Returns (nil, error) if a test result cannot be mapped to
 // result_sink.Status
 func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, error) {
 	r := sinkpb.TestResult{

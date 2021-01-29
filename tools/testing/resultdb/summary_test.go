@@ -117,6 +117,27 @@ func TestIsReadable(t *testing.T) {
 	}
 }
 
+func TestInvocationLevelArtifacts(t *testing.T) {
+	artifacts := invocationLevelArtifacts(*testDataDir)
+	foundSyslog := false
+	foundSerial := false
+	for logName := range artifacts {
+		switch logName {
+		case "syslog.txt":
+			foundSyslog = true
+		case "serial_log.log":
+			foundSerial = true
+		default:
+			t.Errorf("Found unexpected log (%s), expect only syslog.txt or serial_log.log", logName)
+		}
+	}
+	if !foundSyslog {
+		t.Errorf("Did not find syslog.txt in output")
+	}
+	if !foundSerial {
+		t.Errorf("Did not find serial_log.log in output")
+	}
+}
 func TestDetermineExpected(t *testing.T) {
 	testCases := []struct {
 		testStatus     resultpb.TestStatus
