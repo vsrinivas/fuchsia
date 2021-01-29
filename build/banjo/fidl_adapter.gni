@@ -35,6 +35,7 @@ template("fidl_adapter") {
     fidl_library(main_target_name) {
       name = library_name
       sources = invoker.sources
+      should_lint = false
     }
   } else if (is_fuchsia) {
     not_needed(invoker, "*")
