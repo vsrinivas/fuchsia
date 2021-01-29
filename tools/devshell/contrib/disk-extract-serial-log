@@ -1,0 +1,200 @@
+#!/usr/bin/env python3
+
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### Extract disk image from serial logs.
+##
+## When filesystems are corrupted, it may happen that we lose abiility to ssh into the system
+## to debug. In such cases, we may want access to filesystem metadata to debug the problem. A
+## board or product may write filesystem metadata to serial.
+## This script helps to identify and extract metadata written to serial.
+##
+## Since scraping logs is prone to error, this script may fail if format of log changes. For
+## reference, |logs| under function test() contains a real example log with which the script
+## works.
+##
+## There are multiple ways to get serial log including `fx serial`. The output of serial log
+## should be stored in input file.
+##
+## usage: fx disk-extract-serial-log --input FILE --output FILE
+##
+##      --input Extract disk image from serial logs.
+##      --output Path where extracted image will be created.
+##
+
+import argparse
+import os
+import struct
+import sys
+import re
+import zlib
+import tempfile
+
+
+def test():
+  logs = (
+        '[00018.241] 02331:02333> [00018.241126][2331][2333][fshost.cm] ERROR: [src/storage/fshost/extract-metadata.cc(140)]\n'
+        '[00018.241] 02331:02333> EIL: Extracting minfs to serial.\n'
+        '[00018.241] 02331:02333> EIL: Following lines that start with "EIL" are from extractor.\n'
+        '[00018.241] 02331:02333> EIL: Successful extraction ends with "EIL: Done extracting minfs to serial."\n'
+        '[00018.241] 02331:02333> EIL: Compression:off Checksum:on Offset:on bytes_per_line:64\n'
+        '[00018.241] 02331:02333>\n'
+        '[00027.513] 02331:02333> [00027.513786][2331][2333][fshost.cm] ERROR: [src/storage/fshost/extract-metadata.cc(76)]\n'
+        '[00027.513] 02331:02333> EIL 0-63:643e34d64b1f76e3c57b6f9af52ba08a0100000000000000002000000000000000200000000000006d39c50c0000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 64-127:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 128-8191:*\n'
+        '[00027.513] 02331:02333> EIL 8192-8255:fb7db2cd9b1dcc8e654d025bf38116450d0000000000000000000000000000000000000000000000f75470420000000000000000000000000020000000000000\n'
+        '[00027.513] 02331:02333> EIL 8256-8319:02020000000000000020000000000000000000200000000000000000000000000000002000000000000010200000000002020000000000000000102000000000\n'
+        '[00027.513] 02331:02333> EIL 8320-8383:00000040000000000000000000000000000000400000000000001040000000000202000000000000000010400000000000000060000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 8384-8447:00000060000000000000106000000000020200000000000000001060000000000000008000000000000000000000000000000080000000000000208000000000\n'
+        '[00027.513] 02331:02333> EIL 8448-8511:02020000000000000000208000000000000000a0000000000000000000000000000000a000000000002000a0000000000100000000000000002000a000000000\n'
+        '[00027.513] 02331:02333> EIL 8512-8575:004000a0000000000202000000000000004000a000000000000010a0000000000100000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 8576-8639:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 8640-16383:*\n'
+        '[00027.513] 02331:02333> EIL 16384-16447:214d696e4653210004d3d3d3d30050380900000000000000615f933e020000000300000000200000000100008000000000100000020000000200000000000100\n'
+        '[00027.513] 02331:02333> EIL 16448-16511:00000200000003000000040000000500000010000000000001000000010000000100000002000000010000000000000000000000020000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 16512-16575:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 16576-24575:*\n'
+        '[00027.513] 02331:02333> EIL 24576-24639:03000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 24640-24703:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 24704-1073151:*\n'
+        '[00027.513] 02331:02333> EIL 1073152-1073215:03000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 1073216-1073279:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 1073280-2121983:*\n'
+        '[00027.513] 02331:02333> EIL 2121984-2122047:046e6faa00200000010000000200000021317689d5355a1600000000000000000000000000000000020000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 2122048-2122111:01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 2122112-2122175:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 2122176-3170303:*\n'
+        '[00027.513] 02331:02333> EIL 3170304-3170367:214d696e4653210004d3d3d3d30050380900000000000000615f933e020000000300000000200000000100008000000000100000020000000200000000000100\n'
+        '[00027.513] 02331:02333> EIL 3170368-3170431:00000200000003000000040000000500000010000000000001000000010000000100000002000000010000000000000000000000020000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 3170432-3170495:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.513] 02331:02333> EIL 3170496-3178495:*\n'
+        '[00027.513] 02331:02333> EIL 3178496-3178559:6c6e726a626f6c620000000000000000000000000000000000000000000000009b11533a00000000000000000000000000000000000000000000000000000000\n'
+        '[00027.514] 02331:02333> EIL 3178560-3178623:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.514] 02331:02333> EIL 3178624-5267455:*\n'
+        '[00027.514] 02331:02333> EIL 5267456-5267519:010000001000000001042e0000000000010000001000008002042e2e000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.514] 02331:02333> EIL 5267520-5267583:00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n'
+        '[00027.514] 02331:02333> EIL 5267584-5275647:*\n'
+        '[00027.514] 02331:02333> EIL 0-5275647:checksum: 2019026790\n'
+        '[00027.514] 02331:02333>\n'
+        '[00027.514] 02331:02333> [00027.514051][2331][2333][fshost.cm] ERROR: [src/storage/fshost/extract-metadata.cc(151)]\n'
+        '[00027.514] 02331:02333> EIL: Done extracting minfs to serial\n'
+    )
+
+  assert extract(logs, '', 'EIL', tempfile.NamedTemporaryFile().name) == 0
+
+
+def trim_log(logs, prefix_regex, tag):
+
+  lines = ''
+
+  # Remove non-tag lines and all the test that preceeds tag.
+  for line in logs.splitlines():
+    if tag in line:
+      lines = lines + re.sub('.*> ' + tag, tag, line) + '\n'
+
+  # Remove header and footer messages
+  lines = lines.replace(prefix_regex + tag + ': Extracting minfs to serial.\n',
+                        '')
+  lines = lines.replace(
+      prefix_regex + tag + ': Following lines that start with "' + tag +
+      '" are from extractor.\n', '')
+  lines = lines.replace(
+      prefix_regex + tag + ': Successful extraction ends with "' + tag +
+      ': Done extracting minfs to serial."\n', '')
+  lines = lines.replace(
+      prefix_regex + tag + ': Done extracting minfs to serial\n', '')
+  return lines
+
+
+# Removes config with which disk image was written to logs.
+# Returns configs and a copy of trimmed logs containing only hex string lines.
+def get_configs(logs, prefix_regex, tag):
+  bytes_per_line = int(
+      re.match(
+          'EIL: Compression:(\S+) Checksum:(\S+) Offset:(\S+) bytes_per_line:(\d+)\n',
+          logs).group(4))
+  compression = re.match(
+      'EIL: Compression:(\S+) Checksum:(\S+) Offset:(\S+) bytes_per_line:(\d+)\n',
+      logs).group(1)
+  checksum = int(re.search('EIL (\d+)-(\d+):checksum: (\d+)', logs).group(3))
+  logs = re.sub(
+      'EIL: Compression:(\S+) Checksum:(\S+) Offset:(\S+) bytes_per_line:(\d+)\n',
+      '', logs)
+  logs = re.sub('EIL (\d+)-(\d+):checksum: (\d+)\n', '', logs)
+
+  return logs, bytes_per_line, checksum, compression
+
+
+# Extracts disk image from the logs and writes it to outfile.
+def extract(logs, prefix_regex, tag, outfile):
+  logs = trim_log(logs, prefix_regex, tag)
+  if logs == None:
+    return 1
+
+  r = get_configs(logs, prefix_regex, tag)
+  if r == None:
+    return 1
+  logs, bytes_per_line, checksum, compression = r
+
+  print('compression: ' + compression)
+  print('bytes_per_line: ' + str(bytes_per_line))
+  print('checksum: ' + str(checksum))
+
+  end = -1
+  data = bytearray()
+  bin = bytearray()
+  last_bin = bytearray()
+
+  with open(outfile, 'wb') as fout:
+    for line in logs.splitlines():
+      match = re.match('EIL (\d+)-(\d+):(\S+)', line)
+      start = int(match.group(1))
+      if start != end + 1:
+        print('Invalid offset. start:' + str(start) + ' end: ' + str(end))
+        exit(1)
+      end = int(match.group(2))
+      hex = match.group(3)
+      if hex == '*':
+        bin = last_bin
+        count = (1 + end - start) // len(bin)
+        for x in range(0, count):
+          data.extend(bin)
+          fout.write(bin)
+      else:
+        if len(hex) != (end - start + 1) * 2:
+          print('Invalid hex string. start:' + str(start) + ' end: ' +
+                str(end) + ': ' + str(len(hex)))
+          exit(1)
+        bin = bytes.fromhex(hex)
+        last_bin = bin
+        data.extend(bin)
+        fout.write(bin)
+
+  found = zlib.crc32(data)
+  if checksum != found:
+    print('Output file created but crc did not match: Expected: ' +
+          str(checksum) + ' found: ' + str(found))
+    return 1
+  return 0
+
+
+def main():
+  parser = argparse.ArgumentParser(
+      description='Extract disk image from serial logs')
+  parser.add_argument('--input', required=True, help='Path to log file.')
+  parser.add_argument(
+      '--output',
+      required=True,
+      help='Path where extracted image will be created.')
+  args = parser.parse_args()
+
+  logs = open(args.input, mode='r').read()
+  return (extract(logs, '', 'EIL', args.output))
+
+
+if __name__ == '__main__':
+  sys.exit(main())
