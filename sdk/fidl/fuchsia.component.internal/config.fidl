@@ -83,6 +83,8 @@ table SecurityPolicy {
     1: JobPolicyAllowlists job_policy;
     /// Capability access policy.
     2: CapabilityPolicyAllowlists capability_policy;
+    /// Debug capability registration policy.
+    3: DebugRegistrationPolicyAllowlists debug_registration_policy;
 };
 
 /// Allowlists for Zircon job policy.
@@ -166,7 +168,7 @@ table CapabilityAllowlistEntry {
     /// capability.
     4: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE target_monikers;
 
-    /// The original source type of this component, self or framework.
+    /// The original source type of this capability, self or framework.
     5: fuchsia.sys2.Ref source;
 };
 
@@ -174,4 +176,36 @@ table CapabilityAllowlistEntry {
 /// `source_moniker` + `capability` pair must be unique in the vector.
 table CapabilityPolicyAllowlists {
     1: vector<CapabilityAllowlistEntry>:MAX_ALLOWLIST_SIZE allowlist;
+};
+
+/// Represents the class of capabilities supported to be allowlisted.
+flexible union AllowlistedDebugRegistration {
+    1: AllowlistedProtocol protocol;
+};
+
+/// Defines a capability policy entry in the set of debug capability policy
+/// allowlists.
+table DebugRegistrationAllowlistEntry {
+    /// The `source_moniker` represents the origin of a capability. The
+    /// `source_moniker` is absolute moniker.
+    1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
+
+    /// The source name of this particular capability.
+    2: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+
+    /// Represents the type of capability that is being restricted along
+    /// with any other properties required by a particular capability type.
+    3: AllowlistedDebugRegistration debug;
+
+    /// The `target_moniker` represents the component which is allowed to register
+    /// this capability in its environment's debug sction.
+    4: string:fuchsia.component.MAX_MONIKER_LENGTH target_moniker;
+
+    /// Name of the environment where this capability can be registered.
+    5: fuchsia.component.name environment_name;
+};
+
+/// Defines the total set of debug capability allowlists.
+table DebugRegistrationPolicyAllowlists {
+    1: vector<DebugRegistrationAllowlistEntry>:MAX_ALLOWLIST_SIZE allowlist;
 };

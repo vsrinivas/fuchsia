@@ -55,6 +55,7 @@ impl std::default::Default for BuiltinPkgResolver {
 pub struct SecurityPolicy {
     job_policy: Option<JobPolicyAllowlists>,
     capability_policy: Option<Vec<CapabilityAllowlistEntry>>,
+    debug_registration_policy: Option<Vec<DebugRegistrationAllowlistEntry>>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -123,6 +124,24 @@ impl Into<component_internal::AllowlistedCapability> for CapabilityTypeName {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
+pub enum DebugRegistrationTypeName {
+    Protocol,
+}
+
+impl Into<component_internal::AllowlistedDebugRegistration> for DebugRegistrationTypeName {
+    fn into(self) -> component_internal::AllowlistedDebugRegistration {
+        match &self {
+            DebugRegistrationTypeName::Protocol => {
+                component_internal::AllowlistedDebugRegistration::Protocol(
+                    component_internal::AllowlistedProtocol::EMPTY,
+                )
+            }
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
 pub enum CapabilityFrom {
     Capability,
     Component,
@@ -149,6 +168,16 @@ pub struct CapabilityAllowlistEntry {
     source: Option<CapabilityFrom>,
     capability: Option<CapabilityTypeName>,
     target_monikers: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct DebugRegistrationAllowlistEntry {
+    source_moniker: Option<String>,
+    source_name: Option<String>,
+    debug: Option<DebugRegistrationTypeName>,
+    target_moniker: Option<String>,
+    environment_name: Option<String>,
 }
 
 impl TryFrom<Config> for component_internal::Config {
@@ -198,10 +227,13 @@ impl TryFrom<Config> for component_internal::Config {
 fn translate_security_policy(
     security_policy: Option<SecurityPolicy>,
 ) -> component_internal::SecurityPolicy {
-    let SecurityPolicy { job_policy, capability_policy } = security_policy.unwrap_or_default();
+    let SecurityPolicy { job_policy, capability_policy, debug_registration_policy } =
+        security_policy.unwrap_or_default();
     component_internal::SecurityPolicy {
         job_policy: job_policy.map(translate_job_policy),
         capability_policy: capability_policy.map(translate_capability_policy),
+        debug_registration_policy: debug_registration_policy
+            .map(translate_debug_registration_policy),
         ..component_internal::SecurityPolicy::EMPTY
     }
 }
@@ -233,6 +265,26 @@ fn translate_capability_policy(
     component_internal::CapabilityPolicyAllowlists {
         allowlist: Some(allowlist),
         ..component_internal::CapabilityPolicyAllowlists::EMPTY
+    }
+}
+
+fn translate_debug_registration_policy(
+    debug_registration_policy: Vec<DebugRegistrationAllowlistEntry>,
+) -> component_internal::DebugRegistrationPolicyAllowlists {
+    let allowlist = debug_registration_policy
+        .iter()
+        .map(|e| component_internal::DebugRegistrationAllowlistEntry {
+            source_moniker: e.source_moniker.clone(),
+            source_name: e.source_name.clone(),
+            debug: e.debug.clone().map_or_else(|| None, |t| Some(t.into())),
+            target_moniker: e.target_moniker.clone(),
+            environment_name: e.environment_name.clone(),
+            ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
+        })
+        .collect::<Vec<_>>();
+    component_internal::DebugRegistrationPolicyAllowlists {
+        allowlist: Some(allowlist),
+        ..component_internal::DebugRegistrationPolicyAllowlists::EMPTY
     }
 }
 
@@ -396,6 +448,15 @@ mod tests {
                         capability: "event",
                         target_monikers: ["/foo/bar", "/foo/bar/baz"],
                     },
+                ],
+                debug_registration_policy: [
+                    {
+                        source_moniker: "/foo/bar",
+                        source_name: "fuchsia.kernel.RootResource",
+                        debug: "protocol",
+                        target_moniker: "/foo",
+                        environment_name: "my_env",
+                    },
                 ]
             },
             namespace_capabilities: [
@@ -462,6 +523,25 @@ mod tests {
                         ]),
                         ..component_internal::CapabilityPolicyAllowlists::EMPTY
                     }),
+                    debug_registration_policy: Some(
+                        component_internal::DebugRegistrationPolicyAllowlists {
+                            allowlist: Some(vec![
+                                component_internal::DebugRegistrationAllowlistEntry {
+                                    source_moniker: Some("/foo/bar".to_string()),
+                                    source_name: Some("fuchsia.kernel.RootResource".to_string()),
+                                    debug: Some(
+                                        component_internal::AllowlistedDebugRegistration::Protocol(
+                                            component_internal::AllowlistedProtocol::EMPTY
+                                        )
+                                    ),
+                                    target_moniker: Some("/foo".to_string()),
+                                    environment_name: Some("my_env".to_string()),
+                                    ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
+                                }
+                            ]),
+                            ..component_internal::DebugRegistrationPolicyAllowlists::EMPTY
+                        }
+                    ),
                     ..component_internal::SecurityPolicy::EMPTY
                 }),
                 namespace_capabilities: Some(vec![
