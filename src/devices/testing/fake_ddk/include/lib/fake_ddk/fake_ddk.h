@@ -9,6 +9,7 @@
 #include <lib/syslog/logger.h>
 
 #include <optional>
+#include <set>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -28,6 +29,11 @@ struct Protocol {
 struct ProtocolEntry {
   uint32_t id;
   Protocol proto;
+};
+
+struct FragmentEntry {
+  std::string name;
+  std::vector<ProtocolEntry> protocols;
 };
 
 // Fake instances of a parent device, and device returned by DeviceAdd.
@@ -90,6 +96,10 @@ class Bind {
   // parent device.
   void SetProtocols(fbl::Array<ProtocolEntry>&& protocols);
 
+  // Sets an optional list of fragments that the ddk should return for the
+  // parent device. Each fragment may have one more protocols
+  void SetFragments(fbl::Array<FragmentEntry>&& protocols);
+
   // Sets an optional size that the ddk should return for the parent device.
   void SetSize(zx_off_t size);
 
@@ -137,6 +147,10 @@ class Bind {
   virtual zx_status_t DeviceRebind(zx_device_t* device);
   virtual const char* DeviceGetName(zx_device_t* device);
   virtual zx_off_t DeviceGetSize(zx_device_t* device);
+  virtual uint32_t DeviceGetFragmentCount(zx_device_t* dev);
+  virtual void DeviceGetFragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
+                                  size_t comp_count, size_t* comp_actual);
+  virtual bool DeviceGetFragment(zx_device_t* dev, const char* name, zx_device_t** out);
 
   // Allow the DDK entry points to access the above class members.
   //
@@ -169,6 +183,10 @@ class Bind {
   friend zx_status_t(::device_get_metadata_size)(zx_device_t* device, uint32_t type,
                                                  size_t* out_size);
   friend zx_status_t(::device_rebind)(zx_device_t* device);
+  friend uint32_t(::device_get_fragment_count)(zx_device_t* dev);
+  friend void(::device_get_fragments)(zx_device_t* dev, composite_device_fragment_t* comp_list,
+                                      size_t comp_count, size_t* comp_actual);
+  friend bool(::device_get_fragment)(zx_device_t* dev, const char* name, zx_device_t** out);
 
   // These fields should be private, but are currently referenced extensively
   // by tests inheriting from us.
@@ -197,6 +215,8 @@ class Bind {
   zx_off_t size_ = 0;
 
   fbl::Array<ProtocolEntry> protocols_;
+  fbl::Array<FragmentEntry> fragments_;
+  std::set<const FragmentEntry*> fragment_lookup_;
   FidlMessenger fidl_;
 
   bool has_init_hook_ = false;

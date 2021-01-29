@@ -109,6 +109,15 @@ __EXPORT __WEAK zx_status_t load_firmware(zx_device_t* device, const char* path,
 __EXPORT
 zx_status_t device_rebind(zx_device_t* device) { return ZX_OK; }
 
+__EXPORT uint32_t device_get_fragment_count(zx_device_t* dev) { return 0; }
+
+__EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
+                                   size_t comp_count, size_t* comp_actual) {}
+
+__EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out) {
+  return false;
+}
+
 // Please do not use get_root_resource() in new code. See ZX-1467.
 __EXPORT
 zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }

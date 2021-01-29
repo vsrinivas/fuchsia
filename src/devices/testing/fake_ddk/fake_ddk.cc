@@ -94,6 +94,13 @@ void Bind::SetProtocols(fbl::Array<ProtocolEntry>&& protocols) {
   protocols_ = std::move(protocols);
 }
 
+void Bind::SetFragments(fbl::Array<FragmentEntry>&& fragments) {
+  fragments_ = std::move(fragments);
+  for (auto& fragment : fragments_) {
+    fragment_lookup_.insert(&fragment);
+  }
+}
+
 void Bind::SetSize(zx_off_t size) { size_ = size; }
 
 void Bind::SetMetadata(const void* data, size_t data_length) {
@@ -270,18 +277,31 @@ void Bind::DeviceResumeComplete(zx_device_t* device, zx_status_t status, uint8_t
 }
 
 zx_status_t Bind::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
-  if (device != kFakeParent) {
-    bad_device_ = true;
+  auto out = reinterpret_cast<Protocol*>(protocol);
+  if (device == kFakeParent) {
+    for (const auto& proto : protocols_) {
+      if (proto_id == proto.id) {
+        out->ops = proto.proto.ops;
+        out->ctx = proto.proto.ctx;
+        return ZX_OK;
+      }
+    }
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto out = reinterpret_cast<Protocol*>(protocol);
-  for (const auto& proto : protocols_) {
-    if (proto_id == proto.id) {
-      out->ops = proto.proto.ops;
-      out->ctx = proto.proto.ctx;
-      return ZX_OK;
+
+  const auto& fragment = fragment_lookup_.find(reinterpret_cast<const FragmentEntry*>(device));
+  if (fragment != fragment_lookup_.end()) {
+    for (const auto& proto : (*fragment)->protocols) {
+      if (proto_id == proto.id) {
+        out->ops = proto.proto.ops;
+        out->ctx = proto.proto.ctx;
+        return ZX_OK;
+      }
     }
+    return ZX_ERR_NOT_SUPPORTED;
   }
+
+  bad_device_ = true;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -314,6 +334,39 @@ zx_off_t Bind::DeviceGetSize(zx_device_t* device) {
     bad_device_ = true;
   }
   return size_;
+}
+
+uint32_t Bind::DeviceGetFragmentCount(zx_device_t* device) {
+  if (device != kFakeParent) {
+    bad_device_ = true;
+  }
+  return static_cast<uint32_t>(fragment_lookup_.size());
+}
+
+void Bind::DeviceGetFragments(zx_device_t* device, composite_device_fragment_t* comp_list,
+                              size_t comp_count, size_t* comp_actual) {
+  if (device != kFakeParent) {
+    bad_device_ = true;
+  }
+  *comp_actual = fragments_.size();
+  for (size_t i = 0; i < std::min(fragments_.size(), comp_count); i++) {
+    strncpy(comp_list[i].name, fragments_[i].name.c_str(),
+            std::min(sizeof(comp_list[i].name), fragments_[i].name.size()));
+    comp_list[i].device = reinterpret_cast<zx_device_t*>(&fragments_[i]);
+  }
+}
+
+bool Bind::DeviceGetFragment(zx_device_t* device, const char* name, zx_device_t** out) {
+  if (device != kFakeParent) {
+    bad_device_ = true;
+  }
+  for (auto& fragment : fragments_) {
+    if (fragment.name.compare(name) == 0) {
+      *out = reinterpret_cast<zx_device_t*>(&fragment);
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace fake_ddk
@@ -485,6 +538,31 @@ zx_status_t device_rebind(zx_device_t* device) {
     return ZX_OK;
   }
   return fake_ddk::Bind::Instance()->DeviceRebind(device);
+}
+
+__EXPORT uint32_t device_get_fragment_count(zx_device_t* dev) {
+  if (!fake_ddk::Bind::Instance()) {
+    return 0;
+  }
+  return fake_ddk::Bind::Instance()->DeviceGetFragmentCount(dev);
+}
+
+__EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
+                                   size_t comp_count, size_t* comp_actual) {
+  ZX_ASSERT(comp_list != nullptr);
+  ZX_ASSERT(comp_actual != nullptr);
+  if (!fake_ddk::Bind::Instance()) {
+    *comp_actual = 0;
+    return;
+  }
+  return fake_ddk::Bind::Instance()->DeviceGetFragments(dev, comp_list, comp_count, comp_actual);
+}
+
+__EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out) {
+  if (!fake_ddk::Bind::Instance()) {
+    return false;
+  }
+  return fake_ddk::Bind::Instance()->DeviceGetFragment(dev, name, out);
 }
 
 // Please do not use get_root_resource() in new code. See fxbug.dev/31358.

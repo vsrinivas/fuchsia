@@ -33,3 +33,75 @@ TEST(FakeDdk, InspectVmoLeak) {
   // |inspect_vmo| should be the only handle.
   EXPECT_EQ(1u, count.handle_count);
 }
+
+class CompositeTest : public zxtest::Test {
+ public:
+  ~CompositeTest() override = default;
+  void SetUp() override {
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[2], 2);
+    fragments[0].name = "fragment-1";
+    fragments[0].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{0, fake_ddk::Protocol{nullptr, nullptr}});
+    fragments[0].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{1, fake_ddk::Protocol{nullptr, nullptr}});
+    fragments[1].name = "fragment-2";
+    fragments[1].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{2, fake_ddk::Protocol{nullptr, nullptr}});
+
+    bind.SetFragments(std::move(fragments));
+  }
+
+ private:
+  fake_ddk::Bind bind;
+};
+
+TEST_F(CompositeTest, GetFragmentCount) {
+  EXPECT_EQ(device_get_fragment_count(fake_ddk::FakeParent()), 2);
+}
+
+TEST_F(CompositeTest, GetProtocolParent) {
+  // Protocols are not available under parent device.
+  fake_ddk::Protocol proto = {};
+  EXPECT_NE(device_get_protocol(fake_ddk::FakeParent(), 0, &proto), ZX_OK);
+  EXPECT_NE(device_get_protocol(fake_ddk::FakeParent(), 1, &proto), ZX_OK);
+  EXPECT_NE(device_get_protocol(fake_ddk::FakeParent(), 2, &proto), ZX_OK);
+}
+
+TEST_F(CompositeTest, GetFragment) {
+  zx_device_t *fragment1, *fragment2;
+  EXPECT_TRUE(device_get_fragment(fake_ddk::FakeParent(), "fragment-1", &fragment1));
+  EXPECT_TRUE(device_get_fragment(fake_ddk::FakeParent(), "fragment-2", &fragment2));
+
+  // Only first two protocols are availably in fragment-1.
+  fake_ddk::Protocol proto = {};
+  EXPECT_OK(device_get_protocol(fragment1, 0, &proto));
+  EXPECT_OK(device_get_protocol(fragment1, 1, &proto));
+  EXPECT_NE(device_get_protocol(fragment1, 2, &proto), ZX_OK);
+
+  // Only last protocols is availably in fragment-2.
+  EXPECT_NE(device_get_protocol(fragment2, 0, &proto), ZX_OK);
+  EXPECT_NE(device_get_protocol(fragment2, 1, &proto), ZX_OK);
+  EXPECT_OK(device_get_protocol(fragment2, 2, &proto));
+}
+
+TEST_F(CompositeTest, GetFragments) {
+  composite_device_fragment_t fragments[2] = {};
+  size_t actual;
+  device_get_fragments(fake_ddk::FakeParent(), fragments, 2, &actual);
+  EXPECT_EQ(actual, 2);
+
+  // Fragment names line up
+  EXPECT_EQ(strcmp(fragments[0].name, "fragment-1"), 0);
+  EXPECT_EQ(strcmp(fragments[1].name, "fragment-2"), 0);
+
+  // Only first two protocols are availably in fragment-1.
+  fake_ddk::Protocol proto = {};
+  EXPECT_OK(device_get_protocol(fragments[0].device, 0, &proto));
+  EXPECT_OK(device_get_protocol(fragments[0].device, 1, &proto));
+  EXPECT_NE(device_get_protocol(fragments[0].device, 2, &proto), ZX_OK);
+
+  // Only last protocols is availably in fragment-2.
+  EXPECT_NE(device_get_protocol(fragments[1].device, 0, &proto), ZX_OK);
+  EXPECT_NE(device_get_protocol(fragments[1].device, 1, &proto), ZX_OK);
+  EXPECT_OK(device_get_protocol(fragments[1].device, 2, &proto));
+}
