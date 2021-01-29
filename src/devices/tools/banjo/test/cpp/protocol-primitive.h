@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/protocol/primitive.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -221,7 +222,20 @@ public:
         }
     }
 
-    // Create a SynchronousPrimitiveProtocolClient from the given parent device.
+    SynchronousPrimitiveProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        synchronous_primitive_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_SYNCHRONOUS_PRIMITIVE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a SynchronousPrimitiveProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -234,6 +248,19 @@ public:
         }
         *result = SynchronousPrimitiveProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a SynchronousPrimitiveProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        SynchronousPrimitiveProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a SynchronousPrimitiveProtocolClient from the given composite protocol.
@@ -407,7 +434,20 @@ public:
         }
     }
 
-    // Create a AsyncPrimitiveProtocolClient from the given parent device.
+    AsyncPrimitiveProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        async_primitive_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ASYNC_PRIMITIVE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a AsyncPrimitiveProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -420,6 +460,19 @@ public:
         }
         *result = AsyncPrimitiveProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a AsyncPrimitiveProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        AsyncPrimitiveProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a AsyncPrimitiveProtocolClient from the given composite protocol.

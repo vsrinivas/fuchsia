@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/simple.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <lib/zx/vmo.h>
@@ -125,7 +126,20 @@ public:
         }
     }
 
-    // Create a DrawingProtocolClient from the given parent device.
+    DrawingProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        drawing_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_DRAWING, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a DrawingProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -138,6 +152,19 @@ public:
         }
         *result = DrawingProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a DrawingProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        DrawingProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a DrawingProtocolClient from the given composite protocol.

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/protocol/vector.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -266,7 +267,20 @@ public:
         }
     }
 
-    // Create a VectorProtocolClient from the given parent device.
+    VectorProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        vector_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_VECTOR, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a VectorProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -279,6 +293,19 @@ public:
         }
         *result = VectorProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a VectorProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        VectorProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a VectorProtocolClient from the given composite protocol.
@@ -460,7 +487,20 @@ public:
         }
     }
 
-    // Create a Vector2ProtocolClient from the given parent device.
+    Vector2ProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        vector2_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_VECTOR2, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a Vector2ProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -473,6 +513,19 @@ public:
         }
         *result = Vector2ProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a Vector2ProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        Vector2ProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a Vector2ProtocolClient from the given composite protocol.
@@ -654,7 +707,20 @@ public:
         }
     }
 
-    // Create a VectorOfVectorsProtocolClient from the given parent device.
+    VectorOfVectorsProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        vector_of_vectors_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_VECTOR_OF_VECTORS, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a VectorOfVectorsProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -667,6 +733,19 @@ public:
         }
         *result = VectorOfVectorsProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a VectorOfVectorsProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        VectorOfVectorsProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a VectorOfVectorsProtocolClient from the given composite protocol.

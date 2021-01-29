@@ -45,7 +45,20 @@ public:
         }}
     }}
 
-    // Create a {protocol_name}ProtocolClient from the given parent device.
+    {protocol_name}ProtocolClient(zx_device_t* parent, const char* fragment_name) {{
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        {protocol_name_snake}_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_{protocol_name_uppercase}, &proto) == ZX_OK) {{
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        }} else {{
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }}
+    }}
+
+    // Create a {protocol_name}ProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -58,6 +71,19 @@ public:
         }}
         *result = {protocol_name}ProtocolClient(&proto);
         return ZX_OK;
+    }}
+
+    // Create a {protocol_name}ProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        {protocol_name}ProtocolClient* result) {{
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {{
+          return ZX_ERR_NOT_FOUND;
+        }}
+        return CreateFromDevice(fragment, result);
     }}
 
     // Create a {protocol_name}ProtocolClient from the given composite protocol.

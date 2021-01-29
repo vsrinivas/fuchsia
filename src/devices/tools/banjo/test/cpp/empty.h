@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/empty.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>

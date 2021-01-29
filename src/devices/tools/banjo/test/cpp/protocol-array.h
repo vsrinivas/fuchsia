@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/protocol/array.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -266,7 +267,20 @@ public:
         }
     }
 
-    // Create a ArrayProtocolClient from the given parent device.
+    ArrayProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        array_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ARRAY, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a ArrayProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -279,6 +293,19 @@ public:
         }
         *result = ArrayProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a ArrayProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        ArrayProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a ArrayProtocolClient from the given composite protocol.
@@ -460,7 +487,20 @@ public:
         }
     }
 
-    // Create a Array2ProtocolClient from the given parent device.
+    Array2ProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        array2_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ARRAY2, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a Array2ProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -473,6 +513,19 @@ public:
         }
         *result = Array2ProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a Array2ProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        Array2ProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a Array2ProtocolClient from the given composite protocol.
@@ -654,7 +707,20 @@ public:
         }
     }
 
-    // Create a ArrayofArraysProtocolClient from the given parent device.
+    ArrayofArraysProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        arrayof_arrays_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ARRAYOF_ARRAYS, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a ArrayofArraysProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -667,6 +733,19 @@ public:
         }
         *result = ArrayofArraysProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a ArrayofArraysProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        ArrayofArraysProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a ArrayofArraysProtocolClient from the given composite protocol.

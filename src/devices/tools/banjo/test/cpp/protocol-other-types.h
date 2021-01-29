@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/protocol/other/types.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -271,7 +272,20 @@ public:
         }
     }
 
-    // Create a OtherTypesProtocolClient from the given parent device.
+    OtherTypesProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        other_types_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a OtherTypesProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -284,6 +298,19 @@ public:
         }
         *result = OtherTypesProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a OtherTypesProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        OtherTypesProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a OtherTypesProtocolClient from the given composite protocol.
@@ -417,7 +444,20 @@ public:
         }
     }
 
-    // Create a OtherTypesAsyncProtocolClient from the given parent device.
+    OtherTypesAsyncProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        other_types_async_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_ASYNC, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a OtherTypesAsyncProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -430,6 +470,19 @@ public:
         }
         *result = OtherTypesAsyncProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a OtherTypesAsyncProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        OtherTypesAsyncProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a OtherTypesAsyncProtocolClient from the given composite protocol.
@@ -559,7 +612,20 @@ public:
         }
     }
 
-    // Create a OtherTypesReferenceProtocolClient from the given parent device.
+    OtherTypesReferenceProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        other_types_reference_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_REFERENCE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a OtherTypesReferenceProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -572,6 +638,19 @@ public:
         }
         *result = OtherTypesReferenceProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a OtherTypesReferenceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        OtherTypesReferenceProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a OtherTypesReferenceProtocolClient from the given composite protocol.
@@ -697,7 +776,20 @@ public:
         }
     }
 
-    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device.
+    OtherTypesAsyncReferenceProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        other_types_async_reference_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -710,6 +802,19 @@ public:
         }
         *result = OtherTypesAsyncReferenceProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        OtherTypesAsyncReferenceProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a OtherTypesAsyncReferenceProtocolClient from the given composite protocol.
@@ -831,7 +936,20 @@ public:
         }
     }
 
-    // Create a InterfaceProtocolClient from the given parent device.
+    InterfaceProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        interface_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_INTERFACE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a InterfaceProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -844,6 +962,19 @@ public:
         }
         *result = InterfaceProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a InterfaceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        InterfaceProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a InterfaceProtocolClient from the given composite protocol.

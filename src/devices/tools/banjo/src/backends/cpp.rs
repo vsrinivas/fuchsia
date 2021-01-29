@@ -849,6 +849,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_includes(&self, ast: &BanjoAst) -> Result<String, Error> {
         let mut includes = vec![
+            "ddk/device".to_string(),
             "ddk/driver".to_string(),
             "ddktl/device-internal".to_string(),
             "zircon/assert".to_string(),

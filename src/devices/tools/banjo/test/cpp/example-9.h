@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/example9.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <lib/zx/channel.h>
@@ -143,7 +144,20 @@ public:
         }
     }
 
-    // Create a EchoProtocolClient from the given parent device.
+    EchoProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        echo_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ECHO, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a EchoProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -156,6 +170,19 @@ public:
         }
         *result = EchoProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a EchoProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        EchoProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a EchoProtocolClient from the given composite protocol.

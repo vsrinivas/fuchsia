@@ -8,6 +8,7 @@
 #pragma once
 
 #include <banjo/examples/protocol/base.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <zircon/assert.h>
@@ -203,7 +204,20 @@ public:
         }
     }
 
-    // Create a SynchronousBaseProtocolClient from the given parent device.
+    SynchronousBaseProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        synchronous_base_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_SYNCHRONOUS_BASE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a SynchronousBaseProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -216,6 +230,19 @@ public:
         }
         *result = SynchronousBaseProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a SynchronousBaseProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        SynchronousBaseProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a SynchronousBaseProtocolClient from the given composite protocol.
@@ -373,7 +400,20 @@ public:
         }
     }
 
-    // Create a AsyncBaseProtocolClient from the given parent device.
+    AsyncBaseProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        async_base_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ASYNC_BASE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a AsyncBaseProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
@@ -386,6 +426,19 @@ public:
         }
         *result = AsyncBaseProtocolClient(&proto);
         return ZX_OK;
+    }
+
+    // Create a AsyncBaseProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        AsyncBaseProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
     }
 
     // Create a AsyncBaseProtocolClient from the given composite protocol.
