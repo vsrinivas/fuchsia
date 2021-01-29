@@ -7,7 +7,7 @@ import("//build/config.gni")
 group("a11y") {
   deps = [
     ":config",
-    "bin/a11y_manager",
+    "bin/a11y_manager:a11y-manager",
     "bin/a11y_tts_log_engine",
     "lib",
   ]

@@ -3,10 +3,11 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/a11y_manager_apptests"
+        "binary": "bin/a11y_manager_apptests"
     },
     "sandbox": {
         "services": [
+            "fuchsia.intl.PropertyProvider",
             "fuchsia.tracing.provider.Registry"
         ]
     }

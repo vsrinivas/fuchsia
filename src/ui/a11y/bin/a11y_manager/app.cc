@@ -85,9 +85,9 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   // to process when the locale changes.
   property_provider_ = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
   property_provider_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::intl::PropertyProvider" << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Error from fuchsia::intl::PropertyProvider" << zx_status_get_string(status);
     if (status == ZX_ERR_PEER_CLOSED) {
-      FX_LOGS(ERROR) << "Using the default locale: en-US";
+      FX_LOGS(INFO) << "Using the default locale: en-US";
       inspect_property_intl_property_provider_disconnected_.Set(true);
       fuchsia::intl::Profile default_profile;
       this->i18n_profile_ = std::move(default_profile);

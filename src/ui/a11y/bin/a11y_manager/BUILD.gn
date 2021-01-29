@@ -2,138 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-
-package("a11y_manager") {
-  deps = [
-    ":bin",
-    "//src/ui/a11y/lib/screen_reader/i18n:resources",
-  ]
-
-  binaries = [
-    {
-      name = "a11y_manager"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/a11y_manager.cmx")
-      dest = "a11y_manager.cmx"
-    },
-    {
-      path = rebase_path("meta/a11y_manager.cml")
-      dest = "a11y_manager.cm"
-    },
-  ]
-
-  resources = [
-    # Needed to load Screen Reader strings.
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/en/l10n.json")
-      dest = "assets/locales/en/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/ar-XB/l10n.json")
-      dest = "assets/locales/ar-XB/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/da/l10n.json")
-      dest = "assets/locales/da/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/de/l10n.json")
-      dest = "assets/locales/de/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/de-CH/l10n.json")
-      dest = "assets/locales/de-CH/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/en-GB/l10n.json")
-      dest = "assets/locales/en-GB/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/en-XA/l10n.json")
-      dest = "assets/locales/en-XA/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/en-XC/l10n.json")
-      dest = "assets/locales/en-XC/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/es/l10n.json")
-      dest = "assets/locales/es/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/es-419/l10n.json")
-      dest = "assets/locales/es-419/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/fr/l10n.json")
-      dest = "assets/locales/fr/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/fr-CA/l10n.json")
-      dest = "assets/locales/fr-CA/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/it/l10n.json")
-      dest = "assets/locales/it/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/ja/l10n.json")
-      dest = "assets/locales/ja/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/ko/l10n.json")
-      dest = "assets/locales/ko/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/nb/l10n.json")
-      dest = "assets/locales/nb/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/nl/l10n.json")
-      dest = "assets/locales/nl/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/no/l10n.json")
-      dest = "assets/locales/no/l10n.json"
-    },
-    {
-      path = rebase_path(
-              "$target_gen_dir/../../lib/screen_reader/i18n/sv/l10n.json")
-      dest = "assets/locales/sv/l10n.json"
-    },
-
-    # [START icudata_resource]
-    {
-      # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
-      # be loaded from a file instead.
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
-  ]
-}
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "a11y_manager"
@@ -155,6 +24,136 @@ executable("bin") {
   ]
 
   include_dirs = [ "//third_party/glm" ]
+}
+
+l10n_files = [
+  # Needed to load Screen Reader strings.
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/en/l10n.json"
+    dest = "assets/locales/en/l10n.json"
+    language = "en"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/ar-XB/l10n.json"
+    dest = "assets/locales/ar-XB/l10n.json"
+    language = "ar-XB"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/da/l10n.json"
+    dest = "assets/locales/da/l10n.json"
+    language = "da"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/de/l10n.json"
+    dest = "assets/locales/de/l10n.json"
+    language = "de"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/de-CH/l10n.json"
+    dest = "assets/locales/de-CH/l10n.json"
+    language = "de-CH"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/en-GB/l10n.json"
+    dest = "assets/locales/en-GB/l10n.json"
+    language = "en-GB"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/en-XA/l10n.json"
+    dest = "assets/locales/en-XA/l10n.json"
+    language = "en-XA"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/en-XC/l10n.json"
+    dest = "assets/locales/en-XC/l10n.json"
+    language = "en-XC"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/es/l10n.json"
+    dest = "assets/locales/es/l10n.json"
+    language = "es"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/es-419/l10n.json"
+    dest = "assets/locales/es-419/l10n.json"
+    language = "es-419"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/fr/l10n.json"
+    dest = "assets/locales/fr/l10n.json"
+    language = "fr"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/fr-CA/l10n.json"
+    dest = "assets/locales/fr-CA/l10n.json"
+    language = "fr-CA"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/it/l10n.json"
+    dest = "assets/locales/it/l10n.json"
+    language = "it"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/ja/l10n.json"
+    dest = "assets/locales/ja/l10n.json"
+    language = "ja"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/ko/l10n.json"
+    dest = "assets/locales/ko/l10n.json"
+    language = "ko"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/nb/l10n.json"
+    dest = "assets/locales/nb/l10n.json"
+    language = "nb"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/nl/l10n.json"
+    dest = "assets/locales/nl/l10n.json"
+    language = "nl"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/no/l10n.json"
+    dest = "assets/locales/no/l10n.json"
+    language = "no"
+  },
+  {
+    path = "$target_gen_dir/../../lib/screen_reader/i18n/sv/l10n.json"
+    dest = "assets/locales/sv/l10n.json"
+    language = "sv"
+  },
+]
+
+l10n_resource_deps = []
+
+foreach(file, l10n_files) {
+  language = file.language
+  name = "resource_$language"
+  resource(name) {
+    sources = [ file.path ]
+    outputs = [ file.dest ]
+    deps = [ "//src/ui/a11y/lib/screen_reader/i18n:resources" ]
+  }
+  l10n_resource_deps += [ ":$name" ]
+}
+
+# Fuchsia's ICU does not have libicudata.so, and the locale data MUST
+# be loaded from a file instead.
+resource("icudata_resource") {
+  sources = [ rebase_path("//third_party/icu/common/icudtl.dat") ]
+  outputs = [ "icudtl.dat" ]
+}
+
+fuchsia_package_with_single_component("a11y-manager") {
+  component_name = "a11y-manager"
+  manifest = "meta/a11y_manager.cmx"
+  deps = [
+    ":bin",
+    ":icudata_resource",
+    "//src/ui/a11y/lib/screen_reader/i18n:resources",
+  ]
+  deps += l10n_resource_deps
 }
 
 source_set("lib") {

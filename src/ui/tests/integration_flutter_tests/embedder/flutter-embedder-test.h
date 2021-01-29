@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_TESTS_E2E_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
-#define SRC_UI_TESTS_E2E_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
+#ifndef SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
+#define SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -32,7 +32,7 @@ constexpr std::array<std::pair<const char*, const char*>, NUM_SERVICES> kInjecte
     // clang-format off
     {
       "fuchsia.accessibility.semantics.SemanticsManager",
-      "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx"
+      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"
     },{
       "fuchsia.deprecatedtimezone.Timezone",
       "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx"
@@ -238,24 +238,20 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
       // Inject one input report, then a conclusion (empty) report.
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
       *touch = {.touches = {{.finger_id = 1, .x = 0, .y = 0}}};  // center of display
-      InputReport report{.event_time = TimeToUint(MonotonicNow()),
-                         .touchscreen = std::move(touch)};
+      InputReport report{.event_time = TimeToUint(MonotonicNow()), .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
     }
 
     {
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
-      InputReport report{.event_time = TimeToUint(MonotonicNow()),
-                         .touchscreen = std::move(touch)};
+      InputReport report{.event_time = TimeToUint(MonotonicNow()), .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
     }
     FX_LOGS(INFO) << "Input dispatched.";
   }
 
  private:
-  zx::time MonotonicNow() {
-    return zx::clock::get_monotonic();
-  };
+  zx::time MonotonicNow() { return zx::clock::get_monotonic(); };
 
   template <typename TimeT>
   uint64_t TimeToUint(const TimeT& time) {
@@ -268,4 +264,4 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
 
 }  // namespace flutter_embedder_test
 
-#endif  // SRC_UI_TESTS_E2E_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
+#endif  // SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_

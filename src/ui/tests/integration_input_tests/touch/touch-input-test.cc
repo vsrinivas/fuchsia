@@ -595,7 +595,7 @@ class WebEngineTest : public TouchInputBase {
   static constexpr char kWebContextProvider[] =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
   static constexpr char kSemanticsManager[] =
-      "fuchsia-pkg://fuchsia.com/a11y_manager#meta/a11y_manager.cmx";
+      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
