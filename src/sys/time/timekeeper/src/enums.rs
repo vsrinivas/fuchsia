@@ -164,9 +164,6 @@ pub enum ClockUpdateReason {
     EndSlew,
     ReduceError,
     IncreaseError,
-    // fxbug.dev/68590: Remove this or explain why it's here.
-    #[allow(dead_code)]
-    ChangeFrequency,
 }
 
 impl Into<CobaltTrackEvent> for ClockUpdateReason {
@@ -177,7 +174,6 @@ impl Into<CobaltTrackEvent> for ClockUpdateReason {
             Self::EndSlew => CobaltTrackEvent::ClockUpdateEndSlew,
             Self::ReduceError => CobaltTrackEvent::ClockUpdateReduceError,
             Self::IncreaseError => CobaltTrackEvent::ClockUpdateIncreaseError,
-            Self::ChangeFrequency => CobaltTrackEvent::ClockUpdateChangeFrequency,
         }
     }
 }
