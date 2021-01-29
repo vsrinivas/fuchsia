@@ -22,6 +22,7 @@ var additionalSkipDirs = []string{
 	"third_party/rust_crates/compat",                         // TODO(b/172586985): Remove once completed.
 	"third_party/tink/third_party/wycheproof",                // TODO(b/172586985): Remove once completed.
 	"zircon/third_party/zstd",                                // TODO(b/171584331): Remove once completed.
+	"third_party/zstd",                                       // TODO(b/171584331): Remove once completed.
 	"src/devices/tools/banjo/src/backends/templates",         // Skip template directories
 	"src/devices/tools/fidlgen_banjo/src/backends/templates", // Skip template directories
 }
