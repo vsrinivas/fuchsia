@@ -42,6 +42,9 @@ if (current_toolchain == default_toolchain) {
     }
   } else {
     action("version-string.bin") {
+      # TODO(fxbug.dev/68558): figure out why this is failing on bot and remove.
+      hermetic_deps = false
+
       visibility = [
         ":*",
         "//zircon/kernel:*",

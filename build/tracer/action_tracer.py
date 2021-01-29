@@ -508,10 +508,14 @@ def main():
     trace_output_dir = os.path.dirname(args.trace_output)
     os.makedirs(trace_output_dir, exist_ok=True)
 
+    os.environ["FSAT_BUF_SIZE"] = "5000000"
     retval = subprocess.call(
         [
-            "../../prebuilt/fsatrace/fsatrace", "rwmdt", args.trace_output,
-            "--", args.script
+            "../../prebuilt/fsatrace/fsatrace",
+            "erwmdt",
+            args.trace_output,
+            "--",
+            args.script,
         ] + args.args)
 
     # If inner action failed that's a build error, don't bother with the trace.
