@@ -21,7 +21,8 @@
     "prebuilt/third_party/rust/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
     "prebuilt/third_party/rust_tools/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
     "third_party/crashpad/third_party/glibc/elf/elf.h",
-    "third_party/dart-pkg/pub/devtools/build/assets/NOTICES"
+    "third_party/dart-pkg/pub/devtools/build/assets/NOTICES",
+    "third_party/zstd/src/COPYING"
   ],
   "skipDirs": [
     ".cipd",
@@ -195,6 +196,10 @@
     {
       "projectRoot": "zircon/third_party/scudo",
       "licenseLocation": "src/LICENSE.TXT"
+    },
+    {
+      "projectRoot": "zircon/third_party/zstd",
+      "licenseLocation": "src/LICENSE"
     }
   ],
   "flutterLicenses": [
