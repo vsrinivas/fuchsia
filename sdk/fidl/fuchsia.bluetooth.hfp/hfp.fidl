@@ -97,6 +97,10 @@ protocol CallManager {
     /// the call manager should use to handle a peer. If the call manager does
     /// not intend to handle a given peer, it must close the handle with a
     /// `ZX_ERR_UNAVAILABLE` epitaph.
+    ///
+    /// There can only be one outstanding `WatchForPeer` request at a time. The
+    /// channel will be closed with a `ZX_ERR_BAD_STATE` epitaph if additional
+    /// requests are made while one is already outstanding.
     WatchForPeer() -> (bt.PeerId id, request<PeerHandler> handle);
 };
 
