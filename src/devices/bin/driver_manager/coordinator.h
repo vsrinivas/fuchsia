@@ -150,27 +150,6 @@ class ResumeContext {
 using ResumeCallback = std::function<void(zx_status_t)>;
 using SuspendCallback = fit::function<void(zx_status_t)>;
 
-// Values parsed out of argv.  All paths described below are absolute paths.
-struct DevmgrArgs {
-  // Load drivers from these directories.  If this is empty, the default will
-  // be used.
-  fbl::Vector<std::string> driver_search_paths;
-  // Load the drivers with these paths.  The specified drivers do not need to
-  // be in directories in |driver_search_paths|.
-  fbl::Vector<const char*> load_drivers;
-  // Use this driver as the sys_device driver.  If nullptr, the default will
-  // be used.
-  std::string sys_device_driver;
-  // Connect the stdout and stderr file descriptors for this program to a
-  // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
-  bool log_to_debuglog = false;
-  // Path prefix for binaries/drivers/libraries etc.
-  std::string path_prefix = "/boot/";
-  // Use the default loader rather than the one provided by fshost.
-  bool use_default_loader = false;
-  bool no_exit_after_suspend = false;
-};
-
 struct CoordinatorConfig {
   // Initial root resource from the kernel.
   zx::resource root_resource;

@@ -129,7 +129,28 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
   return root_resource_ptr->Get(root_resource);
 }
 
-void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
+// Values parsed out of argv.  All paths described below are absolute paths.
+struct DriverManagerArgs {
+  // Load drivers from these directories.  If this is empty, the default will
+  // be used.
+  fbl::Vector<std::string> driver_search_paths;
+  // Load the drivers with these paths.  The specified drivers do not need to
+  // be in directories in |driver_search_paths|.
+  fbl::Vector<const char*> load_drivers;
+  // Use this driver as the sys_device driver.  If nullptr, the default will
+  // be used.
+  std::string sys_device_driver;
+  // Connect the stdout and stderr file descriptors for this program to a
+  // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
+  bool log_to_debuglog = false;
+  // Path prefix for binaries/drivers/libraries etc.
+  std::string path_prefix = "/boot/";
+  // Use the default loader rather than the one provided by fshost.
+  bool use_default_loader = false;
+  bool no_exit_after_suspend = false;
+};
+
+DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
   enum {
     kDriverSearchPath,
     kLoadDriver,
@@ -165,38 +186,36 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     }
   };
 
-  // Reset the args state
-  *out = DevmgrArgs();
-
-  int opt;
-  while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
+  DriverManagerArgs args{};
+  for (int opt; (opt = getopt_long(argc, argv, "", options, nullptr)) != -1;) {
     switch (opt) {
       case kDriverSearchPath:
-        out->driver_search_paths.push_back(optarg);
+        args.driver_search_paths.push_back(optarg);
         break;
       case kLoadDriver:
-        out->load_drivers.push_back(optarg);
+        args.load_drivers.push_back(optarg);
         break;
       case kLogToDebuglog:
-        out->log_to_debuglog = true;
+        args.log_to_debuglog = true;
         break;
       case kNoExitAfterSuspend:
-        out->no_exit_after_suspend = true;
+        args.no_exit_after_suspend = true;
         break;
       case kPathPrefix:
-        out->path_prefix = std::string(optarg);
+        args.path_prefix = std::string(optarg);
         break;
       case kSysDeviceDriver:
-        check_not_duplicated(out->sys_device_driver);
-        out->sys_device_driver = optarg;
+        check_not_duplicated(args.sys_device_driver);
+        args.sys_device_driver = optarg;
         break;
       case kUseDefaultLoader:
-        out->use_default_loader = true;
+        args.use_default_loader = true;
         break;
       default:
         print_usage_and_exit();
     }
   }
+  return args;
 }
 
 }  // namespace
@@ -221,33 +240,33 @@ int main(int argc, char** argv) {
 
   auto boot_args = llcpp::fuchsia::boot::Arguments::SyncClient{std::move(local)};
   auto driver_manager_params = GetDriverManagerParams(boot_args);
-  DevmgrArgs devmgr_args;
-  ParseArgs(argc, argv, &devmgr_args);
+  auto driver_manager_args = ParseDriverManagerArgs(argc, argv);
 
   if (driver_manager_params.verbose) {
     FX_LOG_SET_SEVERITY(ALL);
   }
-  if (driver_manager_params.log_to_debuglog || devmgr_args.log_to_debuglog) {
-    zx_status_t status = log_to_debuglog();
+  if (driver_manager_params.log_to_debuglog || driver_manager_args.log_to_debuglog) {
+    status = log_to_debuglog();
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s", zx_status_get_string(status));
       return status;
     }
   }
   // Set up the default values for our arguments if they weren't given.
-  if (devmgr_args.driver_search_paths.size() == 0) {
-    devmgr_args.driver_search_paths.push_back(devmgr_args.path_prefix + "driver");
+  if (driver_manager_args.driver_search_paths.size() == 0) {
+    driver_manager_args.driver_search_paths.push_back(driver_manager_args.path_prefix + "driver");
   }
-  if (devmgr_args.sys_device_driver.empty()) {
-    devmgr_args.sys_device_driver = devmgr_args.path_prefix + "driver/platform-bus.so";
+  if (driver_manager_args.sys_device_driver.empty()) {
+    driver_manager_args.sys_device_driver =
+        driver_manager_args.path_prefix + "driver/platform-bus.so";
   }
 
-  SuspendCallback suspend_callback = [&devmgr_args](zx_status_t status) {
+  SuspendCallback suspend_callback = [&driver_manager_args](zx_status_t status) {
     if (status != ZX_OK) {
       LOGF(ERROR, "Error suspending devices while stopping the component:%s",
            zx_status_get_string(status));
     }
-    if (!devmgr_args.no_exit_after_suspend) {
+    if (!driver_manager_args.no_exit_after_suspend) {
       LOGF(INFO, "Exiting driver manager gracefully");
       // TODO(fxb:52627) This event handler should teardown devices and driver hosts
       // properly for system state transitions where driver manager needs to go down.
@@ -264,10 +283,11 @@ int main(int argc, char** argv) {
   config.require_system = driver_manager_params.require_system;
   config.asan_drivers = driver_manager_params.driver_host_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
-  config.log_to_debuglog = driver_manager_params.log_to_debuglog || devmgr_args.log_to_debuglog;
+  config.log_to_debuglog =
+      driver_manager_params.log_to_debuglog || driver_manager_args.log_to_debuglog;
   config.verbose = driver_manager_params.verbose;
   config.fs_provider = &system_instance;
-  config.path_prefix = devmgr_args.path_prefix;
+  config.path_prefix = driver_manager_args.path_prefix;
   config.eager_fallback_drivers = std::move(driver_manager_params.eager_fallback_drivers);
   config.enable_ephemeral = driver_manager_params.enable_ephemeral;
 
@@ -320,7 +340,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  status = coordinator.InitCoreDevices(devmgr_args.sys_device_driver.c_str());
+  status = coordinator.InitCoreDevices(driver_manager_args.sys_device_driver.c_str());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to initialize core devices: %s", zx_status_get_string(status));
     return status;
@@ -379,7 +399,7 @@ int main(int argc, char** argv) {
       }
       return conn.status_value();
     });
-  } else if (!devmgr_args.use_default_loader) {
+  } else if (!driver_manager_args.use_default_loader) {
     coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
@@ -390,10 +410,10 @@ int main(int argc, char** argv) {
     });
   }
 
-  for (const std::string& path : devmgr_args.driver_search_paths) {
+  for (const std::string& path : driver_manager_args.driver_search_paths) {
     find_loadable_drivers(path, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
-  for (const char* driver : devmgr_args.load_drivers) {
+  for (const char* driver : driver_manager_args.load_drivers) {
     load_driver(driver, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
 
