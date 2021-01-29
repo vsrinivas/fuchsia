@@ -76,6 +76,11 @@ do
     with_rust=false
   fi
 
+  if [ "$filename" = "constants" ]; then
+    with_cpp=false
+    with_rust=false
+  fi
+
   echo "Regenerating $filename"
   if [ $with_c = true ]; then
     $BANJO_BIN --backend C $zx --output "$C_FILES/$filename.h" $dependencies --files $f

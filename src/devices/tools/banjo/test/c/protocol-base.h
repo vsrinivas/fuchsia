@@ -14,6 +14,7 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef struct synchronous_base_protocol synchronous_base_protocol_t;
 typedef void (*async_base_status_callback)(void* ctx, zx_status_t status, zx_status_t status_2);
 typedef void (*async_base_time_callback)(void* ctx, zx_time_t time, zx_time_t time_2);
 typedef void (*async_base_duration_callback)(void* ctx, zx_duration_t duration, zx_duration_t duration_2);
@@ -24,64 +25,8 @@ typedef void (*async_base_paddr32_callback)(void* ctx, zx_paddr32_t paddr32, zx_
 typedef void (*async_base_gpaddr_callback)(void* ctx, zx_gpaddr_t gpaddr, zx_gpaddr_t gpaddr_2);
 typedef void (*async_base_off_callback)(void* ctx, zx_off_t off, zx_off_t off_2);
 typedef struct async_base_protocol async_base_protocol_t;
-typedef struct synchronous_base_protocol synchronous_base_protocol_t;
 
 // Declarations
-typedef struct async_base_protocol_ops {
-    void (*status)(void* ctx, zx_status_t status, async_base_status_callback callback, void* cookie);
-    void (*time)(void* ctx, zx_time_t time, async_base_time_callback callback, void* cookie);
-    void (*duration)(void* ctx, zx_duration_t duration, async_base_duration_callback callback, void* cookie);
-    void (*koid)(void* ctx, zx_koid_t koid, async_base_koid_callback callback, void* cookie);
-    void (*vaddr)(void* ctx, zx_vaddr_t vaddr, async_base_vaddr_callback callback, void* cookie);
-    void (*paddr)(void* ctx, zx_paddr_t paddr, async_base_paddr_callback callback, void* cookie);
-    void (*paddr32)(void* ctx, zx_paddr32_t paddr32, async_base_paddr32_callback callback, void* cookie);
-    void (*gpaddr)(void* ctx, zx_gpaddr_t gpaddr, async_base_gpaddr_callback callback, void* cookie);
-    void (*off)(void* ctx, zx_off_t off, async_base_off_callback callback, void* cookie);
-} async_base_protocol_ops_t;
-
-
-struct async_base_protocol {
-    async_base_protocol_ops_t* ops;
-    void* ctx;
-};
-
-static inline void async_base_status(const async_base_protocol_t* proto, zx_status_t status, async_base_status_callback callback, void* cookie) {
-    proto->ops->status(proto->ctx, status, callback, cookie);
-}
-
-static inline void async_base_time(const async_base_protocol_t* proto, zx_time_t time, async_base_time_callback callback, void* cookie) {
-    proto->ops->time(proto->ctx, time, callback, cookie);
-}
-
-static inline void async_base_duration(const async_base_protocol_t* proto, zx_duration_t duration, async_base_duration_callback callback, void* cookie) {
-    proto->ops->duration(proto->ctx, duration, callback, cookie);
-}
-
-static inline void async_base_koid(const async_base_protocol_t* proto, zx_koid_t koid, async_base_koid_callback callback, void* cookie) {
-    proto->ops->koid(proto->ctx, koid, callback, cookie);
-}
-
-static inline void async_base_vaddr(const async_base_protocol_t* proto, zx_vaddr_t vaddr, async_base_vaddr_callback callback, void* cookie) {
-    proto->ops->vaddr(proto->ctx, vaddr, callback, cookie);
-}
-
-static inline void async_base_paddr(const async_base_protocol_t* proto, zx_paddr_t paddr, async_base_paddr_callback callback, void* cookie) {
-    proto->ops->paddr(proto->ctx, paddr, callback, cookie);
-}
-
-static inline void async_base_paddr32(const async_base_protocol_t* proto, zx_paddr32_t paddr32, async_base_paddr32_callback callback, void* cookie) {
-    proto->ops->paddr32(proto->ctx, paddr32, callback, cookie);
-}
-
-static inline void async_base_gpaddr(const async_base_protocol_t* proto, zx_gpaddr_t gpaddr, async_base_gpaddr_callback callback, void* cookie) {
-    proto->ops->gpaddr(proto->ctx, gpaddr, callback, cookie);
-}
-
-static inline void async_base_off(const async_base_protocol_t* proto, zx_off_t off, async_base_off_callback callback, void* cookie) {
-    proto->ops->off(proto->ctx, off, callback, cookie);
-}
-
-
 typedef struct synchronous_base_protocol_ops {
     zx_status_t (*status)(void* ctx, zx_status_t status, zx_status_t* out_status_2);
     zx_time_t (*time)(void* ctx, zx_time_t time, zx_time_t* out_time_2);
@@ -134,6 +79,61 @@ static inline zx_gpaddr_t synchronous_base_gpaddr(const synchronous_base_protoco
 
 static inline zx_off_t synchronous_base_off(const synchronous_base_protocol_t* proto, zx_off_t off, zx_off_t* out_off_2) {
     return proto->ops->off(proto->ctx, off, out_off_2);
+}
+
+
+typedef struct async_base_protocol_ops {
+    void (*status)(void* ctx, zx_status_t status, async_base_status_callback callback, void* cookie);
+    void (*time)(void* ctx, zx_time_t time, async_base_time_callback callback, void* cookie);
+    void (*duration)(void* ctx, zx_duration_t duration, async_base_duration_callback callback, void* cookie);
+    void (*koid)(void* ctx, zx_koid_t koid, async_base_koid_callback callback, void* cookie);
+    void (*vaddr)(void* ctx, zx_vaddr_t vaddr, async_base_vaddr_callback callback, void* cookie);
+    void (*paddr)(void* ctx, zx_paddr_t paddr, async_base_paddr_callback callback, void* cookie);
+    void (*paddr32)(void* ctx, zx_paddr32_t paddr32, async_base_paddr32_callback callback, void* cookie);
+    void (*gpaddr)(void* ctx, zx_gpaddr_t gpaddr, async_base_gpaddr_callback callback, void* cookie);
+    void (*off)(void* ctx, zx_off_t off, async_base_off_callback callback, void* cookie);
+} async_base_protocol_ops_t;
+
+
+struct async_base_protocol {
+    async_base_protocol_ops_t* ops;
+    void* ctx;
+};
+
+static inline void async_base_status(const async_base_protocol_t* proto, zx_status_t status, async_base_status_callback callback, void* cookie) {
+    proto->ops->status(proto->ctx, status, callback, cookie);
+}
+
+static inline void async_base_time(const async_base_protocol_t* proto, zx_time_t time, async_base_time_callback callback, void* cookie) {
+    proto->ops->time(proto->ctx, time, callback, cookie);
+}
+
+static inline void async_base_duration(const async_base_protocol_t* proto, zx_duration_t duration, async_base_duration_callback callback, void* cookie) {
+    proto->ops->duration(proto->ctx, duration, callback, cookie);
+}
+
+static inline void async_base_koid(const async_base_protocol_t* proto, zx_koid_t koid, async_base_koid_callback callback, void* cookie) {
+    proto->ops->koid(proto->ctx, koid, callback, cookie);
+}
+
+static inline void async_base_vaddr(const async_base_protocol_t* proto, zx_vaddr_t vaddr, async_base_vaddr_callback callback, void* cookie) {
+    proto->ops->vaddr(proto->ctx, vaddr, callback, cookie);
+}
+
+static inline void async_base_paddr(const async_base_protocol_t* proto, zx_paddr_t paddr, async_base_paddr_callback callback, void* cookie) {
+    proto->ops->paddr(proto->ctx, paddr, callback, cookie);
+}
+
+static inline void async_base_paddr32(const async_base_protocol_t* proto, zx_paddr32_t paddr32, async_base_paddr32_callback callback, void* cookie) {
+    proto->ops->paddr32(proto->ctx, paddr32, callback, cookie);
+}
+
+static inline void async_base_gpaddr(const async_base_protocol_t* proto, zx_gpaddr_t gpaddr, async_base_gpaddr_callback callback, void* cookie) {
+    proto->ops->gpaddr(proto->ctx, gpaddr, callback, cookie);
+}
+
+static inline void async_base_off(const async_base_protocol_t* proto, zx_off_t off, async_base_off_callback callback, void* cookie) {
+    proto->ops->off(proto->ctx, off, callback, cookie);
 }
 
 

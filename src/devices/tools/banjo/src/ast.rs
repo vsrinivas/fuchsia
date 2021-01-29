@@ -15,19 +15,19 @@ use {
 
 #[derive(Debug, Error)]
 pub enum ParseError {
-    #[error("{} is not yet support", 0)]
+    #[error("{0} is not yet support")]
     NotYetSupported(String),
-    #[error("{:?} is not expected in this location", 0)]
+    #[error("{0:?} is not expected in this location")]
     UnexpectedToken(Rule),
-    #[error("{} was not included in the input libraries", 0)]
+    #[error("{0} was not included in the input libraries")]
     UnImported(String),
-    #[error("{:?} is an unknown type", 0)]
+    #[error("{0} is an unknown type")]
     UnrecognizedType(String),
-    #[error("Failed to parse because {:?} is not an integer", 0)]
+    #[error("Failed to parse because {0:?} is not an integer")]
     NotAnInteger(Rule),
-    #[error("Invalid dependencies: {}", 0)]
+    #[error("Invalid dependencies: {0}")]
     InvalidDeps(String),
-    #[error("Expected {:?} to resolve to a {:?}.", 0, 1)]
+    #[error("Expected {0:?} to resolve to a {1:?}.")]
     InvalidConstType(Constant, Ty),
     #[error("Declaration not found in namespace")]
     UnknownDecl,
@@ -1060,6 +1060,7 @@ impl BanjoAst {
         // Start with all decls that have no incoming edges.
         let mut decls_without_deps = degrees
             .iter()
+            .rev() // To match the fidlc order.
             .filter(|(_, &degrees)| degrees == 0)
             .map(|(&decl, _)| decl)
             .collect::<VecDeque<_>>();

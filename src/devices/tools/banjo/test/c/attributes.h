@@ -14,19 +14,13 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-typedef struct none_struct none_struct_t;
-typedef struct packed_struct packed_struct_t;
-typedef union none_union none_union_t;
 typedef union packed_union packed_union_t;
+typedef union none_union none_union_t;
+typedef struct packed_struct packed_struct_t;
+typedef struct none_struct none_struct_t;
 
 // Declarations
-struct none_struct {
-    int32_t foo;
-    int32_t bar;
-    int32_t baz;
-};
-
-struct packed_struct {
+union packed_union {
     int32_t foo;
     int32_t bar;
     int32_t baz;
@@ -38,11 +32,17 @@ union none_union {
     int32_t baz;
 };
 
-union packed_union {
+struct packed_struct {
     int32_t foo;
     int32_t bar;
     int32_t baz;
 } __attribute__ ((packed));
+
+struct none_struct {
+    int32_t foo;
+    int32_t bar;
+    int32_t baz;
+};
 
 
 __END_CDECLS

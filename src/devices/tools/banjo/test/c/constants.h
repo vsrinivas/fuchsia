@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.tables banjo file
+// Generated from the banjo.examples.constants banjo file
 
 #pragma once
 
@@ -14,27 +14,12 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-typedef struct c c_t;
-typedef struct b b_t;
-typedef struct a a_t;
-typedef struct d d_t;
+#define SOME_VALUE UINT32_C(12345)
+#define FANCY_PANTS INT16_C(0xFF)
+#define DO_IT false
+#define ANOTHER_VALUE INT8_C(32)
 
 // Declarations
-struct c {
-    zx_handle_t baz;
-};
-
-struct b {
-    a_t bar;
-};
-
-struct a {
-    b_t foo;
-};
-
-struct d {
-    c_t qux;
-};
 
 
 __END_CDECLS

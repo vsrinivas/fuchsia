@@ -14,20 +14,20 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-typedef struct mutable_field mutable_field_t;
 typedef struct some_type some_type_t;
+typedef struct mutable_field mutable_field_t;
 typedef struct vector_field_in_struct vector_field_in_struct_t;
 typedef struct in_out_protocol_protocol in_out_protocol_protocol_t;
 
 // Declarations
+struct some_type {
+    uint32_t value;
+};
+
 struct mutable_field {
     char* some_string;
     const char* some_other_string;
     const char* some_default_string;
-};
-
-struct some_type {
-    uint32_t value;
 };
 
 struct vector_field_in_struct {

@@ -14,11 +14,11 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-typedef struct echo_more echo_more_t;
+#define favorite_echo UINT32_C(0)
 typedef uint32_t echo_me_t;
 #define ECHO_ME_ZERO UINT32_C(0)
 #define ECHO_ME_ONE UINT32_C(1)
-#define favorite_echo UINT32_C(0)
+typedef struct echo_more echo_more_t;
 typedef struct echo_protocol echo_protocol_t;
 
 // Declarations
