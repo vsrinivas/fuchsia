@@ -10,6 +10,7 @@
 .config
 .envrc
 .flutter_tool_state
+.fx
 .fx-build-dir
 .fx-metrics-config
 .fx-multi-list
