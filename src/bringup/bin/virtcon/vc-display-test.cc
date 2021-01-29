@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

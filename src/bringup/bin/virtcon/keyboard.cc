@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -29,6 +29,8 @@
 #include <hid/usages.h>
 
 #include "src/ui/lib/key_util/key_util.h"
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace {
 
@@ -284,7 +286,7 @@ zx_status_t Keyboard::Setup(
 }
 
 zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
-  if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
+  if ((evt != fio::WATCH_EVENT_EXISTING) && (evt != fio::WATCH_EVENT_ADDED)) {
     return ZX_OK;
   }
 
@@ -333,7 +335,7 @@ void KeyboardWatcher::DirCallback(async_dispatcher_t* dispatcher, async::WaitBas
   // Buffer contains events { Opcode, Len, Name[Len] }
   // See zircon/device/vfs.h for more detail
   // extra byte is for temporary NUL
-  std::array<uint8_t, fuchsia_io_MAX_BUF + 1> buffer;
+  std::array<uint8_t, fio::MAX_BUF + 1> buffer;
   uint32_t len;
   if (zx_channel_read(wait->object(), 0, buffer.data(), nullptr, buffer.size() - 1, 0, &len,
                       nullptr) < 0) {
@@ -379,10 +381,11 @@ zx_status_t KeyboardWatcher::Setup(async_dispatcher_t* dispatcher, keypress_hand
   }
 
   dir_caller_ = fdio_cpp::FdioCaller(std::move(fd));
-  zx_status_t io_status = fuchsia_io_DirectoryWatch(
-      dir_caller_.borrow_channel(), fuchsia_io_WATCH_MASK_ALL, 0, server.release(), &status);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    return io_status;
+
+  auto result = fio::Directory::Call::Watch(zx::unowned_channel(dir_caller_.borrow_channel()),
+                                            fio::WATCH_MASK_ALL, 0, std::move(server));
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
 
   dir_wait_.set_object(client.release());

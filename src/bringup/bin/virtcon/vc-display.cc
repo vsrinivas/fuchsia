@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/cpp/caller.h>
@@ -34,6 +34,7 @@
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
+namespace fio = ::llcpp::fuchsia::io;
 
 static async_dispatcher_t* dc_dispatcher = nullptr;
 // At any point, |dc_wait| will either be waiting on the display controller device directory
@@ -575,7 +576,7 @@ void initialize_display_channel(zx::channel channel) {
 #else
 
 static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
-  if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
+  if ((evt != fio::WATCH_EVENT_EXISTING) && (evt != fio::WATCH_EVENT_ADDED)) {
     return ZX_OK;
   }
 
@@ -658,7 +659,7 @@ zx_status_t handle_device_dir_event(zx_handle_t handle, zx_signals_t signals,
   // Buffer contains events { Opcode, Len, Name[Len] }
   // See zircon/device/vfs.h for more detail
   // extra byte is for temporary NUL
-  uint8_t buf[fuchsia_io_MAX_BUF + 1];
+  uint8_t buf[fio::MAX_BUF + 1];
   uint32_t len;
   if (zx_channel_read(handle, 0, buf, nullptr, sizeof(buf) - 1, 0, &len, nullptr) < 0) {
     printf("vc: failed to read from device directory\n");
@@ -712,12 +713,11 @@ static void vc_find_display_controller() {
   }
 
   fdio_t* fdio = fdio_unsafe_fd_to_io(dc_dir_fd);
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_io_DirectoryWatch(
-      fdio_unsafe_borrow_channel(fdio), fuchsia_io_WATCH_MASK_ALL, 0, server.release(), &status);
-  fdio_unsafe_release(fdio);
 
-  if (io_status != ZX_OK || status != ZX_OK) {
+  auto result = fio::Directory::Call::Watch(zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)),
+                                            fio::WATCH_MASK_ALL, 0, std::move(server));
+  fdio_unsafe_release(fdio);
+  if (result.status() != ZX_OK) {
     printf("vc: Failed to watch dc directory\n");
     return;
   }
@@ -731,7 +731,7 @@ static void vc_find_display_controller() {
     vc_dc_dir_event_cb(dispatcher, wait, status, signal);
   });
 
-  status = dc_wait.Begin(dc_dispatcher);
+  zx_status_t status = dc_wait.Begin(dc_dispatcher);
   if (status != ZX_OK) {
     printf("vc: Failed to wait on dc directory\n");
   }

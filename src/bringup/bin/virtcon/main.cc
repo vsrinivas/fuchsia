@@ -4,7 +4,6 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

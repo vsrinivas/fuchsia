@@ -6,7 +6,6 @@
 #define SRC_BRINGUP_BIN_VIRTCON_KEYBOARD_H_
 
 #include <fuchsia/input/report/llcpp/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/cpp/caller.h>
