@@ -92,7 +92,7 @@ pin-project = "0.4.26"
 pin-utils = "0.1.0"
 png = "0.14" # saved for future use
 pretty_assertions = "0.5.1"
-proc-macro-hack = "0.5.15"
+proc-macro-hack = "0.5.19"
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 rand = "0.6"
@@ -170,7 +170,7 @@ openat = "0.1.17"
 owning_ref = "0.4.0"
 pretty = "0.5.2"
 prettytable-rs = "0.8.0"
-proc-macro-nested = "0.1.4"
+proc-macro-nested = "0.1.7"
 rand_xorshift = "0.1.1"
 rust_icu_common = { version = "0.4.1", default-features = false, features = ["renaming"] }
 rust_icu_sys = { version = "0.4.1", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
@@ -204,7 +204,7 @@ hyper-rustls = { version = "0.20.0", default-features = false, features = ["rust
 indoc = "0.3.3"
 nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
 petgraph = "0.5.1"
-proc-macro2 = "1.0.9"
+proc-macro2 = "1.0.24"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
 serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
@@ -347,6 +347,9 @@ rustflags = ["--cfg=has_i128"]
 [gn.package.pin-project-internal."0.4.26"]
 rustflags = ["--cfg=underscore_consts", "--cfg=deprecated_proc_macro"]
 
+[gn.package.proc-macro-hack."0.5.19"]
+rustflags = []
+
 [gn.package.proc-macro2."0.4.27"]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
@@ -372,9 +375,9 @@ deps = [ "//third_party/rust_crates/compat/rust-crypto" ]
 [gn.package.ryu."1.0.3"]
 rustflags = ["--cfg=integer128", "--cfg=must_use_return", "--cfg=maybe_uninit"]
 
-[gn.package.proc-macro-nested."0.1.4"]
+[gn.package.proc-macro-nested."0.1.7"]
 rustflags = []
-env_vars = ["OUT_DIR=../../../compat/proc-macro-nested"]
+env_vars = ["OUT_DIR=../../../compat/proc-macro-nested", "PATH_SEPARATOR=/"]
 
 [gn.package.serde."1.0.116"]
 rustflags = ["--cfg=ops_bound", "--cfg=core_reverse", "--cfg=de_boxed_c_str", "--cfg=de_boxed_path", "--cfg=de_rc_dst", "--cfg=core_duration", "--cfg=integer128", "--cfg=range_inclusive", "--cfg=num_nonzero", "--cfg=core_try_from", "--cfg=num_nonzero_signed", "--cfg=std_atomic64", "--cfg=std_atomic"]

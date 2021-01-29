@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "proc-macro-hack"
-version = "0.5.15"
+version = "0.5.19"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 description = "Procedural macros in expression position"
 readme = "README.md"
@@ -42,5 +42,3 @@ version = "1.0.5"
 
 [dev-dependencies.trybuild]
 version = "1.0"
-[badges.travis-ci]
-repository = "dtolnay/proc-macro-hack"

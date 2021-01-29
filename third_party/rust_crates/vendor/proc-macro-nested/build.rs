@@ -1,8 +1,7 @@
 use std::env;
-use std::fs::File;
-use std::io::Write;
+use std::fs;
 use std::iter;
-use std::path::Path;
+use std::path::{self, Path};
 
 /*
 #[doc(hidden)]
@@ -16,26 +15,36 @@ macro_rules! count {
 */
 
 fn main() {
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let dest_path = Path::new(&out_dir).join("count.rs");
-    let mut f = File::create(&dest_path).unwrap();
+    // Tell Cargo not to rerun on src/lib.rs changes.
+    println!("cargo:rerun-if-changed=build.rs");
 
     let mut content = String::new();
-    content += "
-        #[doc(hidden)]
-        #[macro_export]
-        macro_rules! count {
-    ";
+    content += "#[doc(hidden)]\n";
+    content += "#[macro_export]\n";
+    content += "macro_rules! count {\n";
     for i in 0..=64 {
         let bangs = iter::repeat("!").take(i).collect::<String>();
-        content += &format!("({}) => {{ proc_macro_call_{}!() }};", bangs, i);
+        content += &format!("    ({}) => {{ proc_macro_call_{}!() }};\n", bangs, i);
     }
-    content += "
-            ($(!)+) => {
-                compile_error!(\"this macro does not support >64 nested macro invocations\")
-            };
-        }
-    ";
+    content += "    ($(!)+) => {\n";
+    content += "        compile_error! {\n";
+    content += "            \"this macro does not support >64 nested macro invocations\"\n";
+    content += "        }\n";
+    content += "    };\n";
+    content += "}\n";
 
-    f.write_all(content.as_bytes()).unwrap();
+    let content = content.as_bytes();
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let ref dest_path = Path::new(&out_dir).join("count.rs");
+
+    // Avoid bumping filetime if content is up to date. Possibly related to
+    // https://github.com/dtolnay/proc-macro-hack/issues/56 ...?
+    if fs::read(dest_path)
+        .map(|existing| existing != content)
+        .unwrap_or(true)
+    {
+        fs::write(dest_path, content).unwrap();
+    }
+
+    println!("cargo:rustc-env=PATH_SEPARATOR={}", path::MAIN_SEPARATOR);
 }
