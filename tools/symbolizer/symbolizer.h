@@ -21,22 +21,30 @@ class Symbolizer {
   };
   virtual ~Symbolizer() = default;
 
-  // The following 4 functions correspond to the 4 markup tags we support right now.
-  // Check //docs/reference/kernel/symbolizer_markup.md for details.
+  // Each of the following functions corresponds to one markup tag in
+  // //docs/reference/kernel/symbolizer_markup.md.
 
+  // {{{reset}}}
   // Resets the internal state and starts processing the stack trace for a new process.
   virtual void Reset() = 0;
 
+  // {{{module:%i:%s:%s:...}}}
   // Adds a module to the current process, indexed by id.
   virtual void Module(uint64_t id, std::string_view name, std::string_view build_id) = 0;
 
+  // {{{mmap:%p:%x:...}}}
   // Associates a memory region with the module indexed by its id.
-  virtual void MMap(uint64_t address, uint64_t size, uint64_t module_id,
+  virtual void MMap(uint64_t address, uint64_t size, uint64_t module_id, std::string_view flags,
                     uint64_t module_offset) = 0;
 
+  // {{{bt:%u:%p}}}, {{{bt:%u:%p:ra}}}, {{{bt:%u:%p:pc}}}
   // Represents one frame in the backtrace. We'll output the symbolized content for each frame.
   virtual void Backtrace(int frame_id, uint64_t address, AddressType type,
                          std::string_view message) = 0;
+
+  // {{{dumpfile:%s:%s}}}
+  // Dumps the current modules and mmaps to a json file.
+  virtual void DumpFile(std::string_view type, std::string_view name) = 0;
 };
 
 }  // namespace symbolizer

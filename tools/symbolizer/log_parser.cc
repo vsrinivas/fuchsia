@@ -99,7 +99,7 @@ bool LogParser::ProcessMarkup(std::string_view markup) {
         splitted[3] != "load")
       return false;
 
-    symbolizer_->MMap(address, size, module_id, module_offset);
+    symbolizer_->MMap(address, size, module_id, splitted[5], module_offset);
     return true;
   }
 
@@ -130,6 +130,15 @@ bool LogParser::ProcessMarkup(std::string_view markup) {
       }
     }
     symbolizer_->Backtrace(frame_id, address, type, message);
+    return true;
+  }
+
+  if (tag == "dumpfile") {
+    // dumpfile:{type}:{name}
+    if (splitted.size() < 3)
+      return false;
+
+    symbolizer_->DumpFile(splitted[1], splitted[2]);
     return true;
   }
 

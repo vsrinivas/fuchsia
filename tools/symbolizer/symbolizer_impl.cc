@@ -4,7 +4,12 @@
 
 #include "tools/symbolizer/symbolizer_impl.h"
 
+#include <fstream>
 #include <string>
+
+#include <rapidjson/ostreamwrapper.h>
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/rapidjson.h>
 
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
@@ -101,9 +106,26 @@ SymbolizerImpl::SymbolizerImpl(Printer* printer, const CommandLineOptions& optio
   if (waiting_auth_) {
     loop_.Run();
   }
+
+  if (options.dumpfile_output) {
+    dumpfile_output_ = options.dumpfile_output.value();
+    dumpfile_document_.SetArray();
+    ResetDumpfileCurrentObject();
+  }
 }
 
-SymbolizerImpl::~SymbolizerImpl() { loop_.Cleanup(); }
+SymbolizerImpl::~SymbolizerImpl() {
+  loop_.Cleanup();
+
+  // Support for dumpfile
+  if (!dumpfile_output_.empty()) {
+    std::ofstream ofs(dumpfile_output_);
+    rapidjson::OStreamWrapper osw(ofs);
+    rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
+    writer.SetIndent(' ', 2);
+    dumpfile_document_.Accept(writer);
+  }
+}
 
 void SymbolizerImpl::Reset() {
   modules_.clear();
@@ -116,15 +138,29 @@ void SymbolizerImpl::Reset() {
     target_->GetProcess()->GetSymbols()->target_symbols()->RemoveAllModules();
     target_->OnProcessExiting(0);
   }
+
+  // Support for dumpfile
+  if (!dumpfile_output_.empty()) {
+    ResetDumpfileCurrentObject();
+  }
 }
 
 void SymbolizerImpl::Module(uint64_t id, std::string_view name, std::string_view build_id) {
   modules_[id].name = name;
   modules_[id].build_id = build_id;
+
+  // Support for dumpfile
+  if (!dumpfile_output_.empty()) {
+    rapidjson::Value module(rapidjson::kObjectType);
+    module.AddMember("name", ToJSONString(name), dumpfile_document_.GetAllocator());
+    module.AddMember("build", ToJSONString(build_id), dumpfile_document_.GetAllocator());
+    module.AddMember("id", id, dumpfile_document_.GetAllocator());
+    dumpfile_current_object_["modules"].PushBack(module, dumpfile_document_.GetAllocator());
+  }
 }
 
 void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
-                          uint64_t module_offset) {
+                          std::string_view flags, uint64_t module_offset) {
   if (modules_.find(module_id) == modules_.end()) {
     printer_->OutputWithContext("symbolizer: Invalid module id.");
     return;
@@ -165,6 +201,17 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
         fxl::StringPrintf("[[[ELF module #0x%" PRIx64 " \"%s\" BuildID=%s 0x%" PRIx64 "]]]",
                           module_id, module.name.c_str(), module.build_id.c_str(), base));
     module.printed = true;
+  }
+
+  // Support for dumpfile
+  if (!dumpfile_output_.empty()) {
+    rapidjson::Value segment(rapidjson::kObjectType);
+    segment.AddMember("mod", module_id, dumpfile_document_.GetAllocator());
+    segment.AddMember("vaddr", address, dumpfile_document_.GetAllocator());
+    segment.AddMember("size", size, dumpfile_document_.GetAllocator());
+    segment.AddMember("flags", ToJSONString(flags), dumpfile_document_.GetAllocator());
+    segment.AddMember("mod_rel_addr", module_offset, dumpfile_document_.GetAllocator());
+    dumpfile_current_object_["segments"].PushBack(segment, dumpfile_document_.GetAllocator());
   }
 }
 
@@ -242,6 +289,17 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
   }
 }
 
+void SymbolizerImpl::DumpFile(std::string_view type, std::string_view name) {
+  if (!dumpfile_output_.empty()) {
+    dumpfile_current_object_.AddMember("type", ToJSONString(type),
+                                       dumpfile_document_.GetAllocator());
+    dumpfile_current_object_.AddMember("name", ToJSONString(name),
+                                       dumpfile_document_.GetAllocator());
+    dumpfile_document_.PushBack(dumpfile_current_object_, dumpfile_document_.GetAllocator());
+    ResetDumpfileCurrentObject();
+  }
+}
+
 void SymbolizerImpl::OnDownloadsStarted() { is_downloading_ = true; }
 
 void SymbolizerImpl::OnDownloadsStopped(size_t num_succeeded, size_t num_failed) {
@@ -294,6 +352,20 @@ void SymbolizerImpl::InitProcess() {
   if (is_downloading_) {
     loop_.Run();
   }
+}
+
+void SymbolizerImpl::ResetDumpfileCurrentObject() {
+  dumpfile_current_object_.SetObject();
+  dumpfile_current_object_.AddMember("modules", rapidjson::kArrayType,
+                                     dumpfile_document_.GetAllocator());
+  dumpfile_current_object_.AddMember("segments", rapidjson::kArrayType,
+                                     dumpfile_document_.GetAllocator());
+}
+
+rapidjson::Value SymbolizerImpl::ToJSONString(std::string_view str) {
+  rapidjson::Value string;
+  string.SetString(str.data(), str.size(), dumpfile_document_.GetAllocator());
+  return string;
 }
 
 }  // namespace symbolizer

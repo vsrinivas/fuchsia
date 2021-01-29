@@ -21,6 +21,9 @@ if (is_host) {
       "//src/developer/debug/zxdb/symbols",
       "//src/lib/fxl",
       "//zircon/system/ulib/cmdline",
+
+      # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
+      "//zircon/third_party/rapidjson",
     ]
   }
 
@@ -46,6 +49,7 @@ if (is_host) {
     ]
     deps = [
       ":src",
+      "//src/lib/files",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gmock",
       "//third_party/googletest:gtest",

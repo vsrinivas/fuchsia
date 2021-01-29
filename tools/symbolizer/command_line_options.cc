@@ -74,6 +74,9 @@ const char kAuthHelp[] = R"(  --auth
 const char kOmitModuleLinesHelp[] = R"(  --omit-module-lines
       Omit the "[[[ELF module ...]]]" lines from the output.)";
 
+const char kDumpfileOutputHelp[] = R"(  --dumpfile-output=<path>
+      Write the dumpfile output to the given file.)";
+
 }  // namespace
 
 Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options) {
@@ -90,6 +93,7 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
   parser.AddSwitch("version", 'v', kVersionHelp, &CommandLineOptions::requested_version);
   parser.AddSwitch("omit-module-lines", 0, kOmitModuleLinesHelp,
                    &CommandLineOptions::omit_module_lines);
+  parser.AddSwitch("dumpfile-output", 0, kDumpfileOutputHelp, &CommandLineOptions::dumpfile_output);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;

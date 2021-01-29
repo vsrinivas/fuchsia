@@ -20,11 +20,13 @@ class MockSymbolizer : public Symbolizer {
   MOCK_METHOD(void, Module, (uint64_t id, std::string_view name, std::string_view build_id),
               (override));
   MOCK_METHOD(void, MMap,
-              (uint64_t address, uint64_t size, uint64_t module_id, uint64_t module_offset),
+              (uint64_t address, uint64_t size, uint64_t module_id, std::string_view flags,
+               uint64_t module_offset),
               (override));
   MOCK_METHOD(void, Backtrace,
               (int frame_id, uint64_t address, AddressType type, std::string_view message),
               (override));
+  MOCK_METHOD(void, DumpFile, (std::string_view type, std::string_view name), (override));
 };
 
 class LogParserTest : public ::testing::Test {
@@ -73,7 +75,7 @@ TEST_F(LogParserTest, Module) {
 }
 
 TEST_F(LogParserTest, MMap) {
-  EXPECT_CALL(symbolizer_, MMap(0xbb57d35000, 0x2000, 0, 0));
+  EXPECT_CALL(symbolizer_, MMap(0xbb57d35000, 0x2000, 0, std::string_view("r"), 0));
   ProcessOneLine("{{{mmap:0xbb57d35000:0x2000:load:0:r:0}}}");
 }
 
@@ -90,6 +92,12 @@ TEST_F(LogParserTest, Backtrace) {
   EXPECT_CALL(symbolizer_, Backtrace(1, 0xbb57d370b0, Symbolizer::AddressType::kProgramCounter,
                                      std::string_view("sp 0x3f540e65ef0")));
   ProcessOneLine("{{{bt:1:0xbb57d370b0:pc:sp 0x3f540e65ef0}}}");
+  ASSERT_EQ(output_.str(), "");
+}
+
+TEST_F(LogParserTest, DumpFile) {
+  EXPECT_CALL(symbolizer_, DumpFile(std::string_view("type"), std::string_view("name")));
+  ProcessOneLine("{{{dumpfile:type:name}}}");
   ASSERT_EQ(output_.str(), "");
 }
 

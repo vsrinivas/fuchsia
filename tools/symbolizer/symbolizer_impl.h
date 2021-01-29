@@ -9,6 +9,8 @@
 #include <string_view>
 #include <unordered_map>
 
+#include <rapidjson/document.h>
+
 #include "src/developer/debug/shared/message_loop_poll.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -32,9 +34,11 @@ class SymbolizerImpl : public Symbolizer,
   // |Symbolizer| implementation.
   void Reset() override;
   void Module(uint64_t id, std::string_view name, std::string_view build_id) override;
-  void MMap(uint64_t address, uint64_t size, uint64_t module_id, uint64_t module_offset) override;
+  void MMap(uint64_t address, uint64_t size, uint64_t module_id, std::string_view flags,
+            uint64_t module_offset) override;
   void Backtrace(int frame_id, uint64_t address, AddressType type,
                  std::string_view message) override;
+  void DumpFile(std::string_view type, std::string_view name) override;
 
   // |DownloadObserver| implementation.
   void OnDownloadsStarted() override;
@@ -47,6 +51,12 @@ class SymbolizerImpl : public Symbolizer,
  private:
   // Ensures a process is created on target_. Should be called before each Bactrace().
   void InitProcess();
+
+  // Resets dumpfile_current_object_.
+  void ResetDumpfileCurrentObject();
+
+  // Helper to convert a string_view to a rapidjson string.
+  rapidjson::Value ToJSONString(std::string_view str);
 
   // Non-owning.
   Printer* printer_;
@@ -91,8 +101,40 @@ class SymbolizerImpl : public Symbolizer,
   // Useful when doing binary search for the module from an address.
   std::map<uint64_t, int> address_to_module_id_;
 
-  // Omit the [[[ELF module]]] lines.
+  // Whether to omit the [[[ELF module]]] lines.
   bool omit_module_lines_ = false;
+
+  // The JSON file to write the dumpfile output. If it's empty then nothing will be written and
+  // dumpfile_array_ and dumpfile_current_object_ will be useless.
+  std::string dumpfile_output_;
+  // The JSON document/array that holds the dumpfile output. The content will be written to
+  // dumpfile_output_ when we destruct.
+  rapidjson::Document dumpfile_document_;
+  // Object that will be appended to dumpfile_output_array_ on the next DumpFile(). It'll be like {
+  //   "modules": [
+  //     {
+  //       "name": "libsyslog.so",
+  //       "build": "3552581785f71a08",
+  //       "id": 7
+  //     },
+  //     ...
+  //   ],
+  //   "segments": [
+  //     {
+  //       "mod": 0,
+  //       "vaddr": 38628535922688,
+  //       "size": 61440,
+  //       "flags": "r",
+  //       "mod_rel_addr": 0
+  //     },
+  //     ...
+  //   ],
+  // }.
+  // Each Module() will be appended to the modules array and each MMap() will be appended to the
+  // segments array.  We're keeping a separate copy of those info because
+  // 1) not all mmap info is kept in ModuleInfo.
+  // 2) the dumpfile feature might be removed in the future.
+  rapidjson::Value dumpfile_current_object_;
 };
 
 }  // namespace symbolizer
