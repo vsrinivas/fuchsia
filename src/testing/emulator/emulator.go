@@ -305,7 +305,7 @@ func (d *Distribution) setCommonArgs(params Params, b commandBuilder) {
 	// so we'll know whether QEMU has started or not.
 	b.SetFlag("-trace", "enable=vm_state_notify")
 	b.SetFlag("-nographic")
-	b.SetFlag("-smp", "4,threads=2")
+	b.SetFlag("-smp", "4")
 	b.SetMemory(8192)
 
 	b.AddKernelArg("kernel.serial=legacy")

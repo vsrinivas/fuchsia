@@ -296,7 +296,7 @@ ARGS+=("-vga" "none")
 ARGS+=("-device" "virtio-keyboard-pci")
 
 if [[ $SMP != 1 ]]; then
-  ARGS+=("-smp" "${SMP},threads=2")
+  ARGS+=("-smp" "${SMP}")
 fi
 
 # TODO(raggi): do we want to use hda on arm64?
