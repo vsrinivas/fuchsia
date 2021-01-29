@@ -42,6 +42,7 @@
 #include "metadata.h"
 #include "package_resolver.h"
 #include "resume_task.h"
+#include "suspend_context.h"
 #include "suspend_task.h"
 #include "system_state_manager.h"
 #include "unbind_task.h"
@@ -58,44 +59,6 @@ class SystemStateManager;
 
 constexpr zx::duration kDefaultResumeTimeout = zx::sec(30);
 constexpr zx::duration kDefaultSuspendTimeout = zx::sec(30);
-
-class SuspendContext {
- public:
-  enum class Flags : uint32_t {
-    kRunning = 0u,
-    kSuspend = 1u,
-  };
-
-  SuspendContext() = default;
-
-  SuspendContext(Flags flags, uint32_t sflags) : flags_(flags), sflags_(sflags) {}
-
-  ~SuspendContext() {}
-
-  SuspendContext(SuspendContext&&) = default;
-  SuspendContext& operator=(SuspendContext&&) = default;
-
-  void set_task(fbl::RefPtr<SuspendTask> task) { task_ = std::move(task); }
-
-  const SuspendTask* task() const { return task_.get(); }
-
-  Flags flags() const { return flags_; }
-  void set_flags(Flags flags) { flags_ = flags; }
-  uint32_t sflags() const { return sflags_; }
-  async::TaskClosure* watchdog_task() const { return suspend_watchdog_task_.get(); }
-  void set_suspend_watchdog_task(std::unique_ptr<async::TaskClosure> watchdog_task) {
-    suspend_watchdog_task_ = std::move(watchdog_task);
-  }
-
- private:
-  fbl::RefPtr<SuspendTask> task_;
-  std::unique_ptr<async::TaskClosure> suspend_watchdog_task_;
-
-  Flags flags_ = Flags::kRunning;
-
-  // suspend flags
-  uint32_t sflags_ = 0u;
-};
 
 // Tracks the global resume state that is currently in progress.
 class ResumeContext {
