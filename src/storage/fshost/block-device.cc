@@ -174,9 +174,9 @@ const std::string& BlockDevice::partition_name() const {
   // The block device might not support the partition protocol in which case the connection will be
   // closed, so clone the channel in case that happens.
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  zx::channel channel(fdio_service_clone(connection.borrow_channel()));
-  auto resp =
-      llcpp::fuchsia::hardware::block::partition::Partition::Call::GetName(channel.borrow());
+  fidl::ClientEnd<llcpp::fuchsia::hardware::block::partition::Partition> channel(
+      zx::channel(fdio_service_clone(connection.borrow_channel())));
+  auto resp = fidl::BindSyncClient(std::move(channel)).GetName();
   if (resp.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partiton name (fidl error): "
                    << zx_status_get_string(resp.status());

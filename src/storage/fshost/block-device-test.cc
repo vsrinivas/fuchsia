@@ -49,19 +49,20 @@ class BlockDeviceTest : public testing::Test {
 
   void SetUp() override {
     // Initialize FilesystemMounter.
-    zx::channel dir_request, lifecycle_request;
+    fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request;
+    fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request;
     ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
                                   watcher_),
               ZX_OK);
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.
-    zx::channel client, server;
-    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-    ASSERT_EQ(manager_.ServeRoot(std::move(server)), ZX_OK);
+    auto root = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+    ASSERT_EQ(root.status_value(), ZX_OK);
+    ASSERT_EQ(manager_.ServeRoot(std::move(root->server)), ZX_OK);
     fdio_ns_t* ns;
     ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
-    ASSERT_EQ(fdio_ns_bind(ns, "/fs", client.release()), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns, "/fs", root->client.TakeChannel().release()), ZX_OK);
 
     // fshost uses hardcoded /boot/bin paths to launch filesystems, but this test is packaged now.
     // Make /boot redirect to /pkg in our namespace, which contains the needed binaries.

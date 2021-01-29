@@ -13,15 +13,16 @@ namespace devmgr {
 
 fbl::RefPtr<fs::Service> AdminServer::Create(devmgr::FsManager* fs_manager,
                                              async_dispatcher* dispatcher) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, fs_manager](zx::channel chan) mutable {
-    zx_status_t status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
-                                                      std::make_unique<AdminServer>(fs_manager));
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to bind admin service: " << zx_status_get_string(status);
-      return status;
-    }
-    return ZX_OK;
-  });
+  return fbl::MakeRefCounted<fs::Service>(
+      [dispatcher, fs_manager](fidl::ServerEnd<::llcpp::fuchsia::fshost::Admin> chan) {
+        zx_status_t status = fidl::BindSingleInFlightOnly(
+            dispatcher, std::move(chan), std::make_unique<AdminServer>(fs_manager));
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "failed to bind admin service: " << zx_status_get_string(status);
+          return status;
+        }
+        return ZX_OK;
+      });
 }
 
 void AdminServer::Shutdown(ShutdownCompleter::Sync& completer) {

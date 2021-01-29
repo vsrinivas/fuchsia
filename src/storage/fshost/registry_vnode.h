@@ -26,7 +26,7 @@ class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::Interface
   RegistryVnode(async_dispatcher_t* dispatcher, fbl::RefPtr<fs::PseudoDir> filesystems);
 
   // Register a remote |directory| to |filesystems|.
-  zx_status_t AddFilesystem(zx::channel directory);
+  zx_status_t AddFilesystem(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> directory);
 
   // FIDL method from |fuchsia.fshost.Registry|.
   void RegisterFilesystem(zx::channel public_export,

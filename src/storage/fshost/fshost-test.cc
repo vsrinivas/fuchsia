@@ -61,14 +61,14 @@ TEST(VnodeTestCase, AddFilesystem) {
 
   // Adds a new filesystem to the fshost service node.
   // This filesystem should appear as a new entry within |dir|.
-  zx::channel server, client;
-  ASSERT_OK(zx::channel::create(0u, &server, &client));
+  auto endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_OK(endpoints.status_value());
 
-  zx_handle_t client_value = client.get();
-  ASSERT_OK(fshost_vn->AddFilesystem(std::move(client)));
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> client_value = endpoints->client.borrow();
+  ASSERT_OK(fshost_vn->AddFilesystem(std::move(endpoints->client)));
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup("0", &node));
-  EXPECT_EQ(node->GetRemote().channel(), client_value);
+  EXPECT_EQ(node->GetRemote(), client_value);
 }
 
 TEST(VnodeTestCase, AddFilesystemThroughFidl) {
@@ -76,8 +76,10 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   // set up registry service
-  zx::channel registry_client, registry_server;
-  ASSERT_OK(zx::channel::create(0, &registry_client, &registry_server));
+  auto registry_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::fshost::Registry>();
+  ASSERT_OK(registry_endpoints.status_value());
+  auto [registry_client, registry_server] = std::move(registry_endpoints.value());
+
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   auto fshost_vn = std::make_unique<fshost::RegistryVnode>(loop.dispatcher(), dir);
   auto server_binding =
@@ -85,15 +87,16 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_TRUE(server_binding.is_ok());
 
   // make a new "vfs" "client" that doesn't really point anywhere.
-  zx::channel vfs_client, vfs_server;
-  ASSERT_OK(zx::channel::create(0, &vfs_client, &vfs_server));
+  auto vfs_endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_OK(vfs_endpoints.status_value());
+  auto [vfs_client, vfs_server] = std::move(vfs_endpoints.value());
   zx_info_handle_basic_t vfs_client_info;
-  ASSERT_OK(vfs_client.get_info(ZX_INFO_HANDLE_BASIC, &vfs_client_info, sizeof(vfs_client_info),
-                                nullptr, nullptr));
+  ASSERT_OK(vfs_client.channel().get_info(ZX_INFO_HANDLE_BASIC, &vfs_client_info,
+                                          sizeof(vfs_client_info), nullptr, nullptr));
 
   // register the filesystem through the fidl interface
-  auto resp = ::llcpp::fuchsia::fshost::Registry::Call::RegisterFilesystem(
-      zx::unowned(registry_client), std::move(vfs_client));
+  auto resp = ::llcpp::fuchsia::fshost::Registry::Call::RegisterFilesystem(registry_client,
+                                                                           std::move(vfs_client));
   ASSERT_TRUE(resp.ok());
   ASSERT_OK(resp.value().s);
 
@@ -101,8 +104,8 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup("0", &node));
   zx_info_handle_basic_t vfs_remote_info;
-  zx_handle_t remote = node->GetRemote().channel();
-  ASSERT_OK(zx_object_get_info(remote, ZX_INFO_HANDLE_BASIC, &vfs_remote_info,
+  auto remote = node->GetRemote();
+  ASSERT_OK(zx_object_get_info(remote.channel(), ZX_INFO_HANDLE_BASIC, &vfs_remote_info,
                                sizeof(vfs_remote_info), nullptr, nullptr));
   EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }

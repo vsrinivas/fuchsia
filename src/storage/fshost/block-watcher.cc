@@ -360,16 +360,17 @@ zx_signals_t BlockWatcher::WaitForWatchMessages(const zx::unowned_channel& watch
 
 fbl::RefPtr<fs::Service> BlockWatcherServer::Create(async_dispatcher* dispatcher,
                                                     BlockWatcher& watcher) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, &watcher](zx::channel chan) mutable {
-    zx_status_t status = fidl::BindSingleInFlightOnly(
-        dispatcher, std::move(chan),
-        std::unique_ptr<BlockWatcherServer>(new BlockWatcherServer(watcher)));
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to bind admin service:" << zx_status_get_string(status);
-      return status;
-    }
-    return ZX_OK;
-  });
+  return fbl::MakeRefCounted<fs::Service>(
+      [dispatcher, &watcher](fidl::ServerEnd<llcpp::fuchsia::fshost::BlockWatcher> chan) {
+        zx_status_t status = fidl::BindSingleInFlightOnly(
+            dispatcher, std::move(chan),
+            std::unique_ptr<BlockWatcherServer>(new BlockWatcherServer(watcher)));
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "failed to bind admin service:" << zx_status_get_string(status);
+          return status;
+        }
+        return ZX_OK;
+      });
 }
 
 void BlockWatcherServer::Pause(PauseCompleter::Sync& completer) {

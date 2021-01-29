@@ -28,6 +28,22 @@ class Service : public Vnode {
   // If the |connector| is null, then incoming connection requests will be dropped.
   explicit Service(Connector connector);
 
+  // Handler called to bind the provided channel to an implementation
+  // of the service. This version is typed to the exact FIDL protocol
+  // the handler will support.
+  template <typename Protocol>
+  using ProtocolConnector = fit::function<zx_status_t(fidl::ServerEnd<Protocol>)>;
+
+  // Creates a service with the specified connector.
+  // This version is typed to the exact FIDL protocol the handler will support.
+  //
+  // If the |connector| is null, then incoming connection requests will be dropped.
+  template <typename Protocol>
+  explicit Service(ProtocolConnector<Protocol> connector)
+      : Service([connector = std::move(connector)](zx::channel channel) {
+          return connector(fidl::ServerEnd<Protocol>(std::move(channel)));
+        }) {}
+
   // Destroys the services and releases its connector.
   ~Service() override;
 

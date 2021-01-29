@@ -24,7 +24,8 @@ RegistryVnode::RegistryVnode(async_dispatcher_t* dispatcher, fbl::RefPtr<fs::Pse
       filesystem_counter_(0),
       dispatcher_(dispatcher) {}
 
-zx_status_t RegistryVnode::AddFilesystem(zx::channel directory) {
+zx_status_t RegistryVnode::AddFilesystem(
+    fidl::ClientEnd<::llcpp::fuchsia::io::Directory> directory) {
   char buf[32];
   snprintf(buf, sizeof(buf), "%" PRIu64 "", filesystem_counter_++);
 

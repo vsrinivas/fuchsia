@@ -19,30 +19,28 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   // Create a new DelayedOutdir, and initialize it with a new channel
   auto delayed_outdir = devmgr::DelayedOutdir();
 
-  zx::channel delayed_client, delayed_server;
-  zx_status_t status = zx::channel::create(0, &delayed_client, &delayed_server);
-  ASSERT_OK(status);
+  auto delayed = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_OK(delayed.status_value());
 
-  auto remote_dir = delayed_outdir.Initialize(std::move(delayed_client));
+  auto remote_dir = delayed_outdir.Initialize(std::move(delayed->client));
 
   // Put the remote_dir we received from DelayedOutDir in a vfs and run it
 
-  zx::channel vfs_client, vfs_server;
-  status = zx::channel::create(0, &vfs_client, &vfs_server);
-  ASSERT_OK(status);
+  auto root = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_OK(root.status_value());
 
   auto loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto vfs = fs::ManagedVfs(loop.dispatcher());
-  vfs.ServeDirectory(remote_dir, std::move(vfs_server));
+  vfs.ServeDirectory(remote_dir, std::move(root->server));
   loop.StartThread("delayed_outgoing_dir_test");
 
   // Attempt to open "fs/foo" in our vfs, which will forward an open request for
   // "foo" into the channel we provided above.
 
-  zx::channel foo_client, foo_server;
-  status = zx::channel::create(0, &foo_client, &foo_server);
-  ASSERT_OK(status);
-  status = fdio_open_at(vfs_client.get(), "fs/foo", ZX_FS_RIGHT_READABLE, foo_server.release());
+  auto foo = fidl::CreateEndpoints<::llcpp::fuchsia::io::Directory>();
+  ASSERT_OK(foo.status_value());
+  zx_status_t status = fdio_open_at(root->client.channel().get(), "fs/foo", ZX_FS_RIGHT_READABLE,
+                                    foo->server.channel().release());
   ASSERT_OK(status);
 
   // If we attempt to read from the channel behind DelayedOutdir, we should see
@@ -53,8 +51,8 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   zx_handle_t handle_buffer[16];
   uint32_t actual_bytes = 0;
   uint32_t actual_handles = 0;
-  status = delayed_server.read(0, read_buffer, handle_buffer, sizeof(read_buffer),
-                               sizeof(handle_buffer), &actual_bytes, &actual_handles);
+  status = delayed->server.channel().read(0, read_buffer, handle_buffer, sizeof(read_buffer),
+                                          sizeof(handle_buffer), &actual_bytes, &actual_handles);
   ASSERT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
   // Now let's start the DelayedOutdir, and wait for the channel to become
@@ -63,7 +61,8 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
 
   delayed_outdir.Start();
   zx_signals_t observed;
-  status = delayed_server.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(10)), &observed);
+  status = delayed->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(10)),
+                                              &observed);
   ASSERT_OK(status);
   ASSERT_TRUE(observed & ZX_CHANNEL_READABLE);
 

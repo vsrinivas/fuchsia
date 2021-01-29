@@ -15,8 +15,9 @@ namespace devmgr {
 
 // Utility to open a directory at the given `path` under `root`. The resulting channel handle will
 // be in `result`. The returned `status` indicates whether the operation was successful or not.
-zx_status_t OpenNode(zx::unowned_channel root, const std::string& path, uint32_t mode,
-                     zx::channel* result);
+zx_status_t OpenNode(fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> root,
+                     const std::string& path, uint32_t mode,
+                     fidl::ClientEnd<::llcpp::fuchsia::io::Node>* result);
 
 // Management of fshost inspect data.
 class InspectManager {
@@ -37,10 +38,12 @@ class InspectManager {
 
   // Fills information about the size of files and directories under the given `root` under the
   // given `node` and emplaces it in the given `inspector`. Returns the total size of `root`.
-  void FillFileTreeSizes(zx::channel root, inspect::Node node, inspect::Inspector* inspector);
+  void FillFileTreeSizes(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> root, inspect::Node node,
+                         inspect::Inspector* inspector);
 
   // Queries the filesystem about stats of the given `root` and stores them in the given `inspector`
-  void FillStats(zx::unowned_channel root, inspect::Inspector* inspector);
+  void FillStats(fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> root,
+                 inspect::Inspector* inspector);
 };
 
 // A directory entry returned by `DirectoryEntriesIterator`
@@ -48,7 +51,7 @@ struct DirectoryEntry {
   // The name of the entry.
   std::string name;
   // A handle to the node this entry represents.
-  zx::channel node;
+  fidl::ClientEnd<llcpp::fuchsia::io::Node> node;
   // If the entry its a file, this contains the content size. If the entry is a directory, this will
   // be zero.
   size_t size;
@@ -60,17 +63,17 @@ struct DirectoryEntry {
 class DirectoryEntriesIterator {
  public:
   // Create a new lazy iterator.
-  DirectoryEntriesIterator(zx::channel directory);
+  explicit DirectoryEntriesIterator(fidl::ClientEnd<llcpp::fuchsia::io::Directory> directory);
 
   // Get the next entry. If there's no more entries left (it finished), returns std::nullopt
   // forever.
   std::optional<DirectoryEntry> GetNext();
 
-  bool finished() { return finished_; }
+  bool finished() const { return finished_; }
 
  private:
   // The directory which entries will be retrieved.
-  zx::channel directory_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> directory_;
   // Pending entries to return.
   std::queue<std::string> pending_entries_;
   // Whether or not the iterator has finished.

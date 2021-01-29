@@ -741,11 +741,11 @@ class BlockWatcherTest : public FshostIntegrationTest {
     // Figure out the expected topological path of the last block device.
     std::string expected_path = ramdisk.path() + "/part-000/block";
 
-    zx_handle_t handle;
-    ASSERT_EQ(fdio_get_service_handle(fd.release(), &handle), ZX_OK);
-    zx::channel channel(handle);
+    fidl::ClientEnd<llcpp::fuchsia::device::Controller> controller;
+    ASSERT_EQ(fdio_get_service_handle(fd.release(), controller.channel().reset_and_get_address()),
+              ZX_OK);
     // Get the actual topological path of the block device.
-    auto result = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(channel.borrow());
+    auto result = fidl::BindSyncClient(std::move(controller)).GetTopologicalPath();
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_FALSE(result->result.is_err());
 

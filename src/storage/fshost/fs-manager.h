@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FS_MANAGER_H_
 #define SRC_STORAGE_FSHOST_FS_MANAGER_H_
 
+#include <fuchsia/process/lifecycle/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -42,8 +43,10 @@ class FsManager {
                      std::unique_ptr<FsHostMetrics> metrics);
   ~FsManager();
 
-  zx_status_t Initialize(zx::channel dir_request, zx::channel lifecycle_request,
-                         std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
+  zx_status_t Initialize(
+      fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
+      fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request,
+      std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
 
   // TODO(fxbug.dev/39588): delete this
   // Starts servicing the delayed portion of the outgoing directory, called once
@@ -55,7 +58,7 @@ class FsManager {
   zx_status_t InstallFs(const char* path, zx::channel h);
 
   // Serves connection to the root directory ("/") on |server|.
-  zx_status_t ServeRoot(zx::channel server);
+  zx_status_t ServeRoot(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server);
 
   // Serves connection to the fshost directory (exporting the "fuchsia.fshost" services) on
   // |server|.
@@ -84,10 +87,12 @@ class FsManager {
                                         zx::channel fs_diagnostics_dir_client);
 
  private:
-  zx_status_t SetupOutgoingDirectory(zx::channel dir_request,
+  zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
                                      std::shared_ptr<loader::LoaderServiceBase> loader,
                                      BlockWatcher& watcher);
-  zx_status_t SetupLifecycleServer(zx::channel lifecycle_request);
+
+  zx_status_t SetupLifecycleServer(
+      fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request);
 
   static constexpr const char* kMountPoints[] = {
       "/bin", "/data", "/volume", "/system", "/install", "/blob", "/pkgfs", "/factory", "/durable"};

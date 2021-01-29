@@ -13,23 +13,22 @@ namespace fio = ::llcpp::fuchsia::io;
 
 namespace devmgr {
 
-zx_status_t OpenNode(zx::unowned_channel root, const std::string& path, uint32_t mode,
-                     zx::channel* result) {
-  zx::channel dir_chan, server;
-  zx_status_t status = zx::channel::create(0, &dir_chan, &server);
-  if (status != ZX_OK) {
-    return status;
+zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::string& path,
+                     uint32_t mode, fidl::ClientEnd<fio::Node>* result) {
+  auto dir = fidl::CreateEndpoints<fio::Node>();
+  if (!dir.is_ok()) {
+    return dir.status_value();
   }
 
   fidl::StringView path_view(fidl::unowned_ptr(&path[0]), strlen(&path[0]));
-  status = fio::Directory::Call::Open(std::move(root),
-                                      fs::VnodeConnectionOptions::ReadOnly().ToIoV1Flags(), mode,
-                                      std::move(path_view), std::move(server))
-               .status();
+  zx_status_t status =
+      fio::Directory::Call::Open(root, fs::VnodeConnectionOptions::ReadOnly().ToIoV1Flags(), mode,
+                                 std::move(path_view), std::move(dir->server))
+          .status();
   if (status != ZX_OK) {
     return status;
   }
-  *result = std::move(dir_chan);
+  *result = std::move(dir->client);
   return ZX_OK;
 }
 
@@ -53,21 +52,27 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
       name + "_stats",
       [this, name = std::move(name), root = std::move(root)] {
         inspect::Inspector insp;
-        zx::channel root_chan;
-        zx_status_t status = devmgr::OpenNode(zx::unowned_channel(root->GetRemote().channel()), "/",
-                                              S_IFDIR, &root_chan);
+        fidl::ClientEnd<fio::Node> root_chan;
+        zx_status_t status = devmgr::OpenNode(root->GetRemote(), "/", S_IFDIR, &root_chan);
         if (status != ZX_OK) {
           return fit::make_result_promise(fit::ok(std::move(insp)));
         }
-        FillFileTreeSizes(std::move(root_chan), insp.GetRoot().CreateChild(name), &insp);
-        FillStats(zx::unowned_channel(root->GetRemote().channel()), &insp);
+        // Note: we are unsafely assuming that |root_chan| is a directory
+        // i.e. speaks |fuchsia.io/Directory|.
+        fidl::ClientEnd<fio::Directory> root_dir(root_chan.TakeChannel());
+        FillFileTreeSizes(std::move(root_dir), insp.GetRoot().CreateChild(name), &insp);
+        FillStats(root->GetRemote(), &insp);
         return fit::make_result_promise(fit::ok(std::move(insp)));
       },
       &inspector_);
 }
 
-void InspectManager::FillStats(zx::unowned_channel dir_chan, inspect::Inspector* inspector) {
-  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(std::move(dir_chan));
+void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
+                               inspect::Inspector* inspector) {
+  // Note: we are unsafely assuming that the directory also speaks
+  // |fuchsia.io/DirectoryAdmin|.
+  fidl::UnownedClientEnd<fio::DirectoryAdmin> dir_admin(dir_chan.channel());
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(dir_admin);
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
   if (result.status() == ZX_OK) {
     fio::DirectoryAdmin::QueryFilesystemResponse* response = result.Unwrap();
@@ -84,8 +89,8 @@ void InspectManager::FillStats(zx::unowned_channel dir_chan, inspect::Inspector*
   inspector->emplace(std::move(stats));
 }
 
-void InspectManager::FillFileTreeSizes(zx::channel current_dir, inspect::Node node,
-                                       inspect::Inspector* inspector) {
+void InspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> current_dir,
+                                       inspect::Node node, inspect::Inspector* inspector) {
   struct PendingDirectory {
     std::unique_ptr<DirectoryEntriesIterator> entries_iterator;
     inspect::Node node;
@@ -131,7 +136,8 @@ void InspectManager::FillFileTreeSizes(zx::channel current_dir, inspect::Node no
       // If the entry is a directory, push it to the stack and continue the stack loop.
       if (entry->is_dir) {
         work_stack.push_back(PendingDirectory{
-            .entries_iterator = std::make_unique<DirectoryEntriesIterator>(std::move(entry->node)),
+            .entries_iterator = std::make_unique<DirectoryEntriesIterator>(
+                fidl::ClientEnd<::llcpp::fuchsia::io::Directory>(entry->node.TakeChannel())),
             .node = current.node.CreateChild(entry->name),
             .total_size = 0,
         });
@@ -148,7 +154,7 @@ void InspectManager::FillFileTreeSizes(zx::channel current_dir, inspect::Node no
 }
 
 // Create a new lazy iterator.
-DirectoryEntriesIterator::DirectoryEntriesIterator(zx::channel directory)
+DirectoryEntriesIterator::DirectoryEntriesIterator(fidl::ClientEnd<fio::Directory> directory)
     : directory_(std::move(directory)), finished_(false) {}
 
 // Get the next entry. If there's no more entries left, this method will return std::nullopt
@@ -186,19 +192,18 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::GetNext() {
 std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
     const std::string& entry_name) {
   // Open child of the current node with the given entry name.
-  zx::channel child_chan;
-  zx_status_t status =
-      OpenNode(zx::unowned_channel(directory_), entry_name, S_IFREG | S_IFDIR, &child_chan);
+  fidl::ClientEnd<fio::Node> child_chan;
+  zx_status_t status = OpenNode(directory_, entry_name, S_IFREG | S_IFDIR, &child_chan);
   if (status != ZX_OK) {
     return std::nullopt;
   }
 
   // Get child attributes to know whether the child is a directory or not.
-  auto result = fio::Directory::Call::GetAttr(zx::unowned_channel(child_chan));
+  auto result = fio::Node::Call::GetAttr(child_chan);
   if (result.status() != ZX_OK) {
     return std::nullopt;
   }
-  fio::Directory::GetAttrResponse* response = result.Unwrap();
+  fio::Node::GetAttrResponse* response = result.Unwrap();
 
   bool is_dir = response->attributes.mode & fio::MODE_TYPE_DIRECTORY;
   return std::optional<DirectoryEntry>{{
@@ -211,7 +216,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
 
 // Reads the next set of dirents and loads them into `pending_entries_`.
 void DirectoryEntriesIterator::RefreshPendingEntries() {
-  auto result = fio::Directory::Call::ReadDirents(zx::unowned_channel(directory_), fio::MAX_BUF);
+  auto result = fio::Directory::Call::ReadDirents(directory_, fio::MAX_BUF);
   if (result.status() != ZX_OK) {
     return;
   }

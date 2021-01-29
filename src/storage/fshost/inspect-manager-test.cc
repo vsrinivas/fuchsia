@@ -141,10 +141,13 @@ TEST_F(InspectManagerTest, DirectoryEntryIteratorGetNext) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(ZX_OK,
             fdio_open(kTmpfsPath, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, server.release()));
-  zx::channel test_dir_chan;
+  fidl::ClientEnd<::llcpp::fuchsia::io::Node> test_dir_chan;
   status = devmgr::OpenNode(zx::unowned_channel(root), "/iterator-test", S_IFDIR, &test_dir_chan);
   ASSERT_EQ(status, ZX_OK);
-  auto iterator = devmgr::DirectoryEntriesIterator(std::move(test_dir_chan));
+
+  // The opened node must be a directory because of the |MakeDir| call above.
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> test_dir(test_dir_chan.TakeChannel());
+  auto iterator = devmgr::DirectoryEntriesIterator(std::move(test_dir));
   int64_t found = 0;
   while (auto entry = iterator.GetNext()) {
     if (entry->name.find("dir") == 0) {
@@ -155,7 +158,7 @@ TEST_F(InspectManagerTest, DirectoryEntryIteratorGetNext) {
       EXPECT_EQ(entry->size, 10);
       EXPECT_FALSE(entry->is_dir);
     }
-    EXPECT_NE(entry->node, ZX_HANDLE_INVALID);
+    EXPECT_TRUE(entry->node.is_valid());
     found += 1;
   }
   EXPECT_EQ(found, 5000);

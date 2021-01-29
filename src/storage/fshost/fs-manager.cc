@@ -71,16 +71,17 @@ FsManager::~FsManager() {
   sync_completion_wait(&shutdown_, ZX_TIME_INFINITE);
 }
 
-zx_status_t FsManager::SetupLifecycleServer(zx::channel lifecycle_request) {
+zx_status_t FsManager::SetupLifecycleServer(
+    fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request) {
   return devmgr::LifecycleServer::Create(global_loop_->dispatcher(), this,
                                          std::move(lifecycle_request));
 }
 
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
 // handle if it exists. See fshost.cml for a list of what's in the directory.
-zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
-                                              std::shared_ptr<loader::LoaderServiceBase> loader,
-                                              BlockWatcher& watcher) {
+zx_status_t FsManager::SetupOutgoingDirectory(
+    fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
+    std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // TODO(unknown): fshost exposes two separate service directories, one here and one in
@@ -167,9 +168,10 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   return ZX_OK;
 }
 
-zx_status_t FsManager::Initialize(zx::channel dir_request, zx::channel lifecycle_request,
-                                  std::shared_ptr<loader::LoaderServiceBase> loader,
-                                  BlockWatcher& watcher) {
+zx_status_t FsManager::Initialize(
+    fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
+    fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request,
+    std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
   zx_status_t status = memfs::Vfs::Create("<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
     return status;
@@ -231,7 +233,7 @@ zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t FsManager::ServeRoot(zx::channel server) {
+zx_status_t FsManager::ServeRoot(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server) {
   fs::Rights rights;
   rights.read = true;
   rights.write = true;
