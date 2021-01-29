@@ -36,7 +36,7 @@ async fn main() -> Result<(), Error> {
     // Begin searching for AVRCP target/controller SDP records on newly connected remote peers
     // and register our AVRCP service with the BrEdr profile service.
     let (profile_proxy, mut connection_requests, mut search_result_requests) =
-        profile::connect_and_advertise().expect("Unable to connect to BrEdr Profile Service");
+        profile::connect_and_advertise().context("Unable to connect to BrEdr Profile Service")?;
 
     // Create a channel that peer manager will receive requests for peer controllers from the FIDL
     // service runner.
@@ -48,7 +48,7 @@ async fn main() -> Result<(), Error> {
     let inspect = inspect::Inspector::new();
     inspect.serve(&mut fs)?;
 
-    let mut peer_manager = PeerManager::new(profile_proxy).expect("Unable to create Peer Manager");
+    let mut peer_manager = PeerManager::new(profile_proxy);
     if let Err(e) = peer_manager.iattach(inspect.root(), "peers") {
         warn!("Failed to attach to inspect: {:?}", e);
     }
