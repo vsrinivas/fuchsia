@@ -251,7 +251,9 @@ bool is_board_sherlock() { return GetBoardName() == "sherlock"; }
 
 bool is_board_luis() { return GetBoardName() == "luis"; }
 
-bool is_board_astro_sherlock_or_luis() {
+bool is_board_nelson() { return GetBoardName() == "nelson"; }
+
+bool is_board_with_amlogic_secure() {
   if (is_board_astro()) {
     return true;
   }
@@ -261,12 +263,13 @@ bool is_board_astro_sherlock_or_luis() {
   if (is_board_luis()) {
     return true;
   }
+  if (is_board_nelson()) {
+    return true;
+  }
   return false;
 }
 
-bool is_board_with_amlogic_secure() { return is_board_astro_sherlock_or_luis(); }
-
-bool is_board_with_amlogic_secure_vdec() { return is_board_astro_sherlock_or_luis(); }
+bool is_board_with_amlogic_secure_vdec() { return is_board_with_amlogic_secure(); }
 
 void nanosleep_duration(zx::duration duration) {
   zx_status_t status = zx::nanosleep(zx::deadline_after(duration));
