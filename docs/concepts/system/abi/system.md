@@ -185,7 +185,7 @@ example, components run in processes with `ZX_POL_NEW_PROCESS` set to
 `fuchsia.process.Launcher` service to create processes rather than issuing the
 `zx_process_create` system call directly.
 
-### Vulkan ICD
+### Vulkan ICD {#vulkan-icd}
 
 Components that use the Vulkan API for hardware accelerated graphics link
 against `libvulkan.so` and specify the `vulkan` feature in their manifests. This
