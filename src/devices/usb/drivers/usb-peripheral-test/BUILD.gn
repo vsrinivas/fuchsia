@@ -8,7 +8,10 @@ bind_rules("usb_peripheral_test-bind") {
   rules = "usb_peripheral_test.bind"
   output = "usb_peripheral_test-bind.h"
   tests = "tests.json"
-  deps = [ "//src/devices/bind/fuchsia.usb" ]
+  deps = [
+    "//src/devices/bind/fuchsia.google.usb",
+    "//src/devices/bind/fuchsia.usb",
+  ]
 }
 
 if (is_fuchsia) {

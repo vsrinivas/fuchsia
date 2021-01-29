@@ -16,7 +16,6 @@
 #include <queue>
 #include <thread>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -27,6 +26,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/registers/testing/mock-registers/mock-registers.h"
+#include "src/devices/usb/drivers/aml-usb-phy-v2/aml_usb_phy_bind.h"
 #include "usb-phy-regs.h"
 
 struct zx_device : std::enable_shared_from_this<zx_device> {

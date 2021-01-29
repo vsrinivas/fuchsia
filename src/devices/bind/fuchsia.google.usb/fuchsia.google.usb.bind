@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.google.usb;
+
+extend uint fuchsia.BIND_USB_VID {
+    GOOGLE = 0x18D1,
+};
+
+extend uint fuchsia.BIND_USB_PID {
+    FUNCTION_TEST = 0xA022,
+    CDC_AND_FUNCTION_TEST = 0xA023,
+};
+
+extend uint fuchsia.BIND_USB_PROTOCOL {
+  XHCI_COMPLIANCE_TESTER = 0x00,
+};

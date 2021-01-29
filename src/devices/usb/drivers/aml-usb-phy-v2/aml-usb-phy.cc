@@ -16,7 +16,6 @@
 #include <sstream>
 #include <string>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -29,6 +28,7 @@
 #include <hw/reg.h>
 
 #include "usb-phy-regs.h"
+#include "src/devices/usb/drivers/aml-usb-phy-v2/aml_usb_phy_bind.h"
 
 namespace aml_usb_phy {
 
@@ -494,7 +494,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace aml_usb_phy
 
-ZIRCON_DRIVER_BEGIN(aml_usb_phy, aml_usb_phy::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AML_USB_PHY_V2), ZIRCON_DRIVER_END(aml_usb_phy)
+ZIRCON_DRIVER(aml_usb_phy, aml_usb_phy::driver_ops, "zircon", "0.1");

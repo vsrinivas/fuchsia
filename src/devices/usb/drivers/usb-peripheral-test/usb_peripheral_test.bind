@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 using fuchsia.usb;
+using fuchsia.google.usb;
 
 fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.FUNCTION;
-fuchsia.BIND_USB_VID == 0x18D1; // GOOGLE_USB_VID
+fuchsia.BIND_USB_VID == fuchsia.google.usb.BIND_USB_VID.GOOGLE;
 accept fuchsia.BIND_USB_PID {
-  0xA022, // GOOGLE_USB_FUNCTION_TEST_PID
-  0xA023, // GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID
+  fuchsia.google.usb.BIND_USB_PID.FUNCTION_TEST,
+  fuchsia.google.usb.BIND_USB_PID.CDC_AND_FUNCTION_TEST,
 }

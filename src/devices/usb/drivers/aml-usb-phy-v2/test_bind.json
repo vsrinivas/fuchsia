@@ -1,0 +1,35 @@
+[
+    {
+        "name": "All Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.USB_PHY_V2"
+        }
+    },
+    {
+        "name": "Mismatch Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.USB_PHY_V2"
+        }
+    },
+    {
+        "name": "Mismatch VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.USB_PHY_V2"
+        }
+    },
+    {
+        "name": "Mismatch DID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
+        }
+    }
+]
