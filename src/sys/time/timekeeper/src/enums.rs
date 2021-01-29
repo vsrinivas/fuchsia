@@ -164,6 +164,8 @@ pub enum ClockUpdateReason {
     EndSlew,
     ReduceError,
     IncreaseError,
+    // fxbug.dev/68590: Remove this or explain why it's here.
+    #[allow(dead_code)]
     ChangeFrequency,
 }
 
