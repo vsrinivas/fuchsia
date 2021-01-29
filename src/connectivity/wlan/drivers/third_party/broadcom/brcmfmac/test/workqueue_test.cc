@@ -22,24 +22,37 @@
 
 namespace {
 
-struct TestWork {
-  sync_completion_t entered;
-  sync_completion_t leaving;
-  sync_completion_t proceed;
-  WorkItem work;
-  int state;
-  TestWork();
+class CompletionSignal {
+public:
+  void Signal() {
+    signaled_ = true;
+    sync_completion_signal(&completion_);
+  }
+
+  void Wait(zx_duration_t timeout) {
+    while (!signaled_) {
+      sync_completion_wait(&completion_, timeout);
+    }
+  }
+
+private:
+  std::atomic<bool> signaled_ = false;
+  sync_completion_t completion_;
 };
 
-TestWork::TestWork() : state(0) {}
+struct TestWork {
+  CompletionSignal entered;
+  CompletionSignal proceed;
+  WorkItem work;
+  int state = 0;
+};
 
 static void handler(WorkItem* work) {
   TestWork* tester = containerof(work, TestWork, work);
   tester->state++;
-  sync_completion_signal(&tester->entered);
-  sync_completion_wait(&tester->proceed, ZX_TIME_INFINITE);
+  tester->entered.Signal();
+  tester->proceed.Wait(ZX_TIME_INFINITE);
   tester->state++;
-  sync_completion_signal(&tester->leaving);
 }
 
 TEST(Workqueue, JobsInOrder) {
@@ -50,14 +63,14 @@ TEST(Workqueue, JobsInOrder) {
   work2.work = WorkItem(handler);
   queue->Schedule(&work1.work);
   queue->Schedule(&work2.work);
-  sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
+  work1.entered.Wait(ZX_TIME_INFINITE);
   EXPECT_EQ(work1.state, 1);
   EXPECT_EQ(work2.state, 0);
-  sync_completion_signal(&work1.proceed);
-  sync_completion_wait(&work2.entered, ZX_TIME_INFINITE);
+  work1.proceed.Signal();
+  work2.entered.Wait(ZX_TIME_INFINITE);
   EXPECT_EQ(work1.state, 2);
   EXPECT_EQ(work2.state, 1);
-  sync_completion_signal(&work2.proceed);
+  work2.proceed.Signal();
   delete queue;
 }
 
@@ -69,7 +82,7 @@ TEST(Workqueue, ScheduleDeduplication) {
   work2.work = WorkItem(handler);
   // Queue up the first work item and wait for it to start
   queue->Schedule(&work1.work);
-  sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
+  work1.entered.Wait(ZX_TIME_INFINITE);
   // Then before it's allowed to proceed queue it again, this is allowed
   queue->Schedule(&work1.work);
   // Before the first work item completes queue up the second work item twice.
@@ -77,8 +90,8 @@ TEST(Workqueue, ScheduleDeduplication) {
   queue->Schedule(&work2.work);
   queue->Schedule(&work2.work);
   // Allow both work items to proceed.
-  sync_completion_signal(&work1.proceed);
-  sync_completion_signal(&work2.proceed);
+  work1.proceed.Signal();
+  work2.proceed.Signal();
   // Destroy the queue to wait for all work items to complete
   delete queue;
   // The first work item should have run twice, the second only once.
@@ -90,9 +103,9 @@ TEST(Workqueue, DefaultQueueWorks) {
   TestWork work1;
   work1.work = WorkItem(handler);
   WorkQueue::ScheduleDefault(&work1.work);
-  sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
+  work1.entered.Wait(ZX_TIME_INFINITE);
   EXPECT_EQ(work1.state, 1);
-  sync_completion_signal(&work1.proceed);
+  work1.proceed.Signal();
   WorkQueue::FlushDefault();
 }
 
@@ -121,34 +134,31 @@ TEST(Workqueue, CancelPending) {
   queue->Schedule(&work2.work);
   queue->Schedule(&work3.work);
 
-  sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
+  work1.entered.Wait(ZX_TIME_INFINITE);
   EXPECT_EQ(work1.state, 1);
   EXPECT_EQ(work2.state, 0);
   work2.work.Cancel();
-  sync_completion_signal(&work1.proceed);
-  sync_completion_wait(&work3.entered, ZX_TIME_INFINITE);
+  work1.proceed.Signal();
+  work3.entered.Wait(ZX_TIME_INFINITE);
   EXPECT_EQ(work1.state, 2);
   EXPECT_EQ(work2.state, 0);
   EXPECT_EQ(work3.state, 1);
-  sync_completion_signal(&work3.proceed);
+  work3.proceed.Signal();
   delete queue;
 }
 
 struct WorkCanceler {
   WorkItem work;
   TestWork* target;
-  sync_completion_t leaving;
-  int state;
-  WorkCanceler();
+  CompletionSignal leaving;
+  int state = 0;
 };
-
-WorkCanceler::WorkCanceler() : state(0) { work = WorkItem(); }
 
 static void cancel_handler(WorkItem* work) {
   WorkCanceler* canceler = containerof(work, WorkCanceler, work);
   canceler->target->work.Cancel();
   canceler->state = 2;
-  sync_completion_signal(&canceler->leaving);
+  canceler->leaving.Signal();
 }
 
 // Upon canceling a job that is in progress, the canceler should block until the job completes.
@@ -164,7 +174,7 @@ TEST(Workqueue, CancelCurrent) {
   canceler.work = WorkItem(cancel_handler);
   queue->Schedule(&work1.work);
   queue->Schedule(&work2.work);
-  sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
+  work1.entered.Wait(ZX_TIME_INFINITE);
   EXPECT_EQ(work1.state, 1);
   EXPECT_EQ(work2.state, 0);
   WorkQueue::ScheduleDefault(&canceler.work);
@@ -173,12 +183,12 @@ TEST(Workqueue, CancelCurrent) {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
   EXPECT_EQ(work1.state, 1);
   EXPECT_EQ(canceler.state, 0);
-  sync_completion_signal(&work1.proceed);
-  sync_completion_wait(&work2.entered, ZX_TIME_INFINITE);
+  work1.proceed.Signal();
+  work2.entered.Wait(ZX_TIME_INFINITE);
   EXPECT_EQ(work1.state, 2);
   EXPECT_EQ(work2.state, 1);
-  sync_completion_wait(&canceler.leaving, ZX_TIME_INFINITE);
-  sync_completion_signal(&work2.proceed);
+  canceler.leaving.Wait(ZX_TIME_INFINITE);
+  work2.proceed.Signal();
   delete queue;
 }
 
