@@ -20,22 +20,21 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
  public:
   MockFshostAdminServer() : has_been_shutdown_(false) {}
 
-  std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> CreateClient(
-      async_dispatcher* dispatcher) {
+  fidl::Client<llcpp::fuchsia::fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
     zx::channel client, server;
     zx_status_t status = zx::channel::create(0, &client, &server);
     if (status != ZX_OK) {
-      return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
+      return fidl::Client<llcpp::fuchsia::fshost::Admin>();
     }
 
     status = fidl::BindSingleInFlightOnly(dispatcher, std::move(server), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to create client for mock fshost admin, failed to bind: %s",
            zx_status_get_string(status));
-      return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
+      return fidl::Client<llcpp::fuchsia::fshost::Admin>();
     }
 
-    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(client));
+    return fidl::Client<llcpp::fuchsia::fshost::Admin>(std::move(client), dispatcher);
   }
 
   void Shutdown(ShutdownCompleter::Sync& completer) override {
@@ -51,7 +50,7 @@ class CoordinatorForTest : public Coordinator {
   CoordinatorForTest(CoordinatorConfig config, async_dispatcher_t* dispatcher)
       : Coordinator(std::move(config), dispatcher) {}
 
-  void set_fshost_admin_client(std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> client) {
+  void set_fshost_admin_client(fidl::Client<llcpp::fuchsia::fshost::Admin> client) {
     suspend_handler().set_fshost_admin_client(std::move(client));
   }
 

@@ -17,18 +17,19 @@ namespace {
 
 constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
 
-std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> ConnectToFshostAdminServer() {
+fidl::Client<llcpp::fuchsia::fshost::Admin> ConnectToFshostAdminServer(
+    async_dispatcher_t* dispatcher) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
+    return fidl::Client<llcpp::fuchsia::fshost::Admin>();
   }
   status = fdio_service_connect(kFshostAdminPath, remote.release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", zx_status_get_string(status));
-    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
+    return fidl::Client<llcpp::fuchsia::fshost::Admin>();
   }
-  return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(local));
+  return fidl::Client<llcpp::fuchsia::fshost::Admin>(std::move(local), dispatcher);
 }
 
 void SuspendFallback(const zx::resource& root_resource, uint32_t flags) {
@@ -83,6 +84,14 @@ void DumpSuspendTaskDependencies(const SuspendTask* task, int depth = 0) {
 
 }  // namespace
 
+SuspendHandler::SuspendHandler(Coordinator* coordinator, bool suspend_fallback,
+                               zx::duration suspend_timeout)
+    : coordinator_(coordinator),
+      suspend_fallback_(suspend_fallback),
+      suspend_timeout_(suspend_timeout) {
+  fshost_admin_client_ = ConnectToFshostAdminServer(coordinator_->dispatcher());
+}
+
 void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
   // cannot go to suspend.
@@ -110,10 +119,15 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   if ((sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
     log_to_debuglog();
     LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");
-    ShutdownFilesystems();
+    ShutdownFilesystems([this](zx_status_t status) { SuspendAfterFilesystemShutdown(); });
+    return;
   }
-  LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog");
+  // If we don't have to shutdown the filesystems we can just call this directly.
+  SuspendAfterFilesystemShutdown();
+}
 
+void SuspendHandler::SuspendAfterFilesystemShutdown() {
+  LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog\n");
   auto watchdog_task = std::make_unique<async::TaskClosure>([this] {
     if (!InSuspend()) {
       return;  // Suspend failed to complete.
@@ -170,19 +184,22 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   LOGF(INFO, "Successfully created suspend task on device 'sys'");
 }
 
-void SuspendHandler::ShutdownFilesystems() {
-  // TODO(dgonyeo): we should connect to this service eagerly when Coordinator
-  // is created, since we want to do as little work here as possible
-  if (fshost_admin_client_.get() == nullptr) {
-    fshost_admin_client_ = ConnectToFshostAdminServer();
-  }
-  auto result = fshost_admin_client_->Shutdown();
+void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callback) {
+  auto callback_ptr = std::make_shared<fit::callback<void(zx_status_t)>>(std::move(callback));
+
+  auto result = fshost_admin_client_->Shutdown(
+      [callback_ptr](llcpp::fuchsia::fshost::Admin::ShutdownResponse* response) {
+        LOGF(INFO, "Successfully waited for VFS exit completion\n");
+        if (*callback_ptr) {
+          (*callback_ptr)(ZX_OK);
+        }
+      });
   if (result.status() != ZX_OK) {
     LOGF(WARNING,
          "Failed to cause VFS exit ourselves, this is expected during orderly shutdown: %s",
          zx_status_get_string(result.status()));
-    return;
+    if (*callback_ptr) {
+      (*callback_ptr)(ZX_OK);
+    }
   }
-
-  LOGF(INFO, "Successfully waited for VFS exit completion");
 }

@@ -19,10 +19,7 @@ class SuspendHandler {
   };
 
   // Create a SuspendHandler. `coordinator` is a weak pointer that must outlive `SuspendHandler`.
-  SuspendHandler(Coordinator* coordinator, bool suspend_fallback, zx::duration suspend_timeout)
-      : coordinator_(coordinator),
-        suspend_fallback_(suspend_fallback),
-        suspend_timeout_(suspend_timeout) {}
+  SuspendHandler(Coordinator* coordinator, bool suspend_fallback, zx::duration suspend_timeout);
 
   bool InSuspend() const { return flags_ == SuspendHandler::Flags::kSuspend; }
 
@@ -33,10 +30,10 @@ class SuspendHandler {
   // different locations; during suspension, and in a low-memory situation.
   // Currently, both of these calls happen on the same dispatcher thread, but
   // consider thread safety when refactoring.
-  void ShutdownFilesystems();
+  void ShutdownFilesystems(fit::callback<void(zx_status_t)> callback);
 
   // For testing only: Set the fshost admin client.
-  void set_fshost_admin_client(std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> client) {
+  void set_fshost_admin_client(fidl::Client<llcpp::fuchsia::fshost::Admin> client) {
     fshost_admin_client_ = std::move(client);
   }
 
@@ -45,6 +42,8 @@ class SuspendHandler {
   uint32_t sflags() const { return sflags_; }
 
  private:
+  void SuspendAfterFilesystemShutdown();
+
   Coordinator* coordinator_;
   bool suspend_fallback_;
   zx::duration suspend_timeout_;
@@ -52,7 +51,7 @@ class SuspendHandler {
   SuspendCallback suspend_callback_;
   fbl::RefPtr<SuspendTask> task_;
   std::unique_ptr<async::TaskClosure> suspend_watchdog_task_;
-  std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
+  fidl::Client<llcpp::fuchsia::fshost::Admin> fshost_admin_client_;
 
   Flags flags_ = Flags::kRunning;
 

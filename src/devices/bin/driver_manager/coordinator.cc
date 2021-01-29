@@ -1827,7 +1827,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {
-  suspend_handler_.ShutdownFilesystems();
+  suspend_handler_.ShutdownFilesystems([](zx_status_t status) {});
 }
 
 std::string Coordinator::GetFragmentDriverPath() const {

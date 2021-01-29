@@ -147,7 +147,7 @@ void MultipleDeviceTestCase::SetUp() {
   }
 
   coordinator_.set_fshost_admin_client(
-      coordinator_.admin_server_.CreateClient(mock_server_loop_.dispatcher()));
+      coordinator_.admin_server_.CreateClient(coordinator_loop_.dispatcher()));
 }
 
 void MultipleDeviceTestCase::TearDown() {

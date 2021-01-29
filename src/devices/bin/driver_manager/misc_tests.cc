@@ -204,14 +204,16 @@ class TestDriverTestReporter : public DriverTestReporter {
 };
 
 TEST(MiscTestCase, InitCoreDevices) {
-  Coordinator coordinator(NullConfig(), nullptr);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  Coordinator coordinator(NullConfig(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 }
 
 TEST(MiscTestCase, DumpState) {
-  Coordinator coordinator(NullConfig(), nullptr);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  Coordinator coordinator(NullConfig(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
