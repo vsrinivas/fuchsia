@@ -374,6 +374,21 @@ func TestGenArgs(t *testing.T) {
 			},
 		},
 		{
+			name: "profile variant with changed files",
+			contextSpec: &fintpb.Context{
+				ChangedFiles: []*fintpb.Context_ChangedFile{
+					{Path: "src/foo.cc"},
+					{Path: "src/bar.cc"},
+				},
+			},
+			staticSpec: &fintpb.Static{
+				Variants: []string{`profile`},
+			},
+			expectedArgs: []string{
+				`profile_source_files=["//src/foo.cc","//src/bar.cc"]`,
+			},
+		},
+		{
 			name: "release version",
 			contextSpec: &fintpb.Context{
 				ReleaseVersion: "1234",
