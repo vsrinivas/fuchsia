@@ -7,8 +7,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -284,6 +287,76 @@ TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
   EXPECT_EQ(sendmsg(client_fd().get(), &msg, 0), (ssize_t)memlength, "%s", strerror(errno));
 
   EXPECT_EQ(close(mutable_client_fd().release()), 0, "%s", strerror(errno));
+}
+
+TEST_F(TcpSocketTest, WaitBeginEnd) {
+  fdio_t* io = fdio_unsafe_fd_to_io(client_fd().get());
+
+  // fdio_unsafe_wait_begin
+
+  zx::handle handle;
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLIN, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  }
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLOUT, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED);
+  }
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLRDHUP, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  }
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLHUP, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED);
+  }
+
+  // fdio_unsafe_wait_end
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_READABLE, &events);
+    EXPECT_EQ(events, POLLIN);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
+    EXPECT_EQ(events, POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);
+    EXPECT_EQ(events, POLLIN | POLLRDHUP);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITABLE, &events);
+    EXPECT_EQ(events, POLLOUT);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
+    EXPECT_EQ(events, POLLOUT | POLLHUP);
+  }
+
+  fdio_unsafe_release(io);
 }
 
 using UdpSocketTest = BaseTest<ZX_SOCKET_DATAGRAM>;

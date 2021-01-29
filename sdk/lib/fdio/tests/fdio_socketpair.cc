@@ -509,41 +509,65 @@ void WaitBeginEnd(uint16_t type) {
   // fdio_unsafe_wait_begin
 
   zx::handle handle;
-  zx_signals_t signals;
-  fdio_unsafe_wait_begin(io, POLLIN, handle.reset_and_get_address(), &signals);
-  EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
-  EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLIN, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  }
 
-  fdio_unsafe_wait_begin(io, POLLOUT, handle.reset_and_get_address(), &signals);
-  EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
-  EXPECT_EQ(signals, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED);
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLOUT, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED);
+  }
 
-  signals = ZX_SIGNAL_NONE;
-  fdio_unsafe_wait_begin(io, POLLRDHUP, handle.reset_and_get_address(), &signals);
-  EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
-  EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLRDHUP, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  }
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLHUP, handle.reset_and_get_address(), &signals);
+    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SIGNAL_NONE);
+  }
 
   // fdio_unsafe_wait_end
 
-  uint32_t events = 0u;
-  fdio_unsafe_wait_end(io, ZX_SOCKET_READABLE, &events);
-  EXPECT_EQ(events, (uint32_t)POLLIN);
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_READABLE, &events);
+    EXPECT_EQ(events, POLLIN);
+  }
 
-  events = 0u;
-  fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
-  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP));
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
+    EXPECT_EQ(events, POLLIN | POLLRDHUP);
+  }
 
-  events = 0u;
-  fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);
-  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP));
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);
+    EXPECT_EQ(events, POLLIN | POLLRDHUP);
+  }
 
-  events = 0u;
-  fdio_unsafe_wait_end(io, ZX_SOCKET_WRITABLE, &events);
-  EXPECT_EQ(events, (uint32_t)POLLOUT);
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITABLE, &events);
+    EXPECT_EQ(events, POLLOUT);
+  }
 
-  events = 0u;
-  fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
-  EXPECT_EQ(events, (uint32_t)POLLOUT);
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
+    EXPECT_EQ(events, POLLOUT);
+  }
 
   fdio_unsafe_release(io);
 }

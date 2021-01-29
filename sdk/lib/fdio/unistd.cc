@@ -1922,6 +1922,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
   nfds_t nvalid = 0;
 
   zx_wait_item_t items[n];
+  int nfds = 0;
 
   for (nfds_t i = 0; i < n; i++) {
     struct pollfd* pfd = &fds[i];
@@ -1936,6 +1937,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
     if ((io = fd_to_io(pfd->fd)) == nullptr) {
       // fd is not opened
       pfd->revents = POLLNVAL;
+      nfds++;
       continue;
     }
     ios[i] = io;
@@ -1955,7 +1957,6 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
     nvalid++;
   }
 
-  int nfds = 0;
   if (r == ZX_OK) {
     zx_time_t tmo = ZX_TIME_INFINITE;
     // Check for overflows on every operation.

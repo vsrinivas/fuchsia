@@ -533,22 +533,20 @@ static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_
   }
 
   zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
-  if (events & (POLLOUT | POLLHUP)) {
+
+  if (*ioflag & IOFLAG_SOCKET_CONNECTED) {
+    fdio_zxio_pipe_wait_begin(io, events, signals, handle, out_signals);
+    return;
+  }
+
+  if (events & POLLOUT) {
     signals |= ZXIO_SIGNAL_WRITE_DISABLED;
   }
   if (events & (POLLIN | POLLRDHUP)) {
     signals |= ZXIO_SIGNAL_READ_DISABLED;
   }
 
-  if (*ioflag & IOFLAG_SOCKET_CONNECTED) {
-    // Can't subscribe to ZX_SOCKET_WRITABLE unless we're connected; such a subscription would
-    // immediately fire, since the socket buffer is almost certainly empty.
-    if (events & POLLOUT) {
-      signals |= ZXIO_SIGNAL_WRITABLE;
-    }
-  }
-
-  if (*ioflag & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED)) {
+  if (*ioflag & IOFLAG_SOCKET_CONNECTING) {
     if (events & POLLIN) {
       signals |= ZXIO_SIGNAL_READABLE;
     }
@@ -557,15 +555,13 @@ static void fdio_wait_begin_socket(fdio_t* io, const zx::socket& socket, uint32_
   zx_signals_t zx_signals = ZX_SIGNAL_NONE;
   zxio_wait_begin(fdio_get_zxio(io), signals, handle, &zx_signals);
 
-  if (!(*ioflag & IOFLAG_SOCKET_CONNECTED)) {
-    if (events & POLLOUT) {
-      // signal when connect() operation is finished.
-      zx_signals |= ZXSIO_SIGNAL_OUTGOING;
-    }
-    if (events & POLLIN) {
-      // signal when a listening socket gets an incoming connection.
-      zx_signals |= ZXSIO_SIGNAL_INCOMING;
-    }
+  if (events & POLLOUT) {
+    // signal when connect() operation is finished.
+    zx_signals |= ZXSIO_SIGNAL_OUTGOING;
+  }
+  if (events & POLLIN) {
+    // signal when a listening socket gets an incoming connection.
+    zx_signals |= ZXSIO_SIGNAL_INCOMING;
   }
   *out_signals = zx_signals;
 }
@@ -582,9 +578,19 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t*
   }
 
   zxio_signals_t signals = ZXIO_SIGNAL_NONE;
-  zxio_wait_end(fdio_get_zxio(io), zx_signals, &signals);
-
   uint32_t events = 0;
+  if (*ioflag & IOFLAG_SOCKET_CONNECTED) {
+    fdio_zxio_pipe_wait_end(io, zx_signals, &events, &signals);
+  } else {
+    zxio_wait_end(fdio_get_zxio(io), zx_signals, &signals);
+    if (zx_signals & ZXSIO_SIGNAL_OUTGOING) {
+      events |= POLLOUT;
+    }
+    if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
+      events |= POLLIN;
+    }
+  }
+
   if (signals & ZXIO_SIGNAL_PEER_CLOSED) {
     events |= POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP;
   }
@@ -593,21 +599,6 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t zx_signals, uint32_t*
   }
   if (signals & ZXIO_SIGNAL_READ_DISABLED) {
     events |= POLLRDHUP | POLLIN;
-  }
-  if (*ioflag & IOFLAG_SOCKET_CONNECTED) {
-    if (signals & ZXIO_SIGNAL_WRITABLE) {
-      events |= POLLOUT;
-    }
-    if (signals & ZXIO_SIGNAL_READABLE) {
-      events |= POLLIN;
-    }
-  } else {
-    if (zx_signals & ZXSIO_SIGNAL_OUTGOING) {
-      events |= POLLOUT;
-    }
-    if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
-      events |= POLLIN;
-    }
   }
   *out_events = events;
 }

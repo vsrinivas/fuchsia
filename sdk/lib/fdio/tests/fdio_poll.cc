@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 #include <poll.h>
+#include <sys/socket.h>
 #include <time.h>
+#include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -97,6 +100,63 @@ TEST(Poll, PpollZeroFds) {
               (before.tv_sec == after.tv_sec && before.tv_nsec <= after.tv_nsec));
   timespec interval = delta(before, after);
   ASSERT_TRUE(interval.tv_sec > 0 || interval.tv_nsec >= 1000000ll);
+}
+
+TEST(Poll, Pipe) {
+  std::array<fbl::unique_fd, 2> fds;
+  int int_fds[fds.size()];
+  ASSERT_EQ(pipe(int_fds), 0, "%s", strerror(errno));
+  fds[0].reset(int_fds[0]);
+  fds[1].reset(int_fds[1]);
+
+  constexpr int kTimeout = 10000;
+
+  {
+    char c;
+    ASSERT_EQ(write(fds[1].get(), &c, sizeof(c)), sizeof(c), "%s", strerror(errno));
+    struct pollfd pfds[] = {{
+                                .fd = fds[0].get(),
+                                .events = POLLIN,
+                            },
+                            {
+                                .fd = fds[1].get(),
+                                .events = POLLOUT,
+                            }};
+    int n = poll(pfds, std::size(pfds), kTimeout);
+    ASSERT_GE(n, 0, "%s", strerror(errno));
+    ASSERT_EQ(n, std::size(pfds));
+    ASSERT_EQ(pfds[0].revents, POLLIN);
+    ASSERT_EQ(pfds[1].revents, POLLOUT);
+  }
+
+  {
+    ASSERT_EQ(close(fds[1].get()), 0, "%s", strerror(errno));
+    struct pollfd pfds[] = {
+        {
+            .fd = fds[0].get(),
+#if defined(__Fuchsia__)
+            // TODO(https://fxbug.dev/47132): For Linux parity, pipe wait_begin needs to always wait
+            // on ZXIO_SIGNAL_PEER_CLOSED and wait_end needs to set POLLHUP on seeing this.
+            .events = POLLIN,
+#endif
+        },
+        {
+            .fd = fds[1].get(),
+        }};
+    int n = poll(pfds, std::size(pfds), kTimeout);
+    ASSERT_GE(n, 0, "%s", strerror(errno));
+    ASSERT_EQ(n, std::size(pfds));
+    ASSERT_EQ(pfds[0].revents,
+#if defined(__Fuchsia__)
+              // TODO(https://fxbug.dev/47132): For Linux parity, pipe wait_begin needs to always
+              // wait on ZXIO_SIGNAL_PEER_CLOSED and wait_end needs to set POLLHUP on seeing this.
+              POLLIN
+#else
+              POLLHUP
+#endif
+    );
+    ASSERT_EQ(pfds[1].revents, POLLNVAL);
+  }
 }
 
 }  // namespace

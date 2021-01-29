@@ -63,14 +63,22 @@ zx_status_t fdio_zxio_close(fdio_t* io) {
   return zxio_close(z);
 }
 
+static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* out_handle,
+                                 zx_signals_t* out_signals) {
+  fdio_zxio_pipe_wait_begin(io, events, ZXIO_SIGNAL_NONE, out_handle, out_signals);
+}
+
+static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_events) {
+  fdio_zxio_pipe_wait_end(io, signals, out_events, nullptr);
+}
+
 // TODO(fxbug.dev/45813): This is mainly used by pipes. Consider merging this with the
 // POSIX-to-zxio signal translation in |fdio_zxio_remote_wait_begin|.
 // TODO(fxbug.dev/47132): Do not change the signal mapping here and in |fdio_zxio_wait_end|
 // until linked issue is resolved.
-static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* out_handle,
-                                 zx_signals_t* out_signals) {
+void fdio_zxio_pipe_wait_begin(fdio_t* io, uint32_t events, zxio_signals_t signals,
+                               zx_handle_t* out_handle, zx_signals_t* out_signals) {
   zxio_t* z = fdio_get_zxio(io);
-  zxio_signals_t signals = ZXIO_SIGNAL_NONE;
   if (events & POLLIN) {
     signals |= ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_PEER_CLOSED | ZXIO_SIGNAL_READ_DISABLED;
   }
@@ -83,10 +91,14 @@ static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* out_h
   zxio_wait_begin(z, signals, out_handle, out_signals);
 }
 
-static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_events) {
+void fdio_zxio_pipe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_events,
+                             zxio_signals_t* out_signals) {
   zxio_t* z = fdio_get_zxio(io);
-  zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
+  zxio_signals_t zxio_signals;
   zxio_wait_end(z, signals, &zxio_signals);
+  if (out_signals) {
+    *out_signals = zxio_signals;
+  }
 
   uint32_t events = 0;
   if (zxio_signals & (ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_PEER_CLOSED | ZXIO_SIGNAL_READ_DISABLED)) {

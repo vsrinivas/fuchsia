@@ -248,6 +248,12 @@ fdio_t* fdio_stream_socket_create(zx::socket socket,
 // Creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b, uint32_t options);
 
+void fdio_zxio_pipe_wait_begin(fdio_t* io, uint32_t events, zxio_signals_t signals,
+                               zx_handle_t* out_handle, zx_signals_t* out_signals);
+
+void fdio_zxio_pipe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_events,
+                             zxio_signals_t* zxio_signals);
+
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
 
