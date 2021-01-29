@@ -40,7 +40,7 @@ source_set("sim_common") {
     "sim_hw.h",
   ]
   deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bus",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/devices/lib/broadcom",
     "//src/lib/ddk",
@@ -53,12 +53,20 @@ source_set("sim_common") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
+    "//zircon/system/ulib/async",
   ]
 }
 
 source_set("sim") {
   testonly = true
   sources = [ "sim_fw.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//zircon/system/public",
+  ]
   public_deps = [ ":sim_common" ]
   public_configs = [ ":config_sim" ]
   friend = [ "test/*" ]
@@ -67,6 +75,12 @@ source_set("sim") {
 source_set("sim_mfg") {
   testonly = true
   sources = [ "sim_fw.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//zircon/system/public",
+  ]
   public_deps = [ ":sim_common" ]
   public_configs = [ ":config_sim_mfg" ]
   friend = [ "test/*" ]

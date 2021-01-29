@@ -349,7 +349,7 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
 void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
   struct brcmf_if* ifp;
 
-  BRCMF_DBG(DATA, "Enter: %s: rxp=%p", device_get_name(drvr->zxdev), netbuf);
+  BRCMF_DBG(DATA, "Enter: rxp=%p", netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
     BRCMF_DBG(TEMP, "hdrpull returned nonzero");
@@ -368,7 +368,7 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
 void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
   struct brcmf_if* ifp;
 
-  BRCMF_DBG(EVENT, "Enter: %s: rxp=%p", device_get_name(drvr->zxdev), netbuf);
+  BRCMF_DBG(EVENT, "Enter: rxp=%p", netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
     return;

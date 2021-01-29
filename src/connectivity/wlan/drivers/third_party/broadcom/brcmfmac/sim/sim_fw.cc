@@ -652,13 +652,6 @@ zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
   return ZX_OK;
 }
 
-void SimFirmware::BusSetTimer(std::function<void()> fn, zx_duration_t delay, uint64_t* id_out) {
-  zx::duration event_delay(delay);
-  hw_.RequestCallback(std::move(fn), event_delay, id_out);
-}
-
-void SimFirmware::BusCancelTimer(uint64_t id) { hw_.CancelCallback(id); }
-
 void SimFirmware::BcdcResponse::Clear() { len_ = 0; }
 
 zx_status_t SimFirmware::BcdcResponse::Get(uint8_t* msg, size_t len, int* rxlen_out) {

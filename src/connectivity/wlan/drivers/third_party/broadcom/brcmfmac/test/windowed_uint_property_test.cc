@@ -14,38 +14,58 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <functional>
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/windowed_uint_property.h"
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/device_inspect_test.h"
+#include <lib/async/cpp/task.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
+
+#include <functional>
+#include <memory>
+
+#include <gtest/gtest.h>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace wlan {
 namespace brcmfmac {
 
-class UintPropertyTest : public DeviceInspectTestHelper {
+class WindowedUintPropertyTest : public gtest::TestLoopFixture {
  public:
-  zx_status_t Init(zx_duration_t time_window, zx_duration_t refresh_interval) {
-    zx_status_t status = count_.Init(&device_->inspect_.GetInspector().GetRoot(),
-                                     time_window / refresh_interval, name_, 0);
+  zx_status_t Init(zx::duration time_window, zx::duration refresh_interval) {
+    zx_status_t status =
+        count_.Init(&inspector_.GetRoot(), time_window / refresh_interval, name_, 0);
     if (status != ZX_OK) {
       return status;
     }
 
-    timer_ = std::make_unique<Timer>(device_->drvr()->bus_if, device_->drvr()->dispatcher,
-                                     std::bind(&UintPropertyTest::TimerCallback, this), true);
-
-    timer_->Start(refresh_interval);
+    async::PostDelayedTask(
+        dispatcher(),
+        std::bind(&WindowedUintPropertyTest::SlideWindowTimer, this, refresh_interval),
+        refresh_interval);
     return ZX_OK;
+  }
+
+  void SlideWindowTimer(zx::duration refresh_interval) {
+    count_.SlideWindow();
+    async::PostDelayedTask(
+        dispatcher(),
+        std::bind(&WindowedUintPropertyTest::SlideWindowTimer, this, refresh_interval),
+        refresh_interval);
   }
 
   void ScheduleIncrement(zx::duration delay, uint64_t count) {
     for (uint64_t i = 0; i < count; i++) {
-      env_->ScheduleNotification(std::bind(&UintPropertyTest::Increment, this), delay);
+      async::PostDelayedTask(
+          dispatcher(), [this]() { count_.Add(1); }, delay);
     }
   }
 
   uint64_t GetCount() {
-    FetchHierarchy();
-    auto* count = hierarchy_.value().node().get_property<inspect::UintPropertyValue>(name_);
+    auto hierarchy = FetchHierarchy(inspector_);
+    auto* count = hierarchy.value().node().get_property<inspect::UintPropertyValue>(name_);
     EXPECT_TRUE(count);
     return count->value();
   }
@@ -57,24 +77,19 @@ class UintPropertyTest : public DeviceInspectTestHelper {
   }
 
  protected:
+  inspect::Inspector inspector_;
   WindowedUintProperty count_;
-  const std::string name_ = "uintproperty_counter";
-  void Increment() { count_.Add(1); }
-
- private:
-  std::unique_ptr<Timer> timer_;
-  void TimerCallback() { count_.SlideWindow(); }
+  const std::string name_ = "uint_property_counter";
 };
 
-TEST_F(UintPropertyTest, InitErrors) {
-  EXPECT_EQ(ZX_ERR_NO_RESOURCES,
-            count_.Init(&device_->inspect_.GetInspector().GetRoot(), 129, name_, 0));
-  EXPECT_EQ(ZX_OK, count_.Init(&device_->inspect_.GetInspector().GetRoot(), 128, name_, 0));
+TEST_F(WindowedUintPropertyTest, InitErrors) {
+  EXPECT_EQ(ZX_ERR_NO_RESOURCES, count_.Init(&inspector_.GetRoot(), 129, name_, 0));
+  EXPECT_EQ(ZX_OK, count_.Init(&inspector_.GetRoot(), 128, name_, 0));
 }
 
-TEST_F(UintPropertyTest, SimpleCounter) {
+TEST_F(WindowedUintPropertyTest, SimpleCounter) {
   // Initialize object such that it builds a window_size of 5.
-  EXPECT_EQ(ZX_OK, count_.Init(&device_->inspect_.GetInspector().GetRoot(), 5, name_, 0));
+  EXPECT_EQ(ZX_OK, count_.Init(&inspector_.GetRoot(), 5, name_, 0));
 
   // We sequence over the following increments per interval time, and ensure the
   // value is always the sum of the last 5 increments.
@@ -98,12 +113,12 @@ TEST_F(UintPropertyTest, SimpleCounter) {
   AddAndValidate(0, 0);    // 1 falls off the queue, and 0 gets added.
 }
 
-TEST_F(UintPropertyTest, CounterWithoutWindowUpdate) {
+TEST_F(WindowedUintPropertyTest, CounterWithoutWindowUpdate) {
   // Initialize object such that it builds a queue_capacity of 5.
-  EXPECT_EQ(ZX_OK, count_.Init(&device_->inspect_.GetInspector().GetRoot(), 5, name_, 0));
+  EXPECT_EQ(ZX_OK, count_.Init(&inspector_.GetRoot(), 5, name_, 0));
 
-  // The test sequences over multiple increments happening between window
-  // updates, to ensure the count is up to date. The sequence is as follows.
+  // The test sequences over multiple increments happening between window updates, to ensure the
+  // count is up to date. The sequence is as follows.
   //  - Increment by 1.
   //  - Slide window for one period.
   //  - Increment by 3, 1, 5 - ensure counter keeps up without window update.
@@ -124,33 +139,32 @@ TEST_F(UintPropertyTest, CounterWithoutWindowUpdate) {
   ASSERT_EQ(10u, GetCount());
 }
 
-TEST_F(UintPropertyTest, 24HrsCounter) {
+TEST_F(WindowedUintPropertyTest, 24HrsCounter) {
   // Maintains count for a window of 24hours, refreshed every hour.
-  EXPECT_EQ(ZX_OK, Init(ZX_HOUR(24), ZX_HOUR(1)));
+  EXPECT_EQ(ZX_OK, Init(zx::hour(24), zx::hour(1)));
 
   // Increment count once every hour, including the first and last.
-  const uint32_t log_hours = 100;
-  for (uint32_t i = 0; i <= log_hours; i++) {
-    ScheduleIncrement(zx::hour(i), 1);
+  constexpr zx::duration kLogHours = zx::hour(100);
+  for (zx::duration i; i <= kLogHours; i += zx::hour(1)) {
+    ScheduleIncrement(i, 1);
   }
-  env_->Run(zx::hour(log_hours));
+  RunLoopFor(kLogHours);
 
-  // Since log_hours is > 24hrs, we expect the counter to show
-  // a count of only 24.
+  // Since kLogHours is > 24hrs, we expect the counter to show a count of only 24.
   EXPECT_EQ(24u, GetCount());
 }
 
-TEST_F(UintPropertyTest, 60MinsCounter) {
+TEST_F(WindowedUintPropertyTest, 60MinsCounter) {
   // Maintains count for a window of 60mins, refreshed every 10mins.
-  EXPECT_EQ(ZX_OK, Init(ZX_MIN(60), ZX_MIN(10)));
+  EXPECT_EQ(ZX_OK, Init(zx::min(60), zx::min(10)));
 
   ScheduleIncrement(zx::min(30), 3);
   ScheduleIncrement(zx::min(80), 2);
   ScheduleIncrement(zx::min(81), 7);
 
-  // We stop the test such that there has been some increments past the
-  // last window update time, and ensure those counts are accounted for.
-  env_->Run(zx::min(85));
+  // We stop the test such that there has been some increments past the last window update time, and
+  // ensure those counts are accounted for.
+  RunLoopFor(zx::min(85));
 
   EXPECT_EQ(12u, GetCount());
 }

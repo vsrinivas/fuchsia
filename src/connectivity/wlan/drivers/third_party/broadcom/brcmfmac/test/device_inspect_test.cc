@@ -14,20 +14,33 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/device_inspect_test.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
+
+#include <lib/async/cpp/task.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
 
 #include <functional>
+#include <memory>
+
+#include <gtest/gtest.h>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace wlan {
 namespace brcmfmac {
 
-class DeviceInspectTest : public DeviceInspectTestHelper {
+class DeviceInspectTest : public gtest::TestLoopFixture {
  public:
-  void LogTxQfull() { device_->inspect_.LogTxQueueFull(); }
+  void SetUp() override { ASSERT_EQ(ZX_OK, DeviceInspect::Create(dispatcher(), &device_inspect_)); }
+
+  void LogTxQfull() { device_inspect_->LogTxQueueFull(); }
 
   uint64_t GetTxQfull() {
-    FetchHierarchy();
-    auto* root = hierarchy_.value().GetByPath({"brcmfmac-phy"});
+    auto hierarchy = FetchHierarchy(device_inspect_->inspector());
+    auto* root = hierarchy.value().GetByPath({"brcmfmac-phy"});
     EXPECT_TRUE(root);
     auto* tx_qfull = root->node().get_property<inspect::UintPropertyValue>("tx_qfull");
     EXPECT_TRUE(tx_qfull);
@@ -35,18 +48,20 @@ class DeviceInspectTest : public DeviceInspectTestHelper {
   }
 
   uint64_t GetTxQfull24Hrs() {
-    FetchHierarchy();
-    auto* root = hierarchy_.value().GetByPath({"brcmfmac-phy"});
+    auto hierarchy = FetchHierarchy(device_inspect_->inspector());
+    auto* root = hierarchy.value().GetByPath({"brcmfmac-phy"});
     EXPECT_TRUE(root);
     auto* tx_qfull_24hrs = root->node().get_property<inspect::UintPropertyValue>("tx_qfull_24hrs");
     EXPECT_TRUE(tx_qfull_24hrs);
     return tx_qfull_24hrs->value();
   }
+
+  std::unique_ptr<DeviceInspect> device_inspect_;
 };
 
 TEST_F(DeviceInspectTest, HierarchyCreation) {
-  FetchHierarchy();
-  ASSERT_TRUE(hierarchy_.is_ok());
+  auto hierarchy = FetchHierarchy(device_inspect_->inspector());
+  ASSERT_TRUE(hierarchy.is_ok());
 }
 
 TEST_F(DeviceInspectTest, LogTxQfullSingle) {
@@ -67,30 +82,29 @@ TEST_F(DeviceInspectTest, LogTxQfullMultiple) {
 
 TEST_F(DeviceInspectTest, LogTxQfull24HrsFor10Hrs) {
   EXPECT_EQ(0u, GetTxQfull24Hrs());
-  const uint32_t log_duration = 10;
+  constexpr zx::duration kLogDuration = zx::hour(10);
 
   // Log 1 queue full event every hour, including the first and last, for 'log_duration' hours.
-  for (uint32_t i = 0; i <= log_duration; i++) {
-    env_->ScheduleNotification(std::bind(&DeviceInspectTest::LogTxQfull, this), zx::hour(i));
+  for (zx::duration i; i <= kLogDuration; i += zx::hour(1)) {
+    async::PostDelayedTask(dispatcher(), std::bind(&DeviceInspectTest::LogTxQfull, this), i);
   }
-  env_->Run(zx::hour(log_duration));
+  RunLoopFor(kLogDuration);
 
   // Since we also log once at the beginning of the run, we will have one more count.
-  EXPECT_EQ(log_duration + 1, GetTxQfull24Hrs());
+  EXPECT_EQ(static_cast<uint64_t>(kLogDuration / zx::hour(1)) + 1, GetTxQfull24Hrs());
 }
 
 TEST_F(DeviceInspectTest, LogTxQfull24HrsFor100Hrs) {
   EXPECT_EQ(0u, GetTxQfull24Hrs());
-  const uint32_t log_duration = 100;
+  constexpr zx::duration kLogDuration = zx::hour(100);
 
   // Log 1 queue full event every hour, including the first and last, for 'log_duration' hours.
-  for (uint32_t i = 0; i <= log_duration; i++) {
-    env_->ScheduleNotification(std::bind(&DeviceInspectTest::LogTxQfull, this), zx::hour(i));
+  for (zx::duration i; i <= kLogDuration; i += zx::hour(1)) {
+    async::PostDelayedTask(dispatcher(), std::bind(&DeviceInspectTest::LogTxQfull, this), i);
   }
-  env_->Run(zx::hour(log_duration));
+  RunLoopFor(kLogDuration);
 
-  // Since log_duration is > 24hrs, we expect the rolling counter to show
-  // a count of only 24.
+  // Since log_duration is > 24hrs, we expect the rolling counter to show a count of only 24.
   EXPECT_EQ(24u, GetTxQfull24Hrs());
 }
 

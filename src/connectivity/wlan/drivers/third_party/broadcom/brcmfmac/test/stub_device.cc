@@ -10,20 +10,11 @@ namespace brcmfmac {
 
 StubDevice::StubDevice() : Device(nullptr){};
 
-StubDevice::~StubDevice() { Stop(); }
+StubDevice::~StubDevice() = default;
 
-// static
-zx_status_t StubDevice::Create(std::unique_ptr<StubDevice>* out_stub_device) {
-  zx_status_t status = ZX_OK;
-  auto stub_device = std::make_unique<StubDevice>();
+async_dispatcher_t* StubDevice::GetDispatcher() { return nullptr; }
 
-  if ((status = stub_device->Device::Init()) != ZX_OK) {
-    return status;
-  }
-
-  *out_stub_device = std::move(stub_device);
-  return ZX_OK;
-}
+DeviceInspect* StubDevice::GetInspect() { return nullptr; }
 
 zx_status_t StubDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return ZX_ERR_NOT_SUPPORTED;

@@ -16,7 +16,7 @@
 
 /* Toplevel file. Relies on dhd_linux.c to send commands to the dongle. */
 
-#include "cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
@@ -39,27 +39,27 @@
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
-#include "bits.h"
-#include "brcmu_d11.h"
-#include "brcmu_utils.h"
-#include "brcmu_wifi.h"
-#include "btcoex.h"
-#include "common.h"
-#include "core.h"
-#include "debug.h"
-#include "defs.h"
-#include "feature.h"
-#include "fweh.h"
-#include "fwil.h"
-#include "fwil_types.h"
-#include "linuxisms.h"
-#include "macros.h"
-#include "netbuf.h"
-#include "proto.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/btcoex.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/proto.h"
 #include "third_party/bcmdhd/crossdriver/dhd.h"
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 #include "third_party/bcmdhd/crossdriver/wlioctl.h"
-#include "workqueue.h"
 
 #define BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS 320
 #define BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS 400
@@ -2512,7 +2512,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
   cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
   /* Init scan_timeout timer */
   cfg->escan_timer =
-      new Timer(cfg->pub->bus_if, cfg->pub->dispatcher, std::bind(brcmf_escan_timeout, cfg), false);
+      new Timer(cfg->pub->device->GetDispatcher(), std::bind(brcmf_escan_timeout, cfg), false);
   cfg->escan_timeout_work = WorkItem(brcmf_cfg80211_escan_timeout_worker);
 }
 
@@ -5320,8 +5320,7 @@ init_priv_mem_out:
 
 static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   zx_status_t err = ZX_OK;
-  struct brcmf_bus* bus_if = cfg->pub->bus_if;
-  async_dispatcher_t* dispatcher = cfg->pub->dispatcher;
+  async_dispatcher_t* dispatcher = cfg->pub->device->GetDispatcher();
 
   cfg->scan_request = nullptr;
   cfg->pwr_save = false;  // FIXME #37793: should be set per-platform
@@ -5336,19 +5335,17 @@ static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   brcmf_init_conf(cfg->conf);
 
   // Initialize the disconnect timer
-  cfg->disconnect_timer =
-      new Timer(bus_if, dispatcher, std::bind(brcmf_disconnect_timeout, cfg), false);
+  cfg->disconnect_timer = new Timer(dispatcher, std::bind(brcmf_disconnect_timeout, cfg), false);
   cfg->disconnect_timeout_work = WorkItem(brcmf_disconnect_timeout_worker);
   // Initialize the signal report timer
   cfg->signal_report_timer =
-      new Timer(bus_if, dispatcher, std::bind(brcmf_signal_report_timeout, cfg), true);
+      new Timer(dispatcher, std::bind(brcmf_signal_report_timeout, cfg), true);
   cfg->signal_report_work = WorkItem(brcmf_signal_report_worker);
   // Initialize the ap start timer
-  cfg->ap_start_timer =
-      new Timer(bus_if, dispatcher, std::bind(brcmf_ap_start_timeout, cfg), false);
+  cfg->ap_start_timer = new Timer(dispatcher, std::bind(brcmf_ap_start_timeout, cfg), false);
   cfg->ap_start_timeout_work = WorkItem(brcmf_ap_start_timeout_worker);
   // Initialize the connect timer
-  cfg->connect_timer = new Timer(bus_if, dispatcher, std::bind(brcmf_connect_timeout, cfg), false);
+  cfg->connect_timer = new Timer(dispatcher, std::bind(brcmf_connect_timeout, cfg), false);
   cfg->connect_timeout_work = WorkItem(brcmf_connect_timeout_worker);
 
   cfg->vif_disabled = {};

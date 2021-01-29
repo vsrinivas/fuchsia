@@ -21,7 +21,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
@@ -40,8 +39,14 @@ namespace wlan_llcpp = ::llcpp::fuchsia::factory::wlan;
 
 Device::Device(zx_device_t* parent)
     : ::ddk::Device<Device, ddk::Messageable>(parent),
+      brcmf_pub_(std::make_unique<brcmf_pub>()),
       client_interface_(nullptr),
-      ap_interface_(nullptr) {}
+      ap_interface_(nullptr) {
+  brcmf_pub_->device = this;
+  for (auto& entry : brcmf_pub_->if2bss) {
+    entry = BRCMF_BSSIDX_INVALID;
+  }
+}
 
 Device::~Device() = default;
 
@@ -74,45 +79,6 @@ void Device::Set(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> req
     _completer.ReplySuccess();
   } else {
     _completer.ReplyError(status);
-  }
-}
-
-zx_status_t Device::Init() {
-  zx_status_t status = ZX_OK;
-
-  auto dispatcher = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  if ((status = dispatcher->StartThread("brcmfmac-worker", nullptr)) != ZX_OK) {
-    return status;
-  }
-
-  // Initialize our module-level settings
-  auto pub = std::make_unique<brcmf_pub>();
-  pub->zxdev = parent();
-  pub->dispatcher = dispatcher->dispatcher();
-  pub->inspect = &inspect_;
-  for (auto& entry : pub->if2bss) {
-    entry = BRCMF_BSSIDX_INVALID;
-  }
-
-  brcmf_pub_ = std::move(pub);
-  dispatcher_ = std::move(dispatcher);
-  return ZX_OK;
-}
-
-zx_status_t Device::Start() {
-  zx_status_t status = ZX_OK;
-  if ((status = inspect_.Start(brcmf_pub_->bus_if, brcmf_pub_->dispatcher)) != ZX_OK) {
-    return status;
-  }
-
-  return status;
-}
-
-void Device::Stop() {
-  inspect_.Stop();
-
-  if (dispatcher_ != nullptr) {
-    dispatcher_->Shutdown();
   }
 }
 

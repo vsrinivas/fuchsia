@@ -13,15 +13,19 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio_device.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/zircon-internal/align.h>
 
 #include <limits>
 #include <string>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_regs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio.h"
 
 namespace wlan {
@@ -31,23 +35,32 @@ namespace brcmfmac {
 zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
+  auto async_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  if ((status = async_loop->StartThread("brcmfmac-worker", nullptr)) != ZX_OK) {
+    return status;
+  }
+
+  std::unique_ptr<DeviceInspect> inspect;
+  if ((status = DeviceInspect::Create(async_loop->dispatcher(), &inspect)) != ZX_OK) {
+    return status;
+  }
+
   const auto ddk_remover = [](SdioDevice* device) { device->DdkAsyncRemove(); };
   std::unique_ptr<SdioDevice, decltype(ddk_remover)> device(new SdioDevice(parent_device),
                                                             ddk_remover);
-
   if ((status = device->DdkAdd(ddk::DeviceAddArgs("brcmfmac-wlanphy")
                                    .set_flags(DEVICE_ADD_INVISIBLE)
-                                   .set_inspect_vmo(device->inspect_.GetVmo()))) != ZX_OK) {
+                                   .set_inspect_vmo(inspect->inspector().DuplicateVmo()))) !=
+      ZX_OK) {
     delete device.release();
     return status;
   }
 
-  if ((status = device->brcmfmac::Device::Init()) != ZX_OK) {
-    return status;
-  }
+  device->async_loop_ = std::move(async_loop);
+  device->inspect_ = std::move(inspect);
 
   std::unique_ptr<brcmf_bus> bus;
-  if ((status = brcmf_sdio_register(device->brcmf_pub_.get(), &bus)) != ZX_OK) {
+  if ((status = brcmf_sdio_register(device->drvr(), &bus)) != ZX_OK) {
     return status;
   }
 
@@ -75,7 +88,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     BRCMF_ERR("Firmware binary size too large");
     return ZX_ERR_INTERNAL;
   }
-  if ((status = brcmf_sdio_firmware_callback(device->brcmf_pub_.get(), firmware_binary.data(),
+  if ((status = brcmf_sdio_firmware_callback(device->drvr(), firmware_binary.data(),
                                              static_cast<uint32_t>(firmware_binary.size()),
                                              nvram_binary.data(), nvram_binary.size())) != ZX_OK) {
     return status;
@@ -89,18 +102,14 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     // The firmware IOVAR accesses to upload the CLM blob are always on ifidx 0, so we stub out an
     // appropriate brcmf_if instance here.
     brcmf_if ifp = {};
-    ifp.drvr = device->brcmf_pub_.get();
+    ifp.drvr = device->drvr();
     ifp.ifidx = 0;
     if ((status = brcmf_c_process_clm_blob(&ifp, clm_binary)) != ZX_OK) {
       return status;
     }
   }
 
-  if ((status = brcmf_bus_started(device->brcmf_pub_.get())) != ZX_OK) {
-    return status;
-  }
-
-  if ((status = device->brcmfmac::Device::Start()) != ZX_OK) {
+  if ((status = brcmf_bus_started(device->drvr())) != ZX_OK) {
     return status;
   }
 
@@ -110,6 +119,10 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   device.release();  // This now has its lifecycle managed by the devhost.
   return ZX_OK;
 }
+
+async_dispatcher_t* SdioDevice::GetDispatcher() { return async_loop_->dispatcher(); }
+
+DeviceInspect* SdioDevice::GetInspect() { return inspect_.get(); }
 
 zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return device_add(zxdev(), args, out_device);
@@ -128,7 +141,6 @@ zx_status_t SdioDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t bufle
 SdioDevice::SdioDevice(zx_device_t* parent) : Device(parent) {}
 
 SdioDevice::~SdioDevice() {
-  Stop();
   if (brcmf_bus_) {
     brcmf_sdio_exit(brcmf_bus_.get());
   }

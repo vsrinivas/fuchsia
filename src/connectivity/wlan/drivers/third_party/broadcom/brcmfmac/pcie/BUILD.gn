@@ -27,20 +27,23 @@ source_set("pcie") {
   public = [ "pcie_device.h" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.pci",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bus",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/mmio",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/ddk",
     "//zircon/system/public",
+    "//zircon/system/ulib/async",
   ]
   public_configs = [ ":config_pcie" ]
   friend = [

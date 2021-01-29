@@ -24,7 +24,6 @@
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <lib/async/dispatcher.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <netinet/if_ether.h>
@@ -38,7 +37,6 @@
 #include "bus.h"
 #include "fweh.h"
 #include "fwil_types.h"
-#include "inspect/device_inspect.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "workqueue.h"
@@ -119,11 +117,18 @@ struct brcmf_rev_info {
 };
 
 /* Common structure for module and instance linkage */
+
+namespace wlan {
+namespace brcmfmac {
+
+class Device;
+
+}  // namespace brcmfmac
+}  // namespace wlan
+
 struct brcmf_pub {
-  zx_device_t* zxdev;
-  async_dispatcher_t* dispatcher;
+  wlan::brcmfmac::Device* device;
   std::recursive_mutex irq_callback_lock;
-  wlan::brcmfmac::DeviceInspect* inspect;
 
   /* Linkage ponters */
   struct brcmf_bus* bus_if;

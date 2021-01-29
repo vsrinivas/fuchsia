@@ -17,18 +17,16 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
-#include "debug.h"
+typedef void (Timer::*timer_handler)(void);
 
-Timer::Timer(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher,
-             std::function<void()> callback, bool periodic)
+Timer::Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, bool periodic)
     : task_({}),
       callback_(callback),
       interval_(0),
       scheduled_(false),
       finished_({}),
-      dispatcher_(dispatcher),
-      bus_if_(bus_if) {
-  task_.handler = TimerHandler;
+      dispatcher_(dispatcher) {
+  task_.handler = &TimerHandler;
 
   if (periodic) {
     type_ = BRCMF_TIMER_PERIODIC;
@@ -40,60 +38,38 @@ Timer::Timer(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher,
 // Set timer with timeout @interval. If interval is 0, return without setting
 // the timer (can be used to stop a periodic timer)
 void Timer::Start(zx_duration_t interval) {
-  if (bus_if_ && brcmf_bus_get_bus_type(bus_if_) == BRCMF_BUS_TYPE_SIM) {
-    // Go through bus to schedule event in sim-env instead of using real dispatcher, it's
-    // synchronized so no need to lock.
-    interval_ = interval;
+  std::lock_guard lock(lock_);
 
-    if (!interval_) {
-      return;
-    }
+  interval_ = interval;
 
-    brcmf_bus_set_sim_timer(bus_if_, std::bind(&Timer::SimTimerHandler, this), interval,
-                            &event_id_);
-    scheduled_ = true;
-  } else {
-    lock_.lock();
-
-    interval_ = interval;
-
-    if (!interval_) {
-      // One way to stop periodic timer
-      lock_.unlock();
-      return;
-    }
-    async_cancel_task(dispatcher_, &task_);  // Make sure it's not scheduled
-    task_.deadline = interval_ + async_now(dispatcher_);
-    scheduled_ = true;
-    sync_completion_reset(&finished_);
-    async_post_task(dispatcher_, &task_);
-
-    lock_.unlock();
+  if (!interval_) {
+    // One way to stop periodic timer
+    return;
   }
+  async_cancel_task(dispatcher_, &task_);  // Make sure it's not scheduled
+  task_.deadline = interval_ + async_now(dispatcher_);
+  scheduled_ = true;
+  sync_completion_reset(&finished_);
+  async_post_task(dispatcher_, &task_);
 }
 
 void Timer::Stop() {
-  if (bus_if_ && brcmf_bus_get_bus_type(bus_if_) == BRCMF_BUS_TYPE_SIM) {
-    brcmf_bus_cancel_sim_timer(bus_if_, event_id_);
-    scheduled_ = false;
-  } else {
-    lock_.lock();
-    interval_ = 0;
-    if (!scheduled_) {
-      lock_.unlock();
-      return;
-    }
-    zx_status_t result = async_cancel_task(dispatcher_, &task_);
+  lock_.lock();
+  interval_ = 0;
+  if (!scheduled_) {
     lock_.unlock();
-    if (result != ZX_OK) {
-      // In case the handler task could not be cancelled, wait for up to the
-      // timeout interval for the handler task to finish.
-      sync_completion_wait(&finished_, interval_);
-    }
-    lock_.lock();
-    scheduled_ = false;
-    lock_.unlock();
+    return;
   }
+  zx_status_t result = async_cancel_task(dispatcher_, &task_);
+  lock_.unlock();
+  if (result != ZX_OK) {
+    // In case the handler task could not be cancelled, wait for up to the
+    // timeout interval for the handler task to finish.
+    sync_completion_wait(&finished_, interval_);
+  }
+  lock_.lock();
+  scheduled_ = false;
+  lock_.unlock();
 }
 
 void Timer::TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
@@ -126,14 +102,4 @@ void Timer::TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_
   }
 
   timer->Start(timer->interval_);
-}
-
-// TimerHandler for simulation test framework.
-void Timer::SimTimerHandler() {
-  callback_();
-
-  if (type_ == BRCMF_TIMER_SINGLE_SHOT) {
-    return;
-  }
-  Start(interval_);
 }

@@ -20,8 +20,9 @@
 #include <memory>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_fw.h"
+
+struct brcmf_bus;
 
 struct brcmf_simdev {
   std::unique_ptr<::wlan::brcmfmac::SimFirmware> sim_fw;

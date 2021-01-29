@@ -20,7 +20,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/sdio/c/banjo.h>
 #include <fuchsia/hardware/sdio/cpp/banjo-mock.h>
-#include <lib/fake_ddk/fake_ddk.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <array>
@@ -34,6 +34,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/stub_device.h"
 
 // These numbers come from real bugs.
 #define NOT_ALIGNED_SIZE 1541
@@ -47,11 +48,28 @@ bool operator==(const sdio_rw_txn_t& lhs, const sdio_rw_txn_t& rhs) {
 bool operator==(const sdio_rw_txn_new_t& lhs, const sdio_rw_txn_new_t& rhs) { return false; }
 
 zx_status_t get_wifi_metadata(struct brcmf_bus* bus, void* data, size_t exp_size, size_t* actual) {
-  return device_get_metadata(bus->bus_priv.sdio->drvr->zxdev, DEVICE_METADATA_WIFI_CONFIG, data,
-                             exp_size, actual);
+  return bus->bus_priv.sdio->drvr->device->DeviceGetMetadata(DEVICE_METADATA_WIFI_CONFIG, data,
+                                                             exp_size, actual);
 }
 
 namespace {
+
+class FakeSdioDevice : public wlan::brcmfmac::StubDevice {
+ public:
+  zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) override {
+    if (type == DEVICE_METADATA_WIFI_CONFIG) {
+      // Provide a fake implementation for this metadata.
+      static constexpr wifi_config_t config = {.oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_LOW};
+      if (buflen < sizeof(config)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      std::memcpy(buf, &config, sizeof(config));
+      *actual = sizeof(config);
+      return ZX_OK;
+    }
+    return StubDevice::DeviceGetMetadata(type, buf, buflen, actual);
+  }
+};
 
 constexpr sdio_rw_txn MakeSdioTxn(uint32_t addr, uint32_t data_size, bool incr, bool write,
                                   bool use_dma = false, zx_handle_t dma_vmo = ZX_HANDLE_INVALID) {
@@ -80,14 +98,7 @@ class MockSdio : public ddk::MockSdio {
 };
 
 TEST(Sdio, IntrRegister) {
-  fake_ddk::Bind ddk;
-
-  wifi_config_t config = {
-      .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_LOW,
-  };
-  ddk.SetMetadata(&config, sizeof(config));
-
-  brcmf_pub drvr = {};
+  FakeSdioDevice device;
   brcmf_sdio_dev sdio_dev = {};
   sdio_func func1 = {};
   MockSdio sdio1;
@@ -104,7 +115,7 @@ TEST(Sdio, IntrRegister) {
   sdio_dev.gpios[WIFI_OOB_IRQ_GPIO_INDEX] = *gpio.GetProto();
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.drvr = &drvr;
+  sdio_dev.drvr = device.drvr();
   bus_if.bus_priv.sdio = &sdio_dev;
   bus_if.ops = &sdio_bus_ops;
   sdio_dev.bus_if = &bus_if;
@@ -125,7 +136,7 @@ TEST(Sdio, IntrRegister) {
 }
 
 TEST(Sdio, IntrUnregister) {
-  brcmf_pub drvr = {};
+  FakeSdioDevice device;
   brcmf_sdio_dev sdio_dev = {};
   sdio_func func1 = {};
 
@@ -134,7 +145,7 @@ TEST(Sdio, IntrUnregister) {
   sdio_dev.func1 = &func1;
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.drvr = &drvr;
+  sdio_dev.drvr = device.drvr();
   sdio_dev.oob_irq_requested = true;
 
   sdio1.ExpectDoVendorControlRwByte(ZX_OK, true, 0xf2, 0, 0).ExpectDisableFnIntr(ZX_OK);
@@ -151,7 +162,7 @@ TEST(Sdio, IntrUnregister) {
   sdio_dev.func1 = &func1;
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
-  sdio_dev.drvr = &drvr;
+  sdio_dev.drvr = device.drvr();
   sdio_dev.sd_irq_requested = true;
 
   sdio1.ExpectDisableFnIntr(ZX_OK);

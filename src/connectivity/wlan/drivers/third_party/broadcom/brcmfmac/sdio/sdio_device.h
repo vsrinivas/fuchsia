@@ -14,14 +14,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_DEVICE_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/dispatcher.h>
 #include <zircon/types.h>
 
 #include <ddk/device.h>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
 namespace wlan::brcmfmac {
+
+class DeviceInspect;
 
 // This class uses the DDKTL classes to manage the lifetime of a brcmfmac driver instance.
 class SdioDevice : public Device {
@@ -34,6 +37,10 @@ class SdioDevice : public Device {
   SdioDevice(const SdioDevice& device) = delete;
   SdioDevice& operator=(const SdioDevice& other) = delete;
 
+  // Virtual state accessor implementation.
+  async_dispatcher_t* GetDispatcher() override;
+  DeviceInspect* GetInspect() override;
+
   // Trampolines for DDK functions, for platforms that support them
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
@@ -44,6 +51,8 @@ class SdioDevice : public Device {
   explicit SdioDevice(zx_device_t* parent);
   ~SdioDevice();
 
+  std::unique_ptr<async::Loop> async_loop_;
+  std::unique_ptr<DeviceInspect> inspect_;
   std::unique_ptr<brcmf_bus> brcmf_bus_;
 };
 

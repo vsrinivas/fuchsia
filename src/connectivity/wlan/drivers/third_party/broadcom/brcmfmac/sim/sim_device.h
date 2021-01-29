@@ -14,11 +14,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_DEVICE_H_
 
+#include <memory>
+
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
+
+struct brcmf_bus;
 
 namespace wlan::brcmfmac {
 
@@ -37,6 +41,9 @@ class SimDevice : public Device {
   SimDevice(const SimDevice& device) = delete;
   SimDevice& operator=(const SimDevice& other) = delete;
 
+  async_dispatcher_t* GetDispatcher() override;
+  DeviceInspect* GetInspect() override;
+
   // Run the simulator bus initialization
   zx_status_t Init();
 
@@ -49,10 +56,11 @@ class SimDevice : public Device {
   brcmf_simdev* GetSim();
 
  private:
-  std::unique_ptr<brcmf_bus> brcmf_bus_;
-  zx_device_t* phy_device_;
   simulation::FakeDevMgr* fake_dev_mgr_;
   std::shared_ptr<simulation::Environment> sim_environ_;
+  std::unique_ptr<DeviceInspect> inspect_;
+  std::unique_ptr<brcmf_bus> brcmf_bus_;
+  zx_device_t* phy_device_;
 };
 
 }  // namespace wlan::brcmfmac

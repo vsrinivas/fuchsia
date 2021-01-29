@@ -45,6 +45,8 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
@@ -2408,7 +2410,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
     brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
     BRCMF_ERR_THROTTLE("out of bus->txq !!!");
-    sdiodev->drvr->inspect->LogTxQueueFull();
+    sdiodev->drvr->device->GetInspect()->LogTxQueueFull();
     ret = ZX_ERR_NO_RESOURCES;
 
     // TODO(fxbug.dev/42151): Remove once bug resolved
@@ -3508,8 +3510,8 @@ static void brcmf_sdio_watchdog(struct brcmf_sdio* bus) {
 static zx_status_t brcmf_get_wifi_metadata(brcmf_bus* bus_if, void* data, size_t exp_size,
                                            size_t* actual) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-  return device_get_metadata(sdiodev->drvr->zxdev, DEVICE_METADATA_WIFI_CONFIG, data, exp_size,
-                             actual);
+  return sdiodev->drvr->device->DeviceGetMetadata(DEVICE_METADATA_WIFI_CONFIG, data, exp_size,
+                                                  actual);
 }
 
 static zx_status_t brcmf_sdio_get_bootloader_macaddr(brcmf_bus* bus_if, uint8_t* mac_addr) {
@@ -3553,7 +3555,7 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
   struct sdpcm_shared sh = {};
   uint8_t saveclk = 0;
 
-  BRCMF_DBG(TRACE, "Enter: dev=%s, err=%d", device_get_name(sdiodev->drvr->zxdev), err);
+  BRCMF_DBG(TRACE, "Enter:");
 
   if (err != ZX_OK) {
     goto fail;
@@ -3674,7 +3676,7 @@ release:
   sdio_release_host(sdiodev->func1);
 
 fail:
-  BRCMF_DBG(TRACE, "failed: dev=%s, err=%d", device_get_name(sdiodev->drvr->zxdev), err);
+  BRCMF_DBG(TRACE, "failed: err=%d", err);
   BRCMF_ERR("Need to implement driver release logic (fxbug.dev/29508)");
   // TODO(fxbug.dev/29508)
   // device_release_driver(&sdiodev->func2->dev);
@@ -3707,8 +3709,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   /* single-threaded workqueue */
   char name[WorkQueue::kWorkqueueNameMaxlen];
   static int queue_uniquify = 0;
-  snprintf(name, WorkQueue::kWorkqueueNameMaxlen, "brcmf_wq/%s%d",
-           device_get_name(sdiodev->drvr->zxdev), queue_uniquify++);
+  snprintf(name, WorkQueue::kWorkqueueNameMaxlen, "brcmf_wq/%d", queue_uniquify++);
   wq = new WorkQueue(name);
   if (!wq) {
     BRCMF_ERR("insufficient memory to create txworkqueue");
@@ -3756,7 +3757,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->sdiodev->drvr->settings = bus->sdiodev->settings;
 
   /* Set up the watchdog timer */
-  bus->timer = new Timer(bus->sdiodev->drvr->bus_if, bus->sdiodev->drvr->dispatcher,
+  bus->timer = new Timer(bus->sdiodev->drvr->device->GetDispatcher(),
                          std::bind(brcmf_sdio_watchdog, bus), false);
 
   ret = brcmf_attach(bus->sdiodev->drvr);

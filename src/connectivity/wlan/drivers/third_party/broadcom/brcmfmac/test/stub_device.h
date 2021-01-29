@@ -12,8 +12,12 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
+struct async_dispatcher;
+
 namespace wlan {
 namespace brcmfmac {
+
+class DeviceInspect;
 
 // A stub implementatkon of Device.
 class StubDevice : public Device {
@@ -21,10 +25,9 @@ class StubDevice : public Device {
   StubDevice();
   ~StubDevice() override;
 
-  // Static factory function for StubDevice instances.
-  static zx_status_t Create(std::unique_ptr<StubDevice>* out_stub_device);
-
   // Device implementation.
+  async_dispatcher* GetDispatcher() override;
+  DeviceInspect* GetInspect() override;
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;

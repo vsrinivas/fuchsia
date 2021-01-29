@@ -20,9 +20,6 @@
 
 #include <mutex>
 
-#include "bus.h"
-#include "debug.h"
-
 // This is the function that timer users write to receive callbacks.
 typedef void(brcmf_timer_callback_t)(void* data);
 
@@ -33,8 +30,7 @@ typedef enum brcmf_timer_type {
 
 class Timer {
  public:
-  Timer(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher, std::function<void()> callback,
-        bool periodic);
+  Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, bool periodic);
   // If timer is active it will call the callback function, must wait/cancel timer
   ~Timer() { Stop(); }
   // To avoid accidentally creating multiple timers using the same callback/data
@@ -47,8 +43,6 @@ class Timer {
 
  private:
   static void TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
-  // TimerHandler for simulation test framework.
-  void SimTimerHandler();
 
   async_task_t task_;
   std::function<void()> callback_;
@@ -59,10 +53,6 @@ class Timer {
   bool scheduled_;
   sync_completion_t finished_;
   async_dispatcher_t* dispatcher_;
-
-  // Variables used for simulation test framework
-  uint64_t event_id_;
-  struct brcmf_bus* bus_if_;
 };
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TIMER_H_

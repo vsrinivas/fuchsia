@@ -14,18 +14,19 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "btcoex.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/btcoex.h"
 
-#include "brcmu_utils.h"
-#include "brcmu_wifi.h"
-#include "cfg80211.h"
-#include "core.h"
-#include "debug.h"
-#include "defs.h"
-#include "fwil.h"
-#include "fwil_types.h"
-#include "linuxisms.h"
-#include "workqueue.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 /* T1 start SCO/eSCO priority suppression */
 #define BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC (2000)
@@ -360,8 +361,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
   btci->timer_on = false;
   btci->timeout = BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
   btci->timer = new Timer(
-      cfg->pub->bus_if, cfg->pub->dispatcher, [btci] { return brcmf_btcoex_timerfunc(btci); },
-      false);
+      cfg->pub->device->GetDispatcher(), [btci] { return brcmf_btcoex_timerfunc(btci); }, false);
   btci->cfg = cfg;
   btci->saved_regs_part1 = false;
   btci->saved_regs_part2 = false;

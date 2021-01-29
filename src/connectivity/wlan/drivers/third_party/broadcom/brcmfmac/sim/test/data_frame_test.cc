@@ -350,7 +350,6 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
 
 void DataFrameTest::StartAssoc() {
   // Send join request
-  BRCMF_DBG(SIM, "Start assoc: @ %lu\n", env_->GetTime().get());
   wlanif_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, assoc_context_.bssid.byte, ETH_ALEN);
   join_req.selected_bss.ies_bytes_list = assoc_context_.ies.data();
@@ -400,7 +399,6 @@ void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcA
 
 void DataFrameTest::ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
                              std::vector<uint8_t>& ethFrame) {
-  BRCMF_DBG(SIM, "ClientTx: @ %lu\n", env_->GetTime().get());
   simulation::SimQosDataFrame dataFrame(true, false, kApBssid, srcAddr, dstAddr, 0, ethFrame);
   env_->Tx(dataFrame, kDefaultTxInfo, this);
 }

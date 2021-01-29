@@ -49,6 +49,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
@@ -103,9 +104,8 @@ zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, u
   // MAC address is only 6 bytes, but it is rounded up to 8 in the ZBI
   uint8_t bootloader_macaddr[8];
   size_t actual_len;
-  zx_status_t ret =
-      device_get_metadata(sdiodev->drvr->zxdev, DEVICE_METADATA_MAC_ADDRESS, bootloader_macaddr,
-                          sizeof(bootloader_macaddr), &actual_len);
+  zx_status_t ret = sdiodev->drvr->device->DeviceGetMetadata(
+      DEVICE_METADATA_MAC_ADDRESS, bootloader_macaddr, sizeof(bootloader_macaddr), &actual_len);
 
   if (ret != ZX_OK || actual_len < ETH_ALEN) {
     return ret;
@@ -788,7 +788,7 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
 
   BRCMF_DBG(SDIO, "Enter");
 
-  ddk::CompositeProtocolClient composite(drvr->zxdev);
+  ddk::CompositeProtocolClient composite(drvr->device->parent());
   if (!composite.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }

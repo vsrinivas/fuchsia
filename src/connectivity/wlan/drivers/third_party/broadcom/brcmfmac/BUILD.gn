@@ -75,8 +75,8 @@ source_set("linuxisms") {
   ]
   deps = [
     ":debug",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/sync",
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.ethernet",
@@ -98,8 +98,8 @@ source_set("dmabuf") {
   ]
   deps = [ ":debug" ]
   public_deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/public",
+    "//zircon/system/ulib/zx",
   ]
   friend = [ "test/*" ]
 }
@@ -109,7 +109,6 @@ source_set("bcdc") {
   sources = [ "bcdc.cc" ]
   public = [ "bcdc.h" ]
   deps = [
-    ":bus",
     ":core",
     ":debug",
     "//zircon/system/public",
@@ -120,27 +119,13 @@ source_set("bcdc") {
   ]
 }
 
-# Source set for bus interface.
-source_set("bus") {
-  public = [ "bus.h" ]
-  public_deps = [
-    ":linuxisms",
-    "//src/lib/ddk",
-  ]
-}
-
 # Sources for timer implementation.
 source_set("timer") {
   sources = [ "timer.cc" ]
   public = [ "timer.h" ]
-  deps = [
-    ":bus",
-    ":debug",
-  ]
   public_deps = [
-    ":bus",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -171,13 +156,13 @@ source_set("core") {
     "brcmu_d11.h",
     "brcmu_utils.h",
     "brcmu_wifi.h",
+    "bus.h",
     "calls.h",
     "cfg80211.h",
     "chip.h",
     "chipcommon.h",
     "common.h",
     "core.h",
-    "debug.h",
     "defs.h",
     "device.h",
     "fweh.h",
@@ -189,14 +174,15 @@ source_set("core") {
     "wlan_interface.h",
   ]
   deps = [
-    ":bus",
     ":debug",
     ":timer",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/ddk",
     "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
+    "//zircon/system/ulib/async",
   ]
   public_deps = [
     ":linuxisms",
@@ -205,16 +191,12 @@ source_set("core") {
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",
     "//src/lib/ddktl",
     "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/sync",
     "//zircon/system/public",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync",
   ]
   friend = [ "test/*" ]
 }

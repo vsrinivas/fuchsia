@@ -22,7 +22,7 @@ source_set("stub_netbuf") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//zircon/system/public",
   ]
-  deps = [ "//zircon/public/lib/zxtest" ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }
 
 source_set("stub_device") {
@@ -94,6 +94,29 @@ executable("debug_test") {
   ]
 }
 
+executable("device_inspect_test") {
+  output_name = "device_inspect_test"
+  testonly = true
+  sources = [
+    "device_inspect_test.cc",
+    "device_inspect_test_utils.cc",
+    "device_inspect_test_utils.h",
+    "windowed_uint_property_test.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/public",
+    "//zircon/system/ulib/fit",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 executable("dma_buffer_test") {
   output_name = "dma_buffer_test"
   testonly = true
@@ -103,7 +126,7 @@ executable("dma_buffer_test") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -116,7 +139,7 @@ executable("dma_pool_test") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -129,7 +152,7 @@ executable("dma_ring_test") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -153,7 +176,7 @@ executable("netbuf_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 
@@ -164,9 +187,9 @@ executable("task_queue_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:util",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/public",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -175,13 +198,12 @@ executable("timer_test") {
   testonly = true
   sources = [ "timer_test.cc" ]
   deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:timer",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/sync",
+    "//zircon/system/public",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -210,7 +232,7 @@ executable("workqueue_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -225,6 +247,7 @@ unittest_package("brcmfmac_test") {
             "channel_conversion_test",
             "cfg80211_test",
             "debug_test",
+            "device_inspect_test",
             "dma_buffer_test",
             "dma_pool_test",
             "dma_ring_test",

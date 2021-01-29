@@ -4,6 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_DEVICE_H_
 
+#include <lib/async/dispatcher.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -12,9 +13,16 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
+namespace async {
+
+class Loop;
+
+}  // namespace async
+
 namespace wlan {
 namespace brcmfmac {
 
+class DeviceInspect;
 class MsgbufProto;
 class PcieBus;
 
@@ -31,6 +39,10 @@ class PcieDevice : public Device {
   PcieDevice(const PcieDevice& device) = delete;
   PcieDevice& operator=(const PcieDevice& other) = delete;
 
+  // Virtual state accessor implementation.
+  async_dispatcher_t* GetDispatcher() override;
+  DeviceInspect* GetInspect() override;
+
   // Trampolines for DDK functions, for platforms that support them
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
@@ -41,6 +53,8 @@ class PcieDevice : public Device {
   explicit PcieDevice(zx_device_t* parent);
   ~PcieDevice();
 
+  std::unique_ptr<async::Loop> async_loop_;
+  std::unique_ptr<DeviceInspect> inspect_;
   std::unique_ptr<PcieBus> pcie_bus_;
   std::unique_ptr<MsgbufProto> msgbuf_proto_;
 };

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 The Fuchsia Authors
+// Copyright (c) 2021 The Fuchsia Authors
 //
 // Permission to use, copy, modify, and/or distribute this software for any purpose with or without
 // fee is hereby granted, provided that the above copyright notice and this permission notice
@@ -14,35 +14,38 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_INSPECT_DEVICE_INSPECT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_INSPECT_DEVICE_INSPECT_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/vmo.h>
+#include <zircon/types.h>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/windowed_uintproperty.h"
+#include <memory>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/windowed_uint_property.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/timer.h"
 
 namespace wlan::brcmfmac {
 
 class DeviceInspect {
  public:
-  zx_status_t Start(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher);
-  void Stop() { DeallocTimers(); }
-  zx::vmo GetVmo() { return inspector_.DuplicateVmo(); }
-  inspect::Inspector GetInspector() { return inspector_; }
+  // Factory creation function.
+  static zx_status_t Create(async_dispatcher_t* dispatcher,
+                            std::unique_ptr<DeviceInspect>* inspect_out);
+  ~DeviceInspect() = default;
 
-  // Exposed for use in sim-tests.
-  void StartTimers();
+  // State accessors.
+  inspect::Inspector inspector() { return inspector_; }
 
-  // Metrics APIs
+  // Metrics APIs.
   void LogTxQueueFull();
 
  private:
-  void AllocTimers(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher);
-  void DeallocTimers();
+  // Only constructible through Create().
+  DeviceInspect() = default;
 
   inspect::Inspector inspector_;
   inspect::Node root_;
   std::unique_ptr<Timer> timer_hr_;
-  void TimerHrCallback();
-  zx_status_t InitMetrics();
 
   // Metrics tracked
   inspect::UintProperty tx_qfull_;

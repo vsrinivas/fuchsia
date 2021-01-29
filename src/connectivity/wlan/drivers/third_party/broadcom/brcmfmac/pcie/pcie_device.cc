@@ -3,12 +3,15 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/device_inspect.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_proto.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_bus.h"
 
@@ -19,26 +22,35 @@ PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) {}
 
 PcieDevice::~PcieDevice() {
   brcmf_detach(drvr());
-  Stop();
 }
 
 // static
 zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
+  auto async_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  if ((status = async_loop->StartThread("brcmfmac-worker", nullptr)) != ZX_OK) {
+    return status;
+  }
+
+  std::unique_ptr<DeviceInspect> inspect;
+  if ((status = DeviceInspect::Create(async_loop->dispatcher(), &inspect)) != ZX_OK) {
+    return status;
+  }
+
   const auto ddk_remover = [](PcieDevice* device) { device->DdkAsyncRemove(); };
   std::unique_ptr<PcieDevice, decltype(ddk_remover)> device(new PcieDevice(parent_device),
                                                             ddk_remover);
   if ((status = device->DdkAdd(ddk::DeviceAddArgs("brcmfmac-wlanphy")
                                    .set_flags(DEVICE_ADD_INVISIBLE)
-                                   .set_inspect_vmo(device->inspect_.GetVmo()))) != ZX_OK) {
+                                   .set_inspect_vmo(inspect_->inspector().DuplicateVmo()))) !=
+      ZX_OK) {
     delete device.release();
     return status;
   }
 
-  if ((status = device->brcmfmac::Device::Init()) != ZX_OK) {
-    return status;
-  }
+  device->async_loop_ = std::move(async_loop);
+  device->inspect_ = std::move(inspect);
 
   std::unique_ptr<PcieBus> pcie_bus;
   if ((status = PcieBus::Create(device.get(), &pcie_bus)) != ZX_OK) {
@@ -65,16 +77,16 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  if ((status = device->brcmfmac::Device::Start()) != ZX_OK) {
-    return status;
-  }
-
   // TODO(sheu): make the device visible once higher-level functionality is present.
   // device->DdkMakeVisible();
 
   device.release();  // This now has its lifecycle managed by the devhost.
   return ZX_OK;
 }
+
+async_dispatcher_t* PcieDevice::GetDispatcher() { return async_loop_->dispatcher(); }
+
+DeviceInspect* PcieDevice::GetInspect() { return inspect_.get(); }
 
 zx_status_t PcieDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return device_add(zxdev(), args, out_device);

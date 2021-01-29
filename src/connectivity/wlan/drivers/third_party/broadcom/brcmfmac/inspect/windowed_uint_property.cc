@@ -11,7 +11,9 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/windowed_uintproperty.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect/windowed_uint_property.h"
+
+#include <lib/inspect/cpp/inspect.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 

@@ -16,6 +16,7 @@
 #include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
@@ -34,10 +35,6 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
   zx_status_t status = ZX_OK;
 
   auto device = std::make_unique<SimDevice>(parent_device, dev_mgr, env);
-  if ((status = device->brcmfmac::Device::Init()) != ZX_OK) {
-    return status;
-  }
-
   device_add_args_t add_args = {
       .version = DEVICE_ADD_ARGS_VERSION,
       .name = "brcmfmac-wlanphy",
@@ -46,13 +43,18 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
       .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
       // The tests don't access any of the other fields yet
   };
-
   if ((status = dev_mgr->DeviceAdd(parent_device, &add_args, &device->phy_device_)) != ZX_OK) {
     return status;
   }
 
+  std::unique_ptr<DeviceInspect> inspect;
+  if ((status = DeviceInspect::Create(env->GetDispatcher(), &inspect)) != ZX_OK) {
+    return status;
+  }
+  device->inspect_ = std::move(inspect);
+
   std::unique_ptr<brcmf_bus> bus;
-  if ((status = brcmf_sim_alloc(device->brcmf_pub_.get(), &bus, device->fake_dev_mgr_,
+  if ((status = brcmf_sim_alloc(device->drvr(), &bus, device->fake_dev_mgr_,
                                 device->sim_environ_.get())) != ZX_OK) {
     dev_mgr->DeviceAsyncRemove(device->phy_device_);
     // Ownership of the device has been transferred to dev_mgr
@@ -61,17 +63,15 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
   }
   device->brcmf_bus_ = std::move(bus);
 
-  if ((status = device->brcmfmac::Device::Start()) != ZX_OK) {
-    dev_mgr->DeviceAsyncRemove(device->phy_device_);
-    device.release();
-    return status;
-  }
-
   *device_out = device.release();
   return ZX_OK;
 }
 
-zx_status_t SimDevice::Init() { return brcmf_sim_register(brcmf_pub_.get()); }
+zx_status_t SimDevice::Init() { return brcmf_sim_register(drvr()); }
+
+async_dispatcher_t* SimDevice::GetDispatcher() { return sim_environ_->GetDispatcher(); }
+
+DeviceInspect* SimDevice::GetInspect() { return inspect_.get(); }
 
 zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return fake_dev_mgr_->DeviceAdd(phy_device_, args, out_device);
@@ -90,7 +90,6 @@ zx_status_t SimDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t buflen
 brcmf_simdev* SimDevice::GetSim() { return (brcmf_bus_.get())->bus_priv.sim; }
 
 SimDevice::~SimDevice() {
-  Stop();
   if (brcmf_bus_) {
     brcmf_sim_exit(brcmf_bus_.get());
   }

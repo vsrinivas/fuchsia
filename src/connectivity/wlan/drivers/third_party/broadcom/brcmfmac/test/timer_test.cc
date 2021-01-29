@@ -19,11 +19,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sync/completion.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <gtest/gtest.h>
-
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 
 namespace wlan::brcmfmac {
 
@@ -47,7 +46,6 @@ class TimerTest : public testing::Test {
   ~TimerTest();
 
   void SetUp() override;
-  brcmf_pub* GetFakeDrvr() { return fake_drvr_.get(); }
   void CreateTimer(TestTimerCfg* cfg, uint32_t exp_count, bool periodic, bool call_timerset,
                    bool call_timerstop);
   void StartTimer(TestTimerCfg* cfg, uint32_t delay);
@@ -57,7 +55,6 @@ class TimerTest : public testing::Test {
   TestTimerCfg* GetTimerCfg2() { return timer_cfg_2_.get(); }
 
  private:
-  std::unique_ptr<brcmf_pub> fake_drvr_;
   std::unique_ptr<async::Loop> dispatcher_loop_;
   std::unique_ptr<TestTimerCfg> timer_cfg_1_;
   std::unique_ptr<TestTimerCfg> timer_cfg_2_;
@@ -65,11 +62,9 @@ class TimerTest : public testing::Test {
 
 // Setup the dispatcher and timer contexts
 void TimerTest::SetUp() {
-  fake_drvr_ = std::make_unique<brcmf_pub>();
   dispatcher_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = dispatcher_loop_->StartThread("test-timer-worker", nullptr);
   EXPECT_EQ(status, ZX_OK);
-  fake_drvr_->dispatcher = dispatcher_loop_->dispatcher();
   timer_cfg_1_ = std::make_unique<TestTimerCfg>("timer1");
   timer_cfg_2_ = std::make_unique<TestTimerCfg>("timer2");
   // The timer must be standard layout in order to use containerof
@@ -108,13 +103,11 @@ TestTimerCfg::~TestTimerCfg() {
 
 void TimerTest::CreateTimer(TestTimerCfg* cfg, uint32_t exp_count, bool periodic,
                             bool call_timerset, bool call_timerstop) {
-  brcmf_pub* pub = GetFakeDrvr();
-
   cfg->target_cnt = exp_count;
   cfg->call_timerset = call_timerset;
   cfg->call_timerstop = call_timerstop;
   cfg->timer =
-      new Timer(pub->bus_if, pub->dispatcher, std::bind(test_timer_handler, cfg), periodic);
+      new Timer(dispatcher_loop_->dispatcher(), std::bind(test_timer_handler, cfg), periodic);
 }
 
 void TimerTest::StartTimer(TestTimerCfg* cfg, uint32_t delay) {
