@@ -27,7 +27,6 @@ driver_module("ramdisk") {
     "//sdk/banjo/fuchsia.hardware.block",
     "//sdk/banjo/fuchsia.hardware.block.partition",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
