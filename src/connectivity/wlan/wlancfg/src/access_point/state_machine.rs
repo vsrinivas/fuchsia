@@ -367,10 +367,15 @@ async fn stopping_state(
         Ok(code) => Err(format_err!("Unexpected StopApResultCode: {:?}", code)),
         Err(e) => Err(format_err!("Failed to send a stop command to wlanstack: {}", e)),
     };
+
+    // If the stop command fails, the SME is probably unusable.  If the state is not updated before
+    // evaluating the stop result code, the AP state updates may end up with a lingering reference
+    // to a started or starting AP.
+    send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
     result.map_err(|e| ExitReason(Err(e)))?;
 
+    // Ack the request to stop the AP.
     responder.send(()).unwrap_or_else(|_| ());
-    send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     Ok(stopped_state(proxy, next_req, sender).into_state())
 }
@@ -415,8 +420,19 @@ async fn started_state(
     loop {
         select! {
             status_response = pending_status_req.select_next_some() => {
-                let status_response = status_response
-                    .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
+                let status_response = match status_response {
+                    Ok(status_response) => status_response,
+                    Err(e) => {
+                        // If querying AP status fails, notify listeners and exit the state
+                        // machine.
+                        prev_state.state = types::OperatingState::Failed;
+                        send_state_update(&sender, prev_state)
+                            .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
+
+                        return Err(ExitReason(Err(anyhow::Error::from(e))));
+                    }
+                };
+
                 match status_response.running_ap {
                     Some(state) => {
                         let mut new_state = prev_state.clone();
@@ -851,7 +867,7 @@ mod tests {
     #[test]
     fn test_sme_failure_during_started() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let mut test_values = test_setup();
 
         // Drop the serving side of the SME so that a status request will result in an error.
         drop(test_values.sme_req_stream);
@@ -886,6 +902,14 @@ mod tests {
 
         // The state machine should exit when it is unable to query status.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // Verify that a failure notification is send to listeners.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(mut updates))) => {
+            let update = updates.access_points.pop().expect("no new updates available.");
+            assert_eq!(update.state, types::OperatingState::Failed);
+        });
     }
 
     #[test]
@@ -1184,7 +1208,7 @@ mod tests {
     #[test]
     fn test_sme_failure_while_stopping() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let mut test_values = test_setup();
 
         // Drop the serving side of the SME so that the stop request will result in an error.
         drop(test_values.sme_req_stream);
@@ -1203,6 +1227,13 @@ mod tests {
         // The state machine should exit when it is unable to issue the stop command.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Err(_)));
+
+        // There should be a new update indicating that no AP's are active.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert!(updates.access_points.is_empty());
+        });
     }
 
     #[test]
@@ -1239,6 +1270,13 @@ mod tests {
         // The state machine should exit.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Err(_)));
+
+        // There should be a new update indicating that no AP's are active.
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert!(updates.access_points.is_empty());
+        });
     }
 
     #[test]
