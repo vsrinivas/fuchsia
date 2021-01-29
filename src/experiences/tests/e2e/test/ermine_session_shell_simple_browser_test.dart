@@ -11,7 +11,8 @@ import 'ermine_driver.dart';
 
 const _timeoutSeconds = 10;
 const _timeout = Duration(milliseconds: _timeoutSeconds * 1000);
-const homePageTitle = 'Fuchsia';
+const testserverUrl =
+    'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
 
 void main() {
   Sl4f sl4f;
@@ -32,31 +33,101 @@ void main() {
     sl4f?.close();
   });
 
-  test('Run simple browser through Ermine session shell.', () async {
+  // TODO(fxb/68689): Transition physical interactions to use Sl4f.Input
+  test(
+      'Simple browser\'s page and history navigation features '
+      'should work correctly.', () async {
+    // Hosts a local http website.
+    await ermine.launch(testserverUrl);
+
+    // Launches a browser.
     final browser = await ermine.launchAndWaitForSimpleBrowser();
 
+    // Adds a new tab.
     final addTab = find.byValueKey('new_tab');
     await browser.waitFor(addTab);
 
     await browser.tap(addTab);
 
-    final newTab = find.text('NEW TAB');
-    await browser.waitFor(newTab, timeout: _timeout);
+    final newTabFinder = find.text('NEW TAB');
+    final indexTabFinder = find.text('Localhost');
+    final nextTabFinder = find.text('Next Page');
+    final popupTabFinder = find.text('Popup Page');
 
-    // TODO(fxb/35834): Replace fuchsia.dev with a locally hosted website.
-    await browser.requestData('fuchsia.dev');
-    await browser.waitFor(find.text(homePageTitle), timeout: _timeout);
-    final tabTitle = await browser.getText(find.text(homePageTitle));
-    expect(tabTitle, homePageTitle);
+    await browser.waitFor(newTabFinder, timeout: _timeout);
 
-    final webdriver = await ermine.getWebDriverFor('fuchsia.dev');
+    // Access to the website.
+    await browser.requestData('http://127.0.0.1:8080/index.html');
+    await browser.waitFor(indexTabFinder, timeout: _timeout);
+    final webdriver = await ermine.getWebDriverFor('127.0.0.1');
 
-    final termsLink = webdriver.findElement(By.linkText('Terms'));
-    expect(termsLink, isNotNull, reason: 'Cannot find text link "Terms".');
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+
+    final nextLink = webdriver.findElement(By.linkText('Next'));
+    expect(nextLink, isNotNull);
+
+    // Clicks the text link that opens next.html (page navigation)
+    nextLink.click();
+    await browser.waitForAbsent(indexTabFinder, timeout: _timeout);
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(nextTabFinder), isNotNull);
+
+    final prevLink = webdriver.findElement(By.linkText('Prev'));
+    expect(prevLink, isNotNull);
+
+    // Clicks the text link that opens index.html (page navigation)
+    prevLink.click();
+    await browser.waitForAbsent(nextTabFinder, timeout: _timeout);
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+
+    // Goes back to next.html by tapping the BCK button (history navigation)
+    final back = find.byValueKey('back');
+    await browser.tap(back);
+    await browser.waitForAbsent(indexTabFinder, timeout: _timeout);
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(nextTabFinder), isNotNull);
+
+    // Goes forward to index.html by tapping the FWD button (history navigation)
+    final forward = find.byValueKey('forward');
+    await browser.tap(forward);
+    await browser.waitForAbsent(nextTabFinder, timeout: _timeout);
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+
+    // Clicks + button to increase the number
+    var digitLink = webdriver.findElement(By.id('target'));
+    final addButton = webdriver.findElement(By.id('increase'));
+    expect(digitLink.text, '0');
+    addButton.click();
+    expect(digitLink.text, '1');
+    addButton.click();
+    expect(digitLink.text, '2');
+
+    // Refreshes the page
+    final refresh = find.byValueKey('refresh');
+    await browser.tap(refresh);
+    digitLink = webdriver.findElement(By.id('target'));
+    expect(digitLink.text, '0');
+
+    // Clicks the text link that opens popup.html (popup page navigation)
+    final popupLink = webdriver.findElement(By.linkText('Popup'));
+    expect(popupLink, isNotNull);
+
+    popupLink.click();
+    await browser.waitFor(popupTabFinder, timeout: _timeout);
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(indexTabFinder), isNotNull);
+    expect(await browser.getText(popupTabFinder), isNotNull);
 
     // Close the view.
     await ermine.driver.requestData('close');
     // Verify the view is closed.
     await ermine.driver.waitForAbsent(find.text('simple_browser'));
+
+    await ermine.driver.requestData('close');
+    // Verify the view is closed.
+    await ermine.driver.waitForAbsent(find.text('ermine_testserver.cmx'));
   });
 }

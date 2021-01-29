@@ -26,6 +26,7 @@ class HistoryButtons extends StatelessWidget {
             animation: bloc.backStateNotifier,
             builder: (_, __) => _HistoryButton(
                 title: Strings.back.toUpperCase(),
+                valueKey: 'back',
                 onTap: () => bloc.request.add(GoBackAction()),
                 isEnabled: bloc.backState)),
         SizedBox(width: 8.0),
@@ -33,6 +34,7 @@ class HistoryButtons extends StatelessWidget {
             animation: bloc.forwardStateNotifier,
             builder: (_, __) => _HistoryButton(
                 title: Strings.forward.toUpperCase(),
+                valueKey: 'forward',
                 onTap: () => bloc.request.add(GoForwardAction()),
                 isEnabled: bloc.forwardState)),
         SizedBox(width: 8.0),
@@ -40,6 +42,7 @@ class HistoryButtons extends StatelessWidget {
             animation: bloc.urlNotifier,
             builder: (_, __) => _HistoryButton(
                 title: Strings.refresh.toUpperCase(),
+                valueKey: 'refresh',
                 onTap: () => bloc.request.add(RefreshAction()),
                 isEnabled: bloc.pageType == PageType.normal)),
       ],
@@ -50,16 +53,19 @@ class HistoryButtons extends StatelessWidget {
 class _HistoryButton extends StatelessWidget {
   const _HistoryButton({
     @required this.title,
+    @required this.valueKey,
     @required this.onTap,
     @required this.isEnabled,
   });
 
   final String title;
+  final String valueKey;
   final VoidCallback onTap;
   final bool isEnabled;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
+        key: ValueKey(valueKey),
         onTap: isEnabled ? onTap : null,
         child: Padding(
           padding: _kPadding,
