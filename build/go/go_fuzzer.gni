@@ -59,6 +59,7 @@ template("go_fuzzer") {
 
   # 3a. Build the wrapper package as a C archive with Go's libfuzzer instrumentation.
   go_build(wrapper_name) {
+    hermetic_deps = false
     gopackages = [ wrapper_name ]
     carchive = true
     tags = [ "libfuzzer" ]

@@ -28,6 +28,7 @@ template("prebuilt_binaries") {
     # TODO(fxbug.dev/41478) Make unconditionally testonly once separated from
     # prebuilt_package() instances.
     forward_variables_from(invoker, [ "testonly" ])
+    hermetic_deps = false
 
     tool = "//tools/debug/unpack_debug_symbols"
     outputs = [ binary_manifest ]
