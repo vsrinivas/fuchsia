@@ -54,6 +54,7 @@ rustc_library("bt-a2dp") {
     "src/media_types.rs",
     "src/peer/controller.rs",
     "src/peer/mod.rs",
+    "src/permits.rs",
     "src/rtp.rs",
     "src/stream.rs",
   ]

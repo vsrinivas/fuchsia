@@ -22,3 +22,6 @@ pub mod connected_peers;
 
 /// Real-time Transport Protocol parsing and packet building
 pub mod rtp;
+
+/// Permits counting for reservations.
+pub mod permits;
