@@ -293,6 +293,8 @@ async fn get_entries(dir: &fio::DirectoryProxy) -> Result<Vec<DirectoryEntry>, E
         entries.push(DirectoryEntry { name: ent.name.as_bytes().to_vec(), data });
     }
 
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+
     Ok(entries)
 }
 
@@ -467,6 +469,7 @@ mod tests {
     async fn test_get_entries() {
         let dir = pseudo_directory! {
             "a" => read_only_static("a content"),
+            "d" => read_only_static("d content"),
             "b" => pseudo_directory! {
                 "c" => read_only_static("c content"),
             },
@@ -488,6 +491,7 @@ mod tests {
             vec![
                 DirectoryEntry { name: b"a".to_vec(), data: b"a content".to_vec() },
                 DirectoryEntry { name: b"b/c".to_vec(), data: b"c content".to_vec() },
+                DirectoryEntry { name: b"d".to_vec(), data: b"d content".to_vec() },
             ],
         );
     }
