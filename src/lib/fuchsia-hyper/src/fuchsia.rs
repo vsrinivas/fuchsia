@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{HyperConnectorFuture, TcpOptions, TcpStream},
+    crate::{
+        happy_eyeballs::{self, RealSocketConnector},
+        HyperConnectorFuture, TcpOptions, TcpStream,
+    },
     fidl_fuchsia_net::{NameLookupMarker, NameLookupProxy},
     fidl_fuchsia_posix_socket::{ProviderMarker, ProviderProxy},
     fuchsia_async::{self, net},
@@ -79,16 +82,7 @@ impl HyperConnector {
             }
         };
 
-        let addr = if let Some(addr) = parse_ip_addr(&self.provider, host, port).await? {
-            addr
-        } else {
-            // TODO(fxbug.dev/65391): don't just pick first addr.
-            resolve_ip_addr(&self.provider, host, port).await?.next().ok_or_else(|| {
-                io::Error::new(io::ErrorKind::Other, "host name resolution returned no hosts")
-            })?
-        };
-
-        let stream = net::TcpStream::connect(addr)?.await?;
+        let stream = connect_to_addr(&self.provider, host, port).await?;
         let () = apply_tcp_options(stream.std(), &self.tcp_options)?;
 
         Ok(TcpStream { stream })
@@ -151,6 +145,24 @@ impl NameLookupConnector for RealServiceConnector {
             )
         })
     }
+}
+
+async fn connect_to_addr<T: ProviderConnector + NameLookupConnector>(
+    provider: &T,
+    host: &str,
+    port: u16,
+) -> Result<net::TcpStream, io::Error> {
+    if let Some(addr) = parse_ip_addr(provider, host, port).await? {
+        return net::TcpStream::connect(addr)?.await;
+    }
+
+    happy_eyeballs::happy_eyeballs(
+        resolve_ip_addr(provider, host, port).await?,
+        RealSocketConnector,
+        happy_eyeballs::RECOMMENDED_MIN_CONN_ATT_DELAY,
+        happy_eyeballs::RECOMMENDED_CONN_ATT_DELAY,
+    )
+    .await
 }
 
 async fn resolve_ip_addr(
