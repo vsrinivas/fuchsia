@@ -2,7 +2,66 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("fidl/tests.gni")
+
 group("tests") {
   testonly = true
-  deps = [ "parser:tests" ]
+  deps = [
+    ":fidlgen_banjo_unittests($host_toolchain)",
+    "parser:tests",
+  ]
+}
+
+if (current_toolchain == host_toolchain) {
+  # Write a .rs file containing all the IRs needed by tests.
+  irs_contents = []
+  all_irs = []
+  foreach(test, fidlgen_tests) {
+    _path = rebase_path(test.ir)
+    irs_contents += [
+      "pub mod ${test.name} {",
+      "  pub static IR: &str = include_str!(\"$_path\");",
+      "}",
+    ]
+    all_irs += [ test.ir ]
+  }
+  irs_file = "$target_gen_dir/lib.rs"
+  write_file(irs_file, irs_contents)
+
+  # Expose the IRs in a standard Rust library.
+  rustc_library("irs") {
+    edition = "2018"
+
+    name = "test_irs"
+
+    source_root = irs_file
+
+    sources = [ irs_file ]
+
+    inputs = all_irs
+
+    deps = [ "fidl" ]
+  }
+
+  rustc_test("fidlgen_banjo_unittests") {
+    edition = "2018"
+
+    source_root = "tests.rs"
+
+    sources = [ "tests.rs" ]
+
+    deps = [
+      ":irs",
+      "..:lib",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:serde_json",
+    ]
+
+    inputs = []
+    foreach(test, fidlgen_tests) {
+      inputs += test.goldens
+    }
+  }
 }

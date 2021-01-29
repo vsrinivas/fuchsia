@@ -4,10 +4,13 @@
 
 use {crate::fidl::FidlIr, anyhow::Error, std::io};
 
+pub use self::c::CBackend;
 pub use self::dummy_c::DummyCBackend;
 
+mod c;
 mod dummy_c;
+mod util;
 
-pub trait Backend<W: io::Write> {
+pub trait Backend<'a, W: io::Write> {
     fn codegen(&mut self, ir: FidlIr) -> Result<(), Error>;
 }

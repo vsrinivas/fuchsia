@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+import("tests.gni")
+
+fidl_library_deps = []
+foreach(test, fidlgen_tests) {
+  fidl(test.target) {
+    name = test.library_name
+    sources = test.sources
+  }
+  fidl_library_deps += [ test.dep ]
+}
+
+# Depend on this target to have the IRs generated for all test FIDL libraries.
+group("fidl") {
+  public_deps = fidl_library_deps
+}

@@ -1,0 +1,41 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#![cfg(test)]
+
+/// Makes a banjo backend test.
+/// Arguments:
+///     id: name of test
+///     backend: backend generator (CBackend, etc...)
+///     golden file: file to compare against generated output
+#[macro_export]
+macro_rules! codegen_test {
+    ( $id:ident, $backend: ident, $golden_file:expr ) => {
+        #[test]
+        fn $id() -> Result<(), anyhow::Error> {
+            use fidlgen_banjo_lib::{backends, fidl::FidlIr};
+
+            let ir: FidlIr = serde_json::from_str(test_irs::$id::IR)?;
+            let mut output = vec![];
+            let expected = include_str!($golden_file);
+
+            {
+                let mut backend: Box<dyn backends::Backend<'_, _>> =
+                    Box::new(backends::$backend::new(&mut output));
+                backend.codegen(ir).unwrap();
+            }
+            let output = String::from_utf8(output).unwrap();
+            assert_eq!(output, expected);
+
+            Ok(())
+        }
+    };
+}
+
+mod c {
+    use super::codegen_test;
+
+    codegen_test!(constants, CBackend, "c/constants.h");
+    codegen_test!(enums, CBackend, "c/enums.h");
+}

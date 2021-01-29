@@ -1,0 +1,57 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/toolchain.gni")
+
+# Exposes a `fidlgen_tests` variable describing all the available libraries to
+# test fidlgen_banjo.
+
+# Single-file libraries.
+_simple_libraries = [
+  {
+    name = "constants"
+    backends = [ "c" ]
+  },
+  {
+    name = "enums"
+    backends = [ "c" ]
+  },
+]
+
+_base_label = "//src/devices/tools/fidlgen_banjo/tests"
+_fidl_label = "$_base_label/fidl"
+_fidl_gen_dir =
+    get_label_info("$_fidl_label:something($fidl_toolchain)", "target_gen_dir")
+
+fidlgen_tests = []
+foreach(lib, _simple_libraries) {
+  _name = lib.name
+  fidlgen_tests += [
+    {
+      # Nickname.
+      name = _name
+
+      # fidl() target name.
+      target = _name
+
+      # FIDL library name.
+      library_name = "banjo.examples.$_name"
+
+      # Label for the fidl_library target generating the IR.
+      dep = "$_fidl_label:$_name($fidl_toolchain)"
+
+      # List of source files.
+      sources = [ "$_name.test.fidl" ]
+
+      # Path to the generated IR in the output directory.
+      ir = "$_fidl_gen_dir/$_name.fidl.json"
+
+      # List of golden files.
+      goldens = []
+      if (lib.backends + [ "c" ] - [ "c" ] != lib.backends) {
+        goldens += [ "$_base_label/c/$_name.h" ]
+      }
+    },
+  ]
+}
