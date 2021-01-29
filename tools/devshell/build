@@ -22,9 +22,8 @@ fx-config-read
 
 function main {
   local switches=() fuchsia_targets=()
-  local log_file is_logging continue_on_error
+  local log_file is_logging
   is_logging=false
-  continue_on_error=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --log)
@@ -50,9 +49,6 @@ function main {
       # These Ninja switches take an argument.
       -[Cfjkldtw])
         switches+=("$1" "$2")
-        if [[ "$1" = "-k" && "$2" -eq 0 ]]; then
-          continue_on_error=true
-        fi
         shift
         ;;
       -*)
