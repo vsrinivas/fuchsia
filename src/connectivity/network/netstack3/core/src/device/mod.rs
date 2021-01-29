@@ -16,7 +16,9 @@ use core::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{
+    AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
+};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
 use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
@@ -1525,7 +1527,7 @@ impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Context<D> {
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
         device: DeviceId,
-        src_ip: Ipv6Addr,
+        src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: NdpPacket<B>,
     ) {
@@ -1573,7 +1575,7 @@ impl<D: EventDispatcher> MldPacketHandler<(), DeviceId> for Context<D> {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         device: DeviceId,
-        src_ip: Ipv6Addr,
+        src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: MldPacket<B>,
     ) {

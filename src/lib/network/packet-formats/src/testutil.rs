@@ -18,7 +18,7 @@ use crate::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
 use crate::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::ip::{IpExtByteSlice, IpProto};
 use crate::ipv4::{Ipv4Header, Ipv4Packet};
-use crate::ipv6::Ipv6Packet;
+use crate::ipv6::{Ipv6Header, Ipv6Packet};
 use crate::tcp::options::TcpOption;
 use crate::tcp::TcpSegment;
 use crate::udp::UdpPacket;

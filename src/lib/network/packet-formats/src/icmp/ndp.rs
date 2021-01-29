@@ -683,7 +683,7 @@ mod tests {
 
     use super::*;
     use crate::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs};
-    use crate::ipv6::Ipv6Packet;
+    use crate::ipv6::{Ipv6Header, Ipv6Packet};
 
     #[test]
     fn parse_serialize_redirected_header() {

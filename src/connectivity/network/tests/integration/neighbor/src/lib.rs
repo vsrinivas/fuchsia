@@ -421,8 +421,8 @@ fn extract_frame_metadata(data: Vec<u8>) -> Result<FrameMetadata> {
         arp::{ArpOp, ArpPacket},
         ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck},
         icmp::{ndp::NdpPacket, IcmpParseArgs, Icmpv6Packet},
-        ip::IpProto,
-        ipv4::{Ipv4Header, Ipv4Packet},
+        ip::{IpPacket, IpProto},
+        ipv4::Ipv4Packet,
         ipv6::Ipv6Packet,
     };
 

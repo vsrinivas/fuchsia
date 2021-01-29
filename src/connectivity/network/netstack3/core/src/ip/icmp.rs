@@ -9,8 +9,10 @@ use core::fmt::Debug;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use log::{debug, trace};
-use net_types::ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{MulticastAddress, SpecifiedAddr, Witness};
+use net_types::ip::{
+    Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
+};
+use net_types::{MulticastAddress, SpecifiedAddr, UnicastAddr, Witness};
 use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
 use packet_formats::icmp::{
     self as wire_icmp, peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage,
@@ -592,7 +594,7 @@ pub(crate) trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>:
         device: Self::DeviceId,
         frame_dst: FrameDestination,
         src_ip: SpecifiedAddr<I::Addr>,
-        dst_ip: I::Addr,
+        dst_ip: SpecifiedAddr<I::Addr>,
         get_body: F,
         ip_mtu: Option<u32>,
         allow_dst_multicast: bool,
@@ -1030,40 +1032,46 @@ impl<
     fn receive_ip_packet(
         ctx: &mut C,
         device: Option<C::DeviceId>,
-        src_ip: Ipv6Addr,
+        src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         mut buffer: B,
     ) -> Result<(), (B, TransportReceiveError)> {
         trace!(
-            "<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet({}, {})",
+            "<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet({:?}, {})",
             src_ip,
             dst_ip
         );
 
-        let packet =
-            match buffer.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)) {
-                Ok(packet) => packet,
-                Err(_) => return Ok(()), // TODO(joshlf): Do something else here?
-            };
+        let packet = match buffer
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.into_addr(), dst_ip))
+        {
+            Ok(packet) => packet,
+            Err(_) => return Ok(()), // TODO(joshlf): Do something else here?
+        };
 
         match packet {
             Icmpv6Packet::EchoRequest(echo_request) => {
                 ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request");
 
-                if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
+                if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
                     let req = *echo_request.message();
                     let code = echo_request.code();
                     let (local_ip, remote_ip) = (dst_ip, src_ip);
                     // TODO(joshlf): Do something if send_icmp_reply returns an
                     // error?
-                    let _ = ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
-                        buffer.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                            src_ip,
-                            remote_ip,
-                            code,
-                            req.reply(),
-                        ))
-                    });
+                    let _ = ctx.send_icmp_reply(
+                        device,
+                        remote_ip.into_specified(),
+                        local_ip,
+                        |src_ip| {
+                            buffer.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                                src_ip,
+                                remote_ip,
+                                code,
+                                req.reply(),
+                            ))
+                        },
+                    );
                 } else {
                     trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet: Received echo request with an unspecified source address");
                 }
@@ -1071,9 +1079,14 @@ impl<
             Icmpv6Packet::EchoReply(echo_reply) => {
                 ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_reply");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet: Received an EchoReply message");
-                let id = echo_reply.message().id();
-                let seq = echo_reply.message().seq();
-                receive_icmp_echo_reply(ctx, src_ip, dst_ip, id, seq, buffer);
+                // We don't allow creating echo sockets connected to the
+                // unspecified address, so it's OK to bail early here if the
+                // source address is unspecified.
+                if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
+                    let id = echo_reply.message().id();
+                    let seq = echo_reply.message().seq();
+                    receive_icmp_echo_reply(ctx, src_ip.into_addr(), dst_ip, id, seq, buffer);
+                }
             }
             Icmpv6Packet::Ndp(packet) => ctx.receive_ndp_packet(
                 device.expect("received NDP packet from localhost"),
@@ -1084,23 +1097,32 @@ impl<
             Icmpv6Packet::PacketTooBig(packet_too_big) => {
                 ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::packet_too_big");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet: Received a Packet Too Big message");
-                // We are updating the path MTU from the destination address of
-                // this `packet` (which is an IP address on this node) to some
-                // remote (identified by the source address of this `packet`).
-                //
-                // `update_pmtu_if_less` may return an error, but it will only
-                // happen if the Packet Too Big message's mtu field had a value
-                // that was less than the IPv6 minimum mtu (which as per IPv6
-                // RFC 8200, must not happen).
-                ctx.update_pmtu_if_less(dst_ip.get(), src_ip, packet_too_big.message().mtu());
+                if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
+                    // We are updating the path MTU from the destination address
+                    // of this `packet` (which is an IP address on this node) to
+                    // some remote (identified by the source address of this
+                    // `packet`).
+                    //
+                    // `update_pmtu_if_less` may return an error, but it will
+                    // only happen if the Packet Too Big message's mtu field had
+                    // a value that was less than the IPv6 minimum mtu (which as
+                    // per IPv6 RFC 8200, must not happen).
+                    ctx.update_pmtu_if_less(
+                        dst_ip.get(),
+                        src_ip.into_addr(),
+                        packet_too_big.message().mtu(),
+                    );
+                }
                 receive_icmpv6_error(ctx, &packet_too_big, Icmpv6ErrorCode::PacketTooBig);
             }
-            Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(
-                device.expect("MLD messages must come from a device"),
-                src_ip,
-                dst_ip,
-                packet,
-            ),
+            Icmpv6Packet::Mld(packet) => {
+                ctx.receive_mld_packet(
+                    device.expect("MLD messages must come from a device"),
+                    src_ip,
+                    dst_ip,
+                    packet,
+                );
+            }
             Icmpv6Packet::DestUnreachable(dest_unreachable) => receive_icmpv6_error(
                 ctx,
                 &dest_unreachable,
@@ -1213,7 +1235,7 @@ pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: BufferIcmpv4Cont
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv4Addr,
+    src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
     original_packet: B,
     header_len: usize,
@@ -1225,7 +1247,7 @@ pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: BufferIcmpv4Cont
         device,
         frame_dst,
         src_ip,
-        dst_ip.into_addr(),
+        dst_ip,
         Icmpv4DestUnreachableCode::DestProtocolUnreachable,
         original_packet,
         header_len,
@@ -1245,7 +1267,7 @@ pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, C: BufferIcmpv6Cont
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv6Addr,
+    src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     original_packet: B,
     header_len: usize,
@@ -1256,8 +1278,8 @@ pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, C: BufferIcmpv6Cont
         ctx,
         device,
         frame_dst,
-        src_ip,
-        dst_ip.into_addr(),
+        src_ip.into_specified(),
+        dst_ip,
         Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
         // Per RFC 4443, the pointer refers to the first byte of the packet
         // whose Next Header field was unrecognized. It is measured as an offset
@@ -1293,7 +1315,7 @@ pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: BufferIcmpv4Context<
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv4Addr,
+    src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
     original_packet: B,
     header_len: usize,
@@ -1305,7 +1327,7 @@ pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: BufferIcmpv4Context<
         device,
         frame_dst,
         src_ip,
-        dst_ip.into_addr(),
+        dst_ip,
         Icmpv4DestUnreachableCode::DestPortUnreachable,
         original_packet,
         header_len,
@@ -1324,7 +1346,7 @@ pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C: BufferIcmpv6Context<
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv6Addr,
+    src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     original_packet: B,
 ) {
@@ -1335,7 +1357,7 @@ pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C: BufferIcmpv6Context<
         device,
         frame_dst,
         src_ip,
-        dst_ip.into_addr(),
+        dst_ip,
         Icmpv6DestUnreachableCode::PortUnreachable,
         original_packet,
     );
@@ -1356,8 +1378,8 @@ pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: BufferIcmpv4Context<B
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
+    src_ip: SpecifiedAddr<Ipv4Addr>,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
     proto: IpProto,
     original_packet: B,
     header_len: usize,
@@ -1396,8 +1418,8 @@ pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C: BufferIcmpv6Context<B
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    src_ip: UnicastAddr<Ipv6Addr>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     proto: IpProto,
     original_packet: B,
     header_len: usize,
@@ -1436,46 +1458,43 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: BufferIcmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
+    src_ip: SpecifiedAddr<Ipv4Addr>,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
     proto: IpProto,
     mut original_packet: B,
     header_len: usize,
 ) {
     ctx.increment_counter("send_icmpv4_ttl_expired");
 
-    if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        // Check whether we MUST NOT send an ICMP error message because the
-        // original packet was itself an ICMP error message.
-        if is_icmp_error_message::<Ipv4>(proto, &original_packet.as_ref()[header_len..]) {
-            return;
-        }
-
-        // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
-        // body.
-        original_packet.shrink_back_to(header_len + 64);
-        // TODO(joshlf): Do something if send_icmp_error_message returns an
-        // error?
-        let _ = try_send_error!(
-            ctx,
-            ctx.send_icmp_error_message(
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                |local_ip| {
-                    original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                        local_ip,
-                        src_ip,
-                        Icmpv4TimeExceededCode::TtlExpired,
-                        IcmpTimeExceeded::default(),
-                    ))
-                },
-                None,
-                false,
-            )
-        );
+    // Check whether we MUST NOT send an ICMP error message because the original
+    // packet was itself an ICMP error message.
+    if is_icmp_error_message::<Ipv4>(proto, &original_packet.as_ref()[header_len..]) {
+        return;
     }
+
+    // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
+    // body.
+    original_packet.shrink_back_to(header_len + 64);
+    // TODO(joshlf): Do something if send_icmp_error_message returns an error?
+    let _ = try_send_error!(
+        ctx,
+        ctx.send_icmp_error_message(
+            device,
+            frame_dst,
+            src_ip,
+            dst_ip,
+            |local_ip| {
+                original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                    local_ip,
+                    src_ip,
+                    Icmpv4TimeExceededCode::TtlExpired,
+                    IcmpTimeExceeded::default(),
+                ))
+            },
+            None,
+            false,
+        )
+    );
 }
 
 /// Send an ICMPv6 message in response to receiving a packet whose hop limit has
@@ -1492,48 +1511,46 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: BufferIcmpv6Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    src_ip: UnicastAddr<Ipv6Addr>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     proto: IpProto,
     original_packet: B,
     header_len: usize,
 ) {
     ctx.increment_counter("send_icmpv6_ttl_expired");
 
-    if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        // Check whether we MUST NOT send an ICMP error message because the
-        // original packet was itself an ICMP error message.
-        if is_icmp_error_message::<Ipv6>(proto, &original_packet.as_ref()[header_len..]) {
-            return;
-        }
-
-        // TODO(joshlf): Do something if send_icmp_error_message returns an
-        // error?
-        let _ = try_send_error!(
-            ctx,
-            ctx.send_icmp_error_message(
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                |local_ip| {
-                    let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                        local_ip,
-                        src_ip,
-                        Icmpv6TimeExceededCode::HopLimitExceeded,
-                        IcmpTimeExceeded::default(),
-                    );
-
-                    // Per RFC 4443, body contains as much of the original body
-                    // as possible without exceeding IPv6 minimum MTU.
-                    TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
-                        .encapsulate(icmp_builder)
-                },
-                Some(Ipv6::MINIMUM_LINK_MTU.into()),
-                false,
-            )
-        );
+    // Check whether we MUST NOT send an ICMP error message because the
+    // original packet was itself an ICMP error message.
+    if is_icmp_error_message::<Ipv6>(proto, &original_packet.as_ref()[header_len..]) {
+        return;
     }
+
+    // TODO(joshlf): Do something if send_icmp_error_message returns an
+    // error?
+    let _ = try_send_error!(
+        ctx,
+        ctx.send_icmp_error_message(
+            device,
+            frame_dst,
+            src_ip.into_specified(),
+            dst_ip,
+            |local_ip| {
+                let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    local_ip,
+                    src_ip.into_specified(),
+                    Icmpv6TimeExceededCode::HopLimitExceeded,
+                    IcmpTimeExceeded::default(),
+                );
+
+                // Per RFC 4443, body contains as much of the original body
+                // as possible without exceeding IPv6 minimum MTU.
+                TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
+                    .encapsulate(icmp_builder)
+            },
+            Some(Ipv6::MINIMUM_LINK_MTU.into()),
+            false,
+        )
+    );
 }
 
 // TODO(joshlf): Test send_icmpv6_packet_too_big once we support dummy IPv6 test
@@ -1549,65 +1566,61 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: BufferIcmpv6Context<B>
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    src_ip: UnicastAddr<Ipv6Addr>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     proto: IpProto,
     mtu: u32,
     original_packet: B,
     header_len: usize,
 ) {
     ctx.increment_counter("send_icmpv6_packet_too_big");
-
-    if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        // Check whether we MUST NOT send an ICMP error message because the
-        // original packet was itself an ICMP error message.
-        if is_icmp_error_message::<Ipv6>(proto, &original_packet.as_ref()[header_len..]) {
-            return;
-        }
-
-        let _ = try_send_error!(
-            ctx,
-            ctx.send_icmp_error_message(
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                |local_ip| {
-                    let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                        local_ip,
-                        src_ip,
-                        IcmpUnusedCode,
-                        Icmpv6PacketTooBig::new(mtu),
-                    );
-
-                    // Per RFC 4443, body contains as much of the original body
-                    // as possible without exceeding IPv6 minimum MTU.
-                    //
-                    // The final IP packet must fit within the MTU, so we shrink
-                    // the original packet to the MTU minus the IPv6 and ICMP
-                    // header sizes.
-                    TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
-                        .encapsulate(icmp_builder)
-                },
-                Some(Ipv6::MINIMUM_LINK_MTU.into()),
-                // Note, here we explicitly let `should_send_icmpv6_error` allow
-                // a multicast destination (link-layer or destination IP) as RFC
-                // 4443 Section 2.4.e explicitly allows sending an ICMP response
-                // if the original packet was sent to a multicast IP or link
-                // layer if the ICMP response message will be a Packet Too Big
-                // Message.
-                true,
-            )
-        );
+    // Check whether we MUST NOT send an ICMP error message because the
+    // original packet was itself an ICMP error message.
+    if is_icmp_error_message::<Ipv6>(proto, &original_packet.as_ref()[header_len..]) {
+        return;
     }
+
+    let _ = try_send_error!(
+        ctx,
+        ctx.send_icmp_error_message(
+            device,
+            frame_dst,
+            src_ip.into_specified(),
+            dst_ip,
+            |local_ip| {
+                let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    local_ip,
+                    src_ip.into_specified(),
+                    IcmpUnusedCode,
+                    Icmpv6PacketTooBig::new(mtu),
+                );
+
+                // Per RFC 4443, body contains as much of the original body as
+                // possible without exceeding IPv6 minimum MTU.
+                //
+                // The final IP packet must fit within the MTU, so we shrink the
+                // original packet to the MTU minus the IPv6 and ICMP header
+                // sizes.
+                TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
+                    .encapsulate(icmp_builder)
+            },
+            Some(Ipv6::MINIMUM_LINK_MTU.into()),
+            // Note, here we explicitly let `should_send_icmpv6_error` allow a
+            // multicast destination (link-layer or destination IP) as RFC 4443
+            // Section 2.4.e explicitly allows sending an ICMP response if the
+            // original packet was sent to a multicast IP or link layer if the
+            // ICMP response message will be a Packet Too Big Message.
+            true,
+        )
+    );
 }
 
 pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: BufferIcmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
+    src_ip: SpecifiedAddr<Ipv4Addr>,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
     code: Icmpv4ParameterProblemCode,
     parameter_problem: Icmpv4ParameterProblem,
     mut original_packet: B,
@@ -1615,171 +1628,158 @@ pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: BufferIcmpv4Context
 ) {
     ctx.increment_counter("send_icmpv4_parameter_problem");
 
-    if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
-        // body.
-        original_packet.shrink_back_to(header_len + 64);
-        // TODO(joshlf): Do something if send_icmp_error_message returns an
-        // error?
-        let _ = try_send_error!(
-            ctx,
-            ctx.send_icmp_error_message(
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                |local_ip| {
-                    original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                        local_ip,
-                        src_ip,
-                        code,
-                        parameter_problem,
-                    ))
-                },
-                None,
-                false,
-            )
-        );
-    } else {
-        trace!("send_icmpv4_parameter_problem: Can't send ICMP error response to the unspecified address");
-    }
+    // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
+    // body.
+    original_packet.shrink_back_to(header_len + 64);
+    // TODO(joshlf): Do something if send_icmp_error_message returns an error?
+    let _ = try_send_error!(
+        ctx,
+        ctx.send_icmp_error_message(
+            device,
+            frame_dst,
+            src_ip,
+            dst_ip,
+            |local_ip| {
+                original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                    local_ip,
+                    src_ip,
+                    code,
+                    parameter_problem,
+                ))
+            },
+            None,
+            false,
+        )
+    );
 }
 
 /// Send an ICMPv6 Parameter Problem error message.
 ///
-/// If the error message is Code 2 reporting an unrecognized IPv6 option that has the Option
-/// Type highest-order two bits set to 10, `allow_dst_multicast` must be set to `true`. See
-/// [`should_send_icmpv6_error`] for more details.
+/// If the error message is Code 2 reporting an unrecognized IPv6 option that
+/// has the Option Type highest-order two bits set to 10, `allow_dst_multicast`
+/// must be set to `true`. See [`should_send_icmpv6_error`] for more details.
 ///
 /// # Panics
 ///
-/// Panics if `allow_multicast_addr` is set to `true`, but this Parameter Problem's code is not
-/// 2 (Unrecognized IPv6 Option).
+/// Panics if `allow_multicast_addr` is set to `true`, but this Parameter
+/// Problem's code is not 2 (Unrecognized IPv6 Option).
 pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: BufferIcmpv6Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    src_ip: SpecifiedAddr<Ipv6Addr>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     code: Icmpv6ParameterProblemCode,
     parameter_problem: Icmpv6ParameterProblem,
     original_packet: B,
     allow_multicast_dst: bool,
 ) {
-    // Only allow the `allow_multicast_dst` parameter to be set if the code is the unrecognized
-    // IPv6 option as that is one of the few exceptions where we can send an ICMP packet in response
-    // to a packet that was destined for a multicast address.
+    // Only allow the `allow_multicast_dst` parameter to be set if the code is
+    // the unrecognized IPv6 option as that is one of the few exceptions where
+    // we can send an ICMP packet in response to a packet that was destined for
+    // a multicast address.
     assert!(!allow_multicast_dst || code == Icmpv6ParameterProblemCode::UnrecognizedIpv6Option);
 
     ctx.increment_counter("send_icmpv6_parameter_problem");
 
-    if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        // TODO(joshlf): Do something if send_icmp_error_message returns an
-        // error?
-        let _ = try_send_error!(
-            ctx,
-            ctx.send_icmp_error_message(
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                |local_ip| {
-                    let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                        local_ip,
-                        src_ip,
-                        code,
-                        parameter_problem,
-                    );
+    // TODO(joshlf): Do something if send_icmp_error_message returns an error?
+    let _ = try_send_error!(
+        ctx,
+        ctx.send_icmp_error_message(
+            device,
+            frame_dst,
+            src_ip,
+            dst_ip,
+            |local_ip| {
+                let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    local_ip,
+                    src_ip,
+                    code,
+                    parameter_problem,
+                );
 
-                    // Per RFC 4443, body contains as much of the original body
-                    // as possible without exceeding IPv6 minimum MTU.
-                    TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
-                        .encapsulate(icmp_builder)
-                },
-                Some(Ipv6::MINIMUM_LINK_MTU.into()),
-                allow_multicast_dst,
-            )
-        );
-    }
+                // Per RFC 4443, body contains as much of the original body as
+                // possible without exceeding IPv6 minimum MTU.
+                TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
+                    .encapsulate(icmp_builder)
+            },
+            Some(Ipv6::MINIMUM_LINK_MTU.into()),
+            allow_multicast_dst,
+        )
+    );
 }
 
 fn send_icmpv4_dest_unreachable<B: BufferMut, C: BufferIcmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
+    src_ip: SpecifiedAddr<Ipv4Addr>,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
     code: Icmpv4DestUnreachableCode,
     mut original_packet: B,
     header_len: usize,
 ) {
     ctx.increment_counter("send_icmpv4_dest_unreachable");
 
-    if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
-        // body.
-        original_packet.shrink_back_to(header_len + 64);
-        // TODO(joshlf): Do something if send_icmp_error_message returns an
-        // error?
-        let _ = try_send_error!(
-            ctx,
-            ctx.send_icmp_error_message(
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                |local_ip| {
-                    original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                        local_ip,
-                        src_ip,
-                        code,
-                        IcmpDestUnreachable::default(),
-                    ))
-                },
-                None,
-                false,
-            )
-        );
-    }
+    // Per RFC 792, body contains entire IPv4 header + 64 bytes of original
+    // body.
+    original_packet.shrink_back_to(header_len + 64);
+    // TODO(joshlf): Do something if send_icmp_error_message returns an error?
+    let _ = try_send_error!(
+        ctx,
+        ctx.send_icmp_error_message(
+            device,
+            frame_dst,
+            src_ip,
+            dst_ip,
+            |local_ip| {
+                original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                    local_ip,
+                    src_ip,
+                    code,
+                    IcmpDestUnreachable::default(),
+                ))
+            },
+            None,
+            false,
+        )
+    );
 }
 
 fn send_icmpv6_dest_unreachable<B: BufferMut, C: BufferIcmpv6Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
+    src_ip: UnicastAddr<Ipv6Addr>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     code: Icmpv6DestUnreachableCode,
     original_packet: B,
 ) {
-    if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        // TODO(joshlf): Do something if send_icmp_error_message returns an
-        // error?
-        let _ = try_send_error!(
-            ctx,
-            ctx.send_icmp_error_message(
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                |local_ip| {
-                    let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                        local_ip,
-                        src_ip,
-                        code,
-                        IcmpDestUnreachable::default(),
-                    );
+    // TODO(joshlf): Do something if send_icmp_error_message returns an error?
+    let _ = try_send_error!(
+        ctx,
+        ctx.send_icmp_error_message(
+            device,
+            frame_dst,
+            src_ip.into_specified(),
+            dst_ip,
+            |local_ip| {
+                let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    local_ip,
+                    src_ip,
+                    code,
+                    IcmpDestUnreachable::default(),
+                );
 
-                    // Per RFC 4443, body contains as much of the original body
-                    // as possible without exceeding IPv6 minimum MTU.
-                    TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
-                        .encapsulate(icmp_builder)
-                },
-                Some(Ipv6::MINIMUM_LINK_MTU.into()),
-                false,
-            )
-        );
-    }
+                // Per RFC 4443, body contains as much of the original body as
+                // possible without exceeding IPv6 minimum MTU.
+                TruncatingSerializer::new(original_packet, TruncateDirection::DiscardBack)
+                    .encapsulate(icmp_builder)
+            },
+            Some(Ipv6::MINIMUM_LINK_MTU.into()),
+            false,
+        )
+    );
 }
 
 /// Should we send an ICMP(v4) response?
@@ -1802,7 +1802,7 @@ fn send_icmpv6_dest_unreachable<B: BufferMut, C: BufferIcmpv6Context<B>>(
 pub(crate) fn should_send_icmpv4_error(
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
-    dst_ip: Ipv4Addr,
+    dst_ip: SpecifiedAddr<Ipv4Addr>,
 ) -> bool {
     // NOTE: We do not explicitly implement the "unspecified address" check, as
     // it is enforced by the types of the arguments.
@@ -1862,7 +1862,7 @@ pub(crate) fn should_send_icmpv4_error(
 pub(crate) fn should_send_icmpv6_error(
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv6Addr>,
-    dst_ip: Ipv6Addr,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
     allow_dst_multicast: bool,
 ) -> bool {
     // NOTE: We do not explicitly implement the "unspecified address" check, as
@@ -2071,9 +2071,10 @@ fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
-    use std::num::NonZeroU16;
-    use std::time::Duration;
+    use core::convert::TryInto;
+    use core::fmt::Debug;
+    use core::num::NonZeroU16;
+    use core::time::Duration;
 
     use net_types::ip::{Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
@@ -2130,7 +2131,7 @@ mod tests {
     >(
         modify_stack_state_builder: F,
         body: &mut [u8],
-        dst_ip: I::Addr,
+        dst_ip: SpecifiedAddr<I::Addr>,
         ttl: u8,
         proto: IpProto,
         assert_counters: &[&str],
@@ -2141,7 +2142,7 @@ mod tests {
         let buffer = Buf::new(body, ..)
             .encapsulate(<I as IpExt>::PacketBuilder::new(
                 *I::DUMMY_CONFIG.remote_ip,
-                dst_ip,
+                dst_ip.into_addr(),
                 ttl,
                 proto,
             ))
@@ -2217,7 +2218,7 @@ mod tests {
             test_receive_ip_packet::<I, _, _, _, _>(
                 |_| {},
                 buffer.as_mut(),
-                I::DUMMY_CONFIG.local_ip.get(),
+                I::DUMMY_CONFIG.local_ip,
                 64,
                 I::ICMP_IP_PROTO,
                 assert_counters,
@@ -2249,7 +2250,7 @@ mod tests {
                 builder.ipv4_builder().icmpv4_builder().send_timestamp_reply(true);
             },
             buffer.as_mut(),
-            DUMMY_CONFIG_V4.local_ip.get(),
+            DUMMY_CONFIG_V4.local_ip,
             64,
             IpProto::Icmp,
             &["<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::timestamp_request", "send_ipv4_packet"],
@@ -2277,7 +2278,7 @@ mod tests {
                 test_receive_ip_packet::<Ipv4, _, _, _, _>(
                     |_| {},
                     &mut [0u8; 128],
-                    DUMMY_CONFIG_V4.local_ip.get(),
+                    DUMMY_CONFIG_V4.local_ip,
                     64,
                     proto,
                     &["send_icmpv4_protocol_unreachable", "send_icmp_error_message"],
@@ -2299,7 +2300,7 @@ mod tests {
                 test_receive_ip_packet::<Ipv6, _, _, _, _>(
                     |_| {},
                     &mut [0u8; 128],
-                    DUMMY_CONFIG_V6.local_ip.get(),
+                    DUMMY_CONFIG_V6.local_ip,
                     64,
                     proto,
                     &["send_icmpv6_protocol_unreachable", "send_icmp_error_message"],
@@ -2346,7 +2347,7 @@ mod tests {
                     builder.transport_builder().udp_builder().send_port_unreachable(true);
                 },
                 buffer.as_mut(),
-                I::DUMMY_CONFIG.local_ip.get(),
+                I::DUMMY_CONFIG.local_ip,
                 64,
                 IpProto::Udp,
                 assert_counters,
@@ -2358,7 +2359,7 @@ mod tests {
                 // leave the `send_port_unreachable` feature disabled
                 |_| {},
                 buffer.as_mut(),
-                I::DUMMY_CONFIG.local_ip.get(),
+                I::DUMMY_CONFIG.local_ip,
                 64,
                 IpProto::Udp,
                 &[],
@@ -2388,7 +2389,7 @@ mod tests {
                 sb.ipv4_builder().forward(true);
             },
             &mut [0u8; 128],
-            Ipv4Addr::new([1, 2, 3, 4]),
+            SpecifiedAddr::new(Ipv4Addr::new([1, 2, 3, 4])).unwrap(),
             64,
             IpProto::Udp,
             &["send_icmpv4_net_unreachable", "send_icmp_error_message"],
@@ -2404,7 +2405,8 @@ mod tests {
                 sb.ipv6_builder().forward(true);
             },
             &mut [0u8; 128],
-            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),
+            SpecifiedAddr::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]))
+                .unwrap(),
             64,
             IpProto::Udp,
             &["send_icmpv6_net_unreachable", "send_icmp_error_message"],
@@ -2423,7 +2425,7 @@ mod tests {
                 builder.ipv4_builder().forward(true);
             },
             &mut [0u8; 128],
-            DUMMY_CONFIG_V4.remote_ip.get(),
+            DUMMY_CONFIG_V4.remote_ip,
             1,
             IpProto::Udp,
             &["send_icmpv4_ttl_expired", "send_icmp_error_message"],
@@ -2436,7 +2438,7 @@ mod tests {
                 builder.ipv6_builder().forward(true);
             },
             &mut [0u8; 128],
-            DUMMY_CONFIG_V6.remote_ip.get(),
+            DUMMY_CONFIG_V6.remote_ip,
             1,
             IpProto::Udp,
             &["send_icmpv6_ttl_expired", "send_icmp_error_message"],
@@ -2449,16 +2451,16 @@ mod tests {
     #[test]
     fn test_should_send_icmpv4_error() {
         let src_ip = DUMMY_CONFIG_V4.local_ip;
-        let dst_ip = DUMMY_CONFIG_V4.remote_ip.get();
+        let dst_ip = DUMMY_CONFIG_V4.remote_ip;
         let frame_dst = FrameDestination::Unicast;
-        let multicast_ip_1 = Ipv4Addr::new([224, 0, 0, 1]);
+        let multicast_ip_1 = SpecifiedAddr::new(Ipv4Addr::new([224, 0, 0, 1])).unwrap();
         let multicast_ip_2 = SpecifiedAddr::new(Ipv4Addr::new([224, 0, 0, 2])).unwrap();
 
         // Should Send.
         assert!(should_send_icmpv4_error(frame_dst, src_ip, dst_ip));
 
         // Should not send because destined for IP broadcast addr
-        assert!(!should_send_icmpv4_error(frame_dst, src_ip, Ipv4::GLOBAL_BROADCAST_ADDRESS.get()));
+        assert!(!should_send_icmpv4_error(frame_dst, src_ip, Ipv4::GLOBAL_BROADCAST_ADDRESS));
 
         // Should not send because destined for multicast addr
         assert!(!should_send_icmpv4_error(frame_dst, src_ip, multicast_ip_1));
@@ -2486,9 +2488,11 @@ mod tests {
     #[test]
     fn test_should_send_icmpv6_error() {
         let src_ip = DUMMY_CONFIG_V6.local_ip;
-        let dst_ip = DUMMY_CONFIG_V6.remote_ip.get();
+        let dst_ip = DUMMY_CONFIG_V6.remote_ip;
         let frame_dst = FrameDestination::Unicast;
-        let multicast_ip_1 = Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        let multicast_ip_1 =
+            SpecifiedAddr::new(Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]))
+                .unwrap();
         let multicast_ip_2 =
             SpecifiedAddr::new(Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]))
                 .unwrap();
@@ -2620,7 +2624,7 @@ mod tests {
     struct SendIcmpErrorMessageArgs<A: IpAddress> {
         frame_dst: FrameDestination,
         src_ip: SpecifiedAddr<A>,
-        dst_ip: A,
+        dst_ip: SpecifiedAddr<A>,
         body: Vec<u8>,
         ip_mtu: Option<u32>,
         allow_dst_multicast: bool,
@@ -2884,7 +2888,7 @@ mod tests {
                     _device: DummyDeviceId,
                     frame_dst: FrameDestination,
                     src_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
-                    dst_ip: <$ip as Ip>::Addr,
+                    dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
                     get_body: F,
                     ip_mtu: Option<u32>,
                     allow_dst_multicast: bool,
@@ -2899,7 +2903,7 @@ mod tests {
                         // because the error variant of the return value of
                         // `serialize_vec_outer` doesn't implement `Debug`,
                         // which is required for `unwrap`.
-                        body: get_body(SpecifiedAddr::new(dst_ip).unwrap())
+                        body: get_body(dst_ip)
                             .serialize_vec_outer()
                             .unwrap_or_else(|_| panic!("failed to serialize body"))
                             .as_ref()
@@ -2925,7 +2929,7 @@ mod tests {
         fn receive_ndp_packet<B: ByteSlice>(
             &mut self,
             _device: DummyDeviceId,
-            _src_ip: Ipv6Addr,
+            _src_ip: Ipv6SourceAddr,
             _dst_ip: SpecifiedAddr<Ipv6Addr>,
             _packet: NdpPacket<B>,
         ) {
@@ -2937,7 +2941,7 @@ mod tests {
         fn receive_mld_packet<B: ByteSlice>(
             &mut self,
             _device: DummyDeviceId,
-            _src_ip: Ipv6Addr,
+            _src_ip: Ipv6SourceAddr,
             _dst_ip: SpecifiedAddr<Ipv6Addr>,
             _packet: MldPacket<B>,
         ) {
@@ -3310,7 +3314,7 @@ mod tests {
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>::receive_ip_packet(
                 &mut ctx,
                 Some(DummyDeviceId),
-                DUMMY_CONFIG_V6.remote_ip.get(),
+                DUMMY_CONFIG_V6.remote_ip.into_addr().try_into().unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
                 Buf::new(original_packet, ..)
                     .encapsulate(IcmpPacketBuilder::new(
@@ -3571,8 +3575,8 @@ mod tests {
                 ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
-                DUMMY_CONFIG_V4.remote_ip.get(),
-                DUMMY_CONFIG_V4.local_ip.get(),
+                DUMMY_CONFIG_V4.remote_ip,
+                DUMMY_CONFIG_V4.local_ip,
                 IpProto::Udp,
                 Buf::new(&mut [], ..),
                 0,
@@ -3585,8 +3589,8 @@ mod tests {
                 ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
-                DUMMY_CONFIG_V4.remote_ip.get(),
-                DUMMY_CONFIG_V4.local_ip.get(),
+                DUMMY_CONFIG_V4.remote_ip,
+                DUMMY_CONFIG_V4.local_ip,
                 Icmpv4ParameterProblemCode::PointerIndicatesError,
                 Icmpv4ParameterProblem::new(0),
                 Buf::new(&mut [], ..),
@@ -3600,8 +3604,8 @@ mod tests {
                 ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
-                DUMMY_CONFIG_V4.remote_ip.get(),
-                DUMMY_CONFIG_V4.local_ip.get(),
+                DUMMY_CONFIG_V4.remote_ip,
+                DUMMY_CONFIG_V4.local_ip,
                 Icmpv4DestUnreachableCode::DestNetworkUnreachable,
                 Buf::new(&mut [], ..),
                 0,
@@ -3614,8 +3618,8 @@ mod tests {
                 ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
-                DUMMY_CONFIG_V6.remote_ip.get(),
-                DUMMY_CONFIG_V6.local_ip.get(),
+                UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
+                DUMMY_CONFIG_V6.local_ip,
                 IpProto::Udp,
                 Buf::new(&mut [], ..),
                 0,
@@ -3628,8 +3632,8 @@ mod tests {
                 ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
-                DUMMY_CONFIG_V6.remote_ip.get(),
-                DUMMY_CONFIG_V6.local_ip.get(),
+                UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
+                DUMMY_CONFIG_V6.local_ip,
                 IpProto::Udp,
                 0,
                 Buf::new(&mut [], ..),
@@ -3643,8 +3647,8 @@ mod tests {
                 ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
-                DUMMY_CONFIG_V6.remote_ip.get(),
-                DUMMY_CONFIG_V6.local_ip.get(),
+                DUMMY_CONFIG_V6.remote_ip,
+                DUMMY_CONFIG_V6.local_ip,
                 Icmpv6ParameterProblemCode::ErroneousHeaderField,
                 Icmpv6ParameterProblem::new(0),
                 Buf::new(&mut [], ..),
@@ -3658,8 +3662,8 @@ mod tests {
                 ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
-                DUMMY_CONFIG_V6.remote_ip.get(),
-                DUMMY_CONFIG_V6.local_ip.get(),
+                UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
+                DUMMY_CONFIG_V6.local_ip,
                 Icmpv6DestUnreachableCode::NoRoute,
                 Buf::new(&mut [], ..),
             );

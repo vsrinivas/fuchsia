@@ -272,7 +272,7 @@ mod tests {
 
     use super::*;
     use crate::icmp::{IcmpMessage, IcmpPacket, MessageBody};
-    use crate::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+    use crate::ipv6::{Ipv6Header, Ipv6Packet, Ipv6PacketBuilder};
 
     fn serialize_to_bytes<B: ByteSlice + Debug, M: IcmpMessage<Ipv6, B> + Debug>(
         src_ip: Ipv6Addr,

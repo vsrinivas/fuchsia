@@ -15,7 +15,7 @@ use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::error::{IpParseError, IpParseResult};
 use crate::ipv4::{Ipv4Header, Ipv4Packet, Ipv4PacketBuilder};
-use crate::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+use crate::ipv6::{Ipv6Header, Ipv6Packet, Ipv6PacketBuilder};
 
 mod private {
     use super::*;
@@ -211,16 +211,16 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
     type Builder = Ipv6PacketBuilder;
 
     fn src_ip(&self) -> Ipv6Addr {
-        Ipv6Packet::src_ip(self)
+        Ipv6Header::src_ip(self)
     }
     fn dst_ip(&self) -> Ipv6Addr {
-        Ipv6Packet::dst_ip(self)
+        Ipv6Header::dst_ip(self)
     }
     fn proto(&self) -> IpProto {
         Ipv6Packet::proto(self)
     }
     fn ttl(&self) -> u8 {
-        Ipv6Packet::hop_limit(self)
+        Ipv6Header::hop_limit(self)
     }
     fn set_ttl(&mut self, ttl: u8)
     where

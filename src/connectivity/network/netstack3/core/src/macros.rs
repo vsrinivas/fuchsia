@@ -4,6 +4,9 @@
 
 //! Macros used in Netstack3.
 
+use net_types::ip::{Ipv6Addr, Ipv6SourceAddr};
+use net_types::UnicastAddr;
+
 macro_rules! log_unimplemented {
     ($nocrash:expr, $fmt:expr $(,$arg:expr)*) => {{
 
@@ -140,13 +143,19 @@ impl<T, E> TryUnitHelper<T> for Result<T, E> {
     }
 }
 
+impl TryUnitHelper<UnicastAddr<Ipv6Addr>> for Ipv6SourceAddr {
+    fn into_option(self) -> Option<UnicastAddr<Ipv6Addr>> {
+        self.into()
+    }
+}
+
 /// Like the `try!` macro, but for functions which return `()`.
 ///
 /// `try_unit!($e)` tries to unwrap `$e` (either as `Result::Ok` or
 /// `Option::Some`). If `$e` is instead `Result::Err` or `Option::None`, it
-/// returns `()`. If `try_unit!` is invoked as `try_unit!($e, $trace)` and `$e`
-/// is `Result::Err` or `Option::None`, it will also invoke `trace!($trace)`
-/// before returning.
+/// returns `()`. If `try_unit!` is invoked as `try_unit!($e, $stmt)` and `$e`
+/// is `Result::Err` or `Option::None`, it will also invoke `$stmt` before
+/// returning.
 macro_rules! try_unit {
     ($e:expr) => {
         match crate::macros::TryUnitHelper::<_>::into_option($e) {
@@ -154,11 +163,11 @@ macro_rules! try_unit {
             None => return,
         }
     };
-    ($e:expr, $trace:literal) => {
+    ($e:expr, $stmt:stmt) => {
         match crate::macros::TryUnitHelper::<_>::into_option($e) {
             Some(x) => x,
             None => {
-                trace!($trace);
+                $stmt
                 return;
             }
         }

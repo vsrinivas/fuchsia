@@ -48,6 +48,7 @@
 // TODO(joshlf): Add RFC references for various standards such as the global
 // broadcast address or the Class E subnet.
 
+use core::convert::TryFrom;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::hash::Hash;
 use core::ops::Deref;
@@ -1357,8 +1358,8 @@ impl From<Ipv6Addr> for net::Ipv6Addr {
 impl Display for Ipv6Addr {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
-        // TODO(joshlf): Implement canonicalization even when the `std` feature
-        // is not enabled.
+        // TODO(fxbug.dev/68672): Implement canonicalization even when the "std"
+        // feature is not enabled.
 
         use core::convert::TryInto;
 
@@ -1395,6 +1396,135 @@ impl Display for Ipv6Addr {
 }
 
 impl Debug for Ipv6Addr {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        Display::fmt(self, f)
+    }
+}
+
+/// The source address from an IPv6 packet.
+///
+/// An `Ipv6SourceAddr` represents the source address from an IPv6 packet, which
+/// may only be either unicast or unspecified.
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum Ipv6SourceAddr {
+    Unicast(UnicastAddr<Ipv6Addr>),
+    Unspecified,
+}
+
+impl Ipv6SourceAddr {
+    /// Converts this `Ipv6SourceAddr` into an `Option<UnicastAddr<Ipv6Addr>>`,
+    /// mapping [`Ipv6SourceAddr::Unspecified`] to `None`.
+    pub fn into_option(self) -> Option<UnicastAddr<Ipv6Addr>> {
+        match self {
+            Ipv6SourceAddr::Unicast(addr) => Some(addr),
+            Ipv6SourceAddr::Unspecified => None,
+        }
+    }
+}
+
+impl crate::sealed::Sealed for Ipv6SourceAddr {}
+
+impl Witness<Ipv6Addr> for Ipv6SourceAddr {
+    fn new(addr: Ipv6Addr) -> Option<Ipv6SourceAddr> {
+        if let Some(addr) = UnicastAddr::new(addr) {
+            Some(Ipv6SourceAddr::Unicast(addr))
+        } else if !addr.is_specified() {
+            Some(Ipv6SourceAddr::Unspecified)
+        } else {
+            None
+        }
+    }
+
+    fn into_addr(self) -> Ipv6Addr {
+        match self {
+            Ipv6SourceAddr::Unicast(addr) => addr.into_addr(),
+            Ipv6SourceAddr::Unspecified => Ipv6::UNSPECIFIED_ADDRESS,
+        }
+    }
+
+    fn from_witness<W: Witness<Ipv6Addr>>(addr: W) -> Option<Ipv6SourceAddr> {
+        Ipv6SourceAddr::new(addr.into_addr())
+    }
+}
+
+impl SpecifiedAddress for Ipv6SourceAddr {
+    fn is_specified(&self) -> bool {
+        self != &Ipv6SourceAddr::Unspecified
+    }
+}
+
+impl UnicastAddress for Ipv6SourceAddr {
+    fn is_unicast(&self) -> bool {
+        matches!(self, Ipv6SourceAddr::Unicast(_))
+    }
+}
+
+impl LinkLocalAddress for Ipv6SourceAddr {
+    fn is_linklocal(&self) -> bool {
+        let addr: Ipv6Addr = self.into();
+        addr.is_linklocal()
+    }
+}
+
+impl From<Ipv6SourceAddr> for Ipv6Addr {
+    fn from(addr: Ipv6SourceAddr) -> Ipv6Addr {
+        addr.into_addr()
+    }
+}
+
+impl From<&'_ Ipv6SourceAddr> for Ipv6Addr {
+    fn from(addr: &Ipv6SourceAddr) -> Ipv6Addr {
+        match addr {
+            Ipv6SourceAddr::Unicast(addr) => addr.get(),
+            Ipv6SourceAddr::Unspecified => Ipv6::UNSPECIFIED_ADDRESS,
+        }
+    }
+}
+
+impl From<UnicastAddr<Ipv6Addr>> for Ipv6SourceAddr {
+    fn from(addr: UnicastAddr<Ipv6Addr>) -> Ipv6SourceAddr {
+        Ipv6SourceAddr::Unicast(addr)
+    }
+}
+
+impl TryFrom<Ipv6Addr> for Ipv6SourceAddr {
+    type Error = ();
+    fn try_from(addr: Ipv6Addr) -> Result<Ipv6SourceAddr, ()> {
+        Ipv6SourceAddr::new(addr).ok_or(())
+    }
+}
+
+impl From<Ipv6SourceAddr> for Option<UnicastAddr<Ipv6Addr>> {
+    fn from(addr: Ipv6SourceAddr) -> Option<UnicastAddr<Ipv6Addr>> {
+        addr.into_option()
+    }
+}
+
+impl Deref for Ipv6SourceAddr {
+    type Target = Ipv6Addr;
+
+    fn deref(&self) -> &Ipv6Addr {
+        match self {
+            Ipv6SourceAddr::Unicast(addr) => addr,
+            Ipv6SourceAddr::Unspecified => &Ipv6::UNSPECIFIED_ADDRESS,
+        }
+    }
+}
+
+impl Display for Ipv6SourceAddr {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Ipv6SourceAddr::Unicast(addr) => write!(f, "{}", addr),
+            // TODO(fxbug.dev/68672): Once we implement canonicalization without
+            // the "std" feature, replace this with `write!(f, "::")`
+            Ipv6SourceAddr::Unspecified => write!(f, "{}", Ipv6::UNSPECIFIED_ADDRESS),
+        }
+    }
+}
+
+impl Debug for Ipv6SourceAddr {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         Display::fmt(self, f)

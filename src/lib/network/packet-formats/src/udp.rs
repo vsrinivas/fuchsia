@@ -409,7 +409,7 @@ mod tests {
     use super::*;
     use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
     use crate::ipv4::{Ipv4Header, Ipv4Packet};
-    use crate::ipv6::Ipv6Packet;
+    use crate::ipv6::{Ipv6Header, Ipv6Packet};
     use crate::testutil::benchmarks::{black_box, Bencher};
     use crate::testutil::*;
 

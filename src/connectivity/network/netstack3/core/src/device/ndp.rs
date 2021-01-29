@@ -27,7 +27,7 @@ use core::ops::RangeInclusive;
 use core::time::Duration;
 
 use log::{debug, error, trace};
-use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv6, Ipv6Addr, Subnet};
+use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet};
 use net_types::{
     LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
     SpecifiedAddress, Witness,
@@ -2540,7 +2540,7 @@ pub(crate) trait NdpPacketHandler<DeviceId> {
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
         device: DeviceId,
-        src_ip: Ipv6Addr,
+        src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: NdpPacket<B>,
     );
@@ -2560,7 +2560,7 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
 pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    src_ip: Ipv6Addr,
+    src_ip: Ipv6SourceAddr,
     _dst_ip: SpecifiedAddr<Ipv6Addr>,
     packet: NdpPacket<B>,
 ) where
@@ -2607,17 +2607,21 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 return;
             }
 
-            if let Some(link_addr) = source_link_layer_option {
-                // Set the link address and mark the neighbor entry as stale if we either create it,
-                // or updated an existing one, as per RFC 4861 section 6.2.6.
-                ndp_state.neighbors.set_link_address(src_ip, link_addr, false);
-            }
+            if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
+                if let Some(link_addr) = source_link_layer_option {
+                    // Set the link address and mark the neighbor entry as stale
+                    // if we either create it, or updated an existing one, as
+                    // per RFC 4861 section 6.2.6.
+                    ndp_state.neighbors.set_link_address(src_ip.into_addr(), link_addr, false);
+                }
 
-            if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
-                // Set the neighbor's IsRouter flag to false, as per RFC 4861 section 6.2.6.
-                //
-                // This is because only hosts should solicit routers.
-                state.is_router = false;
+                if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
+                    // Set the neighbor's IsRouter flag to false, as per RFC
+                    // 4861 section 6.2.6.
+                    //
+                    // This is because only hosts should solicit routers.
+                    state.is_router = false;
+                }
             }
 
             //
@@ -2703,7 +2707,9 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
         NdpPacket::RouterAdvertisement(p) => {
             trace!("receive_ndp_packet_inner: Received NDP RA from router: {:?}", src_ip);
 
-            let src_ip = if let Some(src_ip) = LinkLocalAddr::new(src_ip) {
+            let src_ip = if let Some(src_ip) =
+                src_ip.into_option().and_then(LinkLocalAddr::from_witness)
+            {
                 src_ip
             } else {
                 // Nodes MUST silently discard any received Router Advertisement message
@@ -2836,7 +2842,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                         // Set the link address and mark it as stale if we either created
                         // the neighbor entry, or updated an existing one.
-                        ndp_state.neighbors.set_link_address(src_ip.get(), link_addr, false);
+                        ndp_state.neighbors.set_link_address(src_ip.into_addr(), link_addr, false);
                     }
                     NdpOption::MTU(mtu) => {
                         trace!("receive_ndp_packet_inner: mtu option with mtu = {:?}", mtu);
@@ -3223,7 +3229,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
             // If we have a source link layer address option, we take it and
             // save to our cache.
-            if src_ip.is_specified() {
+            if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
                 // We only update the cache if it is not from an unspecified address,
                 // i.e., it is not a DAD message. (RFC 4861)
                 if let Some(ll) = get_source_link_layer_option(p.body()) {
@@ -3232,7 +3238,11 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     // Set the link address and mark it as stale if we either create
                     // the neighbor entry, or updated an existing one, as per RFC 4861
                     // section 7.2.3.
-                    ctx.get_state_mut_with(device_id).neighbors.set_link_address(src_ip, ll, false);
+                    ctx.get_state_mut_with(device_id).neighbors.set_link_address(
+                        src_ip.into_addr(),
+                        ll,
+                        false,
+                    );
                 }
 
                 trace!(
@@ -3242,7 +3252,13 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                 // Finally we ought to reply to the Neighbor Solicitation with a
                 // Neighbor Advertisement.
-                send_neighbor_advertisement(ctx, device_id, true, *target_address, src_ip);
+                send_neighbor_advertisement(
+                    ctx,
+                    device_id,
+                    true,
+                    *target_address,
+                    src_ip.into_addr(),
+                );
             } else {
                 trace!(
                     "receive_ndp_packet_inner: Received NDP NS: sending NA to all nodes multicast"
@@ -3261,6 +3277,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
         }
         NdpPacket::NeighborAdvertisement(p) => {
             trace!("receive_ndp_packet_inner: Received NDP NA");
+            let src_ip = try_unit!(src_ip, debug!("receive_ndp_packet: Received NDP packet from the unspecified address; dropping"));
 
             let message = p.message();
             let target_address = message.target_address();
@@ -3287,7 +3304,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             let ndp_state = ctx.get_state_mut_with(device_id);
 
             let neighbor_state = if let Some(state) =
-                ndp_state.neighbors.get_neighbor_state_mut(&src_ip)
+                ndp_state.neighbors.get_neighbor_state_mut(&src_ip.into_addr())
             {
                 state
             } else {
@@ -3328,15 +3345,20 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         src_ip,
                         address
                     );
-                    ndp_state.neighbors.set_link_address(src_ip, address, message.solicited_flag());
+                    ndp_state.neighbors.set_link_address(
+                        src_ip.into_addr(),
+                        address,
+                        message.solicited_flag(),
+                    );
 
                     // Cancel the resolution timeout.
                     ctx.cancel_timer(
-                        NdpTimerId::new_link_address_resolution(device_id, src_ip).into(),
+                        NdpTimerId::new_link_address_resolution(device_id, src_ip.into_addr())
+                            .into(),
                     );
 
                     // Send any packets queued for the neighbor awaiting address resolution.
-                    ctx.address_resolved(device_id, &src_ip, address);
+                    ctx.address_resolved(device_id, &src_ip.into_addr(), address);
                 } else {
                     trace!("receive_ndp_packet_inner: Performing address resolution but the NDP NA from {:?} does not have a target link layer address option, so discarding", src_ip);
                     return;
@@ -3408,7 +3430,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     trace!("receive_ndp_packet_inner: NDP RS from {:?} informed us that it is no longer a router, updating is_router flag", src_ip);
                     neighbor_state.is_router = false;
 
-                    if let Some(router_ll) = LinkLocalAddr::new(src_ip) {
+                    if let Some(router_ll) = LinkLocalAddr::from_witness(src_ip) {
                         // Invalidate the router as a default router if it is one of our default
                         // routers.
                         if ndp_state.has_default_router(&router_ll) {
@@ -3492,7 +3514,7 @@ fn generate_global_address(prefix: &Subnet<Ipv6Addr>, iid: &[u8]) -> AddrSubnet<
 mod tests {
     use super::*;
 
-    use std::convert::TryFrom;
+    use core::convert::{TryFrom, TryInto};
 
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
@@ -4750,7 +4772,12 @@ mod tests {
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
 
-        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device_id,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 0);
 
         //
@@ -4766,7 +4793,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device_id,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 1);
 
         //
@@ -4793,7 +4825,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            unspecified_source,
+            Ipv6SourceAddr::Unspecified,
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -4813,12 +4845,25 @@ mod tests {
         // Test receiving NDP RA where source ip is not a link local address (should not receive)
         //
 
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip, config.local_ip.get(), 1, false, false, 3, 4, 5);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.into(),
+            config.local_ip.get(),
+            1,
+            false,
+            false,
+            3,
+            4,
+            5,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device_id,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 0);
 
         //
@@ -4831,7 +4876,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device_id, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device_id,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
     }
 
@@ -4869,7 +4919,7 @@ mod tests {
         );
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -4910,7 +4960,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -4954,7 +5004,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -4991,7 +5041,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -5032,7 +5082,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -5075,7 +5125,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -5120,7 +5170,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -5190,7 +5240,7 @@ mod tests {
             );
             ctx.receive_ndp_packet(
                 device_id,
-                src_ip.get(),
+                Ipv6SourceAddr::from_witness(src_ip).unwrap(),
                 config.local_ip,
                 icmpv6_packet.unwrap_ndp(),
             );
@@ -5260,7 +5310,7 @@ mod tests {
         assert!(ndp_state.neighbors.get_neighbor_state(&src_ip).is_none());
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -5294,7 +5344,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device_id,
-            src_ip.get(),
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
@@ -5366,7 +5416,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5384,7 +5439,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5402,7 +5462,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip.get(), config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5466,7 +5531,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5486,7 +5556,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5507,7 +5582,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -5527,7 +5607,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -6579,7 +6664,12 @@ mod tests {
         let rs = rs_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dummy_config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, dummy_config.local_ip, rs.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            dummy_config.local_ip,
+            rs.unwrap_ndp(),
+        );
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
@@ -6638,7 +6728,12 @@ mod tests {
         let rs = rs_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dummy_config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, dummy_config.local_ip, rs.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            dummy_config.local_ip,
+            rs.unwrap_ndp(),
+        );
         // Timer should not have been updated.
         assert_eq!(
             ctx.dispatcher()
@@ -6690,7 +6785,12 @@ mod tests {
         let rs = rs_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dummy_config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, dummy_config.local_ip, rs.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            dummy_config.local_ip,
+            rs.unwrap_ndp(),
+        );
         // Timer should be updated to be at max `MIN_DELAY_BETWEEN_RAS` + `MAX_RA_DELAY_TIME` from
         // the time the last Router Advertisement was sent.
         assert_eq!(
@@ -6799,7 +6899,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device,
-            dummy_config.remote_ip.get(),
+            Ipv6SourceAddr::from_witness(dummy_config.remote_ip).unwrap(),
             dummy_config.local_ip,
             rs.unwrap_ndp(),
         );
@@ -6848,7 +6948,7 @@ mod tests {
             .unwrap();
         ctx.receive_ndp_packet(
             device,
-            dummy_config.remote_ip.get(),
+            Ipv6SourceAddr::from_witness(dummy_config.remote_ip).unwrap(),
             dummy_config.local_ip,
             rs.unwrap_ndp(),
         );
@@ -6988,7 +7088,7 @@ mod tests {
             );
             let packet =
                 buf.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
-            ctx.receive_ndp_packet(device, src_ip, dst_ip, packet.unwrap_ndp());
+            ctx.receive_ndp_packet(device, src_ip.try_into().unwrap(), dst_ip, packet.unwrap_ndp());
 
             let neighbor_state =
                 StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -7038,7 +7138,12 @@ mod tests {
         let packet = buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(neighbor_ip, all_nodes_addr))
             .unwrap();
-        ctx.receive_ndp_packet(device, neighbor_ip, all_nodes_addr, packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            Ipv6SourceAddr::new(neighbor_ip).unwrap(),
+            all_nodes_addr,
+            packet.unwrap_ndp(),
+        );
 
         // We still do not know about the neighbor since the NA was unsolicited and we never were
         // interested in the neighbor yet.
@@ -7067,7 +7172,12 @@ mod tests {
         let packet = buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(neighbor_ip, all_nodes_addr))
             .unwrap();
-        ctx.receive_ndp_packet(device, neighbor_ip, all_nodes_addr, packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            Ipv6SourceAddr::new(neighbor_ip).unwrap(),
+            all_nodes_addr,
+            packet.unwrap_ndp(),
+        );
 
         // We still do not know about the neighbor since the NA was unsolicited and we never were
         // interested in the neighbor yet.
@@ -7369,7 +7479,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
 
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
@@ -7421,7 +7536,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -7458,7 +7578,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -7544,7 +7669,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -7679,7 +7809,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -7783,7 +7918,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -7876,7 +8016,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -7942,7 +8087,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -8008,7 +8158,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -8175,7 +8330,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
 
         // Address state and configuration type should not have changed.
         assert_eq!(
@@ -8251,7 +8411,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
@@ -8328,7 +8493,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
@@ -8394,7 +8564,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .count(),
@@ -8468,7 +8643,12 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        ctx.receive_ndp_packet(device, src_ip, config.local_ip, icmpv6_packet.unwrap_ndp());
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
 
         // Should have gotten a new ip.
         assert_eq!(
@@ -8568,7 +8748,12 @@ mod tests {
             let icmpv6_packet = icmpv6_packet_buf
                 .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip))
                 .unwrap();
-            ctx.receive_ndp_packet(device, src_ip, dst_ip, icmpv6_packet.unwrap_ndp());
+            ctx.receive_ndp_packet(
+                device,
+                src_ip.try_into().unwrap(),
+                dst_ip,
+                icmpv6_packet.unwrap_ndp(),
+            );
 
             assert_eq!(
                 NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(ctx, device.id().into())

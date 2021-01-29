@@ -12,7 +12,8 @@ use core::fmt::{self, Debug, Formatter};
 use core::ops::Range;
 
 use log::debug;
-use net_types::ip::{Ipv6, Ipv6Addr};
+use net_types::ip::{Ipv6, Ipv6Addr, Ipv6SourceAddr};
+use net_types::Witness;
 use packet::records::{AlignedRecordsSerializer, Records, RecordsRaw};
 use packet::{
     BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
@@ -388,11 +389,6 @@ impl<B: ByteSlice> Ipv6Packet<B> {
         self.fixed_hdr.flowlabel()
     }
 
-    /// The hop limit.
-    pub fn hop_limit(&self) -> u8 {
-        self.fixed_hdr.hop_limit
-    }
-
     /// The Upper layer protocol for this packet.
     ///
     /// This is found in the fixed header's Next Header if there are no extension
@@ -402,14 +398,14 @@ impl<B: ByteSlice> Ipv6Packet<B> {
         self.proto
     }
 
-    /// The source IP address.
-    pub fn src_ip(&self) -> Ipv6Addr {
-        self.fixed_hdr.src_ip
-    }
-
-    /// The destination IP address.
-    pub fn dst_ip(&self) -> Ipv6Addr {
-        self.fixed_hdr.dst_ip
+    /// The source IP address represented as an [`Ipv6SourceAddr`].
+    ///
+    /// Unlike [`IpHeader::src_ip`], `src_ipv6` returns an `Ipv6SourceAddr`,
+    /// which represents the valid values that a source address can take
+    /// (namely, a unicast or unspecified address) or `None` if the address is
+    /// invalid (namely, a multicast address).
+    pub fn src_ipv6(&self) -> Option<Ipv6SourceAddr> {
+        Ipv6SourceAddr::new(self.fixed_hdr.src_ip)
     }
 
     /// Return a buffer that is a copy of the header bytes in this

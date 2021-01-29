@@ -409,7 +409,7 @@ async fn test_ip_endpoint_packets() -> Result {
         },
         igmp::messages::IgmpPacket,
         ipv4::{Ipv4Packet, Ipv4PacketBuilder},
-        ipv6::{Ipv6Packet, Ipv6PacketBuilder},
+        ipv6::{Ipv6Header, Ipv6Packet, Ipv6PacketBuilder},
     };
 
     let read_frame = futures::stream::try_unfold(tun_dev.clone(), |tun_dev| async move {

@@ -13,7 +13,7 @@ use core::marker::PhantomData;
 use core::time::Duration;
 
 use log::{debug, error, trace};
-use net_types::ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope};
+use net_types::ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope, Ipv6SourceAddr};
 use net_types::{
     LinkLocalAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, SpecifiedAddress, Witness,
 };
@@ -139,7 +139,7 @@ pub(crate) trait MldPacketHandler<D, DeviceId> {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         device: DeviceId,
-        src_ip: Ipv6Addr,
+        src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: MldPacket<B>,
     );
@@ -149,7 +149,7 @@ impl<D: LinkDevice, C: MldContext<D>> MldPacketHandler<D, C::DeviceId> for C {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         device: C::DeviceId,
-        _src_ip: Ipv6Addr,
+        _src_ip: Ipv6SourceAddr,
         _dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: MldPacket<B>,
     ) {
@@ -586,9 +586,12 @@ mod tests {
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(router_addr, MY_IP))
             .unwrap()
         {
-            Icmpv6Packet::Mld(packet) => {
-                ctx.receive_mld_packet(DummyLinkDeviceId, router_addr, MY_IP, packet)
-            }
+            Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(
+                DummyLinkDeviceId,
+                router_addr.try_into().unwrap(),
+                MY_IP,
+                packet,
+            ),
             _ => panic!("serialized icmpv6 message is not an mld message"),
         }
     }
@@ -610,9 +613,12 @@ mod tests {
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(router_addr, MY_IP))
             .unwrap()
         {
-            Icmpv6Packet::Mld(packet) => {
-                ctx.receive_mld_packet(DummyLinkDeviceId, router_addr, MY_IP, packet)
-            }
+            Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(
+                DummyLinkDeviceId,
+                router_addr.try_into().unwrap(),
+                MY_IP,
+                packet,
+            ),
             _ => panic!("serialized icmpv6 message is not an mld message"),
         }
     }

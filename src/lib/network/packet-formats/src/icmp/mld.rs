@@ -252,7 +252,7 @@ mod tests {
     use crate::ipv6::ext_hdrs::{
         ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData, Ipv6ExtensionHeaderData,
     };
-    use crate::ipv6::{Ipv6Packet, Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
+    use crate::ipv6::{Ipv6Header, Ipv6Packet, Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
 
     fn serialize_to_bytes<
         B: ByteSlice + Debug,
