@@ -133,20 +133,20 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
   enum {
     kDriverSearchPath,
     kLoadDriver,
-    kSysDeviceDriver,
     kLogToDebuglog,
-    kPathPrefix,
-    kUseDefaultLoader,
     kNoExitAfterSuspend,
+    kPathPrefix,
+    kSysDeviceDriver,
+    kUseDefaultLoader,
   };
   option options[] = {
       {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
       {"load-driver", required_argument, nullptr, kLoadDriver},
-      {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
-      {"path-prefix", required_argument, nullptr, kPathPrefix},
-      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
       {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
+      {"path-prefix", required_argument, nullptr, kPathPrefix},
+      {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
+      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
       {0, 0, 0, 0},
   };
 
@@ -177,21 +177,21 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
       case kLoadDriver:
         out->load_drivers.push_back(optarg);
         break;
-      case kSysDeviceDriver:
-        check_not_duplicated(out->sys_device_driver);
-        out->sys_device_driver = optarg;
-        break;
       case kLogToDebuglog:
         out->log_to_debuglog = true;
+        break;
+      case kNoExitAfterSuspend:
+        out->no_exit_after_suspend = true;
         break;
       case kPathPrefix:
         out->path_prefix = std::string(optarg);
         break;
+      case kSysDeviceDriver:
+        check_not_duplicated(out->sys_device_driver);
+        out->sys_device_driver = optarg;
+        break;
       case kUseDefaultLoader:
         out->use_default_loader = true;
-        break;
-      case kNoExitAfterSuspend:
-        out->no_exit_after_suspend = true;
         break;
       default:
         print_usage_and_exit();
