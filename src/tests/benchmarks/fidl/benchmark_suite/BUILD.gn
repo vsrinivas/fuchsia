@@ -23,6 +23,8 @@ template("benchmark_fidl") {
 
   action_foreach(copy_target) {
     hermetic_deps = false
+    all_outputs_fresh = false
+
     script = "copy_replace_fidl_library.py"
 
     sources = invoker.sources

@@ -587,13 +587,8 @@ foreach(_target_type,
 
         # If the action didn't write or touch all of its declared outputs, it
         # should be marked with `all_outputs_fresh = false`.
-        #
-        # TODO(jayzhuang): Default to `true` and mark all violations. Although
-        # we are still determining whether these should be allow-listed like
-        # `hermetic_deps` above because "skipping writing an output file if it
-        # didn't change" is a common pattern.
         if (!defined(all_outputs_fresh)) {
-          all_outputs_fresh = false
+          all_outputs_fresh = true
         }
 
         script = python_exe_src

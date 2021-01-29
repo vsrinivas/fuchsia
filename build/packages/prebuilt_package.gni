@@ -88,6 +88,8 @@ template("prebuilt_package") {
   }
 
   action(target_name) {
+    all_outputs_fresh = false
+
     forward_variables_from(invoker,
                            [
                              "metadata",

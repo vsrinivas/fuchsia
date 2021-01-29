@@ -87,6 +87,7 @@ template("_compiled_action_target") {
                              "depfile",
                              "deps",
                              "hermetic_deps",
+                             "all_outputs_fresh",
                              "inputs",
                              "metadata",
                              "outputs",

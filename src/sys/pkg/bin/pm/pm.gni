@@ -21,6 +21,7 @@ template("_pm") {
     tool_output_name = "pm"
     forward_variables_from(invoker,
                            [
+                             "all_outputs_fresh",
                              "args",
                              "data_deps",
                              "depfile",
@@ -88,6 +89,7 @@ template("pm_build") {
   _pm(target_name) {
     forward_variables_from(invoker,
                            [
+                             "all_outputs_fresh",
                              "data_deps",
                              "deps",
                              "public_deps",
