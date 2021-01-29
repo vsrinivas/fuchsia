@@ -242,7 +242,9 @@ zx_status_t SparseContainer::Verify() const {
     start = end;
     xprintf("Found partition %u with %u extents\n", i, partitions_[i].descriptor.extent_count);
 
-    if (partitions_[i].descriptor.flags & fvm::kSparseFlagSnapshotMetadataPartition) {
+    // Internal partition GUID.
+    if (memcmp(partitions_[i].descriptor.type, fvm::kSnapshotMetadataTypeGuid.data(),
+               sizeof(fvm::VPartitionEntry::type)) == 0) {
       // Reserve partitions need no verification.
       continue;
     }
@@ -651,7 +653,7 @@ zx_status_t SparseContainer::AddSnapshotMetadataPartition(size_t reserved_slices
   descriptor.magic = fvm::kPartitionDescriptorMagic;
   memcpy(descriptor.type, entry.type, sizeof(kDataType));
   memcpy(descriptor.name, entry.unsafe_name, sizeof(descriptor.name));
-  descriptor.flags = fvm::kSparseFlagSnapshotMetadataPartition;
+  descriptor.flags = 0;
   descriptor.extent_count = 0;
 
   // TODO(fxbug.dev/59567): Add partition/extent entries describing blobfs.
