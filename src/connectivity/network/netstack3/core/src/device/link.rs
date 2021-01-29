@@ -39,7 +39,7 @@ impl LinkAddress for Mac {
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        // assert that contract is being held:
+        // Assert that contract is being held.
         debug_assert_eq!(bytes.len(), Self::BYTES_LENGTH);
         let mut b = [0; Self::BYTES_LENGTH];
         b.copy_from_slice(bytes);

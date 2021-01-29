@@ -42,7 +42,7 @@ pub enum NetstackError {
     /// Error when a maximum transmission unit (MTU) is exceeded.
     #[error("MTU exceeded")]
     Mtu,
-    // Add error types here as we add more to the stack
+    // Add error types here as we add more to the stack.
 }
 
 impl From<AddressError> for NetstackError {
@@ -102,9 +102,10 @@ pub enum LocalAddressError {
     AddressInUse,
 }
 
-// TODO(joshlf): Once we support a more general model of sockets in which UDP and ICMP
-// connections are special cases of UDP and ICMP sockets, we can introduce a more
-// specialized ListenerError which does not contain the NoRoute variant.
+// TODO(joshlf): Once we support a more general model of sockets in which UDP
+// and ICMP connections are special cases of UDP and ICMP sockets, we can
+// introduce a more specialized ListenerError which does not contain the NoRoute
+// variant.
 
 /// An error encountered when attempting to create a UDP, TCP, or ICMP connection.
 #[derive(Error, Debug, PartialEq)]

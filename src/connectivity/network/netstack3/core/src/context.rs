@@ -139,8 +139,8 @@ pub(crate) trait TimerContext<Id>: InstantContext {
 
     /// Get the instant a timer will fire, if one is scheduled.
     ///
-    /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no timer
-    /// with the given ID exists, `scheduled_instant` will return `None`.
+    /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no
+    /// timer with the given ID exists, `scheduled_instant` will return `None`.
     fn scheduled_instant(&self, id: Id) -> Option<Self::Instant>;
 }
 
@@ -675,8 +675,8 @@ pub(crate) mod testutil {
             }
         }
 
-        /// Skip current time forward until `instant`, triggering all timers until
-        /// then, inclusive.
+        /// Skip current time forward until `instant`, triggering all timers
+        /// until then, inclusive.
         ///
         /// Returns the number of timers triggered.
         ///
@@ -708,8 +708,9 @@ pub(crate) mod testutil {
         /// Returns the number of timers triggered.
         fn trigger_timers_for(&mut self, duration: Duration) -> usize {
             let instant = self.as_mut().now() + duration;
-            // We know the call to `self.trigger_timers_until_instant` will not panic because
-            // we provide an instant that is greater than or equal to the current time.
+            // We know the call to `self.trigger_timers_until_instant` will not
+            // panic because we provide an instant that is greater than or equal
+            // to the current time.
             self.trigger_timers_until_instant(instant)
         }
     }
@@ -723,8 +724,8 @@ pub(crate) mod testutil {
     }
 
     impl<Meta> DummyFrameContext<Meta> {
-        /// Closure which can decide to cause an error to be thrown when handling a
-        /// frame, based on the metadata.
+        /// Closure which can decide to cause an error to be thrown when
+        /// handling a frame, based on the metadata.
         pub fn set_should_error_for_frame<F: Fn(&Meta) -> bool + 'static>(&mut self, f: F) {
             self.should_error_for_frame = Some(Box::new(f));
         }
@@ -839,9 +840,9 @@ pub(crate) mod testutil {
         ///
         /// This method is provided instead of an [`AsRef`] impl to avoid
         /// conflicting with user-provided implementations of `AsRef<T> for
-        /// DummyContext<S, Id, Meta>` for other types, `T`. It is named `get_ref`
-        /// instead of `as_ref` so that programmer doesn't need to specify which
-        /// `as_ref` method is intended.
+        /// DummyContext<S, Id, Meta>` for other types, `T`. It is named
+        /// `get_ref` instead of `as_ref` so that programmer doesn't need to
+        /// specify which `as_ref` method is intended.
         pub(crate) fn get_ref(&self) -> &S {
             &self.state
         }
@@ -1077,14 +1078,15 @@ pub(crate) mod testutil {
                 links,
             };
 
-            // We can't guarantee that all contexts are safely running their timers
-            // together if we receive a context with any timers already set.
+            // We can't guarantee that all contexts are safely running their
+            // timers together if we receive a context with any timers already
+            // set.
             assert!(
                 !ret.contexts.iter().any(|(_, ctx)| { !ctx.timers.timers.is_empty() }),
                 "can't start network with contexts that already have timers set"
             );
 
-            // synchronize all dispatchers' current time to the same value:
+            // Synchronize all dispatchers' current time to the same value.
             for (_, ctx) in ret.contexts.iter_mut() {
                 ctx.timers.instant.time = ret.current_time;
             }
@@ -1160,8 +1162,8 @@ pub(crate) mod testutil {
 
             // Dispatch all pending frames:
             while let Some(InstantAndData(t, _)) = self.pending_frames.peek() {
-                // TODO(brunodalbo): Remove this break once let_chains is
-                // stable.
+                // TODO(https://github.com/rust-lang/rust/issues/53667): Remove
+                // this break once let_chains is stable.
                 if *t > self.current_time {
                     break;
                 }
@@ -1183,7 +1185,8 @@ pub(crate) mod testutil {
                 // timer for the same or older DummyInstant.
                 let mut timers = Vec::<TimerId>::new();
                 while let Some(InstantAndData(t, id)) = ctx.timers.timers.peek() {
-                    // TODO(brunodalbo): remove this break once let_chains is stable
+                    // TODO(https://github.com/rust-lang/rust/issues/53667):
+                    // Remove this break once let_chains is stable.
                     if *t > ctx.now() {
                         break;
                     }
@@ -1241,7 +1244,7 @@ pub(crate) mod testutil {
         /// current time for which an event is available. If no events are
         /// available, returns `None`.
         fn next_step(&self) -> Option<DummyInstant> {
-            // get earliest timer in all contexts
+            // Get earliest timer in all contexts.
             let next_timer = self
                 .contexts
                 .iter()
@@ -1250,7 +1253,7 @@ pub(crate) mod testutil {
                     None => None,
                 })
                 .min();
-            // get the instant for the next packet
+            // Get the instant for the next packet.
             let next_packet_due = self.pending_frames.peek().map(|t| t.0);
 
             // Return the earliest of them both, and protect against returning a
@@ -1269,8 +1272,8 @@ pub(crate) mod testutil {
 
         #[test]
         fn test_instant_and_data() {
-            // verify implementation of InstantAndData to be used as a complex type
-            // in a BinaryHeap:
+            // Verify implementation of InstantAndData to be used as a complex
+            // type in a BinaryHeap.
             let mut heap = BinaryHeap::<InstantAndData<usize>>::new();
             let now = DummyInstant::default();
 
@@ -1281,7 +1284,7 @@ pub(crate) mod testutil {
             heap.push(new_data(now + Duration::from_secs(1), 1));
             heap.push(new_data(now + Duration::from_secs(2), 2));
 
-            // earlier timer is popped first
+            // Earlier timer is popped first.
             assert!(heap.pop().unwrap().1 == 1);
             assert!(heap.pop().unwrap().1 == 2);
             assert!(heap.pop().is_none());
@@ -1289,7 +1292,7 @@ pub(crate) mod testutil {
             heap.push(new_data(now + Duration::from_secs(1), 1));
             heap.push(new_data(now + Duration::from_secs(1), 1));
 
-            // can pop twice with identical data:
+            // Can pop twice with identical data.
             assert!(heap.pop().unwrap().1 == 1);
             assert!(heap.pop().unwrap().1 == 1);
             assert!(heap.pop().is_none());
@@ -1330,13 +1333,15 @@ pub(crate) mod testutil {
             assert!(ctx.trigger_next_timer());
             assert_eq!(ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
 
-            // After the timer fires, it should not still be scheduled at some instant.
+            // After the timer fires, it should not still be scheduled at some
+            // instant.
             assert!(ctx.scheduled_instant(0).is_none());
 
             // The time should have been advanced.
             assert_eq!(ctx.now(), ONE_SEC_INSTANT);
 
-            // Once it's been triggered, it should be canceled and not triggerable again.
+            // Once it's been triggered, it should be canceled and not
+            // triggerable again.
             ctx = Default::default();
             assert!(!ctx.trigger_next_timer());
             assert_eq!(ctx.get_ref().as_slice(), []);

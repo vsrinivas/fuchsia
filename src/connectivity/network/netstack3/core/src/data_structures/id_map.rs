@@ -505,7 +505,7 @@ impl<'a, K: EntryKey, T> OccupiedEntry<'a, K, T> {
 
     /// Gets a reference to the value in the entry.
     pub fn get(&self) -> &T {
-        // we can unwrap because value is always Some for OccupiedEntry
+        // We can unwrap because value is always Some for OccupiedEntry.
         self.id_map.get(self.key.get_key_index()).unwrap()
     }
 
@@ -514,7 +514,7 @@ impl<'a, K: EntryKey, T> OccupiedEntry<'a, K, T> {
     /// If you need a reference to the `OccupiedEntry` which may outlive the
     /// destruction of the entry value, see [`OccupiedEntry::into_mut`].
     pub fn get_mut(&mut self) -> &mut T {
-        // we can unwrap because value is always Some for OccupiedEntry
+        // We can unwrap because value is always Some for OccupiedEntry.
         self.id_map.get_mut(self.key.get_key_index()).unwrap()
     }
 
@@ -524,19 +524,19 @@ impl<'a, K: EntryKey, T> OccupiedEntry<'a, K, T> {
     /// If you need multiple references to the `OccupiedEntry`, see
     /// [`OccupiedEntry::get_mut`].
     pub fn into_mut(self) -> &'a mut T {
-        // we can unwrap because value is always Some for OccupiedEntry
+        // We can unwrap because value is always Some for OccupiedEntry.
         self.id_map.get_mut(self.key.get_key_index()).unwrap()
     }
 
     /// Sets the value of the entry, and returns the entry's old value.
     pub fn insert(&mut self, value: T) -> T {
-        // we can unwrap because value is always Some for OccupiedEntry
+        // We can unwrap because value is always Some for OccupiedEntry.
         self.id_map.insert(self.key.get_key_index(), value).unwrap()
     }
 
     /// Takes the value out of the entry, and returns it.
     pub fn remove(self) -> T {
-        // we can unwrap because value is always Some for OccupiedEntry
+        // We can unwrap because value is always Some for OccupiedEntry.
         self.id_map.remove(self.key.get_key_index()).unwrap()
     }
 
@@ -972,7 +972,7 @@ mod tests {
             for i in 0..NELEMS {
                 assert_eq!(map.push(i), i);
             }
-            // don't remove the last one to prevent compressing.
+            // Don't remove the last one to prevent compressing.
             let mut remove_seq: Vec<usize> = (0..NELEMS - 1).collect();
             remove_seq.shuffle(&mut rng);
             for i in &remove_seq {

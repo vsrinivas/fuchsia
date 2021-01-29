@@ -144,8 +144,8 @@ mod port_alloc {
     ///
     /// [RFC 6056]: https://tools.ietf.org/html/rfc6056
     pub(crate) struct PortAlloc<I: PortAllocImpl> {
-        // TODO(brunodalbo): table can be made an array once we can declare
-        // arrays with associated consts
+        // TODO(brunodalbo): Table can be made an array once we can declare
+        // arrays with associated consts.
         table: Vec<PortNumber>,
         secret_a: [u8; SECRET_LEN],
         secret_b: [u8; SECRET_LEN],
@@ -222,7 +222,7 @@ mod port_alloc {
             let table_val = &mut self.table[table_index];
             for _ in 0..num_ephemeral {
                 let local_off = offset.wrapping_add(*table_val as usize) % num_ephemeral;
-                // we can safely cast `local_off` to `PortNumber` because of the
+                // We can safely cast `local_off` to `PortNumber` because of the
                 // % num_ephemeral operation above.
                 let port = I::EPHEMERAL_RANGE.start() + (local_off as PortNumber);
                 *table_val = table_val.wrapping_add(1);
@@ -319,19 +319,19 @@ mod port_alloc {
 
         #[test]
         fn test_single_range_start() {
-            // test boundary condition for first ephemeral port:
+            // Test boundary condition for first ephemeral port.
             test_allow_single(MockImpl::EPHEMERAL_RANGE.start().clone())
         }
 
         #[test]
         fn test_single_range_end() {
-            // test boundary condition for last ephemeral port:
+            // Test boundary condition for last ephemeral port.
             test_allow_single(MockImpl::EPHEMERAL_RANGE.end().clone())
         }
 
         #[test]
         fn test_single_range_mid() {
-            // test some other ephemeral port:
+            // Test some other ephemeral port.
             test_allow_single(
                 (MockImpl::EPHEMERAL_RANGE.end() + MockImpl::EPHEMERAL_RANGE.start()) / 2,
             )
@@ -339,7 +339,7 @@ mod port_alloc {
 
         #[test]
         fn test_allow_none() {
-            // test that if no ports are available, try_alloc must return none:
+            // Test that if no ports are available, try_alloc must return none.
             with_fake_rngs(RNG_ROUNDS, |mut rng| {
                 let mock = MockImpl { available: MockAvailable::DenyAll };
                 let mut alloc = PortAlloc::<MockImpl>::new(&mut rng);
@@ -350,8 +350,8 @@ mod port_alloc {
 
         #[test]
         fn test_allow_evens() {
-            // test that if we only allow even ports, we will always get ports
-            // in the specified range, and they'll always be even:
+            // Test that if we only allow even ports, we will always get ports
+            // in the specified range, and they'll always be even.
             with_fake_rngs(RNG_ROUNDS, |mut rng| {
                 let mock = MockImpl { available: MockAvailable::AllowEvens };
                 let mut alloc = PortAlloc::<MockImpl>::new(&mut rng);
@@ -363,8 +363,8 @@ mod port_alloc {
 
         #[test]
         fn test_sequential_allocs() {
-            // test that for a single flow Id, we get sequential ports that can
-            // span the entire ephemeral range:
+            // Test that for a single flow ID, we get sequential ports that can
+            // span the entire ephemeral range.
             with_fake_rngs(RNG_ROUNDS, |mut rng| {
                 let mock = MockImpl { available: MockAvailable::AllowAll };
                 let mut alloc = PortAlloc::<MockImpl>::new(&mut rng);
@@ -385,7 +385,7 @@ mod port_alloc {
 
         #[test]
         fn test_different_tables() {
-            // test that different Ids can hash to different offsets in internal
+            // Test that different IDs can hash to different offsets in internal
             // tables, which increase independently.
             let mock = MockImpl { available: MockAvailable::AllowAll };
             let mut alloc = PortAlloc::<MockImpl>::new(&mut FakeCryptoRng::new_xorshift(0));
@@ -396,18 +396,18 @@ mod port_alloc {
             assert_eq!(hmac_with_secret(&id_a, &alloc.secret_b[..]) % 2, 0);
             assert_eq!(hmac_with_secret(&id_b, &alloc.secret_b[..]) % 2, 1);
             let _ = alloc.try_alloc(&id_a, &mock).unwrap();
-            // a single allocation should've moved offset a but not b:
+            // A single allocation should've moved offset a but not b.
             assert_eq!(table_a.wrapping_add(1), alloc.table[0]);
             assert_eq!(table_b, alloc.table[1]);
             let _ = alloc.try_alloc(&id_b, &mock).unwrap();
-            // now offset b should've moved, and a remained just one forward:
+            // Now offset b should've moved, and a remained just one forward.
             assert_eq!(table_a.wrapping_add(1), alloc.table[0]);
             assert_eq!(table_b.wrapping_add(1), alloc.table[1]);
         }
 
         #[test]
         fn test_ephemeral_port_random() {
-            // test that random ephemeral ports are always in range
+            // Test that random ephemeral ports are always in range.
             let mut rng = FakeCryptoRng::new_xorshift(0);
             for _ in 0..1000 {
                 let rnd_port = EphemeralPort::<MockImpl>::new_random(&mut rng);
@@ -421,7 +421,7 @@ mod port_alloc {
                 port: *MockImpl::EPHEMERAL_RANGE.start(),
                 _marker: PhantomData,
             };
-            // loop over all the range twice so we see the wrap-around
+            // Loop over all the range twice so we see the wrap-around.
             for _ in 0..=1 {
                 for x in MockImpl::EPHEMERAL_RANGE {
                     assert_eq!(port.port, x);

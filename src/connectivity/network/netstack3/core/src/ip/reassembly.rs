@@ -12,23 +12,23 @@
 //! is without any modification. If it is fragmented, this utility will capture
 //! its body and store it in a cache while waiting for all the fragments for a
 //! packet to arrive. The header information from a fragment with offset set to
-//! 0 will also be kept to add to the final, reassembled packet. Once this utility
-//! has received all the fragments for a combination of source address, destination
-//! address and identification value, the implementer will need to allocate a
-//! buffer of sufficient size to reassemble the final packet into and pass it to
-//! this utility. This utility will then attempt to reassemble and parse the
-//! packet, which will be returned to the caller. The caller should then handle
-//! the returned packet as a normal IP packet. Note, there is a timer from
-//! receipt of the first fragment to reassembly of the final packet. See
-//! [`REASSEMBLY_TIMEOUT_SECONDS`].
+//! 0 will also be kept to add to the final, reassembled packet. Once this
+//! utility has received all the fragments for a combination of source address,
+//! destination address and identification value, the implementer will need to
+//! allocate a buffer of sufficient size to reassemble the final packet into and
+//! pass it to this utility. This utility will then attempt to reassemble and
+//! parse the packet, which will be returned to the caller. The caller should
+//! then handle the returned packet as a normal IP packet. Note, there is a
+//! timer from receipt of the first fragment to reassembly of the final packet.
+//! See [`REASSEMBLY_TIMEOUT_SECONDS`].
 //!
-//! Note, this utility does not support reassembly of jumbogram packets. According
-//! to the IPv6 Jumbogram RFC (RFC 2675), the jumbogram payload option is relevent
-//! only for nodes that may be attached to links with a link MTU greater than
-//! 65575 bytes. Note, the maximum size of a non-jumbogram IPv6 packet is also
-//! 65575 (as the payload length field for IP packets is 16 bits + 40 byte IPv6
-//! header). If a link supports an MTU greater than the maximum size of a
-//! non-jumbogram packet, the packet should not be fragmented.
+//! Note, this utility does not support reassembly of jumbogram packets.
+//! According to the IPv6 Jumbogram RFC (RFC 2675), the jumbogram payload option
+//! is relevent only for nodes that may be attached to links with a link MTU
+//! greater than 65575 bytes. Note, the maximum size of a non-jumbogram IPv6
+//! packet is also 65575 (as the payload length field for IP packets is 16 bits
+//! + 40 byte IPv6 header). If a link supports an MTU greater than the maximum
+//! size of a non-jumbogram packet, the packet should not be fragmented.
 
 use alloc::collections::HashMap;
 use alloc::collections::{BTreeSet, BinaryHeap};
@@ -47,21 +47,21 @@ use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::context::{StateContext, TimerContext, TimerHandler};
 
-/// The maximum amount of time from receipt of the first fragment to reassembly of
-/// a packet. Note, "first fragment" does not mean a fragment with offset 0; it means
-/// the first fragment packet we receive with a new combination of source address,
-/// destination address and fragment identification value.
+/// The maximum amount of time from receipt of the first fragment to reassembly
+/// of a packet. Note, "first fragment" does not mean a fragment with offset 0;
+/// it means the first fragment packet we receive with a new combination of
+/// source address, destination address and fragment identification value.
 const REASSEMBLY_TIMEOUT_SECONDS: u64 = 60;
 
 /// Number of bytes per fragment block for IPv4 and IPv6.
 ///
-/// IPv4 outlines the fragment block size in RFC 791 section 3.1, under the fragment
-/// offset field's description: "The fragment offset is measured in units of 8 octets
-/// (64 bits)".
+/// IPv4 outlines the fragment block size in RFC 791 section 3.1, under the
+/// fragment offset field's description: "The fragment offset is measured in
+/// units of 8 octets (64 bits)".
 ///
-/// IPv6 outlines the fragment block size in RFC 8200 section 4.5, under the fragment
-/// offset field's description: "The offset, in 8-octet units, of the data following
-/// this header".
+/// IPv6 outlines the fragment block size in RFC 8200 section 4.5, under the
+/// fragment offset field's description: "The offset, in 8-octet units, of the
+/// data following this header".
 const FRAGMENT_BLOCK_SIZE: u8 = 8;
 
 /// Maximum number of fragment blocks an IPv4 or IPv6 packet can have.
@@ -72,9 +72,10 @@ const MAX_FRAGMENT_BLOCKS: u16 = 8191;
 
 /// Maximum number of bytes of all currently cached fragments per IP protocol.
 ///
-/// If the current cache size is less than this number, a new fragment can be cached
-/// (even if this will result in the total cache size exceeding this threshold). If
-/// the current cache size >= this number, the incoming fragment will be dropped.
+/// If the current cache size is less than this number, a new fragment can be
+/// cached (even if this will result in the total cache size exceeding this
+/// threshold). If the current cache size >= this number, the incoming fragment
+/// will be dropped.
 const MAX_FRAGMENT_CACHE_SIZE: usize = 4 * 1024 * 1024;
 
 /// The execution context for the fragment cache.
@@ -98,9 +99,9 @@ impl<A: IpAddress, C: FragmentContext<A::Version>> TimerHandler<FragmentCacheKey
 pub(crate) trait FragmentablePacket {
     /// Return fragment identifier data.
     ///
-    /// Returns the fragment identification, offset and more flag as
-    /// `(a, b, c)` where `a` is the fragment identification value,
-    /// `b` is the fragment offset and `c` is the more flag.
+    /// Returns the fragment identification, offset and more flag as `(a, b, c)`
+    /// where `a` is the fragment identification value, `b` is the fragment
+    /// offset and `c` is the more flag.
     ///
     /// # Panics
     ///
@@ -145,27 +146,29 @@ pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip> {
     ///  1) Body is not a multiple of `FRAGMENT_BLOCK_SIZE` and  it is not the
     ///     last fragment (last fragment of a packet, not last fragment received
     ///     for a packet).
-    ///  2) Overlaps with an existing fragment. This is explicitly not allowed for
-    ///     IPv6 as per RFC 8200 section 4.5 (more details in RFC 5722). We choose
-    ///     the same behaviour for IPv4 for the same reasons.
-    ///  3) Packet's fragment offset + # of fragment blocks > `MAX_FRAGMENT_BLOCKS`.
-    // TODO(ghanan): Investigate whether disallowing overlapping fragments for IPv4
-    //               cause issues interoperating with hosts that produce overlapping
-    //               fragments.
+    ///  2) Overlaps with an existing fragment. This is explicitly not allowed
+    ///     for IPv6 as per RFC 8200 section 4.5 (more details in RFC 5722). We
+    ///     choose the same behaviour for IPv4 for the same reasons.
+    ///  3) Packet's fragment offset + # of fragment blocks >
+    ///     `MAX_FRAGMENT_BLOCKS`.
+    // TODO(ghanan): Investigate whether disallowing overlapping fragments for
+    //               IPv4 cause issues interoperating with hosts that produce
+    //               overlapping fragments.
     InvalidFragment,
 
     /// Successfully proccessed the provided fragment. We are still waiting on
-    /// more fragments for a packet to arrive before being ready to reassemble the
-    /// packet.
+    /// more fragments for a packet to arrive before being ready to reassemble
+    /// the packet.
     NeedMoreFragments,
 
-    /// Cannot process the fragment because `MAX_FRAGMENT_CACHE_SIZE` is reached.
+    /// Cannot process the fragment because `MAX_FRAGMENT_CACHE_SIZE` is
+    /// reached.
     OutOfMemory,
 
-    /// Successfully processed the provided fragment. We now have all the fragments
-    /// we need to reassemble the packet. The caller must create a buffer with capacity
-    /// for at least `packet_len` bytes and provide the buffer and `key` to
-    /// `reassemble_packet`.
+    /// Successfully processed the provided fragment. We now have all the
+    /// fragments we need to reassemble the packet. The caller must create a
+    /// buffer with capacity for at least `packet_len` bytes and provide the
+    /// buffer and `key` to `reassemble_packet`.
     Ready { key: FragmentCacheKey<I::Addr>, packet_len: usize },
 }
 
@@ -201,44 +204,49 @@ impl<A: IpAddress> FragmentCacheKey<A> {
 /// Data required for fragmented packet reassembly.
 #[derive(Debug)]
 struct FragmentCacheData {
-    /// List of non-overlapping inclusive ranges of fragment blocks required before
-    /// being ready to reassemble a packet.
+    /// List of non-overlapping inclusive ranges of fragment blocks required
+    /// before being ready to reassemble a packet.
     ///
-    /// When creating a new instance of `FragmentCacheData`, we will set `missing_blocks`
-    /// to a list with a single element representing all blocks, (0, MAX_VALUE).
-    /// In this case, MAX_VALUE will be set to `core::u16::MAX`.
-    // TODO(ghanan): Consider a different data structure? With the BTreeSet, searches will be
-    //               O(n) and inserts/removals may be O(log(n)). If we use a linked list,
-    //               searches will be O(n) but inserts/removals will be O(1).
-    //               For now, a `BTreeSet` is used since Rust provides one and it does the job of
-    //               keeping the list of gaps in increasing order when searching, inserting and
-    //               removing. How many fragments for a packet will we get in practice though?
-    // TODO(fxbug.dev/50830): O(n) complexity per fragment is a DDOS vulnerability: this should be
-    //              refactored to be O(log(n)).
+    /// When creating a new instance of `FragmentCacheData`, we will set
+    /// `missing_blocks` to a list with a single element representing all
+    /// blocks, (0, MAX_VALUE). In this case, MAX_VALUE will be set to
+    /// `core::u16::MAX`.
+    // TODO(ghanan): Consider a different data structure? With the BTreeSet,
+    //               searches will be O(n) and inserts/removals may be
+    //               O(log(n)). If we use a linked list, searches will be O(n)
+    //               but inserts/removals will be O(1). For now, a `BTreeSet` is
+    //               used since Rust provides one and it does the job of keeping
+    //               the list of gaps in increasing order when searching,
+    //               inserting and removing. How many fragments for a packet
+    //               will we get in practice though?
+    // TODO(fxbug.dev/50830): O(n) complexity per fragment is a DDOS
+    //              vulnerability: this should be refactored to be O(log(n)).
     missing_blocks: BTreeSet<(u16, u16)>,
 
     /// Received fragment blocks.
     ///
-    /// We use a binary heap for help when reassembling packets. When we reassemble
-    /// packets, we will want to fill up a new buffer with all the body fragments.
-    /// The easiest way to do this is in order, from the fragment with offset 0 to
-    /// the fragment with the highest offset. Since we only need to enforce the order
-    /// when reassembling, we use a min-heap so we have a defined order (increasing
-    /// fragment offset values) when popping. `BinaryHeap` is technically a max-heap,
-    /// but we use the negative of the offset values as the key for the heap. See
+    /// We use a binary heap for help when reassembling packets. When we
+    /// reassemble packets, we will want to fill up a new buffer with all the
+    /// body fragments. The easiest way to do this is in order, from the
+    /// fragment with offset 0 to the fragment with the highest offset. Since we
+    /// only need to enforce the order when reassembling, we use a min-heap so
+    /// we have a defined order (increasing fragment offset values) when
+    /// popping. `BinaryHeap` is technically a max-heap, but we use the negative
+    /// of the offset values as the key for the heap. See
     /// [`PacketBodyFragment::new`].
     body_fragments: BinaryHeap<PacketBodyFragment>,
 
     /// The header data for the reassembled packet.
     ///
-    /// The header of the fragment packet with offset 0 will be used as the header
-    /// for the final, reassembled packet.
+    /// The header of the fragment packet with offset 0 will be used as the
+    /// header for the final, reassembled packet.
     header: Option<Vec<u8>>,
 
     /// Total number of bytes in the reassembled packet.
     ///
-    /// This is used so that we don't have to iterated through `body_fragments` and
-    /// sum the partial body sizes to calculate the reassembled packet's size.
+    /// This is used so that we don't have to iterated through `body_fragments`
+    /// and sum the partial body sizes to calculate the reassembled packet's
+    /// size.
     total_size: usize,
 }
 
@@ -657,7 +665,8 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
 ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
     // Parse the packet.
 
-    // TODO(https://github.com/rust-lang/rust/issues/59278): Use `BinaryHeap::into_iter_sorted`.
+    // TODO(https://github.com/rust-lang/rust/issues/59278): Use
+    // `BinaryHeap::into_iter_sorted`.
     let body_fragments = body_fragments.into_sorted_vec().into_iter().map(|x| x.1);
     <I as IpExtByteSlice<B>>::reassemble_fragmented_packet(buffer, header, body_fragments)
         .map_err(|_| FragmentReassemblyError::PacketParsingError)
@@ -914,7 +923,8 @@ mod tests {
 
         match expected_result {
             ExpectedResult::Ready | ExpectedResult::ReadyReassemble => {
-                // We add 20 to the expected packet length because of the IPv4 header.
+                // We add 20 to the expected packet length because of the IPv4
+                // header.
                 let (key, packet_len) = assert_frag_proc_state_ready!(
                     process_fragment::<Ipv4, _, &[u8]>(ctx, packet),
                     DUMMY_CONFIG_V4.remote_ip.get(),
@@ -989,7 +999,8 @@ mod tests {
 
         match expected_result {
             ExpectedResult::Ready | ExpectedResult::ReadyReassemble => {
-                // We add 20 to the expected packet length because of the IPv4 header.
+                // We add 20 to the expected packet length because of the IPv4
+                // header.
                 let (key, packet_len) = assert_frag_proc_state_ready!(
                     process_fragment::<Ipv6, _, &[u8]>(ctx, packet),
                     DUMMY_CONFIG_V6.remote_ip.get(),
@@ -1025,10 +1036,8 @@ mod tests {
     fn test_ipv4_reassembly_not_needed() {
         let mut ctx = DummyContext::default();
 
-        //
         // Test that we don't attempt reassembly if the packet is not
         // fragmented.
-        //
 
         let builder = get_ipv4_builder();
         let mut buffer =
@@ -1044,10 +1053,8 @@ mod tests {
     fn test_ipv6_reassembly_not_needed() {
         let mut ctx = DummyContext::default();
 
-        //
         // Test that we panic if we call `fragment_data` on a packet that has no
         // fragment data.
-        //
 
         let builder = get_ipv6_builder();
         let mut buffer =
@@ -1061,9 +1068,7 @@ mod tests {
         let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
-        //
         // Test that we properly reassemble fragmented packets.
-        //
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
@@ -1081,10 +1086,8 @@ mod tests {
         let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
-        //
         // Test the error we get when we attempt to reassemble with missing
         // fragments.
-        //
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
@@ -1115,9 +1118,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 0);
         assert_eq!(ctx.get_state_mut().cache_size, 0);
 
-        //
         // Test that we properly reset fragment cache on timer.
-        //
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
@@ -1169,10 +1170,8 @@ mod tests {
         assert_eq!(ctx.get_state_mut().cache_size, 0);
         ctx.get_state_mut().threshold = THRESHOLD;
 
-        //
         // Test that when cache size exceeds the threshold, process_fragment
         // returns OOM.
-        //
 
         while ctx.get_state_mut().cache_size < THRESHOLD {
             process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
@@ -1198,9 +1197,7 @@ mod tests {
         let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
-        //
         // Test that we error on overlapping/duplicate fragments.
-        //
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
@@ -1215,10 +1212,8 @@ mod tests {
         let fragment_id = 0;
 
         assert_eq!(ctx.get_state_mut().cache_size, 0);
-        //
         // Test that fragment bodies must be a multiple of
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
-        //
 
         // Process fragment #0
         process_ipv4_fragment(&mut ctx, fragment_id, 0, 2, ExpectedResult::NeedMore);
@@ -1274,10 +1269,8 @@ mod tests {
         let fragment_id = 0;
 
         assert_eq!(ctx.get_state_mut().cache_size, 0);
-        //
         // Test that fragment bodies must be a multiple of
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
-        //
 
         // Process fragment #0
         process_ipv6_fragment(&mut ctx, fragment_id, 0, 2, ExpectedResult::NeedMore);
@@ -1343,10 +1336,8 @@ mod tests {
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
 
-        //
         // Test that we properly reassemble fragmented packets when they arrive
         // intertwined with other packets' fragments.
-        //
 
         // Process fragment #0 for packet #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 0, 3, ExpectedResult::NeedMore);
@@ -1374,7 +1365,6 @@ mod tests {
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;
 
-        //
         // Test that we properly timer with multiple intertwined packets that
         // all arrive out of order. We expect packet 1 and 3 to succeed, and
         // packet 1 to fail due to the reassembly timer.
@@ -1398,7 +1388,6 @@ mod tests {
         //     - Timeout for reassembly of Packet #1.
         //     - Packet #1, Fragment #1 arrives (final fragment but timer
         //       already triggered so fragment not complete).
-        //
 
         // Process fragment #0 for packet #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 0, 3, ExpectedResult::NeedMore);

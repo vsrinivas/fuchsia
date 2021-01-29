@@ -200,9 +200,7 @@ pub(crate) struct IpSock<I: IpExt, D> {
     proto: IpProto,
     unroutable_behavior: UnroutableBehavior,
 
-    //
     // This is merely cached and can change.
-    //
 
     // This is `Routable` if the socket is currently routable and `Unroutable`
     // otherwise. If `unroutable_behavior` is `Close`, then this is guaranteed
@@ -334,9 +332,9 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
                     .addr()
             };
             Ok(IpSock {
-                // `get_ip_addr_subnet` and `get_assigned_ip_addr_subnets` both return
-                // `AddrSubnet`s, which guarantee that their addresses are
-                // unicast address in their subnets. That satisfies the
+                // `get_ip_addr_subnet` and `get_assigned_ip_addr_subnets` both
+                // return `AddrSubnet`s, which guarantee that their addresses
+                // are unicast address in their subnets. That satisfies the
                 // invariant on this field.
                 local_ip,
                 remote_ip,
@@ -771,9 +769,7 @@ mod tests {
     fn test_new() {
         // Test that `new_ip_socket` works with various edge cases.
 
-        //
         // IPv4
-        //
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
             .build::<DummyEventDispatcher>();
@@ -879,9 +875,7 @@ mod tests {
             ) == Err(NoRouteError)
         );
 
-        //
         // IPv6
-        //
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
@@ -993,9 +987,7 @@ mod tests {
         // Test various edge cases of the
         // `BufferIpSocketContext::send_ip_packet` method.
 
-        //
         // IPv4
-        //
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
             .build::<DummyEventDispatcher>();
@@ -1063,9 +1055,7 @@ mod tests {
             SendError::Unroutable
         );
 
-        //
         // IPv6
-        //
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
@@ -1138,10 +1128,8 @@ mod tests {
     fn test_select_ipv6_source_address() {
         use AddressState::*;
 
-        //
         // Test the comparison operator used by `select_ipv6_source_address` by
-        // separately testing each comparison condition
-        //
+        // separately testing each comparison condition.
 
         /// Construct a new `AddressEntry` with reasonable defaults for this
         /// test.

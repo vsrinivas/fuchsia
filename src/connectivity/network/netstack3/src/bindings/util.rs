@@ -104,8 +104,8 @@ impl<F, C: TryFromFidl<F>> TryIntoCore<C> for F {}
 
 /// A FIDL type which can be infallibly converted into the core type `C`.
 ///
-/// `IntoCore<C>` extends [`TryIntoCore<C>`] where `<C as TryFromFidl<_>>::Error =
-/// Never`, and provides the infallible conversion method [`into_core`].
+/// `IntoCore<C>` extends [`TryIntoCore<C>`] where `<C as TryFromFidl<_>>::Error
+/// = Never`, and provides the infallible conversion method [`into_core`].
 ///
 /// [`TryIntoCore<C>`]: crate::bindings::util::TryIntoCore
 /// [`into_fidl`]: crate::bindings::util::IntoCore::into_core

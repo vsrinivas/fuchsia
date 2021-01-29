@@ -28,7 +28,8 @@ use packet::{Buf, BufferMut};
 use super::{IcmpEchoSockets, IcmpStackContext, InnerIcmpConnId, RX_BUFFER_SIZE};
 use crate::bindings::{context::InnerValue, StackContext};
 
-/// Worker for handling requests from a [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
+/// Worker for handling requests from a
+/// [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
 pub(crate) struct EchoSocketWorker<C: StackContext> {
     ctx: C,
     reply_rx: mpsc::Receiver<EchoPacket>,
@@ -97,9 +98,9 @@ pub enum ResponderError {
     ReachedCapacity,
 }
 
-/// `Responder` represents a request to watch for a result. The request is completed once
-/// `respond` is called with an `EchoSocketWatchResult`, consuming the `Responder`. This
-/// abstraction allows for mocking.
+/// `Responder` represents a request to watch for a result. The request is
+/// completed once `respond` is called with an `EchoSocketWatchResult`,
+/// consuming the `Responder`. This abstraction allows for mocking.
 pub trait Responder {
     /// Send a response.
     fn respond(self, result: &mut EchoSocketWatchResult) -> Result<(), ResponderError>;
@@ -165,8 +166,8 @@ impl<R: Responder, CV4: fmt::Debug, CV6: fmt::Debug> EchoSocketWorkerInner<R, CV
 }
 
 impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>> {
-    /// Handle a `fidl_fuchsia_net_icmp::EchoSocketRequest`, which is used for sending ICMP echo
-    /// requests and receiving ICMP echo replies.
+    /// Handle a `fidl_fuchsia_net_icmp::EchoSocketRequest`, which is used for
+    /// sending ICMP echo requests and receiving ICMP echo replies.
     async fn handle_request<C>(&mut self, ctx: &C, req: EchoSocketRequest)
     where
         C::Dispatcher: InnerValue<IcmpEchoSockets>,
@@ -198,8 +199,8 @@ impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnI
         payload: B,
     ) {
         trace!("Sending ICMP Echo request for {:?} w/ sequence number {}", self.conn, seq_num);
-        // TODO(fxbug.dev/37143): Report ICMP errors to responders, once implemented
-        // in the core, by pushing a `zx::Status` to `self.results`.
+        // TODO(fxbug.dev/37143): Report ICMP errors to responders, once
+        // implemented in the core, by pushing a `zx::Status` to `self.results`.
         let _ = match self.conn {
             InnerIcmpConnId::V4(conn) => {
                 core_icmp::send_icmpv4_echo_request(ctx, conn, seq_num, payload)

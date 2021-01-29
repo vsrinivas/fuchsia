@@ -18,7 +18,7 @@ macro_rules! log_unimplemented {
         #[allow(clippy::unused_unit)]
         {
             // log doesn't play well with the new macro system; it expects all
-            // of its macros to be in scope
+            // of its macros to be in scope.
             use ::log::*;
             trace!(concat!("Unimplemented: ", $fmt), $($arg),*);
             $nocrash

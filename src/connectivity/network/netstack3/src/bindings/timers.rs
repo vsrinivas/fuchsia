@@ -180,8 +180,8 @@ where
 
     /// Schedule a new timer with identifier `timer_id` at `time`.
     ///
-    /// If a timer with the same `timer_id` was already scheduled, the old timer is
-    /// unscheduled and its expiry time is returned.
+    /// If a timer with the same `timer_id` was already scheduled, the old timer
+    /// is unscheduled and its expiry time is returned.
     pub(crate) fn schedule_timer(&mut self, timer_id: T, time: StackTime) -> Option<StackTime> {
         let next_id = self.next_id;
 
@@ -195,10 +195,10 @@ where
         // Overflowing next_id should be safe enough to hold TimerDispatcher's
         // invariant about around "versioning" timer identifiers. We'll
         // overlflow after 2^64 timers are scheduled (which can take a while)
-        // and, even then, for it to break the invariant we'd need to still
-        // have a timer scheduled from long ago and be unlucky enough that
-        // ordering ends up giving it the same ID. That seems unlikely, so we
-        // just wrap around and overflow next_id.
+        // and, even then, for it to break the invariant we'd need to still have
+        // a timer scheduled from long ago and be unlucky enough that ordering
+        // ends up giving it the same ID. That seems unlikely, so we just wrap
+        // around and overflow next_id.
         self.next_id = self.next_id.overflowing_add(1).0;
 
         let event = TimerEvent { inner: timer_id.clone(), id: next_id };

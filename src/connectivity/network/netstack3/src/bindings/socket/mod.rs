@@ -118,9 +118,9 @@ where
 
     /// Spawns a socket worker for the given `transport`.
     ///
-    /// The created worker will serve the appropriate FIDL protocol over `channel`
-    /// and send [`Event::SocketEvent`] variants to the `event_loop`'s main mpsc
-    /// channel.
+    /// The created worker will serve the appropriate FIDL protocol over
+    /// `channel` and send [`Event::SocketEvent`] variants to the `event_loop`'s
+    /// main mpsc channel.
     fn spawn_worker(
         &self,
         net_proto: IpVersion,

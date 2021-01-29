@@ -16,9 +16,9 @@
 //! local address and port and a single remote address and port. By virtue of
 //! being bound to a local address, it is also bound to a local interface. This
 //! means that, regardless of the entries in the forwarding table, all traffic
-//! on that connection will always egress over the same interface. [^1] This also
-//! means that, if the interface's address changes, any connections bound to it
-//! are severed.
+//! on that connection will always egress over the same interface. [^1] This
+//! also means that, if the interface's address changes, any connections bound
+//! to it are severed.
 //!
 //! ## Listeners
 //!

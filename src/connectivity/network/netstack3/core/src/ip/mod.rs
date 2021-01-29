@@ -292,7 +292,7 @@ impl<A: IpAddress, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacke
         meta: IpPacketFromArgs<A>,
         body: S,
     ) -> Result<(), S> {
-        // TODO(brunodalbo) this lookup is not considering the source ip in
+        // TODO(brunodalbo) this lookup is not considering the source IP in
         // `meta`, doesn't look totally correct.
         let route = if let Some(r) = lookup_route(self, meta.dst_ip) {
             r
@@ -571,8 +571,8 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Con
         self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(key))
     }
 
-    // TODO(rheacock): the compiler thinks that `f` doesn't have to be mutable, but it does. Thus
-    // we `allow(unused)` here.
+    // TODO(rheacock): the compiler thinks that `f` doesn't have to be mutable,
+    // but it does. Thus we `allow(unused)` here.
     #[allow(unused)]
     fn cancel_timers_with<F: FnMut(&FragmentCacheKey<A>) -> bool>(&mut self, f: F) {
         #[specialize_ip_address]
@@ -832,9 +832,9 @@ macro_rules! drop_packet_and_undo_parse {
 
 /// Process a fragment and reassemble if required.
 ///
-/// Attempts to process a potential fragment packet and reassemble if we
-/// are ready to do so. If the packet isn't fragmented, or a packet was
-/// reassembled, attempt to dispatch the packet.
+/// Attempts to process a potential fragment packet and reassemble if we are
+/// ready to do so. If the packet isn't fragmented, or a packet was reassembled,
+/// attempt to dispatch the packet.
 macro_rules! process_fragment {
     ($ctx:expr, $dispatch:ident, $device:expr, $frame_dst:expr, $buffer:expr, $packet:expr, $src_ip:expr, $dst_ip:expr, $ip:ident) => {{
         match process_fragment::<$ip, _, &mut [u8]>($ctx, $packet) {
@@ -1061,8 +1061,8 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 } else {
                     debug!("received IPv4 packet dropped due to expired TTL");
 
-                    // TTL is 0 or would become 0 after decrement; see "TTL" section,
-                    // https://tools.ietf.org/html/rfc791#page-14
+                    // TTL is 0 or would become 0 after decrement; see "TTL"
+                    // section, https://tools.ietf.org/html/rfc791#page-14
                     let (src_ip, _, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
                     let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
                     icmp::send_icmpv4_ttl_expired(
@@ -1372,8 +1372,8 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 }
             }
             ForwardDestination::ForwardingDisabled => {
-                // TODO(fxbug.dev/21182): Check to make sure the behavior here is the
-                // same as for IPv4.
+                // TODO(fxbug.dev/21182): Check to make sure the behavior here
+                // is the same as for IPv4.
                 //
                 // When forwarding is disabled, we silently drop packets not
                 // destined for this host, based on RFC 1122 § 3.2.1.3, however
@@ -1450,12 +1450,12 @@ fn deliver_ipv6<D: EventDispatcher>(
 /// Either a reason a packet should not be forwarded, or the destination it
 /// should be forwarded to.
 enum ForwardDestination<A: IpAddress> {
-    /// The packet should not be forwarded because the netstack is not configured
-    /// for forwarding for the requested IP version, either globally or for the
-    /// inbound device.
+    /// The packet should not be forwarded because the netstack is not
+    /// configured for forwarding for the requested IP version, either globally
+    /// or for the inbound device.
     ForwardingDisabled,
-    /// The packet should not be forwarded because no route to the specified host
-    /// could be found.
+    /// The packet should not be forwarded because no route to the specified
+    /// host could be found.
     NoRouteToHost,
     /// The packet should be forwarded to the given destination.
     Destination(Destination<A, DeviceId>),
@@ -1563,7 +1563,7 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
     res
 }
 
-/// Return all the routes for the provided `IpAddress` type
+/// Returns all the routes for the provided `IpAddress` type.
 pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
 ) -> core::slice::Iter<Entry<A, DeviceId>> {
@@ -1799,8 +1799,9 @@ where
     assert!(!A::Version::LOOPBACK_SUBNET.contains(&src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(&dst_ip));
 
-    // Tentative addresses are not considered bound to an interface in the traditional sense,
-    // therefore, no packet should have a source IP set to a tentative address.
+    // Tentative addresses are not considered bound to an interface in the
+    // traditional sense, therefore, no packet should have a source IP set to a
+    // tentative address.
     debug_assert!(!SpecifiedAddr::new(src_ip).map_or(false, |src_ip| {
         crate::device::is_addr_tentative_on_device(ctx, &src_ip, device)
     }));
@@ -2085,10 +2086,9 @@ pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(ctx: &Context<D>) ->
 
 /// Get the hop limit for new IP packets that will be sent out from `device`.
 fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) -> u8 {
-    // TODO(ghanan): Should IPv4 packets use the same TTL value
-    //               as IPv6 packets? Currently for the IPv6 case,
-    //               we get the default hop limit from the device
-    //               state which can be updated by NDP's Router
+    // TODO(ghanan): Should IPv4 packets use the same TTL value as IPv6 packets?
+    //               Currently for the IPv6 case, we get the default hop limit
+    //               from the device state which can be updated by NDP's Router
     //               Advertisement.
 
     match I::VERSION {
@@ -2138,15 +2138,14 @@ mod tests {
     use crate::testutil::*;
     use crate::{DeviceId, Mac, StackStateBuilder};
 
-    //
     // Some helper functions
-    //
 
-    /// Verify that an ICMP Parameter Problem packet was actually sent in response to
-    /// a packet with an unrecognized IPv6 extension header option.
+    /// Verify that an ICMP Parameter Problem packet was actually sent in
+    /// response to a packet with an unrecognized IPv6 extension header option.
     ///
-    /// `verify_icmp_for_unrecognized_ext_hdr_option` verifies that the next frame
-    /// in `net` is an ICMP packet with code set to `code`, and pointer set to `pointer`.
+    /// `verify_icmp_for_unrecognized_ext_hdr_option` verifies that the next
+    /// frame in `net` is an ICMP packet with code set to `code`, and pointer
+    /// set to `pointer`.
     fn verify_icmp_for_unrecognized_ext_hdr_option(
         ctx: &mut Context<DummyEventDispatcher>,
         code: Icmpv6ParameterProblemCode,
@@ -2174,11 +2173,12 @@ mod tests {
         }
     }
 
-    /// Populate a buffer `bytes` with data required to test unrecognized options.
+    /// Populate a buffer `bytes` with data required to test unrecognized
+    /// options.
     ///
-    /// The unrecognized option type will be located at index 48. `bytes` must be
-    /// at least 64 bytes long. If `to_multicast` is `true`, the destination address
-    /// of the packet will be a multicast address.
+    /// The unrecognized option type will be located at index 48. `bytes` must
+    /// be at least 64 bytes long. If `to_multicast` is `true`, the destination
+    /// address of the packet will be a multicast address.
     fn buf_for_unrecognized_ext_hdr_option_test(
         bytes: &mut [u8],
         action: ExtensionHeaderOptionAction,
@@ -2319,11 +2319,9 @@ mod tests {
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
 
-        //
         // Test parsing an IPv6 packet with invalid next header value which
         // we SHOULD send an ICMP response for (but we don't since its not a
         // MUST).
-        //
 
         #[rustfmt::skip]
         let bytes: &mut [u8] = &mut [
@@ -2357,10 +2355,8 @@ mod tests {
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
 
-        //
         // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
         // response (invalid routing type for a routing extension header).
-        //
 
         #[rustfmt::skip]
         let bytes: &mut [u8] = &mut [
@@ -2408,15 +2404,10 @@ mod tests {
         let mut bytes = [0; 64];
         let frame_dst = FrameDestination::Unicast;
 
-        //
-        // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
-        // due to an unrecognized extension header option.
-        //
+        // Test parsing an IPv6 packet where we MUST send an ICMP parameter
+        // problem due to an unrecognized extension header option.
 
-        //
-        // Test with unrecognized option type set with
-        // action = skip & continue.
-        //
+        // Test with unrecognized option type set with action = skip & continue.
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
@@ -2428,10 +2419,8 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
-        //
         // Test with unrecognized option type set with
         // action = discard.
-        //
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
@@ -2442,11 +2431,9 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
-        //
         // Test with unrecognized option type set with
         // action = discard & send icmp
         // where dest addr is a unicast addr.
-        //
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
@@ -2464,11 +2451,9 @@ mod tests {
             expected_icmps - 1,
         );
 
-        //
         // Test with unrecognized option type set with
         // action = discard & send icmp
         // where dest addr is a multicast addr.
-        //
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
@@ -2486,11 +2471,9 @@ mod tests {
             expected_icmps - 1,
         );
 
-        //
         // Test with unrecognized option type set with
         // action = discard & send icmp if not multicast addr
         // where dest addr is a unicast addr.
-        //
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
@@ -2508,11 +2491,9 @@ mod tests {
             expected_icmps - 1,
         );
 
-        //
         // Test with unrecognized option type set with
         // action = discard & send icmp if not multicast addr
         // but dest addr is a multicast addr.
-        //
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
@@ -2524,10 +2505,8 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
 
-        //
-        // None of our tests should have sent an icmpv4 packet, or dispatched an ip packet
-        // after the first.
-        //
+        // None of our tests should have sent an icmpv4 packet, or dispatched an
+        // IP packet after the first.
 
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
@@ -2542,9 +2521,7 @@ mod tests {
 
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
-        //
         // Test that a non fragmented packet gets dispatched right away.
-        //
 
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 1);
 
@@ -2559,10 +2536,8 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
-        //
-        // Test that the received packet gets dispatched only after
-        // receiving all the fragments.
-        //
+        // Test that the received packet gets dispatched only after receiving
+        // all the fragments.
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
@@ -2590,11 +2565,8 @@ mod tests {
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;
 
-        //
-        // Test that received packets gets dispatched only after
-        // receiving all the fragments with out of order arrival of
-        // fragments.
-        //
+        // Test that received packets gets dispatched only after receiving all
+        // the fragments with out of order arrival of fragments.
 
         // Process packet #0, fragment #1
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 1, 3);
@@ -2642,10 +2614,8 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
-        //
         // Test to make sure that packets must arrive within the reassembly
         // timeout.
-        //
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
@@ -2673,17 +2643,17 @@ mod tests {
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
 
-        // Make sure no packets got dispatched yet since even
-        // though we technically received all the fragments, this fragment
-        // (#2) arrived too late and the reassembly timeout was triggered,
-        // causing the prior fragment data to be discarded.
+        // Make sure no packets got dispatched yet since even though we
+        // technically received all the fragments, this fragment (#2) arrived
+        // too late and the reassembly timeout was triggered, causing the prior
+        // fragment data to be discarded.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
     }
 
     #[ip_test]
     fn test_ip_reassembly_only_at_destination_host<I: Ip + TestIpExt>() {
-        // Create a new network with two parties (alice & bob) and
-        // enable IP packet routing for alice.
+        // Create a new network with two parties (alice & bob) and enable IP
+        // packet routing for alice.
         let a = "alice";
         let b = "bob";
         let dummy_config = I::DUMMY_CONFIG;
@@ -2709,12 +2679,11 @@ mod tests {
         });
         let fragment_id = 5;
 
-        //
         // Test that packets only get reassembled and dispatched at the
-        // destination. In this test, Alice is receiving packets from some source
-        // that is actually destined for Bob. Alice should simply forward
-        // the packets without attempting to process or reassemble the fragments.
-        //
+        // destination. In this test, Alice is receiving packets from some
+        // source that is actually destined for Bob. Alice should simply forward
+        // the packets without attempting to process or reassemble the
+        // fragments.
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 0, 3);
@@ -2756,10 +2725,9 @@ mod tests {
 
     #[test]
     fn test_ipv6_packet_too_big() {
-        //
-        // Test sending an IPv6 Packet Too Big Error when receiving a packet that is
-        // too big to be forwarded when it isn't destined for the node it arrived at.
-        //
+        // Test sending an IPv6 Packet Too Big Error when receiving a packet
+        // that is too big to be forwarded when it isn't destined for the node
+        // it arrived at.
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
@@ -2782,12 +2750,14 @@ mod tests {
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
         let frame_dst = FrameDestination::Unicast;
 
-        // Construct an IPv6 packet that is too big for our MTU (MTU = 1280; body itself is 5000).
-        // Note, the final packet will be larger because of IP header data.
+        // Construct an IPv6 packet that is too big for our MTU (MTU = 1280;
+        // body itself is 5000). Note, the final packet will be larger because
+        // of IP header data.
         let mut rng = new_rng(70812476915813);
         let body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(5000).collect();
 
-        // Ip packet from some node destined to a remote on this network, arriving locally.
+        // Ip packet from some node destined to a remote on this network,
+        // arriving locally.
         let mut ipv6_packet_buf = Buf::new(body.clone(), ..)
             .encapsulate(Ipv6PacketBuilder::new(extra_ip, dummy_config.remote_ip, 64, IpProto::Udp))
             .serialize_vec_outer()
@@ -2823,7 +2793,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(code, IcmpUnusedCode);
-        // MTU should match the mtu for the link.
+        // MTU should match the MTU for the link.
         assert_eq!(message, Icmpv6PacketTooBig::new(1280));
     }
 
@@ -2871,10 +2841,9 @@ mod tests {
 
     #[ip_test]
     fn test_ip_update_pmtu<I: Ip + TestIpExt>() {
-        //
-        // Test receiving a Packet Too Big (IPv6) or Dest Unreachable Fragmentation
-        // Required (IPv4) which should update the PMTU if it is less than the current value.
-        //
+        // Test receiving a Packet Too Big (IPv6) or Dest Unreachable
+        // Fragmentation Required (IPv4) which should update the PMTU if it is
+        // less than the current value.
 
         let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
@@ -2882,9 +2851,7 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
-        //
-        // Update PMTU from None
-        //
+        // Update PMTU from None.
 
         let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 100;
 
@@ -2907,13 +2874,12 @@ mod tests {
             new_mtu1
         );
 
-        //
-        // Don't update PMTU when current PMTU is less than reported MTU
-        //
+        // Don't update PMTU when current PMTU is less than reported MTU.
 
         let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 200;
 
-        // Create IPv6 ICMPv6 packet too big packet with MTU larger than current PMTU.
+        // Create IPv6 ICMPv6 packet too big packet with MTU larger than current
+        // PMTU.
         let packet_buf = create_packet_too_big_buf(
             dummy_config.remote_ip.get(),
             dummy_config.local_ip.get(),
@@ -2933,13 +2899,12 @@ mod tests {
             new_mtu1
         );
 
-        //
-        // Update PMTU when current PMTU is greater than the reported MTU
-        //
+        // Update PMTU when current PMTU is greater than the reported MTU.
 
         let new_mtu3 = u32::from(I::MINIMUM_LINK_MTU) + 50;
 
-        // Create IPv6 ICMPv6 packet too big packet with MTU smaller than current PMTU.
+        // Create IPv6 ICMPv6 packet too big packet with MTU smaller than
+        // current PMTU.
         let packet_buf = create_packet_too_big_buf(
             dummy_config.remote_ip.get(),
             dummy_config.local_ip.get(),
@@ -2962,10 +2927,9 @@ mod tests {
 
     #[ip_test]
     fn test_ip_update_pmtu_too_low<I: Ip + TestIpExt>() {
-        //
-        // Test receiving a Packet Too Big (IPv6) or Dest Unreachable Fragmentation
-        // Required (IPv4) which should not update the PMTU if it is less than the min mtu.
-        //
+        // Test receiving a Packet Too Big (IPv6) or Dest Unreachable
+        // Fragmentation Required (IPv4) which should not update the PMTU if it
+        // is less than the min MTU.
 
         let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
@@ -2973,9 +2937,7 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
-        //
-        // Update PMTU from None but with a mtu too low.
-        //
+        // Update PMTU from None but with an MTU too low.
 
         let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) - 1;
 
@@ -3010,10 +2972,8 @@ mod tests {
 
     #[test]
     fn test_ipv4_remote_no_rfc1191() {
-        //
         // Test receiving an IPv4 Dest Unreachable Fragmentation
         // Required from a node that does not implement RFC 1191.
-        //
 
         let dummy_config = Ipv4::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
@@ -3021,11 +2981,10 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
-        //
-        // Update from None
-        //
+        // Update from None.
 
-        // Create ICMP IP buf w/ orig packet body len = 500; orig packet len = 520
+        // Create ICMP IP buf w/ orig packet body len = 500; orig packet len =
+        // 520
         let packet_buf = create_packet_too_big_buf(
             dummy_config.remote_ip.get(),
             dummy_config.local_ip.get(),
@@ -3048,9 +3007,7 @@ mod tests {
             508
         );
 
-        //
-        // Don't Update when packet size is too small
-        //
+        // Don't Update when packet size is too small.
 
         // Create ICMP IP buf w/ orig packet body len = 1; orig packet len = 21
         let packet_buf = create_packet_too_big_buf(
@@ -3074,9 +3031,7 @@ mod tests {
             508
         );
 
-        //
         // Update to lower PMTU estimate based on original packet size.
-        //
 
         // Create ICMP IP buf w/ orig packet body len = 60; orig packet len = 80
         let packet_buf = create_packet_too_big_buf(
@@ -3100,12 +3055,11 @@ mod tests {
             68
         );
 
-        //
         // Should not update PMTU because the next low PMTU from this original
         // packet size is higher than current PMTU.
-        //
 
-        // Create ICMP IP buf w/ orig packet body len = 290; orig packet len = 310
+        // Create ICMP IP buf w/ orig packet body len = 290; orig packet len =
+        // 310
         let packet_buf = create_packet_too_big_buf(
             dummy_config.remote_ip.get(),
             dummy_config.local_ip.get(),
@@ -3159,8 +3113,8 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
 
         // In IPv6, the next header value (ICMP(v4)) would have been considered
-        // unrecognized so an ICMP parameter problem response SHOULD be sent, but
-        // the netstack chooses to just drop the packet since we are not
+        // unrecognized so an ICMP parameter problem response SHOULD be sent,
+        // but the netstack chooses to just drop the packet since we are not
         // required to send the ICMP response.
         assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
     }
@@ -3218,9 +3172,8 @@ mod tests {
             return Ipv6Addr::new([255, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
         }
 
-        //
-        // Test receiving a packet destined to a multicast IP (and corresponding multicast MAC).
-        //
+        // Test receiving a packet destined to a multicast IP (and corresponding
+        // multicast MAC).
 
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
@@ -3248,13 +3201,15 @@ mod tests {
         receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
-        // Join the multicast group and receive the packet, we should dispatch it.
+        // Join the multicast group and receive the packet, we should dispatch
+        // it.
         crate::device::join_ip_multicast(&mut ctx, device, multi_addr);
         assert!(crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
-        // Leave the multicast group and receive the packet, we should not dispatch it.
+        // Leave the multicast group and receive the packet, we should not
+        // dispatch it.
         crate::device::leave_ip_multicast(&mut ctx, device, multi_addr);
         assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
@@ -3275,13 +3230,15 @@ mod tests {
 
     #[test]
     fn test_no_dispatch_non_ndp_packets_during_ndp_dad() {
-        // Here we make sure we are not dispatching packets destined to a tentative address
-        // (that is performing NDP's Duplicate Address Detection (DAD)) -- IPv6 only.
+        // Here we make sure we are not dispatching packets destined to a
+        // tentative address (that is performing NDP's Duplicate Address
+        // Detection (DAD)) -- IPv6 only.
 
-        // We explicitly call `build_with` when building our context below because `build` will
-        // set the default NDP parameter DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling
-        // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
-        // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
+        // We explicitly call `build_with` when building our context below
+        // because `build` will set the default NDP parameter
+        // DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling DAD) so we use
+        // our own custom `StackStateBuilder` to set it to the default value of
+        // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
@@ -3303,7 +3260,8 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
 
-        // Make sure all timers are done (initial DAD to complete on the interface).
+        // Make sure all timers are done (initial DAD to complete on the
+        // interface).
         trigger_timers_until(&mut ctx, |_| false);
 
         // Received packet should have been dispatched.
@@ -3325,7 +3283,8 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
 
-        // Make sure all timers are done (DAD to complete on the interface due to new IP).
+        // Make sure all timers are done (DAD to complete on the interface due
+        // to new IP).
         trigger_timers_until(&mut ctx, |_| false);
 
         // Received packet should have been dispatched.

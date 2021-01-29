@@ -13,11 +13,12 @@
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
 // run with that feature enabled.
 #![cfg_attr(feature = "benchmark", feature(test))]
-// TODO Follow 2018 idioms
+// TODO: Follow 2018 idioms.
 #![allow(elided_lifetimes_in_paths)]
 #![cfg_attr(not(test), no_std)]
 
-// TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
+// TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove
+// this module.
 extern crate fakealloc as alloc;
 
 // TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
@@ -188,10 +189,10 @@ pub struct StackState<D: EventDispatcher> {
 impl<D: EventDispatcher> StackState<D> {
     /// Add a new ethernet device to the device layer.
     ///
-    /// `add_ethernet_device` only makes the netstack aware of the device. The device still needs to
-    /// be initialized. A device MUST NOT be used until it has been initialized. The netstack
-    /// promises not to generate any outbound traffic on the device until [`initialize_device`] has
-    /// been called.
+    /// `add_ethernet_device` only makes the netstack aware of the device. The
+    /// device still needs to be initialized. A device MUST NOT be used until it
+    /// has been initialized. The netstack promises not to generate any outbound
+    /// traffic on the device until [`initialize_device`] has been called.
     ///
     /// See [`initialize_device`] for more information.
     ///
@@ -379,8 +380,8 @@ pub trait EventDispatcher:
 
     /// Returns the current instant.
     ///
-    /// `now` guarantees that two subsequent calls to `now` will return monotonically
-    /// non-decreasing values.
+    /// `now` guarantees that two subsequent calls to `now` will return
+    /// monotonically non-decreasing values.
     fn now(&self) -> Self::Instant;
 
     /// Schedule a callback to be invoked after a timeout.
@@ -426,8 +427,8 @@ pub trait EventDispatcher:
 
     /// Get the instant a timer will fire, if one is scheduled.
     ///
-    /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no timer
-    /// with the given ID exists, `scheduled_instant` will return `None`.
+    /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no
+    /// timer with the given ID exists, `scheduled_instant` will return `None`.
     fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant>;
 
     // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
@@ -582,21 +583,21 @@ mod test {
         let prefix = config.subnet.prefix();
         let addr_subnet = AddrSubnetEither::new(ip, prefix).unwrap();
 
-        // ip doesn't exist initially
+        // IP doesn't exist initially.
         assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
 
-        // Add ip (ok)
+        // Add IP (OK).
         let () = add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap();
         assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
 
-        // Add ip again (already exists)
+        // Add IP again (already exists).
         assert_eq!(
             add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap_err(),
             NetstackError::Exists
         );
         assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
 
-        // Add ip with different subnet (already exists)
+        // Add IP with different subnet (already exists).
         let wrong_addr_subnet = AddrSubnetEither::new(ip, prefix - 1).unwrap();
         assert_eq!(
             add_ip_addr_subnet(&mut ctx, device, wrong_addr_subnet).unwrap_err(),
@@ -605,11 +606,11 @@ mod test {
         assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
 
         let ip = SpecifiedAddr::new(ip).unwrap();
-        // Del ip (ok)
+        // Del IP (ok).
         let () = del_ip_addr(&mut ctx, device, ip.into()).unwrap();
         assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
 
-        // Del ip again (not found)
+        // Del IP again (not found).
         assert_eq!(del_ip_addr(&mut ctx, device, ip.into()).unwrap_err(), NetstackError::NotFound);
         assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
     }

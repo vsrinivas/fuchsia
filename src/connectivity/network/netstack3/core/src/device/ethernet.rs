@@ -266,14 +266,15 @@ pub(crate) struct EthernetDeviceState<I: Instant> {
     // body and the MTU check is performed before queueing them here.
     pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
 
-    /// A flag indicating whether the device will accept all ethernet frames that it receives,
-    /// regardless of the ethernet frame's destination MAC address.
+    /// A flag indicating whether the device will accept all ethernet frames
+    /// that it receives, regardless of the ethernet frame's destination MAC
+    /// address.
     promiscuous_mode: bool,
 }
 
 impl<I: Instant> EthernetDeviceState<I> {
-    /// Adds a pending frame `frame` associated with `local_addr` to the list
-    /// of pending frames in the current device state.
+    /// Adds a pending frame `frame` associated with `local_addr` to the list of
+    /// pending frames in the current device state.
     ///
     /// If an older frame had to be dropped because it exceeds the maximum
     /// allowed number of pending frames, it is returned.
@@ -302,10 +303,12 @@ impl<I: Instant> EthernetDeviceState<I> {
         }
     }
 
-    /// Is a packet with a destination MAC address, `dst`, destined for this device?
+    /// Is a packet with a destination MAC address, `dst`, destined for this
+    /// device?
     ///
-    /// Returns `true` if this device is has `dst_mac` as its assigned MAC address, `dst_mac` is the
-    /// broadcast MAC address, or it is one of the multicast MAC addresses the device has joined.
+    /// Returns `true` if this device is has `dst_mac` as its assigned MAC
+    /// address, `dst_mac` is the broadcast MAC address, or it is one of the
+    /// multicast MAC addresses the device has joined.
     fn should_accept(&self, dst_mac: &Mac) -> bool {
         (self.mac == *dst_mac)
             || dst_mac.is_broadcast()
@@ -314,10 +317,11 @@ impl<I: Instant> EthernetDeviceState<I> {
                 .unwrap_or(false))
     }
 
-    /// Should a packet with destination MAC address, `dst`, be accepted by this device?
+    /// Should a packet with destination MAC address, `dst`, be accepted by this
+    /// device?
     ///
-    /// Returns `true` if this device is in promiscuous mode or the frame is destined for this
-    /// device.
+    /// Returns `true` if this device is in promiscuous mode or the frame is
+    /// destined for this device.
     fn should_deliver(&self, dst_mac: &Mac) -> bool {
         self.promiscuous_mode || self.should_accept(dst_mac)
     }
@@ -405,13 +409,13 @@ impl_timer_context!(
 
 /// Initialize a device.
 ///
-/// `initialize_device` sets the link-local address for `device_id` and performs DAD on it.
+/// `initialize_device` sets the link-local address for `device_id` and performs
+/// DAD on it.
 ///
-/// `device_id` MUST be ready to send packets before `initialize_device` is called.
+/// `device_id` MUST be ready to send packets before `initialize_device` is
+/// called.
 pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
-    //
     // Assign a link-local address.
-    //
 
     let state = ctx.get_state_with(device_id);
 
@@ -664,8 +668,8 @@ pub(super) fn get_ip_addr_state<C: EthernetIpDeviceContext, A: IpAddress>(
 
 /// Get the state of an address on a device.
 ///
-/// If `configuration_type` is provided, then only the state of an address of that
-/// configuration type will be returned.
+/// If `configuration_type` is provided, then only the state of an address of
+/// that configuration type will be returned.
 ///
 /// Returns `None` if `addr` is not associated with `device_id`.
 // TODO(ghanan): Use `SpecializedAddr` for `addr`.
@@ -822,15 +826,15 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
             if let Some(state) = get_ip_addr_state_inner(ctx, device_id, &addr, configuration_type)
             {
                 if state.is_tentative() {
-                    // Cancel current duplicate address detection for `addr` as we are
-                    // removing this IP.
+                    // Cancel current duplicate address detection for `addr` as
+                    // we are removing this IP.
                     //
-                    // `cancel_duplicate_address_detection` may panic if we are not
-                    // performing DAD on `addr`. However, we will only reach here
-                    // if `addr` is marked as tentative. If `addr` is marked as
-                    // tentative, then we know that we are performing DAD on it.
-                    // Given this, we know `cancel_duplicate_address_detection` will
-                    // not panic.
+                    // `cancel_duplicate_address_detection` may panic if we are
+                    // not performing DAD on `addr`. However, we will only reach
+                    // here if `addr` is marked as tentative. If `addr` is
+                    // marked as tentative, then we know that we are performing
+                    // DAD on it. Given this, we know
+                    // `cancel_duplicate_address_detection` will not panic.
                     ctx.cancel_duplicate_address_detection(device_id, addr);
                 }
             } else {
@@ -843,8 +847,8 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
             state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
             let new_size = state.ipv6_addr_sub.len();
 
-            // Since we just checked earlier if we had the address, we must have removed it
-            // now.
+            // Since we just checked earlier if we had the address, we must have
+            // removed it now.
             assert_eq!(original_size - new_size, 1);
 
             // Leave the the solicited-node multicast group.
@@ -878,16 +882,19 @@ pub(super) fn get_ipv6_link_local_addr<C: EthernetIpDeviceContext>(
 
 /// Add `device_id` to a link multicast group `multicast_addr`.
 ///
-/// Calling `join_link_multicast` with the same `device_id` and `multicast_addr` is completely safe.
-/// A counter will be kept for the number of times `join_link_multicast` has been called with the
-/// same `device_id` and `multicast_addr` pair. To completely leave a multicast group,
-/// [`leave_link_multicast`] must be called the same number of times `join_link_multicast` has been
-/// called for the same `device_id` and `multicast_addr` pair. The first time `join_link_multicast`
-/// is called for a new `device` and `multicast_addr` pair, the device will actually join the
+/// Calling `join_link_multicast` with the same `device_id` and `multicast_addr`
+/// is completely safe. A counter will be kept for the number of times
+/// `join_link_multicast` has been called with the same `device_id` and
+/// `multicast_addr` pair. To completely leave a multicast group,
+/// [`leave_link_multicast`] must be called the same number of times
+/// `join_link_multicast` has been called for the same `device_id` and
+/// `multicast_addr` pair. The first time `join_link_multicast` is called for a
+/// new `device` and `multicast_addr` pair, the device will actually join the
 /// multicast group.
 ///
-/// `join_link_multicast` is different from [`join_ip_multicast`] as `join_link_multicast` joins an
-/// L2 multicast group, whereas `join_ip_multicast` joins an L3 multicast group.
+/// `join_link_multicast` is different from [`join_ip_multicast`] as
+/// `join_link_multicast` joins an L2 multicast group, whereas
+/// `join_ip_multicast` joins an L3 multicast group.
 pub(super) fn join_link_multicast<C: EthernetIpDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
@@ -913,16 +920,18 @@ pub(super) fn join_link_multicast<C: EthernetIpDeviceContext>(
 
 /// Remove `device_id` from a link multicast group `multicast_addr`.
 ///
-/// `leave_link_multicast` will attempt to remove `device_id` from the multicast group
-/// `multicast_addr`. `device_id` may have "joined" the same multicast address multiple times, so
-/// `device_id` will only leave the multicast group once `leave_ip_multicast` has been called for
-/// each corresponding [`join_link_multicast`]. That is, if `join_link_multicast` gets called 3
-/// times and `leave_link_multicast` gets called two times (after all 3 `join_link_multicast`
-/// calls), `device_id` will still be in the multicast group until the next (final) call to
-/// `leave_link_multicast`.
+/// `leave_link_multicast` will attempt to remove `device_id` from the multicast
+/// group `multicast_addr`. `device_id` may have "joined" the same multicast
+/// address multiple times, so `device_id` will only leave the multicast group
+/// once `leave_ip_multicast` has been called for each corresponding
+/// [`join_link_multicast`]. That is, if `join_link_multicast` gets called 3
+/// times and `leave_link_multicast` gets called two times (after all 3
+/// `join_link_multicast` calls), `device_id` will still be in the multicast
+/// group until the next (final) call to `leave_link_multicast`.
 ///
-/// `leave_link_multicast` is different from [`leave_ip_multicast`] as `leave_link_multicast` leaves
-/// an L2 multicast group, whereas `leave_ip_multicast` leaves an L3 multicast group.
+/// `leave_link_multicast` is different from [`leave_ip_multicast`] as
+/// `leave_link_multicast` leaves an L2 multicast group, whereas
+/// `leave_ip_multicast` leaves an L3 multicast group.
 ///
 /// # Panics
 ///
@@ -956,16 +965,19 @@ fn leave_link_multicast<C: EthernetIpDeviceContext>(
 
 /// Add `device_id` to a multicast group `multicast_addr`.
 ///
-/// Calling `join_ip_multicast` with the same `device_id` and `multicast_addr` is completely safe.
-/// A counter will be kept for the number of times `join_ip_multicast` has been called with the
-/// same `device_id` and `multicast_addr` pair. To completely leave a multicast group,
-/// [`leave_ip_multicast`] must be called the same number of times `join_ip_multicast` has been
-/// called for the same `device_id` and `multicast_addr` pair. The first time `join_ip_multicast` is
-/// called for a new `device` and `multicast_addr` pair, the device will actually join the multicast
-/// group.
+/// Calling `join_ip_multicast` with the same `device_id` and `multicast_addr`
+/// is completely safe. A counter will be kept for the number of times
+/// `join_ip_multicast` has been called with the same `device_id` and
+/// `multicast_addr` pair. To completely leave a multicast group,
+/// [`leave_ip_multicast`] must be called the same number of times
+/// `join_ip_multicast` has been called for the same `device_id` and
+/// `multicast_addr` pair. The first time `join_ip_multicast` is called for a
+/// new `device` and `multicast_addr` pair, the device will actually join the
+/// multicast group.
 ///
-/// `join_ip_multicast` is different from [`join_link_multicast`] as `join_ip_multicast` joins an
-/// L3 multicast group, whereas `join_link_multicast` joins an L2 multicast group.
+/// `join_ip_multicast` is different from [`join_link_multicast`] as
+/// `join_ip_multicast` joins an L3 multicast group, whereas
+/// `join_link_multicast` joins an L2 multicast group.
 #[specialize_ip_address]
 pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
@@ -999,15 +1011,18 @@ pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
 
 /// Remove `device_id` from a multicast group `multicast_addr`.
 ///
-/// `leave_ip_multicast` will attempt to remove `device_id` from a multicast group `multicast_addr`.
-/// `device_id` may have "joined" the same multicast address multiple times, so `device_id` will
-/// only leave the multicast group once `leave_ip_multicast` has been called for each corresponding
-/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times and
-/// `leave_ip_multicast` gets called two times (after all 3 `join_ip_multicast` calls), `device_id`
-/// will still be in the multicast group until the next (final) call to `leave_ip_multicast`.
+/// `leave_ip_multicast` will attempt to remove `device_id` from a multicast
+/// group `multicast_addr`. `device_id` may have "joined" the same multicast
+/// address multiple times, so `device_id` will only leave the multicast group
+/// once `leave_ip_multicast` has been called for each corresponding
+/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times
+/// and `leave_ip_multicast` gets called two times (after all 3
+/// `join_ip_multicast` calls), `device_id` will still be in the multicast group
+/// until the next (final) call to `leave_ip_multicast`.
 ///
-/// `leave_ip_multicast` is different from [`leave_link_multicast`] as `leave_ip_multicast` leaves
-/// an L3 multicast group, whereas `leave_link_multicast` leaves an L2 multicast group.
+/// `leave_ip_multicast` is different from [`leave_link_multicast`] as
+/// `leave_ip_multicast` leaves an L3 multicast group, whereas
+/// `leave_link_multicast` leaves an L2 multicast group.
 ///
 /// # Panics
 ///
@@ -1066,7 +1081,8 @@ pub(super) fn get_mtu<C: EthernetIpDeviceContext>(ctx: &C, device_id: C::DeviceI
     ctx.get_state_with(device_id).link().mtu
 }
 
-/// Get the hop limit for new IPv6 packets that will be sent out from `device_id`.
+/// Get the hop limit for new IPv6 packets that will be sent out from
+/// `device_id`.
 pub(super) fn get_ipv6_hop_limit<C: EthernetIpDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
@@ -1076,9 +1092,10 @@ pub(super) fn get_ipv6_hop_limit<C: EthernetIpDeviceContext>(
 
 /// Is IP packet routing enabled on `device_id`?
 ///
-/// Note, `true` does not necessarily mean that `device` is currently routing IP packets. It
-/// only means that `device` is allowed to route packets. To route packets, this netstack must
-/// be configured to allow IP packets to be routed if it was not destined for this node.
+/// Note, `true` does not necessarily mean that `device` is currently routing IP
+/// packets. It only means that `device` is allowed to route packets. To route
+/// packets, this netstack must be configured to allow IP packets to be routed
+/// if it was not destined for this node.
 pub(super) fn is_routing_enabled<C: EthernetIpDeviceContext, I: Ip>(
     ctx: &C,
     device_id: C::DeviceId,
@@ -1112,8 +1129,8 @@ pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
 ///
 /// This will cause any conflicting dynamic entry to be removed, and
 /// any future conflicting gratuitous ARPs to be ignored.
-// TODO(rheacock): remove `cfg(test)` when this is used. Will probably be
-// called by a pub fn in the device mod.
+// TODO(rheacock): remove `cfg(test)` when this is used. Will probably be called
+// by a pub fn in the device mod.
 #[cfg(test)]
 pub(super) fn insert_static_arp_table_entry<C: EthernetIpDeviceContext>(
     ctx: &mut C,
@@ -1126,10 +1143,10 @@ pub(super) fn insert_static_arp_table_entry<C: EthernetIpDeviceContext>(
 
 /// Insert an entry into this device's NDP table.
 ///
-/// This method only gets called when testing to force set a neighbor's
-/// link address so that lookups succeed immediately, without doing
-/// address resolution.
-// TODO(rheacock): remove when this is called from non-test code
+/// This method only gets called when testing to force set a neighbor's link
+/// address so that lookups succeed immediately, without doing address
+/// resolution.
+// TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
 pub(super) fn insert_ndp_table_entry<C: EthernetIpDeviceContext>(
     ctx: &mut C,
@@ -1330,7 +1347,8 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         // Leave the the solicited-node multicast group.
         leave_ip_multicast(self, device_id, addr.to_solicited_node_address());
 
-        // TODO: we need to pick a different address depending on what flow we are using.
+        // TODO: we need to pick a different address depending on what flow we
+        // are using.
     }
 
     fn unique_address_determined(&mut self, device_id: C::DeviceId, addr: Ipv6Addr) {
@@ -1352,16 +1370,16 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     }
 
     fn set_mtu(&mut self, device_id: C::DeviceId, mut mtu: u32) {
-        // TODO(ghanan): Should this new MTU be updated only from the netstack's perspective or
-        //               be exposed to the device hardware?
+        // TODO(ghanan): Should this new MTU be updated only from the netstack's
+        //               perspective or be exposed to the device hardware?
 
         // `mtu` must not be less than the minimum IPv6 MTU.
         assert!(mtu >= Ipv6::MINIMUM_LINK_MTU.into());
 
         let dev_state = self.get_state_mut_with(device_id).link_mut();
 
-        // If `mtu` is greater than what the device supports, set `mtu` to the maximum MTU the
-        // device supports.
+        // If `mtu` is greater than what the device supports, set `mtu` to the
+        // maximum MTU the device supports.
         if mtu > dev_state.hw_mtu {
             trace!("ethernet::ndp_device::set_mtu: MTU of {:?} is greater than the device {:?}'s max MTU of {:?}, using device's max MTU instead", mtu, device_id, dev_state.hw_mtu);
             mtu = dev_state.hw_mtu;
@@ -1415,11 +1433,13 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
                 }
                 AddressState::Tentative => {
                     trace!("ethernet::deprecate_slaac_addr: invalidating the deprecated tentative address {:?} on device {:?}", addr, device_id);
-                    // If `addr` is currently tentative on `device_id`, the address should simply
-                    // be invalidated as new connections should not use a deprecated address,
-                    // and we should have no existing connections using a tentative address.
+                    // If `addr` is currently tentative on `device_id`, the
+                    // address should simply be invalidated as new connections
+                    // should not use a deprecated address, and we should have
+                    // no existing connections using a tentative address.
 
-                    // We must have had an invalidation timeout if we just attempted to deprecate.
+                    // We must have had an invalidation timeout if we just
+                    // attempted to deprecate.
                     assert!(self
                         .cancel_timer(
                             ndp::NdpTimerId::new_invalidate_slaac_address(device_id, *addr).into()
@@ -1444,7 +1464,8 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
             device_id
         );
 
-        // `unwrap` will panic if `addr` is not an address configured via SLAAC on `device_id`.
+        // `unwrap` will panic if `addr` is not an address configured via SLAAC
+        // on `device_id`.
         del_ip_addr_inner(self, device_id, addr, Some(AddressConfigurationType::Slaac)).unwrap();
     }
 
@@ -1518,13 +1539,12 @@ fn mac_resolved<C: EthernetIpDeviceContext>(
     };
     if let Some(pending) = state.take_pending_frames(address) {
         for frame in pending {
-            // NOTE(brunodalbo): We already performed MTU checking when we
-            //  saved the buffer waiting for address resolution. It should
-            //  be noted that the MTU check back then didn't account for
-            //  ethernet frame padding required by EthernetFrameBuilder,
-            //  but that's fine (as it stands right now) because the MTU
-            //  is guaranteed to be larger than an Ethernet minimum frame
-            //  body size.
+            // NOTE(brunodalbo): We already performed MTU checking when we saved
+            //  the buffer waiting for address resolution. It should be noted
+            //  that the MTU check back then didn't account for ethernet frame
+            //  padding required by EthernetFrameBuilder, but that's fine (as it
+            //  stands right now) because the MTU is guaranteed to be larger
+            //  than an Ethernet minimum frame body size.
             let res = ctx.send_frame(
                 device_id.into(),
                 frame.encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type)),
@@ -1705,7 +1725,7 @@ mod tests {
         state.add_pending_frame(ip, Buf::new(vec![2], ..));
         state.add_pending_frame(ip, Buf::new(vec![3], ..));
 
-        // check that we're accumulating correctly...
+        // Check that we're accumulating correctly...
         assert_eq!(3, state.take_pending_frames(ip).unwrap().count());
         // ...and that take_pending_frames clears all the buffered data.
         assert!(state.take_pending_frames(ip).is_none());
@@ -1713,7 +1733,7 @@ mod tests {
         for i in 0..ETHERNET_MAX_PENDING_FRAMES {
             assert!(state.add_pending_frame(ip, Buf::new(vec![i as u8], ..)).is_none());
         }
-        // check that adding more than capacity will drop the older buffers as
+        // Check that adding more than capacity will drop the older buffers as
         // a proper FIFO queue.
         assert_eq!(0, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
         assert_eq!(1, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
@@ -1722,9 +1742,7 @@ mod tests {
 
     #[specialize_ip]
     fn test_receive_ip_frame<I: Ip>(initialize: bool) {
-        //
         // Should only receive a frame if the device is initialized
-        //
 
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -1748,7 +1766,7 @@ mod tests {
         crate::device::receive_frame(&mut ctx, device, Buf::new(bytes, ..));
 
         // If we did not initialize, we would not reach here since
-        // `receive_frame` would have paniced.
+        // `receive_frame` would have panicked.
         #[ipv4]
         assert_eq!(get_counter_val(&mut ctx, "receive_ipv4_packet"), 1);
         #[ipv6]
@@ -1768,9 +1786,7 @@ mod tests {
 
     #[specialize_ip]
     fn test_send_ip_frame<I: Ip>(initialize: bool) {
-        //
         // Should only send a frame if the device is initialized
-        //
 
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -1885,9 +1901,7 @@ mod tests {
             .unwrap()
             .unwrap_b();
 
-        //
         // Test with netstack no fowarding
-        //
 
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
         add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip.get(), src_mac);
@@ -1912,14 +1926,13 @@ mod tests {
         // Still should not send ICMP because device has routing disabled.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
-        //
         // Test with netstack fowarding
-        //
 
         let mut state_builder = StackStateBuilder::default();
         state_builder.ipv4_builder().forward(true);
         state_builder.ipv6_builder().forward(true);
-        // Most tests do not need NDP's DAD or router solicitation so disable it here.
+        // Most tests do not need NDP's DAD or router solicitation so disable it
+        // here.
         let mut ndp_configs = ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
@@ -1943,7 +1956,8 @@ mod tests {
         // Should not update other Ip routing status.
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
-        // Should route the packet since routing fully enabled (netstack & device).
+        // Should route the packet since routing fully enabled (netstack &
+        // device).
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         println!("{:?}", buf.as_ref());
@@ -1987,11 +2001,9 @@ mod tests {
 
     #[ip_test]
     fn test_promiscuous_mode<I: Ip + TestIpExt + IpExt>() {
-        //
-        // Test that frames not destined for a device will still be accepted when
-        // the device is put into promiscuous mode. In all cases, frames that are
-        // destined for a device must always be accepted.
-        //
+        // Test that frames not destined for a device will still be accepted
+        // when the device is put into promiscuous mode. In all cases, frames
+        // that are destined for a device must always be accepted.
 
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
@@ -2039,7 +2051,8 @@ mod tests {
             .unwrap()
             .unwrap_b();
 
-        // Reject packet not destined for this device if promiscuous mode is off.
+        // Reject packet not destined for this device if promiscuous mode is
+        // off.
         crate::device::set_promiscuous_mode(&mut ctx, device, false);
         crate::device::receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
@@ -2159,7 +2172,7 @@ mod tests {
         assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
         assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
 
-        // Should not receive packets on any ip.
+        // Should not receive packets on any IP.
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 0);
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 0);
 
@@ -2214,8 +2227,9 @@ mod tests {
         .unwrap();
     }
 
-    /// Test that we can join and leave a multicast group, but we only truly leave it after
-    /// calling `leave_ip_multicast` the same number of times as `join_ip_multicast`.
+    /// Test that we can join and leave a multicast group, but we only truly
+    /// leave it after calling `leave_ip_multicast` the same number of times as
+    /// `join_ip_multicast`.
     #[ip_test]
     fn test_ip_join_leave_multicast_addr_ref_count<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
@@ -2258,8 +2272,8 @@ mod tests {
     ///
     /// # Panics
     ///
-    /// This method should always panic as leaving an unjoined multicast group is a panic
-    /// condition.
+    /// This method should always panic as leaving an unjoined multicast group
+    /// is a panic condition.
     #[ip_test]
     #[should_panic(expected = "attempted to leave IP multicast group we were not a member of:")]
     fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt>() {
@@ -2280,11 +2294,10 @@ mod tests {
 
     #[test]
     fn test_ipv6_duplicate_solicited_node_address() {
-        //
-        // Test that we still receive packets destined to a solicited-node multicast address of an
-        // IP address we deleted because another (distinct) IP address that is still assigned uses
-        // the same solicited-node multicast address.
-        //
+        // Test that we still receive packets destined to a solicited-node
+        // multicast address of an IP address we deleted because another
+        // (distinct) IP address that is still assigned uses the same
+        // solicited-node multicast address.
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -2300,7 +2313,8 @@ mod tests {
                 .unwrap();
         let from_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 1]);
 
-        // ip1 and ip2 are not equal but their solicited node addresses are the same.
+        // ip1 and ip2 are not equal but their solicited node addresses are the
+        // same.
         assert_ne!(ip1, ip2);
         assert_eq!(ip1.to_solicited_node_address(), ip2.to_solicited_node_address());
         let sn_addr = ip1.to_solicited_node_address().get();
@@ -2320,7 +2334,8 @@ mod tests {
 
         // Add ip2 to the device.
         //
-        // Should get packets destined for the solicited node address, ip1 and ip2.
+        // Should get packets destined for the solicited node address, ip1 and
+        // ip2.
         crate::device::add_ip_addr_subnet(&mut ctx, device, addr_sub2).unwrap();
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 3);
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 4);
@@ -2337,9 +2352,7 @@ mod tests {
 
     #[test]
     fn test_get_ip_addr_subnet() {
-        //
         // Test that `get_ip_addr_subnet` only returns non-local IPv6 addresses.
-        //
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -2351,7 +2364,8 @@ mod tests {
         // `initialize_device` adds the MAC-derived link-local IPv6 address.
         initialize_device(&mut ctx, device);
         let addr_sub = &ctx.state().device.ethernet.get(0).unwrap().device.ip.ipv6_addr_sub;
-        // Verify that there is a single assigned address - the MAC-derived link-local.
+        // Verify that there is a single assigned address - the MAC-derived
+        // link-local.
         assert_eq!(addr_sub.len(), 1);
         assert_eq!(
             addr_sub[0].addr_sub().addr().get(),
@@ -2364,9 +2378,7 @@ mod tests {
 
     #[test]
     fn test_add_ip_addr_subnet_link_local() {
-        //
         // Test that `add_ip_addr_subnet` allows link-local addresses.
-        //
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();

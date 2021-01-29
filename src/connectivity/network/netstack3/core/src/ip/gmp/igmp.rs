@@ -448,7 +448,7 @@ fn run_actions<D: LinkDevice, C: IgmpContext<D>>(
     }
 }
 
-/// Interpret the actions
+/// Interprets the `action`.
 fn run_action<D: LinkDevice, C: IgmpContext<D>>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -784,12 +784,12 @@ mod tests {
         assert_eq!(ctx.frames().len(), 1);
         assert_eq!(ctx.timers().len(), 1);
         let instant2 = ctx.timers()[0].0.clone();
-        // because of the message, our timer should be reset to a nearer future
+        // Because of the message, our timer should be reset to a nearer future.
         assert!(instant2 <= instant1);
         assert!(ctx.trigger_next_timer());
         assert!(ctx.now() - start <= duration);
         assert_eq!(ctx.frames().len(), 2);
-        // make sure it is a V2 report
+        // Make sure it is a V2 report.
         assert_eq!(ctx.frames().last().unwrap().1[24], 0x16);
         ensure_ttl_ihl_rtr(&ctx);
     }
@@ -799,20 +799,20 @@ mod tests {
         let mut ctx = setup_simple_test_environment();
         ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
-        // The initial unsolicited report
+        // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 1);
         assert!(ctx.trigger_next_timer());
-        // The report after the delay
+        // The report after the delay.
         assert_eq!(ctx.frames().len(), 2);
         assert_eq!(ctx.igmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // our leave message
+        // Our leave message.
         assert_eq!(ctx.frames().len(), 3);
 
         let leave_frame = &ctx.frames().last().unwrap().1;
 
-        // make sure it is a leave message
+        // Make sure it is a leave message.
         assert_eq!(leave_frame[24], 0x17);
-        // and the destination is ALL-ROUTERS (224.0.0.2)
+        // Make sure the destination is ALL-ROUTERS (224.0.0.2).
         assert_eq!(leave_frame[16], 224);
         assert_eq!(leave_frame[17], 0);
         assert_eq!(leave_frame[18], 0);
@@ -832,7 +832,7 @@ mod tests {
         // else.
         assert_eq!(ctx.frames().len(), 1);
         assert_eq!(ctx.igmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // A leave message is not sent
+        // A leave message is not sent.
         assert_eq!(ctx.frames().len(), 1);
         ensure_ttl_ihl_rtr(&ctx);
     }
@@ -843,7 +843,7 @@ mod tests {
         ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR_2);
         assert_eq!(ctx.timers().len(), 2);
-        // The initial unsolicited report
+        // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 2);
         assert!(ctx.trigger_next_timer());
         assert!(ctx.trigger_next_timer());
@@ -853,7 +853,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 2);
         assert!(ctx.trigger_next_timer());
         assert!(ctx.trigger_next_timer());
-        // Two new reports should be sent
+        // Two new reports should be sent.
         assert_eq!(ctx.frames().len(), 6);
         ensure_ttl_ihl_rtr(&ctx);
     }
@@ -878,12 +878,14 @@ mod tests {
         assert_no_effect(&ctx);
 
         receive_igmp_report(&mut ctx);
-        // We should have executed the transition but not executed any `Actions`.
+        // We should have executed the transition but not executed any
+        // `Actions`.
         assert_gmp_state!(ctx, &GROUP_ADDR, Idle);
         assert_no_effect(&ctx);
 
         receive_igmp_query(&mut ctx, Duration::from_secs(10));
-        // We should have executed the transition but not executed any `Actions`.
+        // We should have executed the transition but not executed any
+        // `Actions`.
         assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
         assert_no_effect(&ctx);
 

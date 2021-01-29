@@ -371,23 +371,25 @@ impl<'a, G: InnerValue<Context<D>>, D: StackDispatcher> LockedGuardContext<'a, G
         }
     }
 
-    /// Enables an interface, adding it to the core if it is not currently enabled.
-    /// Both `admin_enabled` and `phy_up` must be true for the interface to be enabled.
+    /// Enables an interface, adding it to the core if it is not currently
+    /// enabled. Both `admin_enabled` and `phy_up` must be true for the
+    /// interface to be enabled.
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         let (state, disp) = self.state_and_dispatcher();
         let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
 
         if device.admin_enabled() && device.phy_up() {
-            // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in two
-            // stages: add device to the core to get an id, then reach into the
-            // driver to get updated info before triggering the core to allow
-            // traffic on the interface.
+            // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in
+            // two stages: add device to the core to get an id, then reach into
+            // the driver to get updated info before triggering the core to
+            // allow traffic on the interface.
             let generate_core_id = |info: &DeviceInfo| {
                 state.add_ethernet_device(Mac::new(info.mac().octets), info.mtu())
             };
             match disp.get_inner_mut::<Devices>().activate_device(id, generate_core_id) {
                 Ok(device_info) => {
-                    // we can unwrap core_id here because activate_device just succeeded.
+                    // we can unwrap core_id here because activate_device just
+                    // succeeded.
                     let core_id = device_info.core_id().unwrap();
                     // don't forget to initialize the device in core!
                     initialize_device(self.deref_mut(), core_id);
@@ -406,15 +408,16 @@ impl<'a, G: InnerValue<Context<D>>, D: StackDispatcher> LockedGuardContext<'a, G
         }
     }
 
-    /// Disables an interface, removing it from the core if it is currently enabled.
-    /// Either an Admin (fidl) or Phy change can disable an interface.
+    /// Disables an interface, removing it from the core if it is currently
+    /// enabled. Either an Admin (fidl) or Phy change can disable an interface.
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         match self.dispatcher_mut().get_inner_mut::<Devices>().deactivate_device(id) {
             Ok((core_id, device_info)) => {
-                // Sanity check that there is a reason that the device is disabled.
+                // Sanity check that there is a reason that the device is
+                // disabled.
                 assert!(!device_info.admin_enabled() || !device_info.phy_up());
-                // Disabling the interface deactivates it in the bindings, and will remove
-                // it completely from the core.
+                // Disabling the interface deactivates it in the bindings, and
+                // will remove it completely from the core.
                 match remove_device(self.deref_mut(), core_id) {
                     // TODO(rheacock): schedule and send the received frames
                     Some(_) => Ok(()),

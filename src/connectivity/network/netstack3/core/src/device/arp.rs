@@ -138,7 +138,8 @@ impl<
 // `StateContext`, `TimerContext`, and `FrameContext` impls would all conflict
 // for similar reasons).
 
-/// An execution context which provides a `DeviceId` type for ARP internals to share.
+/// An execution context which provides a `DeviceId` type for ARP internals to
+/// share.
 pub(crate) trait ArpDeviceIdContext<D: ArpDevice> {
     /// An ID that identifies a particular device.
     type DeviceId: Copy + PartialEq;
@@ -154,7 +155,8 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType>:
 {
     /// Get a protocol address of this interface.
     ///
-    /// If `device_id` does not have any addresses associated with it, return `None`.
+    /// If `device_id` does not have any addresses associated with it, return
+    /// `None`.
     fn get_protocol_addr(&self, device_id: Self::DeviceId) -> Option<P>;
 
     /// Get the hardware address of this interface.
@@ -197,15 +199,15 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>> ArpPack
 
 /// An ARP handler for ARP Events.
 ///
-/// `ArpHandler<D, P>` is implemented for any type which implements [`ArpContext<D, P>`],
-/// and it can also be mocked for use in testing.
+/// `ArpHandler<D, P>` is implemented for any type which implements
+/// [`ArpContext<D, P>`], and it can also be mocked for use in testing.
 pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
     ArpDeviceIdContext<D> + TimerHandler<ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
     /// Cleans up state associated with the device.
     ///
-    /// The contract is that after `deinitialize` is called, nothing else should be done
-    /// with the state.
+    /// The contract is that after `deinitialize` is called, nothing else should
+    /// be done with the state.
     fn deinitialize(&mut self, device_id: Self::DeviceId);
 
     /// Look up the hardware address for a network protocol address.
@@ -218,8 +220,8 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType>:
 
     /// Insert a static entry into this device's ARP table.
     ///
-    /// This will cause any conflicting dynamic entry to be removed, and any future
-    /// conflicting gratuitous ARPs to be ignored.
+    /// This will cause any conflicting dynamic entry to be removed, and any
+    /// future conflicting gratuitous ARPs to be ignored.
     // TODO(rheacock): remove `cfg(test)` when this is used.
     #[cfg(test)]
     fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, addr: P, hw: D::HType);
@@ -251,14 +253,14 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> ArpHandler<D, P> for C {
 
     #[cfg(test)]
     fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, addr: P, hw: D::HType) {
-        // Cancel any outstanding timers for this entry; if none exist, these will
-        // be no-ops.
+        // Cancel any outstanding timers for this entry; if none exist, these
+        // will be no-ops.
         let outstanding_request =
             self.cancel_timer(ArpTimerId::new_request_retry(device_id, addr)).is_some();
         self.cancel_timer(ArpTimerId::new_entry_expiration(device_id, addr));
 
-        // If there was an outstanding resolution request, notify the device layer
-        // that it's been resolved.
+        // If there was an outstanding resolution request, notify the device
+        // layer that it's been resolved.
         if outstanding_request {
             self.address_resolved(device_id, addr, hw);
         }
@@ -280,10 +282,11 @@ pub(super) fn handle_timer<D: ArpDevice, P: PType, H: ArpHandler<D, P>>(
 /// A handler for ARP events.
 ///
 /// This type cannot be constructed, and is only meant to be used at the type
-/// level. We implement `TimerHandler` and `FrameHandler` for `ArpTimerFrameHandler`
-/// rather than just provide the top-level `handle_timer` and `receive_frame`
-/// functions so that `ArpTimerFrameHandler` can be used in tests with the
-/// `DummyTimerContextExt` trait and with the `DummyNetwork` type.
+/// level. We implement `TimerHandler` and `FrameHandler` for
+/// `ArpTimerFrameHandler` rather than just provide the top-level `handle_timer`
+/// and `receive_frame` functions so that `ArpTimerFrameHandler` can be used in
+/// tests with the `DummyTimerContextExt` trait and with the `DummyNetwork`
+/// type.
 struct ArpTimerFrameHandler<D: ArpDevice, P> {
     _marker: PhantomData<(D, P)>,
     _never: Never,
@@ -314,7 +317,8 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> TimerHandler<ArpTimerId<D, P, 
                 //   may be desirable to have table aging and/or timers".
                 if let Some(sender_protocol_addr) = self.get_protocol_addr(id.device_id) {
                     let self_hw_addr = self.get_hardware_addr(id.device_id);
-                    // TODO(joshlf): Do something if send_frame returns an error?
+                    // TODO(joshlf): Do something if send_frame returns an
+                    // error?
                     let _ = self.send_frame(
                         ArpFrameMetadata { device_id: id.device_id, dst_addr: D::HType::BROADCAST },
                         ArpPacketBuilder::new(
@@ -366,12 +370,12 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         let packet = match buffer.parse::<ArpPacket<_, D::HType, P>>() {
             Ok(packet) => packet,
             Err(err) => {
-                // If parse failed, it's because either the packet was malformed, or
-                // it was for an unexpected hardware or network protocol. In either
-                // case, we just drop the packet and move on. RFC 826's "Packet
-                // Reception" section says of packet processing algorithm, "Negative
-                // conditionals indicate an end of processing and a discarding of
-                // the packet."
+                // If parse failed, it's because either the packet was
+                // malformed, or it was for an unexpected hardware or network
+                // protocol. In either case, we just drop the packet and move
+                // on. RFC 826's "Packet Reception" section says of packet
+                // processing algorithm, "Negative conditionals indicate an end
+                // of processing and a discarding of the packet."
                 debug!("discarding malformed ARP packet: {}", err);
                 return;
             }
@@ -380,11 +384,11 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         let addressed_to_me =
             Some(packet.target_protocol_address()) == ctx.get_protocol_addr(device_id);
 
-        // The following logic is equivalent to the "ARP, Proxy ARP, and Gratuitous
-        // ARP" section of RFC 2002.
+        // The following logic is equivalent to the "ARP, Proxy ARP, and
+        // Gratuitous ARP" section of RFC 2002.
 
-        // Gratuitous ARPs, which have the same sender and target address, need to
-        // be handled separately since they do not send a response.
+        // Gratuitous ARPs, which have the same sender and target address, need
+        // to be handled separately since they do not send a response.
         if packet.sender_protocol_address() == packet.target_protocol_address() {
             insert_dynamic(
                 ctx,
@@ -393,8 +397,8 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
                 packet.sender_hardware_address(),
             );
 
-            // If we have an outstanding retry timer for this host, we should cancel
-            // it since we now have the mapping in cache.
+            // If we have an outstanding retry timer for this host, we should
+            // cancel it since we now have the mapping in cache.
             ctx.cancel_timer(ArpTimerId::new_request_retry(
                 device_id,
                 packet.sender_protocol_address(),
@@ -410,12 +414,12 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
             return;
         }
 
-        // The following logic is equivalent to the "Packet Reception" section of
-        // RFC 826.
+        // The following logic is equivalent to the "Packet Reception" section
+        // of RFC 826.
         //
-        // We statically know that the hardware type and protocol type are correct,
-        // so we do not need to have additional code to check that. The remainder of
-        // the algorithm is:
+        // We statically know that the hardware type and protocol type are
+        // correct, so we do not need to have additional code to check that. The
+        // remainder of the algorithm is:
         //
         // Merge_flag := false
         // If the pair <protocol type, sender protocol address> is
@@ -450,9 +454,9 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
         // | RESPONSE | no            | no            | NOP                         |
         // +----------+---------------+---------------+-----------------------------+
         //
-        // Given that the semantics of ArpTable is that inserting and updating an
-        // entry are the same, this can be implemented with two if statements (one
-        // to update the table, and one to send a response).
+        // Given that the semantics of ArpTable is that inserting and updating
+        // an entry are the same, this can be implemented with two if statements
+        // (one to update the table, and one to send a response).
 
         if addressed_to_me
             || ctx
@@ -467,8 +471,8 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
                 packet.sender_protocol_address(),
                 packet.sender_hardware_address(),
             );
-            // Since we just got the protocol -> hardware address mapping, we can
-            // cancel a timer to resend a request.
+            // Since we just got the protocol -> hardware address mapping, we
+            // can cancel a timer to resend a request.
             ctx.cancel_timer(ArpTimerId::new_request_retry(
                 device_id,
                 packet.sender_protocol_address(),
@@ -630,11 +634,11 @@ struct ArpTable<P: Hash + Eq, H> {
 
 #[derive(Debug, Eq, PartialEq)] // for testing
 enum ArpValue<H> {
-    // invariant: no timers exist for this entry
+    // Invariant: no timers exist for this entry.
     _Static { hardware_addr: H },
-    // invariant: a single entry expiration timer exists for this entry
+    // Invariant: a single entry expiration timer exists for this entry.
     Dynamic { hardware_addr: H },
-    // invariant: a single request retry timer exists for this entry
+    // Invariant: a single request retry timer exists for this entry.
     Waiting { remaining_tries: usize },
 }
 
@@ -642,7 +646,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
     // TODO(rheacock): remove `cfg(test)` when this is used
     #[cfg(test)]
     fn insert_static(&mut self, net: P, hw: H) {
-        // a static entry overrides everything, so just insert it.
+        // A static entry overrides everything, so just insert it.
         self.table.insert(net, ArpValue::_Static { hardware_addr: hw });
     }
 
@@ -650,9 +654,9 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
     /// bool returned from the function is used to indicate whether the
     /// insertion is successful.
     fn insert_dynamic(&mut self, net: P, hw: H) -> bool {
-        // a dynamic entry should not override a static one, if that happens,
+        // A dynamic entry should not override a static one, if that happens,
         // don't do it. if we want to handle this kind of situation in the
-        // future, we can make this function return a `Result`
+        // future, we can make this function return a `Result`.
         let new_val = ArpValue::Dynamic { hardware_addr: hw };
 
         match self.table.entry(net) {

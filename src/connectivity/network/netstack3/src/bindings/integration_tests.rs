@@ -348,11 +348,13 @@ impl TestStack {
 
     /// Creates a new `TestStack`.
     pub(crate) fn new() -> Self {
-        // Create a new TestStack with Duplicate Address Detection disabled for tests.
+        // Create a new TestStack with Duplicate Address Detection disabled for
+        // tests.
         //
-        // TODO(fxbug.dev/36238): Remove this code when an event is dispatched when Duplicate Address
-        // Detection finishes or when an IPv6 address has been assigned. Without such events, tests
-        // do not know how long to wait for the stack to be ready for events.
+        // TODO(fxbug.dev/36238): Remove this code when an event is dispatched
+        // when Duplicate Address Detection finishes or when an IPv6 address has
+        // been assigned. Without such events, tests do not know how long to
+        // wait for the stack to be ready for events.
         use netstack3_core::NdpConfigurations;
         let mut builder = StackStateBuilder::default();
         let mut config = NdpConfigurations::default();
@@ -584,9 +586,9 @@ impl TestSetupBuilder {
 ///
 /// # Panics
 ///
-/// May panic if `prefix` is longer than the number of bits in this type of IP address (32 for
-/// IPv4), or if `ip` is not a unicast address in the resulting subnet (see
-/// [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
+/// May panic if `prefix` is longer than the number of bits in this type of IP
+/// address (32 for IPv4), or if `ip` is not a unicast address in the resulting
+/// subnet (see [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
 pub fn new_ipv4_addr_subnet(ip: [u8; 4], prefix: u8) -> AddrSubnetEither {
     AddrSubnetEither::new(IpAddr::V4(Ipv4Addr::from(ip)), prefix).unwrap()
 }
@@ -595,9 +597,9 @@ pub fn new_ipv4_addr_subnet(ip: [u8; 4], prefix: u8) -> AddrSubnetEither {
 ///
 /// # Panics
 ///
-/// May panic if `prefix` is longer than the number of bits in this type of IP address (128 for
-/// IPv6), or if `ip` is not a unicast address in the resulting subnet (see
-/// [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
+/// May panic if `prefix` is longer than the number of bits in this type of IP
+/// address (128 for IPv6), or if `ip` is not a unicast address in the resulting
+/// subnet (see [`net_types::ip::IpAddress::is_unicast_in_subnet`]).
 pub fn new_ipv6_addr_subnet(ip: [u8; 16], prefix: u8) -> AddrSubnetEither {
     AddrSubnetEither::new(IpAddr::V6(Ipv6Addr::from(ip)), prefix).unwrap()
 }

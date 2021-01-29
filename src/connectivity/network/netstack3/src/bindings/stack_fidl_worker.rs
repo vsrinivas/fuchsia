@@ -168,9 +168,9 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
             .await
             .map(|s| s.contains(ethernet_worker::DeviceStatus::Online))
             .unwrap_or(false);
-        // We do not support updating the device's mac-address,
-        // mtu, and features during it's lifetime, their cached
-        // states are hence not updated once initialized.
+        // We do not support updating the device's mac-address, mtu, and
+        // features during it's lifetime, their cached states are hence not
+        // updated once initialized.
         let comm_info = CommonInfo::new(
             topological_path,
             client,
@@ -191,9 +191,9 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
             Some(id) => {
                 ethernet_worker::EthernetWorker::new(id, self.worker.ctx.clone())
                     .spawn(client_stream);
-                // If we have a core_id associated with id, that means
-                // the device was added in the active state, so we must
-                // initialize it using the new core_id.
+                // If we have a core_id associated with id, that means the
+                // device was added in the active state, so we must initialize
+                // it using the new core_id.
                 if let Some(core_id) = self.ctx.dispatcher().get_inner::<Devices>().get_core_id(id)
                 {
                     initialize_device(&mut self.ctx, core_id);

@@ -138,7 +138,8 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
     state_builder.ipv4_builder().forward(true);
 
-    // Most tests do not need NDP's DAD or router solicitation so disable it here.
+    // Most tests do not need NDP's DAD or router solicitation so disable it
+    // here.
     let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
     ndp_configs.set_dup_addr_detect_transmits(None);
     ndp_configs.set_max_router_solicitations(None);

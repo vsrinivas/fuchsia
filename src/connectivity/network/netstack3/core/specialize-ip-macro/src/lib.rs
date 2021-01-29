@@ -513,11 +513,12 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
     // invoking the trait function.
     //
     // Note, we do not capture the lifetime parameters as we do not pass them on
-    // to the generated function. This is because rust does not allow us to specify
-    // lifetime arguments explicitly if late bound lifetime parameters are present.
-    // If we wanted to pass lifetimes, we would need to add logic to first detect
-    // whether any late bound lifetime parameters are present. Instead, we simply
-    // do not specify any lifetime for the generated function and let rust infer them.
+    // to the generated function. This is because rust does not allow us to
+    // specify lifetime arguments explicitly if late bound lifetime parameters
+    // are present. If we wanted to pass lifetimes, we would need to add logic
+    // to first detect whether any late bound lifetime parameters are present.
+    // Instead, we simply do not specify any lifetime for the generated function
+    // and let rust infer them.
     let trait_fn_type_params = traif_fn_sig
         .generics
         .params
@@ -646,13 +647,16 @@ fn rewrite_types(
         sig.generics.params = remove_from_punctuated(sig.generics.params.clone(), idx);
 
         let mut rename = RenameVisit::new(type_ident.clone());
-        // For `cfg.type_ident` `I`, rewrite bounds like `A: Foo<I>` to `A: Foo<Self>`.
+        // For `cfg.type_ident` `I`, rewrite bounds like `A: Foo<I>` to `A:
+        // Foo<Self>`.
         rename.visit_generics_mut(&mut sig.generics);
-        // For `cfg.type_ident` `I`, rewrite arguments like `a: Foo<I>` to `a: Foo<Self>`
+        // For `cfg.type_ident` `I`, rewrite arguments like `a: Foo<I>` to `a:
+        // Foo<Self>`
         for arg in &mut sig.inputs {
             rename.visit_fn_arg_mut(arg);
         }
-        // For `cfg.type_ident` `I`, rewrite return types like `Foo<I>` to `Foo<Self>`
+        // For `cfg.type_ident` `I`, rewrite return types like `Foo<I>` to
+        // `Foo<Self>`
         rename.visit_return_type_mut(&mut sig.output);
         // Make sure no uses of "impl trait" are present in the return type.
         ReturnImplTraitVisit(errors).visit_return_type_mut(&mut sig.output);

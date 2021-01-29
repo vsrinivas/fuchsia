@@ -39,9 +39,9 @@ pub(crate) enum Ipv6PacketAction {
 ///
 /// What this function does depends on whether or not the `at_destination` flag
 /// is set. If it is `true`, then we will attempt to process all the extension
-/// headers in `packet`. Otherwise, we will only attempt to process the hop-by-hop
-/// extension header (which MUST be the first extension header if present) as
-/// per RFC 8200 section 4.
+/// headers in `packet`. Otherwise, we will only attempt to process the
+/// hop-by-hop extension header (which MUST be the first extension header if
+/// present) as per RFC 8200 section 4.
 pub(crate) fn handle_extension_headers<D: EventDispatcher, B: ByteSlice>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -57,7 +57,8 @@ pub(crate) fn handle_extension_headers<D: EventDispatcher, B: ByteSlice>(
     let mut iter = packet.iter_extension_hdrs();
 
     if at_destination {
-        // Keep looping while we are okay to just continue parsing extension headers.
+        // Keep looping while we are okay to just continue parsing extension
+        // headers.
         while action == Ipv6PacketAction::Continue {
             let ext_hdr = match iter.next() {
                 None => break,
@@ -109,10 +110,10 @@ pub(crate) fn handle_extension_headers<D: EventDispatcher, B: ByteSlice>(
 }
 
 /// Handles a Hop By Hop extension header for a `packet`.
-// For now, we do not support any options. If parsing succeeds we are
-// guaranteed that the options present are safely skippable. If they
-// aren't safely skippable, we must have resulted in a parsing error
-// when parsing the packet, and so this function will never be called.
+// For now, we do not support any options. If parsing succeeds we are guaranteed
+// that the options present are safely skippable. If they aren't safely
+// skippable, we must have resulted in a parsing error when parsing the packet,
+// and so this function will never be called.
 fn handle_hop_by_hop_options_ext_hdr<
     'a,
     D: EventDispatcher,
@@ -127,10 +128,12 @@ fn handle_hop_by_hop_options_ext_hdr<
 ) -> Ipv6PacketAction {
     for option in options {
         match option.data {
-            // Safely skip and continue, as we know that if we parsed an unrecognized
-            // option, the option's action was set to skip and continue.
+            // Safely skip and continue, as we know that if we parsed an
+            // unrecognized option, the option's action was set to skip and
+            // continue.
             HopByHopOptionData::Unrecognized { .. } => {}
-            // Also skip RouterAlert because router part of MLD is not implemented.
+            // Also skip RouterAlert because router part of MLD is not
+            // implemented.
             HopByHopOptionData::RouterAlert { .. } => {}
         }
     }
@@ -139,7 +142,7 @@ fn handle_hop_by_hop_options_ext_hdr<
 }
 
 /// Handles a routing extension header for a `packet`.
-// TODO(rheacock): Remove `_` prefix when this is used
+// TODO(rheacock): Remove `_` prefix when this is used.
 fn _handle_routing_ext_hdr<'a, D: EventDispatcher, B: ByteSlice>(
     _ctx: &mut Context<D>,
     _device: DeviceId,
@@ -147,9 +150,9 @@ fn _handle_routing_ext_hdr<'a, D: EventDispatcher, B: ByteSlice>(
     _packet: &Ipv6Packet<B>,
     _routing_data: &RoutingData<'a>,
 ) -> Ipv6PacketAction {
-    // We should never end up here because we do not support parsing any routing header
-    // type yet. We should have errored out while parsing the extension header if
-    // there is a routing header we would normally have to act on.
+    // We should never end up here because we do not support parsing any routing
+    // header type yet. We should have errored out while parsing the extension
+    // header if there is a routing header we would normally have to act on.
     unreachable!("We should not end up here because no routing type is supported yet");
 }
 
@@ -165,10 +168,10 @@ fn handle_fragment_ext_hdr<'a, D: EventDispatcher, B: ByteSlice>(
 }
 
 /// Handles a destination extension header for a `packet`.
-// For now, we do not support any options. If parsing succeeds we are
-// guaranteed that the options present are safely skippable. If they
-// aren't safely skippable, we must have resulted in a parsing error
-// when parsing the packet, and so this function will never be called.
+// For now, we do not support any options. If parsing succeeds we are guaranteed
+// that the options present are safely skippable. If they aren't safely
+// skippable, we must have resulted in a parsing error when parsing the packet,
+// and so this function will never be called.
 fn handle_destination_options_ext_hdr<
     'a,
     D: EventDispatcher,
@@ -183,8 +186,9 @@ fn handle_destination_options_ext_hdr<
 ) -> Ipv6PacketAction {
     for option in options {
         match option.data {
-            // Safely skip and continue, as we know that if we parsed an unrecognized
-            // option, the option's action was set to skip and continue.
+            // Safely skip and continue, as we know that if we parsed an
+            // unrecognized option, the option's action was set to skip and
+            // continue.
             DestinationOptionData::Unrecognized { .. } => {}
         }
     }
@@ -205,9 +209,7 @@ mod tests {
 
     #[test]
     fn test_no_extension_headers() {
-        //
         // Test that if we have no extension headers, we continue
-        //
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();

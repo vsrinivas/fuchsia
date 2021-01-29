@@ -487,8 +487,8 @@ impl<D> DeviceState<D> {
 // TODO(ghanan): Split this up into IPv4 and IPv6 specific device states.
 pub(crate) struct IpDeviceState<I: Instant> {
     /// Assigned IPv4 addresses.
-    // TODO(ghanan): Use `AddrSubnet` instead of `AddressEntry` as IPv4 addresses do not
-    //               need the extra fields in `AddressEntry`.
+    // TODO(ghanan): Use `AddrSubnet` instead of `AddressEntry` as IPv4
+    //               addresses do not need the extra fields in `AddressEntry`.
     ipv4_addr_sub: Vec<AddressEntry<Ipv4Addr, I>>,
 
     /// Assigned IPv6 addresses.
@@ -521,24 +521,26 @@ pub(crate) struct IpDeviceState<I: Instant> {
     //               state, move this to some IPv6-device state.
     ipv6_hop_limit: NonZeroU8,
 
-    /// A flag indicating whether routing of IPv4 packets not destined for this device is
-    /// enabled.
+    /// A flag indicating whether routing of IPv4 packets not destined for this
+    /// device is enabled.
     ///
-    /// This flag controls whether or not packets can be routed from this device. That is, when a
-    /// packet arrives at a device it is not destined for, the packet can only be routed if the
-    /// device it arrived at has routing enabled and there exists another device that has a path
-    /// to the packet's destination, regardless the other device's routing ability.
+    /// This flag controls whether or not packets can be routed from this
+    /// device. That is, when a packet arrives at a device it is not destined
+    /// for, the packet can only be routed if the device it arrived at has
+    /// routing enabled and there exists another device that has a path to the
+    /// packet's destination, regardless the other device's routing ability.
     ///
     /// Default: `false`.
     route_ipv4: bool,
 
-    /// A flag indicating whether routing of IPv6 packets not destined for this device is
-    /// enabled.
+    /// A flag indicating whether routing of IPv6 packets not destined for this
+    /// device is enabled.
     ///
-    /// This flag controls whether or not packets can be routed from this device. That is, when a
-    /// packet arrives at a device it is not destined for, the packet can only be routed if the
-    /// device it arrived at has routing enabled and there exists another device that has a path
-    /// to the packet's destination, regardless the other device's routing ability.
+    /// This flag controls whether or not packets can be routed from this
+    /// device. That is, when a packet arrives at a device it is not destined
+    /// for, the packet can only be routed if the device it arrived at has
+    /// routing enabled and there exists another device that has a path to the
+    /// packet's destination, regardless the other device's routing ability.
     ///
     /// Default: `false`.
     route_ipv6: bool,
@@ -574,12 +576,12 @@ impl<I: Instant, D> IpLinkDeviceState<I, D> {
         Self { ip: IpDeviceState::default(), link }
     }
 
-    /// Get a reference to the ip (link-independant) state.
+    /// Get a reference to the IP (link-independant) state.
     pub(crate) fn ip(&self) -> &IpDeviceState<I> {
         &self.ip
     }
 
-    /// Get a mutable reference to the ip (link-independant) state.
+    /// Get a mutable reference to the IP (link-independant) state.
     pub(crate) fn ip_mut(&mut self) -> &mut IpDeviceState<I> {
         &mut self.ip
     }
@@ -598,14 +600,13 @@ impl<I: Instant, D> IpLinkDeviceState<I, D> {
 /// The various states an IP address can be on an interface.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AddressState {
-    /// The address is assigned to an interface and can be considered
-    /// bound to it (all packets destined to the address will be
-    /// accepted).
+    /// The address is assigned to an interface and can be considered bound to
+    /// it (all packets destined to the address will be accepted).
     Assigned,
 
     /// The address is considered unassigned to an interface for normal
-    /// operations, but has the intention of being assigned in the future
-    /// (e.g. once NDP's Duplicate Address Detection is completed).
+    /// operations, but has the intention of being assigned in the future (e.g.
+    /// once NDP's Duplicate Address Detection is completed).
     Tentative,
 
     /// The address is considered deprecated on an interface. Existing
@@ -732,19 +733,20 @@ pub(crate) fn is_device_initialized<D: EventDispatcher>(
 
 /// Initialize a device.
 ///
-/// `initialize_device` will start soliciting IPv6 routers on the link if `device` is configured to
-/// be a host. If it is configured to be an advertising interface, it will start sending periodic
-/// router advertisements.
+/// `initialize_device` will start soliciting IPv6 routers on the link if
+/// `device` is configured to be a host. If it is configured to be an
+/// advertising interface, it will start sending periodic router advertisements.
 ///
-/// `initialize_device` MUST be called after adding the device to the netstack. A device MUST NOT
-/// be used until it has been initialized.
+/// `initialize_device` MUST be called after adding the device to the netstack.
+/// A device MUST NOT be used until it has been initialized.
 ///
-/// This initialize step is kept separated from the device creation/allocation step so that
-/// implementations have a chance to do some work (such as updating implementation specific IDs or
-/// state, configure the device or driver, etc.) before the device is actually initialized and used
-/// by this netstack.
+/// This initialize step is kept separated from the device creation/allocation
+/// step so that implementations have a chance to do some work (such as updating
+/// implementation specific IDs or state, configure the device or driver, etc.)
+/// before the device is actually initialized and used by this netstack.
 ///
-/// See [`StackState::add_ethernet_device`] for information about adding ethernet devices.
+/// See [`StackState::add_ethernet_device`] for information about adding
+/// ethernet devices.
 ///
 /// # Panics
 ///
@@ -765,8 +767,8 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
     join_ip_multicast(ctx, device, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
 
     if self::is_router_device::<_, Ipv6>(ctx, device) {
-        // If the device is operating as a router, and it is configured to be an advertising
-        // interface, start sending periodic router advertisements.
+        // If the device is operating as a router, and it is configured to be an
+        // advertising interface, start sending periodic router advertisements.
         if get_ndp_configurations(ctx, device)
             .get_router_configurations()
             .get_should_send_advertisements()
@@ -781,7 +783,8 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
             }
         }
     } else {
-        // RFC 4861 section 6.3.7, it implies only a host sends router solicitation messages.
+        // RFC 4861 section 6.3.7, it implies only a host sends router
+        // solicitation messages.
         match device.protocol {
             DeviceProtocol::Ethernet => {
                 <Context<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(
@@ -798,8 +801,8 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
 
 /// Remove a device from the device layer.
 ///
-/// This function returns frames for the bindings to send if the shutdown is graceful - they can be
-/// safely ignored otherwise.
+/// This function returns frames for the bindings to send if the shutdown is
+/// graceful - they can be safely ignored otherwise.
 ///
 /// # Panics
 ///
@@ -970,7 +973,7 @@ pub(crate) fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
     }
 }
 
-/// Checks if `addr` is a local address
+/// Checks if `addr` is a local address.
 pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
     addr: &SpecifiedAddr<A>,
@@ -1052,13 +1055,15 @@ pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
 /// Add `device` to a multicast group `multicast_addr`.
 ///
-/// Calling `join_ip_multicast` with the same `device` and `multicast_addr` is completely safe.
-/// A counter will be kept for the number of times `join_ip_multicast` has been called with the
-/// same `device` and `multicast_addr` pair. To completely leave a multicast group,
-/// [`leave_ip_multicast`] must be called the same number of times `join_ip_multicast` has been
-/// called for the same `device` and `multicast_addr` pair. The first time `join_ip_multicast` is
-/// called for a new `device` and `multicast_addr` pair, the device will actually join the multicast
-/// group.
+/// Calling `join_ip_multicast` with the same `device` and `multicast_addr` is
+/// completely safe. A counter will be kept for the number of times
+/// `join_ip_multicast` has been called with the same `device` and
+/// `multicast_addr` pair. To completely leave a multicast group,
+/// [`leave_ip_multicast`] must be called the same number of times
+/// `join_ip_multicast` has been called for the same `device` and
+/// `multicast_addr` pair. The first time `join_ip_multicast` is called for a
+/// new `device` and `multicast_addr` pair, the device will actually join the
+/// multicast group.
 ///
 /// # Panics
 ///
@@ -1082,16 +1087,19 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
 
 /// Attempt to remove `device` from a multicast group `multicast_addr`.
 ///
-/// `leave_ip_multicast` will attempt to remove `device` from a multicast group `multicast_addr`.
-/// `device` may have "joined" the same multicast address multiple times, so `device` will only
-/// leave the multicast group once `leave_ip_multicast` has been called for each corresponding
-/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times and
-/// `leave_ip_multicast` gets called two times (after all 3 `join_ip_multicast` calls), `device`
-/// will still be in the multicast group until the next (final) call to `leave_ip_multicast`.
+/// `leave_ip_multicast` will attempt to remove `device` from a multicast group
+/// `multicast_addr`. `device` may have "joined" the same multicast address
+/// multiple times, so `device` will only leave the multicast group once
+/// `leave_ip_multicast` has been called for each corresponding
+/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times
+/// and `leave_ip_multicast` gets called two times (after all 3
+/// `join_ip_multicast` calls), `device` will still be in the multicast group
+/// until the next (final) call to `leave_ip_multicast`.
 ///
 /// # Panics
 ///
-/// Panics if `device` is not initialized or `device` is not currently in the multicast group.
+/// Panics if `device` is not initialized or `device` is not currently in the
+/// multicast group.
 // TODO(joshlf): remove `allow(dead_code)` when this is used.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
@@ -1199,9 +1207,10 @@ fn get_common_device_state_mut<D: EventDispatcher>(
 
 /// Is IP packet routing enabled on `device`?
 ///
-/// Note, `true` does not necessarily mean that `device` is currently routing IP packets. It
-/// only means that `device` is allowed to route packets. To route packets, this netstack must
-/// be configured to allow IP packets to be routed if it was not destined for this node.
+/// Note, `true` does not necessarily mean that `device` is currently routing IP
+/// packets. It only means that `device` is allowed to route packets. To route
+/// packets, this netstack must be configured to allow IP packets to be routed
+/// if it was not destined for this node.
 pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
     ctx: &Context<D>,
     device: DeviceId,
@@ -1215,13 +1224,13 @@ pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
 
 /// Enables or disables IP packet routing on `device`.
 ///
-/// `set_routing_enabled` does nothing if the new routing status, `enabled`, is the same as
-/// the current routing status.
+/// `set_routing_enabled` does nothing if the new routing status, `enabled`, is
+/// the same as the current routing status.
 ///
-/// Note, enabling routing does not mean that `device` will immediately start routing IP
-/// packets. It only means that `device` is allowed to route packets. To route packets, this
-/// netstack must be configured to allow IP packets to be routed if it was not destined for this
-/// node.
+/// Note, enabling routing does not mean that `device` will immediately start
+/// routing IP packets. It only means that `device` is allowed to route packets.
+/// To route packets, this netstack must be configured to allow IP packets to be
+/// routed if it was not destined for this node.
 // TODO(joshlf): remove `allow(dead_code)` when this is used.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn set_routing_enabled<D: EventDispatcher, I: Ip>(
@@ -1261,9 +1270,10 @@ fn set_ipv4_routing_enabled<D: EventDispatcher>(
 
 /// Sets IPv6 routing on `device`.
 ///
-/// If the `device` transitions from a router -> host or host -> router, periodic router
-/// advertisements will be stopped or started, and router solicitations will be started or stopped,
-/// depending on `device`'s current and new router state.
+/// If the `device` transitions from a router -> host or host -> router,
+/// periodic router advertisements will be stopped or started, and router
+/// solicitations will be started or stopped, depending on `device`'s current
+/// and new router state.
 fn set_ipv6_routing_enabled<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -1274,13 +1284,15 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
     if enabled {
         trace!("set_ipv6_routing_enabled: enabling IPv6 routing for device {:?}", device);
 
-        // Make sure that the netstack is configured to route packets before considering this
-        // device a router and stopping router solicitations. If the netstack was not configured
-        // to route packets before, then we would still be considered a host, so we shouldn't
-        // stop soliciting routers.
+        // Make sure that the netstack is configured to route packets before
+        // considering this device a router and stopping router solicitations.
+        // If the netstack was not configured to route packets before, then we
+        // would still be considered a host, so we shouldn't stop soliciting
+        // routers.
         if ip_routing {
-            // TODO(ghanan): Handle transition from disabled to enabled:
-            //               - start periodic router advertisements (if configured to do so)
+            // TODO(ghanan): Handle transition from disabled to enabled: - start
+            //               periodic router advertisements (if configured to do
+            //               so)
 
             match device.protocol {
                 DeviceProtocol::Ethernet => {
@@ -1295,14 +1307,16 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
         // Actually update the routing flag.
         set_routing_enabled_inner::<_, Ipv6>(ctx, device, true);
 
-        // Make sure that the netstack is configured to route packets before considering this
-        // device a router and starting periodic router advertisements.
+        // Make sure that the netstack is configured to route packets before
+        // considering this device a router and starting periodic router
+        // advertisements.
         if ip_routing {
-            // Now that `device` is a router, join the all-routers multicast group.
+            // Now that `device` is a router, join the all-routers multicast
+            // group.
             join_ip_multicast(ctx, device, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
 
-            // If `device` has a link-local address, and is configured to be an advertising
-            // interface, start advertising.
+            // If `device` has a link-local address, and is configured to be an
+            // advertising interface, start advertising.
             if get_ipv6_link_local_addr(ctx, device).is_some()
                 && get_ndp_configurations(ctx, device)
                     .get_router_configurations()
@@ -1321,13 +1335,15 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
     } else {
         trace!("set_ipv6_routing_enabled: disabling IPv6 routing for device {:?}", device);
 
-        // Make sure that the netstack is configured to route packets before considering this
-        // device a router and stopping periodic router advertisements. If the netstack was not
-        // configured to route packets before, then we would still be considered a host, so we
-        // wouldn't have any periodic router advertisements to stop.
+        // Make sure that the netstack is configured to route packets before
+        // considering this device a router and stopping periodic router
+        // advertisements. If the netstack was not configured to route packets
+        // before, then we would still be considered a host, so we wouldn't have
+        // any periodic router advertisements to stop.
         if ip_routing {
-            // Make sure that the device was configured to send advertisements before stopping it.
-            // If it was never configured to stop advertisements, there should be nothing to stop.
+            // Make sure that the device was configured to send advertisements
+            // before stopping it. If it was never configured to stop
+            // advertisements, there should be nothing to stop.
             if get_ipv6_link_local_addr(ctx, device).is_some()
                 && get_ndp_configurations(ctx, device)
                     .get_router_configurations()
@@ -1343,20 +1359,23 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
                 }
             }
 
-            // Now that `device` is a host, leave the all-routers multicast group.
+            // Now that `device` is a host, leave the all-routers multicast
+            // group.
             leave_ip_multicast(ctx, device, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
         }
 
         // Actually update the routing flag.
         set_routing_enabled_inner::<_, Ipv6>(ctx, device, false);
 
-        // We only need to start soliciting routers if we were not soliciting them before. We
-        // would only reach this point if there was a change in routing status for `device`.
-        // However, if the nestatck does not currently have routing enabled, the device would
-        // not have been considered a router before this routing change on the device, so it
+        // We only need to start soliciting routers if we were not soliciting
+        // them before. We would only reach this point if there was a change in
+        // routing status for `device`. However, if the nestatck does not
+        // currently have routing enabled, the device would not have been
+        // considered a router before this routing change on the device, so it
         // would have already solicited routers.
         if ip_routing {
-            // On transition from router -> host, start soliciting router information.
+            // On transition from router -> host, start soliciting router
+            // information.
             match device.protocol {
                 DeviceProtocol::Ethernet => {
                     <Context<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(
@@ -1384,8 +1403,8 @@ fn set_routing_enabled_inner<D: EventDispatcher, I: Ip>(
 
 /// Is `device` currently operating as a router?
 ///
-/// Returns `true` if both the `device` has routing enabled AND the netstack is configured to
-/// route packets not destined for it; returns `false` otherwise.
+/// Returns `true` if both the `device` has routing enabled AND the netstack is
+/// configured to route packets not destined for it; returns `false` otherwise.
 pub(crate) fn is_router_device<D: EventDispatcher, I: Ip>(
     ctx: &Context<D>,
     device: DeviceId,
@@ -1416,10 +1435,10 @@ pub(super) fn insert_static_arp_table_entry<D: EventDispatcher>(
 
 /// Insert an entry into this device's NDP table.
 ///
-/// This method only gets called when testing to force set a neighbor's
-/// link address so that lookups succeed immediately, without doing
-/// address resolution.
-// TODO(rheacock): remove when this is called from non-test code
+/// This method only gets called when testing to force set a neighbor's link
+/// address so that lookups succeed immediately, without doing address
+/// resolution.
+// TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
 pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
@@ -1436,16 +1455,16 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
 
 /// Updates the NDP Configurations for a `device`.
 ///
-/// Note, some values may not take effect immediately, and may only take effect the next time they
-/// are used. These scenarios documented below:
+/// Note, some values may not take effect immediately, and may only take effect
+/// the next time they are used. These scenarios documented below:
 ///
-///  - Updates to [`NdpConfiguration::dup_addr_detect_transmits`] will only take effect the next
-///    time Duplicate Address Detection (DAD) is done. Any DAD processes that have already started
-///    will continue using the old value.
+///  - Updates to [`NdpConfiguration::dup_addr_detect_transmits`] will only take
+///    effect the next time Duplicate Address Detection (DAD) is done. Any DAD
+///    processes that have already started will continue using the old value.
 ///
-///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take effect the next
-///    time routers are explicitly solicited. Current router solicitation will continue using the
-///    old value.
+///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take
+///    effect the next time routers are explicitly solicited. Current router
+///    solicitation will continue using the old value.
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
 pub fn set_ndp_configurations<D: EventDispatcher>(
@@ -1479,12 +1498,12 @@ pub fn get_ndp_configurations<D: EventDispatcher>(
     }
 }
 
-/// An address that may be "tentative" in that it has not yet passed
-/// duplicate address detection (DAD).
+/// An address that may be "tentative" in that it has not yet passed duplicate
+/// address detection (DAD).
 ///
-/// A tentative address is one for which DAD is currently being performed.
-/// An address is only considered assigned to an interface once DAD has
-/// completed without detecting any duplicates. See [RFC 4862] for more details.
+/// A tentative address is one for which DAD is currently being performed. An
+/// address is only considered assigned to an interface once DAD has completed
+/// without detecting any duplicates. See [RFC 4862] for more details.
 ///
 /// [RFC 4862]: https://tools.ietf.org/html/rfc4862
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

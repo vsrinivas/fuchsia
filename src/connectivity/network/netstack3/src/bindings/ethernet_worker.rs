@@ -46,14 +46,14 @@ impl<C: StackContext> EthernetWorker<C> {
     async fn status_changed(&self) {
         let mut ctx = self.ctx.lock().await;
         info!("device {:?} status changed signal", self.id);
-        // We need to call get_status even if we don't use the output, since calling it
-        // acks the message, and prevents the device from sending more status changed
-        // messages.
+        // We need to call get_status even if we don't use the output, since
+        // calling it acks the message, and prevents the device from sending
+        // more status changed messages.
         if let Some(device) = ctx.dispatcher().get_device_info(self.id) {
             if let Ok(status) = device.client().get_status().await {
                 info!("device {:?} status changed to: {:?}", self.id, status);
-                // Handle the new device state. If this results in no change, no state
-                // will be modified.
+                // Handle the new device state. If this results in no change, no
+                // state will be modified.
                 if status.contains(fidl_ethernet::DeviceStatus::Online) {
                     ctx.update_device_state(self.id, |dev_info| dev_info.set_phy_up(true));
                     ctx.enable_interface(self.id)

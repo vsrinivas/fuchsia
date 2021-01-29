@@ -623,7 +623,7 @@ mod tests {
         }
     }
 
-    // ensure the ttl is 1.
+    // Ensure the ttl is 1.
     fn ensure_ttl(frame: &[u8]) {
         assert_eq!(frame[7], 1);
     }
@@ -634,17 +634,17 @@ mod tests {
         assert_eq!(Ipv6Addr::new(bytes), ip);
     }
 
-    // ensure the destination address field in the ICMPv6 packet is correct.
+    // Ensure the destination address field in the ICMPv6 packet is correct.
     fn ensure_dst_addr(frame: &[u8], ip: Ipv6Addr) {
         ensure_slice_addr(frame, 24, 40, ip);
     }
 
-    // ensure the multicast address field in the MLD packet is correct.
+    // Ensure the multicast address field in the MLD packet is correct.
     fn ensure_multicast_addr(frame: &[u8], ip: Ipv6Addr) {
         ensure_slice_addr(frame, 56, 72, ip);
     }
 
-    // ensure a sent frame meets the requirement
+    // Ensure a sent frame meets the requirement.
     fn ensure_frame(
         frame: &[u8],
         op: u8,
@@ -691,9 +691,9 @@ mod tests {
         assert_eq!(ctx.frames().len(), 1);
 
         receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
-        // the query says that it wants to hear from us immediately
+        // The query says that it wants to hear from us immediately.
         assert_eq!(ctx.frames().len(), 2);
-        // there should be no timers set
+        // There should be no timers set.
         assert!(!ctx.trigger_next_timer());
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -743,7 +743,7 @@ mod tests {
         receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
 
         // Since it is an immediate query, we will send a report immediately and
-        // turn into Idle state again
+        // turn into Idle state again.
         let MldGroupState(group_state) =
             ctx.get_state_with(DummyLinkDeviceId).get(&GROUP_ADDR).unwrap();
         match group_state.get_inner() {
@@ -794,20 +794,21 @@ mod tests {
         let mut ctx = DummyContext::default();
         ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
-        // The initial unsolicited report
+        // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 1);
         assert!(ctx.trigger_next_timer());
-        // The report after the delay
+        // The report after the delay.
         assert_eq!(ctx.frames().len(), 2);
         assert_eq!(ctx.mld_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // Our leave message
+        // Our leave message.
         assert_eq!(ctx.frames().len(), 3);
-        // The first two messages should be reports
+        // The first two messages should be reports.
         ensure_frame(&ctx.frames()[0].1, 131, GROUP_ADDR, GROUP_ADDR);
         ensure_slice_addr(&ctx.frames()[0].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
         ensure_frame(&ctx.frames()[1].1, 131, GROUP_ADDR, GROUP_ADDR);
         ensure_slice_addr(&ctx.frames()[1].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        // The last one should be the done message whose destination is all routers.
+        // The last one should be the done message whose destination is all
+        // routers.
         ensure_frame(
             &ctx.frames()[2].1,
             132,
@@ -825,10 +826,11 @@ mod tests {
         assert_eq!(ctx.frames().len(), 1);
         receive_mld_report(&mut ctx, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 0);
-        // The report should be discarded because we have received from someone else.
+        // The report should be discarded because we have received from someone
+        // else.
         assert_eq!(ctx.frames().len(), 1);
         assert_eq!(ctx.mld_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // A leave message is not sent
+        // A leave message is not sent.
         assert_eq!(ctx.frames().len(), 1);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -869,12 +871,14 @@ mod tests {
             assert_no_effect(&ctx);
 
             receive_mld_report(&mut ctx, group);
-            // We should have executed the transition but not executed any `Actions`.
+            // We should have executed the transition but not executed any
+            // `Actions`.
             assert_gmp_state!(ctx, &group, Idle);
             assert_no_effect(&ctx);
 
             receive_mld_query(&mut ctx, Duration::from_secs(10), group);
-            // We should have executed the transition but not executed any `Actions`.
+            // We should have executed the transition but not executed any
+            // `Actions`.
             assert_gmp_state!(ctx, &group, Delaying);
             assert_no_effect(&ctx);
 

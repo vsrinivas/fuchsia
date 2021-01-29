@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! As the only discoverable service of fuchsia.net.icmp, the Provider service facilitates the
-//! creation of ICMP sockets.
+//! As the only discoverable service of fuchsia.net.icmp, the Provider service
+//! facilitates the creation of ICMP sockets.
 
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -55,7 +55,8 @@ where
         .detach();
     }
 
-    /// Handle a [`fidl_fuchsia_net_icmp::ProviderRequest`], which is used for opening ICMP sockets.
+    /// Handle a [`fidl_fuchsia_net_icmp::ProviderRequest`], which is used for
+    /// opening ICMP sockets.
     async fn handle_request(&self, req: ProviderRequest) -> Result<(), fidl::Error> {
         match req {
             ProviderRequest::OpenEchoSocket { config, socket, control_handle: _ } => {
@@ -116,9 +117,9 @@ where
         local: Option<SpecifiedAddr<I::Addr>>,
         remote: SpecifiedAddr<I::Addr>,
     ) -> Result<(), zx::Status> {
-        // TODO(fxbug.dev/36212): Generate icmp_ids without relying on an RNG. This line
-        // of code does not handle conflicts very well, requiring the client to
-        // continuously create sockets until it succeeds.
+        // TODO(fxbug.dev/36212): Generate icmp_ids without relying on an RNG.
+        // This line of code does not handle conflicts very well, requiring the
+        // client to continuously create sockets until it succeeds.
         let icmp_id = ctx.dispatcher_mut().rng_mut().next_u32() as u16;
         self.connect_echo_socket_inner::<I>(ctx, stream, local, remote, icmp_id)
     }
@@ -171,8 +172,9 @@ mod test {
         new_ipv4_addr_subnet, new_ipv6_addr_subnet, StackSetupBuilder, TestSetup, TestSetupBuilder,
     };
 
-    /// `TestAddr` abstracts extraction of IP addresses (or lack thereof) for testing. This eases
-    /// the process of testing different permutations of IP versions.
+    /// `TestAddr` abstracts extraction of IP addresses (or lack thereof) for
+    /// testing. This eases the process of testing different permutations of IP
+    /// versions.
     trait TestAddr {
         fn local_subnet() -> Option<AddrSubnetEither>;
         fn remote_subnet() -> Option<AddrSubnetEither>;
@@ -372,7 +374,8 @@ mod test {
         open_icmp_echo_socket::<TestNoIpv6Addr, TestNoIpv6Addr>(zx::Status::INVALID_ARGS).await;
     }
 
-    // Relies on connect_echo_socket_inner, thus cannot use the `open_icmp_echo_socket` test helper.
+    // Relies on connect_echo_socket_inner, thus cannot use the
+    // `open_icmp_echo_socket` test helper.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_duplicate() {
         const ALICE: usize = 0;
@@ -422,7 +425,8 @@ mod test {
             Ok(())
         );
 
-        // Open another ICMP echo socket from Alice to Bob with same connection identifier
+        // Open another ICMP echo socket from Alice to Bob with same connection
+        // identifier
         let (_, socket_server) = fidl::endpoints::create_endpoints::<EchoSocketMarker>().unwrap();
         let request_stream = socket_server.into_stream().unwrap();
 

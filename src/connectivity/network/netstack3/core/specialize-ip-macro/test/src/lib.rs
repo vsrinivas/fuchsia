@@ -12,16 +12,16 @@
 #[cfg(test)]
 pub(crate) mod net_types {
     pub(crate) mod ip {
-        /// Simple trait with the identifier `Ip` to test that the `specialize_ip`
-        /// attribute specializes function for the various types that implement
-        /// this trait.
+        /// Simple trait with the identifier `Ip` to test that the
+        /// `specialize_ip` attribute specializes function for the various types
+        /// that implement this trait.
         pub(crate) trait Ip {
             const VERSION: usize;
         }
 
         /// Simple trait with the identifier `IpAddress` to test that the
-        /// `specialize_ip_address` attribute specializes function for the various
-        /// types that implement this trait.
+        /// `specialize_ip_address` attribute specializes function for the
+        /// various types that implement this trait.
         pub(crate) trait IpAddress {
             const VERSION: usize;
         }
@@ -40,15 +40,15 @@ pub(crate) mod net_types {
             const VERSION: usize = 6;
         }
 
-        /// Test type with the identifier `Ipv4Addr` that the `specialize_ip_address`
-        /// attribute can specialize a function for.
+        /// Test type with the identifier `Ipv4Addr` that the
+        /// `specialize_ip_address` attribute can specialize a function for.
         pub(crate) struct Ipv4Addr;
         impl IpAddress for Ipv4Addr {
             const VERSION: usize = 4;
         }
 
-        /// Test type with the identifier `Ipv6Addr` that the `specialize_ip_address`
-        /// attribute can specialize a function for.
+        /// Test type with the identifier `Ipv6Addr` that the
+        /// `specialize_ip_address` attribute can specialize a function for.
         pub(crate) struct Ipv6Addr;
         impl IpAddress for Ipv6Addr {
             const VERSION: usize = 6;

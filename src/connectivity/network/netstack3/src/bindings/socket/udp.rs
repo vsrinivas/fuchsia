@@ -272,11 +272,10 @@ where
 
                 worker.handle_stream(events).await
             }
-            // When the closure above finishes, that means `self` goes out
-            // of scope and is dropped, meaning that the event stream's
-            // underlying channel is closed.
-            // If any errors occured as a result of the closure, we just log
-            // them.
+            // When the closure above finishes, that means `self` goes out of
+            // scope and is dropped, meaning that the event stream's underlying
+            // channel is closed. If any errors occured as a result of the
+            // closure, we just log them.
             .unwrap_or_else(|e: fidl::Error| error!("UDP socket control request error: {:?}", e)),
         )
         .detach();
@@ -314,12 +313,14 @@ where
                 // Datagram sockets are neither mountable nor executable.
                 let admin_executable =
                     flags & fio::OPEN_RIGHT_ADMIN != 0 || flags & fio::OPEN_RIGHT_EXECUTABLE != 0;
-                // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with OPEN_RIGHT_* flags.
+                // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
+                // OPEN_RIGHT_* flags.
                 let conflicting_rights = flags & fio::CLONE_FLAG_SAME_RIGHTS != 0
                     && (flags & fio::OPEN_RIGHT_READABLE != 0
                         || flags & fio::OPEN_RIGHT_WRITABLE != 0);
-                // If CLONE_FLAG_SAME_RIGHTS is not set, then use the intersection of the
-                // inherited rights and the newly specified rights.
+                // If CLONE_FLAG_SAME_RIGHTS is not set, then use the
+                // intersection of the inherited rights and the newly specified
+                // rights.
                 let new_rights = flags & (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
                 let more_rights_than_original = new_rights & (!worker.rights) > 0;
                 if flags & fio::CLONE_FLAG_SAME_RIGHTS == 0 && !more_rights_than_original {
@@ -370,8 +371,9 @@ where
                 Ok(req) => {
                     match req {
                         psocket::DatagramSocketRequest::Describe { responder } => {
-                            // If the call to duplicate_handle fails, we have no choice but to drop the
-                            // responder and close the channel, since Describe must be infallible.
+                            // If the call to duplicate_handle fails, we have no
+                            // choice but to drop the responder and close the
+                            // channel, since Describe must be infallible.
                             if let Some(mut info) = self.make_handler().await.describe() {
                                 responder_send!(responder, &mut info);
                             }
@@ -501,8 +503,8 @@ where
                 }
             }
         }
-        // The loop breaks as the client side of the channel has been dropped, need
-        // to treat that as an implicit close request as well.
+        // The loop breaks as the client side of the channel has been dropped,
+        // need to treat that as an implicit close request as well.
         let () = self.make_handler().await.close();
         Ok(())
     }
@@ -777,8 +779,9 @@ where
                 }
                 match remote {
                     Some((addr, port)) => {
-                        // Caller specified a remote socket address; use stateless
-                        // UDP send using the local address and port in `conn_id`.
+                        // Caller specified a remote socket address; use
+                        // stateless UDP send using the local address and port
+                        // in `conn_id`.
                         let conn_info = get_udp_conn_info(self.ctx.deref(), conn_id);
                         send_udp::<I, Buf<Vec<u8>>, _>(
                             self.ctx.deref_mut(),
@@ -791,8 +794,8 @@ where
                         .map_err(IntoErrno::into_errno)
                     }
                     None => {
-                        // Caller did not specify a remote socket address; just use
-                        // the existing conn.
+                        // Caller did not specify a remote socket address; just
+                        // use the existing conn.
                         send_udp_conn::<_, Buf<Vec<u8>>, _>(self.ctx.deref_mut(), conn_id, body)
                             .map_err(IntoErrno::into_errno)
                     }
@@ -822,8 +825,8 @@ where
             if how.is_empty() {
                 return Err(Errno::Einval);
             }
-            // Shutting down a socket twice is valid so we can just blindly
-            // set the corresponding flags.
+            // Shutting down a socket twice is valid so we can just blindly set
+            // the corresponding flags.
             if how.contains(psocket::ShutdownMode::Write) {
                 *shutdown_write = true;
             }
@@ -842,8 +845,8 @@ where
         Err(Errno::Enotconn)
     }
 
-    /// Tests if we have sufficient rights as required; if we don't, then
-    /// an error is returned.
+    /// Tests if we have sufficient rights as required; if we don't, then an
+    /// error is returned.
     fn need_rights(&self, required: u32) -> Result<(), Errno> {
         if self.rights & required == 0 {
             return Err(Errno::Eperm);
@@ -939,7 +942,8 @@ mod tests {
             .expect_err("connect fails");
         assert_eq!(res, Errno::Econnrefused);
 
-        // Pass an unreachable address (tests error forwarding from `udp_connect`).
+        // Pass an unreachable address (tests error forwarding from
+        // `udp_connect`).
         let res = proxy
             .connect(&mut A::create(A::UNREACHABLE_ADDR, 1010))
             .await
@@ -1047,9 +1051,9 @@ mod tests {
     /// can send data to the server and the server receives it.
     async fn test_udp_hello<A: TestSockAddr>() {
         // We create two stacks, Alice (server listening on LOCAL_ADDR:200), and
-        // Bob (client, bound on REMOTE_ADDR:300).
-        // After setup, Bob connects to Alice and sends a datagram.
-        // Finally, we verify that Alice receives the datagram.
+        // Bob (client, bound on REMOTE_ADDR:300). After setup, Bob connects to
+        // Alice and sends a datagram. Finally, we verify that Alice receives
+        // the datagram.
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
             .add_endpoint()
@@ -1085,7 +1089,8 @@ mod tests {
             .unwrap()
             .expect("alice bind suceeds");
 
-        // Verify that Alice is listening on the local socket, but still has no peer socket
+        // Verify that Alice is listening on the local socket, but still has no
+        // peer socket
         assert_eq!(
             alice_socket.get_sock_name().await.unwrap().expect("alice getsockname succeeds"),
             A::create(A::LOCAL_ADDR, 200)
@@ -1122,7 +1127,8 @@ mod tests {
             .unwrap()
             .expect("bob bind suceeds");
 
-        // Verify that Bob is listening on the local socket, but has no peer socket
+        // Verify that Bob is listening on the local socket, but has no peer
+        // socket
         assert_eq!(
             bob_socket.get_sock_name().await.unwrap().expect("bob getsockname suceeds"),
             A::create(A::REMOTE_ADDR, 300)
@@ -1506,8 +1512,8 @@ mod tests {
     where
         <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
     {
-        // Make sure we cannot close twice from the same channel so that
-        // we maintain the correct refcount.
+        // Make sure we cannot close twice from the same channel so that we
+        // maintain the correct refcount.
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket = get_socket::<A>(test_stack).await;
@@ -1523,7 +1529,8 @@ mod tests {
             .await
             .expect_err("should not be able to close the socket twice on the same channel");
         assert!(socket.into_channel().unwrap().is_closed());
-        // Since we still hold the cloned socket, the binding_data shouldn't be empty
+        // Since we still hold the cloned socket, the binding_data shouldn't be
+        // empty
         test_stack
             .with_ctx(|ctx| {
                 let disp: &BindingsDispatcher = ctx.dispatcher().inner();

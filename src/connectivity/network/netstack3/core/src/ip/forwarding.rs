@@ -60,16 +60,17 @@ enum ActiveEntryDest<A: IpAddress, D> {
 pub(crate) struct ForwardingTable<I: Ip, D> {
     /// A cache of the active routes to use when forwarding a packet.
     ///
-    /// `active` MUST NOT have redundant (even if unique) paths to the same destination to ensure
-    /// that all packets to the same destination use the same path (assuming no changes happen to
-    /// the forwarding table between packets).
+    /// `active` MUST NOT have redundant (even if unique) paths to the same
+    /// destination to ensure that all packets to the same destination use the
+    /// same path (assuming no changes happen to the forwarding table between
+    /// packets).
     // TODO(ghanan): Loosen this restriction and support load balancing?
     active: Vec<ActiveEntry<I::Addr, D>>,
 
     /// All the routes available to forward a packet.
     ///
-    /// `installed` may have redundant, but unique, paths to the same destination. Only the best
-    /// routes should be put into `active`.
+    /// `installed` may have redundant, but unique, paths to the same
+    /// destination. Only the best routes should be put into `active`.
     installed: Vec<Entry<I::Addr, D>>,
 }
 
@@ -82,8 +83,8 @@ impl<I: Ip, D> Default for ForwardingTable<I, D> {
 impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     /// Do we already have the route installed in our forwarding table?
     ///
-    /// `contains_entry` returns `true` if this `ForwardingTable` is already aware of the exact
-    /// route by `entry`.
+    /// `contains_entry` returns `true` if this `ForwardingTable` is already
+    /// aware of the exact route by `entry`.
     fn contains_entry(&self, entry: &Entry<I::Addr, D>) -> bool {
         self.installed.iter().any(|e| e == entry)
     }
@@ -109,7 +110,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     // TODO(joshlf): Should `next_hop` actually be restricted even further,
     // perhaps to unicast addresses?
 
-    /// Add a route to a destination subnet that requires going through another node.
+    /// Add a route to a destination subnet that requires going through another
+    /// node.
     pub(crate) fn add_route(
         &mut self,
         subnet: Subnet<I::Addr>,
@@ -119,7 +121,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         self.add_entry(Entry { subnet, dest: EntryDest::Remote { next_hop } })
     }
 
-    /// Add a route to a destination subnet that lives on a link an interface is attached to.
+    /// Add a route to a destination subnet that lives on a link an interface is
+    /// attached to.
     pub(crate) fn add_device_route(
         &mut self,
         subnet: Subnet<I::Addr>,
@@ -129,11 +132,13 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         self.add_entry(Entry { subnet, dest: EntryDest::Local { device } })
     }
 
-    /// Delete all routes to a subnet, returning `Err` if no route was found to be deleted.
+    /// Delete all routes to a subnet, returning `Err` if no route was found to
+    /// be deleted.
     ///
-    /// Note, `del_route` will remove *all* routes to a `subnet`, including routes that consider
-    /// `subnet` on-link for some device and routes that require packets destined to a node
-    /// within `subnet` to be routed through some next-hop node.
+    /// Note, `del_route` will remove *all* routes to a `subnet`, including
+    /// routes that consider `subnet` on-link for some device and routes that
+    /// require packets destined to a node within `subnet` to be routed through
+    /// some next-hop node.
     pub(crate) fn del_route(&mut self, subnet: Subnet<I::Addr>) -> Result<(), NotFoundError> {
         debug!("deleting route: {}", subnet);
 
@@ -143,8 +148,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         let new_len = self.installed.len();
 
         if old_len == new_len {
-            // If a path to `subnet` was not in our installed table, then it definitely won't be in
-            // our active routes cache.
+            // If a path to `subnet` was not in our installed table, then it
+            // definitely won't be in our active routes cache.
             return Err(NotFoundError);
         }
 
@@ -154,8 +159,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         Ok(())
     }
 
-    /// Delete the route to a subnet that goes through a next hop node, returning `Err` if no
-    /// route was found to be deleted.
+    /// Delete the route to a subnet that goes through a next hop node,
+    /// returning `Err` if no route was found to be deleted.
     // TODO(rheacock): remove `allow(dead_code)` when this is used.
     #[allow(dead_code)]
     pub(crate) fn del_next_hop_route(
@@ -167,8 +172,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         self.del_entry(Entry { subnet, dest: EntryDest::Remote { next_hop } })
     }
 
-    /// Delete the route to a subnet that is considerd on-link for a device, returning `Err` if no
-    /// route was found to be deleted.
+    /// Delete the route to a subnet that is considerd on-link for a device,
+    /// returning `Err` if no route was found to be deleted.
     // TODO(rheacock): remove `#[cfg(test)]` when this is used.
     #[cfg(test)]
     pub(crate) fn del_device_route(
@@ -180,16 +185,16 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         self.del_entry(Entry { subnet, dest: EntryDest::Local { device } })
     }
 
-    /// Delete a route (`entry`) from this `ForwardingTable`, returning `Err` if the route did not
-    /// already exist.
+    /// Delete a route (`entry`) from this `ForwardingTable`, returning `Err` if
+    /// the route did not already exist.
     fn del_entry(&mut self, entry: Entry<I::Addr, D>) -> Result<(), NotFoundError> {
         let old_len = self.installed.len();
         self.installed.retain(|e| *e != entry);
         let new_len = self.installed.len();
 
         if old_len == new_len {
-            // If a path to `subnet` was not in our installed table, then it definitely won't be in
-            // our active routes cache.
+            // If a path to `subnet` was not in our installed table, then it
+            // definitely won't be in our active routes cache.
             return Err(NotFoundError);
         }
 
@@ -253,19 +258,20 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         }
     }
 
-    /// Get an iterator over all of the forwarding entries ([`Entry`]) this `ForwardingTable`
-    /// knows about.
+    /// Get an iterator over all of the forwarding entries ([`Entry`]) this
+    /// `ForwardingTable` knows about.
     pub(crate) fn iter_installed(&self) -> core::slice::Iter<Entry<I::Addr, D>> {
         self.installed.iter()
     }
 
     /// Generate our cache of the active routes to use.
     ///
-    /// `regen_active` will regenerate the active routes used by this `ForwardingTable` when looking
-    /// up the next hop for a packet. This method will ensure that the cache will not have any
-    /// redundant paths to any destination. For any destination, preference will be given to paths
-    /// that require the least amount of hops through routers, as known by the installed table when
-    /// this method was called.
+    /// `regen_active` will regenerate the active routes used by this
+    /// `ForwardingTable` when looking up the next hop for a packet. This method
+    /// will ensure that the cache will not have any redundant paths to any
+    /// destination. For any destination, preference will be given to paths that
+    /// require the least amount of hops through routers, as known by the
+    /// installed table when this method was called.
     // TODO(ghanan): Come up with a more performant algorithm.
     fn regen_active(&mut self) {
         let mut subnets = HashSet::new();
@@ -281,10 +287,12 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
             // Mark `subnet` so we know we already tried to find a route to it.
             subnets.insert(e.subnet);
 
-            // If a route to `subnet` exists, store it in our new active routes cache.
+            // If a route to `subnet` exists, store it in our new active routes
+            // cache.
             //
-            // TODO(ghanan): When regenerating the active table, use the new active table as we
-            //               generate it to help with lookups?
+            // TODO(ghanan): When regenerating the active table, use the new
+            //               active table as we generate it to help with
+            //               lookups?
             if let Some(dest) = self.regen_active_helper(&e.subnet) {
                 new_active.push(ActiveEntry { subnet: e.subnet, dest });
             }
@@ -293,8 +301,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         self.active = new_active;
     }
 
-    /// Find the final destination a packet destined to an address in `subnet` should be routed to
-    /// by inspecting the installed table.
+    /// Find the final destination a packet destined to an address in `subnet`
+    /// should be routed to by inspecting the installed table.
     ///
     /// Preference will be given to an on-link destination.
     fn regen_active_helper(&self, subnet: &Subnet<I::Addr>) -> Option<ActiveEntryDest<I::Addr, D>> {
@@ -304,18 +312,21 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         for e in self.installed.iter().filter(|e| e.subnet == *subnet) {
             match &e.dest {
                 EntryDest::Local { device } => {
-                    // Return routes that consider `subnet` as on-link immediately.
+                    // Return routes that consider `subnet` as on-link
+                    // immediately.
                     return Some(ActiveEntryDest::Local { device: device.clone() });
                 }
                 EntryDest::Remote { next_hop } => {
-                    // If we already have a route going through a next-hop node, skip.
+                    // If we already have a route going through a next-hop node,
+                    // skip.
                     if best_remote.is_some() {
                         continue;
                     }
 
-                    // If the subnet requires a next hop, attempt to resolve the route to the next
-                    // hop. If no route exists, ignore this potential match as we have no path to
-                    // `next_hop` with this route. If a route exists, store it to return if no
+                    // If the subnet requires a next hop, attempt to resolve the
+                    // route to the next hop. If no route exists, ignore this
+                    // potential match as we have no path to `next_hop` with
+                    // this route. If a route exists, store it to return if no
                     // route exists that considers `subnet` an on-link subnet.
                     if let Some(dest) = self.installed_lookup(*next_hop) {
                         best_remote = Some(ActiveEntryDest::Remote { dest });
@@ -327,8 +338,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         best_remote
     }
 
-    /// Find the destination a packet destined to `address` should be routed to by inspecting the
-    /// installed table.
+    /// Find the destination a packet destined to `address` should be routed to
+    /// by inspecting the installed table.
     fn installed_lookup(&self, address: SpecifiedAddr<I::Addr>) -> Option<Destination<I::Addr, D>> {
         use alloc::vec;
 
@@ -336,10 +347,11 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         self.installed_lookup_helper(address, &mut observed)
     }
 
-    /// Find the destination a packet destined to `address` should be routed to by inspecting the
-    /// installed table.
+    /// Find the destination a packet destined to `address` should be routed to
+    /// by inspecting the installed table.
     ///
-    /// `observed` will be marked with each entry we have already observed to prevent loops.
+    /// `observed` will be marked with each entry we have already observed to
+    /// prevent loops.
     fn installed_lookup_helper(
         &self,
         address: SpecifiedAddr<I::Addr>,
@@ -356,10 +368,11 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         for (i, e) in q {
             // Check if we already observed this entry.
             if observed[i] {
-                // If we already observed this entry, then that means we are hitting it again,
-                // indicating the following:
+                // If we already observed this entry, then that means we are
+                // hitting it again, indicating the following:
                 //  1) There is a loop.
-                //  2) The last time we hit this entry, we did not find a valid destination.
+                //  2) The last time we hit this entry, we did not find a valid
+                //     destination.
                 // Given what we know, we skip checking it again.
                 continue;
             }
@@ -369,18 +382,21 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
             match &e.dest {
                 EntryDest::Local { device } => {
-                    // If we have a best route so far and its subnet prefix is greater than the one
-                    // we are looking at right now, skip. Otherwise, if the the subnet prefix is
-                    // less than the one we are looking at right now, or the prefixes are equal but
-                    // the existing best destination is a remote, update to the this local.
+                    // If we have a best route so far and its subnet prefix is
+                    // greater than the one we are looking at right now, skip.
+                    // Otherwise, if the the subnet prefix is less than the one
+                    // we are looking at right now, or the prefixes are equal
+                    // but the existing best destination is a remote, update to
+                    // the this local.
                     if let Some(best_so_far) = &mut best_so_far {
                         if best_so_far.0 > e.subnet.prefix() {
                             continue;
                         } else if best_so_far.0 < e.subnet.prefix()
                             || best_so_far.1.next_hop != address
                         {
-                            // If the prefixes are equal, we know this is a remote because for local
-                            // destinations, the next hop MUST match `address`.
+                            // If the prefixes are equal, we know this is a
+                            // remote because for local destinations, the next
+                            // hop MUST match `address`.
                             *best_so_far = (
                                 e.subnet.prefix(),
                                 Destination { next_hop: address, device: device.clone() },
@@ -395,17 +411,19 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
                     }
                 }
                 EntryDest::Remote { next_hop } => {
-                    // If we have a best route so far and its subnet prefix is greater than or equal
-                    // to the one we are looking at right now, skip.
+                    // If we have a best route so far and its subnet prefix is
+                    // greater than or equal to the one we are looking at right
+                    // now, skip.
                     if let Some(best_so_far) = best_so_far.clone() {
                         if best_so_far.0 >= e.subnet.prefix() {
                             continue;
                         }
                     }
 
-                    // If the subnet requires a next hop, attempt to resolve the route to the next
-                    // hop. If no route exists, ignore this potential match as we have no path to
-                    // `address` with this route. If a route exists, keep it as the best route so
+                    // If the subnet requires a next hop, attempt to resolve the
+                    // route to the next hop. If no route exists, ignore this
+                    // potential match as we have no path to `address` with this
+                    // route. If a route exists, keep it as the best route so
                     // far.
                     if let Some(dest) = self.installed_lookup_helper(*next_hop, observed) {
                         best_so_far = Some((e.subnet.prefix(), dest));
@@ -463,8 +481,8 @@ mod tests {
             }
         }
 
-        /// Get an iterator over the active forwarding entries ([`Entry`]) this `ForwardingTable`
-        /// knows about.
+        /// Get an iterator over the active forwarding entries ([`Entry`]) this
+        /// `ForwardingTable` knows about.
         fn iter_active(&self) -> std::slice::Iter<ActiveEntry<I::Addr, D>> {
             self.active.iter()
         }
@@ -603,7 +621,8 @@ mod tests {
         // Delete the device route.
         table.del_route(next_hop_specific_subnet).unwrap();
 
-        // Do lookup for our next hop (should get None since we have no route to a local device).
+        // Do lookup for our next hop (should get None since we have no route to
+        // a local device).
         assert!(table.lookup(next_hop).is_none());
 
         // Do lookup for some address within `subnet` (should get None as well).
@@ -785,19 +804,21 @@ mod tests {
         let (addr4, sub4_s24) = next_hop_addr_sub::<I>(4, 24);
         let (addr5, sub5_s24) = next_hop_addr_sub::<I>(5, 24);
 
-        // In the following comments, we will used a modified form of prefix notation.
-        // Normally to identify the prefix of an address, we do ADDRESS/PREFIX (e.g.
-        // fe80::e80c:830f:1cc3:2336/64 for IPv6; 100.96.232.33/24 for IPv4).
-        // Here, we will do ADDRESS/-SUFFIX to represent the number of bits of the
-        // host portion of the address instead of the network. The following is the
-        // relationship between SUFFIX and PREFIX: PREFIX = ADDRESS_BITS - SUFFIX.
-        // So for the examples given earlier:
+        // In the following comments, we will use a modified form of prefix
+        // notation. Normally to identify the prefix of an address, we do
+        // ADDRESS/PREFIX (e.g. fe80::e80c:830f:1cc3:2336/64 for IPv6;
+        // 100.96.232.33/24 for IPv4). Here, we will do ADDRESS/-SUFFIX to
+        // represent the number of bits of the host portion of the address
+        // instead of the network. The following is the relationship between
+        // SUFFIX and PREFIX: PREFIX = ADDRESS_BITS - SUFFIX. So for the
+        // examples given earlier:
         //  fe80::e80c:830f:1cc3:2336/64 <-> fe80::e80c:830f:1cc3:2336/-64
         //  100.96.232.33/24 <-> 100.96.232.33/-8
         //
-        // We do this because this method is generic for IPv4 and IPv6 which have different
-        // address lengths. To keep the comments consistent (at the cost of some readability)
-        // we use this custom notation for the comments below.
+        // We do this because this method is generic for IPv4 and IPv6 which
+        // have different address lengths. To keep the comments consistent (at
+        // the cost of some readability) we use this custom notation for the
+        // comments below.
         //
         // Add the following routes:
         //  sub1/-24 -> addr2
@@ -887,8 +908,8 @@ mod tests {
         //  sub1/-24 -> device1
         //  sub5/-23 -> device1
         //
-        // addr5 should now prefer sub5/-23 over sub5/-24 for addressing as it is a more specific
-        // subnet.
+        // addr5 should now prefer sub5/-23 over sub5/-24 for addressing as it
+        // is a more specific subnet.
         let sub5_p23 = sub::<I>(5, 23);
         table.add_device_route(sub5_p23, device1).unwrap();
         table.print();
@@ -933,19 +954,21 @@ mod tests {
         let (addr14, sub14_s25) = next_hop_addr_sub::<I>(14, 25);
         let (addr15, _) = next_hop_addr_sub::<I>(15, 24);
 
-        // In the following comments, we will used a modified form of prefix notation.
-        // Normally to identify the prefix of an address, we do ADDRESS/PREFIX (e.g.
-        // fe80::e80c:830f:1cc3:2336/64 for IPv6; 100.96.232.33/24 for IPv4).
-        // Here, we will do ADDRESS/-SUFFIX to represent the number of bits of the
-        // host portion of the address instead of the network. The following is the
-        // relationship between SUFFIX and PREFIX: PREFIX = ADDRESS_BITS - SUFFIX.
-        // So for the examples given earlier:
+        // In the following comments, we will use a modified form of prefix
+        // notation. Normally to identify the prefix of an address, we do
+        // ADDRESS/PREFIX (e.g. fe80::e80c:830f:1cc3:2336/64 for IPv6;
+        // 100.96.232.33/24 for IPv4). Here, we will do ADDRESS/-SUFFIX to
+        // represent the number of bits of the host portion of the address
+        // instead of the network. The following is the relationship between
+        // SUFFIX and PREFIX: PREFIX = ADDRESS_BITS - SUFFIX. So for the
+        // examples given earlier:
         //  fe80::e80c:830f:1cc3:2336/64 <-> fe80::e80c:830f:1cc3:2336/-64
         //  100.96.232.33/24 <-> 100.96.232.33/-8
         //
-        // We do this because this method is generic for IPv4 and IPv6 which have different
-        // address lengths. To keep the comments consistent (at the cost of some readability)
-        // we use this custom notation for the comments below.
+        // We do this because this method is generic for IPv4 and IPv6 which
+        // have different address lengths. To keep the comments consistent (at
+        // the cost of some readability) we use this custom notation for the
+        // comments below.
         //
         // Subnetting:
         //  sub10/-25, sub12/-26, sub14/-25 and sub15/-24 are subnets of sub8/-27.
@@ -1066,15 +1089,15 @@ mod tests {
             Destination { next_hop: addr10, device: device0 }
         );
 
-        //
         // This next two tests are important.
         //
-        // Here, we add a route from sub10/-25 -> addr7. The routing table as no route from addr7
-        // so normally we would not have any route to the subnet sub10/-25. However, we have a
-        // route for a less specific subnet (sub8/-27) which IS routable so we use that instead.
+        // Here, we add a route from sub10/-25 -> addr7. The routing table as no
+        // route from addr7 so normally we would not have any route to the
+        // subnet sub10/-25. However, we have a route for a less specific subnet
+        // (sub8/-27) which IS routable so we use that instead.
         //
-        // When we do eventually make sub7/-24 routable, sub10/-25 will be routed through addr7.
-        //
+        // When we do eventually make sub7/-24 routable, sub10/-25 will be
+        // routed through addr7.
 
         // Add the following routes:
         //  sub10/-25 -> addr7
@@ -1307,8 +1330,8 @@ mod tests {
         assert!(table.lookup(addr4).is_none());
         assert!(table.lookup(addr5).is_none());
 
-        // Keep the route with the cycle, but add another route that doesn't have a cycle
-        // for sub2.
+        // Keep the route with the cycle, but add another route that doesn't
+        // have a cycle for sub2.
         //
         // Add the following routes:
         //  sub2 -> addr3

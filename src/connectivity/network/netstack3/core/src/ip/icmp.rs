@@ -623,7 +623,8 @@ impl<C> Icmpv4Context for C where
 
 /// The execution context for ICMPv4 where a buffer is required.
 ///
-/// `BufferIcmpv4Context<B>` is a shorthand for `Icmpv4Context + BufferIcmpContext<Ipv4, B>`.
+/// `BufferIcmpv4Context<B>` is a shorthand for `Icmpv4Context +
+/// BufferIcmpContext<Ipv4, B>`.
 pub(crate) trait BufferIcmpv4Context<B: BufferMut>:
     Icmpv4Context + BufferIcmpContext<Ipv4, B>
 {
@@ -694,7 +695,8 @@ impl<C> Icmpv6Context for C where
 
 /// The execution context for ICMPv6 where a buffer is required.
 ///
-/// `BufferIcmpv6Context<B>` is a shorthand for `Icmpv6Context + BufferIcmpContext<Ipv6, B>`.
+/// `BufferIcmpv6Context<B>` is a shorthand for `Icmpv6Context +
+/// BufferIcmpContext<Ipv6, B>`.
 pub(crate) trait BufferIcmpv6Context<B: BufferMut>:
     Icmpv6Context + BufferIcmpContext<Ipv6, B>
 {
@@ -937,8 +939,8 @@ impl<B: BufferMut, C: BufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                         //
                         // `update_pmtu_if_less` may return an error, but it
                         // will only happen if the Dest Unreachable message's
-                        // mtu field had a value that was less than the IPv4
-                        // minimum mtu (which as per IPv4 RFC 791, must not
+                        // MTU field had a value that was less than the IPv4
+                        // minimum MTU (which as per IPv4 RFC 791, must not
                         // happen).
                         ctx.update_pmtu_if_less(
                             dst_ip.get(),
@@ -1104,8 +1106,8 @@ impl<
                     // `packet`).
                     //
                     // `update_pmtu_if_less` may return an error, but it will
-                    // only happen if the Packet Too Big message's mtu field had
-                    // a value that was less than the IPv6 minimum mtu (which as
+                    // only happen if the Packet Too Big message's MTU field had
+                    // a value that was less than the IPv6 minimum MTU (which as
                     // per IPv6 RFC 8200, must not happen).
                     ctx.update_pmtu_if_less(
                         dst_ip.get(),
@@ -1201,7 +1203,8 @@ fn receive_icmpv6_error<
                 Ok(body) => body.into_inner(),
                 Err(UndefinedBodyBoundsError) => {
                     trace!("receive_icmpv6_error: We could not parse the original packet's extension headers, and so we don't know where the original packet's body begins; discarding");
-                    // There's nothing we can do in this case, so we just return.
+                    // There's nothing we can do in this case, so we just
+                    // return.
                     return;
                 }
             };
@@ -1907,12 +1910,12 @@ fn receive_icmp_echo_reply<I: IcmpIpExt, B: BufferMut, C: BufferIcmpContext<I, B
             trace!("receive_icmp_echo_reply: Received echo reply for local socket");
             ctx.receive_icmp_echo_reply(IcmpConnId::new(conn), seq, body);
         } else {
-            // TODO(fxbug.dev/47952): Neither the ICMPv4 or ICMPv6 RFCs explicitly
-            // state what to do in case we receive an "unsolicited" echo reply.
-            // We only expose the replies if we have a registered connection for
-            // the IcmpAddr of the incoming reply for now. Given that a reply
-            // should only be sent in response to a request, an ICMP
-            // unreachable-type message is probably not appropriate for
+            // TODO(fxbug.dev/47952): Neither the ICMPv4 or ICMPv6 RFCs
+            // explicitly state what to do in case we receive an "unsolicited"
+            // echo reply. We only expose the replies if we have a registered
+            // connection for the IcmpAddr of the incoming reply for now. Given
+            // that a reply should only be sent in response to a request, an
+            // ICMP unreachable-type message is probably not appropriate for
             // unsolicited replies. However, it's also possible that we sent a
             // request and then closed the socket before receiving the reply, so
             // this doesn't necessarily indicate a buggy or malicious remote
@@ -2100,9 +2103,7 @@ mod tests {
     };
     use crate::StackStateBuilder;
 
-    //
     // Tests that require an entire IP stack.
-    //
 
     /// Test that receiving a particular IP packet results in a particular ICMP
     /// response.
@@ -2286,15 +2287,15 @@ mod tests {
                         IcmpDestUnreachable::default(),
                         Icmpv4DestUnreachableCode::DestProtocolUnreachable,
                     )),
-                    // ensure packet is truncated to the right length
+                    // Ensure packet is truncated to the right length.
                     |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
                 );
             }
 
-            // TODO(fxbug.dev/47953): We seem to fail to parse an IPv6 packet if its
-            // Next Header value is unrecognized (rather than treating this as a
-            // valid parsing but then replying with a parameter problem error
-            // message). We should a) fix this and, b) expand this test to
+            // TODO(fxbug.dev/47953): We seem to fail to parse an IPv6 packet if
+            // its Next Header value is unrecognized (rather than treating this
+            // as a valid parsing but then replying with a parameter problem
+            // error message). We should a) fix this and, b) expand this test to
             // ensure we don't regress.
             if (&[IpProto::Igmp, IpProto::Tcp]).iter().any(|p| *p == proto) {
                 test_receive_ip_packet::<Ipv6, _, _, _, _>(
@@ -2308,7 +2309,7 @@ mod tests {
                         Icmpv6ParameterProblem::new(40),
                         Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
                     )),
-                    // ensure packet is truncated to the right length
+                    // Ensure packet is truncated to the right length.
                     |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
                 );
             }
@@ -2342,7 +2343,7 @@ mod tests {
                 .serialize_vec_outer()
                 .unwrap();
             test_receive_ip_packet::<I, _, _, _, _>(
-                // enable the `send_port_unreachable` feature
+                // Enable the `send_port_unreachable` feature.
                 |builder| {
                     builder.transport_builder().udp_builder().send_port_unreachable(true);
                 },
@@ -2352,11 +2353,11 @@ mod tests {
                 IpProto::Udp,
                 assert_counters,
                 Some((IcmpDestUnreachable::default(), code)),
-                // ensure packet is truncated to the right length
+                // Ensure packet is truncated to the right length.
                 |packet| assert_eq!(packet.original_packet().bytes().len(), original_packet_len),
             );
             test_receive_ip_packet::<I, C, IcmpDestUnreachable, _, _>(
-                // leave the `send_port_unreachable` feature disabled
+                // Leave the `send_port_unreachable` feature disabled.
                 |_| {},
                 buffer.as_mut(),
                 I::DUMMY_CONFIG.local_ip,
@@ -2397,7 +2398,7 @@ mod tests {
                 IcmpDestUnreachable::default(),
                 Icmpv4DestUnreachableCode::DestNetworkUnreachable,
             )),
-            // ensure packet is truncated to the right length
+            // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
         test_receive_ip_packet::<Ipv6, _, _, _, _>(
@@ -2411,7 +2412,7 @@ mod tests {
             IpProto::Udp,
             &["send_icmpv6_net_unreachable", "send_icmp_error_message"],
             Some((IcmpDestUnreachable::default(), Icmpv6DestUnreachableCode::NoRoute)),
-            // ensure packet is truncated to the right length
+            // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
         );
     }
@@ -2430,7 +2431,7 @@ mod tests {
             IpProto::Udp,
             &["send_icmpv4_ttl_expired", "send_icmp_error_message"],
             Some((IcmpTimeExceeded::default(), Icmpv4TimeExceededCode::TtlExpired)),
-            // ensure packet is truncated to the right length
+            // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
         test_receive_ip_packet::<Ipv6, _, _, _, _>(
@@ -2443,7 +2444,7 @@ mod tests {
             IpProto::Udp,
             &["send_icmpv6_ttl_expired", "send_icmp_error_message"],
             Some((IcmpTimeExceeded::default(), Icmpv6TimeExceededCode::HopLimitExceeded)),
-            // ensure packet is truncated to the right length
+            // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
         );
     }
@@ -2501,26 +2502,26 @@ mod tests {
         assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, false));
         assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, true));
 
-        // Should not send because destined for multicast addr,
-        // unless exception applies
+        // Should not send because destined for multicast addr, unless exception
+        // applies.
         assert!(!should_send_icmpv6_error(frame_dst, src_ip, multicast_ip_1, false));
         assert!(should_send_icmpv6_error(frame_dst, src_ip, multicast_ip_1, true));
 
-        // Should not send because Link Layer Broadcast.,
-        // unless exception applies
+        // Should not send because Link Layer Broadcast, unless exception
+        // applies.
         assert!(!should_send_icmpv6_error(FrameDestination::Broadcast, src_ip, dst_ip, false));
         assert!(should_send_icmpv6_error(FrameDestination::Broadcast, src_ip, dst_ip, true));
 
-        // Should not send because from loopback addr
+        // Should not send because from loopback addr.
         assert!(!should_send_icmpv6_error(frame_dst, Ipv6::LOOPBACK_ADDRESS, dst_ip, false));
         assert!(!should_send_icmpv6_error(frame_dst, Ipv6::LOOPBACK_ADDRESS, dst_ip, true));
 
-        // Should not send because from multicast addr
+        // Should not send because from multicast addr.
         assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, false));
         assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, true));
 
-        // Should not send becuase from multicast addr,
-        // even though dest multicast exception applies
+        // Should not send becuase from multicast addr, even though dest
+        // multicast exception applies.
         assert!(!should_send_icmpv6_error(
             FrameDestination::Broadcast,
             multicast_ip_2,
@@ -2602,13 +2603,11 @@ mod tests {
         assert_eq!(*body, echo_body);
     }
 
-    //
     // Tests that only require an ICMP stack. Unlike the preceding tests, these
     // only test the ICMP stack and state, and mock everything else. We define
     // the `DummyIcmpv4Context` and `DummyIcmpv6Context` types, which we wrap in
     // a `DummyContext` to provide automatic implementations of a number of
     // required traits. The rest we implement manually.
-    //
 
     // The arguments to `IcmpContext::send_icmp_reply`.
     #[derive(Debug, PartialEq)]
@@ -2859,7 +2858,8 @@ mod tests {
             }
 
             impl<B: BufferMut> BufferIcmpContext<$ip, B> for $outer {
-                // TODO(rheacock): remove the `allow(unreachable_code)` once this is implemented.
+                // TODO(rheacock): remove the `allow(unreachable_code)` once
+                // this is implemented.
                 #[allow(unreachable_code)]
                 fn send_icmp_reply<
                     S: Serializer<Buffer = B>,

@@ -106,8 +106,8 @@ mod tests {
 
     #[test]
     fn test_entry_either() {
-        // check that trying to build an EntryEither with mismatching IpAddr
-        // fails, and with matching ones succeeds:
+        // Check that trying to build an EntryEither with mismatching IpAddr
+        // fails, and with matching ones succeeds.
         let subnet_v4 = Subnet::new(Ipv4Addr::new([192, 168, 0, 0]), 24).unwrap().into();
         let subnet_v6 =
             Subnet::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]), 64)
@@ -128,7 +128,7 @@ mod tests {
         assert!(EntryEither::new(subnet_v6, entry_v4).is_none());
         let valid_v4 = EntryEither::new(subnet_v4, entry_v4).unwrap();
         let valid_v6 = EntryEither::new(subnet_v6, entry_v6).unwrap();
-        // check that the split produces results requal to the generating parts:
+        // Check that the split produces results requal to the generating parts.
         assert_eq!((subnet_v4, entry_v4), valid_v4.into_subnet_dest());
         assert_eq!((subnet_v6, entry_v6), valid_v6.into_subnet_dest());
     }
