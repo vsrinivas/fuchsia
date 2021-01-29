@@ -426,10 +426,13 @@ mod tests {
             events: Vec<CapabilityName>,
         ) -> Self {
             // Init model.
-            let mut config = RuntimeConfig::default();
-            config.list_children_batch_size = 2;
+            let config = RuntimeConfig { list_children_batch_size: 2, ..Default::default() };
             let TestModelResult { model, builtin_environment, mock_runner, .. } =
-                new_test_model("root", components, config).await;
+                TestEnvironmentBuilder::new()
+                    .set_components(components)
+                    .set_runtime_config(config)
+                    .build()
+                    .await;
 
             let hook = Arc::new(TestHook::new());
             let hooks = hook.hooks();

@@ -101,9 +101,10 @@ impl Model {
 pub mod tests {
     use {
         crate::{
-            config::RuntimeConfig,
             model::actions::ShutdownAction,
-            model::testing::test_helpers::{new_test_model, ComponentDeclBuilder, TestModelResult},
+            model::testing::test_helpers::{
+                ComponentDeclBuilder, TestEnvironmentBuilder, TestModelResult,
+            },
         },
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     };
@@ -123,7 +124,7 @@ pub mod tests {
         )];
 
         let TestModelResult { model, .. } =
-            new_test_model("root", components, RuntimeConfig::default()).await;
+            TestEnvironmentBuilder::new().set_components(components).build().await;
 
         let _ = model.root.lock_actions().await.register_inner(&model.root, ShutdownAction::new());
 
@@ -146,7 +147,7 @@ pub mod tests {
         )];
 
         let TestModelResult { model, .. } =
-            new_test_model("root", components, RuntimeConfig::default()).await;
+            TestEnvironmentBuilder::new().set_components(components).build().await;
 
         model.start().await;
     }

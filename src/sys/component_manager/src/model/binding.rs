@@ -144,7 +144,6 @@ mod tests {
     use {
         crate::{
             builtin_environment::BuiltinEnvironment,
-            config::RuntimeConfig,
             model::{
                 actions::{ActionKey, ActionSet},
                 events::{event::EventMode, registry::EventSubscription},
@@ -174,7 +173,7 @@ mod tests {
         additional_hooks: Vec<HooksRegistration>,
     ) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
-            new_test_model("root", components, RuntimeConfig::default()).await;
+            TestEnvironmentBuilder::new().set_components(components).build().await;
         model.root.hooks.install(additional_hooks).await;
         (model, builtin_environment, mock_runner)
     }

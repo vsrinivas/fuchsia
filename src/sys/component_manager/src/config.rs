@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::startup,
     anyhow::{format_err, Context, Error},
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::Url,
+    fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinPkgResolver, OutDirContents,
     },
@@ -16,7 +16,7 @@ use {
         collections::{HashMap, HashSet},
         convert::TryFrom,
         iter::FromIterator,
-        path::PathBuf,
+        path::Path,
     },
     thiserror::Error,
 };
@@ -152,18 +152,12 @@ impl Default for RuntimeConfig {
 }
 
 impl RuntimeConfig {
-    /// Load RuntimeConfig from the '--config' command line arg. Returns both the RuntimeConfig
-    /// and the path that the config was loaded from. Returns Err() if an an error occurs
-    /// loading it.
-    pub async fn load_from_file(args: &startup::Arguments) -> Result<(Self, PathBuf), Error> {
-        let config =
-            io_util::file::read_in_namespace_to_fidl::<component_internal::Config>(&args.config)
-                .await
-                .context(format!("Failed to read config file {}", &args.config))?;
-
-        Self::try_from(config)
-            .map(|s| (s, PathBuf::from(&args.config)))
-            .context(format!("Failed to apply config file {}", &args.config))
+    /// Load RuntimeConfig from the '--config' command line arg. Path must
+    /// point to binary encoded fuchsia.component.internal.Config file.
+    /// Otherwise, an Error is returned.
+    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let raw_content = std::fs::read(path)?;
+        Ok(Self::try_from(decode_persistent::<component_internal::Config>(&raw_content)?)?)
     }
 
     fn translate_namespace_capabilities(
@@ -346,17 +340,8 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        cm_types::ParseError,
-        fidl::encoding::encode_persistent,
-        fidl::endpoints::ServerEnd,
-        fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
-        futures::future,
-        matches::assert_matches,
-        vfs::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only, path, pseudo_directory,
-        },
+        super::*, cm_types::ParseError, fidl_fuchsia_io2 as fio2, matches::assert_matches,
+        std::path::PathBuf, tempfile::TempDir,
     };
 
     const FOO_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx";
@@ -650,83 +635,68 @@ mod tests {
     }, ParseError, ParseError::InvalidValue),
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn config_from_file_no_arg() -> Result<(), Error> {
-        let args = startup::Arguments::default();
-        assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
+    fn write_config_to_file(
+        tmp_dir: &TempDir,
+        mut config: component_internal::Config,
+    ) -> Result<PathBuf, Error> {
+        let path = tmp_dir.path().join("test_config.fidl");
+        let content = fidl::encoding::encode_persistent(&mut config)?;
+        std::fs::write(&path, &content)?;
+        Ok(path)
+    }
+
+    #[test]
+    fn config_from_file_no_arg() -> Result<(), Error> {
+        assert_matches!(RuntimeConfig::load_from_file::<PathBuf>(Default::default()), Err(_));
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn config_from_file_missing() -> Result<(), Error> {
-        let args = startup::Arguments { config: "/foo/bar".to_string(), ..Default::default() };
-        assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
+    #[test]
+    fn config_from_file_missing() -> Result<(), Error> {
+        let path = PathBuf::from(&"/foo/bar".to_string());
+        assert_matches!(RuntimeConfig::load_from_file(&path), Err(_));
         Ok(())
     }
 
-    fn install_config_dir_in_namespace(
-        config_dir: &str,
-        config_file: &str,
-        content: Vec<u8>,
-    ) -> Result<(), Error> {
-        let dir = pseudo_directory!(
-            config_file => read_only(move || future::ready(Ok(content.clone()))),
-        );
-        let (dir_server, dir_client) = zx::Channel::create().unwrap();
-        dir.open(
-            ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE,
-            fio::MODE_TYPE_DIRECTORY,
-            path::Path::empty(),
-            ServerEnd::new(dir_server),
-        );
-
-        let ns = fdio::Namespace::installed().expect("Failed to get installed namespace");
-        ns.bind(config_dir, dir_client).expect("Failed to bind test directory");
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn config_from_file_valid() -> Result<(), Error> {
-        // Install a directory containing a test config file in the test process's namespace.
-        let config_dir = "/valid_config";
-        let config_file = "test_config";
-        let mut config = component_internal::Config {
-            debug: None,
-            list_children_batch_size: Some(42),
-            security_policy: None,
-            namespace_capabilities: None,
-            maintain_utc_clock: None,
-            use_builtin_process_launcher: None,
-            num_threads: None,
-            builtin_pkg_resolver: None,
-            out_dir_contents: None,
-            root_component_url: None,
-            ..component_internal::Config::EMPTY
+    #[test]
+    fn config_from_file_valid() -> Result<(), Error> {
+        let tempdir = TempDir::new().unwrap();
+        let path = write_config_to_file(
+            &tempdir,
+            component_internal::Config {
+                debug: None,
+                list_children_batch_size: Some(42),
+                security_policy: None,
+                namespace_capabilities: None,
+                maintain_utc_clock: None,
+                use_builtin_process_launcher: None,
+                num_threads: None,
+                builtin_pkg_resolver: None,
+                out_dir_contents: None,
+                root_component_url: Some(FOO_PKG_URL.to_string()),
+                ..component_internal::Config::EMPTY
+            },
+        )?;
+        let expected = RuntimeConfig {
+            list_children_batch_size: 42,
+            root_component_url: Some(Url::new(FOO_PKG_URL.to_string())?),
+            ..Default::default()
         };
-        install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
 
-        let config_path = [config_dir, "/", config_file].concat();
-        let args = startup::Arguments { config: config_path.to_string(), ..Default::default() };
-        let expected = (
-            RuntimeConfig { list_children_batch_size: 42, ..Default::default() },
-            PathBuf::from(config_path),
-        );
-        assert_matches!(RuntimeConfig::load_from_file(&args).await, Ok(v) if v == expected);
+        assert_matches!(
+            RuntimeConfig::load_from_file(&path)
+            , Ok(v) if v == expected);
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn config_from_file_invalid() -> Result<(), Error> {
-        // Install a directory containing a test config file in the test process's namespace.
-        let config_dir = "/invalid_config";
-        let config_file = "test_config";
+    #[test]
+    fn config_from_file_invalid() -> Result<(), Error> {
+        let tempdir = TempDir::new().unwrap();
+        let path = tempdir.path().join("test_config.fidl");
         // Add config file containing garbage data.
-        install_config_dir_in_namespace(config_dir, config_file, vec![0xfa, 0xde])?;
+        std::fs::write(&path, &vec![0xfa, 0xde])?;
 
-        let config_path = [config_dir, "/", config_file].concat();
-        let args = startup::Arguments { config: config_path.to_string(), ..Default::default() };
-        assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
+        assert_matches!(RuntimeConfig::load_from_file(&path), Err(_));
         Ok(())
     }
 }

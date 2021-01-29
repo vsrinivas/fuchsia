@@ -48,7 +48,6 @@ use {
             storage::admin_protocol::StorageAdmin,
         },
         root_stop_notifier::RootStopNotifier,
-        startup::Arguments,
         work_scheduler::WorkScheduler,
     },
     anyhow::{format_err, Context as _, Error},
@@ -79,7 +78,6 @@ pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_sec
 #[derive(Default)]
 pub struct BuiltinEnvironmentBuilder {
     // TODO(60804): Make component manager's namespace injectable here.
-    args: Option<Arguments>,
     runtime_config: Option<RuntimeConfig>,
     runners: Vec<(CapabilityName, Arc<dyn BuiltinRunnerFactory>)>,
     resolvers: ResolverRegistry,
@@ -92,29 +90,8 @@ impl BuiltinEnvironmentBuilder {
         BuiltinEnvironmentBuilder::default()
     }
 
-    pub fn set_args(mut self, args: Arguments) -> Self {
-        self.args = Some(args);
-        self
-    }
-
     pub fn use_default_config(self) -> Self {
         self.set_runtime_config(RuntimeConfig::default())
-    }
-
-    pub async fn populate_config_from_args(mut self) -> Result<Self, Error> {
-        let args =
-            self.args.as_ref().ok_or(format_err!("Arguments should be set to populate config."))?;
-        if self.runtime_config.is_some() {
-            return Err(format_err!("Unable to populate config from args: already set."));
-        }
-        self.runtime_config = match RuntimeConfig::load_from_file(&args).await {
-            Ok((config, path)) => {
-                info!("Loaded runtime config from {}", path.display());
-                Ok(Some(config))
-            }
-            Err(err) => Err(format_err!("Failed to load runtime config: {}", err)),
-        }?;
-        Ok(self)
     }
 
     pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
@@ -188,11 +165,16 @@ impl BuiltinEnvironmentBuilder {
     }
 
     pub async fn build(mut self) -> Result<BuiltinEnvironment, Error> {
-        let args = self.args.unwrap_or_default();
-
         let runtime_config = self
             .runtime_config
             .ok_or(format_err!("Runtime config is required for BuiltinEnvironment."))?;
+
+        let root_component_url = match runtime_config.root_component_url.as_ref() {
+            Some(url) => url.clone(),
+            None => {
+                return Err(format_err!("Root component url is required from RuntimeConfig."));
+            }
+        };
 
         let runner_map = self
             .runners
@@ -212,19 +194,6 @@ impl BuiltinEnvironmentBuilder {
             Self::insert_namespace_resolvers(&mut self.resolvers, &runtime_config)?
         } else {
             None
-        };
-
-        let root_component_url = match (
-            args.root_component_url.as_ref(),
-            runtime_config.root_component_url.as_ref(),
-        ) {
-            (Some(url), None) | (None, Some(url)) => url.clone(),
-            (None, None) => {
-                return Err(format_err!("`root_component_url` not provided. This field must be provided either as a command line argument or config file parameter."));
-            }
-            (Some(_), Some(_)) => {
-                return Err(format_err!("`root_component_url` set in two places: as a command line argument and a config file parameter. This field can only be set in one of those places."));
-            }
         };
 
         let runtime_config = Arc::new(runtime_config);

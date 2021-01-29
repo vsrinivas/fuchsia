@@ -431,7 +431,6 @@ mod tests {
         super::*,
         crate::{
             capability::ComponentCapability,
-            config::RuntimeConfig,
             model::{
                 component::ComponentInstance,
                 environment::Environment,
@@ -487,8 +486,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn capability_routed_dispatch() -> Result<(), ModelError> {
-        let TestModelResult { model, .. } =
-            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
+        let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let registry = EventRegistry::new(Arc::downgrade(&model));
         let mut event_stream = registry
             .subscribe(
@@ -544,8 +542,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn drop_dispatcher_when_event_stream_dropped() {
-        let TestModelResult { model, .. } =
-            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
+        let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
@@ -595,8 +592,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_error_dispatch() {
-        let TestModelResult { model, .. } =
-            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
+        let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Resolved).await);
@@ -627,8 +623,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn capability_requested_over_two_event_streams() {
-        let TestModelResult { model, .. } =
-            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
+        let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(

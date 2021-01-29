@@ -17,7 +17,6 @@ use {
                 test_hook::TestHook,
             },
         },
-        startup::Arguments,
     },
     cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
     cm_types::Url,
@@ -678,36 +677,63 @@ pub struct TestModelResult {
     pub mock_runner: Arc<MockRunner>,
 }
 
-/// Returns a `Model` and `BuiltinEnvironment` suitable for most tests.
-// TODO: Consider turning this into a builder.
-pub async fn new_test_model(
-    root_component: &str,
-    components: Vec<(&str, ComponentDecl)>,
+pub struct TestEnvironmentBuilder {
+    root_component: String,
+    components: Vec<(&'static str, ComponentDecl)>,
     runtime_config: RuntimeConfig,
-) -> TestModelResult {
-    let mock_runner = Arc::new(MockRunner::new());
+}
 
-    let mut mock_resolver = MockResolver::new();
-    for (name, decl) in &components {
-        mock_resolver.add_component(name, decl.clone());
+impl TestEnvironmentBuilder {
+    pub fn new() -> Self {
+        Self {
+            root_component: "root".to_owned(),
+            components: vec![],
+            runtime_config: Default::default(),
+        }
     }
 
-    let args = Arguments {
-        root_component_url: Some(Url::new(format!("test:///{}", root_component)).unwrap()),
-        ..Default::default()
-    };
+    pub fn set_root_component(mut self, root_component: &str) -> Self {
+        self.root_component = root_component.to_owned();
+        self
+    }
 
-    let builtin_environment = Arc::new(
-        BuiltinEnvironmentBuilder::new()
-            .set_args(args)
-            .add_resolver("test".to_string(), Box::new(mock_resolver))
-            .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
-            .set_runtime_config(runtime_config)
-            .build()
-            .await
-            .expect("builtin environment setup failed"),
-    );
-    TestModelResult { model: builtin_environment.model.clone(), builtin_environment, mock_runner }
+    pub fn set_components(mut self, components: Vec<(&'static str, ComponentDecl)>) -> Self {
+        self.components = components;
+        self
+    }
+
+    pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
+        self.runtime_config = runtime_config;
+        self
+    }
+
+    /// Returns a `Model` and `BuiltinEnvironment` suitable for most tests.
+    pub async fn build(mut self) -> TestModelResult {
+        let mock_runner = Arc::new(MockRunner::new());
+
+        let mut mock_resolver = MockResolver::new();
+        for (name, decl) in &self.components {
+            mock_resolver.add_component(name, decl.clone());
+        }
+
+        self.runtime_config.root_component_url =
+            Some(Url::new(format!("test:///{}", self.root_component)).unwrap());
+
+        let builtin_environment = Arc::new(
+            BuiltinEnvironmentBuilder::new()
+                .add_resolver("test".to_string(), Box::new(mock_resolver))
+                .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
+                .set_runtime_config(self.runtime_config)
+                .build()
+                .await
+                .expect("builtin environment setup failed"),
+        );
+        TestModelResult {
+            model: builtin_environment.model.clone(),
+            builtin_environment,
+            mock_runner,
+        }
+    }
 }
 
 /// A test harness for tests that wish to register or verify actions.
@@ -738,7 +764,11 @@ impl ActionsTest {
         let _ = klog::KernelLogger::init();
 
         let TestModelResult { model, builtin_environment, mock_runner } =
-            new_test_model(root_component, components, RuntimeConfig::default()).await;
+            TestEnvironmentBuilder::new()
+                .set_root_component(root_component)
+                .set_components(components)
+                .build()
+                .await;
 
         // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
         // to start and stop in a certain lifecycle ordering. In particular, some unit

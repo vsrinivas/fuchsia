@@ -18,7 +18,6 @@ use {
             model::Model,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
-        startup::Arguments,
     },
     cm_rust::*,
     cm_types::Url,
@@ -267,16 +266,11 @@ impl RoutingTest {
 
         let echo_service = Arc::new(EchoService::new());
 
-        // Set up runners for the system, including a default runner "test_runner"
-        // backed by mock_runner.
-        let args = Arguments {
+        let config = RuntimeConfig {
+            namespace_capabilities: builder.namespace_capabilities,
             root_component_url: Some(
                 Url::new(format!("test:///{}", builder.root_component)).unwrap(),
             ),
-            ..Default::default()
-        };
-        let config = RuntimeConfig {
-            namespace_capabilities: builder.namespace_capabilities,
             security_policy: SecurityPolicy {
                 capability_policy: builder.capability_policy,
                 ..Default::default()
@@ -285,7 +279,6 @@ impl RoutingTest {
             ..Default::default()
         };
         let mut env_builder = BuiltinEnvironmentBuilder::new()
-            .set_args(args)
             .set_runtime_config(config)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());

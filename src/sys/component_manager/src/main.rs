@@ -6,9 +6,10 @@
 #![allow(elided_lifetimes_in_paths)]
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
     component_manager_lib::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
+        config::RuntimeConfig,
         klog, startup,
     },
     fuchsia_async as fasync,
@@ -16,7 +17,7 @@ use {
     fuchsia_trace_provider as trace_provider,
     fuchsia_zircon::JobCriticalOptions,
     log::*,
-    std::cell::Cell,
+    std::path::PathBuf,
     std::{panic, process, thread, time::Duration},
 };
 
@@ -58,48 +59,32 @@ fn main() -> Result<(), Error> {
     // Enable tracing in Component Manager
     trace_provider::trace_provider_create_with_fdio();
 
-    // The following usage of `std::cell::Cell` is brought by the fact that
-    // we'd like to configure the number of threads to spawn for our executor.
-    // Unfortunately, the configured value lives in the config files that are
-    // parsed by `BuiltinEnvironmentBuilder`. This is problematic because
-    // *building* this object is asynchronous, and thus needs to run in an
-    // async context. So we first need to build the `BuiltinEnvironment`
-    // synchronously, and then extract the configured number of threads into
-    // a local variable before running the root environment using the executor.
-    // TODO(64534): Fix this dance.
-    let builtin_environment: Cell<Option<BuiltinEnvironment>> = Cell::new(None);
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
+    let runtime_config = build_runtime_config()?;
 
-    executor.run_singlethreaded(async {
-        match build_environment().await {
-            Ok(environment) => {
-                builtin_environment.set(Some(environment));
-            }
-            Err(error) => {
-                panic!("Component manager setup failed: {:?}", error);
-            }
-        }
-    });
-
-    let builtin_environment = builtin_environment.take().unwrap();
-
-    // We store a copy of `num_threads` here so that we can safely move
-    // `builtin_environment` into async block below.
-    let num_threads = builtin_environment.num_threads;
+    let num_threads = runtime_config.num_threads;
 
     let fut = async move {
+        let builtin_environment = match build_environment(runtime_config).await {
+            Ok(environment) => environment,
+            Err(error) => {
+                error!("Component manager setup failed: {:?}", error);
+                process::exit(1);
+            }
+        };
+
         if let Err(error) = builtin_environment.run_root().await {
             error!("Failed to bind to root component: {:?}", error);
             process::exit(1);
         }
     };
 
+    let mut executor = fasync::Executor::new().context("error creating executor")?;
     executor.run(fut, num_threads);
 
     Ok(())
 }
 
-async fn build_environment() -> Result<BuiltinEnvironment, Error> {
+fn build_runtime_config() -> Result<RuntimeConfig, Error> {
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
         Err(err) => {
@@ -108,10 +93,35 @@ async fn build_environment() -> Result<BuiltinEnvironment, Error> {
         }
     };
 
+    let path = PathBuf::from(&args.config);
+    let mut config = match RuntimeConfig::load_from_file(&path) {
+        Ok(config) => {
+            info!("Loaded runtime config from {}", path.display());
+            config
+        }
+        Err(err) => {
+            return Err(format_err!("Failed to load runtime config: {}", err));
+        }
+    };
+
+    match (config.root_component_url.as_ref(), args.root_component_url.as_ref()) {
+        (Some(_url), None) => Ok(config),
+        (None, Some(url)) => {
+            config.root_component_url = Some(url.clone());
+            Ok(config)
+        }
+        (None, None) => {
+            Err(format_err!("`root_component_url` not provided. This field must be provided either as a command line argument or config file parameter."))
+        }
+        (Some(_), Some(_)) => {
+            Err(format_err!("`root_component_url` set in two places: as a command line argument and a config file parameter. This field can only be set in one of those places."))
+        }
+    }
+}
+
+async fn build_environment(config: RuntimeConfig) -> Result<BuiltinEnvironment, Error> {
     BuiltinEnvironmentBuilder::new()
-        .set_args(args)
-        .populate_config_from_args()
-        .await?
+        .set_runtime_config(config)
         .create_utc_clock()
         .await?
         .add_elf_runner()?

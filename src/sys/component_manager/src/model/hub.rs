@@ -584,7 +584,6 @@ mod tests {
         super::*,
         crate::{
             builtin_environment::BuiltinEnvironment,
-            config::RuntimeConfig,
             model::{
                 binding::Binder,
                 component::BindReason,
@@ -678,7 +677,7 @@ mod tests {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let decls = components.iter().map(|c| (c.name, c.decl.clone())).collect();
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
-            new_test_model("root", decls, RuntimeConfig::default()).await;
+            TestEnvironmentBuilder::new().set_components(decls).build().await;
         for component in components.into_iter() {
             if let Some(host_fn) = component.host_fn {
                 mock_runner.add_host_fn(&resolved_root_component_url, host_fn);
