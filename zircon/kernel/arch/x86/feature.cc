@@ -394,12 +394,16 @@ void x86_feature_debug(void) {
          version.stepping());
   printf("Patch level: %x\n", model_info.patch_level);
 
-  auto print_feature = [](const char* name, auto value, auto, auto) {
+  auto print_feature = [col = size_t{0}](const char* name, auto value, auto, auto) mutable {
     if (name && value) {
-      printf("%s, ", name);
+      col += printf("%s%s", col ? ", " : "", name);
+      if (col >= 80) {
+        printf("\n");
+        col = 0;
+      }
     }
   };
-  printf("\nFeatures: \t");
+  printf("\nFeatures:\n");
   io.Read<arch::CpuidFeatureFlagsC>().ForEachField(print_feature);
   io.Read<arch::CpuidFeatureFlagsD>().ForEachField(print_feature);
   io.Read<arch::CpuidExtendedFeatureFlagsB>().ForEachField(print_feature);
@@ -408,37 +412,41 @@ void x86_feature_debug(void) {
   printf("\n");
 
   // Print synthetic 'features'/properties.
-  auto print_property = [](bool print, const char* property) {
+  auto print_property = [col = size_t{0}](const char* property, bool print = true) mutable {
     if (print) {
-      printf("%s, ", property);
+      col += printf("%s%s", col ? ", " : "", property);
+      if (col >= 80) {
+        printf("\n");
+        col = 0;
+      }
     }
   };
-  printf("\nProperties: \t");
-  print_property(g_has_meltdown, "meltdown");
-  print_property(g_has_l1tf, "l1tf");
-  print_property(g_has_mds_taa, "mds/taa");
-  print_property(g_has_md_clear, "md_clear");
-  print_property(g_md_clear_on_user_return, "md_clear_user_return");
-  print_property(g_has_swapgs_bug, "swapgs_bug");
-  print_property(g_swapgs_bug_mitigated, "swapgs_bug_mitigated");
-  print_property(g_x86_feature_pcid_good, "pcid_good");
-  print_property(x86_kpti_is_enabled(), "pti_enabled");
-  print_property(g_has_spec_ctrl, "spec_ctrl");
-  print_property(g_has_ssb, "ssb");
-  print_property(g_has_ssbd, "ssbd");
-  print_property(g_ssb_mitigated, "ssb_mitigated");
-  print_property(g_has_ibpb, "ibpb");
-  print_property(g_l1d_flush_on_vmentry, "l1d_flush_on_vmentry");
-  print_property(g_should_ibpb_on_ctxt_switch, "ibpb_ctxt_switch");
-  print_property(g_ras_fill_on_ctxt_switch, "ras_fill");
-  print_property(g_has_enhanced_ibrs, "enhanced_ibrs");
-  print_property(g_enhanced_ibrs_enabled, "enhanced_ibrs_enabled");
+  printf("\nProperties:\n");
+  print_property("meltdown", g_has_meltdown);
+  print_property("l1tf", g_has_l1tf);
+  print_property("mds/taa", g_has_mds_taa);
+  print_property("md_clear", g_has_md_clear);
+  print_property("md_clear_user_return", g_md_clear_on_user_return);
+  print_property("swapgs_bug", g_has_swapgs_bug);
+  print_property("swapgs_bug_mitigated", g_swapgs_bug_mitigated);
+  print_property("pcid_good", g_x86_feature_pcid_good);
+  print_property("pti_enabled", x86_kpti_is_enabled());
+  print_property("spec_ctrl", g_has_spec_ctrl);
+  print_property("ssb", g_has_ssb);
+  print_property("ssbd", g_has_ssbd);
+  print_property("ssb_mitigated", g_ssb_mitigated);
+  print_property("ibpb", g_has_ibpb);
+  print_property("l1d_flush_on_vmentry", g_l1d_flush_on_vmentry);
+  print_property("ibpb_ctxt_switch", g_should_ibpb_on_ctxt_switch);
+  print_property("ras_fill", g_ras_fill_on_ctxt_switch);
+  print_property("enhanced_ibrs", g_has_enhanced_ibrs);
+  print_property("enhanced_ibrs_enabled", g_enhanced_ibrs_enabled);
 #ifdef KERNEL_RETPOLINE
-  print_property(true, "retpoline");
-  print_property(g_amd_retpoline, "amd_retpoline");
+  print_property("retpoline");
+  print_property("amd_retpoline", g_amd_retpoline);
 #endif
 #ifdef X64_KERNEL_JCC_WORKAROUND
-  print_property(true, "jcc_fix");
+  print_property("jcc_fix");
 #endif
   printf("\n\n");
 }
