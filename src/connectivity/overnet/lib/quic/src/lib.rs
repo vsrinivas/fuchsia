@@ -4,15 +4,12 @@
 
 //! Async wrapper around QUIC
 
-use crate::future_help::{LockInner, PollWeakMutex};
-use crate::labels::{Endpoint, NodeId};
 use anyhow::{format_err, Context as _, Error};
 use async_utils::mutex_ticket::MutexTicket;
-use fidl_fuchsia_overnet_protocol::StreamId;
 use fuchsia_async::{Task, Timer};
 use futures::{
     future::{poll_fn, Either},
-    lock::{Mutex, MutexLockFuture},
+    lock::Mutex,
     prelude::*,
     ready,
 };
@@ -21,9 +18,35 @@ use std::cmp::{max, min};
 use std::collections::BTreeMap;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
+
+/// Labels the endpoint of a client/server connection.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum Endpoint {
+    /// Client endpoint.
+    Client,
+    /// Server endpoint.
+    Server,
+}
+
+impl Endpoint {
+    pub(crate) fn quic_id_bit(&self) -> u64 {
+        match self {
+            Endpoint::Client => 0,
+            Endpoint::Server => 1,
+        }
+    }
+
+    /// Returns the other end of this endpoint.
+    pub fn opposite(&self) -> Endpoint {
+        match self {
+            Endpoint::Client => Endpoint::Server,
+            Endpoint::Server => Endpoint::Client,
+        }
+    }
+}
 
 /// Current state of a connection - mutex guarded by AsyncConnection.
 pub struct ConnState {
@@ -44,7 +67,7 @@ impl std::fmt::Debug for ConnState {
 }
 
 impl ConnState {
-    pub(crate) fn poll_send(
+    pub fn poll_send(
         &mut self,
         ctx: &mut Context<'_>,
         frame: &mut [u8],
@@ -146,34 +169,29 @@ impl ConnState {
     }
 }
 
-#[derive(Debug)]
-struct AsyncConnectionInner {
+pub struct AsyncConnection {
+    trace_id: String,
     next_bidi: AtomicU64,
     next_uni: AtomicU64,
     endpoint: Endpoint,
     io: Mutex<ConnState>,
-    own_node_id: NodeId,
-    peer_node_id: NodeId,
 }
 
-impl LockInner for AsyncConnectionInner {
-    type Inner = ConnState;
-    fn lock_inner<'a>(&'a self) -> MutexLockFuture<'a, ConnState> {
-        self.io.lock()
+impl std::fmt::Debug for AsyncConnection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AsyncConnection")
+            .field("trace_id", &self.trace_id)
+            .field("next_bidi", &self.next_bidi)
+            .field("next_uni", &self.next_uni)
+            .field("endpoint", &self.endpoint)
+            .finish()
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct AsyncConnection(Arc<AsyncConnectionInner>);
-
 impl AsyncConnection {
-    pub fn from_connection(
-        conn: Pin<Box<Connection>>,
-        endpoint: Endpoint,
-        own_node_id: NodeId,
-        peer_node_id: NodeId,
-    ) -> Self {
-        let inner = Arc::new(AsyncConnectionInner {
+    pub fn from_connection(conn: Pin<Box<Connection>>, endpoint: Endpoint) -> Arc<Self> {
+        Arc::new(Self {
+            trace_id: conn.trace_id().to_string(),
             io: Mutex::new(ConnState {
                 conn,
                 seen_established: false,
@@ -184,26 +202,46 @@ impl AsyncConnection {
                 timeout: None,
                 new_timeout: None,
             }),
-            next_bidi: AtomicU64::new(match endpoint {
-                Endpoint::Client => 1,
-                Endpoint::Server => 0,
-            }),
+            next_bidi: AtomicU64::new(0),
             next_uni: AtomicU64::new(0),
             endpoint,
-            own_node_id,
-            peer_node_id,
-        });
-        Self(inner)
+        })
     }
 
-    /// Perform maintence tasks vital to keeping the connection running.
-    /// Owner of the AsyncConnection is responsible for calling this function and providing it a task to run within.
-    pub fn run(&self) -> impl Future<Output = Result<(), Error>> {
-        run_timers(Arc::downgrade(&self.0))
+    pub async fn run(self: Arc<Self>) -> Result<(), Error> {
+        let mut timeout_lock = MutexTicket::new(&self.io);
+        // TODO: we shouldn't need this: we should just sleep forever if we get a timeout of None.
+        const A_VERY_LONG_TIME: Duration = Duration::from_secs(10000);
+        let timer_for_timeout = move |timeout: Option<Instant>| {
+            Timer::new(timeout.unwrap_or_else(move || Instant::now() + A_VERY_LONG_TIME))
+        };
+
+        let mut current_timeout = None;
+        let mut timeout_fut = timer_for_timeout(current_timeout);
+        loop {
+            let poll_timeout = |ctx: &mut Context<'_>| -> Poll<Option<Instant>> {
+                ready!(timeout_lock.poll(ctx)).wait_for_new_timeout(ctx, current_timeout)
+            };
+            match futures::future::select(poll_fn(poll_timeout), &mut timeout_fut).await {
+                Either::Left((timeout, _)) => {
+                    log::trace!("new timeout: {:?} old timeout: {:?}", timeout, current_timeout);
+                    current_timeout = timeout;
+                    timeout_fut = timer_for_timeout(current_timeout);
+                }
+                Either::Right(_) => {
+                    timeout_fut = Timer::new(A_VERY_LONG_TIME);
+                    let mut io = timeout_lock.lock().await;
+                    io.conn.on_timeout();
+                    io.update_timeout();
+                    io.wake_stream_io();
+                    io.wake_conn_send();
+                }
+            }
+        }
     }
 
     pub async fn close(&self) {
-        let mut io = self.0.io.lock().await;
+        let mut io = self.io.lock().await;
         log::trace!("{:?} close()", self.debug_id());
         io.closed = true;
         let _ = io.conn.close(false, 0, b"");
@@ -212,16 +250,15 @@ impl AsyncConnection {
     }
 
     pub fn poll_lock_state<'a>(&'a self) -> MutexTicket<'a, ConnState> {
-        MutexTicket::new(&self.0.io)
+        MutexTicket::new(&self.io)
     }
 
-    #[allow(dead_code)]
-    pub fn debug_id(&self) -> impl std::fmt::Debug {
-        (self.0.own_node_id, self.0.peer_node_id, self.0.endpoint)
+    pub fn debug_id(&self) -> impl std::fmt::Debug + '_ {
+        (&self.trace_id, self.endpoint)
     }
 
     pub async fn recv(&self, packet: &mut [u8]) -> Result<(), Error> {
-        let mut io = self.0.io.lock().await;
+        let mut io = self.io.lock().await;
         match io.conn.recv(packet) {
             Ok(_) => (),
             Err(quiche::Error::Done) => (),
@@ -235,19 +272,19 @@ impl AsyncConnection {
         Ok(())
     }
 
-    pub fn alloc_bidi(&self) -> (AsyncQuicStreamWriter, AsyncQuicStreamReader) {
-        let n = self.0.next_bidi.fetch_add(1, Ordering::Relaxed);
-        let id = n * 4 + self.0.endpoint.quic_id_bit();
+    pub fn alloc_bidi(self: &Arc<Self>) -> (AsyncQuicStreamWriter, AsyncQuicStreamReader) {
+        let n = self.next_bidi.fetch_add(1, Ordering::Relaxed);
+        let id = n * 4 + self.endpoint.quic_id_bit();
         self.bind_id(id)
     }
 
-    pub fn alloc_uni(&self) -> AsyncQuicStreamWriter {
-        let n = self.0.next_uni.fetch_add(1, Ordering::Relaxed);
-        let id = n * 4 + 2 + self.0.endpoint.quic_id_bit();
+    pub fn alloc_uni(self: &Arc<Self>) -> AsyncQuicStreamWriter {
+        let n = self.next_uni.fetch_add(1, Ordering::Relaxed);
+        let id = n * 4 + 2 + self.endpoint.quic_id_bit();
         AsyncQuicStreamWriter { conn: self.clone(), id, sent_fin: false }
     }
 
-    pub fn bind_uni_id(&self, id: u64) -> AsyncQuicStreamReader {
+    pub fn bind_uni_id(self: &Arc<Self>, id: u64) -> AsyncQuicStreamReader {
         AsyncQuicStreamReader {
             conn: self.clone(),
             id,
@@ -257,7 +294,7 @@ impl AsyncConnection {
         }
     }
 
-    pub fn bind_id(&self, id: u64) -> (AsyncQuicStreamWriter, AsyncQuicStreamReader) {
+    pub fn bind_id(self: &Arc<Self>, id: u64) -> (AsyncQuicStreamWriter, AsyncQuicStreamReader) {
         (
             AsyncQuicStreamWriter { conn: self.clone(), id, sent_fin: false },
             AsyncQuicStreamReader {
@@ -270,99 +307,41 @@ impl AsyncConnection {
         )
     }
 
+    pub fn endpoint(&self) -> Endpoint {
+        self.endpoint
+    }
+
+    pub fn trace_id(&self) -> &str {
+        &self.trace_id
+    }
+
     pub async fn stats(&self) -> quiche::Stats {
-        self.0.io.lock().await.conn.stats()
+        self.io.lock().await.conn.stats()
     }
 
     pub async fn is_established(&self) -> bool {
-        self.0.io.lock().await.conn.is_established()
-    }
-
-    pub fn peer_node_id(&self) -> NodeId {
-        self.0.peer_node_id
-    }
-
-    pub fn own_node_id(&self) -> NodeId {
-        self.0.own_node_id
-    }
-
-    pub fn endpoint(&self) -> Endpoint {
-        self.0.endpoint
-    }
-}
-
-// TODO: merge this loop with the one in quic_link (and maybe the one in ping_tracker too).
-async fn run_timers(inner: Weak<AsyncConnectionInner>) -> Result<(), Error> {
-    let mut timeout_lock = PollWeakMutex::new(inner.clone());
-    // TODO: we shouldn't need this: we should just sleep forever if we get a timeout of None.
-    const A_VERY_LONG_TIME: Duration = Duration::from_secs(10000);
-    let timer_for_timeout = move |timeout: Option<Instant>| {
-        Timer::new(timeout.unwrap_or_else(move || Instant::now() + A_VERY_LONG_TIME))
-    };
-
-    let mut current_timeout = None;
-    let mut timeout_fut = timer_for_timeout(current_timeout);
-    loop {
-        let poll_timeout = |ctx: &mut Context<'_>| -> Poll<Option<Option<Instant>>> {
-            timeout_lock.poll_fn(ctx, |ctx, io| io.wait_for_new_timeout(ctx, current_timeout))
-        };
-        match futures::future::select(poll_fn(poll_timeout), &mut timeout_fut).await {
-            Either::Left((Some(timeout), _)) => {
-                log::trace!("new timeout: {:?} old timeout: {:?}", timeout, current_timeout);
-                current_timeout = timeout;
-                timeout_fut = timer_for_timeout(current_timeout);
-            }
-            Either::Left((None, _)) => return Ok(()),
-            Either::Right(_) => {
-                timeout_fut = Timer::new(A_VERY_LONG_TIME);
-                timeout_lock
-                    .with_lock(|io| {
-                        io.conn.on_timeout();
-                        io.update_timeout();
-                        io.wake_stream_io();
-                        io.wake_conn_send();
-                    })
-                    .await
-                    .ok_or_else(|| format_err!("Connection disappeared before timeout expired"))?;
-            }
-        }
+        self.io.lock().await.conn.is_established()
     }
 }
 
 pub trait StreamProperties {
-    fn conn(&self) -> &AsyncConnection;
     fn id(&self) -> u64;
+    fn conn(&self) -> &Arc<AsyncConnection>;
 
     fn is_initiator(&self) -> bool {
         // QUIC stream id's use the lower two bits as a stream type designator.
         // Bit 0 of that type is the initiator of the stream: 0 for client, 1 for server.
-        self.id() & 1 == self.endpoint().quic_id_bit()
+        self.id() & 1 == self.conn().endpoint().quic_id_bit()
     }
 
-    fn peer_node_id(&self) -> NodeId {
-        self.conn().peer_node_id()
-    }
-
-    fn own_node_id(&self) -> NodeId {
-        self.conn().own_node_id()
-    }
-
-    fn endpoint(&self) -> Endpoint {
-        self.conn().endpoint()
-    }
-
-    fn stream_id(&self) -> StreamId {
-        StreamId { id: self.id() }
-    }
-
-    fn debug_id(&self) -> (NodeId, NodeId, Endpoint, u64) {
-        (self.own_node_id(), self.peer_node_id(), self.endpoint(), self.id())
+    fn debug_id(&self) -> (&str, u64) {
+        (self.conn().trace_id(), self.id())
     }
 }
 
 #[derive(Debug)]
 pub struct AsyncQuicStreamWriter {
-    conn: AsyncConnection,
+    conn: Arc<AsyncConnection>,
     id: u64,
     sent_fin: bool,
 }
@@ -371,8 +350,7 @@ impl AsyncQuicStreamWriter {
     pub async fn abandon(&mut self) {
         self.sent_fin = true;
         log::trace!("{:?} writer abandon", self.debug_id());
-        if let Err(e) =
-            self.conn.0.io.lock().await.conn.stream_shutdown(self.id, Shutdown::Write, 0)
+        if let Err(e) = self.conn.io.lock().await.conn.stream_shutdown(self.id, Shutdown::Write, 0)
         {
             log::trace!("shutdown stream failed: {:?}", e);
         }
@@ -381,13 +359,13 @@ impl AsyncQuicStreamWriter {
     pub async fn send(&mut self, bytes: &[u8], fin: bool) -> Result<(), Error> {
         assert_eq!(self.sent_fin, false);
         QuicSend {
-            conn: &*self.conn.0,
+            conn: &*self.conn,
             id: self.id,
             bytes,
             fin,
             n: 0,
             sent_fin: &mut self.sent_fin,
-            io_lock: MutexTicket::new(&self.conn.0.io),
+            io_lock: MutexTicket::new(&self.conn.io),
         }
         .await
     }
@@ -400,7 +378,7 @@ impl Drop for AsyncQuicStreamWriter {
             let id = self.id;
             // TODO: don't detach
             Task::spawn(async move {
-                let _ = conn.0.io.lock().await.conn.stream_shutdown(id, Shutdown::Write, 0);
+                let _ = conn.io.lock().await.conn.stream_shutdown(id, Shutdown::Write, 0);
             })
             .detach();
         }
@@ -408,7 +386,7 @@ impl Drop for AsyncQuicStreamWriter {
 }
 
 impl StreamProperties for AsyncQuicStreamWriter {
-    fn conn(&self) -> &AsyncConnection {
+    fn conn(&self) -> &Arc<AsyncConnection> {
         &self.conn
     }
 
@@ -418,7 +396,7 @@ impl StreamProperties for AsyncQuicStreamWriter {
 }
 
 pub struct QuicSend<'b> {
-    conn: &'b AsyncConnectionInner,
+    conn: &'b AsyncConnection,
     id: u64,
     bytes: &'b [u8],
     n: usize,
@@ -430,7 +408,7 @@ pub struct QuicSend<'b> {
 impl<'b> QuicSend<'b> {
     #[allow(dead_code)]
     fn debug_id(&self) -> impl std::fmt::Debug {
-        (self.conn.own_node_id, self.conn.peer_node_id, self.conn.endpoint, self.id)
+        (self.conn.endpoint, self.id)
     }
 }
 
@@ -462,7 +440,7 @@ impl<'b> Future for QuicSend<'b> {
 
 #[derive(Debug)]
 pub struct AsyncQuicStreamReader {
-    conn: AsyncConnection,
+    conn: Arc<AsyncConnection>,
     id: u64,
     ready: bool,
     observed_closed: bool,
@@ -476,7 +454,7 @@ impl Drop for AsyncQuicStreamReader {
             let id = self.id;
             // TODO: don't detach
             Task::spawn(async move {
-                let _ = conn.0.io.lock().await.conn.stream_shutdown(id, Shutdown::Read, 0);
+                let _ = conn.io.lock().await.conn.stream_shutdown(id, Shutdown::Read, 0);
             })
             .detach();
         }
@@ -486,14 +464,14 @@ impl Drop for AsyncQuicStreamReader {
 impl AsyncQuicStreamReader {
     pub fn read<'b>(&'b mut self, bytes: impl Into<ReadBuf<'b>>) -> QuicRead<'b> {
         QuicRead {
-            conn: &self.conn.0,
+            conn: &self.conn,
             id: self.id,
             observed_closed: &mut self.observed_closed,
             ready: &mut self.ready,
             buffered: &mut self.buffered,
             bytes: bytes.into(),
             bytes_offset: 0,
-            io_lock: MutexTicket::new(&self.conn.0.io),
+            io_lock: MutexTicket::new(&self.conn.io),
         }
     }
 
@@ -504,8 +482,7 @@ impl AsyncQuicStreamReader {
     pub async fn abandon(&mut self) {
         log::trace!("{:?} reader abandon", self.debug_id());
         self.observed_closed = true;
-        if let Err(e) = self.conn.0.io.lock().await.conn.stream_shutdown(self.id, Shutdown::Read, 0)
-        {
+        if let Err(e) = self.conn.io.lock().await.conn.stream_shutdown(self.id, Shutdown::Read, 0) {
             log::trace!("shutdown stream failed: {:?}", e);
         }
     }
@@ -519,7 +496,7 @@ pub struct ReadExact<'b> {
 
 impl<'b> ReadExact<'b> {
     #[allow(dead_code)]
-    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
+    pub fn debug_id(&self) -> impl std::fmt::Debug {
         self.read.debug_id()
     }
 }
@@ -546,15 +523,19 @@ impl<'b> Future for ReadExact<'b> {
 }
 
 impl<'b> ReadExact<'b> {
-    pub(crate) fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
+    pub fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
         self.read.read_buf_mut()
     }
 
-    pub(crate) fn rearm(&mut self, bytes: impl Into<ReadBuf<'b>>) {
+    pub fn rearm(&mut self, bytes: impl Into<ReadBuf<'b>>) {
         assert!(self.done);
         self.read.bytes_offset = 0;
         self.read.bytes = bytes.into();
         self.done = false;
+    }
+
+    pub fn conn(&self) -> &Arc<AsyncConnection> {
+        &self.read.conn
     }
 }
 
@@ -583,7 +564,7 @@ impl<'b> ReadBuf<'b> {
         }
     }
 
-    pub(crate) fn as_mut_slice<'a>(&'a mut self) -> &'a mut [u8] {
+    pub fn as_mut_slice<'a>(&'a mut self) -> &'a mut [u8] {
         match self {
             Self::Slice(buf) => buf,
             Self::Vec(buf) => buf.as_mut(),
@@ -600,7 +581,7 @@ impl<'b> ReadBuf<'b> {
         }
     }
 
-    pub(crate) fn take_vec(&mut self) -> Vec<u8> {
+    pub fn take_vec(&mut self) -> Vec<u8> {
         match self {
             Self::Slice(buf) => buf.to_vec(),
             Self::Vec(buf) => std::mem::replace(buf, Vec::new()),
@@ -628,12 +609,12 @@ impl<'b> From<&'b mut Vec<u8>> for ReadBuf<'b> {
 }
 
 impl StreamProperties for AsyncQuicStreamReader {
-    fn id(&self) -> u64 {
-        self.id
+    fn conn(&self) -> &Arc<AsyncConnection> {
+        &self.conn
     }
 
-    fn conn(&self) -> &AsyncConnection {
-        &self.conn
+    fn id(&self) -> u64 {
+        self.id
     }
 }
 
@@ -643,7 +624,7 @@ pub struct QuicRead<'b> {
     ready: &'b mut bool,
     observed_closed: &'b mut bool,
     buffered: &'b mut Vec<u8>,
-    conn: &'b AsyncConnectionInner,
+    conn: &'b Arc<AsyncConnection>,
     bytes: ReadBuf<'b>,
     bytes_offset: usize,
     io_lock: MutexTicket<'b, ConnState>,
@@ -651,11 +632,11 @@ pub struct QuicRead<'b> {
 
 impl<'b> QuicRead<'b> {
     #[allow(dead_code)]
-    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
-        (self.conn.own_node_id, self.conn.peer_node_id, self.conn.endpoint, self.id)
+    pub fn debug_id(&self) -> impl std::fmt::Debug {
+        (self.conn.endpoint, self.id)
     }
 
-    pub(crate) fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
+    pub fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
         &mut self.bytes
     }
 
@@ -712,12 +693,7 @@ impl<'b> QuicRead<'b> {
                 Poll::Ready(Ok((0, true)))
             }
             Err(x) => Poll::Ready(Err(x).with_context(|| {
-                format_err!(
-                    "async quic read: stream_id={:?} ready={:?} endpoint={:?}",
-                    self.id,
-                    *self.ready,
-                    self.conn.endpoint
-                )
+                format_err!("async quic read: stream_id={:?} ready={:?}", self.id, *self.ready,)
             })),
         }
     }
@@ -737,22 +713,49 @@ impl<'b> Future for QuicRead<'b> {
 }
 
 #[cfg(test)]
-pub(crate) mod test_util {
+mod test_util {
 
     use super::*;
-    use crate::router::security_context::quiche_config_from_security_context;
-    use crate::test_util::NodeIdGenerator;
     use futures::future::poll_fn;
     use rand::Rng;
+    #[cfg(not(target_os = "fuchsia"))]
+    fn path_for(name: &str) -> String {
+        let relative_path = &format!("overnet_test_certs/{}", name);
+        let mut path = std::env::current_exe().unwrap();
+        // We don't know exactly where the binary is in the out directory (varies by target platform and
+        // architecture), so search up the file tree for the certificate file.
+        loop {
+            if path.join(relative_path).exists() {
+                path.push(relative_path);
+                break;
+            }
+            if !path.pop() {
+                // Reached the root of the file system
+                panic!(
+                    "Couldn't find {} near {:?}",
+                    relative_path,
+                    std::env::current_exe().unwrap()
+                );
+            }
+        }
+        path.to_str().unwrap().to_string()
+    }
+
+    #[cfg(target_os = "fuchsia")]
+    fn path_for(name: &str) -> String {
+        format!("/pkg/data/{}", name)
+    }
 
     async fn server_config() -> Result<quiche::Config, Error> {
-        let mut config =
-            quiche_config_from_security_context(&crate::test_util::test_security_context()).await?;
-
+        let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)?;
         // TODO(ctiller): don't hardcode these
         config
             .set_application_protos(b"\x0bovernet-test/0.1")
             .context("Setting application protocols")?;
+        config.verify_peer(false);
+        config.load_cert_chain_from_pem_file(&path_for("cert.crt"))?;
+        config.load_priv_key_from_pem_file(&path_for("cert.key"))?;
+        config.load_verify_locations_from_file(&path_for("rootca.crt"))?;
         config.set_initial_max_data(10_000_000);
         config.set_initial_max_stream_data_bidi_local(1_000_000);
         config.set_initial_max_stream_data_bidi_remote(1_000_000);
@@ -775,7 +778,10 @@ pub(crate) mod test_util {
         Ok(config)
     }
 
-    async fn direct_packets(from: AsyncConnection, to: AsyncConnection) -> Result<(), Error> {
+    async fn direct_packets(
+        from: Arc<AsyncConnection>,
+        to: Arc<AsyncConnection>,
+    ) -> Result<(), Error> {
         let mut frame = [0u8; 2048];
         while let Some(length) = {
             let mut lock_state = from.poll_lock_state();
@@ -788,16 +794,11 @@ pub(crate) mod test_util {
 
     /// Generate a test connection pair, that automatically forwards packets from client to server.
     pub async fn run_client_server<
-        F: 'static + Sync + Clone + Send + FnOnce(AsyncConnection, AsyncConnection) -> Fut,
+        F: 'static + Sync + Clone + Send + FnOnce(Arc<AsyncConnection>, Arc<AsyncConnection>) -> Fut,
         Fut: 'static + Send + Future<Output = ()>,
     >(
-        name: &'static str,
-        run: usize,
         f: F,
     ) {
-        let mut node_id_gen = NodeIdGenerator::new(name, run);
-        let cli_id = node_id_gen.next().unwrap();
-        let svr_id = node_id_gen.next().unwrap();
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
@@ -805,8 +806,6 @@ pub(crate) mod test_util {
         let client = AsyncConnection::from_connection(
             quiche::connect(None, &scid, &mut client_config().unwrap()).unwrap(),
             Endpoint::Client,
-            cli_id,
-            svr_id,
         );
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
@@ -815,23 +814,13 @@ pub(crate) mod test_util {
         let server = AsyncConnection::from_connection(
             quiche::accept(&scid, None, &mut server_config().await.unwrap()).unwrap(),
             Endpoint::Server,
-            svr_id,
-            cli_id,
         );
         let forward = futures::future::try_join(
             direct_packets(client.clone(), server.clone()),
             direct_packets(server.clone(), client.clone()),
         );
-        let run_client = client.run();
-        let run_server = server.run();
         let _1 = Task::spawn(async move {
             forward.await.unwrap();
-        });
-        let _2 = Task::spawn(async move {
-            run_client.await.unwrap();
-        });
-        let _3 = Task::spawn(async move {
-            run_server.await.unwrap();
         });
         f(client, server).await;
     }
@@ -844,8 +833,8 @@ mod test {
     use super::StreamProperties;
 
     #[fuchsia::test]
-    async fn simple_send(run: usize) {
-        run_client_server("simple_send", run, |client, server| async move {
+    async fn simple_send() {
+        run_client_server(|client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
             let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
@@ -860,8 +849,8 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn send_fin(run: usize) {
-        run_client_server("send_fin", run, |client, server| async move {
+    async fn send_fin() {
+        run_client_server(|client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
             let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
@@ -876,8 +865,8 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn recv_before_send(run: usize) {
-        run_client_server("recv_before_send", run, |client, server| async move {
+    async fn recv_before_send() {
+        run_client_server(|client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
             let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 

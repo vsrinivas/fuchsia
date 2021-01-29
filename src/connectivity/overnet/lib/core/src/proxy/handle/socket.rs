@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::{IntoProxied, Message, Proxyable, RouterHolder, Serializer, IO};
-use crate::peer::{AsyncConnection, MessageStats};
+use crate::peer::{MessageStats, PeerConnRef};
 use anyhow::{format_err, Error};
 use fidl::{AsyncSocket, HandleBased};
 use fuchsia_zircon_status as zx_status;
@@ -127,7 +127,7 @@ impl Serializer for SocketMessageSerializer {
         &mut self,
         msg: &mut SocketMessage,
         bytes: &mut Vec<u8>,
-        _: &AsyncConnection,
+        _: PeerConnRef<'_>,
         _: &Arc<MessageStats>,
         _: &mut RouterHolder<'_>,
         _: &mut Context<'_>,

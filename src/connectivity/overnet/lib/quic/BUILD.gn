@@ -1,0 +1,49 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+SOURCES = [ "src/lib.rs" ]
+DEPS = [
+  "//src/lib/async-utils",
+  "//src/lib/fuchsia-async",
+  "//third_party/rust-mirrors/quiche",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:rand",
+]
+
+rustc_library("quic") {
+  edition = "2018"
+  sources = SOURCES
+  deps = DEPS
+}
+
+rustc_test("quic_test") {
+  edition = "2018"
+  sources = SOURCES
+  deps = DEPS + [ "//src/lib/fuchsia" ]
+  if (is_host) {
+    deps += [ "//src/connectivity/overnet/lib/core:test_certs" ]
+  }
+}
+
+fuchsia_unittest_package("overnet-quic-tests") {
+  manifest = "meta/overnet_quic_lib_test.cmx"
+  deps = [
+    ":quic_test",
+    "//src/connectivity/overnet/overnetstack:certificates",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":overnet-quic-tests",
+    ":quic_test($host_toolchain)",
+  ]
+}

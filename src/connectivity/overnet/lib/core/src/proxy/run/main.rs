@@ -10,7 +10,7 @@ use super::super::{
     Proxy, ProxyTransferInitiationReceiver, Proxyable, RemoveFromProxyTable, StreamRefSender,
 };
 use crate::labels::{NodeId, TransferKey};
-use crate::peer::{FramedStreamReader, FramedStreamWriter, StreamProperties};
+use crate::peer::{FramedStreamReader, FramedStreamWriter};
 use anyhow::{bail, format_err, Context as _, Error};
 use fuchsia_zircon_status as zx_status;
 use futures::{future::Either, prelude::*};
@@ -103,7 +103,6 @@ pub(crate) async fn run_main_loop<Hdl: 'static + Proxyable>(
     initial_stream_reader: Option<FramedStreamReader>,
     stream_reader: FramedStreamReader,
 ) -> Result<(), Error> {
-    let debug_id = stream_writer.debug_id();
     let (tx_join, rx_join) = new_task_joiner();
     let hdl = proxy.hdl();
     let mut stream_writer = stream_writer.bind(hdl);
@@ -114,10 +113,8 @@ pub(crate) async fn run_main_loop<Hdl: 'static + Proxyable>(
         async {
             if !stream_reader.is_initiator() {
                 stream_reader.expect_hello().await?;
-                log::trace!("[PROXY {:?} {:?}] got hello", proxy.hdl().hdl(), debug_id);
             } else {
                 stream_writer.send_hello().await?;
-                log::trace!("[PROXY {:?} {:?}] sent hello", proxy.hdl().hdl(), debug_id);
             }
             Ok::<(), Error>(())
         },
@@ -129,16 +126,13 @@ pub(crate) async fn run_main_loop<Hdl: 'static + Proxyable>(
         },
     )
     .await?;
-    log::trace!("[PROXY {:?} {:?}] entering main loop", proxy.hdl().hdl(), debug_id);
-    let result = futures::future::try_join(
+    futures::future::try_join(
         stream_to_handle(proxy.clone(), initiate_transfer, stream_reader, tx_join)
             .map_err(|e| e.context("stream_to_handle")),
         handle_to_stream(proxy, stream_writer, rx_join).map_err(|e| e.context("handle_to_stream")),
     )
     .map_ok(drop)
-    .await;
-    log::trace!("[PROXY {:?}] finished main loop with result {:?}", debug_id, result);
-    result
+    .await
 }
 
 async fn handle_to_stream<Hdl: 'static + Proxyable>(
@@ -146,7 +140,6 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
     mut stream: StreamWriter<Hdl::Message>,
     mut finish_proxy_loop: FinishProxyLoopReceiver<Hdl>,
 ) -> Result<(), Error> {
-    let debug_id = stream.debug_id();
     let mut message = Default::default();
     let finish_proxy_loop_action = loop {
         let r = match futures::future::select(
@@ -161,27 +154,14 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             }
             Either::Right((r, _)) => r,
         };
-        log::trace!("[PROXY {:?} {:?}] got from handle {:?}", proxy.hdl().hdl(), debug_id, r);
         match r {
             Ok(()) => {
-                log::trace!(
-                    "[PROXY {:?} {:?}] send message {:?}",
-                    proxy.hdl().hdl(),
-                    debug_id,
-                    message
-                );
                 stream.send_data(&mut message).await.context("send_data")?;
-                log::trace!("[PROXY {:?} {:?}] sent message", proxy.hdl().hdl(), debug_id);
             }
             Err(zx_status::Status::PEER_CLOSED) => {
                 if let Some(finish_proxy_loop_action) = finish_proxy_loop.now_or_never() {
                     break finish_proxy_loop_action;
                 }
-                log::trace!(
-                    "[PROXY {:?} {:?}] handle closed normally",
-                    proxy.hdl().hdl(),
-                    debug_id
-                );
                 stream.send_shutdown(Ok(())).await.context("send_shutdown")?;
                 return Ok(());
             }
@@ -199,11 +179,6 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             stream_ref_sender,
             stream_reader,
         }) => {
-            log::trace!(
-                "[PROXY {:?} {:?}] finish main loop and initiate transfer",
-                proxy.hdl().hdl(),
-                debug_id
-            );
             super::xfer::initiate(
                 proxy,
                 paired_handle,
@@ -220,13 +195,6 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             transfer_key,
             stream_reader,
         }) => {
-            log::trace!(
-                "[PROXY {:?} {:?}] finish main loop and follow {:?} to {:?}",
-                proxy.hdl().hdl(),
-                debug_id,
-                transfer_key,
-                new_destination_node
-            );
             super::xfer::follow(
                 proxy,
                 initiate_transfer,
@@ -238,12 +206,6 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             .await
         }
         Ok(FinishProxyLoopAction::Shutdown { result, stream_reader }) => {
-            log::trace!(
-                "[PROXY {:?} {:?}] finish main loop and shutdown; result={:?}",
-                proxy.hdl().hdl(),
-                debug_id,
-                result
-            );
             join_shutdown(proxy, stream, stream_reader, result).await
         }
         Err(futures::channel::oneshot::Canceled) => unreachable!(),
@@ -266,10 +228,8 @@ async fn drain<Hdl: 'static + Proxyable>(
     proxy: Arc<Proxy<Hdl>>,
     mut drain_stream: StreamReader<Hdl::Message>,
 ) -> Result<(), Error> {
-    let debug_id = drain_stream.debug_id();
     loop {
         let frame = drain_stream.next().await?;
-        log::trace!("[PROXY {:?} {:?}] drain gets {:?}", proxy.hdl().hdl(), debug_id, frame);
         match frame {
             Frame::Data(message) => proxy.write_to_handle(message).await?,
             Frame::EndTransfer => break,
@@ -288,41 +248,25 @@ async fn stream_to_handle<Hdl: 'static + Proxyable>(
     mut stream: StreamReader<Hdl::Message>,
     finish_proxy_loop: FinishProxyLoopSender<Hdl>,
 ) -> Result<(), Error> {
-    let debug_id = stream.debug_id();
     let removed_from_proxy_table = loop {
         let frame = match futures::future::select(&mut initiate_transfer, stream.next()).await {
-            Either::Left((removed_from_proxy_table, fut)) => {
+            Either::Left((removed_from_proxy_table, _)) => {
                 // Note: StreamReader guarantees it's safe to drop a partial read without
                 // losing data.
-                log::trace!(
-                    "[PROXY {:?} {:?}] removed from proxy table {:?}; fut={:?}",
-                    proxy.hdl().hdl(),
-                    debug_id,
-                    removed_from_proxy_table,
-                    fut
-                );
                 break removed_from_proxy_table;
             }
             Either::Right((frame, _)) => frame.context("stream.next()")?,
         };
-        log::trace!("[PROXY {:?} {:?}] receive frame {:?}", proxy.hdl().hdl(), debug_id, frame);
         match frame {
             Frame::Data(message) => {
                 if let Err(e) = proxy.write_to_handle(message).await {
                     let _ = finish_proxy_loop.and_then_shutdown(Err(e), stream);
                     match e {
                         zx_status::Status::PEER_CLOSED => {
-                            log::trace!(
-                                "[PROXY {:?} {:?}] peer closed",
-                                proxy.hdl().hdl(),
-                                debug_id
-                            );
                             return Ok(());
                         }
                         _ => return Err(e).context("write_to_handle"),
                     }
-                } else {
-                    log::trace!("[PROXY {:?} {:?}] wrote to handle", proxy.hdl().hdl(), debug_id);
                 }
             }
             Frame::BeginTransfer(new_destination_node, transfer_key) => {
