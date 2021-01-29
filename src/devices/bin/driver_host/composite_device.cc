@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "composite_device.h"
+#include "src/devices/bin/driver_host/composite_device.h"
 
 #include <fuchsia/hardware/composite/c/banjo.h>
 
@@ -11,8 +11,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
-#include "driver_host.h"
-#include "zx_device.h"
+#include "src/devices/bin/driver_host/driver_host.h"
+#include "src/devices/bin/driver_host/zx_device.h"
 
 namespace {
 
@@ -125,6 +125,7 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
     fragment.device->set_composite(composite);
   }
 
+  dev->set_composite(composite, false);
   dev->set_protocol_id(ZX_PROTOCOL_COMPOSITE);
   dev->protocol_ops = &composite_ops;
   dev->set_ops(&composite_device_ops);
@@ -135,3 +136,17 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
 }
 
 CompositeDevice::~CompositeDevice() = default;
+
+uint32_t CompositeDevice::GetFragmentCount() {
+  return static_cast<CompositeDeviceInstance*>(device_->ctx)->GetFragmentCount();
+}
+
+void CompositeDevice::GetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
+                                   size_t* comp_actual) {
+  static_cast<CompositeDeviceInstance*>(device_->ctx)
+      ->GetFragments(comp_list, comp_count, comp_actual);
+}
+
+bool CompositeDevice::GetFragment(const char* name, zx_device_t** out) {
+  return static_cast<CompositeDeviceInstance*>(device_->ctx)->GetFragment(name, out);
+}

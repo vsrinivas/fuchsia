@@ -16,8 +16,9 @@
 #include <ddk/fragment-device.h>
 #include <fbl/auto_lock.h>
 
-#include "driver_host.h"
-#include "scheduler_profile.h"
+#include "src/devices/bin/driver_host/composite_device.h"
+#include "src/devices/bin/driver_host/driver_host.h"
+#include "src/devices/bin/driver_host/scheduler_profile.h"
 
 // These are the API entry-points from drivers
 // They must take the internal::api_lock before calling internal::* internals
@@ -427,4 +428,28 @@ __EXPORT void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fid
   auto result = std::get<fidl::Transaction*>(fidl_txn)->TakeOwnership();
   auto new_ddk_txn = MakeDdkInternalTransaction(std::move(result));
   *new_txn = *new_ddk_txn.DeviceFidlTxn();
+}
+
+__EXPORT uint32_t device_get_fragment_count(zx_device_t* dev) {
+  if (!dev->is_composite()) {
+    return 0;
+  }
+  return dev->composite()->GetFragmentCount();
+}
+
+__EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
+                                   size_t comp_count, size_t* comp_actual) {
+  if (!dev->is_composite()) {
+    ZX_DEBUG_ASSERT(comp_actual != nullptr);
+    *comp_actual = 0;
+    return;
+  }
+  return dev->composite()->GetFragments(comp_list, comp_count, comp_actual);
+}
+
+__EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out) {
+  if (!dev->is_composite()) {
+    return false;
+  }
+  return dev->composite()->GetFragment(name, out);
 }

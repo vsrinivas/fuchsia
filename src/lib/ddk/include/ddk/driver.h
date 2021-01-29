@@ -320,12 +320,6 @@ typedef struct composite_device_desc {
   size_t metadata_count;
 } composite_device_desc_t;
 
-// Neccesary because banjo cannot generate this type correctly.
-typedef struct composite_device_fragment {
-  char name[32];
-  zx_device_t* device;
-} composite_device_fragment_t;
-
 // Create a composite device with the properties |comp_desc|.
 // Once all of the fragment devices are found, the composite
 // device will be published with protocol_id ZX_PROTOCOL_COMPOSITE and the

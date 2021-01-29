@@ -10,7 +10,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "zx_device.h"
+#include "src/devices/bin/driver_host/zx_device.h"
 
 struct CompositeFragment {
   std::string name;
@@ -34,7 +34,12 @@ class CompositeDevice : public fbl::RefCounted<CompositeDevice> {
  public:
   explicit CompositeDevice(fbl::RefPtr<zx_device> device) : device_(std::move(device)) {}
   ~CompositeDevice();
-  fbl::RefPtr<zx_device> Detach() { return std::move(device_); }
+
+  uint32_t GetFragmentCount();
+
+  void GetFragments(composite_device_fragment_t* comp_list, size_t comp_count, size_t* comp_actual);
+
+  bool GetFragment(const char* name, zx_device_t** out);
 
  private:
   fbl::RefPtr<zx_device> device_;

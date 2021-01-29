@@ -20,6 +20,3 @@ struct DeviceAddArgs {
 
 struct DeviceFragment {
 };
-
-struct CompositeDeviceFragment {
-};

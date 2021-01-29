@@ -325,9 +325,12 @@ struct zx_device
   using PerformanceStates = std::array<::llcpp::fuchsia::device::DevicePerformanceStateInfo,
                                        ::llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>;
 
-  bool has_composite();
-  void set_composite(fbl::RefPtr<CompositeDevice> composite);
+  bool has_composite() const;
+  void set_composite(fbl::RefPtr<CompositeDevice> composite, bool fragment = true);
   fbl::RefPtr<CompositeDevice> take_composite();
+
+  bool is_composite() const;
+  fbl::RefPtr<CompositeDevice> composite();
 
   const DevicePowerStates& GetPowerStates() const;
   const PerformanceStates& GetPerformanceStates() const;
@@ -408,8 +411,11 @@ struct zx_device
     return out->data();
   }
 
-  // If this device is a fragment of a composite, this points to the
-  // composite control structure.
+  // True when this device is a composite device, distinguishing this device from a fragment.
+  bool is_composite_ = false;
+
+  // If this device is a fragment of a composite, or if this device is a composite device itsefl,
+  // this points to the composite control structure.
   fbl::RefPtr<CompositeDevice> composite_;
 
   // Identifier assigned by devmgr that can be used to assemble composite

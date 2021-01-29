@@ -285,14 +285,25 @@ bool zx_device::Unbound() {
   return flags_ & DEV_FLAG_UNBOUND;
 }
 
-bool zx_device::has_composite() { return !!composite_; }
+bool zx_device::has_composite() const { return !!composite_; }
 
 fbl::RefPtr<CompositeDevice> zx_device::take_composite() { return std::move(composite_); }
 
-void zx_device::set_composite(fbl::RefPtr<CompositeDevice> composite) {
+void zx_device::set_composite(fbl::RefPtr<CompositeDevice> composite, bool fragment) {
   composite_ = std::move(composite);
-  inspect_->set_composite();
+  is_composite_ = !fragment;
+  if (fragment) {
+    inspect_->set_fragment();
+  } else {
+    inspect_->set_composite();
+  }
 }
+
+bool zx_device::is_composite() const {
+  return is_composite_ && !!composite_;
+}
+
+fbl::RefPtr<CompositeDevice> zx_device::composite() { return composite_; }
 
 bool zx_device::IsPerformanceStateSupported(uint32_t requested_state) {
   if (requested_state >= fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES) {

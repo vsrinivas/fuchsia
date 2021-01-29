@@ -469,6 +469,24 @@ typedef struct device_fidl_txn {
 // device's unbind hook is completed, whichever is earlier.
 void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn);
 
+// Returns the number of fragments that can be returned by `device_get_fragments`.
+uint32_t device_get_fragment_count(zx_device_t* dev);
+
+typedef struct composite_device_fragment {
+  char name[32];
+  zx_device_t* device;
+} composite_device_fragment_t;
+
+// Returns a list of all of the fragments of this device, in the order
+// in which they were provided to device_add_composite().  The returned
+// devices must not be used after the composite device is unbound.
+void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
+                          size_t comp_count, size_t* comp_actual);
+
+// Returns the specific fragment identified by the name provided when it was created via
+// `device_add_composite`. Returns false if no fragment exists.
+bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_t** out);
+
 // Device State Change Functions.  These match up with the signals defined in
 // the fuchsia.device.Controller interface.
 //

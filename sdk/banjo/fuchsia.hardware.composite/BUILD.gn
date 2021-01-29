@@ -9,5 +9,8 @@ banjo("fuchsia.hardware.composite") {
 
   needs_composite = false
 
-  deps = [ "//sdk/banjo/ddk.driver" ]
+  deps = [
+    "//sdk/banjo/ddk.device",
+    "//sdk/banjo/ddk.driver",
+  ]
 }

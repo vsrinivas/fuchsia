@@ -548,21 +548,14 @@ static zx_status_t test_vreg(vreg_protocol_t* vreg) {
 }
 
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
-  composite_protocol_t composite;
   zx_status_t status;
 
   zxlogf(INFO, "test_bind: %s ", DRIVER_NAME);
 
-  status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE", DRIVER_NAME);
-    return status;
-  }
-
-  uint32_t count = composite_get_fragment_count(&composite);
+  uint32_t count = device_get_fragment_count(parent);
   size_t actual;
-  composite_device_fragment_t fragments[count];
-  composite_get_fragments(&composite, fragments, count, &actual);
+  composite_device_fragment_t fragments[FRAGMENT_COUNT_2] = {};
+  device_get_fragments(parent, fragments, count, &actual);
   if (count != actual) {
     zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %zu)", DRIVER_NAME, count, actual);
     return ZX_ERR_BAD_STATE;

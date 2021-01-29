@@ -231,6 +231,7 @@ class DeviceInspect {
   void set_system_power_state_mapping(const SystemPowerStateMapping& mapping);
 
   void set_composite() { device_node_.CreateBool("composite", true, &static_values_); }
+  void set_fragment() { device_node_.CreateBool("fragment", true, &static_values_); }
 
   void set_flags(uint32_t flags);
 
