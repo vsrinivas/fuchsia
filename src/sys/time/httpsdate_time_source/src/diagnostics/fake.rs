@@ -16,6 +16,7 @@ pub struct FakeDiagnostics {
 /// A copy of `Event` where all contents are owned.
 #[derive(PartialEq, Debug)]
 enum OwnedEvent {
+    NetworkCheckSuccessful,
     Success(HttpsSample),
     Failure(HttpsDateError),
     Phase(Phase),
@@ -24,6 +25,7 @@ enum OwnedEvent {
 impl<'a> From<Event<'a>> for OwnedEvent {
     fn from(event: Event<'a>) -> Self {
         match event {
+            Event::NetworkCheckSuccessful => Self::NetworkCheckSuccessful,
             Event::Success(sample) => Self::Success(sample.clone()),
             Event::Failure(error) => Self::Failure(error),
             Event::Phase(phase) => Self::Phase(phase),

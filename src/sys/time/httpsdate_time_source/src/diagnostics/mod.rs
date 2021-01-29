@@ -26,6 +26,8 @@ pub trait Diagnostics: Send + Sync {
 /// An event reported for diagnostic purposes.
 #[derive(Clone, Copy, PartialEq)]
 pub enum Event<'a> {
+    /// Completion of the network availability check.
+    NetworkCheckSuccessful,
     /// A successful attempt to produce a sample.
     Success(&'a HttpsSample),
     /// A failed attempt to produce a sample.

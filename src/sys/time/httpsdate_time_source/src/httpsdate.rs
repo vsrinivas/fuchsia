@@ -77,6 +77,7 @@ where
                 Ok(()) => {
                     info!("Network check completed.");
                     sink.send(Status::Ok.into()).await?;
+                    self.diagnostics.record(Event::NetworkCheckSuccessful);
                 }
                 Err(e) => {
                     warn!("Network check failed, polling for time anyway: {:?}", e);
@@ -345,6 +346,7 @@ mod test {
             .collect::<Vec<_>>();
         assert_eq!(samples, expected_samples.iter().map(to_fidl_time_sample).collect::<Vec<_>>());
         let expected_events = vec![
+            Event::NetworkCheckSuccessful,
             Event::Phase(Phase::Initial),
             Event::Success(&*TEST_SAMPLE_1),
             Event::Phase(Phase::Converge),
@@ -394,6 +396,7 @@ mod test {
         }
 
         let expected_events = vec![
+            Event::NetworkCheckSuccessful,
             Event::Phase(Phase::Initial),
             Event::Failure(HttpsDateError::NetworkError),
             Event::Failure(HttpsDateError::NetworkError),
@@ -434,6 +437,9 @@ mod test {
             Update::Sample(sample) => assert_eq!(*sample, to_fidl_time_sample(&*TEST_SAMPLE_1)),
             Update::Status(_) => panic!("Expected a sample but got an update"),
         }
+
+        // Network check event not emitted if the check fails.
+        diagnostics.assert_events_starts_with(vec![Event::Phase(Phase::Initial)]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -465,6 +471,7 @@ mod test {
 
         let expected_events = vec![
             vec![
+                Event::NetworkCheckSuccessful,
                 Event::Phase(Phase::Initial),
                 Event::Success(&TEST_SAMPLE_1),
                 Event::Phase(Phase::Converge),

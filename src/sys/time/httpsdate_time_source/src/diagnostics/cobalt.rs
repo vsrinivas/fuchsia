@@ -129,6 +129,7 @@ impl CobaltDiagnostics {
 impl Diagnostics for CobaltDiagnostics {
     fn record<'a>(&self, event: Event<'a>) {
         match event {
+            Event::NetworkCheckSuccessful => (),
             Event::Success(sample) => self.success(sample),
             Event::Failure(_) => (), // currently, no failures are registered with cobalt
             Event::Phase(phase) => self.phase_update(&phase),

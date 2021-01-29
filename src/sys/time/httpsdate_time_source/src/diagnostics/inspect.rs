@@ -28,6 +28,8 @@ const EMPTY_SAMPLE: HttpsSample = HttpsSample {
 
 /// Struct containing inspect metrics for HTTPSDate.
 pub struct InspectDiagnostics {
+    /// Root node for diagnostics.
+    root_node: Node,
     /// Node holding failure counts.
     failure_node: Node,
     /// Monotonic time at which the last error occurred.
@@ -46,6 +48,7 @@ impl InspectDiagnostics {
     /// Create a new `InspectDiagnostics` that records diagnostics to the provided root node.
     pub fn new(root_node: &Node) -> Self {
         InspectDiagnostics {
+            root_node: root_node.clone_weak(),
             failure_node: root_node.create_child("failures"),
             last_failure_time: root_node.create_int("last_failure_time", 0),
             failure_counts: Mutex::new(HashMap::new()),
@@ -57,6 +60,10 @@ impl InspectDiagnostics {
             phase_update_time: root_node
                 .create_int("phase_update_time", zx::Time::get_monotonic().into_nanos()),
         }
+    }
+
+    fn network_check_success(&self) {
+        self.root_node.record_int("network_check_time", zx::Time::get_monotonic().into_nanos());
     }
 
     fn success(&self, sample: &HttpsSample) {
@@ -84,6 +91,7 @@ impl InspectDiagnostics {
 impl Diagnostics for InspectDiagnostics {
     fn record<'a>(&self, event: Event<'a>) {
         match event {
+            Event::NetworkCheckSuccessful => self.network_check_success(),
             Event::Success(sample) => self.success(sample),
             Event::Failure(error) => self.failure(&error),
             Event::Phase(phase) => self.phase_update(&phase),
@@ -363,6 +371,20 @@ mod test {
             root: contains {
                 phase: "Maintain",
                 phase_update_time: AnyProperty,
+            }
+        );
+    }
+
+    #[test]
+    fn test_network_check() {
+        let inspector = Inspector::new();
+        let inspect = InspectDiagnostics::new(inspector.root());
+
+        inspect.record(Event::NetworkCheckSuccessful);
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                network_check_time: AnyProperty,
             }
         );
     }
