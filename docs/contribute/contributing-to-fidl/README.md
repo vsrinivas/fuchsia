@@ -401,10 +401,11 @@ Build:
 fx ninja -C out/default host_x64/fidlgen_banjo
 ```
 
-Run Rust IR parser tests:
+Run tests:
 
 ```sh
-fx ninja -C out/default src/devices/tools/fidlgen_banjo/tests/parser:tests
+fx ninja -C out/default host_x64/fidlgen_banjo_unittests
+./out/default/host_x64/fidlgen_banjo_unittests
 ```
 
 ### Bindings
@@ -538,7 +539,7 @@ Note: While `fx test dart-bindings-test` prints test names as they run, it does 
 | fidlc compiler           | `fx test fidl-compiler`<br>`fx test fidlc_golden_tests` | //tools/fidl/fidlc
 | gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser
 | measure tape test        | `fx test measure-tape_test`         | //tools/fidl/measure-tape
-| Rust IR parser           | `fx build`                          | //src/devices/tools/fidlgen_banjo/tests
+| Rust IR parser           | `fx build`                          | //src/devices/tools/fidlgen_banjo/tests/parser
 
 ### All benchmarks
 
