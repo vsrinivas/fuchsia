@@ -1,0 +1,11 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fidl.test.unionflexiblestrict;
+
+// [START contents]
+flexible union JsonValue {
+    1: int32 int_value;
+    2: string:MAX string_value;
+};
+// [END contents]

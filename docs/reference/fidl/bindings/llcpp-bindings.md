@@ -250,7 +250,7 @@ definition. Reserved fields do not have any generated code.
   set_string_value(fidl::tracking_ptr<fidl::StringView>&& value)`: Setter
   methods for each variant. These setters will overwrite the previously selected
   member, if any.
-* `Tag Which() const`: returns the current [tag][union-lexicon] of the
+* `Tag which() const`: returns the current [tag][union-lexicon] of the
   `JsonValue`. Calling this method without first setting the variant leads to an
   assertion error.
 

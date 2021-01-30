@@ -9,8 +9,9 @@ from typing import IO, List
 
 from types_ import CompatTest, FidlStep, SourceStep, HLCPP, LLCPP, RUST, DART, GO
 
-# Lines of context to show in diffs
-DIFF_CONTEXT = 3
+# Lines of context to show in diffs. We can be very liberal with this number
+# since we already filter out the boilerplate before passing code to difflib.
+DIFF_CONTEXT = 12
 
 # Where to output the docs within the test directory
 DOC_FILE = 'README.md'
@@ -146,6 +147,7 @@ def generate_docs(test_root: Path, test: CompatTest, out: IO) -> str:
     current_step = 1
     while any(remaining_steps.values()):
         is_first_write = True
+        remaining_steps = {k: v for k, v in remaining_steps.items() if v}
         for b in remaining_steps:
             step = remaining_steps[b][0]
             if step.step_num != current_step:
@@ -170,7 +172,6 @@ def generate_docs(test_root: Path, test: CompatTest, out: IO) -> str:
                 write_instructions(out, step.instructions)
                 diff(out, test_root / prev_srcs[b], test_root / step.source)
                 prev_srcs[b] = step.source
-        remaining_steps = {k: v for k, v in remaining_steps.items() if v}
         current_step += 1
 
 

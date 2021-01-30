@@ -143,6 +143,9 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Remove any references to the method in client code (e.g. request calls being made)
 
 ```diff
+  type client struct {
+  	removeMethod *lib.ExampleWithCtxInterface
+  }
   
   func (c client) test() {
   	c.removeMethod.ExistingMethod(context.Background())
@@ -156,9 +159,8 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
   
   // Assert that server implements the Example interface
   var _ lib.ExampleWithCtx = &server{}
-
-```
-```diff
+  
+  func (*server) ExistingMethod(fidl.Context) error {
   	return nil
   }
   
@@ -207,6 +209,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Remove any references to the method in client code (e.g. as part of implementations of the `ProxyInterface`).
 
 ```diff
+  struct ExampleFakeProxy;
   
   impl fidl_lib::ExampleProxyInterface for ExampleFakeProxy {
       fn existing_method(&self) -> Result<(), fidl::Error> {
@@ -216,9 +219,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
           Ok(())
       }
   }
-
-```
-```diff
+  
   async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
       let mut stream = fidl_lib::ExampleRequestStream::from_channel(chan);
       while let Some(req) = stream.try_next().await? {
@@ -230,6 +231,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
           }
       }
       Ok(())
+  }
 
 ```
 ## Update FIDL Library {#step-3}
@@ -248,6 +250,11 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Remove the embedded `WithCtxInterface` struct.
 
 ```diff
+  type client struct {
+  	removeMethod *lib.ExampleWithCtxInterface
+  }
+  
+  func (c client) test() {
   	c.removeMethod.ExistingMethod(context.Background())
   }
   
@@ -258,12 +265,25 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
   
   // Assert that server implements the Example interface
   var _ lib.ExampleWithCtx = &server{}
+  
+  func (*server) ExistingMethod(fidl.Context) error {
+  	return nil
+  }
+  
 
 ```
 ### Rust {#rust-4}
 - Remove the `#[allow(unreachable_patterns)]` attribute and the catch-all match arm.
 
 ```diff
+  struct ExampleFakeProxy;
+  
+  impl fidl_lib::ExampleProxyInterface for ExampleFakeProxy {
+      fn existing_method(&self) -> Result<(), fidl::Error> {
+          Ok(())
+      }
+  }
+  
   async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
       let mut stream = fidl_lib::ExampleRequestStream::from_channel(chan);
       while let Some(req) = stream.try_next().await? {
@@ -274,5 +294,6 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
           }
       }
       Ok(())
+  }
 
 ```

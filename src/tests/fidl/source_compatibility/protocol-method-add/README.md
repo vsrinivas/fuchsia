@@ -90,6 +90,11 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Embed the protocol's `WithCtxTransitionBase` struct into the server type.
 
 ```diff
+  type client struct {
+  	addMethod *lib.ExampleWithCtxInterface
+  }
+  
+  func (c client) test() {
   	c.addMethod.ExistingMethod(context.Background())
   }
   
@@ -100,6 +105,11 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
   
   // Assert that server implements the Example interface
   var _ lib.ExampleWithCtx = &server{}
+  
+  func (*server) ExistingMethod(fidl.Context) error {
+  	return nil
+  }
+  
 
 ```
 ### Rust {#rust-1}
@@ -107,6 +117,14 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Add an underscore arm to the server's request stream match.
 
 ```diff
+  struct ExampleFakeProxy;
+  
+  impl fidl_lib::ExampleProxyInterface for ExampleFakeProxy {
+      fn existing_method(&self) -> Result<(), fidl::Error> {
+          Ok(())
+      }
+  }
+  
   async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
       let mut stream = fidl_lib::ExampleRequestStream::from_channel(chan);
       while let Some(req) = stream.try_next().await? {
@@ -117,6 +135,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
           }
       }
       Ok(())
+  }
 
 ```
 ## Update FIDL Library {#step-2}
@@ -156,6 +175,9 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Start using the new method in client code.
 
 ```diff
+  type client struct {
+  	addMethod *lib.ExampleWithCtxInterface
+  }
   
   func (c client) test() {
   	c.addMethod.ExistingMethod(context.Background())
@@ -169,9 +191,8 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
   
   // Assert that server implements the Example interface
   var _ lib.ExampleWithCtx = &server{}
-
-```
-```diff
+  
+  func (*server) ExistingMethod(fidl.Context) error {
   	return nil
   }
   
@@ -222,6 +243,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 - Replace the underscore arm in the server's request stream match with one that handles the new method.
 
 ```diff
+  struct ExampleFakeProxy;
   
   impl fidl_lib::ExampleProxyInterface for ExampleFakeProxy {
       fn existing_method(&self) -> Result<(), fidl::Error> {
@@ -231,9 +253,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
           Ok(())
       }
   }
-
-```
-```diff
+  
   async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
       let mut stream = fidl_lib::ExampleRequestStream::from_channel(chan);
       while let Some(req) = stream.try_next().await? {
@@ -245,6 +265,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
           }
       }
       Ok(())
+  }
 
 ```
 ## Update FIDL Library {#step-4}

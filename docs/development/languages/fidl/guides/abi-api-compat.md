@@ -276,9 +276,6 @@ Changing an enum declaration from `strict` to `flexible` is:
     removed first. This is because strict enums are generated as an `enum class`
     whereas flexible enums are generated as a `class`, which cannot be used as a
     non-type template parameter.
-  * In HLCPP, the bit mask is a `const` in the top level library namespace for
-    strict bits, but a `static const` member of the generated class for flexible
-    bits.
 
 After changing from `strict` to `flexible`, care must be taken to correctly
 handle any unknown enums.

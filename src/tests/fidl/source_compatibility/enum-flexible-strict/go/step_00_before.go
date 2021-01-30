@@ -1,0 +1,28 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+package main
+
+import (
+	lib "fidl/fidl/test/enumflexiblestrict"
+)
+
+// [START contents]
+func complement(color lib.Color) lib.Color {
+	if color.IsUnknown() {
+		return color
+	}
+	switch color {
+	case lib.ColorBlue:
+		return lib.ColorRed
+	case lib.ColorRed:
+		return lib.ColorBlue
+	default:
+		return color
+	}
+}
+
+// [END contents]
+
+func main() {}

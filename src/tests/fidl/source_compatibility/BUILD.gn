@@ -6,9 +6,15 @@ import("//build/fidl/fidl.gni")
 
 group("tests") {
   deps = [
+    "bits-flexible-strict:tests",
+    "bits-strict-flexible:tests",
+    "enum-flexible-strict:tests",
+    "enum-strict-flexible:tests",
     "protocol-event-add:tests",
     "protocol-event-remove:tests",
     "protocol-method-add:tests",
     "protocol-method-remove:tests",
+    "union-flexible-strict:tests",
+    "union-strict-flexible:tests",
   ]
 }

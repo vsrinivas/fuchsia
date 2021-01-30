@@ -1,0 +1,97 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_during.dart",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_during.go",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove any usages of the bits type as a non-type template parameter. This is not supported for flexible bits since they are implemented as a regular `class`, which cannot be used as a non-type template parameter.",
+                        "Remove any usages of the bits mask member. This generated value is renamed for flexible bits, so it must be temporarily hardcoded."
+                    ],
+                    "source": "hlcpp/step_01_during.cc",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Use the renamed ::kMask constant",
+                        "You can now use flexible-specific APIs"
+                    ],
+                    "source": "hlcpp/step_03_after.cc",
+                    "step_num": 3
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "You can now use flexible-specific APIs"
+                    ],
+                    "source": "llcpp/step_03_after.cc",
+                    "step_num": 3
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "You can now use flexible-specific APIs"
+                    ],
+                    "source": "rust/step_03_after.rs",
+                    "step_num": 3
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_02_after": {
+            "instructions": [
+                "Switch from `strict` to `flexible`"
+            ],
+            "source": "fidl/step_02_after.test.fidl"
+        }
+    },
+    "title": "Change a bits from strict to flexible"
+}

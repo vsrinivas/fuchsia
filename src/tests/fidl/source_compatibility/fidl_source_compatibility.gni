@@ -13,7 +13,13 @@ template("_hlcpp_compat") {
   executable(target_name) {
     output_dir = target_out_dir
     sources = [ invoker.source ]
-    deps = [ ":${invoker.fidl}" ]
+    deps = [
+      ":${invoker.fidl}",
+
+      # Included for ZX_ASSERT, since assert may get compiled away leading to
+      # unused variable errors.
+      "//zircon/public/lib/zx",
+    ]
   }
 }
 

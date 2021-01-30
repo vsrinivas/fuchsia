@@ -85,6 +85,12 @@ async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Erro
 - Add `#[allow(unreachable_patterns)]` and a catch-all arm (`_`) to any client event stream match statements
 
 ```diff
+  fn send_events(stream: fidl_lib::ExampleRequestStream) -> Result<(), fidl::Error> {
+      let control_handle = stream.control_handle();
+      control_handle.send_on_existing_event()?;
+      Ok(())
+  }
+  
   async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Error> {
       let mut event_stream = client.take_event_stream();
       while let Some(event) = event_stream.try_next().await? {
@@ -95,6 +101,7 @@ async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Erro
           }
       }
       Ok(())
+  }
 
 ```
 ## Update FIDL Library {#step-2}
@@ -210,6 +217,7 @@ async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Erro
           }
       }
       Ok(())
+  }
 
 ```
 ## Update FIDL Library {#step-4}

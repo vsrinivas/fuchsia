@@ -1,0 +1,96 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_during.dart",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_during.go",
+            "steps": [
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove any usages of the bits mask member. This generated value is renamed for strict bits, so it must be temporarily hardcoded.",
+                        "Remove usages of flexible-only APIs"
+                    ],
+                    "source": "hlcpp/step_01_during.cc",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "Use the renamed `FlagsMask` constant"
+                    ],
+                    "source": "hlcpp/step_03_after.cc",
+                    "step_num": 3
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove usages of flexible-specific APIs"
+                    ],
+                    "source": "llcpp/step_01_after.cc",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove usages of flexible-specific APIs"
+                    ],
+                    "source": "rust/step_01_after.rs",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_after",
+                    "step_num": 2
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_02_after": {
+            "instructions": [
+                "Switch from `flexible` to `strict`"
+            ],
+            "source": "fidl/step_02_after.test.fidl"
+        }
+    },
+    "title": "Change a bits from flexible to strict"
+}

@@ -1,0 +1,154 @@
+{
+    "bindings": {
+        "dart": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "dart/step_00_before.dart",
+            "steps": [
+                {
+                    "fidl": "step_02_during",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "If using a custom unknown with the [Unknown] attribute, update readers and writers to use `isUnknown` and `$unknown`."
+                    ],
+                    "source": "dart/step_03_after.dart",
+                    "step_num": 3
+                },
+                {
+                    "fidl": "step_04_after",
+                    "step_num": 4
+                }
+            ]
+        },
+        "go": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "go/step_00_before.go",
+            "steps": [
+                {
+                    "fidl": "step_02_during",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "If using a custom unknown with the [Unknown] attribute, update readers and writers to use `IsUnknown` and the `_Unknown` constant.",
+                        "You can now use any flexible enum specific APIs"
+                    ],
+                    "source": "go/step_03_after.go",
+                    "step_num": 3
+                },
+                {
+                    "fidl": "step_04_after",
+                    "step_num": 4
+                }
+            ]
+        },
+        "hlcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "hlcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove any usages of the enum as a non-type template parameter. These usages are not supported for flexible enums."
+                    ],
+                    "source": "hlcpp/step_01_during.cc",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_during",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "If using a custom unknown with the [Unknown] attribute, update readers and writers to use `IsUnknown` and `Unknown`.",
+                        "You can now use any flexible enum specific APIs"
+                    ],
+                    "source": "hlcpp/step_03_after.cc",
+                    "step_num": 3
+                },
+                {
+                    "fidl": "step_04_after",
+                    "step_num": 4
+                }
+            ]
+        },
+        "llcpp": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "llcpp/step_00_before.cc",
+            "steps": [
+                {
+                    "instructions": [
+                        "Remove any usages of the enum as a non-type template parameter. These usages are not supported for flexible enums."
+                    ],
+                    "source": "llcpp/step_01_during.cc",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_during",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "If using a custom unknown with the [Unknown] attribute, update readers and writers to use `IsUnknown` and `Unknown`.",
+                        "You can now use any flexible enum specific APIs"
+                    ],
+                    "source": "llcpp/step_03_after.cc",
+                    "step_num": 3
+                },
+                {
+                    "fidl": "step_04_after",
+                    "step_num": 4
+                }
+            ]
+        },
+        "rust": {
+            "starting_fidl": "step_00_before",
+            "starting_src": "rust/step_00_before.rs",
+            "steps": [
+                {
+                    "instructions": [
+                        "Allow unreachable patterns and add an underscore arm to any `match` statements on the enum."
+                    ],
+                    "source": "rust/step_01_during.rs",
+                    "step_num": 1
+                },
+                {
+                    "fidl": "step_02_during",
+                    "step_num": 2
+                },
+                {
+                    "instructions": [
+                        "If using a custom unknown with the [Unknown] attribute, update readers and writers to use the `ColorUnknown!` macro (or `is_unknown` outside of match statements) and `unknown`.",
+                        "You can now use any flexible enum specific APIs"
+                    ],
+                    "source": "rust/step_03_after.rs",
+                    "step_num": 3
+                },
+                {
+                    "fidl": "step_04_after",
+                    "step_num": 4
+                }
+            ]
+        }
+    },
+    "fidl": {
+        "step_00_before": {
+            "instructions": [],
+            "source": "fidl/step_00_before.test.fidl"
+        },
+        "step_02_during": {
+            "instructions": [
+                "Change from `strict` to `flexible`",
+                "If the enum had a member representing an unknown enum, add the `[Unknown]` attribute to it"
+            ],
+            "source": "fidl/step_02_during.test.fidl"
+        },
+        "step_04_after": {
+            "instructions": [
+                "If transitioning away from a custom unknown member, you can now remove the placeholder member at this point."
+            ],
+            "source": "fidl/step_04_after.test.fidl"
+        }
+    },
+    "title": "Change an enum from strict to flexible"
+}
