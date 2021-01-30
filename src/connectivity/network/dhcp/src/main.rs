@@ -17,12 +17,12 @@ use {
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::DurationNum,
-    futures::{Future, SinkExt, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{Future, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
     std::{
         cell::RefCell,
         collections::HashMap,
         net::{IpAddr, Ipv4Addr, SocketAddr},
-        os::unix::io::AsRawFd,
+        os::unix::io::AsRawFd as _,
     },
     void::Void,
 };
@@ -656,155 +656,142 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn get_option_with_subnet_mask_returns_subnet_mask() -> Result<(), Error> {
+    async fn run_with_server<T, F, Fut>(f: F) -> Result<T, Error>
+    where
+        F: Fn(fidl_fuchsia_net_dhcp::Server_Proxy) -> Fut,
+        Fut: Future<Output = Result<T, Error>>,
+    {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask).fuse() => res.context("get_option failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
+        futures::select! {
+            res = f(proxy).fuse() => res,
+            res = run_server(stream, &server, &defaults, drain()).fuse() => {
+                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+            },
+        }
+    }
 
-        let expected_result =
-            Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("0.0.0.0")));
-        assert_eq!(res, expected_result);
-        Ok(())
+    #[fasync::run_singlethreaded(test)]
+    async fn get_option_with_subnet_mask_returns_subnet_mask() -> Result<(), Error> {
+        run_with_server(|proxy| async move {
+            assert_eq!(
+                proxy
+                    .get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask)
+                    .await
+                    .context("get_option failed")?,
+                Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("0.0.0.0")))
+            );
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_until_stalled(test)]
     async fn get_parameter_with_lease_length_returns_lease_length() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.get_parameter(fidl_fuchsia_net_dhcp::ParameterName::LeaseLength).fuse() => res.context("get_parameter failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-        let expected_result =
-            Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
-                default: None,
-                max: None,
-                ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
-            }));
-        assert_eq!(res, expected_result);
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(
+                proxy
+                    .get_parameter(fidl_fuchsia_net_dhcp::ParameterName::LeaseLength)
+                    .await
+                    .context("get_parameter failed")?,
+                Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+                    default: None,
+                    max: None,
+                    ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
+                }))
+            );
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn set_option_with_subnet_mask_returns_unit() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.set_option(&mut fidl_fuchsia_net_dhcp::Option_::SubnetMask(
-            fidl_ip_v4!("0.0.0.0"),
-        )).fuse() => res.context("set_option failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-        assert_eq!(res, Ok(()));
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(
+                proxy
+                    .set_option(&mut fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!(
+                        "0.0.0.0"
+                    )))
+                    .await
+                    .context("set_option failed")?,
+                Ok(())
+            );
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn set_parameter_with_lease_length_returns_unit() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
-            fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None, ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY },
-        )).fuse() => res.context("set_parameter failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-        assert_eq!(res, Ok(()));
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(
+                proxy
+                    .set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
+                        fidl_fuchsia_net_dhcp::LeaseLength {
+                            default: None,
+                            max: None,
+                            ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
+                        },
+                    ))
+                    .await
+                    .context("set_parameter failed")?,
+                Ok(())
+            );
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn list_options_returns_empty_vec() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.list_options().fuse() => res.context("list_options failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-        assert_eq!(res, Ok(vec![]));
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(proxy.list_options().await.context("list_options failed")?, Ok(Vec::new()));
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn list_parameters_returns_empty_vec() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.list_parameters().fuse() => res.context("list_parameters failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-        assert_eq!(res, Ok(vec![]));
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(
+                proxy.list_parameters().await.context("list_parameters failed")?,
+                Ok(Vec::new())
+            );
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn reset_options_returns_unit() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.reset_options().fuse() => res.context("reset_options failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-
-        assert_eq!(res, Ok(()));
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(proxy.reset_options().await.context("reset_options failed")?, Ok(()));
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn reset_parameters_returns_unit() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.reset_parameters().fuse() => res.context("reset_parameters failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-
-        assert_eq!(res, Ok(()));
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(proxy.reset_parameters().await.context("reset_parameters failed")?, Ok(()));
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn clear_leases_returns_unit() -> Result<(), Error> {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
-
-        let defaults = default_params();
-        let res = futures::select! {
-            res = proxy.clear_leases().fuse() => res.context("clear_leases failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
-        }?;
-
-        assert_eq!(res, Ok(()));
-        Ok(())
+        run_with_server(|proxy| async move {
+            assert_eq!(proxy.clear_leases().await.context("clear_leases failed")?, Ok(()));
+            Ok(())
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -881,7 +868,9 @@ mod tests {
 
         let () = futures::select! {
             res = test_fut.fuse() => res.context("test future failed"),
-            server_fut = run_server(stream, &server, &defaults, socket_sink).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            res = run_server(stream, &server, &defaults, socket_sink).fuse() => {
+                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+            },
         }?;
 
         Ok(())
@@ -896,8 +885,8 @@ mod tests {
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.start_serving().fuse() => res.context("start_serving failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => {
-                Err(anyhow::Error::msg("server finished before request"))
+            res = run_server(stream, &server, &defaults, drain()).fuse() => {
+                Err(anyhow::anyhow!("server finished before request: {:?}", res))
             },
         }?
         .map_err(fuchsia_zircon::Status::from_raw);
@@ -923,8 +912,8 @@ mod tests {
 
         let res = futures::select! {
             res = proxy.start_serving().fuse() => res.context("start_serving failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => {
-                Err(anyhow::Error::msg("server finished before request"))
+            res = run_server(stream, &server, &defaults, drain()).fuse() => {
+                Err(anyhow::anyhow!("server finished before request: {:?}", res))
             },
         }?
         .map_err(fuchsia_zircon::Status::from_raw);
@@ -986,7 +975,9 @@ mod tests {
 
         let () = futures::select! {
             res = test_fut.fuse() => res.context("test future failed"),
-            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            res = run_server(stream, &server, &defaults, drain()).fuse() => {
+                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+            },
         }?;
 
         Ok(())
