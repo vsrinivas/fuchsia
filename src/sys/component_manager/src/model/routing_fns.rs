@@ -7,7 +7,10 @@ use {
         capability::ComponentCapability,
         model::{
             component::{Runtime, WeakComponentInstance},
-            routing::{self, route_expose_capability, route_use_capability},
+            routing::{
+                self, route_and_open_namespace_capability,
+                route_and_open_namespace_capability_from_expose,
+            },
         },
     },
     cm_rust::{ExposeDecl, UseDecl},
@@ -38,11 +41,11 @@ pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingF
                     }
                 };
                 let mut server_end = server_end.into_channel();
-                let res = route_use_capability(
+                let res = route_and_open_namespace_capability(
                     flags,
                     mode,
                     relative_path,
-                    &use_,
+                    use_.clone(),
                     &component,
                     &mut server_end,
                 )
@@ -88,11 +91,11 @@ pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> 
                     }
                 };
                 let mut server_end = server_end.into_channel();
-                let res = route_expose_capability(
+                let res = route_and_open_namespace_capability_from_expose(
                     flags,
                     mode,
                     relative_path,
-                    &expose,
+                    expose.clone(),
                     &component,
                     &mut server_end,
                 )

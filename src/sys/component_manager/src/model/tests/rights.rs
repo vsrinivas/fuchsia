@@ -32,7 +32,7 @@ async fn offer_increasing_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -86,7 +86,7 @@ async fn offer_incompatible_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -144,7 +144,7 @@ async fn expose_increasing_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -198,7 +198,7 @@ async fn expose_incompatible_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -256,7 +256,7 @@ async fn capability_increasing_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -310,7 +310,7 @@ async fn capability_incompatible_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -417,7 +417,7 @@ async fn framework_directory_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "foo_data".into(),
                     target_name: "foo_data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -465,7 +465,7 @@ async fn framework_directory_incompatible_rights() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "foo_data".into(),
                     target_name: "foo_data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -525,7 +525,7 @@ async fn offer_from_component_manager_namespace_directory_incompatible_rights() 
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "foo_data".into(),
                     target_name: "bar_data".into(),
                     target: OfferTarget::Child("b".to_string()),

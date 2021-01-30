@@ -195,7 +195,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::ExposeDecl::Service(s) => services
                         .entry((s.target.fidl_into_native(), s.target_name.fidl_into_native()))
                         .or_default()
-                        .push(ServiceSource::<ExposeServiceSource> {
+                        .push(ServiceSource::<ExposeSource> {
                             source: s.source.fidl_into_native(),
                             source_name: s.source_name.fidl_into_native(),
                         }),
@@ -230,7 +230,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::OfferDecl::Service(s) => services
                         .entry((s.target.fidl_into_native(), s.target_name.fidl_into_native()))
                         .or_default()
-                        .push(ServiceSource::<OfferServiceSource> {
+                        .push(ServiceSource::<OfferSource> {
                             source: s.source.fidl_into_native(),
                             source_name: s.source_name.fidl_into_native(),
                         }),
@@ -466,9 +466,90 @@ pub enum ExposeDecl {
     Resolver(ExposeResolverDecl),
 }
 
+/// Provides a way to extract a reference to the contents of an enum variant,
+/// provided that each variant in the enum is a unique newtype.
+pub trait FromEnum<E> {
+    fn from_enum(e: &E) -> Option<&Self>;
+}
+
+impl FromEnum<ExposeDecl> for ExposeServiceDecl {
+    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
+        match decl {
+            ExposeDecl::Service(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<ExposeDecl> for ExposeProtocolDecl {
+    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
+        match decl {
+            ExposeDecl::Protocol(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<ExposeDecl> for ExposeDirectoryDecl {
+    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
+        match decl {
+            ExposeDecl::Directory(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<ExposeDecl> for ExposeRunnerDecl {
+    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
+        match decl {
+            ExposeDecl::Runner(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<ExposeDecl> for ExposeResolverDecl {
+    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
+        match decl {
+            ExposeDecl::Resolver(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl From<ExposeServiceDecl> for ExposeDecl {
+    fn from(decl: ExposeServiceDecl) -> Self {
+        ExposeDecl::Service(decl)
+    }
+}
+
+impl From<ExposeProtocolDecl> for ExposeDecl {
+    fn from(decl: ExposeProtocolDecl) -> Self {
+        ExposeDecl::Protocol(decl)
+    }
+}
+
+impl From<ExposeDirectoryDecl> for ExposeDecl {
+    fn from(decl: ExposeDirectoryDecl) -> Self {
+        ExposeDecl::Directory(decl)
+    }
+}
+
+impl From<ExposeRunnerDecl> for ExposeDecl {
+    fn from(decl: ExposeRunnerDecl) -> Self {
+        ExposeDecl::Runner(decl)
+    }
+}
+
+impl From<ExposeResolverDecl> for ExposeDecl {
+    fn from(decl: ExposeResolverDecl) -> Self {
+        ExposeDecl::Resolver(decl)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExposeServiceDecl {
-    pub sources: Vec<ServiceSource<ExposeServiceSource>>,
+    pub sources: Vec<ServiceSource<ExposeSource>>,
     pub target: ExposeTarget,
     pub target_name: CapabilityName,
 }
@@ -485,8 +566,151 @@ pub enum OfferDecl {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OfferSource {
+    Framework,
+    Parent,
+    Child(String),
+    Self_,
+    Capability(CapabilityName),
+}
+
+impl FidlIntoNative<OfferSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> OfferSource {
+        match self.unwrap() {
+            fsys::Ref::Parent(_) => OfferSource::Parent,
+            fsys::Ref::Self_(_) => OfferSource::Self_,
+            fsys::Ref::Child(c) => OfferSource::Child(c.name),
+            fsys::Ref::Framework(_) => OfferSource::Framework,
+            fsys::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
+            _ => panic!("invalid OfferSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            OfferSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
+            OfferSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            OfferSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+            OfferSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+            OfferSource::Capability(name) => {
+                fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
+            }
+        })
+    }
+}
+
+impl FromEnum<OfferDecl> for OfferServiceDecl {
+    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
+        match decl {
+            OfferDecl::Service(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<OfferDecl> for OfferProtocolDecl {
+    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
+        match decl {
+            OfferDecl::Protocol(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<OfferDecl> for OfferDirectoryDecl {
+    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
+        match decl {
+            OfferDecl::Directory(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<OfferDecl> for OfferStorageDecl {
+    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
+        match decl {
+            OfferDecl::Storage(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<OfferDecl> for OfferRunnerDecl {
+    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
+        match decl {
+            OfferDecl::Runner(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<OfferDecl> for OfferResolverDecl {
+    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
+        match decl {
+            OfferDecl::Resolver(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<OfferDecl> for OfferEventDecl {
+    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
+        match decl {
+            OfferDecl::Event(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl From<OfferServiceDecl> for OfferDecl {
+    fn from(decl: OfferServiceDecl) -> Self {
+        OfferDecl::Service(decl)
+    }
+}
+
+impl From<OfferProtocolDecl> for OfferDecl {
+    fn from(decl: OfferProtocolDecl) -> Self {
+        OfferDecl::Protocol(decl)
+    }
+}
+
+impl From<OfferDirectoryDecl> for OfferDecl {
+    fn from(decl: OfferDirectoryDecl) -> Self {
+        OfferDecl::Directory(decl)
+    }
+}
+
+impl From<OfferStorageDecl> for OfferDecl {
+    fn from(decl: OfferStorageDecl) -> Self {
+        OfferDecl::Storage(decl)
+    }
+}
+
+impl From<OfferRunnerDecl> for OfferDecl {
+    fn from(decl: OfferRunnerDecl) -> Self {
+        OfferDecl::Runner(decl)
+    }
+}
+
+impl From<OfferResolverDecl> for OfferDecl {
+    fn from(decl: OfferResolverDecl) -> Self {
+        OfferDecl::Resolver(decl)
+    }
+}
+
+impl From<OfferEventDecl> for OfferDecl {
+    fn from(decl: OfferEventDecl) -> Self {
+        OfferDecl::Event(decl)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OfferServiceDecl {
-    pub sources: Vec<ServiceSource<OfferServiceSource>>,
+    pub sources: Vec<ServiceSource<OfferSource>>,
     pub target: OfferTarget,
     pub target_name: CapabilityName,
 }
@@ -590,7 +814,7 @@ fsys::ExposeRunnerDecl,
 fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
 fsys::OfferProtocolDecl,
 {
-    source: OfferServiceSource,
+    source: OfferSource,
     source_name: CapabilityName,
     target: OfferTarget,
     target_name: CapabilityName,
@@ -599,7 +823,7 @@ fsys::OfferProtocolDecl,
 fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
 fsys::OfferDirectoryDecl,
 {
-    source: OfferDirectorySource,
+    source: OfferSource,
     source_name: CapabilityName,
     target: OfferTarget,
     target_name: CapabilityName,
@@ -611,14 +835,14 @@ fidl_into_struct!(OfferStorageDecl, OfferStorageDecl, fsys::OfferStorageDecl,
 fsys::OfferStorageDecl,
 {
     source_name: CapabilityName,
-    source: OfferStorageSource,
+    source: OfferSource,
     target: OfferTarget,
     target_name: CapabilityName,
 });
 fidl_into_struct!(OfferResolverDecl, OfferResolverDecl, fsys::OfferResolverDecl,
 fsys::OfferResolverDecl,
 {
-    source: OfferResolverSource,
+    source: OfferSource,
     source_name: CapabilityName,
     target: OfferTarget,
     target_name: CapabilityName,
@@ -626,7 +850,7 @@ fsys::OfferResolverDecl,
 fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
 fsys::OfferRunnerDecl,
 {
-    source: OfferRunnerSource,
+    source: OfferSource,
     source_name: CapabilityName,
     target: OfferTarget,
     target_name: CapabilityName,
@@ -634,7 +858,7 @@ fsys::OfferRunnerDecl,
 fidl_into_struct!(OfferEventDecl, OfferEventDecl, fsys::OfferEventDecl,
 fsys::OfferEventDecl,
 {
-    source: OfferEventSource,
+    source: OfferSource,
     source_name: CapabilityName,
     target: OfferTarget,
     target_name: CapabilityName,
@@ -808,6 +1032,60 @@ impl fmt::Display for CapabilityPath {
     }
 }
 
+impl FromEnum<CapabilityDecl> for ServiceDecl {
+    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
+        match decl {
+            CapabilityDecl::Service(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<CapabilityDecl> for ProtocolDecl {
+    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
+        match decl {
+            CapabilityDecl::Protocol(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<CapabilityDecl> for DirectoryDecl {
+    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
+        match decl {
+            CapabilityDecl::Directory(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<CapabilityDecl> for StorageDecl {
+    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
+        match decl {
+            CapabilityDecl::Storage(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<CapabilityDecl> for RunnerDecl {
+    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
+        match decl {
+            CapabilityDecl::Runner(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl FromEnum<CapabilityDecl> for ResolverDecl {
+    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
+        match decl {
+            CapabilityDecl::Resolver(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
 impl UseDecl {
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
@@ -833,6 +1111,30 @@ impl UseDecl {
     }
 }
 
+impl From<UseProtocolDecl> for UseDecl {
+    fn from(decl: UseProtocolDecl) -> Self {
+        UseDecl::Protocol(decl)
+    }
+}
+
+impl From<UseDirectoryDecl> for UseDecl {
+    fn from(decl: UseDirectoryDecl) -> Self {
+        UseDecl::Directory(decl)
+    }
+}
+
+impl From<UseEventDecl> for UseDecl {
+    fn from(decl: UseEventDecl) -> Self {
+        UseDecl::Event(decl)
+    }
+}
+
+impl From<UseStorageDecl> for UseDecl {
+    fn from(decl: UseStorageDecl) -> Self {
+        UseDecl::Storage(decl)
+    }
+}
+
 /// A named capability.
 ///
 /// Unlike a `CapabilityPath`, a `CapabilityName` doesn't encode any form
@@ -843,6 +1145,12 @@ pub struct CapabilityName(pub String);
 impl CapabilityName {
     pub fn str(&self) -> &str {
         &self.0
+    }
+}
+
+impl From<CapabilityName> for String {
+    fn from(name: CapabilityName) -> String {
+        name.0
     }
 }
 
@@ -861,6 +1169,348 @@ impl From<String> for CapabilityName {
 impl fmt::Display for CapabilityName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+/// The trait for all declarations that have a source name.
+pub trait SourceName {
+    fn source_name(&self) -> &CapabilityName;
+}
+
+/// The common properties of a [Use](fsys2::UseDecl) declaration.
+pub trait UseDeclCommon: SourceName {
+    fn source(&self) -> &UseSource;
+}
+
+/// The common properties of a Registration-with-environment declaration.
+pub trait RegistrationDeclCommon: SourceName {
+    /// The name of the registration type, for error messages.
+    const TYPE: &'static str;
+    fn source(&self) -> &RegistrationSource;
+}
+
+/// The common properties of an [Offer](fsys2::OfferDecl) declaration.
+pub trait OfferDeclCommon: SourceName {
+    fn target_name(&self) -> &CapabilityName;
+    fn target(&self) -> &OfferTarget;
+    fn source(&self) -> &OfferSource;
+}
+
+/// The common properties of an [Expose](fsys2::ExposeDecl) declaration.
+pub trait ExposeDeclCommon: SourceName {
+    fn target_name(&self) -> &CapabilityName;
+    fn target(&self) -> &ExposeTarget;
+    fn source(&self) -> &ExposeSource;
+}
+
+/// The common properties of a [Capability](fsys2::CapabilityDecl) declaration.
+pub trait CapabilityDeclCommon {
+    fn name(&self) -> &CapabilityName;
+}
+
+impl UseDeclCommon for UseProtocolDecl {
+    fn source(&self) -> &UseSource {
+        &self.source
+    }
+}
+
+impl SourceName for UseProtocolDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl OfferDeclCommon for OfferProtocolDecl {
+    fn source(&self) -> &OfferSource {
+        &self.source
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+
+    fn target(&self) -> &OfferTarget {
+        &self.target
+    }
+}
+
+impl SourceName for OfferProtocolDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl ExposeDeclCommon for ExposeProtocolDecl {
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+
+    fn target(&self) -> &ExposeTarget {
+        &self.target
+    }
+
+    fn source(&self) -> &ExposeSource {
+        &self.source
+    }
+}
+
+impl SourceName for ExposeProtocolDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl CapabilityDeclCommon for ProtocolDecl {
+    fn name(&self) -> &CapabilityName {
+        &self.name
+    }
+}
+
+impl UseDeclCommon for UseDirectoryDecl {
+    fn source(&self) -> &UseSource {
+        &self.source
+    }
+}
+
+impl SourceName for UseDirectoryDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl OfferDeclCommon for OfferDirectoryDecl {
+    fn source(&self) -> &OfferSource {
+        &self.source
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+
+    fn target(&self) -> &OfferTarget {
+        &self.target
+    }
+}
+
+impl SourceName for OfferDirectoryDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl ExposeDeclCommon for ExposeDirectoryDecl {
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+
+    fn target(&self) -> &ExposeTarget {
+        &self.target
+    }
+
+    fn source(&self) -> &ExposeSource {
+        &self.source
+    }
+}
+
+impl SourceName for ExposeDirectoryDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl CapabilityDeclCommon for DirectoryDecl {
+    fn name(&self) -> &CapabilityName {
+        &self.name
+    }
+}
+
+impl SourceName for UseStorageDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl UseDeclCommon for UseStorageDecl {
+    fn source(&self) -> &UseSource {
+        &UseSource::Parent
+    }
+}
+
+impl OfferDeclCommon for OfferStorageDecl {
+    fn source(&self) -> &OfferSource {
+        &self.source
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+
+    fn target(&self) -> &OfferTarget {
+        &self.target
+    }
+}
+
+impl SourceName for OfferStorageDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl CapabilityDeclCommon for StorageDecl {
+    fn name(&self) -> &CapabilityName {
+        &self.name
+    }
+}
+
+impl OfferDeclCommon for OfferRunnerDecl {
+    fn source(&self) -> &OfferSource {
+        &self.source
+    }
+
+    fn target(&self) -> &OfferTarget {
+        &self.target
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+}
+
+impl SourceName for OfferRunnerDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl ExposeDeclCommon for ExposeRunnerDecl {
+    fn source(&self) -> &ExposeSource {
+        &self.source
+    }
+
+    fn target(&self) -> &ExposeTarget {
+        &self.target
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+}
+
+impl SourceName for ExposeRunnerDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl CapabilityDeclCommon for RunnerDecl {
+    fn name(&self) -> &CapabilityName {
+        &self.name
+    }
+}
+
+impl RegistrationDeclCommon for RunnerRegistration {
+    const TYPE: &'static str = "runner";
+
+    fn source(&self) -> &RegistrationSource {
+        &self.source
+    }
+}
+
+impl SourceName for RunnerRegistration {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl OfferDeclCommon for OfferResolverDecl {
+    fn source(&self) -> &OfferSource {
+        &self.source
+    }
+
+    fn target(&self) -> &OfferTarget {
+        &self.target
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+}
+
+impl SourceName for OfferResolverDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl ExposeDeclCommon for ExposeResolverDecl {
+    fn source(&self) -> &ExposeSource {
+        &self.source
+    }
+
+    fn target(&self) -> &ExposeTarget {
+        &self.target
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+}
+
+impl SourceName for ExposeResolverDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl CapabilityDeclCommon for ResolverDecl {
+    fn name(&self) -> &CapabilityName {
+        &self.name
+    }
+}
+
+impl RegistrationDeclCommon for ResolverRegistration {
+    const TYPE: &'static str = "resolver";
+
+    fn source(&self) -> &RegistrationSource {
+        &self.source
+    }
+}
+
+impl SourceName for ResolverRegistration {
+    fn source_name(&self) -> &CapabilityName {
+        &self.resolver
+    }
+}
+
+impl UseDeclCommon for UseEventDecl {
+    fn source(&self) -> &UseSource {
+        &self.source
+    }
+}
+
+impl SourceName for UseEventDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl OfferDeclCommon for OfferEventDecl {
+    fn source(&self) -> &OfferSource {
+        &self.source
+    }
+
+    fn target(&self) -> &OfferTarget {
+        &self.target
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        &self.target_name
+    }
+}
+
+impl SourceName for OfferEventDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
     }
 }
 
@@ -1178,75 +1828,6 @@ impl NativeIntoFidl<Option<fsys::DependencyType>> for DependencyType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferServiceSource {
-    Parent,
-    Self_,
-    Child(String),
-    Capability(CapabilityName),
-}
-
-impl FidlIntoNative<OfferServiceSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferServiceSource {
-        match self.unwrap() {
-            fsys::Ref::Parent(_) => OfferServiceSource::Parent,
-            fsys::Ref::Self_(_) => OfferServiceSource::Self_,
-            fsys::Ref::Child(c) => OfferServiceSource::Child(c.name),
-            fsys::Ref::Capability(c) => OfferServiceSource::Capability(c.name.into()),
-            _ => panic!("invalid OfferServiceSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferServiceSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            OfferServiceSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            OfferServiceSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            OfferServiceSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
-            OfferServiceSource::Capability(name) => {
-                fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
-            }
-        })
-    }
-}
-
-/// The valid sources of a service protocol's expose declaration.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ExposeServiceSource {
-    /// The service is exposed from the component manager itself.
-    Framework,
-    /// The service is exposed by the component itself.
-    Self_,
-    /// The service is exposed by a named child component.
-    Child(String),
-}
-
-impl FidlIntoNative<ExposeServiceSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> ExposeServiceSource {
-        match self.unwrap() {
-            fsys::Ref::Framework(_) => ExposeServiceSource::Framework,
-            fsys::Ref::Self_(_) => ExposeServiceSource::Self_,
-            fsys::Ref::Child(c) => ExposeServiceSource::Child(c.name),
-            _ => panic!("invalid ExposeServiceSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for ExposeServiceSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            ExposeServiceSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
-            ExposeServiceSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            ExposeServiceSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StorageDirectorySource {
     Parent,
     Self_,
@@ -1278,17 +1859,13 @@ impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunnerSource {
-    Parent,
     Self_,
-    Child(String),
 }
 
 impl FidlIntoNative<RunnerSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> RunnerSource {
         match self.unwrap() {
-            fsys::Ref::Parent(_) => RunnerSource::Parent,
             fsys::Ref::Self_(_) => RunnerSource::Self_,
-            fsys::Ref::Child(c) => RunnerSource::Child(c.name),
             _ => panic!("invalid RunnerSource variant"),
         }
     }
@@ -1297,11 +1874,7 @@ impl FidlIntoNative<RunnerSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            RunnerSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             RunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            RunnerSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
         })
     }
 }
@@ -1332,149 +1905,6 @@ impl NativeIntoFidl<Option<fsys::Ref>> for RegistrationSource {
             RegistrationSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferDirectorySource {
-    Parent,
-    Self_,
-    Framework,
-    Child(String),
-}
-
-impl FidlIntoNative<OfferDirectorySource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferDirectorySource {
-        match self.unwrap() {
-            fsys::Ref::Parent(_) => OfferDirectorySource::Parent,
-            fsys::Ref::Self_(_) => OfferDirectorySource::Self_,
-            fsys::Ref::Framework(_) => OfferDirectorySource::Framework,
-            fsys::Ref::Child(c) => OfferDirectorySource::Child(c.name),
-            _ => panic!("invalid OfferDirectorySource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferDirectorySource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            OfferDirectorySource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            OfferDirectorySource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            OfferDirectorySource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
-            OfferDirectorySource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferStorageSource {
-    Parent,
-    Self_,
-}
-
-impl FidlIntoNative<OfferStorageSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferStorageSource {
-        match self.unwrap() {
-            fsys::Ref::Parent(_) => OfferStorageSource::Parent,
-            fsys::Ref::Self_(_) => OfferStorageSource::Self_,
-            _ => panic!("invalid OfferStorageSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            OfferStorageSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            OfferStorageSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferRunnerSource {
-    Parent,
-    Self_,
-    Child(String),
-}
-
-impl FidlIntoNative<OfferRunnerSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferRunnerSource {
-        match self.unwrap() {
-            fsys::Ref::Parent(_) => OfferRunnerSource::Parent,
-            fsys::Ref::Self_(_) => OfferRunnerSource::Self_,
-            fsys::Ref::Child(c) => OfferRunnerSource::Child(c.name),
-            _ => panic!("invalid OfferRunnerSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferRunnerSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            OfferRunnerSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            OfferRunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            OfferRunnerSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferResolverSource {
-    Parent,
-    Self_,
-    Child(String),
-}
-
-impl FidlIntoNative<OfferResolverSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferResolverSource {
-        match self.unwrap() {
-            fsys::Ref::Parent(_) => OfferResolverSource::Parent,
-            fsys::Ref::Self_(_) => OfferResolverSource::Self_,
-            fsys::Ref::Child(c) => OfferResolverSource::Child(c.name),
-            _ => panic!("invalid OfferResolverSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferResolverSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            OfferResolverSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            OfferResolverSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            OfferResolverSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferEventSource {
-    Framework,
-    Parent,
-}
-
-impl FidlIntoNative<OfferEventSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferEventSource {
-        match self.unwrap() {
-            fsys::Ref::Framework(_) => OfferEventSource::Framework,
-            fsys::Ref::Parent(_) => OfferEventSource::Parent,
-            _ => panic!("invalid OfferEventSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferEventSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            OfferEventSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
-            OfferEventSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
         })
     }
 }
@@ -2147,12 +2577,12 @@ mod tests {
                         }),
                         ExposeDecl::Service(ExposeServiceDecl {
                             sources: vec![
-                                ServiceSource::<ExposeServiceSource> {
-                                    source: ExposeServiceSource::Child("netstack".to_string()),
+                                ServiceSource::<ExposeSource> {
+                                    source: ExposeSource::Child("netstack".to_string()),
                                     source_name: "netstack1".try_into().unwrap(),
                                 },
-                                ServiceSource::<ExposeServiceSource> {
-                                    source: ExposeServiceSource::Child("netstack".to_string()),
+                                ServiceSource::<ExposeSource> {
+                                    source: ExposeSource::Child("netstack".to_string()),
                                     source_name: "netstack2".try_into().unwrap(),
                                 },
                             ],
@@ -2162,14 +2592,14 @@ mod tests {
                     ],
                     offers: vec![
                         OfferDecl::Protocol(OfferProtocolDecl {
-                            source: OfferServiceSource::Parent,
+                            source: OfferSource::Parent,
                             source_name: "legacy_netstack".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "legacy_mynetstack".try_into().unwrap(),
                             dependency_type: DependencyType::WeakForMigration,
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferDirectorySource::Parent,
+                            source: OfferSource::Parent,
                             source_name: "dir".try_into().unwrap(),
                             target: OfferTarget::Collection("modular".to_string()),
                             target_name: "data".try_into().unwrap(),
@@ -2179,24 +2609,24 @@ mod tests {
                         }),
                         OfferDecl::Storage(OfferStorageDecl {
                             source_name: "cache".try_into().unwrap(),
-                            source: OfferStorageSource::Self_,
+                            source: OfferSource::Self_,
                             target: OfferTarget::Collection("modular".to_string()),
                             target_name: "cache".try_into().unwrap(),
                         }),
                         OfferDecl::Runner(OfferRunnerDecl {
-                            source: OfferRunnerSource::Parent,
+                            source: OfferSource::Parent,
                             source_name: "elf".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "elf2".try_into().unwrap(),
                         }),
                         OfferDecl::Resolver(OfferResolverDecl {
-                            source: OfferResolverSource::Parent,
+                            source: OfferSource::Parent,
                             source_name: "pkg".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "pkg".try_into().unwrap(),
                         }),
                         OfferDecl::Event(OfferEventDecl {
-                            source: OfferEventSource::Parent,
+                            source: OfferSource::Parent,
                             source_name: "started".into(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "mystarted".into(),
@@ -2205,12 +2635,12 @@ mod tests {
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![
-                                ServiceSource::<OfferServiceSource> {
-                                    source: OfferServiceSource::Parent,
+                                ServiceSource::<OfferSource> {
+                                    source: OfferSource::Parent,
                                     source_name: "netstack1".try_into().unwrap(),
                                 },
-                                ServiceSource::<OfferServiceSource> {
-                                    source: OfferServiceSource::Parent,
+                                ServiceSource::<OfferSource> {
+                                    source: OfferSource::Parent,
                                     source_name: "netstack2".try_into().unwrap(),
                                 },
                             ],
@@ -2240,8 +2670,8 @@ mod tests {
                         }),
                         CapabilityDecl::Runner(RunnerDecl {
                             name: "elf".into(),
-                            source: RunnerSource::Self_,
                             source_path: "/elf".try_into().unwrap(),
+                            source: RunnerSource::Self_,
                         }),
                         CapabilityDecl::Resolver(ResolverDecl {
                             name: "pkg".into(),
@@ -2375,59 +2805,26 @@ mod tests {
             ],
             result_type = ExposeSource,
         },
-        fidl_into_and_from_offer_service_source => {
+        fidl_into_and_from_offer_source => {
             input = vec![
-                Some(fsys::Ref::Parent(fsys::ParentRef {})),
                 Some(fsys::Ref::Self_(fsys::SelfRef {})),
                 Some(fsys::Ref::Child(fsys::ChildRef {
                     name: "foo".to_string(),
                     collection: None,
                 })),
-            ],
-            input_type = Option<fsys::Ref>,
-            result = vec![
-                OfferServiceSource::Parent,
-                OfferServiceSource::Self_,
-                OfferServiceSource::Child("foo".to_string()),
-            ],
-            result_type = OfferServiceSource,
-        },
-        fidl_into_and_from_offer_event_source => {
-            input = vec![Some(fsys::Ref::Parent(fsys::ParentRef {}))],
-            input_type = Option<fsys::Ref>,
-            result = vec![OfferEventSource::Parent],
-            result_type = OfferEventSource,
-        },
-        fidl_into_and_from_offer_directory_source => {
-            input = vec![
-                Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                Some(fsys::Ref::Self_(fsys::SelfRef {})),
                 Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                Some(fsys::Ref::Child(fsys::ChildRef {
-                    name: "foo".to_string(),
-                    collection: None,
-                })),
-            ],
-            input_type = Option<fsys::Ref>,
-            result = vec![
-                OfferDirectorySource::Parent,
-                OfferDirectorySource::Self_,
-                OfferDirectorySource::Framework,
-                OfferDirectorySource::Child("foo".to_string()),
-            ],
-            result_type = OfferDirectorySource,
-        },
-        fidl_into_and_from_offer_storage_source => {
-            input = vec![
+                Some(fsys::Ref::Capability(fsys::CapabilityRef { name: "foo".to_string() })),
                 Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                Some(fsys::Ref::Self_(fsys::SelfRef {})),
             ],
             input_type = Option<fsys::Ref>,
             result = vec![
-                OfferStorageSource::Parent,
-                OfferStorageSource::Self_,
+                OfferSource::Self_,
+                OfferSource::Child("foo".to_string()),
+                OfferSource::Framework,
+                OfferSource::Capability(CapabilityName("foo".to_string())),
+                OfferSource::Parent,
             ],
-            result_type = OfferStorageSource,
+            result_type = OfferSource,
         },
         fidl_into_and_from_storage_capability => {
             input = vec![

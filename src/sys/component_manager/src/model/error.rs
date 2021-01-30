@@ -10,6 +10,7 @@ use {
     },
     anyhow::Error,
     clonable_error::ClonableError,
+    fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, PartialMoniker},
     std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
@@ -188,5 +189,17 @@ impl ModelError {
 
     pub fn stream_creation_error(err: impl Into<Error>) -> ModelError {
         ModelError::StreamCreationError { err: err.into().into() }
+    }
+
+    pub fn as_zx_status(&self) -> zx::Status {
+        match self {
+            ModelError::RoutingError { err } => err.as_zx_status(),
+            ModelError::RightsError { err } => err.as_zx_status(),
+            ModelError::PolicyError { err } => err.as_zx_status(),
+            ModelError::InstanceNotFound { .. } => zx::Status::UNAVAILABLE,
+            ModelError::Unsupported { .. } => zx::Status::NOT_SUPPORTED,
+            // Any other type of error is not expected.
+            _ => zx::Status::INTERNAL,
+        }
     }
 }

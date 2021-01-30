@@ -11,7 +11,7 @@ use {
     },
     cm_rust::{
         self, CapabilityName, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
-        ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget,
+        ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget,
         UseDecl, UseProtocolDecl, UseSource,
     },
     fidl::endpoints::Proxy,
@@ -255,7 +255,7 @@ async fn use_work_scheduler_control_routed() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.WorkSchedulerControl".into(),
                     target_name: offer_use_name.clone().into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -297,7 +297,7 @@ async fn use_work_scheduler_control_error() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.WorkSchedulerControl".into(),
                     target_name: offer_use_name.clone().into(),
                     target: OfferTarget::Child("b".to_string()),

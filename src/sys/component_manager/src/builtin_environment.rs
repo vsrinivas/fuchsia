@@ -31,7 +31,7 @@ use {
         fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
             binding::Binder,
-            environment::{DebugRegistry, Environment, RunnerRegistration, RunnerRegistry},
+            environment::{DebugRegistry, Environment, RunnerRegistry},
             error::ModelError,
             event_logger::EventLogger,
             events::{
@@ -51,7 +51,7 @@ use {
         work_scheduler::WorkScheduler,
     },
     anyhow::{format_err, Context as _, Error},
-    cm_rust::CapabilityName,
+    cm_rust::{CapabilityName, RunnerRegistration},
     cm_types::Url,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_internal::{BuiltinPkgResolver, OutDirContents},
@@ -184,6 +184,7 @@ impl BuiltinEnvironmentBuilder {
                     name.clone(),
                     RunnerRegistration {
                         source_name: name.clone(),
+                        target_name: name.clone(),
                         source: cm_rust::RegistrationSource::Self_,
                     },
                 )

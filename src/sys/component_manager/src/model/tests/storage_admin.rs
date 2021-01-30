@@ -43,13 +43,13 @@ async fn storage_to_one_child_admin_to_another() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Capability("data".into()),
+                    source: OfferSource::Capability("data".into()),
                     source_name: "fuchsia.sys2.StorageAdmin".into(),
                     target_name: "fuchsia.sys2.StorageAdmin".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -117,7 +117,7 @@ async fn directory_from_grandparent_storage_and_admin_from_parent() {
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "data".into(),
                     target_name: "data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -138,7 +138,7 @@ async fn directory_from_grandparent_storage_and_admin_from_parent() {
                     subdir: Some(PathBuf::from("bar")),
                 })
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Capability("storage".into()),
+                    source: OfferSource::Capability("storage".into()),
                     source_name: "fuchsia.sys2.StorageAdmin".into(),
                     target_name: "fuchsia.sys2.StorageAdmin".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -191,7 +191,7 @@ async fn storage_admin_from_sibling() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("c".to_string()),
+                    source: OfferSource::Child("c".to_string()),
                     source_name: "fuchsia.sys2.StorageAdmin".into(),
                     target_name: "fuchsia.sys2.StorageAdmin".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -228,7 +228,7 @@ async fn storage_admin_from_sibling() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("d".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -292,7 +292,7 @@ async fn admin_protocol_used_in_the_same_place_storage_is_declared() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -358,7 +358,7 @@ async fn storage_admin_from_protocol_on_self() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -423,7 +423,7 @@ async fn storage_admin_from_protocol_from_parent() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Capability("unrelated.protocol".into()),
+                    source: OfferSource::Capability("unrelated.protocol".into()),
                     source_name: "fuchsia.sys2.StorageAdmin".into(),
                     target_name: "fuchsia.sys2.StorageAdmin".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -477,7 +477,7 @@ async fn storage_admin_from_protocol_on_sibling() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("c".to_string()),
+                    source: OfferSource::Child("c".to_string()),
                     source_name: "fuchsia.sys2.StorageAdmin".into(),
                     target_name: "fuchsia.sys2.StorageAdmin".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -515,7 +515,7 @@ async fn storage_admin_from_protocol_on_sibling() {
                 })
                 .protocol(ProtocolDeclBuilder::new("unrelated.protocol").build())
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("d".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -580,7 +580,7 @@ async fn storage_admin_from_storage_on_self_bad_protocol_name() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -643,7 +643,7 @@ async fn storage_admin_from_storage_on_parent_bad_protocol_name() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Capability("data".into()),
+                    source: OfferSource::Capability("data".into()),
                     source_name: "unrelated.protocol".into(),
                     target_name: "fuchsia.sys2.StorageAdmin".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -696,7 +696,7 @@ async fn storage_admin_from_protocol_on_sibling_bad_protocol_name() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("c".to_string()),
+                    source: OfferSource::Child("c".to_string()),
                     source_name: "fuchsia.sys2.StorageAdmin".into(),
                     target_name: "fuchsia.sys2.StorageAdmin".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -733,7 +733,7 @@ async fn storage_admin_from_protocol_on_sibling_bad_protocol_name() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("d".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),

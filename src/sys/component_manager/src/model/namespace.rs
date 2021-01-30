@@ -7,7 +7,7 @@ use {
         capability::ComponentCapability,
         constants::PKG_PATH,
         model::{
-            component::{Package, Runtime, WeakComponentInstance},
+            component::{BindReason, Package, Runtime, WeakComponentInstance},
             error::ModelError,
             logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
             rights::Rights,
@@ -360,15 +360,39 @@ impl IncomingNamespace {
                 }
             };
             let mut server_end = server_end.into_zx_channel();
-            let res = routing::route_use_capability(
-                flags,
-                fio::MODE_TYPE_DIRECTORY,
-                String::new(),
-                &use_,
-                &target,
-                &mut server_end,
-            )
-            .await;
+            let res = match &use_ {
+                UseDecl::Directory(use_directory_decl) => {
+                    async {
+                        let (source, cap_state) =
+                            routing::route_directory(use_directory_decl.clone(), &target).await?;
+                        let relative_path = cap_state.make_relative_path(String::new());
+                        routing::open_capability_at_source(
+                            flags,
+                            fio::MODE_TYPE_DIRECTORY,
+                            relative_path,
+                            source,
+                            &target,
+                            &mut server_end,
+                        )
+                        .await
+                    }
+                    .await
+                }
+                UseDecl::Storage(use_storage_decl) => {
+                    // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
+                    // capability to plumb through the correct BindReason.
+                    routing::route_and_open_storage_capability(
+                        use_storage_decl.clone(),
+                        fio::MODE_TYPE_DIRECTORY,
+                        &target,
+                        &mut server_end,
+                        &BindReason::Eager,
+                    )
+                    .await
+                }
+                _ => panic!("not a directory or storage capability"),
+            };
+
             if let Err(e) = res {
                 let cap = ComponentCapability::Use(use_);
                 let execution = target.lock_execution().await;
@@ -426,7 +450,7 @@ impl IncomingNamespace {
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
-                let use_ = UseDecl::Protocol(use_clone.clone());
+                let use_ = use_clone.clone();
                 let component = component.clone();
                 fasync::Task::spawn(async move {
                     let target = match component.upgrade() {
@@ -441,17 +465,23 @@ impl IncomingNamespace {
                         }
                     };
                     let mut server_end = server_end.into_channel();
-                    let res = routing::route_use_capability(
-                        flags,
-                        mode,
-                        relative_path,
-                        &use_,
-                        &target,
-                        &mut server_end,
-                    )
-                    .await;
+                    let res = routing::route_protocol(use_.clone(), &target).await;
+                    let res = match res {
+                        Ok(source) => {
+                            routing::open_capability_at_source(
+                                flags,
+                                mode,
+                                PathBuf::from(relative_path),
+                                source,
+                                &target,
+                                &mut server_end,
+                            )
+                            .await
+                        }
+                        Err(err) => Err(err),
+                    };
                     if let Err(e) = res {
-                        let cap = ComponentCapability::Use(use_);
+                        let cap = ComponentCapability::Use(UseDecl::Protocol(use_));
                         let execution = target.lock_execution().await;
                         let logger = match &execution.runtime {
                             Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),

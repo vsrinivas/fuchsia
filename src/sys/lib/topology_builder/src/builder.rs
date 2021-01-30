@@ -511,9 +511,9 @@ impl TopologyBuilder {
         match &route.capability {
             Capability::Protocol(name) => {
                 let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferServiceSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferServiceSource::Self_,
-                    OfferSource::Child(n) => cm_rust::OfferServiceSource::Child(n.to_string()),
+                    OfferSource::Parent => cm_rust::OfferSource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
+                    OfferSource::Child(n) => cm_rust::OfferSource::Child(n),
                 };
                 for offer in offers.iter() {
                     if let cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
@@ -549,9 +549,9 @@ impl TopologyBuilder {
             }
             Capability::Directory(name, _, _) => {
                 let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferDirectorySource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferDirectorySource::Self_,
-                    OfferSource::Child(n) => cm_rust::OfferDirectorySource::Child(n.to_string()),
+                    OfferSource::Parent => cm_rust::OfferSource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
+                    OfferSource::Child(n) => cm_rust::OfferSource::Child(n),
                 };
                 for offer in offers.iter() {
                     if let cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
@@ -589,8 +589,8 @@ impl TopologyBuilder {
             }
             Capability::Storage(name, _) => {
                 let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferStorageSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferStorageSource::Self_,
+                    OfferSource::Parent => cm_rust::OfferSource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
                     OfferSource::Child(_) => {
                         return Err(BuilderError::StorageCannotBeOfferedFromChild(
                             name,
@@ -632,8 +632,8 @@ impl TopologyBuilder {
             }
             Capability::Event(event, mode) => {
                 let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferEventSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferEventSource::Framework,
+                    OfferSource::Parent => cm_rust::OfferSource::Parent,
+                    OfferSource::Self_ => cm_rust::OfferSource::Framework,
                     OfferSource::Child(_) => {
                         return Err(BuilderError::EventCannotBeOfferedFromChild(
                             event.name(),
@@ -1234,7 +1234,7 @@ mod tests {
                     ComponentDecl {
                         offers: vec![
                             OfferDecl::Event(OfferEventDecl {
-                                source: OfferEventSource::Parent,
+                                source: cm_rust::OfferSource::Parent,
                                 source_name: "started".into(),
                                 target: cm_rust::OfferTarget::Child("a".to_string()),
                                 target_name: "started".into(),
@@ -1242,7 +1242,7 @@ mod tests {
                                 filter: None,
                             }),
                             OfferDecl::Event(OfferEventDecl {
-                                source: OfferEventSource::Parent,
+                                source: cm_rust::OfferSource::Parent,
                                 source_name: "capability_requested".into(),
                                 target: cm_rust::OfferTarget::Child("a".to_string()),
                                 target_name: "capability_requested".into(),
@@ -1284,7 +1284,7 @@ mod tests {
                         ],
                         offers: vec![
                             OfferDecl::Event(OfferEventDecl {
-                                source: OfferEventSource::Framework,
+                                source: cm_rust::OfferSource::Framework,
                                 source_name: "capability_ready".into(),
                                 target: cm_rust::OfferTarget::Child("b".to_string()),
                                 target_name: "capability_ready".into(),
@@ -1294,7 +1294,7 @@ mod tests {
                                         "diagnostics".to_string()))),
                             }),
                             OfferDecl::Event(OfferEventDecl {
-                                source: OfferEventSource::Parent,
+                                source: cm_rust::OfferSource::Parent,
                                 source_name: "capability_requested".into(),
                                 target: cm_rust::OfferTarget::Child("b".to_string()),
                                 target_name: "capability_requested".into(),
@@ -1379,7 +1379,7 @@ mod tests {
                     "",
                     ComponentDecl {
                         offers: vec![OfferDecl::Storage(OfferStorageDecl {
-                            source: OfferStorageSource::Parent,
+                            source: cm_rust::OfferSource::Parent,
                             source_name: "foo".into(),
                             target: cm_rust::OfferTarget::Child("a".to_string()),
                             target_name: "foo".into(),
@@ -1443,7 +1443,7 @@ mod tests {
                 "",
                 ComponentDecl {
                     offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("a".to_string()),
+                        source: cm_rust::OfferSource::Child("a".to_string()),
                         source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                         target: OfferTarget::Child("b".to_string()),
                         target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -1505,7 +1505,7 @@ mod tests {
                     "",
                     ComponentDecl {
                         offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                            source: OfferServiceSource::Child("a".to_string()),
+                            source: cm_rust::OfferSource::Child("a".to_string()),
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target: OfferTarget::Child("b".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -1630,7 +1630,7 @@ mod tests {
                             source_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
                         })],
                         offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                            source: OfferServiceSource::Self_,
+                            source: cm_rust::OfferSource::Self_,
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target: OfferTarget::Child("b".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -1694,14 +1694,14 @@ mod tests {
                     ComponentDecl {
                         offers: vec![
                             OfferDecl::Protocol(OfferProtocolDecl {
-                                source: OfferServiceSource::Child("a".to_string()),
+                                source: cm_rust::OfferSource::Child("a".to_string()),
                                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                                 target: OfferTarget::Child("b".to_string()),
                                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                                 dependency_type: DependencyType::Strong,
                             }),
                             OfferDecl::Directory(OfferDirectoryDecl {
-                                source: OfferDirectorySource::Child("b".to_string()),
+                                source: cm_rust::OfferSource::Child("b".to_string()),
                                 source_name: "example-dir".try_into().unwrap(),
                                 target: OfferTarget::Child("c".to_string()),
                                 target_name: "example-dir".try_into().unwrap(),
@@ -1811,21 +1811,21 @@ mod tests {
                 ComponentDecl {
                     offers: vec![
                         OfferDecl::Protocol(OfferProtocolDecl {
-                            source: OfferServiceSource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::Child("b".to_string()),
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target: OfferTarget::Child("a".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             dependency_type: DependencyType::Strong,
                         }),
                         OfferDecl::Protocol(OfferProtocolDecl {
-                            source: OfferServiceSource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::Child("b".to_string()),
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target: OfferTarget::Child("c".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             dependency_type: DependencyType::Strong,
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferDirectorySource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::Child("b".to_string()),
                             source_name: "example-dir".try_into().unwrap(),
                             target: OfferTarget::Child("a".to_string()),
                             target_name: "example-dir".try_into().unwrap(),
@@ -1834,7 +1834,7 @@ mod tests {
                             subdir: None,
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferDirectorySource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::Child("b".to_string()),
                             source_name: "example-dir".try_into().unwrap(),
                             target: OfferTarget::Child("c".to_string()),
                             target_name: "example-dir".try_into().unwrap(),
@@ -1911,7 +1911,7 @@ mod tests {
                     ComponentDecl {
                         offers: vec![
                             OfferDecl::Directory(OfferDirectoryDecl {
-                                source: OfferDirectorySource::Child("a".to_string()),
+                                source: cm_rust::OfferSource::Child("a".to_string()),
                                 source_name: "example-dir".try_into().unwrap(),
                                 target: OfferTarget::Child("c".to_string()),
                                 target_name: "example-dir".try_into().unwrap(),
@@ -1920,7 +1920,7 @@ mod tests {
                                 subdir: None,
                             }),
                             OfferDecl::Protocol(OfferProtocolDecl {
-                                source: OfferServiceSource::Child("a".to_string()),
+                                source: cm_rust::OfferSource::Child("a".to_string()),
                                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                                 target: OfferTarget::Child("c".to_string()),
                                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -1968,7 +1968,7 @@ mod tests {
                     ComponentDecl {
                         offers: vec![
                             OfferDecl::Directory(OfferDirectoryDecl {
-                                source: OfferDirectorySource::Parent,
+                                source: cm_rust::OfferSource::Parent,
                                 source_name: "example-dir".try_into().unwrap(),
                                 target: OfferTarget::Child("d".to_string()),
                                 target_name: "example-dir".try_into().unwrap(),
@@ -1977,7 +1977,7 @@ mod tests {
                                 subdir: None,
                             }),
                             OfferDecl::Protocol(OfferProtocolDecl {
-                                source: OfferServiceSource::Parent,
+                                source: cm_rust::OfferSource::Parent,
                                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                                 target: OfferTarget::Child("d".to_string()),
                                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),

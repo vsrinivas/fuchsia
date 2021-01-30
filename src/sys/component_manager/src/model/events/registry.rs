@@ -359,14 +359,14 @@ impl EventRegistry {
 
         let mut result = RouteEventsResult::new();
         for use_decl in decl.uses {
-            match &use_decl {
+            match use_decl {
                 UseDecl::Event(event_decl) => {
                     if let Some(mode) = events.get(&event_decl.target_name) {
                         let (source_name, scope_moniker) =
-                            Self::route_event(event_decl, &component).await?;
+                            Self::route_event(event_decl.clone(), &component).await?;
                         let scope = EventDispatcherScope::new(scope_moniker)
-                            .with_filter(EventFilter::new(event_decl.filter.clone()))
-                            .with_mode_set(EventModeSet::new(event_decl.mode.clone()));
+                            .with_filter(EventFilter::new(event_decl.filter))
+                            .with_mode_set(EventModeSet::new(event_decl.mode));
                         if scope.mode_set.supports_mode(mode) {
                             result.insert(source_name, mode.clone(), scope);
                         }
@@ -381,18 +381,16 @@ impl EventRegistry {
 
     /// Routes an event and returns its source name and scope on success.
     async fn route_event(
-        event_decl: &UseEventDecl,
+        event_decl: UseEventDecl,
         component: &Arc<ComponentInstance>,
     ) -> Result<(CapabilityName, AbsoluteMoniker), ModelError> {
-        routing::route_use_event_capability(&UseDecl::Event(event_decl.clone()), &component)
-            .await
-            .map(|source| match source {
-                CapabilitySource::Framework {
-                    capability: InternalCapability::Event(source_name),
-                    scope_moniker,
-                } => (source_name, scope_moniker),
-                _ => unreachable!(),
-            })
+        match routing::route_event(event_decl, component).await? {
+            CapabilitySource::Framework {
+                capability: InternalCapability::Event(source_name),
+                scope_moniker,
+            } => Ok((source_name, scope_moniker)),
+            _ => unreachable!(),
+        }
     }
 
     #[cfg(test)]

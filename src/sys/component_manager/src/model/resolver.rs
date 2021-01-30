@@ -3,21 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capability::EnvironmentCapability,
-        model::{
-            component::{ComponentInstance, WeakComponentInstance},
-            error::ModelError,
-            routing,
-        },
+    crate::model::{
+        component::{ComponentInstance, WeakComponentInstance},
+        error::ModelError,
+        routing,
     },
     anyhow::Error,
     clonable_error::ClonableError,
-    cm_rust::{CapabilityName, RegistrationSource, ResolverRegistration},
+    cm_rust::ResolverRegistration,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
     futures::future::{self, BoxFuture},
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, path::PathBuf, sync::Arc},
     thiserror::Error,
     url::Url,
 };
@@ -61,11 +58,7 @@ impl ResolverRegistry {
         for resolver in decl {
             registry.register(
                 resolver.scheme.clone().into(),
-                Box::new(RemoteResolver::new(
-                    resolver.resolver.clone(),
-                    resolver.source.clone(),
-                    parent.as_weak(),
-                )),
+                Box::new(RemoteResolver::new(resolver.clone(), parent.as_weak())),
             );
         }
         registry
@@ -90,18 +83,13 @@ impl Resolver for ResolverRegistry {
 /// A resolver whose implementation lives in an external component. The source
 /// of the resolver is determined through capability routing.
 pub struct RemoteResolver {
-    capability_name: CapabilityName,
-    source: RegistrationSource,
+    registration: ResolverRegistration,
     component: WeakComponentInstance,
 }
 
 impl RemoteResolver {
-    pub fn new(
-        name: CapabilityName,
-        source: RegistrationSource,
-        component: WeakComponentInstance,
-    ) -> Self {
-        RemoteResolver { capability_name: name, source, component }
+    pub fn new(registration: ResolverRegistration, component: WeakComponentInstance) -> Self {
+        RemoteResolver { registration, component }
     }
 }
 
@@ -110,21 +98,18 @@ impl RemoteResolver {
 impl Resolver for RemoteResolver {
     fn resolve<'a>(&'a self, component_url: &'a str) -> ResolverFut<'a> {
         Box::pin(async move {
-            let decl = EnvironmentCapability::Resolver {
-                source_name: self.capability_name.clone(),
-                source: self.source.clone(),
-            };
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
-            let open_mode = fio::MODE_TYPE_SERVICE;
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
                     .map_err(ResolverError::unknown_resolver_error)?;
             let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
-            routing::route_capability_from_environment(
-                flags,
-                open_mode,
-                String::new(),
-                decl,
+            let capability_source = routing::route_resolver(self.registration.clone(), &component)
+                .await
+                .map_err(ResolverError::routing_error)?;
+            routing::open_capability_at_source(
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_SERVICE,
+                PathBuf::new(),
+                capability_source,
                 &component,
                 &mut server_end.into_channel(),
             )

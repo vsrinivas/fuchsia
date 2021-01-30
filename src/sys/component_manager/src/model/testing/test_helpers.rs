@@ -539,7 +539,7 @@ impl From<DirectoryDeclBuilder> for cm_rust::DirectoryDecl {
 /// component.
 pub fn offer_runner_cap_to_child(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
     cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
-        source: cm_rust::OfferRunnerSource::Parent,
+        source: cm_rust::OfferSource::Parent,
         source_name: runner_cap.into(),
         target: cm_rust::OfferTarget::Child(child.to_string()),
         target_name: runner_cap.into(),
@@ -550,7 +550,7 @@ pub fn offer_runner_cap_to_child(runner_cap: &str, child: &str) -> cm_rust::Offe
 /// collection.
 pub fn offer_runner_cap_to_collection(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
     cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
-        source: cm_rust::OfferRunnerSource::Parent,
+        source: cm_rust::OfferSource::Parent,
         source_name: runner_cap.into(),
         target: cm_rust::OfferTarget::Collection(child.to_string()),
         target_name: runner_cap.into(),

@@ -213,7 +213,7 @@ pub struct ComponentInstance {
 }
 
 /// A `ComponentInstance` or `ComponentManagerInstance`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ExtendedInstance {
     Component(Arc<ComponentInstance>),
     AboveRoot(Arc<ComponentManagerInstance>),
@@ -326,6 +326,11 @@ impl ComponentInstance {
         self.context.upgrade()
     }
 
+    /// Returns this `ComponentInstance`'s child moniker, if it is not the root instance.
+    pub fn child_moniker(&self) -> Option<&ChildMoniker> {
+        self.abs_moniker.leaf()
+    }
+
     /// Locks and returns a lazily resolved and populated `ResolvedInstanceState`. Does not
     /// register a `Resolve` action unless the resolved state is not already populated, so this
     /// function can be called re-entrantly from a Resolved hook. Returns an `InstanceNotFound`
@@ -372,7 +377,7 @@ impl ComponentInstance {
     // We use an explicit `BoxFuture` here instead of a standard async
     // function because we may need to recurse to resolve the runner:
     //
-    //   resolve_runner -> route_use_capability -> bind -> resolve_runner
+    //   resolve_runner -> open_capability_at_source -> bind -> resolve_runner
     //
     // Rust 1.40 doesn't support recursive async functions, so we
     // manually write out the type.
@@ -395,18 +400,18 @@ impl ComponentInstance {
             };
 
             // Find any explicit "use" runner declaration, resolve that.
-            let runner_decl = decl.get_used_runner();
-            if let Some(runner_decl) = runner_decl {
+            if let Some(runner_decl) = decl.get_used_runner() {
                 // Open up a channel to the runner.
                 let (client_channel, server_channel) =
                     create_endpoints::<fcrunner::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
-                routing::route_use_capability(
+                let capability_source = routing::route_runner(runner_decl.clone(), self).await?;
+                routing::open_capability_at_source(
                     OPEN_RIGHT_READABLE,
                     MODE_TYPE_SERVICE,
-                    String::new(),
-                    &UseDecl::Runner(runner_decl.clone()),
+                    PathBuf::new(),
+                    capability_source,
                     self,
                     &mut server_channel,
                 )
@@ -554,7 +559,7 @@ impl ComponentInstance {
         };
         for use_ in decl.uses.iter() {
             if let UseDecl::Storage(use_storage) = use_ {
-                routing::route_and_delete_storage(&use_storage, &self).await?;
+                routing::route_and_delete_storage(use_storage.clone(), &self).await?;
             }
         }
         Ok(())

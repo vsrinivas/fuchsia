@@ -475,7 +475,7 @@ mod tests {
 
         let root_decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferServiceSource::Parent,
+                source: OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 target: OfferTarget::Child("a".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -485,7 +485,7 @@ mod tests {
         };
         let a_decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferServiceSource::Parent,
+                source: OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 target: OfferTarget::Child("b".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
@@ -515,7 +515,7 @@ mod tests {
 
         let root_decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferServiceSource::Parent,
+                source: OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 target: OfferTarget::Child("a".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),

@@ -8,6 +8,7 @@ use {
         error::ModelError,
         resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
     },
+    cm_rust::{CapabilityName, EnvironmentDecl, RegistrationSource, RunnerRegistration},
     fidl_fuchsia_sys2 as fsys,
     std::{collections::HashMap, sync::Arc, time::Duration},
 };
@@ -81,11 +82,8 @@ impl Environment {
         }
     }
 
-    /// Creates an environment from `env_decl`, using `parent` as the parent component.
-    pub fn from_decl(
-        parent: &Arc<ComponentInstance>,
-        env_decl: &cm_rust::EnvironmentDecl,
-    ) -> Environment {
+    /// Creates an environment from `env_decl`, using `parent` as the parent realm.
+    pub fn from_decl(parent: &Arc<ComponentInstance>, env_decl: &EnvironmentDecl) -> Environment {
         Environment {
             parent: Some(parent.into()),
             extends: env_decl.extends.into(),
@@ -125,7 +123,7 @@ impl Environment {
     /// was no match.
     pub fn get_registered_runner(
         &self,
-        name: &cm_rust::CapabilityName,
+        name: &CapabilityName,
     ) -> Result<Option<(Option<Arc<ComponentInstance>>, RunnerRegistration)>, ModelError> {
         let parent = self.parent.as_ref().map(|p| p.upgrade()).transpose()?;
         match self.runner_registry.get_runner(name) {
@@ -146,7 +144,7 @@ impl Environment {
     /// was no match.
     pub fn get_debug_capability(
         &self,
-        name: &cm_rust::CapabilityName,
+        name: &CapabilityName,
     ) -> Result<Option<(Option<Arc<ComponentInstance>>, DebugRegistration)>, ModelError> {
         let parent = self.parent.as_ref().map(|p| p.upgrade()).transpose()?;
         match self.debug_registry.get_capability(name) {
@@ -188,7 +186,7 @@ impl Resolver for Environment {
 ///
 /// [`RunnerRegistration`]: fidl_fuchsia_sys2::RunnerRegistration
 pub struct RunnerRegistry {
-    runners: HashMap<cm_rust::CapabilityName, RunnerRegistration>,
+    runners: HashMap<CapabilityName, RunnerRegistration>,
 }
 
 impl RunnerRegistry {
@@ -196,53 +194,32 @@ impl RunnerRegistry {
         Self { runners: HashMap::new() }
     }
 
-    pub fn new(runners: HashMap<cm_rust::CapabilityName, RunnerRegistration>) -> Self {
+    pub fn new(runners: HashMap<CapabilityName, RunnerRegistration>) -> Self {
         Self { runners }
     }
 
-    pub fn from_decl(regs: &Vec<cm_rust::RunnerRegistration>) -> Self {
+    pub fn from_decl(regs: &Vec<RunnerRegistration>) -> Self {
         let mut runners = HashMap::new();
         for reg in regs {
-            runners.insert(
-                reg.target_name.clone(),
-                RunnerRegistration {
-                    source_name: reg.source_name.clone(),
-                    source: reg.source.clone(),
-                },
-            );
+            runners.insert(reg.target_name.clone(), reg.clone());
         }
         Self { runners }
     }
-    pub fn get_runner(&self, name: &cm_rust::CapabilityName) -> Option<&RunnerRegistration> {
+    pub fn get_runner(&self, name: &CapabilityName) -> Option<&RunnerRegistration> {
         self.runners.get(name)
     }
 }
 
-/// A single runner registered in an environment.
-///
-/// [`RunnerRegistration`]: fidl_fuchsia_sys2::RunnerRegistration
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunnerRegistration {
-    pub source: cm_rust::RegistrationSource,
-    pub source_name: cm_rust::CapabilityName,
-}
-
 /// The set of debug capabilities available in this environment.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct DebugRegistry {
-    debug_capabilities: HashMap<cm_rust::CapabilityName, DebugRegistration>,
+    debug_capabilities: HashMap<CapabilityName, DebugRegistration>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DebugRegistration {
-    pub source: cm_rust::RegistrationSource,
-    pub source_name: cm_rust::CapabilityName,
-}
-
-impl Default for DebugRegistry {
-    fn default() -> Self {
-        Self { debug_capabilities: HashMap::new() }
-    }
+    pub source: RegistrationSource,
+    pub source_name: CapabilityName,
 }
 
 impl From<Vec<cm_rust::DebugRegistration>> for DebugRegistry {
@@ -263,7 +240,7 @@ impl From<Vec<cm_rust::DebugRegistration>> for DebugRegistry {
 }
 
 impl DebugRegistry {
-    pub fn get_capability(&self, name: &cm_rust::CapabilityName) -> Option<&DebugRegistration> {
+    pub fn get_capability(&self, name: &CapabilityName) -> Option<&DebugRegistration> {
         self.debug_capabilities.get(name)
     }
 }
@@ -330,16 +307,16 @@ mod tests {
                     cm_rust::DebugProtocolRegistration {
                         source_name: "source_name".into(),
                         target_name: "target_name".into(),
-                        source: cm_rust::RegistrationSource::Parent,
+                        source: RegistrationSource::Parent,
                     },
                 ))
                 .build(),
         );
-        let expected_debug_capability: HashMap<cm_rust::CapabilityName, DebugRegistration> = hashmap! {
+        let expected_debug_capability: HashMap<CapabilityName, DebugRegistration> = hashmap! {
             "target_name".into() =>
             DebugRegistration {
                 source_name: "source_name".into(),
-                source: cm_rust::RegistrationSource::Parent,
+                source: RegistrationSource::Parent,
             }
         };
         assert_eq!(environment.debug_registry.debug_capabilities, expected_debug_capability);
@@ -350,8 +327,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_inherit_root() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Parent,
+            source: RegistrationSource::Parent,
             source_name: "test-src".into(),
+            target_name: "test".into(),
         };
         let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
             "test".into() => runner_reg.clone()
@@ -359,7 +337,7 @@ mod tests {
 
         let debug_reg = DebugRegistration {
             source_name: "source_name".into(),
-            source: cm_rust::RegistrationSource::Self_,
+            source: RegistrationSource::Self_,
         };
 
         let debug_capabilities: HashMap<cm_rust::CapabilityName, DebugRegistration> = hashmap! {
@@ -430,16 +408,17 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_inherit_parent() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Parent,
+            source: RegistrationSource::Parent,
             source_name: "test-src".into(),
+            target_name: "test".into(),
         };
-        let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
+        let runners: HashMap<CapabilityName, RunnerRegistration> = hashmap! {
             "test".into() => runner_reg.clone()
         };
 
         let debug_reg = DebugRegistration {
             source_name: "source_name".into(),
-            source: cm_rust::RegistrationSource::Parent,
+            source: RegistrationSource::Parent,
         };
 
         let mut resolver = MockResolver::new();
@@ -451,8 +430,8 @@ mod tests {
                     EnvironmentDeclBuilder::new()
                         .name("env_a")
                         .extends(fsys::EnvironmentExtends::Realm)
-                        .add_runner(cm_rust::RunnerRegistration {
-                            source: cm_rust::RegistrationSource::Parent,
+                        .add_runner(RunnerRegistration {
+                            source: RegistrationSource::Parent,
                             source_name: "test-src".into(),
                             target_name: "test".into(),
                         })
@@ -460,7 +439,7 @@ mod tests {
                             cm_rust::DebugProtocolRegistration {
                                 source_name: "source_name".into(),
                                 target_name: "target_name".into(),
-                                source: cm_rust::RegistrationSource::Parent,
+                                source: RegistrationSource::Parent,
                             },
                         )),
                 )
@@ -520,16 +499,17 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_inherit_in_collection() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Parent,
+            source: RegistrationSource::Parent,
             source_name: "test-src".into(),
+            target_name: "test".into(),
         };
-        let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
+        let runners: HashMap<CapabilityName, RunnerRegistration> = hashmap! {
             "test".into() => runner_reg.clone()
         };
 
         let debug_reg = DebugRegistration {
             source_name: "source_name".into(),
-            source: cm_rust::RegistrationSource::Parent,
+            source: RegistrationSource::Parent,
         };
 
         let mut resolver = MockResolver::new();
@@ -541,8 +521,8 @@ mod tests {
                     EnvironmentDeclBuilder::new()
                         .name("env_a")
                         .extends(fsys::EnvironmentExtends::Realm)
-                        .add_runner(cm_rust::RunnerRegistration {
-                            source: cm_rust::RegistrationSource::Parent,
+                        .add_runner(RunnerRegistration {
+                            source: RegistrationSource::Parent,
                             source_name: "test-src".into(),
                             target_name: "test".into(),
                         })
@@ -550,7 +530,7 @@ mod tests {
                             cm_rust::DebugProtocolRegistration {
                                 source_name: "source_name".into(),
                                 target_name: "target_name".into(),
-                                source: cm_rust::RegistrationSource::Parent,
+                                source: RegistrationSource::Parent,
                             },
                         )),
                 )
@@ -622,19 +602,20 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_auto_inheritance() -> Result<(), ModelError> {
         let runner_reg = RunnerRegistration {
-            source: cm_rust::RegistrationSource::Parent,
+            source: RegistrationSource::Parent,
             source_name: "test-src".into(),
+            target_name: "test".into(),
         };
-        let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
+        let runners: HashMap<CapabilityName, RunnerRegistration> = hashmap! {
             "test".into() => runner_reg.clone()
         };
 
         let debug_reg = DebugRegistration {
             source_name: "source_name".into(),
-            source: cm_rust::RegistrationSource::Parent,
+            source: RegistrationSource::Parent,
         };
 
-        let debug_capabilities: HashMap<cm_rust::CapabilityName, DebugRegistration> = hashmap! {
+        let debug_capabilities: HashMap<CapabilityName, DebugRegistration> = hashmap! {
             "target_name".into() => debug_reg.clone()
         };
         let debug_registry = DebugRegistry { debug_capabilities };

@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{
+            CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
+        },
         channel,
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         framework::REALM_SERVICE,
@@ -27,9 +29,7 @@ use {
     cm_rust::*,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{self as echo},
-    fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
@@ -221,7 +221,7 @@ async fn use_from_parent() {
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .protocol(ProtocolDeclBuilder::new("file").path("/svc/file").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_data".into(),
                     target_name: "bar_data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -230,14 +230,14 @@ async fn use_from_parent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_svc".into(),
                     target_name: "bar_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "file".into(),
                     target_name: "device".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -296,7 +296,7 @@ async fn capability_requested_event_at_parent() {
             ComponentDeclBuilder::new()
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_svc".into(),
                     target_name: "bar_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -397,7 +397,7 @@ async fn use_from_grandparent() {
                 .directory(DirectoryDeclBuilder::new("foo_data").build())
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_data".into(),
                     target_name: "bar_data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -406,7 +406,7 @@ async fn use_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_svc".into(),
                     target_name: "bar_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -419,7 +419,7 @@ async fn use_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -428,7 +428,7 @@ async fn use_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "bar_svc".into(),
                     target_name: "baz_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -481,7 +481,7 @@ async fn use_builtin_from_grandparent() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "builtin.Echo".into(),
                     target_name: "builtin.Echo".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -494,7 +494,7 @@ async fn use_builtin_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "builtin.Echo".into(),
                     target_name: "builtin.Echo".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -539,7 +539,7 @@ async fn use_from_sibling_no_root() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("d".to_string()),
+                    source: OfferSource::Child("d".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "foobar_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -548,7 +548,7 @@ async fn use_from_sibling_no_root() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("d".to_string()),
+                    source: OfferSource::Child("d".to_string()),
                     source_name: "bar_svc".into(),
                     target_name: "foobar_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -621,7 +621,7 @@ async fn use_from_sibling_root() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -630,7 +630,7 @@ async fn use_from_sibling_root() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_svc".into(),
                     target_name: "baz_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -705,7 +705,7 @@ async fn use_from_niece() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "baz_data".into(),
                     target_name: "foobar_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -714,7 +714,7 @@ async fn use_from_niece() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "baz_svc".into(),
                     target_name: "foobar_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -812,14 +812,14 @@ async fn use_kitchen_sink() {
             ComponentDeclBuilder::new()
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_svc".into(),
                     target_name: "foo_from_a_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "foo_from_d_data".into(),
                     target_name: "foo_from_d_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -835,7 +835,7 @@ async fn use_kitchen_sink() {
             "b",
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("d".to_string()),
+                    source: OfferSource::Child("d".to_string()),
                     source_name: "foo_from_d_data".into(),
                     target_name: "foo_from_d_data".into(),
                     target: OfferTarget::Child("e".to_string()),
@@ -844,7 +844,7 @@ async fn use_kitchen_sink() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "foo_from_a_svc".into(),
                     target_name: "foo_from_a_svc".into(),
                     target: OfferTarget::Child("e".to_string()),
@@ -866,7 +866,7 @@ async fn use_kitchen_sink() {
             "c",
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "foo_from_d_data".into(),
                     target_name: "foo_from_d_data".into(),
                     target: OfferTarget::Child("f".to_string()),
@@ -875,7 +875,7 @@ async fn use_kitchen_sink() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("g".to_string()),
+                    source: OfferSource::Child("g".to_string()),
                     source_name: "foo_from_h_svc".into(),
                     target_name: "foo_from_h_svc".into(),
                     target: OfferTarget::Child("f".to_string()),
@@ -1039,7 +1039,7 @@ async fn offer_from_component_manager_namespace() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "foo_data".into(),
                     target_name: "bar_data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -1048,7 +1048,7 @@ async fn offer_from_component_manager_namespace() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "foo_svc".into(),
                     target_name: "bar_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -1156,7 +1156,7 @@ async fn use_offer_source_not_exposed() {
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "hippo_data".into(),
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     target_name: "hippo_data".into(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
@@ -1165,7 +1165,7 @@ async fn use_offer_source_not_exposed() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "hippo_svc".into(),
-                    source: OfferServiceSource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
@@ -1228,7 +1228,7 @@ async fn use_offer_source_not_offered() {
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "hippo_data".into(),
-                    source: OfferDirectorySource::Parent,
+                    source: OfferSource::Parent,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
@@ -1237,7 +1237,7 @@ async fn use_offer_source_not_offered() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "hippo_svc".into(),
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
@@ -1363,7 +1363,7 @@ async fn use_from_expose_to_framework() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_data".into(),
                     target_name: "baz_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -1372,7 +1372,7 @@ async fn use_from_expose_to_framework() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_svc".into(),
                     target_name: "baz_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -1455,7 +1455,7 @@ async fn offer_from_non_executable() {
                 .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "hippo_data".into(),
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
@@ -1464,7 +1464,7 @@ async fn offer_from_non_executable() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "hippo_svc".into(),
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
@@ -1525,7 +1525,7 @@ async fn use_in_collection() {
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "foo_data".into(),
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
@@ -1534,7 +1534,7 @@ async fn use_in_collection() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "foo_svc".into(),
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
@@ -1552,7 +1552,7 @@ async fn use_in_collection() {
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "hippo_data".into(),
-                    source: OfferDirectorySource::Parent,
+                    source: OfferSource::Parent,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::Collection("coll".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
@@ -1561,7 +1561,7 @@ async fn use_in_collection() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "hippo_svc".into(),
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Collection("coll".to_string()),
                     dependency_type: DependencyType::Strong,
@@ -1642,7 +1642,7 @@ async fn use_in_collection_not_offered() {
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "foo_data".into(),
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
@@ -1651,7 +1651,7 @@ async fn use_in_collection_not_offered() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "foo_svc".into(),
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
@@ -1733,7 +1733,7 @@ async fn use_directory_with_subdir_from_grandparent() {
                 .directory(DirectoryDeclBuilder::new("foo_data").build())
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_data".into(),
                     target_name: "foo_data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -1748,7 +1748,7 @@ async fn use_directory_with_subdir_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "foo_data".into(),
                     target_name: "foo_data".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -1802,7 +1802,7 @@ async fn use_directory_with_subdir_from_sibling() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "foo_data".into(),
                     target: OfferTarget::Child("c".to_string()),
                     target_name: "foo_data".into(),
@@ -2084,7 +2084,7 @@ async fn use_runner_from_grandparent_environment() {
             ComponentDeclBuilder::new()
                 .add_lazy_child("b")
                 .offer(OfferDecl::Runner(OfferRunnerDecl {
-                    source: OfferRunnerSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: CapabilityName("elf".to_string()),
                     target: OfferTarget::Child("b".to_string()),
                     target_name: CapabilityName("dwarf".to_string()),
@@ -2336,12 +2336,12 @@ async fn use_runner_from_environment_not_found() {
             err: RoutingError::UseFromEnvironmentNotFound {
                 moniker,
                 capability_type,
-                capability_id,
+                capability_name,
             }
         })
         if moniker == AbsoluteMoniker::from(vec!["b:0"]) &&
-        capability_type == "runner".to_string() &&
-        capability_id == "hobbit".to_string());
+        capability_type == "runner" &&
+        capability_name == CapabilityName("hobbit".to_string()));
 }
 
 // TODO: Write a test for environment that extends from None. Currently, this is not
@@ -2511,11 +2511,12 @@ async fn use_not_exposed() {
 /// c: uses service /svc/foo, which should fail
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_with_destroyed_parent() {
-    let use_decl = UseDecl::Protocol(UseProtocolDecl {
+    let use_protocol_decl = UseProtocolDecl {
         source: UseSource::Parent,
         source_name: "foo_svc".into(),
         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-    });
+    };
+    let use_decl = UseDecl::Protocol(use_protocol_decl.clone());
     let components = vec![
         (
             "a",
@@ -2527,7 +2528,7 @@ async fn use_with_destroyed_parent() {
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_svc".into(),
                     target_name: "foo_svc".into(),
                     target: OfferTarget::Collection("coll".to_string()),
@@ -2540,7 +2541,7 @@ async fn use_with_destroyed_parent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "foo_svc".into(),
                     target_name: "foo_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -2578,17 +2579,9 @@ async fn use_with_destroyed_parent() {
 
     // Now attempt to route the service from "c". Should fail because "b" does not exist so we
     // cannot follow it.
-    let (_client, mut server) = zx::Channel::create().unwrap();
-    let err = routing::route_use_capability(
-        OPEN_RIGHT_READABLE,
-        MODE_TYPE_SERVICE,
-        "hippo".to_string(),
-        &use_decl,
-        &realm_c,
-        &mut server,
-    )
-    .await
-    .expect_err("routing unexpectedly succeeded");
+    let err = routing::route_protocol(use_protocol_decl, &realm_c)
+        .await
+        .expect_err("routing unexpectedly succeeded");
     assert_eq!(
         format!("{:?}", err),
         format!("{:?}", ModelError::instance_not_found(vec!["coll:b:1"].into()))
@@ -2610,7 +2603,7 @@ async fn use_from_destroyed_but_not_removed() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Child("b".to_string()),
+                    source: OfferSource::Child("b".to_string()),
                     source_name: "bar_svc".into(),
                     target_name: "baz_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -2705,7 +2698,7 @@ async fn invalid_offer_from_component_manager() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_name: "invalid".into(),
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     target_name: "valid".into(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
@@ -2750,7 +2743,7 @@ async fn use_event_from_framework() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -2817,14 +2810,14 @@ async fn can_offer_capability_requested_event() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested_on_a".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -2886,7 +2879,7 @@ async fn use_event_from_parent() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "started".into(),
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -2894,7 +2887,7 @@ async fn use_event_from_parent() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -2959,7 +2952,7 @@ async fn use_event_from_grandparent() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "started".into(),
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -2967,14 +2960,14 @@ async fn use_event_from_grandparent() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "stopped".into(),
                     target_name: "stopped_on_b".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -2988,7 +2981,7 @@ async fn use_event_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "started_on_a".into(),
                     target_name: "started_on_a".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -2996,14 +2989,14 @@ async fn use_event_from_grandparent() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "destroyed".into(),
                     target_name: "destroyed".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -3092,7 +3085,7 @@ async fn event_filter_routing() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3104,7 +3097,7 @@ async fn event_filter_routing() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3138,21 +3131,21 @@ async fn event_filter_routing() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("d".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -3164,7 +3157,7 @@ async fn event_filter_routing() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("d".to_string()),
@@ -3280,7 +3273,7 @@ async fn event_mode_routing_failure() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3288,7 +3281,7 @@ async fn event_mode_routing_failure() {
                     mode: cm_rust::EventMode::Async,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3301,7 +3294,7 @@ async fn event_mode_routing_failure() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -3309,7 +3302,7 @@ async fn event_mode_routing_failure() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
@@ -3373,7 +3366,7 @@ async fn event_mode_routing_success() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Framework,
+                    source: OfferSource::Framework,
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3381,7 +3374,7 @@ async fn event_mode_routing_success() {
                     mode: cm_rust::EventMode::Sync,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3394,7 +3387,7 @@ async fn event_mode_routing_success() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferEventSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "capability_ready".into(),
                     target_name: "capability_ready".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -3402,7 +3395,7 @@ async fn event_mode_routing_success() {
                     mode: cm_rust::EventMode::Async,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
@@ -3800,7 +3793,7 @@ async fn use_protocol_denied_by_capability_policy() {
             ComponentDeclBuilder::new()
                 .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "hippo_svc".into(),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3856,7 +3849,7 @@ async fn use_directory_with_alias_denied_by_capability_policy() {
             ComponentDeclBuilder::new()
                 .directory(DirectoryDeclBuilder::new("foo_data").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "foo_data".into(),
                     target_name: "bar_data".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3916,7 +3909,7 @@ async fn use_protocol_partial_chain_allowed_by_capability_policy() {
             ComponentDeclBuilder::new()
                 .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "hippo_svc".into(),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -3929,7 +3922,7 @@ async fn use_protocol_partial_chain_allowed_by_capability_policy() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "hippo_svc".into(),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
@@ -4004,7 +3997,7 @@ async fn use_protocol_component_provided_capability_policy() {
             ComponentDeclBuilder::new()
                 .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "hippo_svc".into(),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("b".to_string()),
@@ -4017,14 +4010,14 @@ async fn use_protocol_component_provided_capability_policy() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "hippo_svc".into(),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "hippo_svc".into(),
                     target_name: "hippo_svc".into(),
                     target: OfferTarget::Child("d".to_string()),
@@ -4103,7 +4096,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferServiceSource::Parent,
+                    source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -4236,4 +4229,56 @@ async fn use_from_component_manager_namespace_denied_by_policy() {
         },
     )
     .await;
+}
+
+// a
+//  \
+//   b
+//
+// a: exposes "foo" to parent from child
+// b: exposes "foo" to parent from self
+#[fuchsia_async::run_singlethreaded(test)]
+async fn route_protocol_from_expose() {
+    let expose_decl = ExposeProtocolDecl {
+        source: ExposeSource::Child("b".into()),
+        source_name: "foo".into(),
+        target_name: "foo".into(),
+        target: ExposeTarget::Parent,
+    };
+    let expected_protocol_decl =
+        ProtocolDecl { name: "foo".into(), source_path: "/svc/foo".parse().unwrap() };
+
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Protocol(expose_decl.clone()))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Self_,
+                    source_name: "foo".into(),
+                    target_name: "foo".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .protocol(expected_protocol_decl.clone())
+                .build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("a", components).build().await;
+    let root_instance = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
+    let expected_source_moniker = AbsoluteMoniker::parse_string_without_instances("/b").unwrap();
+    assert_matches!(
+        routing::route_protocol_from_expose(expose_decl, &root_instance).await,
+        Ok(
+            CapabilitySource::Component {
+                capability: ComponentCapability::Protocol(protocol_decl),
+                component,
+            }
+        ) if protocol_decl == expected_protocol_decl && component.moniker == expected_source_moniker
+    );
 }

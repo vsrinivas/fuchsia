@@ -18,8 +18,7 @@ use {
             component::{BindReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            routing::{self, CapabilityState},
-            storage,
+            routing, storage,
         },
     },
     anyhow::{format_err, Error},
@@ -177,11 +176,8 @@ impl StorageAdmin {
         })?;
         let storage_moniker = component.abs_moniker.clone();
 
-        let capability = ComponentCapability::Storage(storage_decl.clone());
-        let cap_state = CapabilityState::new(&capability);
         let storage_capability_source_info =
-            routing::route_storage_backing_directory(storage_decl, component.clone(), cap_state)
-                .await?;
+            routing::route_storage_backing_directory(storage_decl, component.clone()).await?;
 
         let mut stream = ServerEnd::<fsys::StorageAdminMarker>::new(server_end)
             .into_stream()

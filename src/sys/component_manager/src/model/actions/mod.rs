@@ -672,8 +672,8 @@ pub mod tests {
         async_trait::async_trait,
         cm_rust::{
             CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl, ExposeSource,
-            ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget,
-            ProtocolDecl, UseDecl, UseProtocolDecl, UseSource,
+            ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget, ProtocolDecl,
+            UseDecl, UseProtocolDecl, UseSource,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::join,
@@ -1119,14 +1119,14 @@ pub mod tests {
                     .add_eager_child("d")
                     .add_eager_child("e")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("d".to_string()),
+                        source: OfferSource::Child("d".to_string()),
                         source_name: "serviceD".into(),
                         target_name: "serviceD".into(),
                         target: OfferTarget::Child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("d".to_string()),
+                        source: OfferSource::Child("d".to_string()),
                         source_name: "serviceD".into(),
                         target_name: "serviceD".into(),
                         target: OfferTarget::Child("e".to_string()),
@@ -1261,21 +1261,21 @@ pub mod tests {
                     .add_eager_child("e")
                     .add_eager_child("f")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("d".to_string()),
+                        source: OfferSource::Child("d".to_string()),
                         source_name: "serviceD".into(),
                         target_name: "serviceD".into(),
                         target: OfferTarget::Child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("d".to_string()),
+                        source: OfferSource::Child("d".to_string()),
                         source_name: "serviceD".into(),
                         target_name: "serviceD".into(),
                         target: OfferTarget::Child("e".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("e".to_string()),
+                        source: OfferSource::Child("e".to_string()),
                         source_name: "serviceE".into(),
                         target_name: "serviceE".into(),
                         target: OfferTarget::Child("f".to_string()),
@@ -1459,28 +1459,28 @@ pub mod tests {
                     .add_eager_child("e")
                     .add_eager_child("f")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("d".to_string()),
+                        source: OfferSource::Child("d".to_string()),
                         source_name: "serviceD".into(),
                         target_name: "serviceD".into(),
                         target: OfferTarget::Child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("d".to_string()),
+                        source: OfferSource::Child("d".to_string()),
                         source_name: "serviceD".into(),
                         target_name: "serviceD".into(),
                         target: OfferTarget::Child("e".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("d".to_string()),
+                        source: OfferSource::Child("d".to_string()),
                         source_name: "serviceD".into(),
                         target_name: "serviceD".into(),
                         target: OfferTarget::Child("f".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("e".to_string()),
+                        source: OfferSource::Child("e".to_string()),
                         source_name: "serviceE".into(),
                         target_name: "serviceE".into(),
                         target: OfferTarget::Child("f".to_string()),
@@ -1660,7 +1660,7 @@ pub mod tests {
                     .add_eager_child("c")
                     .add_eager_child("d")
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferServiceSource::Child("c".to_string()),
+                        source: OfferSource::Child("c".to_string()),
                         source_name: "serviceC".into(),
                         target_name: "serviceC".into(),
                         target: OfferTarget::Child("d".to_string()),

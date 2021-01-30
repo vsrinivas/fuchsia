@@ -35,7 +35,7 @@ async fn storage_dir_from_cm_namespace() {
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source_name: "cache".into(),
                     target_name: "cache".into(),
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                 }))
                 .add_lazy_child("b")
@@ -103,7 +103,7 @@ async fn storage_and_dir_from_parent() {
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -163,7 +163,7 @@ async fn storage_and_dir_from_parent_with_subdir() {
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -223,7 +223,7 @@ async fn storage_and_dir_from_parent_rights_invalid() {
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -284,7 +284,7 @@ async fn storage_from_parent_dir_from_grandparent() {
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "data".try_into().unwrap(),
                     target_name: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -299,7 +299,7 @@ async fn storage_from_parent_dir_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -361,7 +361,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdirs() {
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "data".try_into().unwrap(),
                     target_name: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -376,7 +376,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdirs() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -441,7 +441,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdir() {
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "data".try_into().unwrap(),
                     target_name: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -456,7 +456,7 @@ async fn storage_from_parent_dir_from_grandparent_with_subdir() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -518,7 +518,7 @@ async fn storage_and_dir_from_grandparent() {
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -536,7 +536,7 @@ async fn storage_and_dir_from_grandparent() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Parent,
+                    source: OfferSource::Parent,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -589,7 +589,7 @@ async fn storage_from_parent_dir_from_sibling() {
                     subdir: None,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -663,7 +663,7 @@ async fn storage_from_parent_dir_from_sibling_with_subdir() {
                     subdir: Some("subdir_2".into()),
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -743,7 +743,7 @@ async fn use_in_collection_from_parent() {
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "data".try_into().unwrap(),
                     target_name: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -763,13 +763,13 @@ async fn use_in_collection_from_parent() {
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -909,13 +909,13 @@ async fn use_in_collection_from_grandparent() {
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -944,13 +944,13 @@ async fn use_in_collection_from_grandparent() {
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Parent,
+                    source: OfferSource::Parent,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Parent,
+                    source: OfferSource::Parent,
                     target: OfferTarget::Collection("coll".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -1090,13 +1090,13 @@ async fn storage_multiple_types() {
                     subdir: Some(PathBuf::from("cache")),
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -1128,13 +1128,13 @@ async fn storage_multiple_types() {
             "c",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Parent,
+                    source: OfferSource::Parent,
                     target: OfferTarget::Child("d".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Parent,
+                    source: OfferSource::Parent,
                     target: OfferTarget::Child("d".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -1232,7 +1232,7 @@ async fn use_the_wrong_type_of_storage() {
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -1289,7 +1289,7 @@ async fn directories_are_not_storage() {
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "data".try_into().unwrap(),
                     target_name: "data".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -1399,7 +1399,7 @@ async fn dir_offered_from_nonexecutable() {
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferDirectorySource::Self_,
+                    source: OfferSource::Self_,
                     source_name: "data".try_into().unwrap(),
                     target_name: "minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
@@ -1414,7 +1414,7 @@ async fn dir_offered_from_nonexecutable() {
             "b",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
@@ -1471,7 +1471,7 @@ async fn storage_dir_from_cm_namespace_prevented_by_policy() {
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source_name: "cache".into(),
                     target_name: "cache".into(),
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                 }))
                 .add_lazy_child("b")
@@ -1559,7 +1559,7 @@ async fn instance_id_from_index() {
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Self_,
+                    source: OfferSource::Self_,
                     target: OfferTarget::Child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
@@ -1581,7 +1581,7 @@ async fn instance_id_from_index() {
                     target_path: "/storage".try_into().unwrap(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source: OfferStorageSource::Parent,
+                    source: OfferSource::Parent,
                     target: OfferTarget::Child("c".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),

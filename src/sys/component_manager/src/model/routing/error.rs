@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     clonable_error::ClonableError,
+    cm_rust::CapabilityName,
     fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker},
     thiserror::Error,
@@ -113,13 +114,13 @@ pub enum RoutingError {
         {} registration was found in the component's environment",
         moniker,
         capability_type,
-        capability_id,
+        capability_name,
         capability_type
     )]
     UseFromEnvironmentNotFound {
         moniker: AbsoluteMoniker,
-        capability_type: String,
-        capability_id: String,
+        capability_type: &'static str,
+        capability_name: CapabilityName,
     },
 
     #[error(
@@ -127,12 +128,12 @@ pub enum RoutingError {
         matching `offer` declaration was found in the parent",
         capability_type,
         moniker,
-        capability_id
+        capability_name
     )]
     EnvironmentFromParentNotFound {
         moniker: AbsoluteMoniker,
-        capability_type: String,
-        capability_id: String,
+        capability_type: &'static str,
+        capability_name: CapabilityName,
     },
 
     #[error(
@@ -141,13 +142,28 @@ pub enum RoutingError {
         capability_type,
         child_moniker,
         moniker,
-        capability_id
+        capability_name
     )]
     EnvironmentFromChildExposeNotFound {
         child_moniker: PartialMoniker,
         moniker: AbsoluteMoniker,
-        capability_type: String,
-        capability_id: String,
+        capability_type: &'static str,
+        capability_name: CapabilityName,
+    },
+
+    #[error(
+        "An `environment` {} registration from `#{}` was found at `{}` for `{}`, but no matching \
+        child was found",
+        capability_type,
+        child_moniker,
+        moniker,
+        capability_name
+    )]
+    EnvironmentFromChildInstanceNotFound {
+        child_moniker: PartialMoniker,
+        moniker: AbsoluteMoniker,
+        capability_name: CapabilityName,
+        capability_type: &'static str,
     },
 
     #[error(
@@ -373,44 +389,6 @@ impl RoutingError {
     ) -> Self {
         Self::UseFromParentNotFound {
             moniker: moniker.clone(),
-            capability_id: capability_id.into(),
-        }
-    }
-
-    pub fn use_from_environment_not_found(
-        moniker: &AbsoluteMoniker,
-        capability_type: impl Into<String>,
-        capability_id: impl Into<String>,
-    ) -> Self {
-        Self::UseFromEnvironmentNotFound {
-            moniker: moniker.clone(),
-            capability_type: capability_type.into(),
-            capability_id: capability_id.into(),
-        }
-    }
-
-    pub fn environment_from_parent_not_found(
-        moniker: &AbsoluteMoniker,
-        capability_type: impl Into<String>,
-        capability_id: impl Into<String>,
-    ) -> Self {
-        Self::EnvironmentFromParentNotFound {
-            moniker: moniker.clone(),
-            capability_type: capability_type.into(),
-            capability_id: capability_id.into(),
-        }
-    }
-
-    pub fn environment_from_child_expose_not_found(
-        child_moniker: &PartialMoniker,
-        moniker: &AbsoluteMoniker,
-        capability_type: impl Into<String>,
-        capability_id: impl Into<String>,
-    ) -> Self {
-        Self::EnvironmentFromChildExposeNotFound {
-            child_moniker: child_moniker.clone(),
-            moniker: moniker.clone(),
-            capability_type: capability_type.into(),
             capability_id: capability_id.into(),
         }
     }
