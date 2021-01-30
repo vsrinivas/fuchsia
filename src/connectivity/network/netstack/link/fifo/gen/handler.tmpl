@@ -193,7 +193,7 @@ func (h *{{ .Handler }}) RxLoop(process func(entry *{{ .EntryType }}) {{ if .Sig
 	}
 }
 
-func (h *{{ .Handler }}) ProcessWrite(pkts stack.PacketBufferList, processor func(*{{ .EntryType }}, *stack.PacketBuffer)) (int, *tcpip.Error) {
+func (h *{{ .Handler }}) ProcessWrite(pkts stack.PacketBufferList, processor func(*{{ .EntryType }}, *stack.PacketBuffer)) (int, tcpip.Error) {
 	i := 0
 
 	for pkt := pkts.Front(); pkt != nil; {
@@ -201,7 +201,7 @@ func (h *{{ .Handler }}) ProcessWrite(pkts stack.PacketBufferList, processor fun
 		for {
 			if h.tx.mu.detached {
 				h.tx.mu.Unlock()
-				return i, tcpip.ErrClosedForSend
+				return i, &tcpip.ErrClosedForSend{}
 			}
 
 			if h.tx.mu.entries.HaveReadied() {

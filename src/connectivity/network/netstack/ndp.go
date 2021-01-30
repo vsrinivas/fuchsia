@@ -59,7 +59,7 @@ func (*ndpRouterAndDADEventCommon) isNDPEvent() {}
 type ndpDuplicateAddressDetectionEvent struct {
 	ndpRouterAndDADEventCommon
 	resolved bool
-	err      *tcpip.Error
+	err      tcpip.Error
 }
 
 type ndpDiscoveredRouterEvent struct {
@@ -169,7 +169,7 @@ type ndpDispatcher struct {
 
 // OnDuplicateAddressDetectionStatus implements
 // ipv6.NDPDispatcher.OnDuplicateAddressDetectionStatus.
-func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err *tcpip.Error) {
+func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err tcpip.Error) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDuplicateAddressDetectionStatus(%d, %s, %t, %v)", nicID, addr, resolved, err)
 	n.addEvent(&ndpDuplicateAddressDetectionEvent{
 		ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{

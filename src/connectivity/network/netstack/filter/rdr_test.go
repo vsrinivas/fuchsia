@@ -280,10 +280,10 @@ func TestRDRWANToLANTCP(t *testing.T) {
 	waitEntryLANMaster, chLANMaster := waiter.NewChannelEntry(nil)
 	wqLANMaster.EventRegister(&waitEntryLANMaster, waiter.EventIn)
 
-	if err := epWANTCP.Connect(receiverRouter); err != nil {
-		if err != tcpip.ErrConnectStarted {
-			t.Fatalf("Connect error: %s", err)
-		}
+	switch err := epWANTCP.Connect(receiverRouter); err.(type) {
+	case *tcpip.ErrConnectStarted:
+	default:
+		t.Fatalf("Connect error: %s", err)
 	}
 
 	select {

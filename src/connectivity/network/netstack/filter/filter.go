@@ -298,7 +298,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			newAddr = nat.newSrcAddr
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-			var e *tcpip.Error
+			var e tcpip.Error
 			nicID = nat.nic
 			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, ports.Flags{}, nat.nic, tcpip.FullAddress{
 				Addr: dstAddr,
@@ -439,7 +439,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			newAddr = nat.newSrcAddr
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-			var err *tcpip.Error
+			var err tcpip.Error
 			newPort, err = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID, tcpip.FullAddress{
 				Addr: dstAddr,
 				Port: dstPort,

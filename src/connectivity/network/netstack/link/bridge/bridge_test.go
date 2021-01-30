@@ -166,25 +166,25 @@ func (e *channelEndpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
 }
 
-func (e *channelEndpoint) WritePacket(_ stack.RouteInfo, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *channelEndpoint) WritePacket(_ stack.RouteInfo, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	_ = pkt.LinkHeader().Push(channelEndpointHeaderLen)
 	select {
 	case e.c <- pkt:
 	default:
-		return tcpip.ErrWouldBlock
+		return &tcpip.ErrWouldBlock{}
 	}
 
 	return nil
 }
 
-func (e *channelEndpoint) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *channelEndpoint) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	i := 0
 	for pkt := pkts.Front(); pkt != nil; i, pkt = i+1, pkt.Next() {
 		_ = pkt.LinkHeader().Push(channelEndpointHeaderLen)
 		select {
 		case e.c <- pkt:
 		default:
-			return i, tcpip.ErrWouldBlock
+			return i, &tcpip.ErrWouldBlock{}
 		}
 	}
 
@@ -837,7 +837,7 @@ type endpoint struct {
 	onWritePacket func(*stack.PacketBuffer)
 }
 
-func (e *endpoint) WritePacket(r stack.RouteInfo, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r stack.RouteInfo, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	if fn := e.onWritePacket; fn != nil {
 		fn(pkt)
 	}
@@ -989,7 +989,9 @@ func connect(sender tcpip.Endpoint, addr tcpip.FullAddress, senderWaitQueue, rec
 	receiverWaitQueue.EventRegister(&receiveReadyWaitEntry, waiter.EventIn)
 	defer receiverWaitQueue.EventUnregister(&receiveReadyWaitEntry)
 
-	if err := sender.Connect(addr); err != tcpip.ErrConnectStarted {
+	switch err := sender.Connect(addr); err.(type) {
+	case *tcpip.ErrConnectStarted:
+	default:
 		return fmt.Errorf("connect failed: %s", err)
 	}
 

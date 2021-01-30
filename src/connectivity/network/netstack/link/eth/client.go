@@ -191,7 +191,7 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 	return tcpip.LinkAddress(c.Info.Mac.Octets[:])
 }
 
-func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
+func (c *Client) write(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	return c.handler.ProcessWrite(pkts, func(entry *eth.FifoEntry, pkt *stack.PacketBuffer) {
 		entry.SetLength(bufferSize)
 		b := c.iob.BufferFromEntry(*entry)
@@ -203,14 +203,14 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
 	})
 }
 
-func (c *Client) WritePacket(_ stack.RouteInfo, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (c *Client) WritePacket(_ stack.RouteInfo, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	var pkts stack.PacketBufferList
 	pkts.PushBack(pkt)
 	_, err := c.write(pkts)
 	return err
 }
 
-func (c *Client) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (c *Client) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	return c.write(pkts)
 }
 

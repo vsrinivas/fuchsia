@@ -114,7 +114,7 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 }
 
 // write writes a list of packets to the device.
-func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	return c.handler.ProcessWrite(pkts, func(descriptorIndex *uint16, pkt *stack.PacketBuffer) {
 		descriptor := c.getDescriptor(*descriptorIndex)
 		// Reset descriptor to default values before filling it.
@@ -154,14 +154,14 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 	})
 }
 
-func (c *Client) WritePacket(_ stack.RouteInfo, _ *stack.GSO, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (c *Client) WritePacket(_ stack.RouteInfo, _ *stack.GSO, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	var pkts stack.PacketBufferList
 	pkts.PushBack(pkt)
 	_, err := c.write(pkts, proto)
 	return err
 }
 
-func (c *Client) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (c *Client) WritePackets(_ stack.RouteInfo, _ *stack.GSO, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	return c.write(pkts, proto)
 }
 

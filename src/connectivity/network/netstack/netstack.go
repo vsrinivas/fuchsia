@@ -574,9 +574,11 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 		panic(fmt.Sprintf("unexpected error deleting route: %s", err))
 	}
 
-	if err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err == tcpip.ErrUnknownNICID {
+	switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
+	case nil:
+	case *tcpip.ErrUnknownNICID:
 		panic(fmt.Sprintf("stack.RemoveAddress(_): NIC [%d] not found", nic))
-	} else if err != nil {
+	default:
 		return false, fmt.Errorf("error removing address %s from NIC ID %d: %s", addr.AddressWithPrefix, nic, err)
 	}
 
@@ -776,7 +778,9 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 	}
 
 	if closed {
-		if err := ifs.ns.stack.RemoveNIC(ifs.nicid); err != nil && err != tcpip.ErrUnknownNICID {
+		switch err := ifs.ns.stack.RemoveNIC(ifs.nicid); err.(type) {
+		case nil, *tcpip.ErrUnknownNICID:
+		default:
 			syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
 		}
 
@@ -965,7 +969,7 @@ func (ns *Netstack) addLoopback() error {
 	ifs.mu.Unlock()
 
 	// Loopback interfaces do not need NDP.
-	if err := func() *tcpip.Error {
+	if err := func() tcpip.Error {
 		ep, err := ns.stack.GetNetworkEndpoint(nicid, ipv6.ProtocolNumber)
 		if err != nil {
 			return err
@@ -1160,15 +1164,15 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 
 		{
 			neighbors, err := ns.stack.Neighbors(id)
-			switch err {
+			switch err.(type) {
 			case nil:
 				info.neighbors = make(map[string]stack.NeighborEntry)
 				for _, n := range neighbors {
 					info.neighbors[n.Addr.String()] = n
 				}
-			case tcpip.ErrNotSupported:
+			case *tcpip.ErrNotSupported:
 				// NIC does not have a neighbor table, skip.
-			case tcpip.ErrUnknownNICID:
+			case *tcpip.ErrUnknownNICID:
 				_ = syslog.Warnf("getIfStateInfo: NIC removed before ns.stack.Neighbors(%d) could be called", id)
 			default:
 				_ = syslog.Errorf("getIfStateInfo: unexpected error from ns.stack.Neighbors(%d) = %s", id, err)

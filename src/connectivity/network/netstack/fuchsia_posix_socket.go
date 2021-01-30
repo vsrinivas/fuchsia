@@ -113,7 +113,7 @@ func (r *socketReader) Len() int {
 type hardError struct {
 	mu struct {
 		sync.Mutex
-		err *tcpip.Error
+		err tcpip.Error
 	}
 }
 
@@ -165,12 +165,12 @@ func (ep *endpoint) decRef() bool {
 // new value if changed.
 //
 // Must be called with he.mu held.
-func (he *hardError) storeAndRetrieveLocked(err *tcpip.Error) *tcpip.Error {
+func (he *hardError) storeAndRetrieveLocked(err tcpip.Error) tcpip.Error {
 	if he.mu.err == nil {
-		switch err {
-		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset,
-			tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute, tcpip.ErrTimeout,
-			tcpip.ErrConnectionRefused:
+		switch err.(type) {
+		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset,
+			*tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute, *tcpip.ErrTimeout,
+			*tcpip.ErrConnectionRefused:
 			he.mu.err = err
 		}
 	}
@@ -198,7 +198,7 @@ func (ep *endpoint) SetAttr(fidl.Context, uint32, fidlio.NodeAttributes) (int32,
 func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseSocketBindResult, error) {
 	addr, err := toTCPIPFullAddress(sockaddr)
 	if err != nil {
-		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
 	}
 	if err := ep.ep.Bind(addr); err != nil {
 		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(err)), nil
@@ -218,7 +218,7 @@ func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket
 func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseSocketConnectResult, error) {
 	addr, err := toTCPIPFullAddress(address)
 	if err != nil {
-		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
 	}
 	// NB: We can't just compare the length to zero because that would
 	// mishandle the IPv6-mapped IPv4 unspecified address.
@@ -231,7 +231,7 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 		if l := len(addr.Addr); l > 0 {
 			if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
 				_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
-				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
+				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
 			}
 		}
 
@@ -242,8 +242,8 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 		hardError := ep.hardError.storeAndRetrieveLocked(err)
 		ep.hardError.mu.Unlock()
 		if err != nil {
-			switch err {
-			case tcpip.ErrConnectStarted:
+			switch err.(type) {
+			case *tcpip.ErrConnectStarted:
 				localAddr, err := ep.ep.GetLocalAddress()
 				if err != nil {
 					panic(err)
@@ -252,7 +252,7 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 			// For TCP endpoints, gVisor Connect() returns this error when the endpoint
 			// is in an error state and the hard error state has already been read from the
 			// endpoint via other APIs. Apply the saved hard error state here.
-			case tcpip.ErrConnectionAborted:
+			case *tcpip.ErrConnectionAborted:
 				if hardError != nil {
 					err = hardError
 				}
@@ -311,7 +311,7 @@ func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseSocketGetPeerNameResul
 func (ep *endpoint) SetSockOpt(_ fidl.Context, level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
 	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
 		if len(optVal) < sizeOfInt32 {
-			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(tcpip.ErrInvalidOptionValue)), nil
+			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(&tcpip.ErrInvalidOptionValue{})), nil
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
@@ -339,7 +339,7 @@ func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.Bas
 		}
 		ep.mu.Unlock()
 	} else {
-		var err *tcpip.Error
+		var err tcpip.Error
 		val, err = GetSockOpt(ep.ep, ep.ns, ep.netProto, ep.transProto, level, optName)
 		if err != nil {
 			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
@@ -491,12 +491,12 @@ func (eps *endpointWithSocket) loopPoll(ch chan<- struct{}) {
 
 		if obs&sigs&zx.SignalSocketWriteDisabled != 0 {
 			sigs ^= zx.SignalSocketWriteDisabled
-			if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
+			switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
+			case nil, *tcpip.ErrNotConnected:
 				// Shutdown can return ErrNotConnected if the endpoint was connected
 				// but no longer is.
-				if err != tcpip.ErrNotConnected {
-					panic(err)
-				}
+			default:
+				panic(err)
 			}
 		}
 
@@ -751,29 +751,32 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		}
 	}
 
-	if localAddr, err := ep.GetLocalAddress(); err == tcpip.ErrNotConnected {
-		// This should never happen as of writing as GetLocalAddress
-		// does not actually return any errors. However, we handle
-		// the tcpip.ErrNotConnected case now for the same reasons
-		// as mentioned below for the ep.GetRemoteAddress case.
+	switch localAddr, err := ep.GetLocalAddress(); err.(type) {
+	case *tcpip.ErrNotConnected:
+		// This should never happen as of writing as GetLocalAddress does not
+		// actually return any errors. However, we handle the tcpip.ErrNotConnected
+		// case now for the same reasons as mentioned below for the
+		// ep.GetRemoteAddress case.
 		_ = syslog.DebugTf("accept", "%p: disconnected", eps)
-	} else if err != nil {
-		panic(err)
-	} else {
-		// GetRemoteAddress returns a tcpip.ErrNotConnected error if ep is no
-		// longer connected. This can happen if the endpoint was closed after
-		// the call to Accept returned, but before this point. A scenario this
-		// was actually witnessed was when a TCP RST was received after the call
-		// to Accept returned, but before this point. If GetRemoteAddress
-		// returns other (unexpected) errors, panic.
-		if remoteAddr, err := ep.GetRemoteAddress(); err == tcpip.ErrNotConnected {
+	case nil:
+		switch remoteAddr, err := ep.GetRemoteAddress(); err.(type) {
+		case *tcpip.ErrNotConnected:
+			// GetRemoteAddress returns a tcpip.ErrNotConnected error if ep is no
+			// longer connected. This can happen if the endpoint was closed after the
+			// call to Accept returned, but before this point. A scenario this was
+			// actually witnessed was when a TCP RST was received after the call to
+			// Accept returned, but before this point. If GetRemoteAddress returns
+			// other (unexpected) errors, panic.
 			_ = syslog.DebugTf("accept", "%p: local=%+v, disconnected", eps, localAddr)
-		} else if err != nil {
-			panic(err)
-		} else {
+		case nil:
 			_ = syslog.DebugTf("accept", "%p: local=%+v, remote=%+v", eps, localAddr, remoteAddr)
+		default:
+			panic(err)
 		}
+	default:
+		panic(err)
 	}
+
 	{
 		eps, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.ns)
 		if err != nil {
@@ -823,8 +826,8 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.lastRead))
 		}
 		// TODO(https://fxbug.dev/35006): Handle all transport write errors.
-		switch err {
-		case nil, tcpip.ErrBadBuffer:
+		switch err.(type) {
+		case nil, *tcpip.ErrBadBuffer:
 			switch err := reader.lastError.(type) {
 			case nil:
 				continue
@@ -852,22 +855,22 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 					fallthrough
 				case zx.ErrBadState:
 					// Reading has been disabled for this socket endpoint.
-					if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil {
+					switch err := eps.ep.Shutdown(tcpip.ShutdownWrite); err.(type) {
+					case nil, *tcpip.ErrNotConnected:
 						// Shutdown can return ErrNotConnected if the endpoint was
 						// connected but no longer is.
-						if err != tcpip.ErrNotConnected {
-							panic(err)
-						}
+					default:
+						panic(err)
 					}
 					return
 				}
 			}
 			panic(err)
-		case tcpip.ErrNotConnected:
+		case *tcpip.ErrNotConnected:
 			// Write never returns ErrNotConnected except for endpoints that were
 			// never connected. Such endpoints should never reach this loop.
 			panic(fmt.Sprintf("connected endpoint returned %s", err))
-		case tcpip.ErrWouldBlock:
+		case *tcpip.ErrWouldBlock:
 			// NB: we can't select on closing here because the client may have
 			// written some data into the buffer and then immediately closed the
 			// socket.
@@ -879,13 +882,13 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			case <-notifyCh:
 				continue
 			}
-		case tcpip.ErrConnectionRefused:
+		case *tcpip.ErrConnectionRefused:
 			// Connection refused is a "hard error" that may be observed on either the
 			// read or write loops.
 			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
 			// another connection attempt to match Linux.
 			return
-		case tcpip.ErrClosedForSend:
+		case *tcpip.ErrClosedForSend:
 			// Closed for send can be issued when the endpoint is in an error state,
 			// which is encoded by the presence of a hard error having been
 			// observed.
@@ -898,10 +901,10 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_READ", eps)
 			}
 			return
-		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
+		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
 			triggerClose = true
 			return
-		case tcpip.ErrTimeout:
+		case *tcpip.ErrTimeout:
 			// The maximum duration of missing ACKs was reached, or the maximum
 			// number of unacknowledged keepalives was reached.
 			triggerClose = true
@@ -939,12 +942,12 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 		hardError := eps.hardError.storeAndRetrieveLocked(err)
 		eps.hardError.mu.Unlock()
 		// TODO(https://fxbug.dev/35006): Handle all transport read errors.
-		switch err {
-		case tcpip.ErrNotConnected:
+		switch err.(type) {
+		case *tcpip.ErrNotConnected:
 			// Read never returns ErrNotConnected except for endpoints that were
 			// never connected. Such endpoints should never reach this loop.
 			panic(fmt.Sprintf("connected endpoint returned %s", err))
-		case tcpip.ErrTimeout:
+		case *tcpip.ErrTimeout:
 			// At the time of writing, this error indicates that a TCP connection
 			// has failed. This can occur during the TCP handshake if the peer
 			// fails to respond to a SYN within 60 seconds, or if the retransmit
@@ -955,13 +958,13 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			// having received a TCP RST.
 			triggerClose = true
 			return
-		case tcpip.ErrConnectionRefused:
+		case *tcpip.ErrConnectionRefused:
 			// Connection refused is a "hard error" that may be observed on either the
 			// read or write loops.
 			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
 			// another connection attempt to match Linux.
 			return
-		case tcpip.ErrWouldBlock:
+		case *tcpip.ErrWouldBlock:
 			select {
 			case <-inCh:
 				continue
@@ -969,7 +972,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 				// We're shutting down.
 				return
 			}
-		case tcpip.ErrClosedForReceive:
+		case *tcpip.ErrClosedForReceive:
 			// Closed for receive can be issued when the endpoint is in an error
 			// state, which is encoded by the presence of a hard error having been
 			// observed.
@@ -982,16 +985,16 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_WRITE", eps)
 			}
 			return
-		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
+		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
 			triggerClose = true
 			return
-		case nil:
-			eps.ep.ModerateRecvBuf(res.Count)
+		case nil, *tcpip.ErrBadBuffer:
+			if err == nil {
+				eps.ep.ModerateRecvBuf(res.Count)
+			}
 			// `tcpip.Endpoint.Read` returns a nil error if _anything_ was written -
 			// even if the writer returned an error - we always want to handle those
 			// errors.
-			fallthrough
-		case tcpip.ErrBadBuffer:
 			switch err := writer.lastError.(type) {
 			case nil:
 				continue
@@ -1016,17 +1019,18 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 					fallthrough
 				case zx.ErrBadState:
 					// Writing has been disabled for this socket endpoint.
-					if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
+					switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
+					case nil:
+					case *tcpip.ErrNotConnected:
 						// An ErrNotConnected while connected is expected if there
 						// is pending data to be read and the connection has been
 						// reset by the other end of the endpoint. The endpoint will
 						// allow the pending data to be read without error but will
 						// return ErrNotConnected if Shutdown is called. Otherwise
 						// this is unexpected, panic.
-						if err != tcpip.ErrNotConnected {
-							panic(err)
-						}
 						_ = syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint; ep info: %#v", eps, eps.endpoint.ep.Info())
+					default:
+						panic(err)
 					}
 					return
 				}
@@ -1123,7 +1127,7 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 		Peek:           flags&socket.RecvMsgFlagsPeek != 0,
 		NeedRemoteAddr: wantAddr,
 	})
-	if err == tcpip.ErrBadBuffer && dataLen == 0 {
+	if _, ok := err.(*tcpip.ErrBadBuffer); ok && dataLen == 0 {
 		err = nil
 	}
 	if err != nil {
@@ -1163,10 +1167,10 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 	if addr != nil {
 		addr, err := toTCPIPFullAddress(*addr)
 		if err != nil {
-			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
 		}
 		if s.endpoint.netProto == ipv4.ProtocolNumber && len(addr.Addr) == header.IPv6AddressSize {
-			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
+			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
 		}
 		writeOpts.To = &addr
 	}
@@ -1624,8 +1628,8 @@ func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceA
 	return resultInfos, nil
 }
 
-func tcpipErrorToCode(err *tcpip.Error) posix.Errno {
-	if err != tcpip.ErrConnectStarted {
+func tcpipErrorToCode(err tcpip.Error) posix.Errno {
+	if _, ok := err.(*tcpip.ErrConnectStarted); !ok {
 		if pc, file, line, ok := runtime.Caller(1); ok {
 			if i := strings.LastIndexByte(file, '/'); i != -1 {
 				file = file[i+1:]
@@ -1635,78 +1639,76 @@ func tcpipErrorToCode(err *tcpip.Error) posix.Errno {
 			_ = syslog.Debugf("%s", err)
 		}
 	}
-	switch err {
-	case tcpip.ErrUnknownProtocol:
+	switch err.(type) {
+	case *tcpip.ErrUnknownProtocol:
 		return posix.ErrnoEinval
-	case tcpip.ErrUnknownNICID:
+	case *tcpip.ErrUnknownNICID:
 		return posix.ErrnoEinval
-	case tcpip.ErrUnknownDevice:
+	case *tcpip.ErrUnknownDevice:
 		return posix.ErrnoEnodev
-	case tcpip.ErrUnknownProtocolOption:
+	case *tcpip.ErrUnknownProtocolOption:
 		return posix.ErrnoEnoprotoopt
-	case tcpip.ErrDuplicateNICID:
+	case *tcpip.ErrDuplicateNICID:
 		return posix.ErrnoEexist
-	case tcpip.ErrDuplicateAddress:
+	case *tcpip.ErrDuplicateAddress:
 		return posix.ErrnoEexist
-	case tcpip.ErrNoRoute:
+	case *tcpip.ErrNoRoute:
 		return posix.ErrnoEhostunreach
-	case tcpip.ErrBadLinkEndpoint:
+	case *tcpip.ErrAlreadyBound:
 		return posix.ErrnoEinval
-	case tcpip.ErrAlreadyBound:
+	case *tcpip.ErrInvalidEndpointState:
 		return posix.ErrnoEinval
-	case tcpip.ErrInvalidEndpointState:
-		return posix.ErrnoEinval
-	case tcpip.ErrAlreadyConnecting:
+	case *tcpip.ErrAlreadyConnecting:
 		return posix.ErrnoEalready
-	case tcpip.ErrAlreadyConnected:
+	case *tcpip.ErrAlreadyConnected:
 		return posix.ErrnoEisconn
-	case tcpip.ErrNoPortAvailable:
+	case *tcpip.ErrNoPortAvailable:
 		return posix.ErrnoEagain
-	case tcpip.ErrPortInUse:
+	case *tcpip.ErrPortInUse:
 		return posix.ErrnoEaddrinuse
-	case tcpip.ErrBadLocalAddress:
+	case *tcpip.ErrBadLocalAddress:
 		return posix.ErrnoEaddrnotavail
-	case tcpip.ErrClosedForSend:
+	case *tcpip.ErrClosedForSend:
 		return posix.ErrnoEpipe
-	case tcpip.ErrClosedForReceive:
+	case *tcpip.ErrClosedForReceive:
 		return posix.ErrnoEagain
-	case tcpip.ErrWouldBlock:
+	case *tcpip.ErrWouldBlock:
 		return posix.Ewouldblock
-	case tcpip.ErrConnectionRefused:
+	case *tcpip.ErrConnectionRefused:
 		return posix.ErrnoEconnrefused
-	case tcpip.ErrTimeout:
+	case *tcpip.ErrTimeout:
 		return posix.ErrnoEtimedout
-	case tcpip.ErrAborted:
+	case *tcpip.ErrAborted:
 		return posix.ErrnoEpipe
-	case tcpip.ErrConnectStarted:
+	case *tcpip.ErrConnectStarted:
 		return posix.ErrnoEinprogress
-	case tcpip.ErrDestinationRequired:
+	case *tcpip.ErrDestinationRequired:
 		return posix.ErrnoEdestaddrreq
-	case tcpip.ErrNotSupported:
+	case *tcpip.ErrNotSupported:
 		return posix.ErrnoEopnotsupp
-	case tcpip.ErrQueueSizeNotSupported:
+	case *tcpip.ErrQueueSizeNotSupported:
 		return posix.ErrnoEnotty
-	case tcpip.ErrNotConnected:
+	case *tcpip.ErrNotConnected:
 		return posix.ErrnoEnotconn
-	case tcpip.ErrConnectionReset:
+	case *tcpip.ErrConnectionReset:
 		return posix.ErrnoEconnreset
-	case tcpip.ErrConnectionAborted:
+	case *tcpip.ErrConnectionAborted:
 		return posix.ErrnoEconnaborted
-	case tcpip.ErrNoSuchFile:
+	case *tcpip.ErrNoSuchFile:
 		return posix.ErrnoEnoent
-	case tcpip.ErrInvalidOptionValue:
+	case *tcpip.ErrInvalidOptionValue:
 		return posix.ErrnoEinval
-	case tcpip.ErrBadAddress:
+	case *tcpip.ErrBadAddress:
 		return posix.ErrnoEfault
-	case tcpip.ErrNetworkUnreachable:
+	case *tcpip.ErrNetworkUnreachable:
 		return posix.ErrnoEnetunreach
-	case tcpip.ErrMessageTooLong:
+	case *tcpip.ErrMessageTooLong:
 		return posix.ErrnoEmsgsize
-	case tcpip.ErrNoBufferSpace:
+	case *tcpip.ErrNoBufferSpace:
 		return posix.ErrnoEnobufs
-	case tcpip.ErrBroadcastDisabled, tcpip.ErrNotPermitted:
+	case *tcpip.ErrBroadcastDisabled, *tcpip.ErrNotPermitted:
 		return posix.ErrnoEacces
-	case tcpip.ErrAddressFamilyNotSupported:
+	case *tcpip.ErrAddressFamilyNotSupported:
 		return posix.ErrnoEafnosupport
 	default:
 		panic(fmt.Sprintf("unknown error %v", err))

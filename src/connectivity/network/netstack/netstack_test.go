@@ -243,7 +243,7 @@ func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
 func TestEndpoint_Close(t *testing.T) {
 	ns := newNetstack(t)
 	var wq waiter.Queue
-	// Avoid polluting everything with err of type *tcpip.Error.
+	// Avoid polluting everything with err of type tcpip.Error.
 	ep := func() tcpip.Endpoint {
 		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, &wq)
 		if err != nil {
@@ -440,7 +440,9 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		listenerWQ.EventRegister(&waitEntry, waiter.EventIn)
 		defer listenerWQ.EventUnregister(&waitEntry)
 
-		if err := client.Connect(connectAddr); err != tcpip.ErrConnectStarted {
+		switch err := client.Connect(connectAddr); err.(type) {
+		case *tcpip.ErrConnectStarted:
+		default:
 			t.Fatalf("Connect(%#v) = %s", connectAddr, err)
 		}
 		<-notifyCh
@@ -508,7 +510,7 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 }
 
 func createEP(t *testing.T, ns *Netstack, wq *waiter.Queue) *endpointWithSocket {
-	// Avoid polluting the scope with err of type *tcpip.Error.
+	// Avoid polluting the scope with err of type tcpip.Error.
 	ep := func() tcpip.Endpoint {
 		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 		if err != nil {
@@ -590,8 +592,10 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 	wq.EventRegister(&waitEntry, math.MaxUint64)
 	defer wq.EventUnregister(&waitEntry)
 
-	if want, got := tcpip.ErrConnectStarted, eps.ep.Connect(destination); got != want {
-		t.Fatalf("got Connect(%#v) = %s, want %s", destination, got, want)
+	switch err := eps.ep.Connect(destination); err.(type) {
+	case *tcpip.ErrConnectStarted:
+	default:
+		t.Fatalf("got Connect(%#v) = %v, want %s", destination, err, &tcpip.ErrConnectStarted{})
 	}
 	if got, want := <-events, waiter.EventIn|waiter.EventOut|waiter.EventErr|waiter.EventHUp; got != want {
 		t.Fatalf("got event = %b, want %b", got, want)
@@ -629,7 +633,9 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 	listener.wq.EventRegister(&waitEntry, waiter.EventIn)
 	defer listener.wq.EventUnregister(&waitEntry)
 
-	if err := client.ep.Connect(connectAddr); err != tcpip.ErrConnectStarted {
+	switch err := client.ep.Connect(connectAddr); err.(type) {
+	case *tcpip.ErrConnectStarted:
+	default:
 		t.Fatalf("ep.Connect(%#v) = %s", connectAddr, err)
 	}
 	// Wait for the newly established connection to show up as acceptable by
@@ -786,7 +792,7 @@ type ndpDADEvent struct {
 	nicID    tcpip.NICID
 	addr     tcpip.Address
 	resolved bool
-	err      *tcpip.Error
+	err      tcpip.Error
 }
 
 // testNDPDispatcher is a tcpip.NDPDispatcher that sends an NDP DAD event on
@@ -797,7 +803,7 @@ type testNDPDispatcher struct {
 
 // OnDuplicateAddressDetectionStatus implements
 // stack.NDPDispatcher.OnDuplicateAddressDetectionStatus.
-func (n *testNDPDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err *tcpip.Error) {
+func (n *testNDPDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err tcpip.Error) {
 	if c := n.dadC; c != nil {
 		c <- ndpDADEvent{
 			nicID:    nicID,
@@ -964,11 +970,11 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 
 	nicInfo1, ok := nicInfos[ifs1.nicid]
 	if !ok {
-		t.Fatalf("stack.NICInfo()[%d]: %s", ifs1.nicid, tcpip.ErrUnknownNICID)
+		t.Fatalf("stack.NICInfo()[%d] = (_, false)", ifs1.nicid)
 	}
 	nicInfo2, ok := nicInfos[ifs2.nicid]
 	if !ok {
-		t.Fatalf("stack.NICInfo()[%d]: %s", ifs2.nicid, tcpip.ErrUnknownNICID)
+		t.Fatalf("stack.NICInfo()[%d]: (_, false)", ifs2.nicid)
 	}
 
 	if nicInfo1.Name == nicInfo2.Name {

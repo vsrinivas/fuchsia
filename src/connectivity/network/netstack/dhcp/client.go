@@ -749,22 +749,22 @@ func (c *Client) send(
 		err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, func(result stack.LinkResolutionResult) {
 			ch <- result
 		})
-		switch err {
+		switch err.(type) {
 		case nil:
 			result := <-ch
 			if result.Success {
 				linkAddress = result.LinkAddress
 			} else {
-				err = tcpip.ErrTimeout
+				err = &tcpip.ErrTimeout{}
 			}
-		case tcpip.ErrWouldBlock:
+		case *tcpip.ErrWouldBlock:
 			select {
 			case result := <-ch:
 				if result.Success {
 					linkAddress = result.LinkAddress
 					err = nil
 				} else {
-					err = tcpip.ErrTimeout
+					err = &tcpip.ErrTimeout{}
 				}
 			case <-ctx.Done():
 				return fmt.Errorf("client address resolution: %w", ctx.Err())
@@ -810,7 +810,7 @@ func (c *Client) recv(
 			NeedLinkPacketInfo: true,
 		})
 		senderAddr := tcpip.LinkAddress(res.RemoteAddr.Addr)
-		if err == tcpip.ErrWouldBlock {
+		if _, ok := err.(*tcpip.ErrWouldBlock); ok {
 			select {
 			case <-read:
 				continue

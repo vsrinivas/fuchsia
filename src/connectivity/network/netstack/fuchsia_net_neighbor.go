@@ -67,12 +67,12 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 
 	for nicID := range n.stack.NICInfo() {
 		neighbors, err := n.stack.Neighbors(nicID)
-		switch err {
+		switch err.(type) {
 		case nil:
-		case tcpip.ErrNotSupported:
+		case *tcpip.ErrNotSupported:
 			// This NIC does not use a neighbor table.
 			continue
-		case tcpip.ErrUnknownNICID:
+		case *tcpip.ErrUnknownNICID:
 			// This NIC was removed since stack.NICInfo() was called.
 			continue
 		default:
@@ -139,8 +139,8 @@ func (n *neighborImpl) AddEntry(_ fidl.Context, interfaceID uint64, neighborIP n
 func (n *neighborImpl) RemoveEntry(_ fidl.Context, interfaceID uint64, neighborIP net.IpAddress) (neighbor.ControllerRemoveEntryResult, error) {
 	if err := n.stack.RemoveNeighbor(tcpip.NICID(interfaceID), fidlconv.ToTCPIPAddress(neighborIP)); err != nil {
 		var zxErr zx.Status
-		switch err {
-		case tcpip.ErrBadAddress:
+		switch err.(type) {
+		case *tcpip.ErrBadAddress:
 			zxErr = zx.ErrNotFound
 		default:
 			zxErr = WrapTcpIpError(err).ToZxStatus()

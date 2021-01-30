@@ -85,18 +85,19 @@ func (c *epConn) Read() (buffer.View, tcpip.FullAddress, error) {
 		res, err := c.ep.Read(&b, tcpip.ReadOptions{
 			NeedRemoteAddr: true,
 		})
-		if err == tcpip.ErrWouldBlock {
+		switch err.(type) {
+		case nil:
+			return b.Bytes(), res.RemoteAddr, nil
+		case *tcpip.ErrWouldBlock:
 			select {
 			case <-c.inCh:
 				continue
 			case <-c.ctx.Done():
 				return nil, tcpip.FullAddress{}, io.EOF
 			}
-		}
-		if err != nil {
+		default:
 			return b.Bytes(), res.RemoteAddr, fmt.Errorf("read: %s", err)
 		}
-		return b.Bytes(), res.RemoteAddr, nil
 	}
 }
 

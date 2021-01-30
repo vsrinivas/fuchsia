@@ -109,7 +109,7 @@ func (e *endpoint) IsAttached() bool {
 
 func (*endpoint) ARPHardwareType() header.ARPHardwareType { return header.ARPHardwareNone }
 
-func (e *endpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	if protocol == ipv4.ProtocolNumber {
 		if fn := e.onWritePacket; fn != nil {
 			p := fn(pkt)

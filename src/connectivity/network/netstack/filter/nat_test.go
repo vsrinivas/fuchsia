@@ -88,7 +88,7 @@ func (e *syncEndpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *syncEndpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
+func (e *syncEndpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	for _, remote := range e.remote {
 		if !remote.IsAttached() {
 			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
@@ -417,10 +417,10 @@ func TestNATLANToWANTCP(t *testing.T) {
 	waitEntryWANMaster, chWANMaster := waiter.NewChannelEntry(nil)
 	wqWANMaster.EventRegister(&waitEntryWANMaster, waiter.EventIn)
 
-	if err := epLANTCP.Connect(receiverWAN); err != nil {
-		if err != tcpip.ErrConnectStarted {
-			t.Fatalf("Connect error: %s", err)
-		}
+	switch err := epLANTCP.Connect(receiverWAN); err.(type) {
+	case *tcpip.ErrConnectStarted:
+	default:
+		t.Fatalf("Connect error: %s", err)
 	}
 
 	select {
