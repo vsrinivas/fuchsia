@@ -590,7 +590,7 @@ impl<'a> NetCfg<'a> {
             })
             .or_else(|e| match e {
                 errors::Error::NonFatal(e) => {
-                    error!("non-fatal error: {}", e);
+                    error!("non-fatal error: {:?}", e);
                     Ok(())
                 }
                 errors::Error::Fatal(e) => Err(e),
@@ -709,7 +709,7 @@ impl<'a> NetCfg<'a> {
                         .context("handle interface watcher event")
                         .or_else(|e| match e {
                             errors::Error::NonFatal(e) => {
-                                error!("non-fatal error: {}", e);
+                                error!("non-fatal error: {:?}", e);
                                 Ok(())
                             }
                             errors::Error::Fatal(e) => Err(e),
@@ -723,7 +723,7 @@ impl<'a> NetCfg<'a> {
                         Err(e) => {
                             // TODO(fxbug.dev/57484): Restart the DNS server watcher.
                             error!("non-fatal error getting next event \
-                                from DNS server watcher stream with source = {:?}: {}", source, e);
+                                from DNS server watcher stream with source = {:?}: {:?}", source, e);
                             let () = self
                                 .handle_dns_server_watcher_done(source, dns_watchers.get_mut())
                                 .await
@@ -739,7 +739,7 @@ impl<'a> NetCfg<'a> {
                         format!("error handling DNS servers update from {:?}", source)
                     }).or_else(|e| match e {
                         errors::Error::NonFatal(e) => {
-                            error!("non-fatal error: {}", e);
+                            error!("non-fatal error: {:?}", e);
                             Ok(())
                         }
                         errors::Error::Fatal(e) => Err(e),
@@ -1022,7 +1022,7 @@ impl<'a> NetCfg<'a> {
                         }
                         Err(devices::AddDeviceError::Other(errors::Error::NonFatal(e))) => {
                             error!(
-                                "non-fatal error adding {} at {}: {}",
+                                "non-fatal error adding {} at {}: {:?}",
                                 D::NAME,
                                 filepath.display(),
                                 e
@@ -1457,7 +1457,7 @@ async fn main() {
             .context("error updating default DNS servers")
             .or_else(|e| match e {
                 errors::Error::NonFatal(e) => {
-                    error!("non-fatal error: {}", e);
+                    error!("non-fatal error: {:?}", e);
                     Ok(())
                 }
                 errors::Error::Fatal(e) => Err(e),
