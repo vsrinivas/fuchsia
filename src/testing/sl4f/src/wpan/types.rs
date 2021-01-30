@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use fidl_fuchsia_lowpan_test::{
-    MacAddressFilterItem, MacAddressFilterMode, MacAddressFilterSettings,
+    MacAddressFilterItem, MacAddressFilterMode, MacAddressFilterSettings, NeighborInfo,
 };
 use serde::{Deserialize, Serialize};
 /// Supported Wpan commands.
@@ -14,6 +14,7 @@ pub enum WpanMethod {
     GetNcpRssi,
     GetNcpState,
     GetNetworkName,
+    GetNeighborTable,
     GetPanId,
     GetPartitionId,
     GetThreadRloc16,
@@ -34,6 +35,7 @@ impl std::str::FromStr for WpanMethod {
             "GetNcpMacAddress" => Ok(WpanMethod::GetNcpMacAddress),
             "GetNcpRssi" => Ok(WpanMethod::GetNcpRssi),
             "GetNcpState" => Ok(WpanMethod::GetNcpState),
+            "GetNeighborTable" => Ok(WpanMethod::GetNeighborTable),
             "GetNetworkName" => Ok(WpanMethod::GetNetworkName),
             "GetPanId" => Ok(WpanMethod::GetPanId),
             "GetPartitionId" => Ok(WpanMethod::GetPartitionId),
@@ -75,6 +77,20 @@ pub enum MacAddressFilterModeDto {
     Disabled = 0,
     Allow = 1,
     Deny = 2,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NeighborInfoDto {
+    pub mac_address: Option<Vec<u8>>,
+    pub short_address: Option<u16>,
+    pub age: Option<i64>,
+    pub is_child: Option<bool>,
+    pub link_frame_count: Option<u32>,
+    pub mgmt_frame_count: Option<u32>,
+    pub last_rssi_in: Option<i32>,
+    pub avg_rssi_in: Option<i8>,
+    pub lqi_in: Option<u8>,
+    pub thread_mode: Option<u8>,
 }
 
 impl Into<MacAddressFilterItemDto> for MacAddressFilterItem {
@@ -140,6 +156,41 @@ impl Into<MacAddressFilterMode> for MacAddressFilterModeDto {
             MacAddressFilterModeDto::Disabled => MacAddressFilterMode::Disabled,
             MacAddressFilterModeDto::Allow => MacAddressFilterMode::Allow,
             MacAddressFilterModeDto::Deny => MacAddressFilterMode::Deny,
+        }
+    }
+}
+
+impl Into<NeighborInfoDto> for NeighborInfo {
+    fn into(self) -> NeighborInfoDto {
+        NeighborInfoDto {
+            mac_address: self.mac_address,
+            short_address: self.short_address,
+            age: self.age,
+            is_child: self.is_child,
+            link_frame_count: self.link_frame_count,
+            mgmt_frame_count: self.mgmt_frame_count,
+            last_rssi_in: self.last_rssi_in,
+            avg_rssi_in: self.avg_rssi_in,
+            lqi_in: self.lqi_in,
+            thread_mode: self.thread_mode,
+        }
+    }
+}
+
+impl Into<NeighborInfo> for NeighborInfoDto {
+    fn into(self) -> NeighborInfo {
+        NeighborInfo {
+            mac_address: self.mac_address,
+            short_address: self.short_address,
+            age: self.age,
+            is_child: self.is_child,
+            link_frame_count: self.link_frame_count,
+            mgmt_frame_count: self.mgmt_frame_count,
+            last_rssi_in: self.last_rssi_in,
+            avg_rssi_in: self.avg_rssi_in,
+            lqi_in: self.lqi_in,
+            thread_mode: self.thread_mode,
+            ..NeighborInfo::EMPTY
         }
     }
 }

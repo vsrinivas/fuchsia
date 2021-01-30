@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::types::{ConnectivityState, MacAddressFilterSettingsDto};
+use super::types::{ConnectivityState, MacAddressFilterSettingsDto, NeighborInfoDto};
 use crate::common_utils::lowpan_context::LowpanContext;
 use anyhow::Error;
 use fidl_fuchsia_lowpan::ConnectivityState as lowpan_ConnectivityState;
@@ -183,6 +183,15 @@ impl WpanFacade {
             None => bail!("DeviceTest proxy is not set!"),
         }
         Ok(())
+    }
+
+    ///Returns the thread neighbor table from the DeviceTest proxy service.
+    pub async fn get_neighbor_table(&self) -> Result<Vec<NeighborInfoDto>, Error> {
+        let settings = match self.device_test.read().as_ref() {
+            Some(device_test) => device_test.get_neighbor_table().await?,
+            _ => bail!("DeviceTest proxy is not set!"),
+        };
+        Ok(settings.into_iter().map(|setting| setting.into()).collect())
     }
 
     fn to_connectivity_state(connectivity_state: lowpan_ConnectivityState) -> ConnectivityState {
@@ -367,5 +376,11 @@ mod tests {
             facade.1,
         )
         .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_neigbor_table() {
+        let facade = MOCK_TESTER.create_facade_and_serve();
+        MockTester::assert_wpan_fn(facade.0.get_neighbor_table(), facade.1).await;
     }
 }
