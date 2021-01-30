@@ -119,11 +119,6 @@ zx_library("fs") {
       "//zircon/system/ulib/trace",
     ]
   }
-
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 group("tests") {

@@ -20,9 +20,6 @@ zx_library("hid-parser") {
     "units.cc",
   ]
   deps = [ "//zircon/public/lib/fbl" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
