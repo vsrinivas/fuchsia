@@ -64,6 +64,19 @@ ordering of independent actions cannot be guaranteed.
 
 _Avoid modifying inputs._
 
+### Symbolic links and hard links
+
+The Ninja build system follows symbolic links to determine timestamps. This can
+have surprising consequences when soft symlinks participate in Ninja rules as
+input dependencies or outputs. The timestamps of symlinks themselves (as opposed
+to their destinations) are not considered for staleness and freshness. See
+[ninja#1186] for an explanation in terms of `stat()` and `lstat()` and a
+demonstration. Hard links (`ln` without `-s`), have the problem where multiple
+references point to the same filesystem object, and hence, have the same
+timestamp.
+
+_Avoid symlinks and hard-links as action inputs and outputs._
+
 ### Timestamp granularity
 
 Modern filesystems store timestamps on files (such as the time of last
@@ -169,8 +182,8 @@ supposed to produce this output, and then subsequently rerun dependent actions.
 
 ## Filesystem access tracing
 
-There are also builders that trace actions' file system accesses.
-Diagnostics for stale or missing outputs look like:
+There are also builders that trace actions' file system accesses. Diagnostics
+for stale or missing outputs look like:
 
 ```
 Not all outputs of //your:label were written or touched, which can cause subsequent
@@ -212,3 +225,5 @@ and then `fx build //your/failing:target`.
 Examine the files in the message in the context of the action's script or
 command, and see if they fall in one of the categories of
 [common issues](#common-root-causes).
+
+[ninja#1186]: https://github.com/ninja-build/ninja/issues/1186
