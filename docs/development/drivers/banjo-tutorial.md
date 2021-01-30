@@ -813,6 +813,35 @@ these callbacks in order to prevent mistakes.
 > Ok, one more caveat with `[Async]` &mdash; the `[Async]` attribute applies *only*
 > to the immediately following method; not any other methods.
 
+### The Buffer attribute
+
+This attribute applies to protocol method parameters of the `vector` type to convey that they are
+used as buffers. In practice, it only affects the names of the generated parameters.
+
+### The CalleeAllocated attribute
+
+When applied to a protocol method output parameter of type `vector`, the attribute conveys the fact
+that the contents of the vector should be allocated by the receiver of the method call.
+
+### The InnerPointer attribute
+
+In the context of a protocol input parameter of type `vector`, this attribute turns the contents of
+the vector into pointers to objects instead of objects themselves.
+
+### The InOut attribute
+
+Adding this attribute to a protocol method input parameter makes the parameter mutable, effectively
+turning it into an "in-out" parameter.
+
+### The Mutable attribute
+
+This attribute should be used to make `struct`/`union` fields of type `vector` or `string` mutable.
+
+### The OutOfLineContents attribute
+
+This attribute allows the contents of a `vector` field in a `struct`/`union` to be stored outside
+of the container.
+
 # Banjo Mocks
 
 Banjo generates a C++ mock class for each protocol. This mock can be passed to protocol users in
