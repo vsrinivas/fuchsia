@@ -68,7 +68,7 @@ https://policies.google.com/privacy
 ";
 
 pub fn show_analytics_notice<W: Write>(mut writer: W) {
-    if is_test_env() {
+    if is_analytics_disabled_by_env() || is_test_env() {
         return;
     }
 

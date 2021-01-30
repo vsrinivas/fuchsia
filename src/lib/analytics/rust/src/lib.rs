@@ -45,7 +45,7 @@ pub async fn add_custom_event(
     action: Option<&str>,
     label: Option<&str>,
 ) -> anyhow::Result<()> {
-    if is_test_env() || !is_opted_in() {
+    if is_analytics_disabled_by_env() || is_test_env() || !is_opted_in() {
         return Ok(());
     }
 
