@@ -1,17 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::handler::base::{Command, Request};
-use crate::handler::base::{GenerateHandler, SettingHandlerResult, State};
+use crate::handler::base::GenerateHandler;
+use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::internal::handler::{reply, Payload};
-use crate::message::base::MessageEvent;
+use crate::handler::setting_handler::{reply, Command, Payload, SettingHandlerResult, State};
+use crate::service::TryFromWithClient;
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
+use std::convert::TryFrom;
 use std::sync::Arc;
 
 /// Trait for providing a service.
@@ -36,23 +37,20 @@ pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
         let handler = shared_handler.clone();
         fasync::Task::spawn(async move {
             while let Some(event) = context.receptor.next().await {
-                match event {
-                    MessageEvent::Message(
-                        Payload::Command(Command::HandleRequest(request)),
-                        client,
-                    ) => {
-                        let response = (handler.lock().await)(request).await;
-                        reply(client, response);
-                    }
-                    MessageEvent::Message(
-                        Payload::Command(Command::ChangeState(state)),
-                        client,
-                    ) => {
-                        if state == State::Startup || state == State::Teardown {
-                            reply(client, Ok(None));
+                // There could be other events such as acks so do not necessarily
+                // return an error if a different message event is received here.
+                if let Ok((payload, client)) = Payload::try_from_with_client(event) {
+                    match Command::try_from(payload).expect("should only receive commands") {
+                        Command::HandleRequest(request) => {
+                            let response = (handler.lock().await)(request).await;
+                            reply(client, response);
+                        }
+                        Command::ChangeState(state) => {
+                            if state == State::Startup || state == State::Teardown {
+                                reply(client, Ok(None));
+                            }
                         }
                     }
-                    _ => {}
                 }
             }
         })

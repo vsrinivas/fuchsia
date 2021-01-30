@@ -5,11 +5,12 @@
 use crate::base::{SettingInfo, SettingType};
 use crate::call;
 use crate::factory_reset::types::FactoryResetInfo;
-use crate::handler::base::{Request, SettingHandlerResult, State};
+use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::controller::Handle;
 use crate::handler::setting_handler::persist::{controller, ClientProxy};
 use crate::handler::setting_handler::ControllerError;
+use crate::handler::setting_handler::{SettingHandlerResult, State};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::ControllerStateResult;
 use async_trait::async_trait;
@@ -39,7 +40,7 @@ type FactoryResetHandle = Arc<Mutex<FactoryResetManager>>;
 /// doesn't need to be individually locked within the manager.
 ///
 /// [`Request`]: crate::handler::base::Request
-/// [`State`]: crate::handler::base::State
+/// [`State`]: crate::handler::setting_handler::State
 /// [`FactoryResetManager`]: crate::factory_reset::FactoryResetManager
 pub struct FactoryResetController {
     handle: FactoryResetHandle,

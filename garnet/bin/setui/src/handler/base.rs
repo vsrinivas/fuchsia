@@ -11,13 +11,14 @@ use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
 use crate::input::{ButtonType, VolumeGain};
-use crate::internal::handler::message;
 use crate::intl::types::IntlInfo;
 use crate::light::types::LightState;
 use crate::night_mode::types::NightModeInfo;
 use crate::payload_convert;
+use crate::service::message::{Factory, Messenger, Receptor, Signature};
 use crate::service_context::ServiceContextHandle;
 use crate::setup::types::ConfigurationInterfaceFlags;
+
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
@@ -32,9 +33,7 @@ use {
     crate::service_context::ServiceContext,
 };
 
-pub type SettingHandlerResult = Result<Option<SettingInfo>, ControllerError>;
 pub type ControllerGenerateResult = Result<(), anyhow::Error>;
-pub type ExitResult = Result<(), ControllerError>;
 
 pub type GenerateHandler<T> =
     Box<dyn Fn(Context<T>) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
@@ -107,7 +106,7 @@ pub enum Request {
 
 /// The data that is sent to and from setting handlers through the service
 /// MessageHub.
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Payload {
     /// The `Request` payload communicates actions to be taken upon the setting.
     /// These actions can be around access (get/listen) and changes (set). Note
@@ -235,47 +234,6 @@ impl From<ControllerError> for Error {
     }
 }
 
-/// An command represents messaging from the proxy to take a
-/// particular action.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Command {
-    HandleRequest(Request),
-    ChangeState(State),
-}
-
-/// Events are sent from the setting handler back to the parent
-/// proxy to indicate changes that happen out-of-band (happening
-/// outside of response to a Command above). They indicate a
-/// change in the handler that should potentially be handled by
-/// the proxy.
-#[derive(Clone, Debug, PartialEq)]
-pub enum Event {
-    // Sent when the publicly perceived values of the setting
-    // handler have been changed.
-    Changed(SettingInfo),
-    Exited(ExitResult),
-}
-
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
-pub enum State {
-    /// State of a controller immediately after it is created. Intended
-    /// to initialize state on the controller.
-    Startup,
-
-    /// State of a controller when at least one client is listening on
-    /// changes to the setting state.
-    Listen,
-
-    /// State of a controller when there are no more clients listening
-    /// on changes to the setting state.
-    EndListen,
-
-    /// State of a controller when there are no requests or listeners on
-    /// the setting type. Intended to tear down state before taking down
-    /// the controller.
-    Teardown,
-}
-
 #[derive(thiserror::Error, Debug, Clone, PartialEq)]
 pub enum SettingHandlerFactoryError {
     #[error("Setting type {0:?} not registered in environment")]
@@ -304,9 +262,9 @@ pub trait SettingHandlerFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: message::Factory,
-        notifier_signature: message::Signature,
-    ) -> Result<message::Signature, SettingHandlerFactoryError>;
+        messenger_factory: Factory,
+        notifier_signature: Signature,
+    ) -> Result<Signature, SettingHandlerFactoryError>;
 }
 
 pub struct Environment<T: DeviceStorageFactory> {
@@ -339,9 +297,9 @@ impl<T: DeviceStorageFactory> Environment<T> {
 /// settings service environment.
 pub struct Context<T: DeviceStorageFactory> {
     pub setting_type: SettingType,
-    pub messenger: message::Messenger,
-    pub receptor: message::Receptor,
-    pub notifier_signature: message::Signature,
+    pub messenger: Messenger,
+    pub receptor: Receptor,
+    pub notifier_signature: Signature,
     pub environment: Environment<T>,
     pub id: u64,
 }
@@ -349,9 +307,9 @@ pub struct Context<T: DeviceStorageFactory> {
 impl<T: DeviceStorageFactory> Context<T> {
     pub fn new(
         setting_type: SettingType,
-        messenger: message::Messenger,
-        receptor: message::Receptor,
-        notifier_signature: message::Signature,
+        messenger: Messenger,
+        receptor: Receptor,
+        notifier_signature: Signature,
         environment: Environment<T>,
         id: u64,
     ) -> Context<T> {
@@ -375,9 +333,9 @@ pub struct ContextBuilder<T: DeviceStorageFactory> {
     settings: HashSet<SettingType>,
     service_context: Option<ServiceContextHandle>,
     event_messenger_factory: Option<EventMessengerFactory>,
-    messenger: message::Messenger,
-    receptor: message::Receptor,
-    notifier_signature: message::Signature,
+    messenger: Messenger,
+    receptor: Receptor,
+    notifier_signature: Signature,
     id: u64,
 }
 
@@ -386,9 +344,9 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
     pub fn new(
         setting_type: SettingType,
         storage_factory: Arc<Mutex<T>>,
-        messenger: message::Messenger,
-        receptor: message::Receptor,
-        notifier_signature: message::Signature,
+        messenger: Messenger,
+        receptor: Receptor,
+        notifier_signature: Signature,
         id: u64,
     ) -> Self {
         Self {

@@ -7,8 +7,8 @@ use std::collections::HashSet;
 use fuchsia_syslog::fx_log_warn;
 
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::{Request, SettingHandlerResult};
-use crate::handler::setting_handler::ControllerError;
+use crate::handler::base::Request;
+use crate::handler::setting_handler::{ControllerError, SettingHandlerResult};
 
 /// Return type from a controller after handling a state change.
 pub type ControllerStateResult = Result<(), ControllerError>;

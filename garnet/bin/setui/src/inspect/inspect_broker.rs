@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -16,10 +17,11 @@ use futures::StreamExt;
 
 use crate::base::SettingInfo;
 use crate::clock;
-use crate::handler::base::{Command, Event, Request};
-use crate::internal::handler::message::{Factory, MessageClient, Messenger, Signature};
-use crate::internal::handler::Payload;
-use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::handler::base::Request;
+use crate::handler::setting_handler::{Command, Event, Payload};
+use crate::message::base::{Audience, MessengerType};
+use crate::service::message::{Factory, MessageClient, Messenger, Signature};
+use crate::service::TryFromWithClient;
 
 /// A broker that listens in on messages between the proxy and setting handlers to record the
 /// values of all settings to inspect.
@@ -61,7 +63,7 @@ impl InspectBroker {
 
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
-                if let MessageEvent::Message(payload, client) = message_event {
+                if let Ok((payload, client)) = Payload::try_from_with_client(message_event) {
                     match payload {
                         // When we see a Restore message, we know a given setting is starting up, so
                         // we watch the reply to get the signature of the setting handler and ask
@@ -126,15 +128,17 @@ impl InspectBroker {
         let mut send_receptor = self
             .messenger_client
             .message(
-                Payload::Command(Command::HandleRequest(Request::Get)),
+                Payload::Command(Command::HandleRequest(Request::Get)).into(),
                 Audience::Messenger(signature),
             )
             .send();
 
         send_receptor.next_payload().await.and_then(|payload| {
-            if let (Payload::Result(Ok(Some(setting))), _) = payload {
+            if let Ok(Payload::Result(Ok(Some(setting)))) = Payload::try_from(payload.0) {
                 Ok(setting)
             } else {
+                // TODO(fxbug.dev/68479): Propagate the returned error or
+                // generate proper error.
                 Err(format_err!("did not receive setting value"))
             }
         })
@@ -178,9 +182,8 @@ mod tests {
     use fuchsia_inspect::assert_inspect_tree;
 
     use crate::base::SettingInfo;
-    use crate::internal::handler::message::{create_hub, Receptor};
-    use crate::internal::handler::Address;
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
+    use crate::service::message::{create_hub, Receptor};
 
     use super::*;
 
@@ -191,7 +194,7 @@ mod tests {
         let result = receptor.next_payload().await;
         assert!(result.is_ok());
         let (received, message_client) = result.unwrap();
-        assert_eq!(received, expected);
+        assert_eq!(Payload::try_from(received).expect("payload should be extracted"), expected);
         return message_client;
     }
 
@@ -208,11 +211,9 @@ mod tests {
 
         let (proxy, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
-        let setting_handler_address = Address::Handler(1);
-        let (_, mut setting_handler_receptor) = messenger_factory
-            .create(MessengerType::Addressable(setting_handler_address.clone()))
-            .await
-            .unwrap();
+        let (_, mut setting_handler_receptor) =
+            messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let setting_handler_signature = setting_handler_receptor.get_signature();
 
         InspectBroker::create(messenger_factory, inspect_node)
             .await
@@ -221,14 +222,14 @@ mod tests {
         // Proxy sends restore request.
         proxy
             .message(
-                Payload::Command(Command::HandleRequest(Request::Restore)),
-                Audience::Address(setting_handler_address),
+                Payload::Command(Command::HandleRequest(Request::Restore)).into(),
+                Audience::Messenger(setting_handler_signature),
             )
             .send();
 
         // Setting handler acks the restore.
         let (_, reply_client) = setting_handler_receptor.next_payload().await.unwrap();
-        reply_client.reply(Payload::Result(Ok(None))).send().ack();
+        reply_client.reply(Payload::Result(Ok(None)).into()).send().ack();
 
         // Inspect broker sends get request to setting handler, handler replies with value.
         let inspect_broker_client = verify_payload(
@@ -237,12 +238,15 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
-                locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
-                temperature_unit: Some(TemperatureUnit::Celsius),
-                time_zone_id: Some("UTC".to_string()),
-                hour_cycle: None,
-            })))))
+            .reply(
+                Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
+                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
+                    temperature_unit: Some(TemperatureUnit::Celsius),
+                    time_zone_id: Some("UTC".to_string()),
+                    hour_cycle: None,
+                }))))
+                .into(),
+            )
             .send()
             .next()
             .await
@@ -277,11 +281,8 @@ mod tests {
             .1
             .get_signature();
 
-        let setting_handler_address = Address::Handler(1);
-        let (setting_handler, setting_handler_receptor) = messenger_factory
-            .create(MessengerType::Addressable(setting_handler_address.clone()))
-            .await
-            .unwrap();
+        let (setting_handler, setting_handler_receptor) =
+            messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         InspectBroker::create(messenger_factory, inspect_node)
             .await
@@ -292,7 +293,7 @@ mod tests {
         // TODO(fxb/66294): Remove get call from inspect broker.
         setting_handler
             .message(
-                Payload::Event(Event::Changed(SettingInfo::Unknown)),
+                Payload::Event(Event::Changed(SettingInfo::Unknown)).into(),
                 Audience::Messenger(proxy_signature),
             )
             .send();
@@ -304,12 +305,15 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
-                locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
-                temperature_unit: Some(TemperatureUnit::Celsius),
-                time_zone_id: Some("UTC".to_string()),
-                hour_cycle: None,
-            })))))
+            .reply(
+                Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
+                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
+                    temperature_unit: Some(TemperatureUnit::Celsius),
+                    time_zone_id: Some("UTC".to_string()),
+                    hour_cycle: None,
+                }))))
+                .into(),
+            )
             .send()
             .next()
             .await

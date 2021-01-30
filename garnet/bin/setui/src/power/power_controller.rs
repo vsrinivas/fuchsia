@@ -5,8 +5,10 @@
 use {
     crate::base::SettingType,
     crate::call_async,
-    crate::handler::base::{Request, SettingHandlerResult},
-    crate::handler::setting_handler::{controller, ClientProxy, ControllerError},
+    crate::handler::base::Request,
+    crate::handler::setting_handler::{
+        controller, ClientProxy, ControllerError, SettingHandlerResult,
+    },
     crate::service_context::ServiceContextHandle,
     async_trait::async_trait,
     fidl_fuchsia_hardware_power_statecontrol::RebootReason,

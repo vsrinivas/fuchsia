@@ -4,12 +4,12 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
-use crate::handler::base::{Request, SettingHandlerResult, State};
+use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult, State};
 use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::types::{
     DeviceState, DeviceStateSource, InputDevice, InputDeviceType, InputInfo, InputInfoSources,

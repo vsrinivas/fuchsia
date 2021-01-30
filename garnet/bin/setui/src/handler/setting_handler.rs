@@ -1,25 +1,91 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::base::SettingType;
-use crate::handler::base::{
-    Command, Context, ControllerGenerateResult, Event, Request, SettingHandlerResult, State,
-};
+use crate::base::{SettingInfo, SettingType};
+use crate::handler::base::{Context, ControllerGenerateResult, Request};
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::internal::handler::{message, reply, Payload};
-use crate::message::base::{Audience, MessageEvent};
+use crate::message::base::Audience;
+use crate::payload_convert;
+use crate::service::message::{MessageClient, Messenger, Signature};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::ControllerStateResult;
 use async_trait::async_trait;
+use core::convert::TryFrom;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
-use futures::StreamExt;
 use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use thiserror::Error;
+
+pub type ExitResult = Result<(), ControllerError>;
+pub type SettingHandlerResult = Result<Option<SettingInfo>, ControllerError>;
+
+// The types of data that can be sent to and from a setting controller.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Payload {
+    // Sent to the controller to request an action is taken.
+    Command(Command),
+    // Sent from the controller adhoc to indicate an event has happened.
+    Event(Event),
+    // Sent in response to a request.
+    Result(SettingHandlerResult),
+}
+
+payload_convert!(Controller, Payload);
+
+/// An command sent to the controller to take a particular action.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Command {
+    HandleRequest(Request),
+    ChangeState(State),
+}
+
+impl TryFrom<crate::handler::setting_handler::Payload> for Command {
+    type Error = &'static str;
+
+    fn try_from(value: crate::handler::setting_handler::Payload) -> Result<Self, Self::Error> {
+        match value {
+            crate::handler::setting_handler::Payload::Command(command) => Ok(command),
+            _ => Err("wrong payload type"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
+pub enum State {
+    /// State of a controller immediately after it is created. Intended
+    /// to initialize state on the controller.
+    Startup,
+
+    /// State of a controller when at least one client is listening on
+    /// changes to the setting state.
+    Listen,
+
+    /// State of a controller when there are no more clients listening
+    /// on changes to the setting state.
+    EndListen,
+
+    /// State of a controller when there are no requests or listeners on
+    /// the setting type. Intended to tear down state before taking down
+    /// the controller.
+    Teardown,
+}
+
+/// Events are sent from the setting handler back to the parent
+/// proxy to indicate changes that happen out-of-band (happening
+/// outside of response to a Command above). They indicate a
+/// change in the handler that should potentially be handled by
+/// the proxy.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Event {
+    // Sent when the publicly perceived values of the setting
+    // handler have been changed.
+    Changed(SettingInfo),
+    Exited(ExitResult),
+}
 
 pub trait StorageFactory: DeviceStorageFactory + Send + Sync {}
 impl<T: DeviceStorageFactory + Send + Sync> StorageFactory for T {}
@@ -100,8 +166,8 @@ impl ClientProxy {
 
 pub struct ClientImpl {
     notify: bool,
-    messenger: message::Messenger,
-    notifier_signature: message::Signature,
+    messenger: Messenger,
+    notifier_signature: Signature,
     service_context: ServiceContextHandle,
     setting_type: SettingType,
 }
@@ -144,31 +210,30 @@ impl ClientImpl {
 
         // Process MessageHub requests
         fasync::Task::spawn(async move {
-            while let Some(event) = context.receptor.next().await {
+            while let Ok((payload, message_client)) = context.receptor.next_payload().await {
                 let setting_type = client.lock().await.setting_type;
-                match event {
-                    MessageEvent::Message(
-                        Payload::Command(Command::HandleRequest(request)),
-                        client,
-                    ) => reply(
-                        client,
+
+                // Setting handlers should only expect commands
+                match Command::try_from(
+                    Payload::try_from(payload).expect("should only receive handler payloads"),
+                )
+                .expect("should only receive commands")
+                {
+                    Command::HandleRequest(request) => reply(
+                        message_client,
                         Self::process_request(setting_type, &controller, request.clone()).await,
                     ),
-                    MessageEvent::Message(
-                        Payload::Command(Command::ChangeState(state)),
-                        receptor_client,
-                    ) => {
+                    Command::ChangeState(state) => {
                         match state {
                             State::Startup => {
-                                match controller.change_state(state).await {
-                                    Some(Err(e)) => fx_log_err!(
+                                if let Some(Err(e)) = controller.change_state(state).await {
+                                    fx_log_err!(
                                         "Failed startup phase for SettingType {:?} {}",
                                         setting_type,
                                         e
-                                    ),
-                                    _ => {}
-                                };
-                                reply(receptor_client, Ok(None));
+                                    );
+                                }
+                                reply(message_client, Ok(None));
                                 continue;
                             }
                             State::Listen => {
@@ -178,21 +243,19 @@ impl ClientImpl {
                                 client.lock().await.notify = false;
                             }
                             State::Teardown => {
-                                match controller.change_state(state).await {
-                                    Some(Err(e)) => fx_log_err!(
+                                if let Some(Err(e)) = controller.change_state(state).await {
+                                    fx_log_err!(
                                         "Failed teardown phase for SettingType {:?} {}",
                                         setting_type,
                                         e
-                                    ),
-                                    _ => {}
-                                };
-                                reply(receptor_client, Ok(None));
+                                    );
+                                }
+                                reply(message_client, Ok(None));
                                 continue;
                             }
                         }
                         controller.change_state(state).await;
                     }
-                    _ => {}
                 }
             }
         })
@@ -208,7 +271,7 @@ impl ClientImpl {
     async fn notify(&self, event: Event) {
         if self.notify {
             self.messenger
-                .message(Payload::Event(event), Audience::Messenger(self.notifier_signature))
+                .message(Payload::Event(event).into(), Audience::Messenger(self.notifier_signature))
                 .send()
                 .ack();
         }
@@ -390,4 +453,8 @@ pub mod persist {
             })
         }
     }
+}
+
+pub fn reply(client: MessageClient, result: SettingHandlerResult) {
+    client.reply(Payload::Result(result).into()).send().ack();
 }

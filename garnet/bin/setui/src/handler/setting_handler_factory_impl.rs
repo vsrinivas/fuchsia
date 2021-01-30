@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 use crate::base::SettingType;
 use crate::handler::base::{
-    Command, Context, Environment, GenerateHandler, SettingHandlerFactory,
-    SettingHandlerFactoryError, State,
+    Context, Environment, GenerateHandler, SettingHandlerFactory, SettingHandlerFactoryError,
 };
 use crate::handler::device_storage::DeviceStorageFactory;
-use crate::internal::handler::{message, Payload};
+use crate::handler::setting_handler::{Command, Payload, State};
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
+use crate::service::message::{Factory, Signature};
 use crate::service_context::ServiceContextHandle;
 use async_trait::async_trait;
 use futures::lock::Mutex;
@@ -33,9 +33,9 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: message::Factory,
-        notifier_signature: message::Signature,
-    ) -> Result<message::Signature, SettingHandlerFactoryError> {
+        messenger_factory: Factory,
+        notifier_signature: Signature,
+    ) -> Result<Signature, SettingHandlerFactoryError> {
         if !self.environment.settings.contains(&setting_type) {
             return Err(SettingHandlerFactoryError::SettingNotFound(setting_type));
         }
@@ -71,7 +71,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
         // Tell the controller to run the Startup phase to initialize its state.
         let mut controller_receptor = controller_messenger
             .message(
-                Payload::Command(Command::ChangeState(State::Startup)),
+                Payload::Command(Command::ChangeState(State::Startup)).into(),
                 Audience::Messenger(signature),
             )
             .send();

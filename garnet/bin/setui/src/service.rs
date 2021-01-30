@@ -22,6 +22,7 @@
 
 use crate::base::SettingType;
 use crate::handler::base as handler;
+use crate::handler::setting_handler as controller;
 use crate::message_hub_definition;
 
 message_hub_definition!(Payload, Address, Role);
@@ -39,12 +40,15 @@ pub enum Address {
 /// The types of data that can be sent through the service [`MessageHub`]. This
 /// enumeration is meant to provide a top level definition. Further definitions
 /// for particular domains should be located in the appropriate mod.
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Payload {
     /// The Setting type captures communication pertaining to settings,
     /// including requests to access/change settings and the associated
     /// responses.
     Setting(handler::Payload),
+    /// The communication to and from a controller to handle requests and
+    /// lifetime.
+    Controller(controller::Payload),
 }
 
 /// A trait implemented by payloads for extracting the payload and associated
@@ -82,6 +86,7 @@ macro_rules! payload_convert {
             use super::*;
             use crate::service;
             use crate::service::TryFromWithClient;
+
             use std::convert::TryFrom;
 
             impl Into<service::Payload> for $payload_type {
@@ -93,19 +98,20 @@ macro_rules! payload_convert {
             }
 
             impl TryFrom<service::Payload> for $payload_type {
-                type Error = &'static str;
+                type Error = String;
 
                 fn try_from(value: service::Payload) -> Result<Self, Self::Error> {
                     paste::paste! {
                         match value {
                             service::Payload::[<$service_payload_type>](payload) => Ok(payload),
+                            _=> Err(format!("unexpected payload encountered: {:?}", value)),
                         }
                     }
                 }
             }
 
             impl TryFromWithClient<service::message::MessageEvent> for $payload_type {
-                type Error = &'static str;
+                type Error = String;
 
                 fn try_from_with_client(
                     value: service::message::MessageEvent,
@@ -113,7 +119,7 @@ macro_rules! payload_convert {
                     if let service::message::MessageEvent::Message(payload, client) = value {
                         Ok((Payload::try_from(payload)?, client))
                     } else {
-                        Err("wrong message type")
+                        Err(String::from("wrong message type"))
                     }
                 }
             }

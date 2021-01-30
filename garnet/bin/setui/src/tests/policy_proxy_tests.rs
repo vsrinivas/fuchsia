@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::{Request, SettingHandlerResult};
+use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::handler::setting_handler::SettingHandlerResult;
 use crate::internal::core;
 use crate::internal::policy;
 use crate::internal::policy::Address;

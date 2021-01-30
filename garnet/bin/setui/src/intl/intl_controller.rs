@@ -4,12 +4,12 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::call_async;
-use crate::handler::base::{Request, SettingHandlerResult};
+use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use crate::switchboard::base::Merge;
 use async_trait::async_trait;

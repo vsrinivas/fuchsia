@@ -17,15 +17,16 @@ use async_trait::async_trait;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{
-    Command, Error as HandlerError, Event, ExitResult, Payload as HandlerPayload, Request,
-    Response, SettingHandlerFactory, SettingHandlerFactoryError, SettingHandlerResult, State,
+    Error as HandlerError, Payload as HandlerPayload, Request, Response, SettingHandlerFactory,
+    SettingHandlerFactoryError,
 };
-use crate::handler::setting_handler::ControllerError;
+use crate::handler::setting_handler::{
+    self, Command, ControllerError, Event, ExitResult, SettingHandlerResult, State,
+};
 use crate::handler::setting_proxy::SettingProxy;
 use crate::internal::core::message::create_hub;
 use crate::internal::core::{self, Address, Payload};
 use crate::internal::event;
-use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::TryFromWithClient;
@@ -36,11 +37,11 @@ const SETTING_PROXY_TIMEOUT_MS: i64 = 1;
 
 struct SettingHandler {
     setting_type: SettingType,
-    messenger: handler::message::Messenger,
+    messenger: service::message::Messenger,
     state_tx: UnboundedSender<State>,
     responses: Vec<(Request, HandlerAction)>,
     done_tx: Option<oneshot::Sender<()>>,
-    proxy_signature: handler::message::Signature,
+    proxy_signature: service::message::Signature,
 }
 
 enum HandlerAction {
@@ -62,7 +63,7 @@ impl SettingHandler {
     pub fn notify(&self) {
         self.messenger
             .message(
-                handler::Payload::Event(Event::Changed(SettingInfo::Unknown)),
+                setting_handler::Payload::Event(Event::Changed(SettingInfo::Unknown)).into(),
                 Audience::Messenger(self.proxy_signature),
             )
             .send()
@@ -82,7 +83,7 @@ impl SettingHandler {
                     HandlerAction::Exit(result) => {
                         self.messenger
                             .message(
-                                handler::Payload::Event(Event::Exited(result)),
+                                setting_handler::Payload::Event(Event::Exited(result)).into(),
                                 Audience::Messenger(self.proxy_signature),
                             )
                             .send()
@@ -97,9 +98,9 @@ impl SettingHandler {
     }
 
     fn create(
-        messenger: handler::message::Messenger,
-        mut receptor: handler::message::Receptor,
-        proxy_signature: handler::message::Signature,
+        messenger: service::message::Messenger,
+        mut receptor: service::message::Receptor,
+        proxy_signature: service::message::Signature,
         setting_type: SettingType,
         state_tx: UnboundedSender<State>,
         done_tx: Option<oneshot::Sender<()>>,
@@ -118,19 +119,26 @@ impl SettingHandler {
             while let Some(event) = receptor.next().await {
                 match event {
                     MessageEvent::Message(
-                        handler::Payload::Command(Command::HandleRequest(request)),
+                        service::Payload::Controller(setting_handler::Payload::Command(
+                            Command::HandleRequest(request),
+                        )),
                         client,
                     ) => {
                         if let Some(response) = handler_clone.lock().await.process_request(request)
                         {
-                            handler::reply(client, response);
+                            setting_handler::reply(client, response);
                         }
                     }
                     MessageEvent::Message(
-                        handler::Payload::Command(Command::ChangeState(state)),
+                        service::Payload::Controller(setting_handler::Payload::Command(
+                            Command::ChangeState(state),
+                        )),
                         client,
                     ) => {
-                        handler::reply(client, handler_clone.lock().await.process_state(state));
+                        setting_handler::reply(
+                            client,
+                            handler_clone.lock().await.process_state(state),
+                        );
                     }
                     _ => {}
                 }
@@ -147,13 +155,13 @@ impl SettingHandler {
 }
 
 struct FakeFactory {
-    handlers: HashMap<SettingType, handler::message::Signature>,
+    handlers: HashMap<SettingType, service::message::Signature>,
     request_counts: HashMap<SettingType, u64>,
-    messenger_factory: handler::message::Factory,
+    messenger_factory: service::message::Factory,
 }
 
 impl FakeFactory {
-    pub fn new(messenger_factory: handler::message::Factory) -> Self {
+    pub fn new(messenger_factory: service::message::Factory) -> Self {
         FakeFactory {
             handlers: HashMap::new(),
             request_counts: HashMap::new(),
@@ -164,7 +172,7 @@ impl FakeFactory {
     pub async fn create(
         &mut self,
         setting_type: SettingType,
-    ) -> (handler::message::Messenger, handler::message::Receptor) {
+    ) -> (service::message::Messenger, service::message::Receptor) {
         let (client, receptor) =
             self.messenger_factory.create(MessengerType::Unbound).await.unwrap();
         self.handlers.insert(setting_type, receptor.get_signature());
@@ -186,9 +194,9 @@ impl SettingHandlerFactory for FakeFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        _: handler::message::Factory,
-        _: handler::message::Signature,
-    ) -> Result<handler::message::Signature, SettingHandlerFactoryError> {
+        _: service::message::Factory,
+        _: service::message::Signature,
+    ) -> Result<service::message::Signature, SettingHandlerFactoryError> {
         let existing_count = self.get_request_count(setting_type);
 
         Ok(self
@@ -227,18 +235,15 @@ impl TestEnvironmentBuilder {
     pub async fn build(self) -> TestEnvironment {
         let messenger_factory = service::message::create_hub();
         let core_messenger_factory = create_hub();
-        let handler_messenger_factory = handler::message::create_hub();
         let event_messenger_factory = event::message::create_hub();
 
-        let handler_factory =
-            Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
+        let handler_factory = Arc::new(Mutex::new(FakeFactory::new(messenger_factory.clone())));
 
         let (proxy_signature, proxy_handler_signature) = SettingProxy::create(
             self.setting_type,
             handler_factory.clone(),
             messenger_factory.clone(),
             core_messenger_factory.clone(),
-            handler_messenger_factory,
             event_messenger_factory.clone(),
             SETTING_PROXY_MAX_ATTEMPTS,
             self.timeout.map_or(None, |(duration, _)| Some(duration)),
@@ -282,7 +287,7 @@ impl TestEnvironmentBuilder {
 
 pub struct TestEnvironment {
     proxy_signature: core::message::Signature,
-    proxy_handler_signature: handler::message::Signature,
+    proxy_handler_signature: service::message::Signature,
     service_client: service::message::Messenger,
     switchboard_client: core::message::Messenger,
     handler_factory: Arc<Mutex<FakeFactory>>,
@@ -542,7 +547,7 @@ async fn test_request_order() {
         futures::select! {
             payload_1 = receptor_1_fuse.next() => {
                 if let Ok((HandlerPayload::Response(response), _)) =
-                        payload_1.map_or(Err("no event"),
+                        payload_1.map_or(Err(String::from("no event")),
                         HandlerPayload::try_from_with_client) {
                     // First request finishes first.
                     assert_eq!(completed_request_ids.len(), 0);
@@ -551,7 +556,7 @@ async fn test_request_order() {
             },
             payload_2 = receptor_2_fuse.next() => {
                 if let Ok((HandlerPayload::Response(response), _)) =
-                        payload_2.map_or(Err("no event"),
+                        payload_2.map_or(Err(String::from("no event")),
                         HandlerPayload::try_from_with_client) {
                     assert_eq!(completed_request_ids.len(), 1);
                     completed_request_ids.push(request_id_2);

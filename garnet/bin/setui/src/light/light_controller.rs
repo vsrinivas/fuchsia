@@ -7,12 +7,12 @@ use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
-use crate::handler::base::{Request, SettingHandlerResult};
+use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use crate::input::ButtonType;
 use crate::light::light_hardware_configuration::DisableConditions;
 use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};

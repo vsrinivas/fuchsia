@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
-use crate::handler::base::{Request, SettingHandlerResult};
+use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::handler::setting_handler::StorageFactory;
+use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
 use crate::internal::core::message::{Audience, Messenger, Receptor, Signature};
 use crate::internal::core::{Address, Payload};
 use crate::policy::base::response::{Error as PolicyError, Response};

@@ -6,11 +6,13 @@ use crate::audio::{
     create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
 };
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::base::{Event, Request, SettingHandlerResult, State};
+use crate::handler::base::Request;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::handler::setting_handler::{
+    controller, ControllerError, Event, SettingHandlerResult, State,
+};
 use crate::input::ButtonType;
 use crate::switchboard::base::*;
 use async_trait::async_trait;

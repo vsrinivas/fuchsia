@@ -4,8 +4,10 @@
 
 use crate::base::SettingInfo;
 use crate::device::types::DeviceInfo;
-use crate::handler::base::{Request, SettingHandlerResult};
-use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
+use crate::handler::base::Request;
+use crate::handler::setting_handler::{
+    controller, ClientProxy, ControllerError, SettingHandlerResult,
+};
 use async_trait::async_trait;
 use std::fs;
 

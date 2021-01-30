@@ -7,23 +7,25 @@ use {
     crate::agent::restore_agent,
     crate::base::{SettingInfo, SettingType},
     crate::do_not_disturb::types::DoNotDisturbInfo,
-    crate::handler::base::{Command, ContextBuilder, Request, SettingHandlerResult, State},
+    crate::handler::base::{ContextBuilder, Request},
     crate::handler::device_storage::DeviceStorageFactory,
     crate::handler::device_storage::{testing::*, DeviceStorageCompatible},
     crate::handler::setting_handler::persist::WriteResult,
     crate::handler::setting_handler::{
         controller, persist, persist::controller as data_controller, persist::write,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
-        BoxedController, ClientImpl, ClientProxy, ControllerError, GenerateController, Handler,
+        BoxedController, ClientImpl, ClientProxy, Command, ControllerError, GenerateController,
+        Handler, Payload, SettingHandlerResult, State,
     },
-    crate::internal::handler::{message, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
+    crate::service,
     crate::switchboard::base::{get_all_setting_types, ControllerStateResult},
     crate::EnvironmentBuilder,
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},
     futures::StreamExt,
     std::collections::HashMap,
+    std::convert::TryFrom,
     std::marker::PhantomData,
 };
 
@@ -124,7 +126,7 @@ async fn test_spawn() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_write_notify() {
-    let factory = message::create_hub();
+    let factory = service::message::create_hub();
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
     let signature = factory
@@ -281,7 +283,7 @@ impl controller::Handle for BlankController {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_event_propagation() {
-    let factory = message::create_hub();
+    let factory = service::message::create_hub();
     let setting_type = SettingType::Unknown;
 
     let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
@@ -309,7 +311,7 @@ async fn test_event_propagation() {
 
     messenger
         .message(
-            Payload::Command(Command::ChangeState(State::Startup)),
+            Payload::Command(Command::ChangeState(State::Startup)).into(),
             Audience::Messenger(signature),
         )
         .send()
@@ -319,7 +321,7 @@ async fn test_event_propagation() {
 
     messenger
         .message(
-            Payload::Command(Command::ChangeState(State::Listen)),
+            Payload::Command(Command::ChangeState(State::Listen)).into(),
             Audience::Messenger(signature),
         )
         .send()
@@ -329,7 +331,7 @@ async fn test_event_propagation() {
 
     messenger
         .message(
-            Payload::Command(Command::ChangeState(State::EndListen)),
+            Payload::Command(Command::ChangeState(State::EndListen)).into(),
             Audience::Messenger(signature),
         )
         .send()
@@ -339,7 +341,7 @@ async fn test_event_propagation() {
 
     messenger
         .message(
-            Payload::Command(Command::ChangeState(State::Teardown)),
+            Payload::Command(Command::ChangeState(State::Teardown)).into(),
             Audience::Messenger(signature),
         )
         .send()
@@ -355,7 +357,7 @@ async fn test_event_propagation() {
 
 // Test that the controller state is entered [n] times.
 async fn verify_controller_state(state: State, n: u8) {
-    let factory = message::create_hub();
+    let factory = service::message::create_hub();
     let setting_type = SettingType::Audio;
 
     let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
@@ -379,7 +381,10 @@ async fn verify_controller_state(state: State, n: u8) {
         .expect("Unable to create ClientImpl");
 
     messenger
-        .message(Payload::Command(Command::ChangeState(state)), Audience::Messenger(signature))
+        .message(
+            Payload::Command(Command::ChangeState(state)).into(),
+            Audience::Messenger(signature),
+        )
         .send()
         .ack();
 
@@ -431,7 +436,7 @@ impl controller::Handle for StubController {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
-        let factory = message::create_hub();
+        let factory = service::message::create_hub();
 
         let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
         let (handler_messenger, handler_receptor) =
@@ -451,17 +456,17 @@ async fn test_unimplemented_error() {
 
         let mut reply_receptor = messenger
             .message(
-                Payload::Command(Command::HandleRequest(Request::Get)),
+                Payload::Command(Command::HandleRequest(Request::Get)).into(),
                 Audience::Messenger(signature),
             )
             .send();
 
         while let Some(message_event) = reply_receptor.next().await {
             if let MessageEvent::Message(incoming_payload, _) = message_event {
-                if let Payload::Result(Err(ControllerError::UnimplementedRequest(
+                if let Ok(Payload::Result(Err(ControllerError::UnimplementedRequest(
                     incoming_type,
                     _,
-                ))) = incoming_payload
+                )))) = Payload::try_from(incoming_payload)
                 {
                     assert_eq!(incoming_type, setting_type);
                     return;

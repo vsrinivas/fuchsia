@@ -160,7 +160,6 @@ rustc_library("lib") {
     "src/internal/common.rs",
     "src/internal/core.rs",
     "src/internal/event.rs",
-    "src/internal/handler.rs",
     "src/internal/monitor.rs",
     "src/internal/policy.rs",
     "src/internal/switchboard.rs",

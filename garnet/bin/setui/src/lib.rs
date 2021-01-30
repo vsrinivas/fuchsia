@@ -573,7 +573,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     let core_messenger_factory = internal::core::message::create_hub();
     let switchboard_messenger_factory = internal::switchboard::message::create_hub();
     let policy_messenger_factory = internal::policy::message::create_hub();
-    let setting_handler_messenger_factory = internal::handler::message::create_hub();
 
     for blueprint in event_subscriber_blueprints {
         blueprint.create(event_messenger_factory.clone()).await;
@@ -588,7 +587,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // Attach inspect broker, which watches messages between proxies and setting handlers to
     // record settings values to inspect.
     let settings_inspect_node = component::inspector().root().create_child("setting_values");
-    InspectBroker::create(setting_handler_messenger_factory.clone(), settings_inspect_node)
+    InspectBroker::create(messenger_factory.clone(), settings_inspect_node)
         .await
         .expect("could not create inspect");
 
@@ -604,7 +603,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
                 handler_factory.clone(),
                 messenger_factory.clone(),
                 core_messenger_factory.clone(),
-                setting_handler_messenger_factory.clone(),
                 event_messenger_factory.clone(),
                 DEFAULT_SETTING_PROXY_MAX_ATTEMPTS,
                 Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),

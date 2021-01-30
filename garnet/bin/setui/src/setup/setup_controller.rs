@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
-use crate::handler::base::{Request, SettingHandlerResult};
+use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
 use async_trait::async_trait;
 

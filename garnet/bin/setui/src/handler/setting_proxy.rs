@@ -5,10 +5,13 @@
 // TODO(fxb/68069): Add module documentation describing Setting Proxy's role in
 // setting handling.
 use crate::handler::base::{
-    Command, Error as HandlerError, Event, ExitResult, Payload as HandlerPayload,
-    Request as HandlerRequest, SettingHandlerFactory, SettingHandlerResult, State,
+    Error as HandlerError, Payload as HandlerPayload, Request as HandlerRequest,
+    SettingHandlerFactory,
 };
-use crate::handler::setting_handler::ControllerError;
+use crate::handler::setting_handler::Command;
+use crate::handler::setting_handler::{
+    ControllerError, Event, ExitResult, SettingHandlerResult, State,
+};
 use crate::message::action_fuse::ActionFuseBuilder;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -22,12 +25,11 @@ use futures::StreamExt;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::{Payload, Request};
+use crate::handler::setting_handler;
 use crate::internal::core;
 use crate::internal::event;
-use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::service;
-use crate::service::TryFromWithClient;
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 use fuchsia_zircon::Duration;
 
@@ -168,21 +170,21 @@ pub struct SettingProxy {
 
     core_messenger_client: core::message::Messenger,
 
-    client_signature: Option<handler::message::Signature>,
+    client_signature: Option<service::message::Signature>,
     active_request: Option<ActiveRequest>,
     pending_requests: VecDeque<RequestInfo>,
     listen_requests: Vec<RequestInfo>,
     has_active_switchboard_listener: bool,
     next_request_id: usize,
 
-    /// Handler factory.
+    /// Factory for generating a new controller to service requests.
     handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
-    /// Factory for creating messengers to communicate with handlers.
-    controller_messenger_factory: handler::message::Factory,
-    /// Client for communicating with handlers.
-    controller_messenger_client: handler::message::Messenger,
-    /// Signature for the controller messenger.
-    controller_messenger_signature: handler::message::Signature,
+    /// Messenger factory for communication with service components.
+    messenger_factory: service::message::Factory,
+    /// Messenger to send messages to controllers.
+    messenger: service::message::Messenger,
+    /// Signature for messages from controllers to be direct towards.
+    signature: service::message::Signature,
     /// Client for communicating events.
     event_publisher: event::Publisher,
 
@@ -208,16 +210,16 @@ impl SettingProxy {
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: service::message::Factory,
         core_messenger_factory: core::message::Factory,
-        controller_messenger_factory: handler::message::Factory,
         event_messenger_factory: event::message::Factory,
         max_attempts: u64,
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
-    ) -> Result<(core::message::Signature, handler::message::Signature), Error> {
-        let (_, receptor) = messenger_factory
+    ) -> Result<(core::message::Signature, service::message::Signature), Error> {
+        let (messenger, receptor) = messenger_factory
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
             .await
             .map_err(Error::new)?;
+        let service_signature = receptor.get_signature();
 
         // TODO(fxbug.dev/67536): Remove receptors below as their logic is
         // migrated to the MessageHub defined above.
@@ -227,18 +229,11 @@ impl SettingProxy {
 
         let signature = core_receptor.get_signature();
 
-        let (controller_messenger_client, controller_receptor) = controller_messenger_factory
-            .create(MessengerType::Unbound)
-            .await
-            .map_err(Error::new)?;
-
         let event_publisher = event::Publisher::create(
             &event_messenger_factory,
             MessengerType::Addressable(event::Address::SettingProxy(setting_type)),
         )
         .await;
-
-        let handler_signature = controller_receptor.get_signature();
 
         let (proxy_request_sender, proxy_request_receiver) =
             futures::channel::mpsc::unbounded::<ProxyRequest>();
@@ -255,9 +250,9 @@ impl SettingProxy {
             listen_requests: Vec::new(),
             has_active_switchboard_listener: false,
             core_messenger_client: core_client,
-            controller_messenger_signature: handler_signature.clone(),
-            controller_messenger_client,
-            controller_messenger_factory,
+            messenger_factory,
+            messenger,
+            signature: service_signature,
             event_publisher: event_publisher,
             proxy_request_sender,
             max_attempts,
@@ -268,19 +263,17 @@ impl SettingProxy {
         // Main task loop for receiving and processing incoming messages.
         fasync::Task::spawn(async move {
             let receptor_fuse = receptor.fuse();
-            let controller_fuse = controller_receptor.fuse();
             let core_fuse = core_receptor.fuse();
-            let proxy_request_fuse = proxy_request_receiver.fuse();
-            futures::pin_mut!(controller_fuse, core_fuse, receptor_fuse, proxy_request_fuse);
+            let proxy_fuse = proxy_request_receiver.fuse();
+
+            futures::pin_mut!(core_fuse, receptor_fuse, proxy_fuse);
 
             loop {
                 futures::select! {
+                    // Handles requests from the service MessageHub and
+                    // communication from the setting controller.
                     event = receptor_fuse.select_next_some() => {
                         proxy.process_service_event(event).await;
-                    }
-                    // Handle top level message from controllers.
-                    controller_event = controller_fuse.select_next_some() => {
-                        proxy.process_controller_event(controller_event).await;
                     }
 
                     // Handle messages from the core messenger.
@@ -290,35 +283,40 @@ impl SettingProxy {
 
                     // Handles messages for enqueueing requests and processing
                     // results on the main event loop for proxy.
-                    request = proxy_request_fuse.select_next_some() => {
+                    request = proxy_fuse.select_next_some() => {
                         proxy.process_proxy_request(request).await;
                     }
                 }
             }
         })
         .detach();
-        Ok((signature, handler_signature))
+        Ok((signature, service_signature))
     }
 
     async fn process_service_event(&mut self, event: service::message::MessageEvent) {
-        if let Ok((Payload::Request(request), client)) = Payload::try_from_with_client(event) {
-            self.process_service_request(request, client).await;
-        }
-    }
-
-    async fn process_controller_event(&mut self, event: handler::message::MessageEvent) {
-        if let MessageEvent::Message(handler::Payload::Event(event), client) = event {
-            // Messages received after the client signature
-            // has been changed will be ignored.
-            if Some(client.get_author()) != self.client_signature {
-                return;
-            }
-            match event {
-                Event::Changed(setting_info) => {
-                    self.notify(setting_info);
+        if let MessageEvent::Message(payload, client) = event {
+            match payload {
+                service::Payload::Setting(Payload::Request(request)) => {
+                    self.process_service_request(request, client).await;
                 }
-                Event::Exited(result) => {
-                    self.process_exit(result);
+                service::Payload::Controller(setting_handler::Payload::Event(event)) => {
+                    // Messages received after the client signature
+                    // has been changed will be ignored.
+                    if Some(client.get_author()) != self.client_signature {
+                        return;
+                    }
+
+                    match event {
+                        Event::Changed(setting_info) => {
+                            self.notify(setting_info);
+                        }
+                        Event::Exited(result) => {
+                            self.process_exit(result);
+                        }
+                    }
+                }
+                _ => {
+                    panic!("Unexpected message");
                 }
             }
         }
@@ -411,17 +409,13 @@ impl SettingProxy {
     async fn get_handler_signature(
         &mut self,
         force_create: bool,
-    ) -> Option<handler::message::Signature> {
+    ) -> Option<service::message::Signature> {
         if force_create || self.client_signature.is_none() {
             self.client_signature = self
                 .handler_factory
                 .lock()
                 .await
-                .generate(
-                    self.setting_type,
-                    self.controller_messenger_factory.clone(),
-                    self.controller_messenger_signature.clone(),
-                )
+                .generate(self.setting_type, self.messenger_factory.clone(), self.signature.clone())
                 .await
                 .map_or(None, Some);
         }
@@ -533,13 +527,14 @@ impl SettingProxy {
         let handler_signature =
             optional_handler_signature.expect("handler signature should be present");
 
-        self.controller_messenger_client
+        self.messenger
             .message(
-                handler::Payload::Command(Command::ChangeState(if self.is_listening() {
+                setting_handler::Payload::Command(Command::ChangeState(if self.is_listening() {
                     State::Listen
                 } else {
                     State::EndListen
-                })),
+                }))
+                .into(),
                 Audience::Messenger(handler_signature),
             )
             .send()
@@ -724,9 +719,9 @@ impl SettingProxy {
         );
 
         let mut receptor = self
-            .controller_messenger_client
+            .messenger
             .message(
-                handler::Payload::Command(Command::HandleRequest(request.clone())),
+                setting_handler::Payload::Command(Command::HandleRequest(request.clone())).into(),
                 Audience::Messenger(signature),
             )
             .set_timeout(self.request_timeout)
@@ -737,7 +732,10 @@ impl SettingProxy {
         fasync::Task::spawn(async move {
             while let Some(message_event) = receptor.next().await {
                 let handler_result = match message_event {
-                    MessageEvent::Message(handler::Payload::Result(result), _) => Some(result),
+                    MessageEvent::Message(
+                        service::Payload::Controller(setting_handler::Payload::Result(result)),
+                        _,
+                    ) => Some(result),
                     MessageEvent::Status(Status::Undeliverable) => {
                         Some(Err(ControllerError::IrrecoverableError))
                     }
@@ -791,9 +789,9 @@ impl SettingProxy {
         let signature = self.client_signature.take().expect("signature should be set");
 
         let mut controller_receptor = self
-            .controller_messenger_client
+            .messenger
             .message(
-                handler::Payload::Command(Command::ChangeState(State::Teardown)),
+                setting_handler::Payload::Command(Command::ChangeState(State::Teardown)).into(),
                 Audience::Messenger(signature),
             )
             .send();
@@ -805,7 +803,7 @@ impl SettingProxy {
 
         // This ensures that the client event loop for the corresponding controller is
         // properly stopped. Without this, the client event loop will run forever.
-        self.controller_messenger_factory.delete(signature);
+        self.messenger_factory.delete(signature);
 
         publish!(self, event::handler::Event::Teardown);
     }

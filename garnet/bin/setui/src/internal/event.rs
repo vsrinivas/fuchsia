@@ -46,7 +46,8 @@ pub mod earcon {
 }
 
 pub mod handler {
-    use crate::handler::base::{ExitResult, Request};
+    use crate::handler::base::Request;
+    use crate::handler::setting_handler::ExitResult;
 
     #[derive(PartialEq, Clone, Debug)]
     pub enum Event {
