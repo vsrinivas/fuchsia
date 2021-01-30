@@ -15,14 +15,14 @@ const EMPTY_TIME: u64 = 0;
 const EMPTY_DEVICE_ID: u32 = 0;
 
 // Type of a keyboard event.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum KeyEventType {
     Pressed,
     Released,
 }
 
 /// Abstraction wrapper for a key event.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct KeyEvent {
     // Key that triggered the event.
     pub key: input::Key,
@@ -147,6 +147,15 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
                 | left_super
                 | right_super,
         })
+    }
+}
+
+impl TryFrom<KeyEvent> for ui_input3::KeyEvent {
+    type Error = Error;
+
+    /// Attempts to convert KeyEvent into fidl_fuchsia_ui_input3::KeyboardEvent.
+    fn try_from(event: KeyEvent) -> Result<Self, Error> {
+        event.inner.ok_or(format_err!("Need underlying input3 event for conversion."))
     }
 }
 

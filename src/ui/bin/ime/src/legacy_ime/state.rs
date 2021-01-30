@@ -5,6 +5,8 @@
 //! This module contains an implementation of `ImeState`, the internal state object of `LegacyIme`.
 
 use {
+    anyhow::{Context as _, Error},
+    core::convert::TryInto,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input as uii, fidl_fuchsia_ui_text as txt,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     std::{
@@ -16,7 +18,7 @@ use {
 };
 
 use super::position;
-use crate::{ime_service::ImeService, index_convert as idx};
+use crate::{ime_service::ImeService, index_convert as idx, keyboard::events::KeyEvent};
 
 /// The internal state of the IME, held within `LegacyIme` inside `Arc<Mutex<ImeState>>`, so it can
 /// be accessed from multiple message handler async tasks. Methods that aren't message handlers
@@ -98,11 +100,15 @@ pub fn get_range(
 impl ImeState {
     /// Forwards a keyboard event to any listening clients without changing the actual state of the
     /// IME at all.
-    pub fn forward_event(&mut self, ev: uii::KeyboardEvent) {
+    pub(crate) fn forward_event(&mut self, key_event: KeyEvent) -> Result<(), Error> {
+        let keyboard_event: uii::KeyboardEvent =
+            key_event.try_into().context("error converting key event to keyboard event")?;
+
         let mut state = idx::text_state_byte_to_codeunit(self.text_state.clone());
         self.client
-            .did_update_state(&mut state, Some(&mut uii::InputEvent::Keyboard(ev)))
-            .unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
+            .did_update_state(&mut state, Some(&mut uii::InputEvent::Keyboard(keyboard_event)))
+            .context("error sending state update to ImeClient: {:?}")?;
+        Ok(())
     }
 
     /// Any time the state is updated, this method is called, which allows ImeState to inform any

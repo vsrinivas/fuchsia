@@ -4,10 +4,9 @@
 
 use {
     anyhow::{Context as _, Error},
-    core::convert::TryInto,
     fidl_fuchsia_ui_input as ui_input, fidl_fuchsia_ui_input2 as ui_input2,
     fidl_fuchsia_ui_input3 as ui_input3,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::{lock::Mutex, TryFutureExt, TryStreamExt},
     std::sync::Arc,
 };
@@ -56,9 +55,9 @@ impl Service {
                         ui_input::ImeServiceRequest::DispatchKey3 { event, responder, .. } => {
                             let key_event =
                                 KeyEvent::new(&event, keyboard3.get_keys_pressed().await)?;
-                            ime_service
-                                .inject_input(ui_input::InputEvent::Keyboard(key_event.try_into()?))
-                                .await;
+                            ime_service.inject_input(key_event.clone()).await.unwrap_or_else(|e| {
+                                fx_log_warn!("error injecting input into IME: {:?}", e)
+                            });
                             let was_handled = keyboard3
                                 .handle_key_event(event)
                                 .await

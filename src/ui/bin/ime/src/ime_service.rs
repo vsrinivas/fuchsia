@@ -2,17 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::legacy_ime::ImeState;
-use crate::legacy_ime::LegacyIme;
-use crate::multiplex::TextFieldMultiplexer;
-use anyhow::{Context as _, Error};
-use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
-use fidl_fuchsia_ui_input as uii;
-use fidl_fuchsia_ui_text as txt;
-use fuchsia_syslog::fx_log_err;
-use futures::lock::Mutex;
-use futures::prelude::*;
-use std::sync::{Arc, Weak};
+use {
+    anyhow::{Context as _, Error},
+    core::convert::TryInto,
+    fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
+    fidl_fuchsia_ui_input as uii, fidl_fuchsia_ui_text as txt,
+    fuchsia_syslog::fx_log_err,
+    futures::{lock::Mutex, prelude::*},
+    std::sync::{Arc, Weak},
+};
+
+use crate::{
+    keyboard::events::KeyEvent,
+    legacy_ime::{ImeState, LegacyIme},
+    multiplex::TextFieldMultiplexer,
+};
 
 pub struct ImeServiceState {
     pub keyboard_visible: bool,
@@ -129,42 +133,39 @@ impl ImeService {
 
     /// This is called by the operating system when input from the physical keyboard comes in.
     /// It also is called by legacy onscreen keyboards that just simulate physical keyboard input.
-    pub(crate) async fn inject_input(&mut self, mut event: uii::InputEvent) {
-        let keyboard_event = match &event {
-            uii::InputEvent::Keyboard(e) => e.clone(),
-            _ => return,
-        };
+    pub(crate) async fn inject_input(&mut self, event: KeyEvent) -> Result<(), Error> {
         let mut state = self.state.lock().await;
         let ime = {
             let active_ime_weak = match state.active_ime {
                 Some(ref v) => v,
-                None => return, // no currently active IME
+                None => return Ok(()), // no currently active IME
             };
             match LegacyIme::upgrade(active_ime_weak) {
                 Some(active_ime) => active_ime,
-                None => return, // IME no longer exists
+                None => return Ok(()), // IME no longer exists
             }
         };
 
         // Send the legacy ime a keystroke event to forward to connected clients. Even if a v2 input
         // method is connected, this ensures legacy text fields are able to still see key events;
         // something not yet provided by the new `TextField` API.
-        ime.forward_event(keyboard_event.clone()).await;
+        ime.forward_event(&event).await?;
 
         // Send the key event to any listening `TextInputContext` clients. If at least one still
         // exists, we assume it handled it and converted it into an edit sent via its handle to the
         // `TextField` protocol.
         state.text_input_context_clients.retain(|listener| {
             // drop listeners if they error on send
-            listener.send_on_input_event(&mut event).is_ok()
+            listener.send_on_key3_event(event.clone().try_into().unwrap()).is_ok()
         });
 
         // If no `TextInputContext` clients handled the input event, or if there are none connected,
         // we allow the internal input method inside of `LegacyIme` to convert this key event into
         // an edit.
         if state.text_input_context_clients.len() == 0 {
-            ime.inject_input(keyboard_event).await;
+            ime.inject_input(event).await?;
         }
+        Ok(())
     }
 
     pub async fn handle_ime_service_msg(
