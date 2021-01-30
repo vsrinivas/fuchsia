@@ -1927,8 +1927,9 @@ archive_formats = [
   "tar",
   "tgz",
 ]
+archive_targets = []
 foreach(format, archive_formats) {
-  paver_targets += [
+  archive_targets += [
     {
       name = "archive-$format"
       outputs = [ "$root_build_dir/build-archive.$format" ]
@@ -1953,8 +1954,16 @@ foreach(format, archive_formats) {
 }
 
 archive_deps = []
+foreach(target, archive_targets + paver_targets) {
+  archive_deps += [ ":${target.name}" ]
+}
+
 uefi_disk_deps = []
 foreach(target, paver_targets) {
+  uefi_disk_deps += [ ":${target.name}" ]
+}
+
+foreach(target, archive_targets + paver_targets) {
   action(target.name) {
     deps = []
     if (defined(target.deps)) {
@@ -1989,8 +1998,6 @@ foreach(target, paver_targets) {
       metadata = target.metadata
     }
   }
-  archive_deps += [ ":${target.name}" ]
-  uefi_disk_deps += [ ":${target.name}" ]
 }
 
 group("archives") {
