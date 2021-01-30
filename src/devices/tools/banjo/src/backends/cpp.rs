@@ -193,11 +193,11 @@ fn get_in_params(
                         name = to_c_name(name)
                     ))
                 }
-                ast::Ty::Vector { ty: inner_ty, .. } => {
+                ast::Ty::Vector { .. } => {
                     // TODO(surajmalhotra): Support zx wrappers for vectors.
                     let ty = ty_to_cpp_str(ast, false, ty).unwrap();
                     // TODO(surajmalhotra): Support multi-dimensional vectors.
-                    let ptr = if inner_ty.is_reference() { "*" } else { "" };
+                    let ptr = if attrs.has_attribute("InnerPointer") { "*" } else { "" };
                     Ok(format!(
                         "const {ty}{ptr}* {name}_{buffer}, size_t {name}_{size}",
                         buffer = name_buffer(&ty, &attrs),
@@ -257,24 +257,21 @@ fn get_out_params(
                     name = to_c_name(name)
                 )
             }
-            ast::Ty::Vector { ty: inner_ty, .. } => {
+            ast::Ty::Vector { .. } => {
                 // TODO(surajmalhotra): Support zx wrappers for vectors.
                 let ty_name = ty_to_cpp_str(ast, false, ty).unwrap();
                 // TODO(surajmalhotra): Support multi-dimensional vectors.
-                let ptr = if inner_ty.is_reference() { "*" } else { "" };
-                if ty.is_reference() {
-                    format!("{ty}{ptr}** out_{name}_{buffer}, size_t* {name}_{size}",
+                if attrs.has_attribute("CalleeAllocated") {
+                    format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
                             buffer = name_buffer(&ty_name, &attrs),
                             size = name_size(&ty_name, &attrs),
                             ty = ty_name,
-                            ptr = ptr,
                             name = to_c_name(name))
                 } else {
-                    format!("{ty}{ptr}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
+                    format!("{ty}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
                             buffer = name_buffer(&ty_name, &attrs),
                             size = name_size(&ty_name, &attrs),
                             ty = ty_name,
-                            ptr = ptr,
                             name = to_c_name(name))
                 }
             },
@@ -331,7 +328,7 @@ fn get_out_args(
                 }
                 ast::Ty::Vector { .. } => {
                     let ty_name = ty_to_cpp_str(ast, false, ty).unwrap();
-                    if ty.is_reference() {
+                    if attrs.has_attribute("CalleeAllocated") {
                         format!(
                             "out_{name}_{buffer}, {name}_{size}",
                             buffer = name_buffer(&ty_name, &attrs),

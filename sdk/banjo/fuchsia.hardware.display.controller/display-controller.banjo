@@ -396,8 +396,8 @@ protocol DisplayControllerImpl {
     ///
     /// The driver must not retain references to the configuration after this function returns.
     /// TODO: Fix me...
-    CheckConfiguration(vector<DisplayConfig?> display_config)
-                       -> (uint32 display_cfg_result, vector<uint32>? layer_cfg_result);
+    CheckConfiguration([InnerPointer] vector<DisplayConfig> display_config)
+                       -> (uint32 display_cfg_result, [CalleeAllocated] vector<uint32> layer_cfg_result);
 
     /// Applies the configuration.
     ///
@@ -415,7 +415,7 @@ protocol DisplayControllerImpl {
     /// callback after doing so.
     ///
     /// The driver must not retain references to the configuration after this function returns.
-    ApplyConfiguration(vector<DisplayConfig?> display_config) -> ();
+    ApplyConfiguration([InnerPointer] vector<DisplayConfig> display_config) -> ();
 
     /// Set ELD for one display.
     ///

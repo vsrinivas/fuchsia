@@ -22,7 +22,7 @@ protocol ZxIntelGpuCore {
 
     /// Maps the given |pci_bar|; address returned in |addr_out|, size in bytes returned in
     /// |size_out|.
-    MapPciMmio(uint32 pci_bar) -> (zx.status s, [Buffer] vector<uint8>? buf);
+    MapPciMmio(uint32 pci_bar) -> (zx.status s, [Buffer, CalleeAllocated] vector<uint8> buf);
 
     /// Unmaps the given |pci_bar|.
     UnmapPciMmio(uint32 pci_bar) -> (zx.status s);
