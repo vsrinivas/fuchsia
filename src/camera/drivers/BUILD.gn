@@ -23,6 +23,14 @@ group("drivers") {
   ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":bind_tests",
+    "test_utils:tests",
+  ]
+}
+
 group("bind_tests") {
   testonly = true
   deps = [

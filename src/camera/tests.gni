@@ -11,8 +11,6 @@ camera_tests = {
     "//src/camera/drivers/hw_accel/gdc/test",
     "//src/camera/drivers/hw_accel/ge2d/test",
     "//src/camera/drivers/sensors/imx227/test",
-    "//src/camera/drivers/test_utils/test:button_checker_test",
-    "//src/camera/drivers/test_utils/test:test_utils_test",
   ]
 
   tests = [
@@ -41,20 +39,6 @@ camera_tests = {
       name = "sherlock_configs_test"
       manifest = "//src/camera/drivers/controller/sherlock/test/meta/sherlock_configs_test.cmx"
       environments = [ sherlock_env ]
-    },
-    {
-      name = "button_checker_test"
-      manifest =
-          "//src/camera/drivers/test_utils/test/meta/button_checker_test.cmx"
-      environments = [
-        sherlock_env,
-        astro_env,
-      ]
-    },
-    {
-      name = "test_utils_test"
-      manifest = "//src/camera/drivers/test_utils/test/meta/test_utils_test.cmx"
-      environments = basic_envs
     },
     {
       name = "camera_device_unittests"
