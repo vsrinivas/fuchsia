@@ -39,6 +39,10 @@ pub struct A2dpConfigurationArgs {
     /// enable sink, allowing peers to stream audio from this device. defaults to true.
     #[argh(option)]
     pub enable_sink: Option<bool>,
+    /// enable avrcp-target, allowing media session updates to be relayed to the peer.
+    /// defaults to true
+    #[argh(option)]
+    pub enable_avrcp_target: Option<bool>,
 
     /// duration for A2DP to wait in milliseconds before assuming role of the initiator.
     /// If a signaling channel has not been established by this time, A2DP will
@@ -98,6 +102,8 @@ pub struct A2dpConfiguration {
     pub enable_source: bool,
     /// Enable sink streams. defaults to true.
     pub enable_sink: bool,
+    /// Enable AVRCP-Target. defaults to true.
+    pub enable_avrcp_target: bool,
     /// Duration for A2DP to wait before assuming role of the initiator.
     /// If a signaling channel has not been established by this time, A2DP will
     /// create the signaling channel, configure, open and start the stream. Defaults
@@ -114,6 +120,7 @@ impl Default for A2dpConfiguration {
             channel_mode: bredr::ChannelMode::Basic,
             enable_source: true,
             enable_sink: true,
+            enable_avrcp_target: true,
             initiator_delay: DEFAULT_INITIATOR_DELAY,
         }
     }
@@ -156,6 +163,7 @@ impl A2dpConfiguration {
             source: args.source.unwrap_or(self.source),
             enable_source: args.enable_source.unwrap_or(self.enable_source),
             enable_sink: args.enable_sink.unwrap_or(self.enable_sink),
+            enable_avrcp_target: args.enable_avrcp_target.unwrap_or(self.enable_avrcp_target),
             channel_mode,
             initiator_delay,
             ..self
@@ -261,6 +269,7 @@ mod tests {
         assert_eq!(A2dpConfiguration::default().domain, config.domain);
         assert_eq!(AudioSourceType::BigBen, config.source);
         assert_eq!(true, config.enable_source);
+        assert_eq!(true, config.enable_avrcp_target);
         assert_eq!(zx::Duration::from_millis(10000), config.initiator_delay);
 
         let missing_source = br#"
@@ -292,5 +301,33 @@ mod tests {
         let missing_all = b"{}";
         let config = A2dpConfiguration::from_reader(&missing_all[..]).expect("without everything");
         assert_eq!(A2dpConfiguration::default(), config);
+    }
+
+    #[test]
+    fn avrcp_target_disabled() {
+        let avrcp_target_disabled = br#"
+            {
+                "domain": "Testing123",
+                "source": "audio_out",
+                "enable_avrcp_target": false
+            }
+        "#;
+        let config = A2dpConfiguration::from_reader(&avrcp_target_disabled[..])
+            .expect("avrcp-tg disabled config");
+        assert_eq!("Testing123", config.domain);
+        assert_eq!(false, config.enable_avrcp_target);
+    }
+
+    #[test]
+    fn missing_avrcp_target_defaults_to_enabled() {
+        let no_avrcp_target = br#"
+            {
+                "domain": "Testing123",
+                "source": "audio_out"
+            }
+        "#;
+        let config =
+            A2dpConfiguration::from_reader(&no_avrcp_target[..]).expect("without avrcp-tg config");
+        assert_eq!(true, config.enable_avrcp_target);
     }
 }

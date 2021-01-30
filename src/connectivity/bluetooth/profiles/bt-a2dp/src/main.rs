@@ -558,8 +558,8 @@ async fn main() -> Result<(), Error> {
         peers_connected_stream.map(move |p| pool.peer_connected(p)).collect::<()>()
     });
 
-    // The AVRCP Target component is only needed if A2DP Source is requested.
-    let _avrcp_target = if config.enable_source {
+    // The AVRCP Target component is needed if it is requested and A2DP Source is requested.
+    let _avrcp_target = if config.enable_source && config.enable_avrcp_target {
         avrcp_target::launch()
             .await
             .or_else(|e| {
