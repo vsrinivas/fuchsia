@@ -1,9 +1,9 @@
-# Fuchsia Driver Development
+# Fuchsia driver development
 
-Fuchsia drivers are shared libraries that are dynamically loaded in Device Host
+Fuchsia drivers are shared libraries that are dynamically loaded in driver host
 processes in user space. The process of loading a driver is controlled by the
-Device Coordinator. See [Device Model](device-model.md) for more information on
-Device Hosts, Device Coordinator and the driver and device lifecycles.
+driver manager. See [Device Model](device-model.md) for more information on
+driver hosts, driver manager and the driver and device lifecycles.
 
 ## Directory structure
 
@@ -12,8 +12,8 @@ areas as specified in the
 [source code layout](/docs/concepts/source_code/layout.md) document. Most
 Fuchsia drivers are found under [//src/devices/](/src/devices). They are grouped
 based on the protocols they implement. The driver protocols are defined in
-[ddk/include/ddk/protodefs.h](/src/lib/ddk/include/ddk/protodefs.h).
-For example, a USB ethernet driver goes in
+[ddk/include/ddk/protodefs.h](/src/lib/ddk/include/ddk/protodefs.h). For
+example, a USB ethernet driver goes in
 [//src/connectivity/ethernet/drivers/](/src/connectivity/ethernet/drivers/)
 rather than [//src/devices/usb/drivers/](/src/devices/usb/drivers) because it
 implements an ethernet protocol. However, drivers that implement the USB stack
@@ -21,13 +21,12 @@ are in [//src/devices/usb/drivers/](/src/devices/usb/drivers) because they
 implement USB protocols.
 
 In the driver's `BUILD.gn`, there should be a `driver_module` target. In order
-to get a driver to show up under `/boot/driver/`, a `migrated_manifest` build
-target must be added which should then be added as a dependency inside of
-`//build/unification/images:migrated-image`. In order to get it to show up
-inside of `/system/driver/` it should be added to the system package via a
-`driver_package` build target which should then be referenced by relevant board
-file(s) under `//boards/`. The device coordinator looks first in
-`/boot/driver/`, then `/system/driver/` for loadable drivers.
+to get a driver to show up under `/boot/driver`, it should be included as under
+the `board_bootfs_labels` list in the relevant board file(s) under //boards. In
+order to get it to show up inside of `/system/driver` it should be added to the
+system package via a `driver_package` build target which should then be
+referenced by relevant boardfile(s) under `//boards`. The driver manager looks
+first in `/boot/driver`, then `/system/driver/` for loadable drivers.
 
 ## Creating a new driver
 
@@ -35,37 +34,34 @@ Creating a new driver can be done automatically by using the
 [Create Tool](/tools/create/README.md). Simply run the following command:
 
 ```
-fx create driver <PATH> --lang cpp 
+fx create driver <PATH> --lang cpp
 ```
 
-This will create the directory `<PATH>` containing an empty driver where the last
-segment of `<PATH>` is the driver name and GN target name. After this command is run,
-the following steps need to be followed:
+This will create the directory `<PATH>` containing an empty driver where the
+last segment of `<PATH>` is the driver name and GN target name. After this
+command is run, the following steps need to be followed:
 
 1) Include the `driver_module` or `driver_package` build target in the correct
-place to get your driver included into the system.
- - For packaged drivers the `driver_package` build target should be added to
-   the relevant board file in `//boards` or `//vendor/<foo>/boards` to a
-   `xx_package_labels` GN argument.
- - For boot drivers the `driver_module` build target should be added to
-   the relevant board file in `//boards` or `//vendor/<foo>/boards` to the
-   `board_bootfs_labels` GN argument.
-2) Include the `tests` build target in the `<PATH>:tests` build target to get
-your tests included in CQ.
-3) Add proper bind rules in `<NAME>.bind`.
-4) Write the functionality for the driver.
+place to get your driver included into the system. - For packaged drivers the
+`driver_package` build target should be added to the relevant board file in
+`//boards` or `//vendor/<foo>/boards` to a `xx_package_labels` GN argument. -
+For boot drivers the `driver_module` build target should be added to the
+relevant board file in `//boards` or `//vendor/<foo>/boards` to the
+`board_bootfs_labels` GN argument. 2) Include the `tests` build target in the
+`<PATH>:tests` build target to get your tests included in CQ. 3) Add proper bind
+rules in `<NAME>.bind`. 4) Write the functionality for the driver.
 
 ## Declaring a driver
 
 At a minimum, a driver should contain the driver declaration and implement the
 `bind()` driver op.
 
-Drivers are loaded and bound to a device when the Device Coordinator
-successfully finds a matching driver for a device. A driver declares the
-devices it is compatible with through bind rules, which should be placed in a
-`.bind` file alongside the driver. The bind compiler compiles those rules and
-creates a driver declaration macro containing those rules in a C header file.
-The following bind program declares the
+Drivers are loaded and bound to a device when the driver manager successfully
+finds a matching driver for a device. A driver declares the devices it is
+compatible with through bind rules, which should be placed in a `.bind` file
+alongside the driver. The bind compiler compiles those rules and creates a
+driver declaration macro containing those rules in a C header file. The
+following bind program declares the
 [AHCI driver](/src/devices/block/drivers/ahci/ahci.h):
 
 ```
@@ -123,11 +119,11 @@ zx_device_prop_t device_props[] = {
 ```
 
 For now, binding variables and macros are defined in
-[ddk/binding.h](/src/lib/ddk/include/ddk/binding.h). In the
-near future, all bind properties will be defined by bind libraries like the
-`deprecated.pci` library imported above. If you are introducing a new device
-class, you may need to introduce new bind properties to the binding header as
-well as the bind libraries.
+[ddk/binding.h](/src/lib/ddk/include/ddk/binding.h). In the near future, all
+bind properties will be defined by bind libraries like the `fuchsia.pci` library
+imported above. If you are introducing a new device class, you may need to
+introduce new bind properties to the binding header as well as the
+[bind libraries](/src/devices/bind/).
 
 Bind properties are 32-bit values. If your variable value requires greater than
 a 32-bit value, split them into multiple 32-bit variables. An example is ACPI
@@ -136,25 +132,8 @@ HID values, which are 8 characters (64-bits) long. It is split into
 libraries is complete you will be able to use other data types such as strings,
 larger numbers, and booleans.
 
-Drivers in the ZN build will need to continue to use the old C macro style of
-bind rules until the migration is complete. The following is the C macro
-equivalent of the bind rules for the AHCI driver.
-
-```c
-ZIRCON_DRIVER_BEGIN(ahci, ahci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x01),
-    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x06),
-    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
-ZIRCON_DRIVER_END(ahci)
-```
-
-Binding directives are evaluated sequentially. The branching directives
-`BI_GOTO()` and `BI_GOTO_IF()` allow you to jump forward to the matching label,
-defined by `BI_LABEL()`.
-
-`BI_ABORT_IF_AUTOBIND` may be used (usually as the first instruction) to prevent
-the default automatic binding behaviour. In that case, a driver can be bound to
+You may specify `disable_autobind = true` in the `bind_rules` build rule to
+disable the automatic binding behaviour. In that case, a driver can be bound to
 a device using `fuchsia.device.Controller/Bind` FIDL call.
 
 ## Driver binding
@@ -162,26 +141,28 @@ a device using `fuchsia.device.Controller/Bind` FIDL call.
 A driver's `bind()` function is called when it is matched to a device. Generally
 a driver will initialize any data structures needed for the device and
 initialize hardware in this function. It should not perform any time-consuming
-tasks or block in this function, because it is invoked from the devhost's RPC
-thread and it will not be able to service other requests in the meantime.
-Instead, it should spawn a new thread to perform lengthy tasks.
+tasks or block in this function, because it is invoked from the driver host's
+RPC thread and it will not be able to service other requests in the meantime.
+Instead, it should take the approach of implementing the `init` device hook as
+elaborated upon below.
 
 The driver should make no assumptions about the state of the hardware in
 `bind()`, resetting the hardware or otherwise ensuring it is in a known state.
-Because the system recovers from a driver crash by re-spawning the devhost, the
-hardware may be in an unknown state when `bind()` is invoked.
+Because the system may recover from a driver crash by re-spawning the driver
+host (this depends on per product policy), the hardware may be in an unknown
+state when `bind()` is invoked.
 
 A driver is required to publish a `zx_device_t` in `bind()` by calling
-`device_add()`. This is necessary for the Device Coordinator to keep track of
-the device lifecycle. If the driver is not able to publish a functional device
-in `bind()`, for example if it is initializing the full device in a thread, it
+`device_add()`. This is necessary for the driver manager to keep track of the
+device lifecycle. If the driver is not able to publish a functional device in
+`bind()`, for example if it is initializing the full device in a thread, it
 should publish an invisible device by implementing the device `init()` hook, and
 call `device_init_reply()` once initialization is complete.
 `device_init_reply()` does not necessarily need to be called from the `init()`
 hook. For example, it may be called from another worker thread. The device is
 also guaranteed not to be removed until the reply is received. See `init()` in
-[src/lib/ddk/include/ddk/device.h](/src/lib/ddk/include/ddk/device.h)
-and `device_init_reply()` in
+[src/lib/ddk/include/ddk/device.h](/src/lib/ddk/include/ddk/device.h) and
+`device_init_reply()` in
 [src/lib/ddk/include/ddk/driver.h](/src/lib/ddk/include/ddk/driver.h).
 
 There are generally four outcomes from `bind()`:
@@ -210,13 +191,13 @@ There are generally four outcomes from `bind()`:
 After a device is added and made visible by the system, it is made available to
 client processes and for binding by compatible drivers.
 
-## Device protocols
+## Banjo protocols
 
 A driver provides a set of device ops and optional protocol ops to a device.
 Device ops implement the device lifecycle methods and the external interface to
 the device that are called by other user space applications and services.
-Protocol ops implement the ddk-internal protocols of the device that are called
-by other drivers.
+Protocol ops implement the in-process protocols of the device that are called by
+other drivers loaded into the same driver host.
 
 You can pass one set of protocol ops for the device in `device_add_args_t`. If a
 device supports multiple protocols, implement the `get_protocol()` device op. A
@@ -228,12 +209,12 @@ the device is published under in devfs.
 A driver generally operates by servicing client requests from children drivers
 or other processes. It fulfills those requests either by communicating directly
 with hardware (for example, via MMIO) or by communicating with its parent device
-(for example, queuing a USB transaction).
+(for example, queueing a USB transaction).
 
-External client requests from processes outside the devhost are fulfilled by
-children drivers, generally in the same process, are fulfilled by device
+External client requests from processes outside the driver host are fulfilled by
+children drivers, generally in the same process, are fulfilled by banjo
 protocols corresponding to the device class. Driver-to-driver requests should
-use device protocols instead of device ops.
+use banjo protocols instead of device ops.
 
 A device can get a protocol supported by its parent by calling
 `device_get_protocol()` on its parent device.
@@ -272,29 +253,30 @@ client. The driver is given the opportunity to interpret FIDL messages via the
 
 ## Protocol ops vs. FIDL messages
 
-Protocol ops define the DDK-internal API for a device. FIDL messages define the
+Protocol ops define the in-process API for a device. FIDL messages define the
 external API. Define a protocol op if the function is meant to be called by
-other drivers. A driver should call a protocol op on its parent to make use of
-those functions.
+other drivers in the same process. A driver should call a protocol op on its
+parent to make use of those functions.
 
 ## Isolate devices
 
-Devices that are added with `DEVICE_ADD_MUST_ISOLATE` spawn a new proxy devhost.
-The device exists in both the parent devhost and as the root of the new devhost.
-Devmgr attempts to load **driver**`.proxy.so` into this proxy devhost. For
-example, PCI is supplied by `libpci.so` so devmgr would look to load
-`libpci.proxy.so`. The driver is provided a channel in `create()` when it
-creates the proxy device (the "bottom half" that runs in the new devhost). The
-proxy device should cache this channel for when it needs to communicate with the
-top half (e.g. if it needs to call API on the parent device).
+Devices that are added with `DEVICE_ADD_MUST_ISOLATE` spawn a new driver host
+with a proxy device. The device exists in both the parent driver host and as the
+root of the new driver host. Devmgr attempts to load **driver**`.proxy.so` into
+the new driver host. For example, PCI is supplied by `libpci.so` so devmgr would
+look to load `libpci.proxy.so`. The driver is provided a channel in `create()`
+when it creates the proxy device (the "bottom half" that runs in the new driver
+host). The proxy device should cache this channel for when it needs to
+communicate with the top half (e.g. if it needs to call API on the parent
+device).
 
 `rxrpc()` is invoked on the top half when this channel is written to by the
 bottom half. There is no common wire protocol for this channel. For an example,
 refer to the [PCI driver](/src/devices/bus/drivers/pci).
 
-Note: This is a mechanism used by various bus devices and not something general
-drivers should have to worry about. (please ping swetland if you think you need
-to use this)
+Note: Proxying is currently deprecated in favor of using FIDL between drivers in
+different driver hosts. Please talk to the driver framework team before
+implementing new proxies.
 
 ## Logging
 
@@ -306,12 +288,12 @@ You can have a driver send log messages to the
 Depending on the type of log level, by default, log messages are sent to the
 following logs:
 
-* [syslog](/docs/development/diagnostics/logs/recording.md#logsinksyslog):
-  * `ERROR`
-  * `WARNING`
-  * `INFO`
-* [debuglog](/docs/development/diagnostics/logs/recording.md#debuglog_handles):
-  * `SERIAL`
+*   [syslog](/docs/development/diagnostics/logs/recording.md#logsinksyslog):
+    *   `ERROR`
+    *   `WARNING`
+    *   `INFO`
+*   [debuglog](/docs/development/diagnostics/logs/recording.md#debuglog_handles):
+    *   `SERIAL`
 
 To control which log levels are sent to the syslog (other than `SERIAL`), the
 [kernel commandline](/docs/reference/kernel/kernel_cmdline.md#drivernamelogflags)
@@ -359,8 +341,7 @@ zxtest and handles logging for you.
 
 Driver authors can use several means for writing integration tests. For simple
 cases, the [fake-ddk](/src/devices/testing/fake_ddk) library is recommended. For
-more complicated ones,
-[driver-integration-test](/zircon/system/ulib/driver-integration-test) is
+more complicated ones, [isolated-devmgr](/src/lib/isolated_devmgr) is
 recommended.
 
 TODO(fxbug.dev/51320): Fill out more detail here.
@@ -370,9 +351,9 @@ TODO(fxbug.dev/51320): Fill out more detail here.
 Although drivers run in user space processes, they have a more restricted set of
 rights than normal processes. Drivers are not allowed to access the filesystem,
 including devfs. That means a driver cannot interact with arbitrary devices. If
-your driver needs to do this, consider writing a service instead. For example,
-the virtual console is implemented by the [virtcon](/src/bringup/bin/virtcon)
-service.
+your driver needs to do this, consider writing a service component instead. For
+example,the virtual console is implemented by the
+[virtcon](/src/bringup/bin/virtcon) component.
 
 Privileged operations such as `zx_vmo_create_contiguous()` and
 [zx_interrupt_create](/docs/reference/syscalls/interrupt_create.md) require a
