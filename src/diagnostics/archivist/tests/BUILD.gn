@@ -17,6 +17,7 @@ group("tests") {
     "logs-budget",
     "logs-connector",
     "logs-from-crash",
+    "logs-lifecycle",
     "logs-redaction",
     "logs-sorting",
     "logs-stop",

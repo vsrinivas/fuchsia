@@ -1,0 +1,66 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/logs_lifecycle",
+    },
+    children: [
+        {
+            name: "logs_when_launched",
+            url: "fuchsia-pkg://fuchsia.com/test-logs-lifecycle#meta/logs-when-launched.cm",
+        },
+        {
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/test-logs-lifecycle#meta/archivist-for-embedding.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.Realm" ],
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "#archivist",
+            to: [ "#logs_when_launched" ],
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "fuchsia.logger.LogSink" },
+        },
+
+        // These events are not needed for the test to pass, but including them
+        // reduces log noise.
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: [ "#archivist" ],
+            modes: [ "async" ],
+        },
+        {
+            event: "capability_ready",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "diagnostics" },
+            modes: [ "async" ],
+        },
+    ],
+}
