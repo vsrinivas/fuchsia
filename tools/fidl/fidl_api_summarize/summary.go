@@ -54,6 +54,10 @@ func (s *summarizer) Elements() []Element {
 func (s *summarizer) addUnions(structs []fidlgen.Union) {
 	for _, st := range structs {
 		for _, m := range st.Members {
+			if m.Reserved {
+				// Disregard reserved members.
+				continue
+			}
 			s.addElement(newMember(
 				st.Name, m.Name, m.Type, fidlgen.UnionDeclType))
 		}
@@ -66,6 +70,10 @@ func (s *summarizer) addUnions(structs []fidlgen.Union) {
 func (s *summarizer) addTables(structs []fidlgen.Table) {
 	for _, st := range structs {
 		for _, m := range st.Members {
+			if m.Reserved {
+				// Disregard reserved members
+				continue
+			}
 			s.addElement(newMember(st.Name, m.Name, m.Type, fidlgen.TableDeclType))
 		}
 		s.addElement(newAggregate(st.Name, st.Resourceness, fidlgen.TableDeclType))

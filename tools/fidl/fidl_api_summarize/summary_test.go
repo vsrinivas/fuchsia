@@ -509,6 +509,26 @@ struct l/Foo
 library l
 `,
 		},
+		{
+			name: "reserved keyword",
+			fidl: `
+library l;
+union E {
+1: reserved;
+2: int32 e;
+};
+table T {
+1: reserved;
+2: int32 e;
+};
+`,
+			expected: `union/member l/E.e int32
+union l/E
+table/member l/T.e int32
+table l/T
+library l
+`,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
