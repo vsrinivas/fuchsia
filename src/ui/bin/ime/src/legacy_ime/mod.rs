@@ -5,8 +5,6 @@
 mod handler;
 mod position;
 mod state;
-#[cfg(test)]
-mod tests;
 
 pub use handler::LegacyIme;
 pub use state::ImeState;

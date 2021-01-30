@@ -62,7 +62,6 @@ rustc_binary("bin") {
     "src/legacy_ime/mod.rs",
     "src/legacy_ime/position.rs",
     "src/legacy_ime/state.rs",
-    "src/legacy_ime/tests.rs",
     "src/main.rs",
     "src/multiplex.rs",
   ]
