@@ -2362,7 +2362,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
     /* Detect queueing to unconfigured precedence */
     if (eprec == prec) {
       // TODO(fxbug.dev/42151): Remove once bug resolved
-      BRCMF_ERR_THROTTLE("Expected to evict from and queue to same queue %d", prec);
+      BRCMF_INFO_THROTTLE("Expected to evict from and queue to same queue %d", prec);
       return false; /* refuse newer (incoming) packet */
     }
     /* Evict packet according to discard policy */
@@ -2409,7 +2409,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   sdiodev->drvr->irq_callback_lock.lock();
   if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
     brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
-    BRCMF_ERR_THROTTLE("out of bus->txq !!!");
+    BRCMF_INFO_THROTTLE("out of bus->txq !!!");
     sdiodev->drvr->device->GetInspect()->LogTxQueueFull();
     ret = ZX_ERR_NO_RESOURCES;
 
@@ -2418,7 +2418,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
     if (brcmf_sdio_txq_full_errors >= 30 && !brcmf_sdio_txq_full_debug_log) {
       // We've seen a large number of these errors in a row, start providing
       // more debug information.
-      BRCMF_INFO("Excessive out of bus->txq errors, enabling debug logging");
+      BRCMF_WARN("Excessive out of bus->txq errors, enabling debug logging");
       brcmf_sdio_txq_full_debug_log = true;
     }
   } else {
