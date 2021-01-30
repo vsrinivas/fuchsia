@@ -5,10 +5,14 @@
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":driver-manager-tests" ]
+  deps = [
+    ":driver-manager-tests",
+    ":driver-runner-integration-test",
+  ]
 }
 
 # Common source files and dependencies between :coordinator and :test
@@ -54,6 +58,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":driver_runner",
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device.manager",
@@ -228,6 +233,23 @@ fuchsia_test_package("driver-manager-tests") {
     ":driver-manager-test",
     ":driver-runner-test",
   ]
+}
+
+executable("driver_runner_integration_test") {
+  testonly = true
+  sources = [ "driver_runner_integration_test.cc" ]
+
+  deps = [
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/devmgr-integration-test",
+  ]
+}
+
+isolated_devmgr_unittest_package("driver-runner-integration-test") {
+  executable_path = "bin/driver_runner_integration_test"
+  deps = [ ":driver_runner_integration_test" ]
 }
 
 component_manifest_resources("meta") {

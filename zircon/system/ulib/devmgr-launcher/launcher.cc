@@ -174,12 +174,15 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     argv.push_back("--load-driver");
     argv.push_back(path);
   }
+  if (args.no_exit_after_suspend) {
+    argv.push_back("--no-exit-after-suspend");
+  }
   if (args.sys_device_driver != nullptr) {
     argv.push_back("--sys-device-driver");
     argv.push_back(args.sys_device_driver);
   }
-  if (args.no_exit_after_suspend) {
-    argv.push_back("--no-exit-after-suspend");
+  if (args.use_driver_runner) {
+    argv.push_back("--use-driver-runner");
   }
   argv.push_back(nullptr);
 

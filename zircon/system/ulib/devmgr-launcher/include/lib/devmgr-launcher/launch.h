@@ -31,10 +31,15 @@ struct Args {
   // drivers from.  This differs from |driver_search_paths| in that it
   // specifies specific drivers rather than entire directories.
   fbl::Vector<const char*> load_drivers;
+  // Do not exit driver manager after suspending the system.
+  bool no_exit_after_suspend = false;
   // An absolute path (in devmgr's view of the filesystem) for which driver
   // should be bound to the sys_device (the top-level device for most
   // devices).  If nullptr, this uses devmgr's default.
   const char* sys_device_driver = nullptr;
+  // Use the driver runner, which allows driver components to be loaded.
+  bool use_driver_runner = false;
+
   // If valid, the FD to give to devmgr as stdin/stdout/stderr.  Otherwise
   // inherits from the caller of Launch().
   fbl::unique_fd stdio;
@@ -45,8 +50,6 @@ struct Args {
   std::vector<std::pair<const char*, zx::channel>> flat_namespace;
   // If true, the block watcher will be disabled and will not start.
   bool disable_block_watcher = false;
-
-  bool no_exit_after_suspend = false;
 
   // The following arguments are for devmgr_integration_test::IsolatedDevmgr only.
   // TODO(fxbug.dev/34365): Clean this up, devmgr-launcher shouldn't define arguments that are

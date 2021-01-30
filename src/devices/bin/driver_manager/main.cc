@@ -42,6 +42,7 @@
 #include "coordinator.h"
 #include "devfs.h"
 #include "driver_host_loader_service.h"
+#include "driver_runner.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
@@ -137,17 +138,20 @@ struct DriverManagerArgs {
   // Load the drivers with these paths.  The specified drivers do not need to
   // be in directories in |driver_search_paths|.
   fbl::Vector<const char*> load_drivers;
-  // Use this driver as the sys_device driver.  If nullptr, the default will
-  // be used.
-  std::string sys_device_driver;
   // Connect the stdout and stderr file descriptors for this program to a
   // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
   bool log_to_debuglog = false;
+  // Do not exit driver manager after suspending the system.
+  bool no_exit_after_suspend = false;
   // Path prefix for binaries/drivers/libraries etc.
   std::string path_prefix = "/boot/";
+  // Use this driver as the sys_device driver.  If nullptr, the default will
+  // be used.
+  std::string sys_device_driver;
   // Use the default loader rather than the one provided by fshost.
   bool use_default_loader = false;
-  bool no_exit_after_suspend = false;
+  // Use the driver runner, which allows driver components to be loaded.
+  bool use_driver_runner = false;
 };
 
 DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
@@ -159,6 +163,7 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     kPathPrefix,
     kSysDeviceDriver,
     kUseDefaultLoader,
+    kUseDriverRunner,
   };
   option options[] = {
       {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
@@ -168,6 +173,7 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       {"path-prefix", required_argument, nullptr, kPathPrefix},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
+      {"use-driver-runner", no_argument, nullptr, kUseDriverRunner},
       {0, 0, 0, 0},
   };
 
@@ -210,6 +216,9 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
         break;
       case kUseDefaultLoader:
         args.use_default_loader = true;
+        break;
+      case kUseDriverRunner:
+        args.use_driver_runner = true;
         break;
       default:
         print_usage_and_exit();
@@ -277,6 +286,51 @@ int main(int argc, char** argv) {
   };
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  svc::Outgoing outgoing{loop.dispatcher()};
+
+  std::optional<DriverRunner> driver_runner;
+  // TODO(fxbug.dev/33183): Replace this with a driver_index component.
+  std::optional<DriverIndex> driver_index;
+  if (driver_manager_args.use_driver_runner) {
+    const auto realm_path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::sys2::Realm::Name);
+    zx::channel realm_client, realm_server;
+    status = zx::channel::create(0, &realm_client, &realm_server);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = fdio_service_connect(realm_path.data(), realm_server.release());
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to connect to '%s': %s", realm_path.data(), zx_status_get_string(status));
+      return status;
+    }
+    // TODO(fxbug.dev/33183): Replace this with a driver_index component.
+    driver_index.emplace([](auto args) -> zx::status<MatchResult> {
+      std::string_view name(args.name().data(), args.name().size());
+      if (name == "platform_bus") {
+        return zx::ok(MatchResult{
+            .url = "fuchsia-boot:///#meta/platform_bus2.cm",
+            .matched_args = std::move(args),
+        });
+      } else if (name == "board") {
+        return zx::ok(MatchResult{
+            .url = "fuchsia-boot:///#meta/x64.cm",
+            .matched_args = std::move(args),
+        });
+      } else {
+        return zx::error(ZX_ERR_NOT_FOUND);
+      }
+    });
+    driver_runner.emplace(std::move(realm_client), &driver_index.value(), loop.dispatcher());
+    auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
+    if (publish.is_error()) {
+      return publish.error_value();
+    }
+    auto start = driver_runner->StartRootDriver("platform_bus");
+    if (start.is_error()) {
+      return start.error_value();
+    }
+  }
+
   CoordinatorConfig config;
   SystemInstance system_instance;
   config.boot_args = &boot_args;
@@ -320,7 +374,6 @@ int main(int argc, char** argv) {
   Coordinator coordinator(std::move(config), loop.dispatcher());
 
   // Services offered to the rest of the system.
-  svc::Outgoing outgoing{loop.dispatcher()};
   status = coordinator.InitOutgoingServices(outgoing.svc_dir());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to initialize outgoing services: %s", zx_status_get_string(status));

@@ -8,6 +8,7 @@
 #include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/power/manager/llcpp/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
+#include <fuchsia/sys2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -44,7 +45,32 @@ namespace {
 
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 
-class FakePowerRegistrationServer
+// TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
+class FakeRealm : public llcpp::fuchsia::sys2::Realm::Interface {
+ public:
+  void BindChild(llcpp::fuchsia::sys2::ChildRef child, zx::channel exposed_dir,
+                 BindChildCompleter::Sync& completer) override {
+    exposed_dir_ = std::move(exposed_dir);
+    completer.ReplySuccess();
+  }
+
+  void CreateChild(llcpp::fuchsia::sys2::CollectionRef collection,
+                   llcpp::fuchsia::sys2::ChildDecl decl,
+                   CreateChildCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+  }
+
+  void DestroyChild(llcpp::fuchsia::sys2::ChildRef child,
+                    DestroyChildCompleter::Sync& completer) override {}
+
+  void ListChildren(llcpp::fuchsia::sys2::CollectionRef collection, zx::channel iter,
+                    ListChildrenCompleter::Sync& completer) override {}
+
+ private:
+  zx::channel exposed_dir_;
+};
+
+class FakePowerRegistration
     : public llcpp::fuchsia::power::manager::DriverManagerRegistration::Interface {
  public:
   void Register(zx::channel transition, zx::channel dir,
@@ -296,7 +322,10 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
   // Create fake Power Registration.
   CreateFakeCppService(
       svc_loop_state_->root, llcpp::fuchsia::power::manager::DriverManagerRegistration::Name,
-      svc_loop_state_->loop.dispatcher(), std::make_unique<FakePowerRegistrationServer>());
+      svc_loop_state_->loop.dispatcher(), std::make_unique<FakePowerRegistration>());
+
+  CreateFakeCppService(svc_loop_state_->root, llcpp::fuchsia::sys2::Realm::Name,
+                       svc_loop_state_->loop.dispatcher(), std::make_unique<FakeRealm>());
 
   // Serve VFS on channel.
   svc_loop_state_->vfs.ServeDirectory(svc_loop_state_->root, std::move(bootsvc_server),
