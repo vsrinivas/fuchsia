@@ -5,7 +5,6 @@
 import 'package:logging/logging.dart';
 
 import '../metrics_results.dart';
-import '../time_delta.dart';
 import '../trace_model.dart';
 import 'common.dart';
 
@@ -21,17 +20,31 @@ const _aggregateMetricsOnly = 'aggregateMetricsOnly';
 
 List<TestCaseResults> temperatureMetricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
-  final duration = getTotalTraceDuration(model);
-  if (duration < TimeDelta.fromMilliseconds(1100)) {
-    _log.info(
-        'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide temperature information');
+  // For soft-transition, try to get power data from temperature_logger, and
+  // fall back to data from power_manager if it is not present.
+  // TODO(fxbug.dev/66087): Remove the fallback to power_manager
+  List<double> temperatureReadings = getArgValuesFromEvents<num>(
+          filterEventsTyped<CounterEvent>(getAllEvents(model),
+              category: 'temperature_logger', name: 'temperature'),
+          'soc_pll')
+      .map((t) => t.toDouble())
+      .toList();
+  if (temperatureReadings.isEmpty) {
+    temperatureReadings = getArgValuesFromEvents<num>(
+            filterEventsTyped<CounterEvent>(getAllEvents(model),
+                category: 'power_manager',
+                name: 'ThermalPolicy raw_temperature'),
+            'raw_temperature')
+        .map((t) => t.toDouble())
+        .toList();
+  }
+  if (temperatureReadings.isEmpty) {
+    final duration = getTotalTraceDuration(model);
+    _log.info('No temperature readings are present. Perhaps the trace duration '
+        '(${duration.toMilliseconds()} milliseconds) is too short to provide '
+        'temperature information');
     return [];
   }
-  final temperatureReadings = getArgValuesFromEvents<num>(
-          filterEventsTyped<CounterEvent>(getAllEvents(model),
-              category: 'power_manager', name: 'ThermalPolicy raw_temperature'),
-          'raw_temperature')
-      .map((t) => t.toDouble());
 
   _log.info(
       'Average temperature reading: ${computeMean(temperatureReadings)} degree Celsius');
