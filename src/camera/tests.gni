@@ -5,7 +5,6 @@ import("//build/testing/environments.gni")
 
 camera_tests = {
   deps = [
-    "//src/camera/bin/device:unittests",
     "//src/camera/drivers/controller/sherlock/test",
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
@@ -39,11 +38,6 @@ camera_tests = {
       name = "sherlock_configs_test"
       manifest = "//src/camera/drivers/controller/sherlock/test/meta/sherlock_configs_test.cmx"
       environments = [ sherlock_env ]
-    },
-    {
-      name = "camera_device_unittests"
-      manifest = "//src/camera/bin/device/camera_device_unittests.cmx"
-      environments = basic_envs
     },
     {
       name = "imx227_test"
