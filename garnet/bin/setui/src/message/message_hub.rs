@@ -180,7 +180,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
     async fn send_to_next(&mut self, sender_id: MessengerId, mut message: Message<P, A, R>) {
         let mut recipients = vec![];
 
-        let message_type = message.get_message_type();
+        let message_type = message.get_type().clone();
 
         let mut require_delivery = false;
 
@@ -487,10 +487,10 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             MessageAction::Forward(mut forwarded_message) => {
                 message = Some(forwarded_message.clone());
                 if let Some(beacon) = self.beacons.get(&fingerprint.id) {
-                    match forwarded_message.clone().get_message_type() {
+                    match forwarded_message.clone().get_type() {
                         MessageType::Origin(audience) => {
                             // Can't forward messages meant for forwarder
-                            if Audience::Messenger(fingerprint.signature) == audience {
+                            if Audience::Messenger(fingerprint.signature) == *audience {
                                 return;
                             }
                             // Ignore forward requests from leafs in broadcast

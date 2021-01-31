@@ -8,6 +8,7 @@ use crate::input::{ButtonType, VolumeGain};
 use crate::internal::event::{self, Event};
 use crate::internal::{agent, switchboard};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
@@ -53,6 +54,7 @@ async fn test_media_buttons_proxied() {
     let context = Context::new(
         agent_receptor,
         Descriptor::new("test_media_buttons_agent"),
+        service::message::create_hub(),
         switchboard::message::create_hub(),
         event_hub,
         HashSet::new(),

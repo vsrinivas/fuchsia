@@ -12,10 +12,12 @@ use crate::agent::base::Context;
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::clock;
-use crate::handler::base::Request;
+use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::internal::agent::Payload;
 use crate::internal::switchboard::{Action, Payload as SwitchboardPayload};
-use crate::message::base::{MessageEvent, MessengerType};
+use crate::message::base::{filter, MessageEvent, MessengerType};
+use crate::service;
+use crate::service::TryFromWithClient;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Property};
@@ -23,6 +25,7 @@ use fuchsia_inspect_derive::{Inspect, WithInspect};
 use futures::StreamExt;
 
 use std::collections::{HashMap, VecDeque};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 blueprint_definition!("inspect", crate::agent::inspect::InspectAgent::create);
@@ -114,26 +117,44 @@ impl InspectAgent {
     }
 
     pub async fn create_with_node(context: Context, node: inspect::Node) {
-        let (_, message_rx) = context
+        let (_, switchboard_message_rx) = context
             .switchboard_messenger_factory
             .create(MessengerType::Broker(None))
+            .await
+            .expect("should receive client");
+
+        let (_, message_rx) = context
+            .messenger_factory
+            .create(MessengerType::Broker(Some(filter::Builder::single(
+                filter::Condition::Custom(Arc::new(move |message| {
+                    // Only catch setting handler requests.
+                    matches!(
+                        message.payload(),
+                        service::Payload::Setting(HandlerPayload::Request(_))
+                    )
+                })),
+            ))))
             .await
             .expect("should receive client");
 
         let mut agent = InspectAgent { inspect_node: node, last_requests: HashMap::new() };
 
         fasync::Task::spawn(async move {
-            let switchboard_event = message_rx.fuse();
+            let event = message_rx.fuse();
+            let switchboard_event = switchboard_message_rx.fuse();
             let agent_event = context.receptor.fuse();
-            futures::pin_mut!(switchboard_event, agent_event);
+            futures::pin_mut!(switchboard_event, agent_event, event);
 
             loop {
                 futures::select! {
+                    message_event = event.select_next_some() => {
+                        agent.process_message_event(message_event);
+                    },
                     switchboard_message = switchboard_event.select_next_some() => {
                         if let MessageEvent::Message(SwitchboardPayload::Action(
                                 Action::Request(setting_type, request)), client)
                                     = switchboard_message {
-                            agent.record_request(setting_type, request);
+                            agent.record_request(setting_type, &request);
                         }
                     },
                     agent_message = agent_event.select_next_some() => {
@@ -150,8 +171,25 @@ impl InspectAgent {
         .detach();
     }
 
+    /// Identfies [`service::message::MessageEvent`] that contains a [`Request`]
+    /// for setting handlers and records the [`Request`].
+    fn process_message_event(&mut self, event: service::message::MessageEvent) {
+        if let Ok((HandlerPayload::Request(request), client)) =
+            HandlerPayload::try_from_with_client(event)
+        {
+            for target in client.get_audience().flatten() {
+                if let service::message::Audience::Address(service::Address::Handler(
+                    setting_type,
+                )) = target
+                {
+                    self.record_request(setting_type, &request);
+                }
+            }
+        }
+    }
+
     /// Write a request to inspect.
-    fn record_request(&mut self, setting_type: SettingType, request: Request) {
+    fn record_request(&mut self, setting_type: SettingType, request: &Request) {
         let inspect_node = &self.inspect_node;
         let setting_type_info = self.last_requests.entry(setting_type).or_insert_with(|| {
             SettingTypeInfo::new()
@@ -205,13 +243,50 @@ mod tests {
     use crate::internal::switchboard;
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::message::base::Audience;
+    use crate::service;
 
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_inspect::testing::{AnyProperty, TreeAssertion};
 
     use std::collections::HashSet;
 
-    async fn send_request_and_wait(
+    /// The `RequestProcessor` handles sending a request through a MessageHub
+    /// From caller to recipient. This is useful when testing brokers in
+    /// between.
+    struct RequestProcessor {
+        messenger_factory: service::message::Factory,
+    }
+
+    impl RequestProcessor {
+        fn new(messenger_factory: service::message::Factory) -> Self {
+            RequestProcessor { messenger_factory }
+        }
+
+        async fn send_and_receive(&self, setting_type: SettingType, setting_request: Request) {
+            let (messenger, _) = self
+                .messenger_factory
+                .create(MessengerType::Unbound)
+                .await
+                .expect("should be created");
+            let (_, mut receptor) = self
+                .messenger_factory
+                .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
+                .await
+                .expect("should be created");
+
+            messenger
+                .message(
+                    HandlerPayload::Request(setting_request).into(),
+                    service::message::Audience::Address(service::Address::Handler(setting_type)),
+                )
+                .send()
+                .ack();
+
+            receptor.next_payload().await.ok();
+        }
+    }
+
+    async fn send_request_and_wait_switchboard(
         messenger: &switchboard::message::Messenger,
         switchboard_receptor: &mut switchboard::message::Receptor,
         setting_type: SettingType,
@@ -239,6 +314,7 @@ mod tests {
                 .expect("should be present")
                 .1,
             Descriptor::new("test_component"),
+            service::message::create_hub(),
             switchboard::message::create_hub(),
             event::message::create_hub(),
             HashSet::new(),
@@ -249,6 +325,69 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect() {
+        clock::mock::set(SystemTime::UNIX_EPOCH);
+
+        let inspector = inspect::Inspector::new();
+        let inspect_node = inspector.root().create_child("switchboard");
+        let context = create_context().await;
+
+        let request_processor = RequestProcessor::new(context.messenger_factory.clone());
+
+        InspectAgent::create_with_node(context, inspect_node).await;
+
+        // Send a few requests to make sure they get written to inspect properly.
+        request_processor
+            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(false))
+            .await;
+
+        request_processor
+            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(false))
+            .await;
+
+        request_processor
+            .send_and_receive(
+                SettingType::Intl,
+                Request::SetIntlInfo(IntlInfo {
+                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
+                    temperature_unit: Some(TemperatureUnit::Celsius),
+                    time_zone_id: Some("UTC".to_string()),
+                    hour_cycle: None,
+                }),
+            )
+            .await;
+
+        assert_inspect_tree!(inspector, root: {
+            switchboard: {
+                "Display": {
+                    "SetAutoBrightness": {
+                        "00000000000000000000": {
+                            request: "SetAutoBrightness(false)",
+                            timestamp: "0",
+                        },
+                        "00000000000000000001": {
+                            request: "SetAutoBrightness(false)",
+                            timestamp: "0",
+                        },
+                    },
+                },
+                "Intl": {
+                    "SetIntlInfo": {
+                        "00000000000000000000": {
+                            request: "SetIntlInfo(IntlInfo { \
+                                locales: Some([LocaleId { id: \"en-US\" }]), \
+                                temperature_unit: Some(Celsius), \
+                                time_zone_id: Some(\"UTC\"), \
+                                hour_cycle: None })",
+                            timestamp: "0",
+                        }
+                    },
+                }
+            }
+        });
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_inspect_switchboard() {
         clock::mock::set(SystemTime::UNIX_EPOCH);
 
         let inspector = inspect::Inspector::new();
@@ -266,7 +405,7 @@ mod tests {
         let _agent = InspectAgent::create_with_node(context, inspect_node).await;
 
         // Send a few requests to make sure they get written to inspect properly.
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
@@ -274,7 +413,7 @@ mod tests {
         )
         .await;
 
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
@@ -282,7 +421,7 @@ mod tests {
         )
         .await;
 
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Intl,
@@ -333,6 +472,59 @@ mod tests {
         let inspect_node = inspector.root().create_child("switchboard");
         let context = create_context().await;
 
+        let request_processor = RequestProcessor::new(context.messenger_factory.clone());
+
+        let _agent = InspectAgent::create_with_node(context, inspect_node).await;
+
+        // Interlace different request types to make sure the counter is correct.
+        request_processor
+            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(false))
+            .await;
+
+        request_processor.send_and_receive(SettingType::Display, Request::Get).await;
+
+        request_processor
+            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(true))
+            .await;
+
+        request_processor.send_and_receive(SettingType::Display, Request::Get).await;
+
+        assert_inspect_tree!(inspector, root: {
+            switchboard: {
+                "Display": {
+                    "SetAutoBrightness": {
+                        "00000000000000000000": {
+                            request: "SetAutoBrightness(false)",
+                            timestamp: "0",
+                        },
+                        "00000000000000000002": {
+                            request: "SetAutoBrightness(true)",
+                            timestamp: "0",
+                        },
+                    },
+                    "Get": {
+                        "00000000000000000001": {
+                            request: "Get",
+                            timestamp: "0",
+                        },
+                        "00000000000000000003": {
+                            request: "Get",
+                            timestamp: "0",
+                        },
+                    },
+                },
+            }
+        });
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_inspect_mixed_request_types_switchboard() {
+        clock::mock::set(SystemTime::UNIX_EPOCH);
+
+        let inspector = inspect::Inspector::new();
+        let inspect_node = inspector.root().create_child("switchboard");
+        let context = create_context().await;
+
         let (messenger, _) =
             context.switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap();
         let (_, mut switchboard_receptor) = context
@@ -344,7 +536,7 @@ mod tests {
         let _agent = InspectAgent::create_with_node(context, inspect_node).await;
 
         // Interlace different request types to make sure the counter is correct.
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
@@ -352,7 +544,7 @@ mod tests {
         )
         .await;
 
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
@@ -360,7 +552,7 @@ mod tests {
         )
         .await;
 
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
@@ -368,7 +560,7 @@ mod tests {
         )
         .await;
 
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
@@ -422,7 +614,7 @@ mod tests {
 
         let _agent = InspectAgent::create_with_node(context, inspect_node).await;
 
-        send_request_and_wait(
+        send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Intl,
@@ -437,7 +629,7 @@ mod tests {
 
         // Send one more than the max requests to make sure they get pushed off the end of the queue
         for _ in 0..INSPECT_REQUESTS_COUNT + 1 {
-            send_request_and_wait(
+            send_request_and_wait_switchboard(
                 &messenger,
                 &mut switchboard_receptor,
                 SettingType::Display,

@@ -5,7 +5,7 @@
 use crate::internal::common::Timestamp;
 use crate::message::action_fuse::{ActionFuse, ActionFuseBuilder, ActionFuseHandle};
 use crate::message::base::{
-    Address, Message, MessageClientId, MessageType, Payload, Role, Signature, Status,
+    Address, Audience, Message, MessageClientId, MessageType, Payload, Role, Signature, Status,
 };
 use crate::message::beacon::BeaconBuilder;
 use crate::message::message_builder::MessageBuilder;
@@ -72,6 +72,16 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageClien
     /// communication.
     pub fn get_author(&self) -> Signature<A> {
         self.message.get_author()
+    }
+
+    /// Returns the audience associated with the underlying [`Message`]. If it
+    /// is a new [`Message`] (origin), it will be the target audience.
+    /// Otherwise it is the author of the reply.
+    pub fn get_audience(&self) -> Audience<A, R> {
+        match self.message.get_type() {
+            MessageType::Origin(audience) => audience.clone(),
+            MessageType::Reply(message) => Audience::Messenger(message.get_author()),
+        }
     }
 
     /// Returns the payload associated with the associated Message.

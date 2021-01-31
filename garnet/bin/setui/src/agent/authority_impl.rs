@@ -10,6 +10,7 @@ use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
+use crate::service;
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
@@ -21,8 +22,10 @@ use std::collections::HashSet;
 pub struct AuthorityImpl {
     // A mapping of agent addresses
     agent_signatures: Vec<agent::message::Signature>,
+    // Factory passed to agents for communicating with the service.
+    messenger_factory: service::message::Factory,
     // Factory to generate messengers to comunicate with the agent
-    messenger_factory: agent::message::Factory,
+    agent_messenger_factory: agent::message::Factory,
     // Factory passed to agents for communicating with the switchboard.
     switchboard_messenger_factory: switchboard::message::Factory,
     // Messenger
@@ -37,22 +40,22 @@ pub struct AuthorityImpl {
 
 impl AuthorityImpl {
     pub async fn create(
-        messenger_factory: agent::message::Factory,
+        messenger_factory: service::message::Factory,
+        agent_messenger_factory: agent::message::Factory,
         switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Result<AuthorityImpl, Error> {
-        let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
+        let (client, _) = agent_messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .map_err(|_| anyhow::format_err!("could not create agent messenger for authority"))?;
 
-        if messenger_result.is_err() {
-            return Err(anyhow::format_err!("could not create agent messenger for authority"));
-        }
-
-        let (client, _) = messenger_result.unwrap();
         return Ok(AuthorityImpl {
             agent_signatures: Vec::new(),
             messenger_factory,
+            agent_messenger_factory,
             switchboard_messenger_factory,
             messenger: client,
             event_factory,
@@ -124,7 +127,7 @@ fn process_payload(
 impl Authority for AuthorityImpl {
     async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error> {
         let agent_receptor = self
-            .messenger_factory
+            .agent_messenger_factory
             .create(MessengerType::Unbound)
             .await
             .map_err(|_| format_err!("could not register"))?
@@ -135,6 +138,7 @@ impl Authority for AuthorityImpl {
                 Context::new(
                     agent_receptor,
                     blueprint.get_descriptor(),
+                    self.messenger_factory.clone(),
                     self.switchboard_messenger_factory.clone(),
                     self.event_factory.clone(),
                     self.available_components.clone(),

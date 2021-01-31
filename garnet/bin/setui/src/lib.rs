@@ -664,6 +664,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .expect("could not create switchboard");
 
     let mut agent_authority = AuthorityImpl::create(
+        messenger_factory.clone(),
         internal::agent::message::create_hub(),
         switchboard_messenger_factory.clone(),
         event_messenger_factory.clone(),

@@ -244,7 +244,7 @@ impl<A: Address + 'static, R: Role + 'static> Audience<A, R> {
         audience.flatten().is_subset(&self.flatten())
     }
 
-    fn flatten(&self) -> HashSet<Audience<A, R>> {
+    pub fn flatten(&self) -> HashSet<Audience<A, R>> {
         match self {
             Audience::Group(group) => {
                 group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
@@ -415,7 +415,7 @@ pub mod filter {
             for condition in &self.conditions {
                 let match_found = match condition {
                     Condition::Audience(audience) => matches!(
-                            message.get_message_type(),
+                            message.get_type(),
                             MessageType::Origin(target) if target.contains(audience)),
                     Condition::Custom(check_fn) => (check_fn)(message),
                     Condition::Filter(filter) => filter.matches(&message),
@@ -539,10 +539,10 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     }
 
     /// Returns the message's type.
-    pub(super) fn get_message_type(&self) -> MessageType<P, A, R> {
+    pub fn get_type(&self) -> &MessageType<P, A, R> {
         match &self.attribution {
-            Attribution::Source(message_type) => message_type.clone(),
-            Attribution::Derived(message, _) => message.get_message_type(),
+            Attribution::Source(message_type) => message_type,
+            Attribution::Derived(message, _) => message.get_type(),
         }
     }
 

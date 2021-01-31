@@ -7,6 +7,7 @@ use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::MessengerType;
 use crate::monitor;
+use crate::service;
 use crate::service_context::ServiceContextHandle;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -46,10 +47,12 @@ impl Descriptor {
     }
 }
 
+/// TODO(fxbug.dev/68659): Add documentation.
 pub struct Context {
     pub receptor: Receptor,
     event_factory: event::message::Factory,
     publisher: event::Publisher,
+    pub messenger_factory: service::message::Factory,
     pub switchboard_messenger_factory: switchboard::message::Factory,
     pub available_components: HashSet<SettingType>,
     pub resource_monitor_actor: Option<monitor::environment::Actor>,
@@ -59,6 +62,7 @@ impl Context {
     pub async fn new(
         receptor: Receptor,
         descriptor: Descriptor,
+        messenger_factory: service::message::Factory,
         switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
@@ -73,6 +77,7 @@ impl Context {
             receptor,
             event_factory,
             publisher,
+            messenger_factory,
             switchboard_messenger_factory,
             available_components,
             resource_monitor_actor,
