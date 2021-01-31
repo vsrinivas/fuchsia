@@ -8,6 +8,7 @@ package netstack
 
 import (
 	"context"
+	"strings"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -33,21 +34,33 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 	const unspecifiedLocalAddress = tcpip.Address("")
 
 	remote, proto := fidlconv.ToTCPIPAddressAndProtocolNumber(destination)
-	netProtoName := networkProtocolToString(proto)
-	route, err := r.stack.FindRoute(unspecifiedNIC, unspecifiedLocalAddress, remote, proto, false /* multicastLoop */)
-	if err != nil {
-		_ = syslog.InfoTf(
-			"fuchsia.net.routes", "stack.FindRoute(%s(unspecified=%t)) = (_, %s)",
+	netProtoName := strings.TrimPrefix(networkProtocolToString(proto), "IP")
+	var flags string
+	syslogFn := syslog.DebugTf
+	if remote.Unspecified() {
+		flags = "U"
+		syslogFn = syslog.InfoTf
+	}
+	logFn := func(suffix string, err tcpip.Error) {
+		_ = syslogFn(
+			"fuchsia.net.routes", "stack.FindRoute(%s (%s|%s))%s = (_, %s)",
+			remote,
 			netProtoName,
-			remote.Unspecified(),
+			flags,
+			suffix,
 			err,
 		)
+	}
+
+	route, err := r.stack.FindRoute(unspecifiedNIC, unspecifiedLocalAddress, remote, proto, false /* multicastLoop */)
+	if err != nil {
+		logFn("", err)
 		return routes.StateResolveResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
 	}
 	defer route.Release()
 
-	ch := make(chan stack.ResolvedFieldsResult, 1)
-	{
+	return func() routes.StateResolveResult {
+		ch := make(chan stack.ResolvedFieldsResult, 1)
 		err := route.ResolvedFields(func(result stack.ResolvedFieldsResult) {
 			ch <- result
 		})
@@ -60,9 +73,7 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 					nicID := route.NICID()
 					route := result.RouteInfo
 
-					var response routes.StateResolveResponse
 					var node routes.Destination
-
 					node.SetSourceAddress(fidlconv.ToNetIpAddress(route.LocalAddress))
 					// If the remote link address is unspecified, then the outgoing link
 					// does not support MAC addressing.
@@ -70,6 +81,8 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 						node.SetMac(fidlconv.ToNetMacAddress(linkAddr))
 					}
 					node.SetInterfaceId(uint64(nicID))
+
+					var response routes.StateResolveResponse
 					if len(route.NextHop) != 0 {
 						node.SetAddress(fidlconv.ToNetIpAddress(route.NextHop))
 						response.Result.SetGateway(node)
@@ -77,24 +90,19 @@ func (r *routesImpl) Resolve(ctx fidl.Context, destination net.IpAddress) (route
 						node.SetAddress(fidlconv.ToNetIpAddress(route.RemoteAddress))
 						response.Result.SetDirect(node)
 					}
-					return routes.StateResolveResultWithResponse(response), nil
+					return routes.StateResolveResultWithResponse(response)
 				}
 			case <-ctx.Done():
 				switch ctx.Err() {
 				case context.Canceled:
-					return routes.StateResolveResultWithErr(int32(zx.ErrCanceled)), nil
+					return routes.StateResolveResultWithErr(int32(zx.ErrCanceled))
 				case context.DeadlineExceeded:
-					return routes.StateResolveResultWithErr(int32(zx.ErrTimedOut)), nil
+					return routes.StateResolveResultWithErr(int32(zx.ErrTimedOut))
 				}
 			}
 			err = &tcpip.ErrTimeout{}
 		}
-		_ = syslog.InfoTf(
-			"fuchsia.net.routes", "stack.FindRoute(%s(unspecified=%t)).ResolvedFields(_) = %s",
-			netProtoName,
-			remote.Unspecified(),
-			err,
-		)
-		return routes.StateResolveResultWithErr(int32(zx.ErrAddressUnreachable)), nil
-	}
+		logFn(".ResolvedFields(...)", err)
+		return routes.StateResolveResultWithErr(int32(zx.ErrAddressUnreachable))
+	}(), nil
 }

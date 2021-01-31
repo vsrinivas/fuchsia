@@ -9,6 +9,7 @@ package netstack
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"fidl/fuchsia/net/neighbor"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -34,25 +36,67 @@ type nudDispatcher struct {
 
 var _ stack.NUDDispatcher = (*nudDispatcher)(nil)
 
+func (d *nudDispatcher) log(verb string, nicID tcpip.NICID, entry stack.NeighborEntry) {
+	family := func() string {
+		switch l := len(entry.Addr); l {
+		case header.IPv4AddressSize:
+			return "v4"
+		case header.IPv6AddressSize:
+			return "v6"
+		default:
+			return fmt.Sprintf("l=%d", l)
+		}
+	}()
+	flags := func() string {
+		var defaultGateway, onLink bool
+		for _, route := range d.ns.stack.GetRouteTable() {
+			if route.NIC != nicID {
+				continue
+			}
+			if len(route.Destination.ID()) != len(entry.Addr) {
+				continue
+			}
+			if route.Destination.Prefix() == 0 {
+				if route.Gateway == entry.Addr {
+					defaultGateway = true
+				}
+			} else if route.Destination.Contains(entry.Addr) {
+				if len(route.Gateway) == 0 {
+					onLink = true
+				}
+			}
+		}
+		var b strings.Builder
+		if defaultGateway {
+			b.WriteByte('G')
+		}
+		if onLink {
+			b.WriteByte('L')
+		}
+		if b.Len() != 0 {
+			return b.String()
+		}
+		return "U"
+	}()
+
+	// TODO(https://fxbug.dev/62788): Change log level to Debug once the neighbor table
+	// is able to be inspected.
+	_ = syslog.InfoTf(nudTag, "%s %s (%s|%s) NIC=%d LinkAddress=%s %s", verb, entry.Addr, family, flags, nicID, entry.LinkAddr, entry.State)
+}
+
 // OnNeighborAdded implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, entry stack.NeighborEntry) {
-	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
-	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "ADD %s NIC=%d LinkAddress=%s %s", entry.Addr, nicID, entry.LinkAddr, entry.State)
+	d.log("ADD", nicID, entry)
 }
 
 // OnNeighborChanged implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, entry stack.NeighborEntry) {
-	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
-	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "MOD %s NIC=%d LinkAddress=%s %s", entry.Addr, nicID, entry.LinkAddr, entry.State)
+	d.log("MOD", nicID, entry)
 }
 
 // OnNeighborRemoved implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, entry stack.NeighborEntry) {
-	// TODO(fxbug.dev/62788): Change log level to Debug once the neighbor table
-	// is able to be inspected.
-	_ = syslog.InfoTf(nudTag, "DEL %s NIC=%d LinkAddress=%s %s", entry.Addr, nicID, entry.LinkAddr, entry.State)
+	d.log("DEL", nicID, entry)
 }
 
 type neighborImpl struct {
@@ -61,8 +105,8 @@ type neighborImpl struct {
 
 var _ neighbor.ViewWithCtx = (*neighborImpl)(nil)
 
-func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIteratorWithCtxInterfaceRequest, options neighbor.EntryIteratorOptions) error {
-	// TODO(fxbug.dev/59425): Watch for changes.
+func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIteratorWithCtxInterfaceRequest, _ neighbor.EntryIteratorOptions) error {
+	// TODO(https://fxbug.dev/59425): Watch for changes.
 	var items []neighbor.EntryIteratorItem
 
 	for nicID := range n.stack.NICInfo() {
@@ -252,9 +296,9 @@ type neighborEntryIterator struct {
 var _ neighbor.EntryIteratorWithCtx = (*neighborEntryIterator)(nil)
 
 // GetNext implements neighbor.EntryIteratorWithCtx.GetNext.
-func (it *neighborEntryIterator) GetNext(ctx fidl.Context) ([]neighbor.EntryIteratorItem, error) {
+func (it *neighborEntryIterator) GetNext(fidl.Context) ([]neighbor.EntryIteratorItem, error) {
 	if len(it.items) == 0 {
-		// TODO(fxbug.dev/59425): Watch for changes instead of closing the
+		// TODO(https://fxbug.dev/59425): Watch for changes instead of closing the
 		// connection. This was deferred to unblock listing entries.
 		return nil, errors.New("watching for changes not supported")
 	}
@@ -300,7 +344,7 @@ func toNeighborEntry(nicID tcpip.NICID, n stack.NeighborEntry) (neighbor.Entry, 
 	case stack.Incomplete:
 		e.SetState(neighbor.EntryStateWithIncomplete(neighbor.IncompleteState{}))
 	case stack.Reachable:
-		// TODO(fxbug.dev/59372): Populate expires_at.
+		// TODO(https://fxbug.dev/59372): Populate expires_at.
 		e.SetState(neighbor.EntryStateWithReachable(neighbor.ReachableState{}))
 	case stack.Stale:
 		e.SetState(neighbor.EntryStateWithStale(neighbor.StaleState{}))
