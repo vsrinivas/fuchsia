@@ -15,5 +15,8 @@ pub mod authority_impl;
 /// Agent for rehydrating actions for restore.
 pub mod restore_agent;
 
+/// Agent for capturing switchboard requests.
+pub mod inspect;
+
 /// Earcons.
 pub mod earcons;

@@ -25,6 +25,8 @@ pub enum AgentType {
     MediaButtons,
     /// Responsible for initializing all of the controllers.
     Restore,
+    /// Responsible for logging to Inspect.
+    Inspect,
 }
 
 pub fn get_default_agent_types() -> HashSet<AgentType> {
@@ -37,6 +39,7 @@ impl From<AgentType> for BlueprintHandle {
             AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
             AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
             AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
+            AgentType::Inspect => crate::agent::inspect::blueprint::create(),
         }
     }
 }

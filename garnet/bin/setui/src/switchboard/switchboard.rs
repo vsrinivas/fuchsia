@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::clock;
 use crate::handler::base::{Error, Request};
 use crate::internal::core;
 use crate::internal::switchboard;
@@ -12,98 +11,22 @@ use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::{SettingAction, SettingActionData, SettingEvent};
 
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component, Property};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
 use futures::FutureExt;
 use std::collections::hash_map::Entry;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::result::Result::Ok;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
 
 type SwitchboardListenerMap = HashMap<SettingType, Vec<switchboard::message::MessageClient>>;
-
-const INSPECT_REQUESTS_COUNT: usize = 25;
-
-/// Information about a switchboard setting to be written to inspect.
-#[derive(Inspect)]
-struct SettingTypeInfo {
-    /// Map from the name of the Request variant to a RequestTypeInfo that holds a list of
-    /// recent requests.
-    #[inspect(skip)]
-    requests_by_type: HashMap<String, RequestTypeInfo>,
-
-    /// Incrementing count for all requests of this setting type.
-    ///
-    /// Count is used across all request types to easily see the order that requests occurred in.
-    #[inspect(skip)]
-    count: u64,
-
-    /// Node of this info.
-    inspect_node: inspect::Node,
-}
-
-impl SettingTypeInfo {
-    fn new() -> Self {
-        Self { count: 0, requests_by_type: HashMap::new(), inspect_node: inspect::Node::default() }
-    }
-}
-
-/// Information for all requests of a particular SettingType variant for a given setting type.
-#[derive(Inspect)]
-struct RequestTypeInfo {
-    /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
-    #[inspect(skip)]
-    last_requests: VecDeque<RequestInfo>,
-
-    /// Node of this info.
-    inspect_node: inspect::Node,
-}
-
-impl RequestTypeInfo {
-    fn new() -> Self {
-        Self {
-            last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
-            inspect_node: inspect::Node::default(),
-        }
-    }
-}
-
-/// Information about a switchboard request to be written to inspect.
-///
-/// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
-/// once they go out of scope.
-#[derive(Inspect)]
-struct RequestInfo {
-    /// Debug string representation of this Request.
-    request: inspect::StringProperty,
-
-    /// Milliseconds since switchboard creation that this request arrived.
-    timestamp: inspect::StringProperty,
-
-    /// Node of this info.
-    inspect_node: inspect::Node,
-}
-
-impl RequestInfo {
-    fn new() -> Self {
-        Self {
-            request: inspect::StringProperty::default(),
-            timestamp: inspect::StringProperty::default(),
-            inspect_node: inspect::Node::default(),
-        }
-    }
-}
 
 pub struct SwitchboardBuilder {
     core_messenger_factory: Option<core::message::Factory>,
     switchboard_messenger_factory: Option<switchboard::message::Factory>,
     setting_proxies: HashMap<SettingType, core::message::Signature>,
     policy_proxies: HashMap<core::message::Signature, SettingType>,
-    inspect_node: Option<inspect::Node>,
 }
 
 impl SwitchboardBuilder {
@@ -113,7 +36,6 @@ impl SwitchboardBuilder {
             switchboard_messenger_factory: None,
             setting_proxies: HashMap::new(),
             policy_proxies: HashMap::new(),
-            inspect_node: None,
         }
     }
 
@@ -151,19 +73,12 @@ impl SwitchboardBuilder {
         self.policy_proxies.extend(policy_proxies);
         self
     }
-
-    pub fn inspect_node(mut self, node: inspect::Node) -> Self {
-        self.inspect_node = Some(node);
-        self
-    }
-
     pub async fn build(self) -> Result<(), anyhow::Error> {
         Switchboard::create(
             self.core_messenger_factory.unwrap_or(core::message::create_hub()),
             self.switchboard_messenger_factory.unwrap_or(switchboard::message::create_hub()),
             self.setting_proxies,
             self.policy_proxies,
-            self.inspect_node.unwrap_or(component::inspector().root().create_child("switchboard")),
         )
         .await
     }
@@ -183,10 +98,6 @@ pub struct Switchboard {
     setting_proxies: HashMap<SettingType, core::message::Signature>,
     /// Mapping from proxy to [`SettingType`].
     proxy_settings: HashMap<core::message::Signature, SettingType>,
-    /// Last requests for inspect to save.
-    last_requests: HashMap<SettingType, SettingTypeInfo>,
-    /// Inspect node to record last requests to.
-    inspect_node: fuchsia_inspect::Node,
 }
 
 impl Switchboard {
@@ -199,7 +110,6 @@ impl Switchboard {
         switchboard_messenger_factory: switchboard::message::Factory,
         setting_proxies: HashMap<SettingType, core::message::Signature>,
         policy_proxies: HashMap<core::message::Signature, SettingType>,
-        inspect_node: inspect::Node,
     ) -> Result<(), anyhow::Error> {
         let (cancel_listen_tx, mut cancel_listen_rx) = futures::channel::mpsc::unbounded::<(
             SettingType,
@@ -234,8 +144,6 @@ impl Switchboard {
             core_messenger,
             setting_proxies,
             proxy_settings,
-            last_requests: HashMap::new(),
-            inspect_node,
         }));
 
         let switchboard_clone = switchboard.clone();
@@ -367,8 +275,6 @@ impl Switchboard {
         let core_messenger = self.core_messenger.clone();
         let action_id = self.get_next_action_id();
 
-        self.record_request(setting_type.clone(), request.clone());
-
         let signature = match self.setting_proxies.entry(setting_type) {
             Entry::Vacant(_) => {
                 reply_client
@@ -456,64 +362,13 @@ impl Switchboard {
             }
         }
     }
-
-    /// Write a request to inspect.
-    fn record_request(&mut self, setting_type: SettingType, request: Request) {
-        let inspect_node = &self.inspect_node;
-        let setting_type_info = self.last_requests.entry(setting_type).or_insert_with(|| {
-            SettingTypeInfo::new()
-                .with_inspect(&inspect_node, format!("{:?}", setting_type))
-                // `with_inspect` will only return an error on types with interior mutability.
-                // Since none are used here, this should be fine.
-                .expect("failed to create SettingTypeInfo inspect node")
-        });
-
-        let key = request.clone().for_inspect().to_string();
-        let request_type_info = match setting_type_info.requests_by_type.entry(key.clone()) {
-            Entry::Occupied(entry) => entry.into_mut(),
-            Entry::Vacant(entry) => {
-                let request_type_info = RequestTypeInfo::new()
-                    .with_inspect(&setting_type_info.inspect_node, key)
-                    // `with_inspect` will only return an error on types with interior mutability.
-                    // Since none are used here, this should be fine.
-                    .expect("failed to create RequestTypeInfo inspect node");
-                entry.insert(request_type_info)
-            }
-        };
-
-        let last_requests = &mut request_type_info.last_requests;
-        if last_requests.len() >= INSPECT_REQUESTS_COUNT {
-            last_requests.pop_back();
-        }
-
-        let count = setting_type_info.count;
-        setting_type_info.count += 1;
-        let timestamp = clock::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .as_ref()
-            .map(Duration::as_millis)
-            .unwrap_or(0);
-        // std::u64::MAX maxes out at 20 digits.
-        if let Ok(request_info) = RequestInfo::new()
-            .with_inspect(&request_type_info.inspect_node, format!("{:020}", count))
-        {
-            request_info.request.set(&format!("{:?}", request));
-            request_info.timestamp.set(&timestamp.to_string());
-            last_requests.push_front(request_info);
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::internal::core;
-    use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
     use crate::message::base::Audience;
-    use fuchsia_inspect::{
-        assert_inspect_tree,
-        testing::{AnyProperty, TreeAssertion},
-    };
 
     async fn retrieve_and_verify_action(
         receptor: &mut core::message::Receptor,
@@ -741,205 +596,5 @@ mod tests {
             receptor_2.next_payload().await.expect("update should be present").0,
             switchboard::Payload::Listen(switchboard::Listen::Update(..))
         ));
-    }
-
-    async fn send_request_and_wait(
-        messenger: &switchboard::message::Messenger,
-        setting_type: SettingType,
-        setting_request: Request,
-    ) {
-        let _ = messenger
-            .message(
-                switchboard::Payload::Action(switchboard::Action::Request(
-                    setting_type,
-                    setting_request,
-                )),
-                Audience::Address(switchboard::Address::Switchboard),
-            )
-            .send()
-            .next_payload()
-            .await;
-    }
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_inspect() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
-
-        let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child("switchboard");
-        let switchboard_factory = switchboard::message::create_hub();
-        assert!(SwitchboardBuilder::create()
-            .inspect_node(inspect_node)
-            .switchboard_messenger_factory(switchboard_factory.clone())
-            .build()
-            .await
-            .is_ok());
-
-        let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
-
-        // Send a few requests to make sure they get written to inspect properly.
-        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(false))
-            .await;
-
-        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(false))
-            .await;
-
-        send_request_and_wait(
-            &messenger,
-            SettingType::Intl,
-            Request::SetIntlInfo(IntlInfo {
-                locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
-                temperature_unit: Some(TemperatureUnit::Celsius),
-                time_zone_id: Some("UTC".to_string()),
-                hour_cycle: None,
-            }),
-        )
-        .await;
-
-        assert_inspect_tree!(inspector, root: {
-            switchboard: {
-                "Display": {
-                    "SetAutoBrightness": {
-                        "00000000000000000000": {
-                            request: "SetAutoBrightness(false)",
-                            timestamp: "0",
-                        },
-                        "00000000000000000001": {
-                            request: "SetAutoBrightness(false)",
-                            timestamp: "0",
-                        },
-                    },
-                },
-                "Intl": {
-                    "SetIntlInfo": {
-                        "00000000000000000000": {
-                            request: "SetIntlInfo(IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None })",
-                            timestamp: "0",
-                        }
-                    },
-                }
-            }
-        });
-    }
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_inspect_mixed_request_types() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
-
-        let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child("switchboard");
-        let switchboard_factory = switchboard::message::create_hub();
-        assert!(SwitchboardBuilder::create()
-            .inspect_node(inspect_node)
-            .switchboard_messenger_factory(switchboard_factory.clone())
-            .build()
-            .await
-            .is_ok());
-
-        let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
-
-        // Interlace different request types to make sure the counter is correct.
-        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(false))
-            .await;
-
-        send_request_and_wait(&messenger, SettingType::Display, Request::Get).await;
-
-        send_request_and_wait(&messenger, SettingType::Display, Request::SetAutoBrightness(true))
-            .await;
-
-        send_request_and_wait(&messenger, SettingType::Display, Request::Get).await;
-
-        assert_inspect_tree!(inspector, root: {
-            switchboard: {
-                "Display": {
-                    "SetAutoBrightness": {
-                        "00000000000000000000": {
-                            request: "SetAutoBrightness(false)",
-                            timestamp: "0",
-                        },
-                        "00000000000000000002": {
-                            request: "SetAutoBrightness(true)",
-                            timestamp: "0",
-                        },
-                    },
-                    "Get": {
-                        "00000000000000000001": {
-                            request: "Get",
-                            timestamp: "0",
-                        },
-                        "00000000000000000003": {
-                            request: "Get",
-                            timestamp: "0",
-                        },
-                    },
-                },
-            }
-        });
-    }
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn inspect_queue_test() {
-        clock::mock::set(SystemTime::UNIX_EPOCH);
-
-        let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child("switchboard");
-        let switchboard_factory = switchboard::message::create_hub();
-        assert!(SwitchboardBuilder::create()
-            .inspect_node(inspect_node)
-            .switchboard_messenger_factory(switchboard_factory.clone())
-            .build()
-            .await
-            .is_ok());
-        let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
-
-        send_request_and_wait(
-            &messenger,
-            SettingType::Intl,
-            Request::SetIntlInfo(IntlInfo {
-                locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
-                temperature_unit: Some(TemperatureUnit::Celsius),
-                time_zone_id: Some("UTC".to_string()),
-                hour_cycle: None,
-            }),
-        )
-        .await;
-
-        // Send one more than the max requests to make sure they get pushed off the end of the queue
-        for _ in 0..INSPECT_REQUESTS_COUNT + 1 {
-            send_request_and_wait(
-                &messenger,
-                SettingType::Display,
-                Request::SetAutoBrightness(false),
-            )
-            .await;
-        }
-
-        // Ensures we have INSPECT_REQUESTS_COUNT items and that the queue dropped the earliest one
-        // when hitting the limit.
-        fn display_subtree_assertion() -> TreeAssertion {
-            let mut tree_assertion = TreeAssertion::new("Display", true);
-            let mut request_assertion = TreeAssertion::new("SetAutoBrightness", true);
-
-            for i in 1..INSPECT_REQUESTS_COUNT + 1 {
-                request_assertion
-                    .add_child_assertion(TreeAssertion::new(&format!("{:020}", i), false));
-            }
-            tree_assertion.add_child_assertion(request_assertion);
-            tree_assertion
-        }
-
-        assert_inspect_tree!(inspector, root: {
-            switchboard: {
-                display_subtree_assertion(),
-                "Intl": {
-                    "SetIntlInfo": {
-                        "00000000000000000000": {
-                            request: AnyProperty,
-                            timestamp: "0",
-                        }
-                    }
-                }
-            }
-        });
     }
 }

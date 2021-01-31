@@ -127,7 +127,7 @@ payload_convert!(Setting, Payload);
 impl Request {
     /// Returns the name of the enum, for writing to inspect.
     /// TODO(fxbug.dev/56718): write a macro to simplify this
-    pub fn for_inspect(self) -> &'static str {
+    pub fn for_inspect(&self) -> &'static str {
         match self {
             Request::Get => "Get",
             Request::Listen => "Listen",

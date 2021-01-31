@@ -72,7 +72,7 @@ impl SettingInfo {
     /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
     // TODO(fxbug.dev/56718): simplify this with a macro.
     // TODO(fxbug.dev/66690): move this into InspectBroker
-    pub fn for_inspect(self) -> (&'static str, String) {
+    pub fn for_inspect(&self) -> (&'static str, String) {
         match self {
             SettingInfo::Unknown => ("Unknown", "".to_string()),
             SettingInfo::Accessibility(info) => ("Accessibility", format!("{:?}", info)),

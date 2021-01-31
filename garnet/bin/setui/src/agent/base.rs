@@ -50,7 +50,7 @@ pub struct Context {
     pub receptor: Receptor,
     event_factory: event::message::Factory,
     publisher: event::Publisher,
-    switchboard_messenger_factory: switchboard::message::Factory,
+    pub switchboard_messenger_factory: switchboard::message::Factory,
     pub available_components: HashSet<SettingType>,
     pub resource_monitor_actor: Option<monitor::environment::Actor>,
 }
