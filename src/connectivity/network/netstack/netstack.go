@@ -1162,20 +1162,24 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 			info.dhcpStats = ifs.mu.dhcp.Stats()
 		}
 
-		{
-			neighbors, err := ns.stack.Neighbors(id)
-			switch err.(type) {
-			case nil:
-				info.neighbors = make(map[string]stack.NeighborEntry)
-				for _, n := range neighbors {
-					info.neighbors[n.Addr.String()] = n
+		for _, network := range []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber} {
+			{
+				neighbors, err := ns.stack.Neighbors(id, network)
+				switch err.(type) {
+				case nil:
+					if info.neighbors == nil {
+						info.neighbors = make(map[string]stack.NeighborEntry)
+					}
+					for _, n := range neighbors {
+						info.neighbors[n.Addr.String()] = n
+					}
+				case *tcpip.ErrNotSupported:
+					// NIC does not have a neighbor table, skip.
+				case *tcpip.ErrUnknownNICID:
+					_ = syslog.Warnf("getIfStateInfo: NIC removed before ns.stack.Neighbors(%d) could be called", id)
+				default:
+					_ = syslog.Errorf("getIfStateInfo: unexpected error from ns.stack.Neighbors(%d) = %s", id, err)
 				}
-			case *tcpip.ErrNotSupported:
-				// NIC does not have a neighbor table, skip.
-			case *tcpip.ErrUnknownNICID:
-				_ = syslog.Warnf("getIfStateInfo: NIC removed before ns.stack.Neighbors(%d) could be called", id)
-			default:
-				_ = syslog.Errorf("getIfStateInfo: unexpected error from ns.stack.Neighbors(%d) = %s", id, err)
 			}
 		}
 
