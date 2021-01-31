@@ -65,7 +65,7 @@ bool RangesConnected(const Range& a, const Range& b) {
 
 Allocator::Allocator(fbl::Span<RangeStorage> storage) {
   for (RangeStorage& s : storage) {
-    free_list_.push_front(new (s.AsRange()) Range{});
+    free_list_.push_front(new (s.AsRangeNode()) RangeNode{});
   }
 }
 
@@ -96,37 +96,37 @@ zx::status<> Allocator::RemoveRangeFromNode(RangeIter node, uint64_t first, uint
   ZX_DEBUG_ASSERT(first <= last);
 
   // If the range doesn't overlap the node at all, we have nothing to do.
-  if (!RangesIntersect(*node, Range::FromFirstAndLast(first, last))) {
+  if (!RangesIntersect(node->range, Range::FromFirstAndLast(first, last))) {
     return zx::ok();
   }
 
   // If the requested allocation covers the whole range, just delete this node.
-  if (first <= node->first && last >= node->last) {
+  if (first <= node->range.first && last >= node->range.last) {
     FreeRangeNode(ranges_.erase(*node));
     return zx::ok();
   }
 
   // If the allocation is at the beginning of this node, just adjust the node's
   // starting point.
-  if (first <= node->first) {
-    node->first = last + 1;
+  if (first <= node->range.first) {
+    node->range.first = last + 1;
     return zx::ok();
   }
 
   // If the allocation is at the end of this node, just adjust the size.
-  if (last >= node->last) {
-    node->last = first - 1;
+  if (last >= node->range.last) {
+    node->range.last = first - 1;
     return zx::ok();
   }
 
   // Otherwise, the allocation is in the middle. Update the node to
   // represent the space at the beginning, and allocate a new node for the space
   // at the end.
-  Range* new_next = CreateRangeNode(last + 1, node->last);
+  RangeNode* new_next = CreateRangeNode(last + 1, node->range.last);
   if (new_next == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  node->last = first - 1;
+  node->range.last = first - 1;
   ranges_.insert_after(node, new_next);
   return zx::ok();
 }
@@ -137,8 +137,8 @@ zx::status<uint64_t> Allocator::TryToAllocateFromNode(RangeIter node, uint64_t d
 
   // Get a potential region for this allocation, ensuring that we don't
   // overflow while aligning up or calculating the last result.
-  uint64_t allocation_first = fbl::round_up(node->first, alignment);
-  if (node->first != 0 && allocation_first == 0) {
+  uint64_t allocation_first = fbl::round_up(node->range.first, alignment);
+  if (node->range.first != 0 && allocation_first == 0) {
     // Overflow while aligning.
     return zx::error(ZX_ERR_NEXT);
   }
@@ -149,8 +149,8 @@ zx::status<uint64_t> Allocator::TryToAllocateFromNode(RangeIter node, uint64_t d
   }
 
   // Determine if the proposed allocation can fit in this node's range.
-  ZX_DEBUG_ASSERT(node->first <= allocation_first);  // implied by calculations above.
-  if (allocation_last > node->last) {
+  ZX_DEBUG_ASSERT(node->range.first <= allocation_first);  // implied by calculations above.
+  if (allocation_last > node->range.last) {
     return zx::error(ZX_ERR_NEXT);
   }
 
@@ -163,20 +163,19 @@ zx::status<uint64_t> Allocator::TryToAllocateFromNode(RangeIter node, uint64_t d
 }
 
 void Allocator::MergeRanges(RangeIter a, RangeIter b) {
-  ZX_DEBUG_ASSERT(RangesConnected(*a, *b));
-  a->first = std::min(a->first, b->first);
-  a->last = std::max(a->last, b->last);
+  ZX_DEBUG_ASSERT(RangesConnected(a->range, b->range));
+  a->range.first = std::min(a->range.first, b->range.first);
+  a->range.last = std::max(a->range.last, b->range.last);
   FreeRangeNode(ranges_.erase(b));
 }
 
-Range* Allocator::CreateRangeNode(uint64_t first, uint64_t last) {
-  Range* node = free_list_.pop_front();
-  node->first = first;
-  node->last = last;
+RangeNode* Allocator::CreateRangeNode(uint64_t first, uint64_t last) {
+  RangeNode* node = free_list_.pop_front();
+  node->range = Range::FromFirstAndLast(first, last);
   return node;
 }
 
-void Allocator::FreeRangeNode(Range* range) {
+void Allocator::FreeRangeNode(RangeNode* range) {
   ZX_DEBUG_ASSERT(!range->InContainer());
   free_list_.push_front(range);
 }
@@ -202,7 +201,7 @@ zx::status<> Allocator::AddRange(uint64_t base, uint64_t size) {
   ZX_ASSERT(base <= last);
 
   // Create a new range node for the range.
-  Range* new_range = CreateRangeNode(base, last);
+  RangeNode* new_range = CreateRangeNode(base, last);
   if (new_range == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -211,7 +210,7 @@ zx::status<> Allocator::AddRange(uint64_t base, uint64_t size) {
   // correctly sorted location.
   auto prev = ranges_.end();  // we use "end" to mean "no previous node".
   auto it = ranges_.begin();
-  while (it != ranges_.end() && new_range->first > it->first) {
+  while (it != ranges_.end() && new_range->range.first > it->range.first) {
     prev = it;
     ++it;
   }
@@ -221,7 +220,7 @@ zx::status<> Allocator::AddRange(uint64_t base, uint64_t size) {
 
   // The new range may be touching the previous range. If so, merge them
   // together.
-  if (prev != ranges_.end() && RangesConnected(*prev, *new_range_it)) {
+  if (prev != ranges_.end() && RangesConnected(prev->range, new_range_it->range)) {
     MergeRanges(prev, new_range_it);
     new_range_it = prev;
   }
@@ -229,7 +228,7 @@ zx::status<> Allocator::AddRange(uint64_t base, uint64_t size) {
   // The new range may be touching or overlapping any number of subsequent
   // ranges. Keep merging the ranges together there is no more overlap.
   auto next = Next(new_range_it);
-  while (next != ranges_.end() && RangesConnected(*new_range_it, *next)) {
+  while (next != ranges_.end() && RangesConnected(new_range_it->range, next->range)) {
     MergeRanges(new_range_it, next);
     next = Next(new_range_it);
   }
@@ -254,7 +253,7 @@ zx::status<> Allocator::RemoveRange(uint64_t base, uint64_t size) {
   // Stop when we get to the end, or we start seeing nodes that start after
   // our removed range finishes.
   auto it = ranges_.begin();
-  while (it != ranges_.end() && it->first <= range_last) {
+  while (it != ranges_.end() && it->range.first <= range_last) {
     auto current = it++;
     zx::status<> result = RemoveRangeFromNode(current, range_first, range_last);
     if (result.is_error()) {

@@ -17,13 +17,15 @@
 
 namespace memalloc {
 
+struct RangeNode;
+class RangeStorage;
+
 // The range of uint64_t values [first, last].
 //
 // The [base, base + length) is generally more convenient to work with, but
 // can't represent the range [0, UINT64_MAX]. We thus expose the latter on the
 // API, but use for the former as our internal representation.
-struct Range : public fbl::DoublyLinkedListable<Range*, fbl::NodeOptions::AllowCopyMove |
-                                                            fbl::NodeOptions::AllowClearUnsafe> {
+struct Range {
   // Create a range with the given first/last pair.
   static Range FromFirstAndLast(uint64_t first, uint64_t last) {
     Range range;
@@ -34,30 +36,6 @@ struct Range : public fbl::DoublyLinkedListable<Range*, fbl::NodeOptions::AllowC
 
   uint64_t first;
   uint64_t last;
-};
-
-// Storage space for Range.
-//
-// Allows callers to allocate storage space for Range objects, which in turn
-// can be passed into the allocator. Allocating Range objects directly can be
-// problematic due to their destructor, which may cause problems with
-// statically allocated objects that are destructed at program shutdown.
-//
-// RangeStorage allocates space without the caller needing to worry about
-// object construction or destruction.
-class RangeStorage {
- public:
-  RangeStorage() = default;
-
-  // Disallow move/copy.
-  RangeStorage(const RangeStorage&) = delete;
-  RangeStorage& operator=(const RangeStorage&) = delete;
-
-  // Get the internal storage as a range pointer.
-  Range* AsRange() { return reinterpret_cast<Range*>(storage_); }
-
- private:
-  alignas(Range) unsigned char storage_[sizeof(Range)];
 };
 
 // A range allocator class.
@@ -123,7 +101,7 @@ class Allocator {
   zx::status<uint64_t> Allocate(uint64_t size, uint64_t alignment = 1);
 
  private:
-  using RangeIter = fbl::DoublyLinkedList<Range*>::iterator;
+  using RangeIter = fbl::DoublyLinkedList<RangeNode*>::iterator;
 
   // Remove the given range [first, last] from `node`.
   //
@@ -147,16 +125,47 @@ class Allocator {
 
   // Allocate a Range node from the internal free list, with the given
   // first/last values.
-  Range* CreateRangeNode(uint64_t first, uint64_t last);
+  RangeNode* CreateRangeNode(uint64_t first, uint64_t last);
 
   // Put the given Range Node back on the internal free list.
-  void FreeRangeNode(Range* range);
+  void FreeRangeNode(RangeNode* range);
 
   // List of nodes, sorted by the beginning of the range.
-  fbl::DoublyLinkedList<Range*> ranges_;
+  fbl::DoublyLinkedList<RangeNode*> ranges_;
 
   // List of unused nodes.
-  fbl::DoublyLinkedList<Range*> free_list_;
+  fbl::DoublyLinkedList<RangeNode*> free_list_;
+};
+
+// A node in the allocator's internal free and used lists.
+struct RangeNode
+    : public fbl::DoublyLinkedListable<RangeNode*, fbl::NodeOptions::AllowCopyMove |
+                                                       fbl::NodeOptions::AllowClearUnsafe> {
+  Range range;
+};
+
+// Storage space for Range.
+//
+// Allows callers to allocate storage space for Range objects, which in turn
+// can be passed into the allocator. Allocating Range objects directly can be
+// problematic due to their destructor, which may cause problems with
+// statically allocated objects that are destructed at program shutdown.
+//
+// RangeStorage allocates space without the caller needing to worry about
+// object construction or destruction.
+class RangeStorage {
+ public:
+  RangeStorage() = default;
+
+  // Disallow move/copy.
+  RangeStorage(const RangeStorage&) = delete;
+  RangeStorage& operator=(const RangeStorage&) = delete;
+
+  // Get the internal storage as a range pointer.
+  RangeNode* AsRangeNode() { return reinterpret_cast<RangeNode*>(storage_); }
+
+ private:
+  alignas(RangeNode) unsigned char storage_[sizeof(RangeNode)];
 };
 
 }  // namespace memalloc
