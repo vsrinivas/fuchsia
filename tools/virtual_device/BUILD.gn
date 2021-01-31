@@ -68,7 +68,7 @@ action("default") {
     "--buildinfo_cpu",
     target_cpu,
   ]
-  deps = [ ":fvd($host_toolchain)" ]
+  deps = [ ":fvd($host_platform)" ]
 }
 
 proto_library("proto_lib") {
