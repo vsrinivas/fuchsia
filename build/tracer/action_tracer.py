@@ -337,6 +337,14 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
     return DepFile(deps=[parse_dep_edges(line) for line in depfile_lines])
 
 
+def _verbose_path(path: str) -> str:
+    """When any symlinks are followed, show this."""
+    realpath = os.path.realpath(path)
+    if path != realpath:
+        return path + " -> " + realpath
+    return path
+
+
 @dataclasses.dataclass
 class OutputDiagnostics(object):
     """Just a structure to capture results of diagnosing outputs."""
@@ -357,14 +365,16 @@ class OutputDiagnostics(object):
         Args:
           stream: a file stream, like sys.stderr.
         """
-        required_writes_formatted = "\n".join(self.required_writes)
+        required_writes_formatted = "\n".join(
+            _verbose_path(f) for f in self.required_writes)
         print(
             f"""
 Required writes:
 {required_writes_formatted}
 """, file=stream)
         if self.nonexistent_outputs:
-            nonexistent_outputs_formatted = "\n".join(self.nonexistent_outputs)
+            nonexistent_outputs_formatted = "\n".join(
+                _verbose_path(f) for f in self.nonexistent_outputs)
             print(
                 f"""
 Missing outputs:
@@ -373,13 +383,29 @@ Missing outputs:
                 file=stream)
 
         if self.stale_outputs:
-            stale_outputs_formatted = "\n".join(self.stale_outputs)
+            stale_outputs_formatted = "\n".join(
+                _verbose_path(f) for f in self.stale_outputs)
             print(
                 f"""
 Stale outputs: (older than newest input: {self.newest_input})
 {stale_outputs_formatted}
 """,
                 file=stream)
+
+
+def realpath_ctime(path: str) -> int:
+    """Follow symlinks before getting ctime.
+
+    This reflects Ninja's behavior of using `stat()` instead of `lstat()`
+    on symlinks.
+
+    Args:
+      path: file or symlink
+
+    Returns:
+      ctime of the realpath of path.
+    """
+    return os.path.getctime(os.path.realpath(path))
 
 
 def diagnose_stale_outputs(
@@ -417,12 +443,12 @@ def diagnose_stale_outputs(
     stale_outputs = set()
     newest_input = None
     if used_inputs and untouched_outputs:
-        newest_input = max(used_inputs, key=os.path.getctime)
+        newest_input = max(used_inputs, key=realpath_ctime)
         # Filter out untouched outputs that are still newer than used inputs.
-        input_timestamp = os.path.getctime(newest_input)
+        input_timestamp = realpath_ctime(newest_input)
         stale_outputs = {
             out for out in untouched_outputs
-            if os.path.getctime(out) < input_timestamp
+            if realpath_ctime(out) < input_timestamp
         }
     return OutputDiagnostics(
         required_writes=access_constraints.required_writes,
