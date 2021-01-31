@@ -332,7 +332,7 @@ pub enum MessengerType<
 }
 
 pub mod filter {
-    use super::{Address, Audience, Message, MessageType, Payload, Role};
+    use super::{Address, Audience, Message, MessageType, Payload, Role, Signature};
     use core::fmt::{Debug, Formatter};
     use std::sync::Arc;
 
@@ -343,6 +343,8 @@ pub mod filter {
         /// Matches on the message's intended audience as specified by the
         /// sender.
         Audience(Audience<A, R>),
+        /// Matches on the author's signature.
+        Author(Signature<A>),
         /// Matches on a custom closure that may evaluate the sent message.
         Custom(Arc<dyn Fn(&Message<P, A, R>) -> bool + Send + Sync>),
         /// Matches on another filter and its conditions.
@@ -355,6 +357,7 @@ pub mod filter {
         fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
             let condition = match self {
                 Condition::Audience(audience) => format!("audience:{:?}", audience),
+                Condition::Author(signature) => format!("author:{:?}", signature),
                 Condition::Custom(_) => "custom".to_string(),
                 Condition::Filter(filter) => format!("filter:{:?}", filter),
             };
@@ -419,6 +422,7 @@ pub mod filter {
                             MessageType::Origin(target) if target.contains(audience)),
                     Condition::Custom(check_fn) => (check_fn)(message),
                     Condition::Filter(filter) => filter.matches(&message),
+                    Condition::Author(signature) => message.get_author().eq(signature),
                 };
                 if match_found {
                     if self.conjugation == Conjugation::Any {
