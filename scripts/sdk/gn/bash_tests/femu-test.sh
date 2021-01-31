@@ -206,22 +206,20 @@ INPUT
 echo "unknown"
 INPUT
 
-  if is-mac; then
-      # The upscript doesn't support OSX, so need to expect it will fail so the test suite passes
-      BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
-  else
-      # Run the upscript with a fake qemu network interface argument
-      BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
+  # For all start-unsecure-internet.sh tests, make sure we use --cleanup so
+  # we don't try to run the whole script. All the sudo commands are mocked,
+  # but there is a cat /proc/sys/net/ipv4/ip_forward which is not mocked and
+  # if a machine doesn't have this set the script will fail.
 
-      source "${PATH_DIR_FOR_TEST}/ip.mock_state"
-      gn-test-check-mock-partial --oneline address show to 172.16.243.1
-      # There are a lot of commands executed, only test for the last one. Note that the
-      # number of tests can vary per-machine, and there are many sudo commands, so we
-      # can't look for a specific version and need to look at the last output file.
-      LAST_SUDO_MOCK_STATE="$(ls -1 ${PATH_DIR_FOR_TEST}/sudo.mock_state.* | sort -V | tail -1)"
-      source "${LAST_SUDO_MOCK_STATE}"
-      gn-test-check-mock-partial iptables -A POSTROUTING
-  fi
+  # Run the upscript with a fake qemu network interface argument
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "--cleanup" "fakenetwork" >/dev/null 2>/dev/null
+
+  # Test for some of the commands being run. There are a lot of commands that
+  # are run through sudo, and the .N values for each command differ between
+  # machines, so these are difficult to test reliably for. So only check the
+  # 'ip' command, which is run directly without sudo.
+  source "${PATH_DIR_FOR_TEST}/ip.mock_state"
+  gn-test-check-mock-partial --oneline address show to 172.16.243.1
 }
 
 # Check that hostname checks work properly
@@ -232,7 +230,7 @@ INPUT
   cat >"${PATH_DIR_FOR_TEST}/lsb_release.mock_side_effects" <<INPUT
 echo "unknown"
 INPUT
-  BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
+  BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "--cleanup" "fakenetwork" >/dev/null 2>/dev/null
 }
 
 # Check that rodete checks work properly
@@ -243,7 +241,7 @@ INPUT
   cat >"${PATH_DIR_FOR_TEST}/lsb_release.mock_side_effects" <<INPUT
 echo "rodete"
 INPUT
-  BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "fakenetwork" >/dev/null 2>/dev/null
+  BT_EXPECT_FAIL "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/start-unsecure-internet.sh" "--cleanup" "fakenetwork" >/dev/null 2>/dev/null
 }
 
 # Verifies that fx emu starts up grpcwebproxy correctly
