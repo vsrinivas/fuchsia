@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_STDCOMPAT_VARIANT_H_
-#define LIB_STDCOMPAT_VARIANT_H_
+#ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VARIANT_H_
+#define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VARIANT_H_
 
 #include <limits>
 
@@ -632,4 +632,4 @@ constexpr bool holds_alternative(const variant<Ts...>& value) {
 
 #endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#endif  // LIB_STDCOMPAT_VARIANT_H_
+#endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VARIANT_H_

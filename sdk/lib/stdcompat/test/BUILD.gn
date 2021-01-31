@@ -31,10 +31,10 @@ group("stdcompat-test-deps") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/stdcompat",
   ]
 }
 

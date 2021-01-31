@@ -72,7 +72,6 @@ group("tests") {
     "simplehid:tests",
     "smbios:tests",
     "static-pie:tests",
-    "stdcompat:tests",
     "storage-metrics:tests",
     "storage/buffer:tests",
     "storage/operation:tests",

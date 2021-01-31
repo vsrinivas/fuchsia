@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#ifndef ZIRCON_SYSTEM_ULIB_STDCOMPAT_TEST_TEST_HELPER_H_
-#define ZIRCON_SYSTEM_ULIB_STDCOMPAT_TEST_TEST_HELPER_H_
+#ifndef LIB_STDCOMPAT_TEST_TEST_HELPER_H_
+#define LIB_STDCOMPAT_TEST_TEST_HELPER_H_
 
 // We have asserts to detect undefined behavior on release builds, but on non release build we want
 // to fail fast.
@@ -24,4 +24,4 @@
 #define ASSERT_THROW_OR_ABORT(stmnt, error) ASSERT_DEATH(stmnt, ".*");
 #endif
 
-#endif  // ZIRCON_SYSTEM_ULIB_STDCOMPAT_TEST_TEST_HELPER_H_
+#endif  // LIB_STDCOMPAT_TEST_TEST_HELPER_H_

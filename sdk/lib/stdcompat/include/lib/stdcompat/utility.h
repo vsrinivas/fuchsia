@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_STDCOMPAT_UTILITY_H_
-#define LIB_STDCOMPAT_UTILITY_H_
+#ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_
+#define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_
 
 #include <lib/stdcompat/internal/utility.h>
 
@@ -71,4 +71,4 @@ static constexpr const in_place_index_t<Index>& in_place_index =
 
 }  // namespace cpp17
 
-#endif  // LIB_STDCOMPAT_UTILITY_H_
+#endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_

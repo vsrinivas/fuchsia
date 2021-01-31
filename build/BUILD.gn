@@ -681,6 +681,7 @@ group("deprecated_zx_wrapper_allowlist") {
   visibility = [
     ":*",
     "//sdk/lib/fdio/*",
+    "//sdk/lib/stdcompat/*",
     "//src/bringup/bin/svchost/*",
     "//src/connectivity/bluetooth/lib/device-protocol-bt-gatt-svc/*",
     "//src/connectivity/openthread/lib/ot-radio/*",
@@ -905,7 +906,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/spi/*",
     "//zircon/system/ulib/static-pie/*",
     "//zircon/system/ulib/statusor/*",
-    "//zircon/system/ulib/stdcompat/*",
     "//zircon/system/ulib/storage-metrics/*",
     "//zircon/system/ulib/storage/buffer/*",
     "//zircon/system/ulib/storage/operation/*",

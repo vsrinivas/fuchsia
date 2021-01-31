@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef LIB_STDCOMPAT_SOURCE_LOCATION_H_
-#define LIB_STDCOMPAT_SOURCE_LOCATION_H_
+#ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_SOURCE_LOCATION_H_
+#define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_SOURCE_LOCATION_H_
 
 #include "version.h"
 
@@ -95,4 +95,4 @@ class source_location {
 
 #endif  // __cpp_lib_source_location >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#endif  // LIB_STDCOMPAT_SOURCE_LOCATION_H_
+#endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_SOURCE_LOCATION_H_
