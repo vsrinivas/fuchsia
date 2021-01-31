@@ -21,7 +21,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -88,7 +87,7 @@ func (*endpoint) MTU() uint32 {
 }
 
 func (*endpoint) Capabilities() stack.LinkEndpointCapabilities {
-	return 0
+	return stack.CapabilityResolutionRequired
 }
 
 func (*endpoint) MaxHeaderLength() uint16 {
@@ -266,16 +265,23 @@ func setupTestEnv(ctx context.Context, t *testing.T, serverCfg Config) (clientSt
 }
 
 func TestDHCP(t *testing.T) {
-	s := createTestStack()
-	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, s, loopback.New())
+	var serverLinkEP, clientLinkEP endpoint
+	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
+	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
+
+	serverStack := createTestStack()
+	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
+
+	clientStack := createTestStack()
+	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if _, err := newEPConnServer(ctx, s, defaultClientAddrs, defaultServerCfg); err != nil {
+	if _, err := newEPConnServer(ctx, serverStack, defaultClientAddrs, defaultServerCfg); err != nil {
 		t.Fatalf("newEPConnServer failed: %s", err)
 	}
 
-	c0 := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+	c0 := newZeroJitterClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 	info := c0.Info()
 	{
 		{
@@ -307,7 +313,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		c1 := newZeroJitterClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+		c1 := newZeroJitterClient(clientStack, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 		info := c1.Info()
 		cfg, err := acquire(ctx, c1, t.Name(), &info)
 		if err != nil {
@@ -323,13 +329,13 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		if err := s.AddProtocolAddressWithOptions(testNICID, tcpip.ProtocolAddress{
+		if err := clientStack.AddProtocolAddressWithOptions(testNICID, tcpip.ProtocolAddress{
 			Protocol:          ipv4.ProtocolNumber,
 			AddressWithPrefix: info.Addr,
 		}, stack.NeverPrimaryEndpoint); err != nil {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
-		defer s.RemoveAddress(testNICID, info.Addr.Address)
+		defer clientStack.RemoveAddress(testNICID, info.Addr.Address)
 		cfg, err := acquire(ctx, c0, t.Name(), &info)
 		if err != nil {
 			t.Fatal(err)
@@ -1513,11 +1519,18 @@ func (c *chConn) Read() (buffer.View, tcpip.FullAddress, error) {
 func (c *chConn) Write(b []byte, addr *tcpip.FullAddress) error { return c.c.Write(b, addr) }
 
 func TestTwoServers(t *testing.T) {
-	s := createTestStack()
-	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, s, loopback.New())
+	var serverLinkEP, clientLinkEP endpoint
+	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
+	clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
+
+	serverStack := createTestStack()
+	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
+
+	clientStack := createTestStack()
+	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
 
 	wq := new(waiter.Queue)
-	ep, err := s.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	ep, err := serverStack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatalf("dhcp: server endpoint: %s", err)
 	}
@@ -1549,7 +1562,7 @@ func TestTwoServers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
+	c := newZeroJitterClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 	info := c.Info()
 	if _, err := acquire(ctx, c, t.Name(), &info); err != nil {
 		t.Fatal(err)
