@@ -47,7 +47,6 @@ source_set("test_sources") {
     ":fidl.test.coding.fuchsia_llcpp",
     ":fidl.test.coding_llcpp",
     "//sdk/lib/fdio",
-    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -73,11 +72,26 @@ if (is_fuchsia) {
     }
     testonly = true
     sources = []
-    deps = [ ":test_sources" ] + gidl_deps
+    deps = [ ":test_sources" ]
   }
 
   fuchsia_unittest_package("fidl-walker-tests") {
     deps = [ ":walker_tests_bin" ]
+  }
+
+  executable("c_conformance_tests_bin") {
+    output_name = "c-conformance-tests"
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+    testonly = true
+    sources = []
+    deps = gidl_deps + [ "//src/lib/fxl/test:gtest_main" ]
+  }
+
+  fuchsia_unittest_package("fidl-c-conformance-tests") {
+    deps = [ ":c_conformance_tests_bin" ]
   }
 
   executable("tests_to_run_under_handle_policy") {
@@ -130,24 +144,23 @@ source_set("host_test_sources") {
   ]
   public_deps = [
     ":fidl.test.coding_llcpp",
-    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/zxtest",
   ]
 }
 
-if (is_linux || is_mac) {
+if (!is_fuchsia) {
   # Some of the tests can run on host.
   test("fidl-walker-host-tests") {
-    if (is_fuchsia) {
-      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-      if (configs + fdio_config - fdio_config != configs) {
-        configs -= fdio_config
-      }
-    }
     testonly = true
     sources = []
-    deps = [ ":host_test_sources" ] + gidl_deps
+    deps = [ ":host_test_sources" ]
+  }
+
+  test("fidl-c-conformance-host-tests") {
+    testonly = true
+    sources = []
+    deps = gidl_deps + [ "//src/lib/fxl/test:gtest_main" ]
   }
 }
 

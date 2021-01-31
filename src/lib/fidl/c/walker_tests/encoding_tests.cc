@@ -2599,16 +2599,24 @@ TEST(Structs, encode_nested_nullable_structs_Mode_LinearizeAndEncode) {
 }
 #endif
 
-TEST(Msg, bytes_msg) {
-  BoolStruct obj{true};
+TEST(Msg, EncodeOutgoingByteMsg) {
+  struct {
+    FIDL_ALIGNDECL
+    BoolStruct b{true};
+  } obj = {};
+  const char* error = nullptr;
   fidl_outgoing_msg_byte_t msg = {
       .bytes = &obj,
       .handles = nullptr,
-      .num_bytes = sizeof(obj),
+      .num_bytes = FIDL_ALIGN(sizeof(obj)),
       .num_handles = 0,
   };
-  zx_status_t status = fidl_encode_msg(&fidl_test_coding_BoolStructTable, &msg, nullptr, nullptr);
-  ASSERT_EQ(status, ZX_OK);
+  uint32_t actual_handles = 42;
+  zx_status_t status =
+      fidl_encode_msg(&fidl_test_coding_BoolStructTable, &msg, &actual_handles, &error);
+  EXPECT_EQ(actual_handles, 0);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error, "%s", error);
 }
 
 }  // namespace
