@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/camera-factory"
+        "binary": "bin/camera_factory_bin"
     },
     "sandbox": {
         "features": [

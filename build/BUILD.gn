@@ -212,8 +212,6 @@ group("deprecated_package") {
     "//sdk/lib/virtualization/*",
     "//src/bringup/bin/pwrbtn-monitor/test/*",
     "//src/camera/*",
-    "//src/camera/bin/factory/*",
-    "//src/camera/bin/factory_cli/*",
     "//src/camera/drivers/bus/aml_mipicsi/*",
     "//src/camera/drivers/controller/luis/*",
     "//src/camera/drivers/controller/sherlock/*",

@@ -3,23 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
 import("//src/camera/debug.gni")
+import("//src/sys/build/components.gni")
 
-name = "camera-factory"
-
-executable("bin") {
-  output_name = name
-
-  defines = [ camera_debug_define ]
-  sources = [ "main.cc" ]
-
-  deps = [ ":lib" ]
+group("factory") {
+  deps = [ ":camera_factory" ]
 }
 
 source_set("lib") {
-  defines = [ camera_debug_define ]
-
   sources = [
     "capture.cc",
     "capture.h",
@@ -54,6 +45,13 @@ source_set("lib") {
   ]
 }
 
+executable("camera_factory_bin") {
+  defines = [ camera_debug_define ]
+  sources = [ "main.cc" ]
+
+  deps = [ ":lib" ]
+}
+
 fidl("fuchsia.factory.camera") {
   sdk_category = "internal"
 
@@ -62,19 +60,7 @@ fidl("fuchsia.factory.camera") {
   public_deps = [ "//sdk/fidl/fuchsia.images" ]
 }
 
-package("${name}") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = name
-    },
-  ]
-
-  meta = [
-    {
-      path = "${name}.cmx"
-      dest = "${name}.cmx"
-    },
-  ]
+fuchsia_package_with_single_component("camera_factory") {
+  manifest = "meta/camera_factory.cmx"
+  deps = [ ":camera_factory_bin" ]
 }
