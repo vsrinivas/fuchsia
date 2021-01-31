@@ -261,8 +261,8 @@ bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
 bool FilterOp::operator()(const fbl::String& test_case, const fbl::String& test) const {
   fbl::String full_test_name = fbl::StringPrintf("%s.%s", test_case.c_str(), test.c_str());
   if (!run_disabled) {
-    fit::string_view test_case_view(test_case.c_str(), test_case.size());
-    fit::string_view test_view(test.c_str(), test.size());
+    cpp17::string_view test_case_view(test_case.c_str(), test_case.size());
+    cpp17::string_view test_view(test.c_str(), test.size());
     if (test_case_view.find(kDisabledTestPrefix) == 0 || test_view.find(kDisabledTestPrefix) == 0) {
       return false;
     }

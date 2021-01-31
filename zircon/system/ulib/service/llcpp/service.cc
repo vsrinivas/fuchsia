@@ -5,7 +5,6 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/string_view.h>
 #include <lib/fit/result.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/device/vfs.h>
@@ -59,8 +58,8 @@ namespace internal {
 
 }  // namespace internal
 
-::zx::status<> OpenNamedServiceAt(::zx::unowned_channel dir, fit::string_view service,
-                                  fit::string_view instance, ::zx::channel remote) {
+::zx::status<> OpenNamedServiceAt(::zx::unowned_channel dir, cpp17::string_view service,
+                                  cpp17::string_view instance, ::zx::channel remote) {
   ::fidl::Array<char, kMaxPath> path_buffer;
   ::zx::status<::fidl::StringView> path_result = ValidateAndJoinPath(
       &path_buffer, ::fidl::unowned_str(service), ::fidl::unowned_str(instance));

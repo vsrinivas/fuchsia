@@ -27,7 +27,6 @@
 #include <storage/buffer/array_buffer.h>
 #endif
 
-#include "lib/fit/string_view.h"
 #include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {

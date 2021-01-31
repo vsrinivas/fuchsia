@@ -36,7 +36,9 @@ zx_library("zxtest") {
     "zxtest-main.cc",
   ]
   public_deps = [
-    # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
+    # Needed for cpp17::string_view.
+    # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fbl:headers",
     "//zircon/system/ulib/fit:headers",
     "//zircon/system/ulib/zircon:headers",

@@ -58,7 +58,7 @@ TEST(ReaderTest, VisitPropertiesWildcard) {
 
   EXPECT_TRUE(VisitProperties<inspect::IntPropertyValue>(
       hierarchy, {"test", inspect::contrib::kPathWildcard},
-      [&](const std::vector<fit::string_view> path, const inspect::IntPropertyValue& value) {
+      [&](const std::vector<cpp17::string_view> path, const inspect::IntPropertyValue& value) {
         if (path.back() == "v1") {
           v1_result = fit::ok(value.value());
         } else if (path.back() == "v3") {
@@ -88,7 +88,7 @@ TEST(ReaderTest, VisitPropertiesExact) {
   fit::result<uint64_t> v2_result;
   EXPECT_TRUE(VisitProperties<inspect::UintPropertyValue>(
       hierarchy, {"test", "v2"},
-      [&](const std::vector<fit::string_view> path, const inspect::UintPropertyValue& value) {
+      [&](const std::vector<cpp17::string_view> path, const inspect::UintPropertyValue& value) {
         v2_result = fit::ok(value.value());
       }));
   ASSERT_TRUE(v2_result.is_ok());
@@ -108,7 +108,7 @@ TEST(ReaderTest, VisitPropertiesHistogram) {
   fit::result<std::vector<inspect::UintArrayValue::HistogramBucket>> hist_result;
   EXPECT_TRUE(VisitProperties<inspect::UintArrayValue>(
       hierarchy, {"test", "hist"},
-      [&](const std::vector<fit::string_view> path, const inspect::UintArrayValue& value) {
+      [&](const std::vector<cpp17::string_view> path, const inspect::UintArrayValue& value) {
         hist_result = fit::ok(value.GetBuckets());
       }));
   ASSERT_TRUE(hist_result.is_ok());
@@ -136,7 +136,7 @@ TEST(ReaderTest, VisitPropertiesRecursive) {
   bool found_other_match = false;
   EXPECT_TRUE(VisitProperties<inspect::StringPropertyValue>(
       hierarchy, {"test", inspect::contrib::kPathWildcard, inspect::contrib::kPathRecursive},
-      [&](const std::vector<fit::string_view> path, const inspect::StringPropertyValue& value) {
+      [&](const std::vector<cpp17::string_view> path, const inspect::StringPropertyValue& value) {
         if (path.back() == "v4") {
           v4_result = fit::ok(value.value());
         }
@@ -164,7 +164,7 @@ TEST(ReaderTest, VisitPropertiesAllRecursive) {
   size_t count_found = 0;
   EXPECT_TRUE(VisitProperties<inspect::IntPropertyValue>(
       hierarchy, {inspect::contrib::kPathRecursive},
-      [&](const std::vector<fit::string_view> path, const inspect::IntPropertyValue& value) {
+      [&](const std::vector<cpp17::string_view> path, const inspect::IntPropertyValue& value) {
         count_found++;
       }));
   EXPECT_EQ(4, count_found);
@@ -184,7 +184,7 @@ TEST(ReaderTest, VisitPropertiesInvalidRecursiveWildcard) {
   size_t count_found = 0;
   EXPECT_FALSE(VisitProperties<inspect::IntPropertyValue>(
       hierarchy, {inspect::contrib::kPathRecursive, "v1"},
-      [&](const std::vector<fit::string_view> path, const inspect::IntPropertyValue& value) {
+      [&](const std::vector<cpp17::string_view> path, const inspect::IntPropertyValue& value) {
         count_found++;
       }));
   EXPECT_EQ(0, count_found);
@@ -192,7 +192,7 @@ TEST(ReaderTest, VisitPropertiesInvalidRecursiveWildcard) {
   // Calling without path should be OK.
   EXPECT_FALSE(VisitProperties<inspect::IntPropertyValue>(
       hierarchy, {},
-      [&](const std::vector<fit::string_view> path, const inspect::IntPropertyValue& value) {}));
+      [&](const std::vector<cpp17::string_view> path, const inspect::IntPropertyValue& value) {}));
 }
 
 }  // namespace

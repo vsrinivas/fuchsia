@@ -6,9 +6,9 @@
 #define LIB_SERVICE_LLCPP_OUTGOING_DIRECTORY_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fit/string_view.h>
 #include <lib/service/llcpp/constants.h>
 #include <lib/service/llcpp/service_handler.h>
+#include <lib/stdcompat/string_view.h>
 
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
@@ -127,7 +127,7 @@ class OutgoingDirectory final {
   // ```
   template <typename Service>
   zx_status_t AddService(ServiceHandler handler,
-                         fit::string_view instance = kDefaultInstance) const {
+                         cpp17::string_view instance = kDefaultInstance) const {
     return AddNamedService(std::move(handler), Service::Name, std::move(instance));
   }
 
@@ -146,8 +146,8 @@ class OutgoingDirectory final {
   // handler.AddMember("my-member", ...);
   // outgoing.AddNamedService(std::move(handler), "lib.example.MyService", "my-instance");
   // ```
-  zx_status_t AddNamedService(ServiceHandler handler, fit::string_view service,
-                              fit::string_view instance = kDefaultInstance) const;
+  zx_status_t AddNamedService(ServiceHandler handler, cpp17::string_view service,
+                              cpp17::string_view instance = kDefaultInstance) const;
 
   // Removes an instance of a service.
   //
@@ -161,7 +161,7 @@ class OutgoingDirectory final {
   // outgoing.RemoveService<::llcpp::lib::example::MyService>("my-instance");
   // ```
   template <typename Service>
-  zx_status_t RemoveService(fit::string_view instance) const {
+  zx_status_t RemoveService(cpp17::string_view instance) const {
     return RemoveNamedService(Service::Name, instance);
   }
 
@@ -170,7 +170,7 @@ class OutgoingDirectory final {
   // # Errors
   //
   // ZX_ERR_NOT_FOUND: The instance was not found.
-  zx_status_t RemoveNamedService(fit::string_view service, fit::string_view instance) const;
+  zx_status_t RemoveNamedService(cpp17::string_view service, cpp17::string_view instance) const;
 
   // Gets the root directory.
   fbl::RefPtr<fs::PseudoDir> root_dir() const { return root_; }

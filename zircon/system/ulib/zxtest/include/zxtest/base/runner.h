@@ -5,7 +5,7 @@
 #ifndef ZXTEST_BASE_RUNNER_H_
 #define ZXTEST_BASE_RUNNER_H_
 
-#include <lib/fit/string_view.h>
+#include <lib/stdcompat/string_view.h>
 
 #include <atomic>
 #include <cstdio>
@@ -25,7 +25,7 @@
 namespace zxtest {
 
 // Prefix used to prevent a test from executing, without explicitly requesting disabled test to run.
-static constexpr fit::string_view kDisabledTestPrefix = "DISABLED_";
+static constexpr cpp17::string_view kDisabledTestPrefix = "DISABLED_";
 
 namespace internal {
 

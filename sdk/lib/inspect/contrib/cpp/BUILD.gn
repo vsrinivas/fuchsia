@@ -24,6 +24,7 @@ source_set("read_visitor") {
   sources = [ "read_visitor.h" ]
 
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/inspect",
   ]
