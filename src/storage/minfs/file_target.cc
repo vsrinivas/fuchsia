@@ -148,7 +148,12 @@ zx::status<> File::FlushCachedWrites() {
     cached_transaction = std::move(cached_transaction_);
   }
   if (cached_transaction == nullptr) {
-    DropCachedWrites();
+    if (Vfs()->IsJournalErrored()) {
+      // Here we want to drop cached writes (the reservations and pending bits) if the journal is
+      // errored. If journal is in a healthy state, we return success because journalled metadata
+      // write might still be working on the file.
+      DropCachedWrites();
+    }
     return zx::ok();
   }
 
