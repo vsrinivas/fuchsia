@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/test_harness_fixture_test_bin"
+        "binary": "bin/test_harness_fixture_test_bin"
     },
     "sandbox": {
         "features": [

@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("modular_test_harness_bin") {
   testonly = true
@@ -17,6 +16,12 @@ executable("modular_test_harness_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_unittest_component("modular-test-harness") {
+  component_name = "modular_test_harness"
+  manifest = "meta/modular_test_harness.cmx"
+  deps = [ ":modular_test_harness_bin" ]
 }
 
 executable("test_session_shell_bin") {
@@ -37,6 +42,11 @@ executable("test_session_shell_bin") {
   ]
 }
 
+fuchsia_unittest_component("test_session_shell") {
+  manifest = "meta/test_session_shell.cmx"
+  deps = [ ":test_session_shell_bin" ]
+}
+
 executable("test_story_shell_bin") {
   testonly = true
 
@@ -51,6 +61,20 @@ executable("test_story_shell_bin") {
     "//src/modular/lib/fidl:view_host",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_component("test_story_shell") {
+  manifest = "meta/test_story_shell.cmx"
+  deps = [ ":test_story_shell_bin" ]
+}
+
+fuchsia_package("modular_test_harness") {
+  testonly = true
+  deps = [
+    ":modular-test-harness",
+    ":test_session_shell",
+    ":test_story_shell",
   ]
 }
 
@@ -69,51 +93,7 @@ executable("modular_test_harness_test") {
   ]
 }
 
-package("modular_test_harness") {
-  testonly = true
-  binaries = [
-    {
-      name = "test_story_shell_bin"
-    },
-    {
-      name = "test_session_shell_bin"
-    },
-    {
-      name = "modular_test_harness_bin"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/modular_test_harness.cmx"
-      dest = "modular_test_harness.cmx"
-    },
-    {
-      path = "meta/test_session_shell.cmx"
-      dest = "test_session_shell.cmx"
-    },
-    {
-      path = "meta/test_story_shell.cmx"
-      dest = "test_story_shell.cmx"
-    },
-  ]
-
-  deps = [
-    ":modular_test_harness_bin",
-    ":test_session_shell_bin",
-    ":test_story_shell_bin",
-  ]
-}
-
-test_package("tests") {
+fuchsia_unittest_package("tests") {
   package_name = "modular_test_harness_test"
-
-  tests = [
-    {
-      name = "modular_test_harness_test"
-      environments = basic_envs
-    },
-  ]
-
   deps = [ ":modular_test_harness_test" ]
 }

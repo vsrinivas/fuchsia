@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//src/modular/build/executable_package.gni")
+import("//src/sys/build/components.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
@@ -13,14 +11,8 @@ declare_args() {
   auto_login_to_guest = false
 }
 
-executable_package("basemgr") {
-  meta = [
-    {
-      path = "meta/basemgr.cmx"
-      dest = "basemgr.cmx"
-    },
-  ]
-
+executable("basemgr_bin") {
+  output_name = "basemgr"
   sources = [
     "basemgr_impl.cc",
     "basemgr_impl.h",
@@ -62,33 +54,18 @@ executable_package("basemgr") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
-  ]
 }
 
-test_package("basemgr_unittests") {
+resource("icudtl") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
+}
+
+fuchsia_package_with_single_component("basemgr") {
+  manifest = "meta/basemgr.cmx"
   deps = [
-    ":basemgr_impl_unittest",
-    ":session_context_impl_unittest",
-  ]
-
-  tests = [
-    {
-      name = "basemgr_impl_unittest"
-    },
-    {
-      name = "session_context_impl_unittest"
-
-      # This test exercises crash handling that logs an ERROR.
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
+    ":basemgr_bin",
+    ":icudtl",
   ]
 }
 
@@ -160,13 +137,18 @@ executable("session_context_impl_unittest") {
   ]
 }
 
+fuchsia_unittest_component("session-context-impl-unittest") {
+  manifest = "meta/session_context_impl_unittest.cmx"
+  deps = [ ":session_context_impl_unittest" ]
+}
+
 executable("basemgr_impl_unittest") {
   testonly = true
 
   sources = [ "basemgr_impl_unittest.cc" ]
 
   deps = [
-    ":basemgr",
+    ":basemgr_bin",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.identity.account",
@@ -185,6 +167,24 @@ executable("basemgr_impl_unittest") {
     "//src/ui/scenic/lib/scenic:scenic",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuchsia_unittest_component("basemgr-impl-unittest") {
+  manifest = "meta/basemgr_impl_unittest.cmx"
+  deps = [ ":basemgr_impl_unittest" ]
+}
+
+fuchsia_test_package("basemgr_unittests") {
+  test_components = [
+    ":basemgr-impl-unittest",
+    ":session-context-impl-unittest",
+  ]
+  test_specs = {
+    # session_context_impl_unittest exercises crash handling that logs an ERROR.
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 config("auto_login_to_guest") {

@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/environments.gni")
-import("//src/modular/build/executable_package.gni")
-import("//src/modular/build/tests_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("basemgr_launcher_bin") {
   output_name = "basemgr_launcher"
@@ -32,21 +30,9 @@ executable("basemgr_launcher_bin") {
   ]
 }
 
-package("basemgr_launcher") {
+fuchsia_shell_package("basemgr_launcher") {
+  manifest = "meta/basemgr_launcher.cmx"
   deps = [ ":basemgr_launcher_bin" ]
-  binaries = [
-    {
-      name = "basemgr_launcher"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/basemgr_launcher.cmx"
-      dest = "basemgr_launcher.cmx"
-    },
-  ]
 }
 
 executable("basemgr_launcher_test") {
@@ -67,7 +53,8 @@ executable("basemgr_launcher_test") {
   ]
 }
 
-hermetic_tests_package("basemgr_launcher_tests") {
+fuchsia_unittest_package("basemgr_launcher_tests") {
+  manifest = "meta/basemgr_launcher_test.cmx"
   deps = [ ":basemgr_launcher_test" ]
 }
 

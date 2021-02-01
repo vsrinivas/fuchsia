@@ -31,8 +31,6 @@ fidl("fuchsia.testing.modular") {
 executable("agent_services_test") {
   testonly = true
 
-  output_name = "agent_services_test"
-
   sources = [ "agent_services_test.cc" ]
 
   deps = [
@@ -53,8 +51,6 @@ fuchsia_unittest_component("agent-services-test") {
 
 executable("agent_session_restart_test") {
   testonly = true
-
-  output_name = "agent_session_restart_test"
 
   sources = [ "agent_session_restart_test.cc" ]
 

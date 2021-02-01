@@ -7,13 +7,16 @@ Modular. They make use of the Modular Test Harness.
 
 The easiest way to get started is to make a copy of an existing test. Be sure to:
 
-1. Add an entry in `BUILD.gn` to build the new test `executable()`
-1. Create a .cmx meta file in `meta/`
-1. Add both the executable binary to the `test_package()` declaration in `BUILD.gn`
+1. In `BUILD.gn`, add an entry to build the new test `executable()`
+1. Create a .cmx file in `meta/` if the new test needs special capabilities
+1. In `BUILD.gn`, create a `fuchsia_unittest_component()` with the new
+   `executable()` as a dependency
+1. In `BUILD.gn`, add the new `fuchsia_unittest_component()` as a
+   `test_component` of the `modular_integration_tests` `fuchsia_test_package()`
 
 ## Running tests
 
-Run the following commands to build & run your tests:
+Run the following commands to build your tests:
 
 ```sh
 fx set core.x64 --with //src/modular/tests
@@ -24,7 +27,7 @@ NOTE: You only need to run `fx set` once.
 
 ### Running all tests
 
-`fx run-test modular_integration_tests`
+`fx test modular_integration_tests`
 
 ### Running one test
 

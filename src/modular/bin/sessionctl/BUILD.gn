@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/modular/build/executable_package.gni")
-import("//src/modular/build/tests_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("sessionctl_bin") {
   output_name = "sessionctl"
@@ -21,21 +20,9 @@ executable("sessionctl_bin") {
   ]
 }
 
-package("sessionctl") {
+fuchsia_shell_package("sessionctl") {
+  manifest = "meta/sessionctl.cmx"
   deps = [ ":sessionctl_bin" ]
-  binaries = [
-    {
-      name = "sessionctl"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/sessionctl.cmx"
-      dest = "sessionctl.cmx"
-    },
-  ]
 }
 
 source_set("lib") {
@@ -84,6 +71,7 @@ executable("sessionctl_unittest") {
   ]
 }
 
-hermetic_tests_package("sessionctl_unittests") {
+fuchsia_unittest_package("sessionctl_unittests") {
+  manifest = "meta/sessionctl_unittest.cmx"
   deps = [ ":sessionctl_unittest" ]
 }
