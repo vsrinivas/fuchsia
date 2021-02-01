@@ -54,8 +54,6 @@ source_set("lib") {
 }
 
 executable("camera_device_bin") {
-  output_name = "device"
-
   sources = [ "main.cc" ]
 
   deps = [
