@@ -9,7 +9,10 @@ import("//build/zircon/migrated_targets.gni")
 source_set("testing") {
   testonly = toolchain.environment != "kernel"
 
-  sources = [ "fake-cpuid.cc" ]
+  sources = [
+    "fake-cpuid.cc",
+    "fake-msr.cc",
+  ]
 
   public_deps = [
     # <lib/arch/x86/testing/fake-cpuid.h> includes <lib/arch/x86/cpuid.h>

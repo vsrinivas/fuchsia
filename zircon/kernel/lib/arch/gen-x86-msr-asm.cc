@@ -10,8 +10,8 @@
 
 int main(int argc, char** argv) {
   return hwreg::AsmHeader()
-      .Macro("MSR_IA32_FS_BASE", static_cast<uint32_t>(X86Msr::IA32_FS_BASE))
-      .Macro("MSR_IA32_GS_BASE", static_cast<uint32_t>(X86Msr::IA32_GS_BASE))
-      .Macro("MSR_IA32_KERNEL_GS_BASE", static_cast<uint32_t>(X86Msr::IA32_KERNEL_GS_BASE))
+      .Macro("MSR_IA32_FS_BASE", static_cast<uint32_t>(arch::X86Msr::IA32_FS_BASE))
+      .Macro("MSR_IA32_GS_BASE", static_cast<uint32_t>(arch::X86Msr::IA32_GS_BASE))
+      .Macro("MSR_IA32_KERNEL_GS_BASE", static_cast<uint32_t>(arch::X86Msr::IA32_KERNEL_GS_BASE))
       .Main(argc, argv);
 }

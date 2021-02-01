@@ -42,6 +42,8 @@
 
 #include <stdint.h>
 
+namespace arch {
+
 // MSR identifiers.  These use the ALL_CAPS name style to be consistent with
 // the Intel manuals.  The generated header <lib/arch/x86/msr-asm.h> contains
 // macros for `MSR_<name>` so these constants can be used in assembly code.
@@ -63,6 +65,8 @@ enum class X86Msr : uint32_t {
 };
 
 // TODO: add more MSRs, add hwreg types for C++ access
+
+}  // namespace arch
 
 #endif  // __ASSEMBLER__
 

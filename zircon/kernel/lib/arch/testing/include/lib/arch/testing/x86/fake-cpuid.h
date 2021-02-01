@@ -88,11 +88,11 @@ class FakeCpuidIo {
                         uint32_t edx);
 
  private:
-  // An intrusive data structure wrapping a CpuidIo object, required to store
+  // An intrusive data structure wrapping a CpuidIo object, required be stored
   // in a fbl::HashTable.
   //
-  // This would be simple using something more along the lines of
-  // std::map<std::pair<uint32_t, uint32_t>, CpuidIo>, but we needs to
+  // This would be simpler using something more along the lines of
+  // std::map<std::pair<uint32_t, uint32_t>, CpuidIo>, but we need to
   // support in-kernel testing where only fbl containers are available.
   struct Hashable : public fbl::SinglyLinkedListable<std::unique_ptr<Hashable>> {
     // Required to instantiate fbl::DefaultKeyedObjectTraits.

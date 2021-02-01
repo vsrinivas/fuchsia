@@ -143,7 +143,7 @@ FakeCpuidIo& FakeCpuidIo::Populate(uint32_t leaf, uint32_t subleaf, uint32_t eax
   if (auto it = map_.find(key); it == map_.end()) {
     fbl::AllocChecker ac;
     std::unique_ptr<Hashable> hashable(new (&ac) Hashable{});
-    ZX_DEBUG_ASSERT(ac.check());
+    ZX_ASSERT(ac.check());
     hashable->key_ = key;
     populate(hashable->cpuid_);
     map_.insert(std::move(hashable));
