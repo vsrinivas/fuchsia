@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    analytics::add_custom_event,
     anyhow::{anyhow, Result},
     check::{PreflightCheck, PreflightCheckResult},
     config::*,
-    ffx_core::{ffx_bail, ffx_plugin},
+    ffx_core::{build_info, ffx_bail, ffx_plugin},
     ffx_preflight_args::PreflightCommand,
     regex::Regex,
     std::fmt,
@@ -19,9 +20,11 @@ mod check;
 mod command_runner;
 mod config;
 
-// Unicode characters
+// Unicode characters.
 static CHECK_MARK: &str = "\u{2713}";
 static BALLOT_X: &str = "\u{2717}";
+
+// String constants for output.
 static RUNNING_CHECKS_PREAMBLE: &str = "Running pre-flight checks...";
 static SOME_CHECKS_FAILED_RECOVERABLE: &str =
     "Some checks failed :(. Follow the instructions above and try running again.";
@@ -30,6 +33,14 @@ static EVERYTING_CHECKS_OUT: &str =
     "Everything checks out! Continue at https://fuchsia.dev/fuchsia-src/get-started";
 static EVERYTING_CHECKS_OUT_WITH_WARNINGS: &str =
     "There were some warnings, but you can still carry on. Continue at https://fuchsia.dev/fuchsia-src/get-started";
+
+// String constants for report_preflight_analytics().
+static ANALYTICS_APP_NAME: &str = "ffx";
+static ANALYTICS_CATEGORY: &str = "preflight";
+static ANALYTICS_ACTION_SUCCESS: &str = "completed_success";
+static ANALYTICS_ACTION_WARNING: &str = "completed_warning";
+static ANALYTICS_ACTION_FAILURE_RECOVERABLE: &str = "completed_failure_recoverable";
+static ANALYTICS_ACTION_FAILURE: &str = "completed_failure";
 
 #[cfg(target_os = "linux")]
 fn get_operating_system() -> Result<OperatingSystem> {
@@ -55,6 +66,22 @@ fn get_operating_system_macos(
     let major: u32 = caps.get(1).unwrap().as_str().parse()?;
     let minor: u32 = caps.get(2).unwrap().as_str().to_string().parse()?;
     Ok(OperatingSystem::MacOS(major, minor))
+}
+
+async fn report_preflight_analytics(action: &str) {
+    let build_info = build_info();
+    let build_version = build_info.build_version;
+    if let Err(e) = add_custom_event(
+        ANALYTICS_APP_NAME,
+        build_version.as_deref(),
+        Some(ANALYTICS_CATEGORY),
+        Some(action),
+        None,
+    )
+    .await
+    {
+        log::error!("Preflight analytics submission failed: {}", e);
+    }
 }
 
 #[ffx_plugin()]
@@ -104,8 +131,10 @@ async fn run_preflight_checks<W: Write>(
             })
             .collect();
         if recoverable_failures.len() == failures.len() {
+            report_preflight_analytics(ANALYTICS_ACTION_FAILURE_RECOVERABLE).await;
             ffx_bail!("{}", SOME_CHECKS_FAILED_RECOVERABLE);
         } else {
+            report_preflight_analytics(ANALYTICS_ACTION_FAILURE).await;
             ffx_bail!("{}", SOME_CHECKS_FAILED_FATAL);
         }
     } else if has_warnings {
@@ -113,6 +142,12 @@ async fn run_preflight_checks<W: Write>(
     } else {
         writeln!(writer, "{}", EVERYTING_CHECKS_OUT)?;
     }
+    report_preflight_analytics(if has_warnings {
+        ANALYTICS_ACTION_WARNING
+    } else {
+        ANALYTICS_ACTION_SUCCESS
+    })
+    .await;
     Ok(())
 }
 
