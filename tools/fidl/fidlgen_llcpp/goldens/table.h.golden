@@ -56,6 +56,8 @@ class SimpleTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const int64_t& x() const {
     ZX_ASSERT(has_x());
     return *frame_ptr_->x_.data;
@@ -81,6 +83,17 @@ class SimpleTable final {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->x_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  template <typename... Args>
+  void set_x(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->x_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_x(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->x_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
 
@@ -111,10 +124,25 @@ class SimpleTable final {
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
   }
+  template <typename... Args>
+  void set_y(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->y_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
+  }
+  void set_y(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->y_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
+  }
 
   SimpleTable() = default;
   explicit SimpleTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit SimpleTable(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit SimpleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~SimpleTable() = default;
   SimpleTable(SimpleTable&& other) noexcept = default;
   SimpleTable& operator=(SimpleTable&& other) noexcept = default;
@@ -126,7 +154,16 @@ class SimpleTable final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {
@@ -399,6 +436,8 @@ class ReverseOrdinalTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const int64_t& z() const {
     ZX_ASSERT(has_z());
     return *frame_ptr_->z_.data;
@@ -424,6 +463,17 @@ class ReverseOrdinalTable final {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->z_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  template <typename... Args>
+  void set_z(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->z_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_z(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->z_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
 
@@ -454,6 +504,17 @@ class ReverseOrdinalTable final {
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
   }
+  template <typename... Args>
+  void set_y(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->y_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+  }
+  void set_y(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->y_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+  }
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -482,10 +543,25 @@ class ReverseOrdinalTable final {
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
   }
+  template <typename... Args>
+  void set_x(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->x_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+  }
+  void set_x(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->x_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+  }
 
   ReverseOrdinalTable() = default;
   explicit ReverseOrdinalTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit ReverseOrdinalTable(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit ReverseOrdinalTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~ReverseOrdinalTable() = default;
   ReverseOrdinalTable(ReverseOrdinalTable&& other) noexcept = default;
   ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept =
@@ -499,7 +575,16 @@ class ReverseOrdinalTable final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {
@@ -812,6 +897,8 @@ class OlderSimpleTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const int64_t& x() const {
     ZX_ASSERT(has_x());
     return *frame_ptr_->x_.data;
@@ -839,10 +926,25 @@ class OlderSimpleTable final {
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
+  template <typename... Args>
+  void set_x(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->x_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_x(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->x_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
 
   OlderSimpleTable() = default;
   explicit OlderSimpleTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit OlderSimpleTable(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit OlderSimpleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~OlderSimpleTable() = default;
   OlderSimpleTable(OlderSimpleTable&& other) noexcept = default;
   OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
@@ -855,7 +957,16 @@ class OlderSimpleTable final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {
@@ -1087,6 +1198,8 @@ class NewerSimpleTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const int64_t& x() const {
     ZX_ASSERT(has_x());
     return *frame_ptr_->x_.data;
@@ -1112,6 +1225,17 @@ class NewerSimpleTable final {
     ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
     frame_ptr_->x_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  template <typename... Args>
+  void set_x(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->x_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_x(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->x_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
 
@@ -1142,6 +1266,17 @@ class NewerSimpleTable final {
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
   }
+  template <typename... Args>
+  void set_y(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->y_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
+  }
+  void set_y(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->y_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
+  }
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
@@ -1170,10 +1305,25 @@ class NewerSimpleTable final {
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
   }
+  template <typename... Args>
+  void set_z(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->z_.data =
+        ::fidl::tracking_ptr<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
+  }
+  void set_z(::fidl::tracking_ptr<int64_t> elem) {
+    frame_ptr_->z_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
+  }
 
   NewerSimpleTable() = default;
   explicit NewerSimpleTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit NewerSimpleTable(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit NewerSimpleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~NewerSimpleTable() = default;
   NewerSimpleTable(NewerSimpleTable&& other) noexcept = default;
   NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
@@ -1186,7 +1336,16 @@ class NewerSimpleTable final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {
@@ -1501,9 +1660,15 @@ class EmptyTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   EmptyTable() = default;
   explicit EmptyTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit EmptyTable(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit EmptyTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~EmptyTable() = default;
   EmptyTable(EmptyTable&& other) noexcept = default;
   EmptyTable& operator=(EmptyTable&& other) noexcept = default;
@@ -1515,7 +1680,16 @@ class EmptyTable final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {

@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_TRACKING_PTR_H_
 
 #include <lib/fidl/llcpp/aligned.h>
+#include <lib/fidl/llcpp/allocator.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/unowned_ptr.h>
@@ -120,6 +121,10 @@ class tracking_ptr final {
   // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
   tracking_ptr(unowned_ptr_t<aligned<T>> other) { set_unowned(&other->value); }
   tracking_ptr(const tracking_ptr&) = delete;
+  // Allocates an object using the allocator.
+  template <typename... Args>
+  explicit tracking_ptr(Allocator& allocator, Args&&... args)
+      : tracking_ptr(allocator.make<T>(std::forward<Args>(args)...)) {}
 
   ~tracking_ptr() { reset_marked(kNullMarkedPtr); }
 
@@ -132,6 +137,12 @@ class tracking_ptr final {
     reset_marked(kNullMarkedPtr);
     set_unowned(view.get());
     return *this;
+  }
+
+  // Allocates an object using the allocator.
+  template <typename... Args>
+  void Allocate(Allocator& allocator, Args&&... args) {
+    reset_marked(reinterpret_cast<marked_ptr>(allocator.make<T>(std::forward<Args>(args)...)));
   }
 
   template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>

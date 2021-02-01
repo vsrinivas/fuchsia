@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 #define LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 
-#include "fidl_allocator.h"
+#include <lib/fidl/llcpp/fidl_allocator.h>
 
 namespace fidl {
 

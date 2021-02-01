@@ -77,6 +77,13 @@ class OnlyLlcpp {
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
+  template <typename... Args>
+  static OnlyLlcpp WithX(::fidl::Allocator& allocator, Args&&... args) {
+    OnlyLlcpp result;
+    result.set_x(
+        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
 
   void set_x(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kX;
@@ -87,6 +94,12 @@ class OnlyLlcpp {
   void set_x(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kX;
     set_x(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+  template <typename... Args>
+  void set_x(::fidl::Allocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kX;
+    set_x(
+        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_x() {

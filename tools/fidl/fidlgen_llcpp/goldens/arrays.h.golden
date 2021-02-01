@@ -84,6 +84,13 @@ class UnionSmallArray {
         allocator, std::forward<Args>(args)...));
     return result;
   }
+  template <typename... Args>
+  static UnionSmallArray WithA(::fidl::Allocator& allocator, Args&&... args) {
+    UnionSmallArray result;
+    result.set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
 
   void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>&& elem) {
     ordinal_ = Ordinal::kA;
@@ -94,6 +101,12 @@ class UnionSmallArray {
   void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
+        allocator, std::forward<Args>(args)...));
+  }
+  template <typename... Args>
+  void set_a(::fidl::Allocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kA;
+    set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -177,6 +190,13 @@ class UnionLargeArray {
         allocator, std::forward<Args>(args)...));
     return result;
   }
+  template <typename... Args>
+  static UnionLargeArray WithA(::fidl::Allocator& allocator, Args&&... args) {
+    UnionLargeArray result;
+    result.set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
 
   void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>&& elem) {
     ordinal_ = Ordinal::kA;
@@ -187,6 +207,12 @@ class UnionLargeArray {
   void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
+        allocator, std::forward<Args>(args)...));
+  }
+  template <typename... Args>
+  void set_a(::fidl::Allocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kA;
+    set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -243,6 +269,8 @@ class TableSmallArray final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(has_a());
     return *frame_ptr_->a_.data;
@@ -270,10 +298,25 @@ class TableSmallArray final {
         allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
+  template <typename... Args>
+  void set_a(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->a_.data = ::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>(
+        allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>> elem) {
+    frame_ptr_->a_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
 
   TableSmallArray() = default;
   explicit TableSmallArray(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit TableSmallArray(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit TableSmallArray(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~TableSmallArray() = default;
   TableSmallArray(TableSmallArray&& other) noexcept = default;
   TableSmallArray& operator=(TableSmallArray&& other) noexcept = default;
@@ -286,7 +329,16 @@ class TableSmallArray final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {
@@ -518,6 +570,8 @@ class TableLargeArray final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(has_a());
     return *frame_ptr_->a_.data;
@@ -545,10 +599,25 @@ class TableLargeArray final {
         allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
+  template <typename... Args>
+  void set_a(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->a_.data = ::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>(
+        allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>> elem) {
+    frame_ptr_->a_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
 
   TableLargeArray() = default;
   explicit TableLargeArray(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit TableLargeArray(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit TableLargeArray(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~TableLargeArray() = default;
   TableLargeArray(TableLargeArray&& other) noexcept = default;
   TableLargeArray& operator=(TableLargeArray&& other) noexcept = default;
@@ -561,7 +630,16 @@ class TableLargeArray final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {

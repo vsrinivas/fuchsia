@@ -5,15 +5,18 @@
 #ifndef LIB_FIDL_LLCPP_ALLOCATOR_H_
 #define LIB_FIDL_LLCPP_ALLOCATOR_H_
 
+#include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/unowned_ptr.h>
 #include <zircon/assert.h>
 
 #include <functional>
 #include <type_traits>
 
-#include "tracking_ptr.h"
-
 namespace fidl {
+
+template <typename T>
+class tracking_ptr;
 
 // Allocator is a base class for a family of classes that implement allocation algorithms
 // to allocate objects on the heap or stack.
@@ -43,8 +46,8 @@ class Allocator {
   // make allocates an object of the specified type and initializes it with the given arguments.
   // It intended to behave identically to std::make_unique<T> but use the allocator rather than
   // the heap.
-  // TODO(fxbug.dev/42059) Consider making it possible to pack small objects tighter by having dedicated
-  // blocks. More complication always has more performance impact, though.
+  // TODO(fxbug.dev/42059) Consider making it possible to pack small objects tighter by having
+  // dedicated blocks. More complication always has more performance impact, though.
   template <typename T, typename = std::enable_if_t<!std::is_array<T>::value>, typename... Args>
   tracking_ptr<T> make(Args&&... args) {
     allocation_result result = allocate(AllocationType::kNonArray, sizeof(fidl::aligned<T>), 1,
@@ -86,6 +89,11 @@ class Allocator {
   template <typename Table, typename std::enable_if<::fidl::IsTable<Table>::value, int>::type = 0>
   typename Table::Builder make_table_builder() {
     return typename Table::Builder(make<typename Table::Frame>());
+  }
+
+  template <typename Table, typename std::enable_if<::fidl::IsTable<Table>::value, int>::type = 0>
+  Table make_table() {
+    return Table(make<typename Table::Frame>());
   }
 
   template <typename T,

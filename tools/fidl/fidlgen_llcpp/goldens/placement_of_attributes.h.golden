@@ -194,6 +194,14 @@ class ExampleXUnion {
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
+  template <typename... Args>
+  static ExampleXUnion WithVariant(::fidl::Allocator& allocator,
+                                   Args&&... args) {
+    ExampleXUnion result;
+    result.set_variant(
+        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
 
   void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kVariant;
@@ -205,6 +213,12 @@ class ExampleXUnion {
     ordinal_ = Ordinal::kVariant;
     set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+  template <typename... Args>
+  void set_variant(::fidl::Allocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kVariant;
+    set_variant(
+        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {
@@ -283,6 +297,14 @@ class ExampleUnion {
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
+  template <typename... Args>
+  static ExampleUnion WithVariant(::fidl::Allocator& allocator,
+                                  Args&&... args) {
+    ExampleUnion result;
+    result.set_variant(
+        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
 
   void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kVariant;
@@ -294,6 +316,12 @@ class ExampleUnion {
     ordinal_ = Ordinal::kVariant;
     set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+  template <typename... Args>
+  void set_variant(::fidl::Allocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kVariant;
+    set_variant(
+        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {
@@ -349,6 +377,8 @@ class ExampleTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const uint32_t& member() const {
     ZX_ASSERT(has_member());
     return *frame_ptr_->member_.data;
@@ -376,10 +406,25 @@ class ExampleTable final {
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
+  template <typename... Args>
+  void set_member(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->member_.data =
+        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_member(::fidl::tracking_ptr<uint32_t> elem) {
+    frame_ptr_->member_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
 
   ExampleTable() = default;
   explicit ExampleTable(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit ExampleTable(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit ExampleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~ExampleTable() = default;
   ExampleTable(ExampleTable&& other) noexcept = default;
   ExampleTable& operator=(ExampleTable&& other) noexcept = default;
@@ -392,7 +437,16 @@ class ExampleTable final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   class UnownedEncodedMessage final {

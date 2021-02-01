@@ -90,6 +90,13 @@ class UnionWithHandle {
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
     return result;
   }
+  template <typename... Args>
+  static UnionWithHandle WithH(::fidl::Allocator& allocator, Args&&... args) {
+    UnionWithHandle result;
+    result.set_h(::fidl::tracking_ptr<::zx::vmo>(allocator,
+                                                 std::forward<Args>(args)...));
+    return result;
+  }
 
   void set_h(::fidl::tracking_ptr<::zx::vmo>&& elem) {
     ordinal_ = Ordinal::kH;
@@ -101,6 +108,12 @@ class UnionWithHandle {
     ordinal_ = Ordinal::kH;
     set_h(
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
+  }
+  template <typename... Args>
+  void set_h(::fidl::Allocator& allocator, Args&&... args) {
+    ordinal_ = Ordinal::kH;
+    set_h(::fidl::tracking_ptr<::zx::vmo>(allocator,
+                                          std::forward<Args>(args)...));
   }
 
   ::zx::vmo& mutable_h() {
@@ -157,6 +170,8 @@ class TableWithHandle final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
+  class Frame;
+
   const ::zx::vmo& h() const {
     ZX_ASSERT(has_h());
     return *frame_ptr_->h_.data;
@@ -184,10 +199,25 @@ class TableWithHandle final {
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
   }
+  template <typename... Args>
+  void set_h(::fidl::Allocator& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    frame_ptr_->h_.data =
+        ::fidl::tracking_ptr<::zx::vmo>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
+  void set_h(::fidl::tracking_ptr<::zx::vmo> elem) {
+    frame_ptr_->h_.data = std::move(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+  }
 
   TableWithHandle() = default;
   explicit TableWithHandle(::fidl::AnyAllocator& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame>(allocator)) {}
+  explicit TableWithHandle(::fidl::Allocator& allocator)
+      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
+  explicit TableWithHandle(::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : frame_ptr_(std::move(frame_ptr)) {}
   ~TableWithHandle() = default;
   TableWithHandle(TableWithHandle&& other) noexcept = default;
   TableWithHandle& operator=(TableWithHandle&& other) noexcept = default;
@@ -200,7 +230,16 @@ class TableWithHandle final {
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyAllocator& allocator) {
+    max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
+  }
+  void Allocate(::fidl::Allocator& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
+  }
+  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
   }
 
   void _CloseHandles();

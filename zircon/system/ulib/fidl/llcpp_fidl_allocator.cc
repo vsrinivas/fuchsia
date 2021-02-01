@@ -8,7 +8,9 @@
 
 namespace fidl {
 
-AnyAllocator::~AnyAllocator() {
+AnyAllocator::~AnyAllocator() { Clean(); }
+
+void AnyAllocator::Clean() {
   // Call all the destructors (starting with the last allocated object).
   // Because we only work with views, the destructors only close handles.
   while (last_destructor_ != nullptr) {

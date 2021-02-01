@@ -71,6 +71,19 @@ class AnyAllocator {
     alignas(FIDL_ALIGNMENT) uint8_t data_[kExtraSize];
   };
 
+  // Deallocate anything allocated by the allocator. Any data previously allocated must not be
+  // accessed anymore.
+  void Clean();
+
+  // Deallocate anything allocated by the allocator. After this call, the allocator is in the
+  // extact same state it was after the construction. Any data previously allocated must not be
+  // accessed anymore.
+  void Reset(uint8_t* next_data_available, size_t available_size) {
+    Clean();
+    next_data_available_ = next_data_available;
+    available_size_ = available_size;
+  }
+
   // Allocates and default constructs an instance of T. Used by fidl::ObjectView.
   template <typename T, typename... Args>
   T* Allocate(Args&&... args) {
@@ -137,6 +150,11 @@ template <size_t initial_capacity = 512>
 class FidlAllocator : public AnyAllocator {
  public:
   FidlAllocator() : AnyAllocator(initial_buffer_, initial_capacity) {}
+
+  // Deallocate anything allocated by the allocator. After this call, the allocator is in the
+  // extact same state it was after the construction. Any data previously allocated must not be
+  // accessed anymore.
+  void Reset() { AnyAllocator::Reset(initial_buffer_, initial_capacity); }
 
  private:
   alignas(FIDL_ALIGNMENT) uint8_t initial_buffer_[initial_capacity];
