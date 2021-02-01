@@ -26,7 +26,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
-	"gvisor.dev/gvisor/pkg/waiter"
 )
 
 const (
@@ -1488,47 +1487,6 @@ func TestNoNullTerminator(t *testing.T) {
 	}
 }
 
-func teeConn(c conn) (conn, conn) {
-	dup1 := &dupConn{
-		c:   c,
-		dup: make(chan connMsg, 8),
-	}
-	dup2 := &chConn{
-		c:  c,
-		ch: dup1.dup,
-	}
-	return dup1, dup2
-}
-
-type connMsg struct {
-	buf  buffer.View
-	addr tcpip.FullAddress
-	err  error
-}
-
-type dupConn struct {
-	c   conn
-	dup chan connMsg
-}
-
-func (c *dupConn) Read() (buffer.View, tcpip.FullAddress, error) {
-	v, addr, err := c.c.Read()
-	c.dup <- connMsg{v, addr, err}
-	return v, addr, err
-}
-func (c *dupConn) Write(b []byte, addr *tcpip.FullAddress) error { return c.c.Write(b, addr) }
-
-type chConn struct {
-	ch chan connMsg
-	c  conn
-}
-
-func (c *chConn) Read() (buffer.View, tcpip.FullAddress, error) {
-	msg := <-c.ch
-	return msg.buf, msg.addr, msg.err
-}
-func (c *chConn) Write(b []byte, addr *tcpip.FullAddress) error { return c.c.Write(b, addr) }
-
 func TestTwoServers(t *testing.T) {
 	var serverLinkEP, clientLinkEP endpoint
 	serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
@@ -1540,21 +1498,10 @@ func TestTwoServers(t *testing.T) {
 	clientStack := createTestStack()
 	addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
 
-	wq := new(waiter.Queue)
-	ep, err := serverStack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
-	if err != nil {
-		t.Fatalf("dhcp: server endpoint: %s", err)
-	}
-	if err = ep.Bind(tcpip.FullAddress{Port: ServerPort}); err != nil {
-		t.Fatalf("dhcp: server bind: %s", err)
-	}
-	ep.SocketOptions().SetBroadcast(true)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	c1, c2 := teeConn(newEPConn(ctx, wq, ep))
 
-	if _, err := NewServer(ctx, c1, []tcpip.Address{"\xc0\xa8\x03\x02"}, Config{
+	if _, err := newEPConnServer(ctx, serverStack, []tcpip.Address{"\xc0\xa8\x03\x02"}, Config{
 		ServerAddress: "\xc0\xa8\x03\x01",
 		SubnetMask:    "\xff\xff\xff\x00",
 		Router:        []tcpip.Address{"\xc0\xa8\x03\xF0"},
@@ -1563,7 +1510,7 @@ func TestTwoServers(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := NewServer(ctx, c2, []tcpip.Address{"\xc0\xa8\x04\x02"}, Config{
+	if _, err := newEPConnServer(ctx, serverStack, []tcpip.Address{"\xc0\xa8\x04\x02"}, Config{
 		ServerAddress: "\xc0\xa8\x04\x01",
 		SubnetMask:    "\xff\xff\xff\x00",
 		Router:        []tcpip.Address{"\xc0\xa8\x03\xF0"},

@@ -117,6 +117,7 @@ func newEPConnServer(ctx context.Context, stack *stack.Stack, addrs []tcpip.Addr
 	if err != nil {
 		return nil, fmt.Errorf("NewEndpoint: %s", err)
 	}
+	ep.SocketOptions().SetReusePort(true)
 	addr := tcpip.FullAddress{Port: ServerPort}
 	if err := ep.Bind(addr); err != nil {
 		return nil, fmt.Errorf("Bind(%+v): %s", addr, err)
