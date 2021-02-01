@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_
 
-#include <lib/object_cache.h>
 #include <sys/types.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/port.h>
@@ -93,7 +92,7 @@ struct PortAllocator {
 struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
   zx_port_packet_t packet;
   const void* const handle;
-  object_cache::UniquePtr<const PortObserver> observer;
+  ktl::unique_ptr<const PortObserver> observer;
   PortAllocator* const allocator;
 
   PortPacket(const void* handle, PortAllocator* allocator);
@@ -204,8 +203,40 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   // 3. The observer is left for on_zero_handles to destroyed.
   void MaybeReap(PortObserver* observer, PortPacket* port_packet);
 
+  // The purpose of this type is to decouple memory allocation from object construction.
+  //
+  // Example usage:
+  //
+  //   // Allocate a placeholder.
+  //   fbl::AllocChecker ac;
+  //   ktl::unique_ptr<PortDispatcher::PortObserverPlaceholder> placeholder{
+  //     new (&ac) PortDispatcher::PortObserverPlaceholder{}};
+  //   ASSERT(ac.check());
+  //
+  //   // At this point memory for a PortObserver has been allocated, however, the PortObserver has
+  //   // not been constructed so if we were to call placeholder.reset() the destructor would not be
+  //   // executed.
+  //
+  //   // Construct the PortObserver and release the placeholder.
+  //   ktl::unique_ptr<PortObserver> observer{new (&placeholder.release()->observer)
+  //                                              PortObserver(...)};
+  //
+  //   // At this point |placeholder| is null and we have a fully constructed PortObserver retained
+  //   // by |observer|.  If were to call observer.reset() the destructor would execute.
+  //
+  union PortObserverPlaceholder {
+    PortObserverPlaceholder() {}
+    ~PortObserverPlaceholder() {}
+
+    uint8_t trivially_destructible_default_variant;
+    PortObserver observer;
+  };
+  static_assert(sizeof(PortObserverPlaceholder) == sizeof(PortObserver));
+  static_assert(alignof(PortObserverPlaceholder) == alignof(PortObserver));
+
   // Called under the handle table lock.
-  zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
+  zx_status_t MakeObserver(ktl::unique_ptr<PortObserverPlaceholder> placeholder, uint32_t options,
+                           Handle* handle, uint64_t key, zx_signals_t signals);
 
   // Returns true if at least one packet was removed from the queue.
   // Called under the handle table lock when |handle| is not null.
@@ -215,9 +246,6 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   // Removes |port_packet| from this port's queue. Returns false if the packet was
   // not in this queue. It is undefined to call this with a packet queued in another port.
   bool CancelQueued(PortPacket* port_packet);
-
-  // Init hook that sets up the PortObserver cache allocator.
-  static void InitializePortObserverCache(uint32_t level);
 
  private:
   explicit PortDispatcher(uint32_t options);
@@ -236,10 +264,6 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   // Keeps track of outstanding observers so they can be removed from dispatchers once handle
   // count drops to zero.
   PortObserver::List observers_ TA_GUARDED(get_lock());
-
-  // Per-cpu cache allocator for PortObservers.
-  inline static object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>
-      observer_allocator_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_

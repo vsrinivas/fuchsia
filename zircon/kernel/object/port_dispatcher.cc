@@ -7,7 +7,6 @@
 #include "object/port_dispatcher.h"
 
 #include <assert.h>
-#include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <platform.h>
 #include <pow2.h>
@@ -20,7 +19,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
-#include <lk/init.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
@@ -217,7 +215,7 @@ void PortDispatcher::on_zero_handles() {
       dispatcher.reset();
 
       // At this point we know the dispatcher no longer has a reference to the observer.
-      object_cache::UniquePtr<PortObserver> destroyer(observer);
+      ktl::unique_ptr<PortObserver> destroyer(observer);
     });
   }
 }
@@ -373,7 +371,7 @@ void PortDispatcher::MaybeReap(PortObserver* observer, PortPacket* port_packet) 
 
   // These pointers are declared before the guard because we want the destructors to execute
   // outside the critical section below (if they end up being the last/only references).
-  object_cache::UniquePtr<PortObserver> destroyer;
+  ktl::unique_ptr<PortObserver> destroyer;
   fbl::RefPtr<Dispatcher> dispatcher;
 
   {
@@ -399,7 +397,8 @@ void PortDispatcher::MaybeReap(PortObserver* observer, PortPacket* port_packet) 
   }
 }
 
-zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint64_t key,
+zx_status_t PortDispatcher::MakeObserver(ktl::unique_ptr<PortObserverPlaceholder> placeholder,
+                                         uint32_t options, Handle* handle, uint64_t key,
                                          zx_signals_t signals) {
   canary_.Assert();
 
@@ -410,22 +409,19 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto observer_result = observer_allocator_.Allocate(
-      options, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals);
-  if (observer_result.is_error()) {
-    return observer_result.error_value();
-  }
+  ktl::unique_ptr<PortObserver> observer{new (&placeholder.release()->observer) PortObserver(
+      options, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals)};
 
   {
     Guard<Mutex> guard{get_lock()};
     DEBUG_ASSERT(!zero_handles_);
-    observers_.push_front(observer_result.value().get());
+    observers_.push_front(observer.get());
   }
 
   Dispatcher::TriggerMode trigger_mode =
       options & ZX_WAIT_ASYNC_EDGE ? Dispatcher::TriggerMode::Edge : Dispatcher::TriggerMode::Level;
 
-  return dispatcher->AddObserver(observer_result.value().release(), handle, signals, trigger_mode);
+  return dispatcher->AddObserver(observer.release(), handle, signals, trigger_mode);
 }
 
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
@@ -462,8 +458,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
         --num_ephemeral_packets_;
       }
       // Destroyed as we go around the loop.
-      object_cache::UniquePtr<const PortObserver> observer =
-          ktl::move(packets_.erase(to_remove)->observer);
+      ktl::unique_ptr<const PortObserver> observer = ktl::move(packets_.erase(to_remove)->observer);
       packet_removed = true;
     } else {
       ++it;
@@ -488,20 +483,3 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
 
   return false;
 }
-
-void PortDispatcher::InitializePortObserverCache(uint32_t /*level*/) {
-  // Reserve up to 8 pages per CPU for servicing PortObservers, unless
-  // overridden on the command line.
-  const size_t default_reserve_pages = 8;
-
-  const size_t reserve_pages =
-      gCmdline.GetUInt64("kernel.portobserver.reserve-pages", default_reserve_pages);
-  auto result =
-      object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>::Create(reserve_pages);
-  ASSERT(result.is_ok());
-  observer_allocator_ = ktl::move(result.value());
-}
-
-// Initialize the cache after the percpu data structures are initialized.
-LK_INIT_HOOK(port_observer_cache_init, PortDispatcher::InitializePortObserverCache,
-             LK_INIT_LEVEL_KERNEL + 1)
