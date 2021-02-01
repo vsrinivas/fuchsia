@@ -842,6 +842,11 @@ This attribute should be used to make `struct`/`union` fields of type `vector` o
 This attribute allows the contents of a `vector` field in a `struct`/`union` to be stored outside
 of the container.
 
+### The PreserveCNames attribute
+
+This attribute applies to `struct` declarations and makes it so that their fields' names remain
+unchanged when run through the C backend.
+
 # Banjo Mocks
 
 Banjo generates a C++ mock class for each protocol. This mock can be passed to protocol users in
