@@ -613,7 +613,7 @@ void platform_pputc(char c) {
   uart_pputc(c);
 }
 
-int platform_pgetc(char* c, bool wait) {
+int platform_pgetc(char* c) {
   if (uart_disabled) {
     return ZX_ERR_NOT_SUPPORTED;
   }

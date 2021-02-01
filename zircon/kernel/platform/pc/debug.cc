@@ -720,7 +720,7 @@ void platform_pputc(char c) {
   }
 }
 
-int platform_pgetc(char* c, bool wait) {
+int platform_pgetc(char* c) {
   if (platform_serial_enabled()) {
     return debug_uart_getc_poll(c);
   }

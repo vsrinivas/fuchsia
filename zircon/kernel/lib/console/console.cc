@@ -730,7 +730,7 @@ static void panic_puts(const char* str) {
 
 static int panic_getc(void) {
   char c;
-  if (platform_pgetc(&c, false) <= 0) {
+  if (platform_pgetc(&c) < 0) {
     return -1;
   } else {
     return c;
