@@ -18,7 +18,8 @@ use {
     operator::VolumeOperator,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::{thread::sleep, time::Duration},
-    stress_test_utils::{fvm::FvmInstance, random_seed, StdoutLogger},
+    storage_stress_test_utils::fvm::FvmInstance,
+    stress_test::{random_seed, StdoutLogger},
 };
 
 #[derive(Clone, Debug, FromArgs)]

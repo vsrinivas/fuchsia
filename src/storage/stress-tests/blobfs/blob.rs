@@ -8,7 +8,7 @@ use {
     },
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
-    stress_test_utils::{
+    storage_stress_test_utils::{
         data::FileData,
         io::{Directory, File},
     },

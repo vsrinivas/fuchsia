@@ -7,10 +7,8 @@ use {
     fuchsia_zircon::Status,
     log::debug,
     rand::{rngs::SmallRng, seq::SliceRandom, Rng},
-    stress_test_utils::{
-        actor::{Actor, ActorError},
-        io::Directory,
-    },
+    storage_stress_test_utils::io::Directory,
+    stress_test::actor::{Actor, ActorError},
 };
 
 // An actor responsible for deleting files randomly

@@ -13,13 +13,11 @@ use {
     fuchsia_zircon::Vmo,
     futures::future::BoxFuture,
     rand::{rngs::SmallRng, Rng, SeedableRng},
-    stress_test_utils::{
-        actor::ActorConfig,
-        environment::Environment,
+    storage_stress_test_utils::{
         fvm::{get_volume_path, FvmInstance},
         io::Directory,
-        random_seed,
     },
+    stress_test::{actor::ActorConfig, environment::Environment, random_seed},
 };
 
 // All partitions in this test have their type set to this arbitrary GUID.

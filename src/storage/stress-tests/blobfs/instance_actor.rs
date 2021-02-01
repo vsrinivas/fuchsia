@@ -5,10 +5,8 @@
 use {
     async_trait::async_trait,
     fs_management::{Blobfs, Filesystem},
-    stress_test_utils::{
-        actor::{Actor, ActorError},
-        fvm::FvmInstance,
-    },
+    storage_stress_test_utils::fvm::FvmInstance,
+    stress_test::actor::{Actor, ActorError},
 };
 
 /// An actor that severs the connection between blobfs and the

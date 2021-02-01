@@ -13,7 +13,7 @@ use {
     environment::MinfsEnvironment,
     fuchsia_async as fasync,
     log::{info, LevelFilter},
-    stress_test_utils::{run_test, StdoutLogger},
+    stress_test::{run_test, StdoutLogger},
 };
 
 #[derive(Clone, Debug, FromArgs)]
