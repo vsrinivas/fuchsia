@@ -59,9 +59,11 @@ impl PolicyProxy {
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
                     // Only catch messages that were sent by the setting proxy and contain a
-                    // SettingEvent.
+                    // SettingEvent. We check the message type to make sure we only capture event
+                    // messages that originate from the proxy and not ones sent as replies.
                     message.get_author() == setting_proxy_signature
                         && matches!(message.payload(), core::Payload::Event(_))
+                        && matches!(message.get_type(), core::message::MessageType::Origin(_))
                 })),
             ))))
             .await

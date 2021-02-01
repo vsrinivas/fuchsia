@@ -131,7 +131,7 @@ impl PolicyInspectBroker {
 
     /// Watches for the reply to a sent message and returns the author of the reply.
     async fn watch_reply(mut client: MessageClient) -> Result<Signature, Error> {
-        let mut reply_receptor = client.observe();
+        let mut reply_receptor = client.spawn_observer();
 
         reply_receptor.next_payload().await.map(|(_, reply_client)| reply_client.get_author())
     }

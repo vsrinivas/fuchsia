@@ -19,7 +19,7 @@ use crate::base::SettingInfo;
 use crate::clock;
 use crate::handler::base::Request;
 use crate::handler::setting_handler::{Command, Event, Payload};
-use crate::message::base::{Audience, MessengerType};
+use crate::message::base::{filter, Audience, MessengerType};
 use crate::service::message::{Factory, MessageClient, Messenger, Signature};
 use crate::service::TryFromWithClient;
 
@@ -52,8 +52,19 @@ impl InspectBroker {
         inspect_node: inspect::Node,
     ) -> Result<(), Error> {
         // Create broker to listen in on all messages between Proxy and setting handlers.
-        let (messenger_client, mut receptor) =
-            messenger_factory.create(MessengerType::Broker(None)).await.unwrap();
+        let (messenger_client, mut receptor) = messenger_factory
+            .create(MessengerType::Broker(Some(filter::Builder::single(
+                filter::Condition::Custom(Arc::new(move |message| {
+                    Payload::try_from(message.payload()).map_or(false, |payload| {
+                        // Only catch messages that were originally sent from the switchboard, and
+                        // that contain a request for the specific setting type we're interested in.
+                        matches!(payload, Payload::Command(Command::HandleRequest(_)))
+                            || matches!(payload, Payload::Event(Event::Changed(_)))
+                    })
+                })),
+            ))))
+            .await
+            .unwrap();
 
         let broker = Arc::new(Mutex::new(Self {
             messenger_client,
@@ -110,7 +121,7 @@ impl InspectBroker {
 
     /// Watches for the reply to a sent message and return the author of the reply.
     async fn watch_reply(mut client: MessageClient) -> Result<Signature, Error> {
-        let mut reply_receptor = client.observe();
+        let mut reply_receptor = client.spawn_observer();
 
         reply_receptor.next_payload().await.map(|(_, reply_client)| reply_client.get_author())
     }

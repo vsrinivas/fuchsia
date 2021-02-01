@@ -233,6 +233,9 @@ async fn test_implicit_forward() {
     )
     .await;
 
+    // Ensure observer gets payload and then do nothing with message.
+    verify_payload(REPLY, &mut receiver_2, None).await;
+
     verify_payload(REPLY, &mut reply_receptor, None).await;
 }
 
@@ -262,7 +265,7 @@ async fn test_observe_addressable() {
             let observe_receptor = observe_receptor_clone.clone();
             Box::pin(async move {
                 let mut receptor = observe_receptor.lock().await;
-                *receptor = Some(client.observe());
+                *receptor = Some(client.spawn_observer());
                 ()
             })
         })),

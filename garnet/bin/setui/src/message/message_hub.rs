@@ -186,12 +186,39 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
         // Replies have a predetermined return path.
         if let MessageType::Reply(mut source) = message_type {
-            // The original author of the reply will be the first participant in
-            // the reply's return path. Otherwise, identify current sender in
-            // the source return path and forward to next participant.
-            let source_return_path = source.get_return_path();
+            // The original author of the reply will be the first participant after brokers in
+            // the reply's return path. Otherwise, identify current sender in the source return path
+            // and forward to next participant.
+            let mut source_return_path = source.get_return_path();
             let mut target_index = None;
-            let last_index = source_return_path.len() - 1;
+
+            let source_return_path_messenger_ids: HashSet<MessengerId> =
+                source_return_path.iter().map(|beacon| beacon.get_messenger_id()).collect();
+
+            // Identify participating brokers. This brokers must:
+            // 1. Not be already participating in the return path (with a spawned observer)
+            // 2. Not be the author of the reply.
+            // 3. Have a matching filter.
+            let mut brokers = self.brokers.clone();
+            brokers.retain(|broker| {
+                !source_return_path_messenger_ids.contains(&broker.messenger_id)
+                    && self
+                        .resolve_messenger_id(&message.get_author())
+                        .map_or(true, |id| id != broker.messenger_id)
+                    && broker.filter.as_ref().map_or(true, |filter| filter.matches(&message))
+            });
+
+            let mut return_path: Vec<Beacon<P, A, R>> = brokers
+                .iter()
+                .map(|broker| {
+                    self.beacons.get(&broker.messenger_id).expect("beacon should resolve").clone()
+                })
+                .collect();
+
+            // The return path places the participating brokers before the participants from the
+            // source message's reply path.
+            return_path.append(&mut source_return_path);
+            let last_index = return_path.len() - 1;
 
             if sender_id == message.get_return_path()[0].get_messenger_id() {
                 // If this is the reply's author, send to the first messenger in
@@ -205,14 +232,14 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 source.report_status(Status::Received).await;
             } else {
                 for index in 0..last_index {
-                    if source_return_path[index].get_messenger_id() == sender_id {
+                    if return_path[index].get_messenger_id() == sender_id {
                         target_index = Some(index + 1);
                     }
                 }
             }
 
             if let Some(index) = target_index {
-                recipients.push(source_return_path[index].clone());
+                recipients.push(return_path[index].clone());
 
                 if index == last_index {
                     // Ack current message if being sent to intended recipient.
