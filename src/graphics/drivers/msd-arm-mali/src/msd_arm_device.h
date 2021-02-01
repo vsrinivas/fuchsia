@@ -160,6 +160,13 @@ class MsdArmDevice : public msd_device_t,
   class CancelAtomsRequest;
   class TaskRequest;
 
+  struct InspectEvent {
+    InspectEvent(inspect::Node* parent, std::string type);
+
+    inspect::Node node;
+    inspect::ValueList properties;
+  };
+
   magma::RegisterIo* register_io() override {
     DASSERT(register_io_);
     return register_io_.get();
@@ -185,6 +192,7 @@ class MsdArmDevice : public msd_device_t,
   bool PowerDownShaders();
   bool ResetDevice();
   void InitInspect();
+  void AppendInspectEvent(InspectEvent event);
 
   magma::Status ProcessDumpStatusToLog();
   magma::Status ProcessPerfCounterSampleCompleted();
@@ -211,9 +219,13 @@ class MsdArmDevice : public msd_device_t,
   static const uint32_t kMagic = 0x64657669;  //"devi"
 
   inspect::Node inspect_;
+  inspect::Node events_;
 
   inspect::UintProperty hang_timeout_count_;
   inspect::UintProperty last_hang_timeout_ns_;
+
+  std::mutex inspect_events_mutex_;
+  MAGMA_GUARDED(inspect_events_mutex_) std::deque<InspectEvent> inspect_events_;
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;

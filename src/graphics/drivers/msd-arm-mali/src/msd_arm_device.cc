@@ -238,6 +238,7 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
 void MsdArmDevice::InitInspect() {
   hang_timeout_count_ = inspect_.CreateUint("hang_timeout", 0);
   last_hang_timeout_ns_ = inspect_.CreateUint("last_hang_timeout_ns", 0);
+  events_ = inspect_.CreateChild("events");
 }
 
 bool MsdArmDevice::InitializeHardware() {
@@ -277,6 +278,8 @@ void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<Dum
 void MsdArmDevice::OutputHangMessage() {
   hang_timeout_count_.Add(1);
   last_hang_timeout_ns_.Set(magma::get_monotonic_ns());
+  AppendInspectEvent(InspectEvent(&events_, "gpu_hang"));
+
   MAGMA_LOG(WARNING, "Possible GPU hang");
   ProcessDumpStatusToLog();
 }
@@ -455,6 +458,10 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
       for (auto& str : dump) {
         MAGMA_LOG(INFO, "%s", str.c_str());
       }
+      InspectEvent event(&events_, "gpu_irq");
+      event.node.CreateUint("irq", irq_status.reg_value(), &event.properties);
+
+      AppendInspectEvent(std::move(event));
     }
 
     if (clear_flags.reg_value()) {
@@ -1364,6 +1371,21 @@ std::shared_ptr<DeviceRequest::Reply> MsdArmDevice::RunTaskOnDeviceThread(FitCal
 
 void MsdArmDevice::SetCurrentThreadToDefaultPriority() {
   magma::PlatformThreadHelper::SetProfile(default_profile_.get());
+}
+
+MsdArmDevice::InspectEvent::InspectEvent(inspect::Node* parent, std::string type) {
+  static std::atomic_uint64_t event_count;
+  node = parent->CreateChild(std::to_string(event_count++));
+  node.CreateUint("@time", magma::get_monotonic_ns(), &properties);
+  node.CreateString("type", std::move(type), &properties);
+}
+
+void MsdArmDevice::AppendInspectEvent(InspectEvent event) {
+  std::lock_guard lock(inspect_events_mutex_);
+  constexpr uint32_t kMaxEventsToStore = 10;
+  while (inspect_events_.size() > kMaxEventsToStore)
+    inspect_events_.pop_front();
+  inspect_events_.push_back(std::move(event));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
