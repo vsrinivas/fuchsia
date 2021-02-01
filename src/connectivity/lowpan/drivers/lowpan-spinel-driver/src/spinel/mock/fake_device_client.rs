@@ -44,6 +44,33 @@ impl Default for FakeSpinelDevice {
         properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
         properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
         properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
+
+        properties.insert(Prop::Thread(PropThread::OnMeshNets), vec![]);
+        properties.insert(Prop::Thread(PropThread::OffMeshRoutes), vec![]);
+        properties.insert(
+            Prop::Ipv6(PropIpv6::AddressTable),
+            vec![
+                0x19, 0x00, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x01, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x19,
+                0x00, 0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x01, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            ],
+        );
+        properties.insert(
+            Prop::Ipv6(PropIpv6::LlAddr),
+            vec![
+                0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x01,
+            ],
+        );
+        properties.insert(
+            Prop::Ipv6(PropIpv6::MlAddr),
+            vec![
+                0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x01,
+            ],
+        );
+
         properties.insert(
             Prop::Mac(PropMac::LongAddr),
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
@@ -75,6 +102,31 @@ impl FakeSpinelDevice {
         properties.insert(
             Prop::Mac(PropMac::LongAddr),
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
+        );
+        properties.insert(Prop::Thread(PropThread::OnMeshNets), vec![]);
+        properties.insert(Prop::Thread(PropThread::OffMeshRoutes), vec![]);
+        properties.insert(
+            Prop::Ipv6(PropIpv6::AddressTable),
+            vec![
+                0x19, 0x00, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x01, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x19,
+                0x00, 0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x01, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            ],
+        );
+        properties.insert(
+            Prop::Ipv6(PropIpv6::LlAddr),
+            vec![
+                0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x01,
+            ],
+        );
+        properties.insert(
+            Prop::Ipv6(PropIpv6::MlAddr),
+            vec![
+                0xfd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x01,
+            ],
         );
     }
 
@@ -117,6 +169,88 @@ impl FakeSpinelDevice {
         let mut saved_network = self.saved_network.lock();
         saved_network.clear();
         properties.insert(Prop::Net(PropNet::Saved), vec![0x00]);
+    }
+
+    fn handle_insert_prop(
+        &self,
+        frame: SpinelFrameRef<'_>,
+        prop: Prop,
+        new_value: &[u8],
+    ) -> Option<Vec<Vec<u8>>> {
+        use std::collections::HashSet;
+        let mut response: Vec<u8> = vec![];
+
+        let mut properties = self.properties.lock();
+        if let Some(value) = properties.get(&prop) {
+            // Dumb insert.
+            let mut value =
+                HashSet::<Vec<u8>>::try_unpack_from_slice(&value).expect("bad list encoding");
+            value.insert(new_value.to_vec());
+            properties.insert(prop, value.try_packed().unwrap());
+            spinel_write!(
+                &mut response,
+                "CiiD",
+                frame.header,
+                Cmd::PropValueIs,
+                prop,
+                properties.get(&prop).unwrap().as_slice()
+            )
+            .unwrap();
+        } else {
+            spinel_write!(
+                &mut response,
+                "Ciii",
+                frame.header,
+                Cmd::PropValueIs,
+                Prop::LastStatus,
+                Status::PropNotFound
+            )
+            .unwrap();
+        }
+        Some(vec![response])
+    }
+
+    fn handle_remove_prop(
+        &self,
+        frame: SpinelFrameRef<'_>,
+        prop: Prop,
+        new_value: &[u8],
+    ) -> Option<Vec<Vec<u8>>> {
+        let mut response: Vec<u8> = vec![];
+
+        let mut properties = self.properties.lock();
+        if let Some(value) = properties.get(&prop) {
+            // Dumb remove.
+            let value = Vec::<Vec<u8>>::try_unpack_from_slice(&value)
+                .expect("bad list encoding")
+                .into_iter()
+                .filter(|x| !x.starts_with(new_value))
+                .collect::<Vec<Vec<u8>>>()
+                .try_packed()
+                .unwrap();
+            properties.insert(prop, value);
+
+            spinel_write!(
+                &mut response,
+                "CiiD",
+                frame.header,
+                Cmd::PropValueIs,
+                prop,
+                properties.get(&prop).unwrap().as_slice()
+            )
+            .unwrap();
+        } else {
+            spinel_write!(
+                &mut response,
+                "Ciii",
+                frame.header,
+                Cmd::PropValueIs,
+                Prop::LastStatus,
+                Status::PropNotFound
+            )
+            .unwrap();
+        }
+        Some(vec![response])
     }
 
     fn handle_set_prop(
@@ -646,6 +780,18 @@ impl FakeSpinelDevice {
                 let prop = Prop::try_unpack(&mut payload).ok();
                 let value = <&[u8]>::try_unpack(&mut payload).unwrap();
                 prop.and_then(|prop| self.handle_set_prop(frame, prop, value)).unwrap_or(vec![])
+            }
+            Cmd::PropValueInsert => {
+                let mut payload = frame.payload.iter();
+                let prop = Prop::try_unpack(&mut payload).ok();
+                let value = <&[u8]>::try_unpack(&mut payload).unwrap();
+                prop.and_then(|prop| self.handle_insert_prop(frame, prop, value)).unwrap_or(vec![])
+            }
+            Cmd::PropValueRemove => {
+                let mut payload = frame.payload.iter();
+                let prop = Prop::try_unpack(&mut payload).ok();
+                let value = <&[u8]>::try_unpack(&mut payload).unwrap();
+                prop.and_then(|prop| self.handle_remove_prop(frame, prop, value)).unwrap_or(vec![])
             }
             Cmd::NetClear => {
                 self.handle_net_clear();

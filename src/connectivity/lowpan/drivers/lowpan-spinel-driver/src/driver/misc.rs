@@ -13,6 +13,7 @@ use fuchsia_async::TimeoutExt;
 use futures::TryFutureExt;
 use lowpan_driver_common::{FutureExt as _, ZxResult};
 use spinel_pack::TryOwnedUnpack;
+use spinel_pack::EUI64;
 
 /// Miscellaneous private methods
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
@@ -83,8 +84,15 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Handler for keeping track of property value changes
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_is(&self, prop: Prop, mut value: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_prop_value_is: {:?} {:02x?}", prop, value);
+        traceln!("on_prop_value_is: {:?} {:02x?}", prop, value);
         match prop {
+            Prop::Mac(PropMac::LongAddr) => {
+                let mac_addr = EUI64::try_unpack_from_slice(value)?;
+                let mut driver_state = self.driver_state.lock();
+                driver_state.mac_addr = mac_addr;
+                std::mem::drop(driver_state);
+                self.driver_state_change.trigger();
+            }
             Prop::Stream(PropStream::Debug) => {
                 let mut ncp_debug_buffer = self.ncp_debug_buffer.lock();
 
@@ -385,22 +393,222 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 }
             }
 
+            Prop::Thread(PropThread::OnMeshNets) => {
+                let value = OnMeshNets::try_unpack_from_slice(value)?;
+
+                let mut driver_state = self.driver_state.lock();
+
+                fx_log_info!("OnMeshNets: {:#?}", value);
+
+                if driver_state.connectivity_state.is_online() {
+                    for change in CorrelatedDiff::diff(&driver_state.on_mesh_nets, &value) {
+                        match change {
+                            CorrelatedDiff::Added(x) => {
+                                if let Err(err) = self.on_mesh_net_added(&driver_state, x) {
+                                    fx_log_err!("Adding on-mesh net `{:?}` failed: `{:?}`", x, err);
+                                }
+                            }
+                            CorrelatedDiff::Removed(x) => {
+                                if let Err(err) = self.on_mesh_net_removed(&driver_state, x) {
+                                    fx_log_err!(
+                                        "Removing on-mesh net `{:?}` failed: `{:?}`",
+                                        x,
+                                        err
+                                    );
+                                }
+                            }
+                            CorrelatedDiff::Changed(old, new) => {
+                                if let Err(err) = self.on_mesh_net_changed(&driver_state, old, new)
+                                {
+                                    fx_log_err!(
+                                        "Changing on-mesh net `{:?}` to `{:?}` failed: `{:?}`",
+                                        old,
+                                        new,
+                                        err
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    driver_state.on_mesh_nets = value;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+
+            Prop::Thread(PropThread::OffMeshRoutes) => {
+                let value = ExternalRoutes::try_unpack_from_slice(value)?;
+
+                let mut driver_state = self.driver_state.lock();
+
+                fx_log_info!("ExternalRoutes: {:#?}", value);
+
+                if driver_state.connectivity_state.is_online() {
+                    for change in CorrelatedDiff::diff(&driver_state.external_routes, &value) {
+                        match change {
+                            CorrelatedDiff::Added(x) => {
+                                if let Err(err) = self.external_route_added(&driver_state, x) {
+                                    fx_log_err!(
+                                        "Adding external_route `{:?}` failed: `{:?}`",
+                                        x,
+                                        err
+                                    );
+                                }
+                            }
+                            CorrelatedDiff::Removed(x) => {
+                                if let Err(err) = self.external_route_removed(&driver_state, x) {
+                                    fx_log_err!(
+                                        "Removing external_route `{:?}` failed: `{:?}`",
+                                        x,
+                                        err
+                                    );
+                                }
+                            }
+                            CorrelatedDiff::Changed(old, new) => {
+                                if let Err(err) =
+                                    self.external_route_changed(&driver_state, old, new)
+                                {
+                                    fx_log_err!(
+                                        "Changing external_route `{:?}` to `{:?}` failed: `{:?}`",
+                                        old,
+                                        new,
+                                        err
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    driver_state.external_routes = value;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+
             _ => {}
         }
         Ok(())
     }
 
+    pub(super) fn on_mesh_net_added(
+        &self,
+        driver_state: &DriverState,
+        on_mesh_net: &OnMeshNet,
+    ) -> Result<(), Error> {
+        fx_log_info!("OnMeshNet Added: {:?}", on_mesh_net);
+
+        if on_mesh_net.flags.is_slaac_valid()
+            && on_mesh_net.flags.is_slaac_preferred()
+            && on_mesh_net.subnet.prefix_len == STD_IPV6_NET_PREFIX_LEN
+            && driver_state.local_address_with_prefix(on_mesh_net.subnet.clone()).is_none()
+        {
+            let new_addr = driver_state.slaac_address_for_prefix(on_mesh_net.subnet.clone())?;
+            fx_log_info!("Adding new SLAAC address: {:?}", new_addr);
+            self.net_if.add_address(&new_addr)?;
+        }
+        Ok(())
+    }
+
+    pub(super) fn on_mesh_net_removed(
+        &self,
+        driver_state: &DriverState,
+        on_mesh_net: &OnMeshNet,
+    ) -> Result<(), Error> {
+        fx_log_info!("OnMeshNet Removed: {:?}", on_mesh_net);
+
+        if on_mesh_net.subnet.prefix_len != STD_IPV6_NET_PREFIX_LEN {
+            return Ok(());
+        }
+
+        if on_mesh_net.flags.is_slaac_valid() {
+            let slaac_addr = driver_state.slaac_address_for_prefix(on_mesh_net.subnet.clone())?;
+            self.net_if.remove_address(&slaac_addr)?;
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn on_mesh_net_changed(
+        &self,
+        driver_state: &DriverState,
+        new: &OnMeshNet,
+        old: &OnMeshNet,
+    ) -> Result<(), Error> {
+        fx_log_info!("OnMeshNet Changed: NEW: {:?} OLD: {:?}", new, old);
+
+        if new.subnet.prefix_len != STD_IPV6_NET_PREFIX_LEN {
+            return Ok(());
+        }
+
+        if driver_state.local_address_with_prefix(new.subnet.clone()).is_none() {
+            if new.flags.is_slaac_valid()
+                && new.flags.is_slaac_preferred()
+                && !old.flags.is_slaac_preferred()
+            {
+                let new_addr = driver_state.slaac_address_for_prefix(new.subnet.clone())?;
+                fx_log_info!("Adding new SLAAC address: {:?}", new_addr);
+                self.net_if.add_address(&new_addr)?;
+            }
+        } else if old.flags.is_slaac_valid() && !new.flags.is_slaac_valid() {
+            let slaac_addr = driver_state.slaac_address_for_prefix(new.subnet.clone())?;
+            fx_log_info!("Removing SLAAC address: {:?}", slaac_addr);
+            self.net_if.remove_address(&slaac_addr)?;
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn external_route_added(
+        &self,
+        _driver_state: &DriverState,
+        external_route: &ExternalRoute,
+    ) -> Result<(), Error> {
+        fx_log_info!("ExternalRoute Added: {:?}", external_route);
+
+        if !external_route.local {
+            self.net_if.add_external_route(&external_route.subnet)?;
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn external_route_removed(
+        &self,
+        _driver_state: &DriverState,
+        external_route: &ExternalRoute,
+    ) -> Result<(), Error> {
+        fx_log_info!("ExternalRoute Removed: {:?}", external_route);
+
+        if !external_route.local {
+            self.net_if.remove_external_route(&external_route.subnet)?;
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn external_route_changed(
+        &self,
+        _driver_state: &DriverState,
+        _new: &ExternalRoute,
+        _old: &ExternalRoute,
+    ) -> Result<(), Error> {
+        fx_log_info!("ExternalRoute Changed: NEW: {:?} OLD: {:?}", _new, _old);
+
+        // Nothing to do here at the moment.
+
+        Ok(())
+    }
+
     /// Handler for keeping track of property value insertions
     /// so that local state stays in sync with the device.
-    pub(super) fn on_prop_value_inserted(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_prop_value_inserted: {:?} {:02X?}", prop, value);
+    pub(super) fn on_prop_value_inserted(&self, _prop: Prop, _value: &[u8]) -> Result<(), Error> {
+        traceln!("on_prop_value_inserted: {:?} {:02X?}", _prop, _value);
         Ok(())
     }
 
     /// Handler for keeping track of property value removals
     /// so that local state stays in sync with the device.
-    pub(super) fn on_prop_value_removed(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_prop_value_removed: {:?} {:02X?}", prop, value);
+    pub(super) fn on_prop_value_removed(&self, _prop: Prop, _value: &[u8]) -> Result<(), Error> {
+        traceln!("on_prop_value_removed: {:?} {:02X?}", _prop, _value);
         Ok(())
     }
 }

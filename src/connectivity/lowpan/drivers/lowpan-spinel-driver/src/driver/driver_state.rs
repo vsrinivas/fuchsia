@@ -5,7 +5,10 @@
 use super::*;
 use crate::spinel::*;
 
+use anyhow::format_err;
+use anyhow::Error;
 use fidl_fuchsia_lowpan::Identity;
+use spinel_pack::EUI64;
 use std::fmt::Debug;
 use std::ops::Deref;
 
@@ -37,11 +40,21 @@ pub(super) struct DriverState {
     /// The current set of addresses configured for this interface.
     pub(super) address_table: AddressTable,
 
+    /// On-Mesh Networks.
+    pub(super) on_mesh_nets: OnMeshNets,
+
+    /// External Routes.
+    pub(super) external_routes: ExternalRoutes,
+
     /// The current link-local address
     pub(super) link_local_addr: std::net::Ipv6Addr,
 
     /// The current mesh-local address
     pub(super) mesh_local_addr: std::net::Ipv6Addr,
+
+    /// MAC address currently used by this interface.
+    /// This is the EUI64 to used for SLAAC.
+    pub(super) mac_addr: EUI64,
 }
 
 impl Clone for DriverState {
@@ -53,8 +66,11 @@ impl Clone for DriverState {
             role: self.role.clone(),
             identity: self.identity.clone(),
             address_table: self.address_table.clone(),
+            on_mesh_nets: self.on_mesh_nets.clone(),
+            external_routes: self.external_routes.clone(),
             link_local_addr: self.link_local_addr.clone(),
             mesh_local_addr: self.mesh_local_addr.clone(),
+            mac_addr: self.mac_addr.clone(),
         }
     }
 }
@@ -71,8 +87,11 @@ impl PartialEq for DriverState {
             && self.identity.raw_name.eq(&other.identity.raw_name)
             && self.identity.xpanid.eq(&other.identity.xpanid)
             && self.address_table.eq(&other.address_table)
+            && self.on_mesh_nets.eq(&other.on_mesh_nets)
+            && self.external_routes.eq(&other.external_routes)
             && self.link_local_addr.eq(&other.link_local_addr)
             && self.mesh_local_addr.eq(&other.mesh_local_addr)
+            && self.mac_addr.eq(&self.mac_addr)
     }
 }
 
@@ -87,8 +106,11 @@ impl Default for DriverState {
             role: Role::Detached,
             identity: Identity::EMPTY,
             address_table: Default::default(),
+            on_mesh_nets: Default::default(),
+            external_routes: Default::default(),
             link_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
             mesh_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
+            mac_addr: Default::default(),
         }
     }
 }
@@ -146,6 +168,30 @@ impl DriverState {
 
     pub fn addr_is_mesh_local(&self, addr: &std::net::Ipv6Addr) -> bool {
         &addr.segments()[0..3] == &self.mesh_local_addr.segments()[0..3]
+    }
+
+    #[allow(dead_code)]
+    pub fn local_address_with_prefix<T: Into<Subnet>>(
+        &self,
+        subnet: T,
+    ) -> Option<AddressTableEntry> {
+        let subnet = subnet.into();
+        self.address_table.get(&subnet.into()).map(|x| x.clone())
+    }
+
+    #[allow(dead_code)]
+    pub fn slaac_address_for_prefix<T: Into<Subnet>>(&self, subnet: T) -> Result<Subnet, Error> {
+        let subnet = subnet.into();
+        if subnet.prefix_len != STD_IPV6_NET_PREFIX_LEN {
+            return Err(format_err!("Invalid Prefix Length, must be 64"));
+        }
+        let mut octets = subnet.addr.octets();
+        for i in 0..8 {
+            octets[i + 8] = self.mac_addr.0[i];
+        }
+        // Flip the administrative bit
+        octets[8] ^= 0x02;
+        Ok(Subnet { addr: octets.into(), prefix_len: STD_IPV6_NET_PREFIX_LEN })
     }
 }
 

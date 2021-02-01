@@ -17,11 +17,17 @@ pub use frame_handler::*;
 pub mod request_desc;
 pub use request_desc::*;
 
+pub mod correlated;
+pub use correlated::*;
+
 pub mod commands;
 pub use commands::*;
 
 pub mod enums;
 pub use enums::*;
+
+pub mod net_flags;
+pub use net_flags::*;
 
 pub mod types;
 pub use types::*;

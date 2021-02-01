@@ -184,13 +184,16 @@ impl NetworkInterface for TunNetworkInterface {
         Ok(())
     }
 
-    fn add_on_link_route(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("TunNetworkInterface: Adding on-link route: {:?} (CURRENTLY IGNORED)", addr);
+    fn add_external_route(&self, addr: &Subnet) -> Result<(), Error> {
+        fx_log_info!("TunNetworkInterface: Adding external route: {:?} (CURRENTLY IGNORED)", addr);
         Ok(())
     }
 
-    fn remove_on_link_route(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("TunNetworkInterface: Removing on-link route: {:?} (CURRENTLY IGNORED)", addr);
+    fn remove_external_route(&self, addr: &Subnet) -> Result<(), Error> {
+        fx_log_info!(
+            "TunNetworkInterface: Removing external route: {:?} (CURRENTLY IGNORED)",
+            addr
+        );
         Ok(())
     }
 

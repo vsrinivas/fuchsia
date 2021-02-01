@@ -12,6 +12,7 @@ use crate::spinel::mock::PROP_DEBUG_LOGGING_TEST;
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
 use fidl_fuchsia_lowpan_test::NeighborInfo;
 use lowpan_driver_common::Driver as _;
+use std::str::FromStr;
 
 impl<DS, NI> SpinelDriver<DS, NI> {
     pub(super) fn get_driver_state_snapshot(&self) -> DriverState {
@@ -184,9 +185,81 @@ async fn test_spinel_lowpan_driver() {
             );
             traceln!("app_task: Credential is correct!");
 
+            traceln!("app_task: Setting enabled...");
+            assert_eq!(driver.set_active(true).await, Ok(()));
+            traceln!("app_task: Did enable!");
+
+            traceln!("app_task: Checking on-mesh prefixes to make sure it is empty...");
+            assert_eq!(driver.get_local_on_mesh_prefixes().await, Ok(vec![]));
+            traceln!("app_task: Is empty!");
+
+            traceln!("app_task: Adding an on-mesh prefix...");
+            let on_mesh_prefix_subnet: fidl_fuchsia_lowpan::Ipv6Subnet = Subnet {
+                addr: std::net::Ipv6Addr::from_str("fd00:abcd:1234::").unwrap(),
+                prefix_len: 64,
+            }
+            .into();
+            let x = fidl_fuchsia_lowpan_device::OnMeshPrefix {
+                subnet: Some(on_mesh_prefix_subnet.clone()),
+                slaac_preferred: Some(true),
+                slaac_valid: Some(true),
+                ..fidl_fuchsia_lowpan_device::OnMeshPrefix::EMPTY
+            };
+            assert_eq!(driver.register_on_mesh_prefix(x.clone()).await, Ok(()));
+            traceln!("app_task: Registered!");
+
+            traceln!("app_task: Checking on-mesh prefixes...");
+            assert_eq!(
+                driver
+                    .get_local_on_mesh_prefixes()
+                    .map(|x| x.context("get_local_on_mesh_prefixes"))
+                    .and_then(|x| futures::future::ready(
+                        x.first()
+                            .ok_or(format_err!("on-mesh-prefixes is empty"))
+                            .map(|x| x.subnet.clone())
+                    ))
+                    .await
+                    .unwrap(),
+                x.subnet
+            );
+            traceln!("app_task: Populated!");
+
+            traceln!("app_task: Removing an on-mesh prefix...");
+            assert_eq!(
+                driver.unregister_on_mesh_prefix(on_mesh_prefix_subnet.clone()).await,
+                Ok(())
+            );
+            traceln!("app_task: Unregistered!");
+
+            traceln!("app_task: Checking on-mesh prefixes to make sure it is empty...");
+            assert_eq!(driver.get_local_on_mesh_prefixes().await, Ok(vec![]));
+            traceln!("app_task: Is empty!");
+
+            traceln!("app_task: Checking device state... (Should be Attaching)");
+            assert_eq!(
+                device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+                ConnectivityState::Attaching
+            );
+
+            traceln!("app_task: Setting disabled...");
+            assert_eq!(driver.set_active(false).await, Ok(()));
+            traceln!("app_task: Did disable!");
+
+            traceln!("app_task: Checking device state... (Should be Ready)");
+            assert_eq!(
+                device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+                ConnectivityState::Ready
+            );
+
             traceln!("app_task: Leaving network...");
             assert_eq!(driver.leave_network().await, Ok(()));
             traceln!("app_task: Did leave!");
+
+            traceln!("app_task: Checking device state... (Should be Inactive)");
+            assert_eq!(
+                device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+                ConnectivityState::Inactive
+            );
 
             traceln!("app_task: Setting enabled...");
             assert_eq!(driver.set_active(true).await, Ok(()));

@@ -12,7 +12,8 @@ use fasync::Time;
 use fidl_fuchsia_lowpan::BeaconInfo;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceState, EnergyScanParameters, NetworkScanParameters, ProvisioningMonitorMarker,
+    DeviceState, EnergyScanParameters, ExternalRoute, NetworkScanParameters, OnMeshPrefix,
+    ProvisioningMonitorMarker,
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_async::TimeoutExt;
@@ -776,6 +777,112 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                 .boxed(),
         )
         .await
+    }
+
+    async fn register_on_mesh_prefix(&self, net: OnMeshPrefix) -> ZxResult<()> {
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        if net.subnet.is_none() {
+            return Err(ZxStatus::INVALID_ARGS);
+        }
+
+        self.apply_standard_combinators(
+            self.frame_handler
+                .send_request(CmdPropValueInsert(
+                    PropThread::OnMeshNets.into(),
+                    OnMeshNet::from(net),
+                ))
+                .boxed(),
+        )
+        .await
+    }
+
+    async fn unregister_on_mesh_prefix(
+        &self,
+        subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
+    ) -> ZxResult<()> {
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.apply_standard_combinators(
+            self.frame_handler
+                .send_request(CmdPropValueRemove(
+                    PropThread::OnMeshNets.into(),
+                    crate::spinel::Subnet::from(subnet),
+                ))
+                .boxed(),
+        )
+        .await
+    }
+
+    async fn register_external_route(&self, net: ExternalRoute) -> ZxResult<()> {
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        if net.subnet.is_none() {
+            return Err(ZxStatus::INVALID_ARGS);
+        }
+
+        self.apply_standard_combinators(
+            self.frame_handler
+                .send_request(CmdPropValueInsert(
+                    PropThread::OffMeshRoutes.into(),
+                    crate::spinel::ExternalRoute::from(net),
+                ))
+                .boxed(),
+        )
+        .await
+    }
+
+    async fn unregister_external_route(
+        &self,
+        subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
+    ) -> ZxResult<()> {
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.apply_standard_combinators(
+            self.frame_handler
+                .send_request(CmdPropValueRemove(
+                    PropThread::OffMeshRoutes.into(),
+                    crate::spinel::Subnet::from(subnet),
+                ))
+                .boxed(),
+        )
+        .await
+    }
+
+    async fn get_local_on_mesh_prefixes(
+        &self,
+    ) -> ZxResult<Vec<fidl_fuchsia_lowpan_device::OnMeshPrefix>> {
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<Vec<OnMeshNet>, _>(PropThread::OnMeshNets)
+            .map_ok(|x| {
+                x.into_iter()
+                    .filter(|x| x.local)
+                    .map(std::convert::Into::<fidl_fuchsia_lowpan_device::OnMeshPrefix>::into)
+                    .collect::<Vec<_>>()
+            })
+            .await
+    }
+
+    async fn get_local_external_routes(
+        &self,
+    ) -> ZxResult<Vec<fidl_fuchsia_lowpan_device::ExternalRoute>> {
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        self.get_property_simple::<Vec<crate::spinel::ExternalRoute>, _>(PropThread::OffMeshRoutes)
+            .map_ok(|x| {
+                x.into_iter()
+                    .filter(|x| x.local)
+                    .map(std::convert::Into::<fidl_fuchsia_lowpan_device::ExternalRoute>::into)
+                    .collect::<Vec<_>>()
+            })
+            .await
     }
 
     async fn commission_network(

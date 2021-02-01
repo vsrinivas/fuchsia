@@ -152,6 +152,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             Prop::Net(PropNet::Saved),
             Prop::Net(PropNet::Xpanid),
             Prop::Phy(PropPhy::Chan),
+            Prop::Mac(PropMac::LongAddr),
         ] {
             if let Err(err) = self.frame_handler.send_request(CmdPropValueGet(*prop)).await {
                 // See the above comment regarding error handling.

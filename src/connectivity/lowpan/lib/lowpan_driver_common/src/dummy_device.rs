@@ -9,8 +9,9 @@ use super::*;
 use anyhow::Error;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceState, EnergyScanParameters, EnergyScanResult, NetworkScanParameters, ProvisionError,
-    ProvisioningMonitorMarker, ProvisioningMonitorRequest, ProvisioningProgress,
+    DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute, NetworkScanParameters,
+    OnMeshPrefix, ProvisionError, ProvisioningMonitorMarker, ProvisioningMonitorRequest,
+    ProvisioningProgress,
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_zircon_status as zx_status;
@@ -425,5 +426,29 @@ impl Driver for DummyDevice {
 
     async fn reset_counters(&self) -> ZxResult<Counters> {
         return Ok(Counters::EMPTY);
+    }
+
+    async fn register_on_mesh_prefix(&self, _net: OnMeshPrefix) -> ZxResult<()> {
+        Ok(())
+    }
+
+    async fn unregister_on_mesh_prefix(&self, _net: Ipv6Subnet) -> ZxResult<()> {
+        Ok(())
+    }
+
+    async fn register_external_route(&self, _net: ExternalRoute) -> ZxResult<()> {
+        Ok(())
+    }
+
+    async fn unregister_external_route(&self, _net: Ipv6Subnet) -> ZxResult<()> {
+        Ok(())
+    }
+
+    async fn get_local_on_mesh_prefixes(&self) -> ZxResult<Vec<OnMeshPrefix>> {
+        Ok(vec![])
+    }
+
+    async fn get_local_external_routes(&self) -> ZxResult<Vec<ExternalRoute>> {
+        Ok(vec![])
     }
 }

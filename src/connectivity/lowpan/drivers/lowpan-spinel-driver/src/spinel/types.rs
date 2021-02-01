@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use super::enums::*;
+use super::{Correlated, CorrelatedBox, NetFlags, RouteFlags};
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
 use spinel_pack::*;
 use std::collections::HashSet;
+use std::hash::Hash;
 use std::io;
 use std::num::NonZeroU8;
 
@@ -196,6 +198,21 @@ impl TryFrom<fidl_fuchsia_net::Subnet> for Subnet {
     }
 }
 
+impl Into<fidl_fuchsia_lowpan::Ipv6Subnet> for Subnet {
+    fn into(self) -> fidl_fuchsia_lowpan::Ipv6Subnet {
+        fidl_fuchsia_lowpan::Ipv6Subnet {
+            addr: fidl_fuchsia_net::Ipv6Address { addr: self.addr.octets() },
+            prefix_len: self.prefix_len,
+        }
+    }
+}
+
+impl From<fidl_fuchsia_lowpan::Ipv6Subnet> for Subnet {
+    fn from(subnet: fidl_fuchsia_lowpan::Ipv6Subnet) -> Self {
+        Self { addr: subnet.addr.addr.into(), prefix_len: subnet.prefix_len }
+    }
+}
+
 /// A spinel address table entry from SPINEL_PROP_IPV6_ADDRESS_TABLE
 #[spinel_packed("DLL")]
 #[derive(Clone, Eq)]
@@ -203,6 +220,18 @@ pub struct AddressTableEntry {
     pub subnet: Subnet,
     pub preferred_lifetime: u32,
     pub valid_lifetime: u32,
+}
+
+pub type AddressTable = HashSet<AddressTableEntry>;
+
+impl std::convert::From<Subnet> for AddressTableEntry {
+    fn from(subnet: Subnet) -> Self {
+        AddressTableEntry {
+            subnet,
+            preferred_lifetime: std::u32::MAX,
+            valid_lifetime: std::u32::MAX,
+        }
+    }
 }
 
 impl std::fmt::Debug for AddressTableEntry {
@@ -249,6 +278,175 @@ impl std::hash::Hash for AddressTableEntry {
     }
 }
 
+/// A on-mesh network entry from SPINEL_PROP_THREAD_ON_MESH_NETS
+#[spinel_packed("DbCbS")]
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct OnMeshNet {
+    pub subnet: Subnet,
+    pub stable: bool,
+    pub flags: NetFlags,
+    pub local: bool,
+    pub rloc16: u16,
+}
+
+impl Into<fidl_fuchsia_lowpan_device::OnMeshPrefix> for OnMeshNet {
+    fn into(self) -> fidl_fuchsia_lowpan_device::OnMeshPrefix {
+        fidl_fuchsia_lowpan_device::OnMeshPrefix {
+            subnet: Some(self.subnet.into()),
+            default_route_preference: self.flags.route_preference(),
+            stable: Some(self.stable),
+            slaac_preferred: Some(self.flags.is_slaac_preferred()),
+            slaac_valid: Some(self.flags.is_slaac_valid()),
+            ..fidl_fuchsia_lowpan_device::OnMeshPrefix::EMPTY
+        }
+    }
+}
+
+impl From<fidl_fuchsia_lowpan_device::OnMeshPrefix> for OnMeshNet {
+    fn from(prefix: fidl_fuchsia_lowpan_device::OnMeshPrefix) -> Self {
+        use fidl_fuchsia_lowpan_device::RoutePreference;
+        Self {
+            subnet: prefix.subnet.expect("OnMeshNet missing required field `subnet`").into(),
+            stable: prefix.stable.unwrap_or(false),
+            flags: {
+                let mut flags = NetFlags::default();
+                if prefix.slaac_preferred == Some(true) {
+                    flags |= NetFlags::SLAAC_PREFERRED;
+                }
+                if prefix.slaac_valid == Some(true) {
+                    flags |= NetFlags::SLAAC_VALID;
+                }
+                if let Some(pref) = prefix.default_route_preference {
+                    flags |= NetFlags::DEFAULT_ROUTE;
+                    match pref {
+                        RoutePreference::High => flags |= NetFlags::PREF_HIGH,
+                        RoutePreference::Medium => flags |= NetFlags::PREF_MED,
+                        RoutePreference::Low => flags |= NetFlags::PREF_LOW,
+                    }
+                }
+                flags
+            },
+            local: true,
+            rloc16: Default::default(),
+        }
+    }
+}
+
+pub type OnMeshNets = HashSet<CorrelatedBox<OnMeshNet>>;
+
+impl Correlated for OnMeshNet {
+    fn correlation_hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.subnet.hash(state);
+        self.local.hash(state);
+        if !self.local {
+            self.rloc16.hash(state);
+        }
+    }
+    fn correlation_eq(&self, other: &Self) -> bool {
+        (self.subnet == other.subnet)
+            && (self.local == other.local)
+            && (self.local || self.rloc16 == other.rloc16)
+    }
+}
+
+impl std::fmt::Debug for OnMeshNet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ", self.subnet)?;
+
+        if self.local {
+            write!(f, "LOCAL")?;
+        } else {
+            write!(f, "@{:04X}", self.rloc16)?;
+        }
+
+        if self.stable {
+            write!(f, " STABLE")?;
+        }
+
+        write!(f, " {:?}", self.flags)
+    }
+}
+
+/// A external route entry from SPINEL_PROP_THREAD_OFF_MESH_ROUTES
+#[spinel_packed("DbCbbS")]
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub struct ExternalRoute {
+    pub subnet: Subnet,
+    pub stable: bool,
+    pub flags: RouteFlags,
+    pub local: bool,
+    pub next_hop: bool,
+    pub rloc16: u16,
+}
+
+impl Into<fidl_fuchsia_lowpan_device::ExternalRoute> for ExternalRoute {
+    fn into(self) -> fidl_fuchsia_lowpan_device::ExternalRoute {
+        fidl_fuchsia_lowpan_device::ExternalRoute {
+            subnet: Some(self.subnet.into()),
+            route_preference: Some(self.flags.route_preference()),
+            stable: Some(self.stable),
+            ..fidl_fuchsia_lowpan_device::ExternalRoute::EMPTY
+        }
+    }
+}
+
+impl From<fidl_fuchsia_lowpan_device::ExternalRoute> for ExternalRoute {
+    fn from(route: fidl_fuchsia_lowpan_device::ExternalRoute) -> Self {
+        use fidl_fuchsia_lowpan_device::RoutePreference;
+        Self {
+            subnet: route.subnet.expect("OnMeshNet missing required field `subnet`").into(),
+            stable: route.stable.unwrap_or(false),
+            flags: match route.route_preference {
+                Some(RoutePreference::High) => RouteFlags::PREF_HIGH,
+                Some(RoutePreference::Low) => RouteFlags::PREF_LOW,
+                _ => RouteFlags::PREF_MED,
+            },
+            local: true,
+            next_hop: true,
+            rloc16: Default::default(),
+        }
+    }
+}
+
+pub type ExternalRoutes = HashSet<CorrelatedBox<ExternalRoute>>;
+
+impl Correlated for ExternalRoute {
+    fn correlation_hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.subnet.hash(state);
+        self.local.hash(state);
+        if !self.local {
+            self.rloc16.hash(state);
+        }
+    }
+    fn correlation_eq(&self, other: &Self) -> bool {
+        (self.subnet == other.subnet)
+            && (self.local == other.local)
+            && (self.local || self.rloc16 == other.rloc16)
+    }
+}
+
+impl std::fmt::Debug for ExternalRoute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ", self.subnet)?;
+
+        if self.local {
+            write!(f, "LOCAL")?;
+        } else {
+            write!(f, "@{:04X}", self.rloc16)?;
+        }
+
+        if self.stable {
+            write!(f, " STABLE")?;
+        }
+
+        if self.next_hop {
+            write!(f, " NEXT_HOP")?;
+        }
+
+        write!(f, " {:?}", self.flags)
+    }
+}
+
 /// A spinel network packet
 #[spinel_packed("dD")]
 #[derive(Debug, Hash, Clone, Eq, PartialEq)]
@@ -256,8 +454,6 @@ pub struct NetworkPacket<'a> {
     pub packet: &'a [u8],
     pub metadata: &'a [u8],
 }
-
-pub type AddressTable = HashSet<AddressTableEntry>;
 
 /// An allow list entry
 #[spinel_packed("Ec")]
@@ -321,5 +517,57 @@ mod tests {
         assert_eq!(Header(0x80).nli(), 0);
         assert_eq!(Header(0xBF).tid(), NonZeroU8::new(15));
         assert_eq!(Header(0xBF).nli(), 3);
+    }
+
+    #[test]
+    fn test_on_mesh_nets_unpack() {
+        let data: &[u8] = &[
+            0x16, 0x00, 0xfd, 0x00, 0xab, 0xcd, 0x12, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x40, 0x01, 0x31, 0x00, 0x01, 0x30, 0x16, 0x00, 0xfd, 0x00,
+            0x12, 0x23, 0xab, 0xcd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x40, 0x01, 0x31, 0x00, 0x01, 0x30,
+        ];
+        println!(
+            "on_mesh_nets_unpack: {:#?}",
+            OnMeshNets::try_unpack_from_slice(data).expect("unable to unpack OnMeshNets")
+        );
+    }
+
+    #[test]
+    fn test_on_mesh_net_unpack() {
+        let data: &[u8] = &[
+            0xfd, 0x00, 0xab, 0xcd, 0x12, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x40, 0x01, 0x31, 0x00, 0x01, 0x30,
+        ];
+        println!(
+            "on_mesh_net_unpack: {:#?}",
+            OnMeshNet::try_unpack_from_slice(data).expect("unable to unpack OnMeshNet")
+        );
+    }
+
+    #[test]
+    fn test_external_routes_unpack() {
+        let data: &[u8] = &[
+            0x17, 0x00, 0xfd, 0x00, 0xab, 0xcd, 0x12, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x40, 0x01, 0x31, 0x00, 0x00, 0x01, 0x30, 0x17, 0x00, 0xfd,
+            0x00, 0x12, 0x23, 0xab, 0xcd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x40, 0x01, 0x31, 0x00, 0x00, 0x01, 0x30,
+        ];
+        println!(
+            "external_routes_unpack: {:#?}",
+            ExternalRoutes::try_unpack_from_slice(data).expect("unable to unpack ExternalRoutes")
+        );
+    }
+
+    #[test]
+    fn test_external_route_unpack() {
+        let data: &[u8] = &[
+            0xfd, 0x00, 0xab, 0xcd, 0x12, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x40, 0x01, 0x31, 0x00, 0x00, 0x01, 0x30,
+        ];
+        println!(
+            "external_route_unpack: {:#?}",
+            ExternalRoute::try_unpack_from_slice(data).expect("unable to unpack ExternalRoute")
+        );
     }
 }

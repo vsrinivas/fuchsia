@@ -77,6 +77,16 @@ where
                             futures.push(driver.serve_to(stream));
                         }
                     }
+                    if let Some(server_end) = protocols.device_route_extra {
+                        if let Some(stream) = server_end.into_stream().ok() {
+                            futures.push(driver.serve_to(stream));
+                        }
+                    }
+                    if let Some(server_end) = protocols.device_route {
+                        if let Some(stream) = server_end.into_stream().ok() {
+                            futures.push(driver.serve_to(stream));
+                        }
+                    }
                     let _ = join_all(futures).await;
                 }
             }

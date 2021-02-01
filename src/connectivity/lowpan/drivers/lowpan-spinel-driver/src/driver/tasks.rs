@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::prelude::*;
 use crate::spinel::*;
 
 use crate::spinel::Subnet;
@@ -281,6 +280,20 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             }
         }
 
+        // Also handle on-mesh networks
+        for entry in driver_state.on_mesh_nets.iter() {
+            if let Err(err) = self.on_mesh_net_added(&driver_state, &entry.0) {
+                fx_log_err!("Adding on-mesh net `{:?}` failed: `{:?}`", &entry.0, err);
+            }
+        }
+
+        // Also handle external routes
+        for entry in driver_state.external_routes.iter() {
+            if let Err(err) = self.external_route_added(&driver_state, &entry.0) {
+                fx_log_err!("Adding external_route `{:?}` failed: `{:?}`", &entry.0, err);
+            }
+        }
+
         Ok(())
     }
 
@@ -321,19 +334,19 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             self.net_if.set_online(true).await.context("Marking network interface as online")?;
 
             self.sync_addresses().await?;
-        } else {
-            Err(format_err!("Unexpected connectivity state: {:?}", connectivity_state))?
+
+            fx_log_info!("online_loop: We are online, starting outbound packet pump");
+
+            // Run the pump that pulls outbound data from netstack to the NCP.
+            // This will run indefinitely.
+            self.outbound_packet_pump()
+                .into_stream()
+                .try_collect::<()>()
+                .await
+                .context("outbound_packet_pump")?;
         }
 
-        fx_log_info!("online_loop: We are online, starting outbound packet pump");
-
-        // Run the pump that pulls outbound data from netstack to the NCP.
-        // This will run indefinitely.
-        self.outbound_packet_pump()
-            .into_stream()
-            .try_collect::<()>()
-            .await
-            .context("outbound_packet_pump")
+        Ok(())
     }
 
     /// Cleanup method that is called after the online task has finished.
@@ -344,9 +357,24 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             .context("Unable to mark network interface as offline")?;
 
         let driver_state = self.driver_state.lock();
+
         for entry in driver_state.address_table.iter() {
             if let Err(err) = self.net_if.remove_address(&entry.subnet) {
                 fx_log_err!("Unable to remove address: {:?}", err);
+            }
+        }
+
+        // Also clean-up on-mesh networks
+        for entry in driver_state.on_mesh_nets.iter() {
+            if let Err(err) = self.on_mesh_net_removed(&driver_state, &entry.0) {
+                fx_log_err!("Removing on-mesh net `{:?}` failed: `{:?}`", &entry.0, err);
+            }
+        }
+
+        // Also clean-up external routes
+        for entry in driver_state.external_routes.iter() {
+            if let Err(err) = self.external_route_removed(&driver_state, &entry.0) {
+                fx_log_err!("Removing external_route `{:?}` failed: `{:?}`", &entry.0, err);
             }
         }
 

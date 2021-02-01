@@ -53,13 +53,13 @@ pub trait NetworkInterface: Send + Sync {
     // TODO(fxbug.dev/64704): Consider making this method async. This method is
     //       currently synchronous so that it can be used directly from
     //       `Driver::on_prop_value_is`, which is also synchronous.
-    fn add_on_link_route(&self, addr: &Subnet) -> Result<(), Error>;
+    fn add_external_route(&self, addr: &Subnet) -> Result<(), Error>;
 
     /// Removes the given subnet from being considered routable over this interface.
     // TODO(fxbug.dev/64704): Consider making this method async. This method is
     //       currently synchronous so that it can be used directly from
     //       `Driver::on_prop_value_is`, which is also synchronous.
-    fn remove_on_link_route(&self, addr: &Subnet) -> Result<(), Error>;
+    fn remove_external_route(&self, addr: &Subnet) -> Result<(), Error>;
 
     /// Gets the event stream for this network interface.
     ///
@@ -125,13 +125,13 @@ impl NetworkInterface for DummyNetworkInterface {
         Ok(())
     }
 
-    fn add_on_link_route(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("On Mesh Route Added: {:?}", addr);
+    fn add_external_route(&self, addr: &Subnet) -> Result<(), Error> {
+        fx_log_info!("External Route Added: {:?}", addr);
         Ok(())
     }
 
-    fn remove_on_link_route(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("On Mesh Route Removed: {:?}", addr);
+    fn remove_external_route(&self, addr: &Subnet) -> Result<(), Error> {
+        fx_log_info!("External Route Removed: {:?}", addr);
         Ok(())
     }
 

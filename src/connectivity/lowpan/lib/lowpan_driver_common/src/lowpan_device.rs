@@ -9,8 +9,10 @@ use fidl::endpoints::RequestStream;
 use fidl_fuchsia_factory_lowpan::*;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceExtraRequest, DeviceExtraRequestStream, DeviceRequest, DeviceRequestStream, DeviceState,
-    EnergyScanParameters, EnergyScanResult, NetworkScanParameters, ProvisioningMonitorMarker,
+    DeviceExtraRequest, DeviceExtraRequestStream, DeviceRequest, DeviceRequestStream,
+    DeviceRouteExtraRequest, DeviceRouteExtraRequestStream, DeviceRouteRequest,
+    DeviceRouteRequestStream, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute,
+    NetworkScanParameters, OnMeshPrefix, ProvisioningMonitorMarker,
 };
 use fidl_fuchsia_lowpan_test::*;
 use futures::stream::BoxStream;
@@ -201,6 +203,66 @@ pub trait Driver: Send + Sync {
     /// Resets all of the counters to zero returning the counter values
     /// immediately prior.
     async fn reset_counters(&self) -> ZxResult<Counters>;
+
+    /// Registers an on-mesh prefix to be advertised on the
+    /// current network.
+    ///
+    /// Subsequent calls with the same value for the `subnet` field will
+    /// update the properties associated with that on-mesh prefix.
+    ///
+    /// These changes persist like adding an IP address would,
+    /// and will stick around until explicitly removed or
+    /// the interface component is reset/restarted.
+    ///
+    /// If the given `OnMeshPrefix` structure is invalid for some reason
+    /// (missing required fields, invalid values, etc), the method
+    /// shall return `Err(ZX_ERR_INVALID_ARGS)`.
+    ///
+    /// If registering a new on-mesh prefix and the maximum number of
+    /// on-mesh prefixes has already been registered, the method
+    /// shall return `Err(ZX_ERR_NO_RESOURCES)`.
+    async fn register_on_mesh_prefix(&self, net: OnMeshPrefix) -> ZxResult<()>;
+
+    /// Unregisters any on-mesh prefix that was previously registered with
+    /// `RegisterOnMeshPrefix`.  It returns once the on-mesh prefix has
+    /// been removed locally.
+    ///
+    /// If the given mesh prefix was not previously registered,
+    /// no action is taken.
+    async fn unregister_on_mesh_prefix(&self, net: Ipv6Subnet) -> ZxResult<()>;
+
+    /// Registers an external route to be advertised on the
+    /// current network.
+    ///
+    /// Subsequent calls with the same value for the `subnet` field will
+    /// update the properties associated with that route.
+    ///
+    /// These changes persist like adding an IP address would,
+    /// and will stick around until explicitly removed or
+    /// the interface component is reset/restarted.
+    ///
+    /// If the given `ExternalRoute` structure is invalid for some reason
+    /// (missing required fields, invalid values, etc), the method
+    /// shall return `Err(ZX_ERR_INVALID_ARGS)`.
+    ///
+    /// If registering a new external route and the maximum number of
+    /// external routes has already been registered, the method
+    /// shall return `Err(ZX_ERR_NO_RESOURCES)`.
+    async fn register_external_route(&self, net: ExternalRoute) -> ZxResult<()>;
+
+    /// Unregisters any external route that was previously registered with
+    /// `RegisterExternalRoute`. It returns once the external route has
+    /// been removed locally.
+    ///
+    /// If the given external route was not previously registered,
+    /// no action is taken.
+    async fn unregister_external_route(&self, net: Ipv6Subnet) -> ZxResult<()>;
+
+    /// Returns a vector containing all of the locally added on-mesh prefixes.
+    async fn get_local_on_mesh_prefixes(&self) -> ZxResult<Vec<OnMeshPrefix>>;
+
+    /// Returns a vector containing all of the locally added external routes.
+    async fn get_local_external_routes(&self) -> ZxResult<Vec<ExternalRoute>>;
 }
 
 #[async_trait()]
@@ -628,6 +690,117 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
             request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
         {
             fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
+
+            // TODO: Properly route epitaph codes. This is tricky to do because
+            //       `request_stream` is consumed by `try_for_each_concurrent`,
+            //       which means that code like the code below will not work:
+            //
+            // ```
+            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+            //     request_stream.into_inner().0
+            //         .shutdown_with_epitaph(*epitaph);
+            // }
+            // ```
+
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<DeviceRouteRequestStream> for T {
+    async fn serve_to(&self, request_stream: DeviceRouteRequestStream) -> anyhow::Result<()> {
+        let closure = |command| async {
+            match command {
+                DeviceRouteRequest::RegisterOnMeshPrefix { prefix, responder, .. } => {
+                    self.register_on_mesh_prefix(prefix)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in register_on_mesh_prefix request")?;
+                }
+                DeviceRouteRequest::UnregisterOnMeshPrefix { subnet, responder, .. } => {
+                    self.unregister_on_mesh_prefix(subnet)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in unregister_on_mesh_prefix request")?;
+                }
+
+                DeviceRouteRequest::RegisterExternalRoute { external_route, responder, .. } => {
+                    self.register_external_route(external_route)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in register_external_route request")?;
+                }
+                DeviceRouteRequest::UnregisterExternalRoute { subnet, responder, .. } => {
+                    self.unregister_external_route(subnet)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in unregister_external_route request")?;
+                }
+            }
+            Result::<(), Error>::Ok(())
+        };
+
+        if let Some(err) =
+            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
+        {
+            fx_log_err!("Error serving DeviceRouteRequestStream: {:?}", err);
+
+            // TODO: Properly route epitaph codes. This is tricky to do because
+            //       `request_stream` is consumed by `try_for_each_concurrent`,
+            //       which means that code like the code below will not work:
+            //
+            // ```
+            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+            //     request_stream.into_inner().0
+            //         .shutdown_with_epitaph(*epitaph);
+            // }
+            // ```
+
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<DeviceRouteExtraRequestStream> for T {
+    async fn serve_to(&self, request_stream: DeviceRouteExtraRequestStream) -> anyhow::Result<()> {
+        let closure = |command| async {
+            match command {
+                DeviceRouteExtraRequest::GetLocalOnMeshPrefixes { responder, .. } => {
+                    self.get_local_on_mesh_prefixes()
+                        .err_into::<Error>()
+                        .and_then(|x| {
+                            ready(responder.send(&mut x.into_iter()).map_err(Error::from))
+                        })
+                        .await
+                        .context("error in get_local_on_mesh_prefixes request")?;
+                }
+                DeviceRouteExtraRequest::GetLocalExternalRoutes { responder, .. } => {
+                    self.get_local_external_routes()
+                        .err_into::<Error>()
+                        .and_then(|x| {
+                            ready(responder.send(&mut x.into_iter()).map_err(Error::from))
+                        })
+                        .await
+                        .context("error in get_local_external_routes request")?;
+                }
+            }
+            Result::<(), Error>::Ok(())
+        };
+
+        if let Some(err) =
+            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
+        {
+            fx_log_err!("Error serving DeviceRouteExtraRequestStream: {:?}", err);
 
             // TODO: Properly route epitaph codes. This is tricky to do because
             //       `request_stream` is consumed by `try_for_each_concurrent`,
