@@ -960,23 +960,6 @@ NO_ASAN void* cmpct_alloc(size_t size) {
   return result;
 }
 
-NO_ASAN void* cmpct_realloc(void* payload, size_t size) {
-  if (payload == NULL) {
-    return cmpct_alloc(size);
-  }
-  header_t* header = (header_t*)payload - 1;
-  size_t old_size = header->size - sizeof(header_t);
-
-  void* new_payload = cmpct_alloc(size);
-  if (new_payload == NULL) {
-    return NULL;
-  }
-
-  memcpy(new_payload, payload, std::min(size, old_size));
-  cmpct_free(payload);
-  return new_payload;
-}
-
 NO_ASAN void cmpct_free(void* payload) {
   if (payload == NULL) {
     return;

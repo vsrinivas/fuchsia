@@ -187,26 +187,6 @@ void* calloc(size_t count, size_t size) {
   return ptr;
 }
 
-void* realloc(void* ptr, size_t size) {
-  DEBUG_ASSERT(!arch_blocking_disallowed());
-  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
-
-  LTRACEF("ptr %p, size %zu\n", ptr, size);
-
-  add_stat(__GET_CALLER(), size);
-
-  void* ptr2 = cmpct_realloc(ptr, size);
-  if (unlikely(heap_trace)) {
-    printf("caller %p realloc %p, %zu -> %p\n", __GET_CALLER(), ptr, size, ptr2);
-  }
-
-  if (HEAP_PANIC_ON_ALLOC_FAIL && unlikely(!ptr2)) {
-    panic("realloc of size %zu old ptr %p failed\n", size, ptr);
-  }
-
-  return ptr2;
-}
-
 void free(void* ptr) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
 

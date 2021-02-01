@@ -31,7 +31,6 @@ struct TheHeapLock {
 extern const size_t kHeapMaxAllocSize;
 
 void* cmpct_alloc(size_t) TA_EXCL(TheHeapLock::Get());
-void* cmpct_realloc(void*, size_t) TA_EXCL(TheHeapLock::Get());
 void cmpct_free(void*) TA_EXCL(TheHeapLock::Get());
 void* cmpct_memalign(size_t alignment, size_t size) TA_EXCL(TheHeapLock::Get());
 
