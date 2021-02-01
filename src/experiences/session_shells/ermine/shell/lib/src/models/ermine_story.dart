@@ -155,7 +155,7 @@ class ErmineStory {
     await proxy
         .proposeElement(spec, elementController.ctrl.request())
         .catchError((err) {
-      log.shout('$err: Failed to propose elememnt <${suggestion.url}>');
+      log.shout('$err: Failed to propose element <${suggestion.url}>');
     });
 
     proxy.ctrl.close();
