@@ -12,7 +12,8 @@ namespace i915 {
 
 inline bool is_skl(uint16_t device_id) { return (device_id & 0xff00) == 0x1900; }
 
-inline bool is_kbl(uint16_t device_id) { return (device_id & 0xff00) == 0x5900; }
+inline bool is_kbl(uint16_t device_id) { return (device_id & 0xff00) == 0x5900 ||
+                                                (device_id & 0xff00) == 0x3e00; }
 
 inline bool is_skl_u(uint16_t device_id) {
   return device_id == 0x1916 || device_id == 0x1906 || device_id == 0x1926 || device_id == 0x1927 ||
