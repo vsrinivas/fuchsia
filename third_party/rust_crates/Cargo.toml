@@ -23,7 +23,7 @@ version = "0.1.0"
 
 [dependencies]
 # Keep this sorted alphabetically, please.
-anyhow = "1.0.25"
+anyhow = "1.0.38"
 arbitrary = { version = "0.4.0", features = ["derive"] }
 argh = "0.1.4"
 arc-swap = "0.4.4"
@@ -125,7 +125,7 @@ tempfile = "3.1"
 termion = "1.5.3"
 test-case = "1.1.0"
 textwrap = "0.11.0"
-thiserror = "1.0.9"
+thiserror = "1.0.23"
 timebomb = "0.1.2"
 tokio = { version = "0.2.16", default-features = false }
 toml = "0.5"
@@ -283,7 +283,7 @@ add_cfgs = []
 #
 # Keep this sorted alphabetically, please.
 
-[gn.package.anyhow."1.0.25"]
+[gn.package.anyhow."1.0.38"]
 # TODO(bwb) turn on when backtrace stabilizes
 # rustflags = ["--cfg=backtrace"]
 

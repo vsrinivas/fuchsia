@@ -1,3 +1,5 @@
+#![deny(clippy::all, clippy::pedantic)]
+
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -114,6 +116,7 @@ fn test_nested() {
     #[error("!bool = {}", not(.0))]
     struct Error(bool);
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn not(bool: &bool) -> bool {
         !*bool
     }
@@ -122,10 +125,32 @@ fn test_nested() {
 }
 
 #[test]
+fn test_match() {
+    #[derive(Error, Debug)]
+    #[error("{}: {0}", match .1 {
+        Some(n) => format!("error occurred with {}", n),
+        None => "there was an empty error".to_owned(),
+    })]
+    struct Error(String, Option<usize>);
+
+    assert(
+        "error occurred with 1: ...",
+        Error("...".to_owned(), Some(1)),
+    );
+    assert(
+        "there was an empty error: ...",
+        Error("...".to_owned(), None),
+    );
+}
+
+#[test]
 fn test_void() {
+    #[allow(clippy::empty_enum)]
     #[derive(Error, Debug)]
     #[error("...")]
     pub enum Error {}
+
+    let _: Error;
 }
 
 #[test]
@@ -178,4 +203,72 @@ fn test_field() {
     struct Error(Inner);
 
     assert("0", Error(Inner { data: 0 }));
+}
+
+#[test]
+fn test_macro_rules() {
+    // Regression test for https://github.com/dtolnay/thiserror/issues/86
+
+    macro_rules! decl_error {
+        ($variant:ident($value:ident)) => {
+            #[derive(Debug, Error)]
+            pub enum Error0 {
+                #[error("{0:?}")]
+                $variant($value),
+            }
+
+            #[derive(Debug, Error)]
+            #[error("{0:?}")]
+            pub enum Error1 {
+                $variant($value),
+            }
+        };
+    }
+
+    decl_error!(Repro(u8));
+
+    assert("0", Error0::Repro(0));
+    assert("0", Error1::Repro(0));
+}
+
+#[test]
+fn test_raw() {
+    #[derive(Error, Debug)]
+    #[error("braced raw error: {r#fn}")]
+    struct Error {
+        r#fn: &'static str,
+    }
+
+    assert("braced raw error: T", Error { r#fn: "T" });
+}
+
+#[test]
+fn test_raw_enum() {
+    #[derive(Error, Debug)]
+    enum Error {
+        #[error("braced raw error: {r#fn}")]
+        Braced { r#fn: &'static str },
+    }
+
+    assert("braced raw error: T", Error::Braced { r#fn: "T" });
+}
+
+#[test]
+fn test_raw_conflict() {
+    #[derive(Error, Debug)]
+    enum Error {
+        #[error("braced raw error: {r#func}, {func}", func = "U")]
+        Braced { r#func: &'static str },
+    }
+
+    assert("braced raw error: T, U", Error::Braced { r#func: "T" });
+}
+
+#[test]
+fn test_keyword() {
+    #[derive(Error, Debug)]
+    #[error("error: {type}", type = 1)]
+    struct Error;
+
+    assert("error: 1", Error);
 }

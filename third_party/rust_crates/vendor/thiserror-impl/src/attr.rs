@@ -1,4 +1,4 @@
-use proc_macro2::{Delimiter, Group, TokenStream, TokenTree};
+use proc_macro2::{Delimiter, Group, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, ToTokens};
 use std::iter::FromIterator;
 use syn::parse::{Nothing, ParseStream};
@@ -12,7 +12,7 @@ pub struct Attrs<'a> {
     pub source: Option<&'a Attribute>,
     pub backtrace: Option<&'a Attribute>,
     pub from: Option<&'a Attribute>,
-    pub transparent: Option<&'a Attribute>,
+    pub transparent: Option<Transparent<'a>>,
 }
 
 #[derive(Clone)]
@@ -21,6 +21,12 @@ pub struct Display<'a> {
     pub fmt: LitStr,
     pub args: TokenStream,
     pub has_bonus_display: bool,
+}
+
+#[derive(Copy, Clone)]
+pub struct Transparent<'a> {
+    pub original: &'a Attribute,
+    pub span: Span,
 }
 
 pub fn get(input: &[Attribute]) -> Result<Attrs> {
@@ -66,14 +72,17 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
     syn::custom_keyword!(transparent);
 
     attr.parse_args_with(|input: ParseStream| {
-        if input.parse::<Option<transparent>>()?.is_some() {
+        if let Some(kw) = input.parse::<Option<transparent>>()? {
             if attrs.transparent.is_some() {
                 return Err(Error::new_spanned(
                     attr,
                     "duplicate #[error(transparent)] attribute",
                 ));
             }
-            attrs.transparent = Some(attr);
+            attrs.transparent = Some(Transparent {
+                original: attr,
+                span: kw.span,
+            });
             return Ok(());
         }
 
@@ -94,13 +103,13 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
     })
 }
 
-fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<TokenStream> {
+fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStream> {
     let mut tokens = Vec::new();
     while !input.is_empty() {
-        if last_is_comma && input.peek(Token![.]) {
+        if begin_expr && input.peek(Token![.]) {
             if input.peek2(Ident) {
                 input.parse::<Token![.]>()?;
-                last_is_comma = false;
+                begin_expr = false;
                 continue;
             }
             if input.peek2(LitInt) {
@@ -108,11 +117,34 @@ fn parse_token_expr(input: ParseStream, mut last_is_comma: bool) -> Result<Token
                 let int: Index = input.parse()?;
                 let ident = format_ident!("_{}", int.index, span = int.span);
                 tokens.push(TokenTree::Ident(ident));
-                last_is_comma = false;
+                begin_expr = false;
                 continue;
             }
         }
-        last_is_comma = input.peek(Token![,]);
+
+        begin_expr = input.peek(Token![break])
+            || input.peek(Token![continue])
+            || input.peek(Token![if])
+            || input.peek(Token![in])
+            || input.peek(Token![match])
+            || input.peek(Token![mut])
+            || input.peek(Token![return])
+            || input.peek(Token![while])
+            || input.peek(Token![+])
+            || input.peek(Token![&])
+            || input.peek(Token![!])
+            || input.peek(Token![^])
+            || input.peek(Token![,])
+            || input.peek(Token![/])
+            || input.peek(Token![=])
+            || input.peek(Token![>])
+            || input.peek(Token![<])
+            || input.peek(Token![|])
+            || input.peek(Token![%])
+            || input.peek(Token![;])
+            || input.peek(Token![*])
+            || input.peek(Token![-]);
+
         let token: TokenTree = if input.peek(token::Paren) {
             let content;
             let delimiter = parenthesized!(content in input);

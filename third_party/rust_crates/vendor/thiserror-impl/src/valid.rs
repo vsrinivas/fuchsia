@@ -2,7 +2,7 @@ use crate::ast::{Enum, Field, Input, Struct, Variant};
 use crate::attr::Attrs;
 use quote::ToTokens;
 use std::collections::BTreeSet as Set;
-use syn::{Error, Member, Result};
+use syn::{Error, GenericArgument, Member, PathArguments, Result, Type};
 
 impl Input<'_> {
     pub(crate) fn validate(&self) -> Result<()> {
@@ -19,7 +19,7 @@ impl Struct<'_> {
         if let Some(transparent) = self.attrs.transparent {
             if self.fields.len() != 1 {
                 return Err(Error::new_spanned(
-                    transparent,
+                    transparent.original,
                     "#[error(transparent)] requires exactly one field",
                 ));
             }
@@ -163,6 +163,12 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             backtrace_field = Some(field);
             has_backtrace = true;
         }
+        if let Some(transparent) = field.attrs.transparent {
+            return Err(Error::new_spanned(
+                transparent.original,
+                "#[error(transparent)] needs to go outside the enum or struct, not on an individual field",
+            ));
+        }
         has_backtrace |= field.is_backtrace();
     }
     if let (Some(from_field), Some(source_field)) = (from_field, source_field) {
@@ -181,6 +187,14 @@ fn check_field_attrs(fields: &[Field]) -> Result<()> {
             ));
         }
     }
+    if let Some(source_field) = source_field.or(from_field) {
+        if contains_non_static_lifetime(&source_field.ty) {
+            return Err(Error::new_spanned(
+                &source_field.original.ty,
+                "non-static lifetimes are not allowed in the source of an error, because std::error::Error requires the source is dyn Error + 'static",
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -189,5 +203,31 @@ fn same_member(one: &Field, two: &Field) -> bool {
         (Member::Named(one), Member::Named(two)) => one == two,
         (Member::Unnamed(one), Member::Unnamed(two)) => one.index == two.index,
         _ => unreachable!(),
+    }
+}
+
+fn contains_non_static_lifetime(ty: &Type) -> bool {
+    match ty {
+        Type::Path(ty) => {
+            let bracketed = match &ty.path.segments.last().unwrap().arguments {
+                PathArguments::AngleBracketed(bracketed) => bracketed,
+                _ => return false,
+            };
+            for arg in &bracketed.args {
+                match arg {
+                    GenericArgument::Type(ty) if contains_non_static_lifetime(ty) => return true,
+                    GenericArgument::Lifetime(lifetime) if lifetime.ident != "static" => {
+                        return true
+                    }
+                    _ => {}
+                }
+            }
+            false
+        }
+        Type::Reference(ty) => ty
+            .lifetime
+            .as_ref()
+            .map_or(false, |lifetime| lifetime.ident != "static"),
+        _ => false, // maybe implement later if there are common other cases
     }
 }
