@@ -417,8 +417,10 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
             return Err(FatfsError::InvalidClusterNumber);
         }
 
-        Ok(self.first_data_sector
-            + self.bpb.sectors_from_clusters(cluster - RESERVED_FAT_ENTRIES)?)
+        Ok(self
+            .first_data_sector
+            .checked_add(self.bpb.sectors_from_clusters(cluster - RESERVED_FAT_ENTRIES)?)
+            .ok_or(FatfsError::InvalidClusterNumber)?)
     }
 
     pub fn cluster_size(&self) -> u32 {
