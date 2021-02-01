@@ -31,7 +31,9 @@ void main() async {
       // overwrite the ordinal to be unknown
       encoder.encodeUint64(0x1234, 0);
 
-      final decoder = Decoder(encoder.message)..claimMemory(24);
+      final decoder =
+          Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
+            ..claimMemory(24);
       ExampleXunion unknownXunion = kExampleXunion_Type.decode(decoder, 0);
       UnknownRawData actual = unknownXunion.$data;
       final expectedData = Uint8List.fromList([

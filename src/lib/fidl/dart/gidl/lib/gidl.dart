@@ -31,7 +31,7 @@ abstract class Decoders {
 List<T> _reorderList<T>(List<T> data, List<int> order) =>
     order.map((index) => data[index]).toList();
 
-fidl.Message _encode<T, I extends Iterable<T>>(
+fidl.OutgoingMessage _encode<T, I extends Iterable<T>>(
     fidl.FidlType<T, I> type, T value) {
   final fidl.Encoder encoder = fidl.Encoder()..encodeMessageHeader(0, 0);
   fidl.MemberType member = fidl.MemberType(
@@ -43,7 +43,7 @@ fidl.Message _encode<T, I extends Iterable<T>>(
 }
 
 /// Ignores the 16-byte header to return the bytes of only the message body.
-Uint8List _getMessageBodyBytes(fidl.Message message) {
+Uint8List _getMessageBodyBytes(fidl.OutgoingMessage message) {
   return Uint8List.view(message.data.buffer, fidl.kMessageHeaderSize,
       message.data.lengthInBytes - fidl.kMessageHeaderSize);
 }
@@ -57,7 +57,7 @@ T _decode<T, I extends Iterable<T>>(
   BytesBuilder input = BytesBuilder(copy: false)
     ..add(Uint8List(fidl.kMessageHeaderSize))
     ..add(bytes);
-  fidl.Message message = fidl.Message(
+  fidl.IncomingMessage message = fidl.IncomingMessage(
       ByteData.view(input.toBytes().buffer, 0, input.length), handles);
   fidl.MemberType member = fidl.MemberType(
     type: type,

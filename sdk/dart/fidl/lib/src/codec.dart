@@ -34,9 +34,9 @@ const int _kMinBufferSizeIncreaseFactor = 2;
 class Encoder {
   Encoder();
 
-  Message get message {
+  OutgoingMessage get message {
     final ByteData trimmed = ByteData.view(data.buffer, 0, _extent);
-    return Message(trimmed, _handles);
+    return OutgoingMessage(trimmed, _handles);
   }
 
   ByteData data = ByteData(_kInitialBufferSize);
@@ -153,7 +153,7 @@ class Encoder {
 }
 
 class Decoder {
-  Decoder(Message message)
+  Decoder(IncomingMessage message)
       : data = message.data,
         handles = message.handles;
 

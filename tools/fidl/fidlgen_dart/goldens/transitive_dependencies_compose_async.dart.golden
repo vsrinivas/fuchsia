@@ -82,7 +82,7 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -92,7 +92,7 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -151,7 +151,8 @@ class TopBinding extends $fidl.AsyncBinding<Top> {
   TopBinding() : super(r"Top");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kTop_GetFoo_Ordinal:
         final String _name = _kTop_GetFoo_Type.name;

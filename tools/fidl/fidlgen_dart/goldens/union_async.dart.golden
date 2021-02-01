@@ -2459,7 +2459,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -2469,7 +2469,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -2581,7 +2581,8 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
   TestProtocolBinding() : super(r"TestProtocol");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
         final String _name =

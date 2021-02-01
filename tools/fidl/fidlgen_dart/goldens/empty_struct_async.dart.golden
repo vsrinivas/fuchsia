@@ -156,7 +156,7 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       case _kEmptyProtocol_Receive_Ordinal:
         final String _name = _kEmptyProtocol_Receive_Type.name;
@@ -185,7 +185,7 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -308,7 +308,8 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
   }
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kEmptyProtocol_Send_Ordinal:
         final String _name = _kEmptyProtocol_Send_Type.name;

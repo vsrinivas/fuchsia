@@ -228,7 +228,7 @@ abstract class AsyncBinding<T> extends _Stateful {
   /// This function is called by this object whenever a message arrives over a
   /// bound channel.
   @protected
-  void handleMessage(Message message, MessageSink respond);
+  void handleMessage(IncomingMessage message, OutgoingMessageSink respond);
 
   void _handleReadable() {
     final ReadResult result = _reader.channel!.queryAndRead();
@@ -237,7 +237,7 @@ abstract class AsyncBinding<T> extends _Stateful {
           'AsyncBinding<${$interfaceName}> Unexpected empty message or error: $result');
     }
 
-    final Message message = Message.fromReadResult(result);
+    final IncomingMessage message = IncomingMessage.fromReadResult(result);
     if (!message.isCompatible()) {
       close();
       throw FidlError(
@@ -256,7 +256,7 @@ abstract class AsyncBinding<T> extends _Stateful {
   ///
   /// If the channel is not bound, the handles inside the message are closed and
   /// the message itself is discarded.
-  void sendMessage(Message response) {
+  void sendMessage(OutgoingMessage response) {
     if (!isBound) {
       response.closeHandles();
       return;
@@ -446,7 +446,7 @@ class AsyncProxyController<T> extends _Stateful {
   /// Called whenever this object receives a response on a bound channel.
   ///
   /// Used by subclasses of [Proxy<T>] to receive responses to messages.
-  MessageSink? onResponse;
+  IncomingMessageSink? onResponse;
 
   void _handleReadable() {
     final ReadResult result = _reader.channel!.queryAndRead();
@@ -456,7 +456,7 @@ class AsyncProxyController<T> extends _Stateful {
       return;
     }
     try {
-      Message message = Message.fromReadResult(result);
+      IncomingMessage message = IncomingMessage.fromReadResult(result);
       final epitaphCallback = onEpitaphReceived;
       final responseCallback = onResponse;
       if (message.ordinal == epitaphOrdinal) {
@@ -483,7 +483,7 @@ class AsyncProxyController<T> extends _Stateful {
   /// Sends the given messages over the bound channel.
   ///
   /// Used by subclasses of [Proxy<T>] to send encoded messages.
-  void sendMessage(Message message) {
+  void sendMessage(OutgoingMessage message) {
     if (!_reader.isBound) {
       proxyError(FidlStateException(
           'AsyncProxyController<${$interfaceName}> is closed.'));
@@ -500,7 +500,8 @@ class AsyncProxyController<T> extends _Stateful {
   /// to handle the response.
   ///
   /// Used by subclasses of [AsyncProxy<T>] to send encoded messages.
-  void sendMessageWithResponse(Message message, Completer<dynamic> completer) {
+  void sendMessageWithResponse(
+      OutgoingMessage message, Completer<dynamic> completer) {
     if (!_reader.isBound) {
       proxyError(FidlStateException(
           'AsyncProxyController<${$interfaceName}> is closed.'));

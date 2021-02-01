@@ -303,7 +303,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -313,7 +313,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -432,7 +432,8 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
   ProtocolBinding() : super(r"Protocol");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kProtocol_RequestStrictResponseFlexible_Ordinal:
         final String _name = _kProtocol_RequestStrictResponseFlexible_Type.name;

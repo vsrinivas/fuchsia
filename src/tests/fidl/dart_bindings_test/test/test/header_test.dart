@@ -15,7 +15,7 @@ class TestAsyncBinding extends AsyncBinding<EmptyImpl> {
   // ignore: empty_constructor_bodies
   TestAsyncBinding() : super(r'TestAsyncBinding') {}
   @override
-  void handleMessage(Message message, MessageSink respond) {
+  void handleMessage(IncomingMessage message, OutgoingMessageSink respond) {
     assert(false, 'should fail in _handleReadable');
   }
 }
@@ -29,7 +29,7 @@ void main() {
       Channel server = proxy.ctrl.request().passChannel();
       await proxy.oneWayStringArg('foo');
       final ReadResult result = server.queryAndRead();
-      final Message message = Message.fromReadResult(result);
+      final IncomingMessage message = IncomingMessage.fromReadResult(result);
       expect(message.magic, equals(kMagicNumberInitial));
     });
 
@@ -38,7 +38,7 @@ void main() {
       Channel client = proxy.ctrl.request().passChannel();
       await proxy.sendStringEvent('bar');
       final ReadResult result = client.queryAndRead();
-      final Message message = Message.fromReadResult(result);
+      final IncomingMessage message = IncomingMessage.fromReadResult(result);
       expect(message.magic, equals(kMagicNumberInitial));
     });
 
@@ -48,7 +48,7 @@ void main() {
       Completer magicNumberCompleter = Completer();
       // monkey patch the proxy controller to resolve responses to the magic
       // number of the response message
-      server.proxy.ctrl.onResponse = (Message message) {
+      server.proxy.ctrl.onResponse = (IncomingMessage message) {
         magicNumberCompleter.complete(message.magic);
       };
 

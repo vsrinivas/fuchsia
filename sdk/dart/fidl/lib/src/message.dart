@@ -4,6 +4,7 @@
 
 import 'dart:typed_data';
 
+import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
 
 import 'codec.dart';
@@ -19,20 +20,13 @@ const int kMessageOrdinalOffset = 8;
 
 const int kMagicNumberInitial = 1;
 
-class Message {
-  Message(this.data, this.handles);
-  Message.fromReadResult(ReadResult result)
-      : data = result.bytes,
-        handles = result.handles,
-        assert(result.status == ZX.OK);
+class _BaseMessage {
+  _BaseMessage(this.data, this.handles);
 
   final ByteData data;
   final List<Handle> handles;
 
   int get txid => data.getUint32(kMessageTxidOffset, Endian.little);
-  set txid(int value) =>
-      data.setUint32(kMessageTxidOffset, value, Endian.little);
-
   int get ordinal => data.getUint64(kMessageOrdinalOffset, Endian.little);
   int get magic => data.getUint8(kMessageMagicOffset);
 
@@ -79,6 +73,23 @@ class Message {
   String toString() {
     return 'Message(numBytes=${data.lengthInBytes}, numHandles=${handles.length})';
   }
+}
+
+class IncomingMessage extends _BaseMessage {
+  IncomingMessage(data, handles) : super(data, handles);
+  IncomingMessage.fromReadResult(ReadResult result)
+      : assert(result.status == ZX.OK),
+        super(result.bytes, result.handles);
+  @visibleForTesting
+  IncomingMessage.fromOutgoingMessage(OutgoingMessage outgoingMessage)
+      : super(outgoingMessage.data, outgoingMessage.handles);
+}
+
+class OutgoingMessage extends _BaseMessage {
+  OutgoingMessage(data, handles) : super(data, handles);
+
+  set txid(int value) =>
+      data.setUint32(kMessageTxidOffset, value, Endian.little);
 }
 
 void _validateEncoding(Encoder encoder) {
@@ -139,7 +150,7 @@ void _validateDecoding(Decoder decoder) {
 }
 
 /// Decodes a FIDL message that contains a single parameter.
-T decodeMessage<T>(Message message, int inlineSize, MemberType typ) {
+T decodeMessage<T>(IncomingMessage message, int inlineSize, MemberType typ) {
   final Decoder decoder = Decoder(message)
     ..claimMemory(kMessageHeaderSize + inlineSize);
   T decoded = typ.decode(decoder, kMessageHeaderSize);
@@ -159,7 +170,7 @@ T decodeMessage<T>(Message message, int inlineSize, MemberType typ) {
 /// only way to accomplish this in Dart is to pass in a function that collects
 /// these multiple values into a bespoke, properly typed class.
 A decodeMessageWithCallback<A>(
-    Message message, int inlineSize, A Function(Decoder decoder) f) {
+    IncomingMessage message, int inlineSize, A Function(Decoder decoder) f) {
   final Decoder decoder = Decoder(message)
     ..claimMemory(kMessageHeaderSize + inlineSize);
   A out = f(decoder);
@@ -168,4 +179,5 @@ A decodeMessageWithCallback<A>(
   return out;
 }
 
-typedef MessageSink = void Function(Message message);
+typedef IncomingMessageSink = void Function(IncomingMessage message);
+typedef OutgoingMessageSink = void Function(OutgoingMessage message);

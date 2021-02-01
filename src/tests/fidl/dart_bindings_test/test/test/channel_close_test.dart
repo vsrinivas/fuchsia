@@ -11,7 +11,7 @@ class TestAsyncBinding extends AsyncBinding<EmptyImpl> {
   // ignore: empty_constructor_bodies
   TestAsyncBinding() : super(r'TestAsyncBinding') {}
   @override
-  void handleMessage(Message message, MessageSink respond) {}
+  void handleMessage(IncomingMessage message, OutgoingMessageSink respond) {}
 }
 
 class EmptyImpl {}

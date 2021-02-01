@@ -84,7 +84,7 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -94,7 +94,7 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -158,7 +158,8 @@ class SuperBinding extends $fidl.AsyncBinding<Super> {
   SuperBinding() : super(r"Super");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kSuper_foo_Ordinal:
         final String _name = _kSuper_foo_Type.name;
@@ -245,7 +246,7 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -255,7 +256,7 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -319,7 +320,8 @@ class SubBinding extends $fidl.AsyncBinding<Sub> {
   SubBinding() : super(r"Sub");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kSub_foo_Ordinal:
         final String _name = _kSub_foo_Type.name;

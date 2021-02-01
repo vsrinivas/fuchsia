@@ -133,7 +133,7 @@ void decode{{ .Name }}Benchmark(run, teardown) {
 	final Encoder encoder = Encoder()..alloc({{ .ValueType}}.inlineSize);
 	{{ .ValueType }}.encode(encoder, value, 0);
 	run(() {
-		final Decoder decoder = Decoder(encoder.message)
+		final Decoder decoder = Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
 			..claimMemory({{ .ValueType}}.inlineSize);
 			{{ .ValueType }}.decode(decoder, 0);
   });

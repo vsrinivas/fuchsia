@@ -292,7 +292,7 @@ abstract class Binding<T> {
   /// This function is called by this object whenever a message arrives over a
   /// bound channel.
   @protected
-  void handleMessage(Message message, MessageSink respond);
+  void handleMessage(IncomingMessage message, OutgoingMessageSink respond);
 
   void _handleReadable() {
     final ReadResult result = _reader.channel!.queryAndRead();
@@ -301,7 +301,7 @@ abstract class Binding<T> {
           'from channel ${_reader.channel}');
     }
 
-    final Message message = Message.fromReadResult(result);
+    final IncomingMessage message = IncomingMessage.fromReadResult(result);
     if (!message.isCompatible()) {
       close();
       throw FidlError(
@@ -323,7 +323,7 @@ abstract class Binding<T> {
   ///
   /// If the channel is not bound, the handles inside the message are closed and
   /// the message itself is discarded.
-  void sendMessage(Message response) {
+  void sendMessage(OutgoingMessage response) {
     if (!_reader.isBound) {
       response.closeHandles();
       return;
@@ -492,7 +492,7 @@ class ProxyController<T> {
   /// Called whenever this object receives a response on a bound channel.
   ///
   /// Used by subclasses of [Proxy<T>] to receive responses to messages.
-  MessageSink? onResponse;
+  IncomingMessageSink? onResponse;
 
   final ChannelReader _reader = ChannelReader();
   final HashMap<int, Function> _callbackMap = HashMap<int, Function>();
@@ -529,7 +529,7 @@ class ProxyController<T> {
       _pendingResponsesCount--;
       final callback = onResponse;
       if (callback != null) {
-        callback(Message.fromReadResult(result));
+        callback(IncomingMessage.fromReadResult(result));
       }
     } on FidlError catch (e) {
       for (Handle handle in result.handles) {
@@ -554,7 +554,7 @@ class ProxyController<T> {
   /// Sends the given messages over the bound channel.
   ///
   /// Used by subclasses of [Proxy<T>] to send encoded messages.
-  void sendMessage(Message message) {
+  void sendMessage(OutgoingMessage message) {
     if (!_reader.isBound) {
       proxyError('The proxy is closed.');
       return;
@@ -569,7 +569,7 @@ class ProxyController<T> {
   /// to handle the response.
   ///
   /// Used by subclasses of [Proxy<T>] to send encoded messages.
-  void sendMessageWithResponse(Message message, Function callback) {
+  void sendMessageWithResponse(OutgoingMessage message, Function callback) {
     if (!_reader.isBound) {
       proxyError('The sender is closed.');
       return;

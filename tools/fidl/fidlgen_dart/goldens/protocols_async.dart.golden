@@ -805,7 +805,7 @@ class WithAndWithoutRequestResponseProxy
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       case _kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
         final String _name =
@@ -853,7 +853,7 @@ class WithAndWithoutRequestResponseProxy
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -1148,7 +1148,8 @@ class WithAndWithoutRequestResponseBinding
   }
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
         final String _name =
@@ -1452,7 +1453,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -1462,7 +1463,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -1620,7 +1621,8 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
   WithErrorSyntaxBinding() : super(r"WithErrorSyntax");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kWithErrorSyntax_ResponseAsStruct_Ordinal:
         final String _name = _kWithErrorSyntax_ResponseAsStruct_Type.name;
@@ -1893,7 +1895,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       case _kChannelProtocol_EventA_Ordinal:
         final String _name = _kChannelProtocol_EventA_Type.name;
@@ -1928,7 +1930,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -2141,7 +2143,8 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
   }
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kChannelProtocol_MethodA_Ordinal:
         final String _name = _kChannelProtocol_MethodA_Type.name;
@@ -2370,7 +2373,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       case _kTransitional_Event_Ordinal:
         final String _name = _kTransitional_Event_Type.name;
@@ -2397,7 +2400,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -2518,7 +2521,8 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
   }
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kTransitional_Request_Ordinal:
         final String _name = _kTransitional_Request_Type.name;

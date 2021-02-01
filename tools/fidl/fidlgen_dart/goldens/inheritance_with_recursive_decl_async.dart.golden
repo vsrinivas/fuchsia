@@ -82,7 +82,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -92,7 +92,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -137,7 +137,8 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
   ParentBinding() : super(r"Parent");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kParent_First_Ordinal:
         final String _name = _kParent_First_Type.name;
@@ -222,7 +223,7 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -232,7 +233,7 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -297,7 +298,8 @@ class ChildBinding extends $fidl.AsyncBinding<Child> {
   ChildBinding() : super(r"Child");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kChild_First_Ordinal:
         final String _name = _kChild_First_Type.name;

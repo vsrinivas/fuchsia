@@ -81,7 +81,7 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -91,7 +91,7 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -131,7 +131,8 @@ class FirstProtocolBinding extends $fidl.AsyncBinding<FirstProtocol> {
   FirstProtocolBinding() : super(r"FirstProtocol");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kFirstProtocol_MethodOnFirst_Ordinal:
         final String _name = _kFirstProtocol_MethodOnFirst_Type.name;
@@ -202,7 +203,7 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
   @override
   Null get $serviceData => null;
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
         ctrl.proxyError(
@@ -212,7 +213,7 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -252,7 +253,8 @@ class SecondProtocolBinding extends $fidl.AsyncBinding<SecondProtocol> {
   SecondProtocolBinding() : super(r"SecondProtocol");
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       case _kSecondProtocol_MethodOnSecond_Ordinal:
         final String _name = _kSecondProtocol_MethodOnSecond_Type.name;

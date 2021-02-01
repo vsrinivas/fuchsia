@@ -210,7 +210,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     Null get $serviceData => null;
   {{- end }}
 
-  void _handleEvent($fidl.Message $message) {
+  void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
 {{- range .Methods }}
 {{- if not .HasRequest }}
@@ -241,7 +241,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     }
   }
 
-  void _handleResponse($fidl.Message $message) {
+  void _handleResponse($fidl.IncomingMessage $message) {
     final int $txid = $message.txid;
     if ($txid == 0) {
       _handleEvent($message);
@@ -386,7 +386,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
   {{- end }}
 
   @override
-  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+  void handleMessage($fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
