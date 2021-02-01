@@ -8,7 +8,7 @@ use {
     std::{fs::File, io::Read},
 };
 
-pub const SUPPORTED_FEATURES_FILE_PATH: &str = "/config/data/supported_features.config";
+pub const SUPPORTED_FEATURES_FILE_PATH: &str = "/pkg/data/supported_features.config";
 
 /// Configuration of optional feature support.
 /// This list of features is derived from the optional features in HFP v1.8, Table 3.1.
