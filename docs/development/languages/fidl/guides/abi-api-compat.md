@@ -88,17 +88,24 @@ declaration exists.
 
 ### Adding a method to a protocol {#protocol-method-add}
 
-ABI: It is binary-compatible to add a method to a protocol.
+**ABI**
+It is binary-compatible to add a method to a protocol.
 
-API: To safely add a method to a protocol, mark the new method with
+**API**
+To safely add a method to a protocol, mark the new method with
 [`[Transitional]`][transitional]. Once all implementations of the new method are
 in place, you can remove the [`[Transitional]`][transitional] attribute.
 
+Examples: removing [an event][example-event-remove], [a
+method][example-method-remove].
+
 ### Removing a method from a protocol {#protocol-method-remove}
 
-ABI: It is binary-compatible to remove a method from a protocol.
+**ABI**
+It is binary-compatible to remove a method from a protocol.
 
-API: To safely remove a method from a protocol, start by marking the method with
+**API**
+To safely remove a method from a protocol, start by marking the method with
 [`[Transitional]`][transitional]. Once this has fully propagated, you can remove
 all implementations of the method, then remove the method from the FIDL
 protocol.
@@ -107,6 +114,8 @@ Note: When using the Rust bindings, you need to manually add catch-all cases
 (`_`) to all the match statements rather than rely on the
 [`[Transitional]`][transitional] attribute. Read more about [how
 `[Transitional]` impacts the Rust bindings][transitional-rust].
+
+Examples: adding [an event][example-event-add], [a method][example-method-add].
 
 ### Renaming a method {#protocol-method-rename}
 
@@ -245,6 +254,7 @@ Details for each declaration and binding are provided below.
 
 #### Bits
 
+**`strict` to `flexible`**
 Changing a bits declaration from `strict` to `flexible` is:
 
 * Source-compatible in LLCPP, Rust, Go, and Dart.
@@ -254,6 +264,10 @@ Changing a bits declaration from `strict` to `flexible` is:
     generated as a `class` (which cannot be used as a non-type template
     parameter).
 
+Example: [changing a bits declaration from `strict` to
+`flexible`][example-bits-strict-flexible].
+
+**`flexible` to `strict`**
 Changing a bits declaration from `flexible` to `strict` is:
 
 * Source-compatible Go, and Dart
@@ -267,8 +281,12 @@ Changing a bits declaration from `flexible` to `strict` is:
     strict bits, but a `static const` member of the generated class for flexible
     bits.
 
+Example: [changing a bits declaration from `flexible` to
+`strict`][example-bits-flexible-strict].
+
 #### Enums
 
+**`strict` to `flexible`**
 Changing an enum declaration from `strict` to `flexible` is:
 
 * Source-compatible in Go and Dart.
@@ -287,11 +305,18 @@ handle any unknown enums.
 can transition to being `flexible` by using the [`[Unknown]`][unknown-attr]
 attribute.
 
+Example: [changing an enum declaration from `strict` to
+`flexible`][example-enum-strict-flexible].
+
+**`flexible` to `strict`**
 Changing an enum declaration from `flexible` to `strict` is:
 
 * Source-incompatible in all bindings.
  * To make this change, any usages of [`flexible`-only APIs][bindings-ref], such
    as uses of the unknown placeholder, must be removed first.
+
+Example: [changing an enum declaration from `flexible` to
+`strict`][example-enum-flexible-strict].
 
 #### Unions
 
@@ -299,6 +324,10 @@ Changing a union declaration from `strict` to `flexible` is source-compatible,
 and changing from `flexible` to `strict` is source-incompatible. To perform the
 latter, any usages [`flexible`-only APIs][bindings-ref] for the union must be
 removed before it can be changed to `strict`.
+
+Example: changing a union declaration from [`strict` to
+`flexible`][example-union-strict-flexible], or [`flexible` to
+`strict`][example-union-flexible-strict].
 
 ### Value vs resource
 
@@ -400,14 +429,24 @@ held by the union (see [lexicon][lexicon-tag]). This is often an enum in
 languages which do not support ADTs like C++.
 
 <!-- xrefs -->
-[transitional]: /docs/reference/fidl/language/attributes.md#transitional
-[transitional-rust]: /docs/reference/fidl/bindings/rust-bindings.md#transitional
+[bindings-ref]: /docs/reference/fidl/bindings/overview.md
+[example-bits-flexible-strict]: /src/tests/fidl/source_compatibility/bits-flexible-strict/README.md
+[example-bits-strict-flexible]: /src/tests/fidl/source_compatibility/bits-strict-flexible/README.md
+[example-enum-flexible-strict]: /src/tests/fidl/source_compatibility/enum-flexible-strict/README.md
+[example-enum-strict-flexible]: /src/tests/fidl/source_compatibility/enum-strict-flexible/README.md
+[example-event-add]: /src/tests/fidl/source_compatibility/protocol-event-add/README.md
+[example-event-remove]: /src/tests/fidl/source_compatibility/protocol-event-remove/README.md
+[example-method-add]: /src/tests/fidl/source_compatibility/protocol-method-add/README.md
+[example-method-remove]: /src/tests/fidl/source_compatibility/protocol-method-remove/README.md
+[example-union-flexible-strict]: /src/tests/fidl/source_compatibility/union-flexible-strict/README.md
+[example-union-strict-flexible]: /src/tests/fidl/source_compatibility/union-strict-flexible/README.md
+[ftp-057-motivation]: /docs/contribute/governance/fidl/ftp/ftp-057.md#motivation
+[lexicon-tag]: /docs/reference/fidl/language/lexicon.md#union-terms
+[Platform Versioning]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
+[rust-bindings-tables]: /docs/reference/fidl/bindings/rust-bindings.md#types-tables
 [rust-enum-macro]: /docs/reference/fidl/bindings/rust-bindings.md#types-enums
 [selector]: /docs/reference/fidl/language/attributes.md#selector
 [soft transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology
-[Platform Versioning]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
-[rust-bindings-tables]: /docs/reference/fidl/bindings/rust-bindings.md#types-tables
-[lexicon-tag]: /docs/reference/fidl/language/lexicon.md#union-terms
-[bindings-ref]: /docs/reference/fidl/bindings/overview.md
+[transitional-rust]: /docs/reference/fidl/bindings/rust-bindings.md#transitional
+[transitional]: /docs/reference/fidl/language/attributes.md#transitional
 [unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
-[ftp-057-motivation]: /docs/contribute/governance/fidl/ftp/ftp-057.md#motivation
