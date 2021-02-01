@@ -22,6 +22,9 @@ template("extract_imported_symbols") {
   action(target_name) {
     script = "//build/cpp/extract_imported_symbols.sh"
 
+    # TODO(http://fxbug.dev/68780): Remove suppression when fixed.
+    hermetic_deps = false
+
     forward_variables_from(invoker, [ "deps" ])
 
     inputs = [
