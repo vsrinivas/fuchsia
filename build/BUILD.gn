@@ -911,7 +911,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/sysmem-make-tracking/*",
     "//zircon/system/ulib/sysmem-version/*",
     "//zircon/system/ulib/task-utils/*",
-    "//zircon/system/ulib/tee-client-api/*",
     "//zircon/system/ulib/test-exceptions/*",
     "//zircon/system/ulib/test-utils/*",
     "//zircon/system/ulib/tftp/*",
