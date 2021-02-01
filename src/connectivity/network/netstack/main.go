@@ -275,12 +275,7 @@ func Main() {
 			udp.NewProtocol,
 		},
 		HandleLocal: true,
-
-		// Enable use of the neighbor cache as part of the staged rollout
-		// (fxbug.dev/61723) for Neighbor Unreachability Detection. This enables
-		// inspection and modification of entries in the neighbor cache.
-		UseNeighborCache: true,
-		NUDDisp:          &nudDisp,
+		NUDDisp:     &nudDisp,
 
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
