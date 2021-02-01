@@ -145,9 +145,7 @@ Send the change for review using the regular process.
 
 ## Examples
 
-This guide is missing an example. Multiple examples may be beneficial in this
-case. If making changes to support this project, please consider adding them
-here for reference.
+*   [479158: [teec] Migrate from zx_library](https://fuchsia-review.googlesource.com/c/fuchsia/+/479158)
 
 ## Sponsors
 
