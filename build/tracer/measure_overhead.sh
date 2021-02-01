@@ -78,7 +78,7 @@ function disable_checks() {
   # Force --no-check-access-permissions and --no-check-output-freshness.
   sed -e 's|--failed-check-status=1|--failed-check-status=0|' \
     -e '/if (!defined(hermetic_deps))/,/}/s|hermetic_deps = true|hermetic_deps = false|' \
-    -e '/if (!defined(all_outputs_fresh))/,/}/s|all_outputs_fresh = true|hermetic_deps = false|' \
+    -e '/if (!defined(all_outputs_fresh))/,/}/s|all_outputs_fresh = true|all_outputs_fresh = false|' \
     "$_bcfg_gn"
 }
 
