@@ -73,13 +73,12 @@ def get_library_label(label):
     return match.group(1) if match else None
 
 
-def remove_composite_library(deps):
-    composite_library = 'fuchsia.hardware.composite'
-    if composite_library in deps:
-        del deps[composite_library]
+def remove_library(name, deps):
+    if name in deps:
+        del deps[name]
     for v in deps.values():
-        if composite_library in v:
-            v.remove(composite_library)
+        if name in v:
+            v.remove(name)
 
 
 def add_back_edges(deps):
@@ -120,7 +119,8 @@ def main():
 
     all_deps = extract_dependencies(deps['//sdk/banjo:banjo']['deps'])
     banjo_deps = filter_banjo_libraries(all_deps)
-    remove_composite_library(banjo_deps)
+    remove_library('zx', banjo_deps)
+    remove_library('fuchsia.hardware.composite', banjo_deps)
     banjo_graph = add_back_edges(banjo_deps)
 
     components = find_connected_components(banjo_graph)

@@ -5,7 +5,7 @@
 
 import unittest
 
-from analyze_deps import add_back_edges, extract_dependencies, filter_banjo_libraries, find_connected_components, get_library_label, remove_composite_library
+from analyze_deps import add_back_edges, extract_dependencies, filter_banjo_libraries, find_connected_components, get_library_label, remove_library
 
 
 class AnalysisTests(unittest.TestCase):
@@ -82,15 +82,15 @@ class AnalysisTests(unittest.TestCase):
         self.assertCountEqual(deps['four'], [])
         self.assertCountEqual(deps['five'], [])
 
-    def test_remove_composite_library(self):
+    def test_remove_library(self):
         deps = {
-            'one': ['fuchsia.hardware.composite', 'three'],
+            'one': ['mwahahahaha', 'three'],
             'two': [],
             'three': ['two'],
-            'fuchsia.hardware.composite': []
+            'mwahahahaha': []
         }
-        remove_composite_library(deps)
-        self.assertFalse('fuchsia.hardware.composite' in deps)
+        remove_library('mwahahahaha', deps)
+        self.assertFalse('mwahahahaha' in deps)
         self.assertCountEqual(deps['one'], ['three'])
         self.assertCountEqual(deps['two'], [])
         self.assertCountEqual(deps['three'], ['two'])
