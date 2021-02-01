@@ -96,7 +96,7 @@ async fn main() -> Result<(), anyhow::Error> {
             let bus = bus_subscribe(&sync_manager, CLIENT_NAME)?;
             // Wait for the server to be attached to the event bus, meaning it's
             // already bound and listening.
-            let _: (bool, Option<Vec<String>>) = bus
+            let (_all, _absent): (bool, Option<Vec<String>>) = bus
                 .wait_for_clients(
                     &mut Some(SERVER_NAME).into_iter(),
                     zx::Time::INFINITE.into_nanos(),
@@ -174,15 +174,15 @@ async fn main() -> Result<(), anyhow::Error> {
 
             // Start the keepalive machinery.
             //
-            // set_keepalive sets TCP_KEEPIDLE, which requires a minimum of 1 second.
-            let keepalive_idle = std::time::Duration::from_secs(1);
-            for socket in [&keepalive_timeout, &keepalive_usertimeout].iter() {
-                let () = socket.std().set_keepalive(Some(keepalive_idle))?;
-            }
-            let keepalive_count: i32 = 1;
-            keepalive_timeout.std().set_keepalive_count(keepalive_count)?;
-            let keepalive_interval = std::time::Duration::from_secs(1);
-            keepalive_timeout.std().set_keepalive_interval(keepalive_interval)?;
+            // [`socket::TcpKeepalive::with_time`] sets TCP_KEEPIDLE, which requires a minimum of 1 second.
+            let keepalive =
+                socket2::TcpKeepalive::new().with_time(std::time::Duration::from_secs(1));
+            let () = socket2::SockRef::from(keepalive_usertimeout.std())
+                .set_tcp_keepalive(&keepalive)?;
+            let keepalive =
+                keepalive.with_interval(std::time::Duration::from_secs(1)).with_retries(1);
+            let () =
+                socket2::SockRef::from(keepalive_timeout.std()).set_tcp_keepalive(&keepalive)?;
 
             // Start the retransmit machinery.
             for socket in [&mut retransmit_timeout, &mut retransmit_usertimeout].iter_mut() {

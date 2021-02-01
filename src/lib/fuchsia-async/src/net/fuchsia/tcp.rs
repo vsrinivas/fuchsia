@@ -44,16 +44,16 @@ impl TcpListener {
     /// Creates a new `TcpListener` bound to the provided socket.
     pub fn bind(addr: &SocketAddr) -> io::Result<TcpListener> {
         let domain = match *addr {
-            SocketAddr::V4(..) => socket2::Domain::ipv4(),
-            SocketAddr::V6(..) => socket2::Domain::ipv6(),
+            SocketAddr::V4(..) => socket2::Domain::IPV4,
+            SocketAddr::V6(..) => socket2::Domain::IPV6,
         };
         let socket =
-            socket2::Socket::new(domain, socket2::Type::stream(), Some(socket2::Protocol::tcp()))?;
+            socket2::Socket::new(domain, socket2::Type::STREAM, Some(socket2::Protocol::TCP))?;
         let () = socket.set_reuse_address(true)?;
         let addr = (*addr).into();
         let () = socket.bind(&addr)?;
         let () = socket.listen(1024)?;
-        TcpListener::from_std(socket.into_tcp_listener())
+        TcpListener::from_std(socket.into())
     }
 
     /// Consumes this listener and returns a `Future` that resolves to an
@@ -94,7 +94,7 @@ impl TcpListener {
     pub fn from_std(listener: net::TcpListener) -> io::Result<TcpListener> {
         let listener: socket2::Socket = listener.into();
         let () = listener.set_nonblocking(true)?;
-        let listener = listener.into_tcp_listener();
+        let listener = listener.into();
         let listener = unsafe { EventedFd::new(listener)? };
         Ok(TcpListener(listener))
     }
@@ -181,11 +181,11 @@ impl TcpStream {
     /// This function returns a future which resolves to an `io::Result<TcpStream>`.
     pub fn connect(addr: SocketAddr) -> io::Result<TcpConnector> {
         let domain = match addr {
-            SocketAddr::V4(..) => socket2::Domain::ipv4(),
-            SocketAddr::V6(..) => socket2::Domain::ipv6(),
+            SocketAddr::V4(..) => socket2::Domain::IPV4,
+            SocketAddr::V6(..) => socket2::Domain::IPV6,
         };
         let socket =
-            socket2::Socket::new(domain, socket2::Type::stream(), Some(socket2::Protocol::tcp()))?;
+            socket2::Socket::new(domain, socket2::Type::STREAM, Some(socket2::Protocol::TCP))?;
         Self::from_socket2(socket, addr)
     }
 
@@ -197,7 +197,7 @@ impl TcpStream {
             Err(e) if e.raw_os_error() == Some(libc::EINPROGRESS) => Ok(()),
             res => res,
         }?;
-        let stream = socket.into_tcp_stream();
+        let stream = socket.into();
         // This is safe because the file descriptor for stream will live as long as the TcpStream.
         let stream = unsafe { EventedFd::new(stream)? };
         let stream = Some(TcpStream { stream });
@@ -209,7 +209,7 @@ impl TcpStream {
     fn from_std(stream: net::TcpStream) -> io::Result<TcpStream> {
         let stream: socket2::Socket = stream.into();
         let () = stream.set_nonblocking(true)?;
-        let stream = stream.into_tcp_stream();
+        let stream = stream.into();
         // This is safe because the file descriptor for stream will live as long as the TcpStream.
         let stream = unsafe { EventedFd::new(stream)? };
         Ok(TcpStream { stream })
@@ -328,14 +328,14 @@ mod tests {
         // bind to a port to find an unused one, but don't start listening.
         let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0).into();
         let socket = socket2::Socket::new(
-            socket2::Domain::ipv4(),
-            socket2::Type::stream(),
-            Some(socket2::Protocol::tcp()),
+            socket2::Domain::IPV4,
+            socket2::Type::STREAM,
+            Some(socket2::Protocol::TCP),
         )
         .expect("could not create socket");
         let () = socket.bind(&addr).expect("could not bind");
         let addr = socket.local_addr().expect("local addr query to succeed");
-        let addr = addr.as_std().expect("local addr to be ipv4 or ipv6");
+        let addr = addr.as_socket().expect("local addr to be ipv4 or ipv6");
 
         // connecting to the nonlistening port should fail.
         let connector = TcpStream::connect(addr).expect("could not create client");

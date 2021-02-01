@@ -760,7 +760,7 @@ impl EnvironmentUdpSocket for std::net::UdpSocket {
 
             let () = sock.bind(&addr.into()).context("bind failed")?;
 
-            Result::Ok(sock.into_udp_socket())
+            Result::Ok(sock.into())
         }
         .boxed_local()
     }
@@ -821,7 +821,7 @@ impl EnvironmentTcpListener for std::net::TcpListener {
             // in Rust std (see https://doc.rust-lang.org/src/std/sys_common/net.rs.html#386).
             let () = sock.listen(128).context("failed to listen on server socket")?;
 
-            Result::Ok(sock.into_tcp_listener())
+            Result::Ok(sock.into())
         }
         .boxed_local()
     }

@@ -400,14 +400,14 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
 /// Creates a socket listening on the input address.
 async fn create_socket(addr: SocketAddr) -> Result<fasync::net::UdpSocket> {
     let socket = socket2::Socket::new(
-        socket2::Domain::ipv6(),
-        socket2::Type::dgram(),
-        Some(socket2::Protocol::udp()),
+        socket2::Domain::IPV6,
+        socket2::Type::DGRAM,
+        Some(socket2::Protocol::UDP),
     )?;
     // It is possible to run multiple clients on the same address.
     let () = socket.set_reuse_port(true)?;
     let () = socket.bind(&addr.into())?;
-    fasync::net::UdpSocket::from_socket(socket.into_udp_socket()).context("converting socket")
+    fasync::net::UdpSocket::from_socket(socket.into()).context("converting socket")
 }
 
 /// Creates a transaction ID that can be used by the client as defined in [RFC 8415, Section 16.1].

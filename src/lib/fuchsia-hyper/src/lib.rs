@@ -110,7 +110,7 @@ pub struct TcpOptions {
     /// This sets TCP_KEEPINTVL and SO_KEEPALIVE.
     pub keepalive_interval: Option<std::time::Duration>,
     /// This sets TCP_KEEPCNT and SO_KEEPALIVE.
-    pub keepalive_count: Option<i32>,
+    pub keepalive_count: Option<u32>,
 }
 
 #[derive(Clone)]

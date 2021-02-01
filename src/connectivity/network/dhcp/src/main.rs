@@ -22,7 +22,6 @@ use {
         cell::RefCell,
         collections::HashMap,
         net::{IpAddr, Ipv4Addr, SocketAddr},
-        os::unix::io::AsRawFd as _,
     },
     void::Void,
 };
@@ -150,32 +149,19 @@ impl SocketServerDispatcher for Server<Stash> {
 
     fn create_socket(name: &str, src: Ipv4Addr) -> std::io::Result<Self::Socket> {
         let socket = socket2::Socket::new(
-            socket2::Domain::ipv4(),
-            socket2::Type::dgram(),
-            Some(socket2::Protocol::udp()),
+            socket2::Domain::IPV4,
+            socket2::Type::DGRAM,
+            Some(socket2::Protocol::UDP),
         )?;
         // Since dhcpd may listen to multiple interfaces, we must enable
         // SO_REUSEPORT so that binding the same (address, port) pair to each
         // interface can still succeed.
         let () = socket.set_reuse_port(true)?;
-        // There are currently no safe Rust interfaces to set SO_BINDTODEVICE,
-        // so we must set it through libc.
-        if unsafe {
-            libc::setsockopt(
-                socket.as_raw_fd(),
-                libc::SOL_SOCKET,
-                libc::SO_BINDTODEVICE,
-                name.as_ptr() as *const libc::c_void,
-                name.len() as libc::socklen_t,
-            )
-        } == -1
-        {
-            return Err(std::io::Error::last_os_error());
-        }
+        let () = socket.bind_device(Some(name.as_bytes()))?;
         log::info!("socket bound to device {}", name);
         let () = socket.set_broadcast(true)?;
         let () = socket.bind(&SocketAddr::new(IpAddr::V4(src), SERVER_PORT).into())?;
-        Ok(UdpSocket::from_socket(socket.into_udp_socket())?)
+        Ok(UdpSocket::from_socket(socket.into())?)
     }
 
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError> {

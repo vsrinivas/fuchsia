@@ -25,7 +25,6 @@ use {
         net::{AddrParseError, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
         num::{ParseIntError, TryFromIntError},
     },
-    tcp_stream_ext::TcpStreamExt as _,
 };
 
 pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {
@@ -90,19 +89,26 @@ impl HyperConnector {
 }
 
 fn apply_tcp_options(stream: &std::net::TcpStream, options: &TcpOptions) -> Result<(), io::Error> {
+    let stream = socket2::SockRef::from(stream);
+    let mut any = false;
+    let mut keepalive = socket2::TcpKeepalive::new();
     if let Some(idle) = options.keepalive_idle {
-        stream.set_keepalive(Some(idle))?;
-    } else if options.keepalive_interval.is_some() || options.keepalive_count.is_some() {
-        // This sets SO_KEEPALIVE without setting TCP_KEEPIDLE.
-        stream.set_keepalive(None)?;
-    }
+        any = true;
+        keepalive = keepalive.with_time(idle);
+    };
     if let Some(interval) = options.keepalive_interval {
-        stream.set_keepalive_interval(interval)?;
+        any = true;
+        keepalive = keepalive.with_interval(interval);
     }
     if let Some(count) = options.keepalive_count {
-        stream.set_keepalive_count(count)?;
+        any = true;
+        keepalive = keepalive.with_retries(count);
     }
-    Ok(())
+    if any {
+        stream.set_tcp_keepalive(&keepalive)
+    } else {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -372,9 +378,12 @@ mod test {
         .unwrap()
         .stream;
 
-        assert_matches!(stream.std().keepalive(), Ok(Some(v)) if v == idle);
-        assert_matches!(stream.std().keepalive_interval(), Ok(v) if v == interval);
-        assert_matches!(stream.std().keepalive_count(), Ok(v) if v == count);
+        let stream = socket2::SockRef::from(stream.std());
+
+        assert_matches!(stream.keepalive(), Ok(v) if v);
+        assert_matches!(stream.keepalive_time(), Ok(v) if v == idle);
+        assert_matches!(stream.keepalive_interval(), Ok(v) if v == interval);
+        assert_matches!(stream.keepalive_retries(), Ok(v) if v == count);
     }
 
     #[fasync::run_singlethreaded(test)]

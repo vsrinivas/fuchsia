@@ -994,7 +994,7 @@ dependencies = [
  "slab",
  "smallvec 0.6.13",
  "smol",
- "socket2",
+ "socket2 0.4.0-alpha.5",
  "splines",
  "static_assertions",
  "strsim 0.10.0",
@@ -1477,9 +1477,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.82"
+version = "0.2.84"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
+checksum = "1cca32fa0182e8c0989459524dc356b8f2b5c10f1b9eb521b7d182c03cf8c5ff"
 
 [[package]]
 name = "libm"
@@ -3023,19 +3023,28 @@ dependencies = [
  "piper",
  "scoped-tls-hkt",
  "slab",
- "socket2",
+ "socket2 0.3.19",
  "wepoll-binding",
 ]
 
 [[package]]
 name = "socket2"
-version = "0.3.12"
+version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03088793f677dce356f3ccc2edb1b314ad191ab702a5de3faf49304f7e104918"
+checksum = "122e570113d28d773067fab24266b66753f6ea915758651696b6e35e49f88d6e"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "libc",
- "redox_syscall",
+ "winapi",
+]
+
+[[package]]
+name = "socket2"
+version = "0.4.0-alpha.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa837ba9d8224cbeb63b73e72c88b38d62201f50b8b766e16ddba3dfd79a3657"
+dependencies = [
+ "libc",
  "winapi",
 ]
 

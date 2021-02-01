@@ -362,12 +362,12 @@ impl<B: ByteSlice + Clone> TryIntoTargetInfo for dns::Message<B> {
 }
 
 fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
-    let socket = match listen_addr {
+    let socket: std::net::UdpSocket = match listen_addr {
         SocketAddr::V4(_) => {
             let socket = socket2::Socket::new(
-                socket2::Domain::ipv4(),
-                socket2::Type::dgram(),
-                Some(socket2::Protocol::udp()),
+                socket2::Domain::IPV4,
+                socket2::Type::DGRAM,
+                Some(socket2::Protocol::UDP),
             )
             .context("construct datagram socket")?;
             socket.set_multicast_loop_v4(false).context("set_multicast_loop_v4")?;
@@ -385,9 +385,9 @@ fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
         }
         SocketAddr::V6(_) => {
             let socket = socket2::Socket::new(
-                socket2::Domain::ipv6(),
-                socket2::Type::dgram(),
-                Some(socket2::Protocol::udp()),
+                socket2::Domain::IPV6,
+                socket2::Type::DGRAM,
+                Some(socket2::Protocol::UDP),
             )
             .context("construct datagram socket")?;
             socket.set_only_v6(true).context("set_only_v6")?;
@@ -402,17 +402,18 @@ fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
             socket.join_multicast_v6(&MDNS_MCAST_V6, 0).context("join_multicast_v6")?;
             socket
         }
-    };
-    Ok(socket.into_udp_socket().into())
+    }
+    .into();
+    Ok(socket.into())
 }
 
 fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<UdpSocket> {
-    let socket = match addr {
+    let socket: std::net::UdpSocket = match addr {
         SocketAddr::V4(ref saddr) => {
             let socket = socket2::Socket::new(
-                socket2::Domain::ipv4(),
-                socket2::Type::dgram(),
-                Some(socket2::Protocol::udp()),
+                socket2::Domain::IPV4,
+                socket2::Type::DGRAM,
+                Some(socket2::Protocol::UDP),
             )
             .context("construct datagram socket")?;
             socket.set_ttl(ttl).context("set_ttl")?;
@@ -423,9 +424,9 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
         }
         SocketAddr::V6(ref _saddr) => {
             let socket = socket2::Socket::new(
-                socket2::Domain::ipv6(),
-                socket2::Type::dgram(),
-                Some(socket2::Protocol::udp()),
+                socket2::Domain::IPV6,
+                socket2::Type::DGRAM,
+                Some(socket2::Protocol::UDP),
             )
             .context("construct datagram socket")?;
             socket.set_only_v6(true).context("set_only_v6")?;
@@ -435,6 +436,7 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
             socket.bind(&addr.into()).context("bind")?;
             socket
         }
-    };
-    Ok(socket.into_udp_socket().into())
+    }
+    .into();
+    Ok(socket.into())
 }

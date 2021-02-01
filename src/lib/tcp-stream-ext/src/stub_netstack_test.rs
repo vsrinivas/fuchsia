@@ -15,8 +15,6 @@ use {
     tcp_stream_ext::TcpStreamExt as _,
 };
 
-const TCP_KEEPCNT_OPTION_VALUE: i32 = -11;
-const TCP_KEEPINTVL_OPTION_VALUE: i32 = -12;
 const TCP_USER_TIMEOUT_OPTION_VALUE: i32 = -13;
 
 fn with_tcp_stream(f: impl FnOnce(TcpStream) -> ()) {
@@ -43,8 +41,6 @@ fn with_tcp_stream(f: impl FnOnce(TcpStream) -> ()) {
                     StreamSocketRequest::GetSockOpt { level, optname, responder } => {
                         let () = assert_eq!(i32::from(level), libc::IPPROTO_TCP);
                         let option_value = match i32::from(optname) {
-                            libc::TCP_KEEPCNT => TCP_KEEPCNT_OPTION_VALUE,
-                            libc::TCP_KEEPINTVL => TCP_KEEPINTVL_OPTION_VALUE,
                             libc::TCP_USER_TIMEOUT => TCP_USER_TIMEOUT_OPTION_VALUE,
                             optname => panic!("unhandled GetSockOpt option name: {}", optname),
                         };
@@ -62,28 +58,11 @@ fn with_tcp_stream(f: impl FnOnce(TcpStream) -> ()) {
 }
 
 #[test]
-fn keepalive_interval_errors_on_negative_duration() {
-    with_tcp_stream(|stream| {
-        assert_matches!(
-            stream.keepalive_interval(),
-            Err(tcp_stream_ext::Error::NegativeDuration(TCP_KEEPINTVL_OPTION_VALUE))
-        )
-    })
-}
-
-#[test]
 fn user_timeout_errors_on_negative_duration() {
     with_tcp_stream(|stream| {
         assert_matches!(
             stream.user_timeout(),
             Err(tcp_stream_ext::Error::NegativeDuration(TCP_USER_TIMEOUT_OPTION_VALUE))
         )
-    })
-}
-
-#[test]
-fn keepalive_count() {
-    with_tcp_stream(|stream| {
-        assert_matches!(stream.keepalive_count(), Ok(TCP_KEEPCNT_OPTION_VALUE))
     })
 }
