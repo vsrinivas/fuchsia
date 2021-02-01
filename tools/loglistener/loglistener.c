@@ -33,7 +33,7 @@ static const char* nodename = "*";
 int main(int argc, char** argv) {
   struct sockaddr_in6 addr;
   char tmp[INET6_ADDRSTRLEN];
-  int r, s, n = 1;
+  int s, n = 1;
   uint32_t last_seqno = 0;
 
   // Make stdout line buffered.
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     return -1;
   }
   setsockopt(s, SOL_SOCKET, REUSEPORT, &n, sizeof(n));
-  if ((r = bind(s, (void*)&addr, sizeof(addr))) < 0) {
+  if (bind(s, (void*)&addr, sizeof(addr)) < 0) {
     fprintf(stderr, "%s: cannot bind to [%s]%d: %d: %s\n", appname,
             inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)), ntohs(addr.sin6_port), errno,
             strerror(errno));
@@ -81,9 +81,9 @@ int main(int argc, char** argv) {
     char buf[4096 + 1];
     logpacket_t* pkt = (void*)buf;
     rlen = sizeof(ra);
-    r = recvfrom(s, buf, 4096, 0, (void*)&ra, &rlen);
+    ssize_t r = recvfrom(s, buf, 4096, 0, (void*)&ra, &rlen);
     if (r < 0) {
-      fprintf(stderr, "%s: socket read error %d\n", appname, r);
+      fprintf(stderr, "%s: socket read error %zd\n", appname, r);
       break;
     }
     if (r < 8)
