@@ -123,7 +123,18 @@ func (e *endpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.N
 			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
 		}
 		// the "remote" address for `other` is our local address and vice versa.
-		remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
+		//
+		// As of writing, a deadlock may occur when performing link resolution as
+		// the neighbor table will send a solicitation while holding a lock and the
+		// response advertisement will be sent in the same stack that sent the
+		// solictation. When the response is received, the stack attempts to take
+		// the same lock it already took before sending the solicitation, leading to
+		// a deadlock. Basically, we attempt to lock the same lock twice in the same
+		// call stack.
+		//
+		// TODO(gvisor.dev/issue/5289): don't use a new goroutine once we support
+		// send and receive queues.
+		go remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
 	}
 	return nil
 }
