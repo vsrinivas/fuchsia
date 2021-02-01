@@ -74,6 +74,14 @@ someone else has made changes to source code that used to have implicit type
 conversion issues, but did not remove the suppression. If there is nothing to
 fix, proceed to sending the change for review. Otherwise, keep reading.
 
+It's entirely possible for large swaths of code to have been needlessly
+suppressed. If you removed a bunch of suppressions and your change passes CQ
+then you're not wrong, just lucky.
+
+Example:
+
+*   [478402: [cleanup] Remove unused -Wno-conversions](https://fuchsia-review.googlesource.com/c/fuchsia/+/478402)
+
 #### Simple downcasts
 
 ```
