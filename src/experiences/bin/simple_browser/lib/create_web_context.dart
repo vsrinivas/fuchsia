@@ -5,7 +5,7 @@
 import 'package:fidl/fidl.dart' show InterfaceHandle;
 import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fidl_io;
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:zircon/zircon.dart';
 
 /// Creates a web context for creating new web frames
@@ -13,9 +13,10 @@ web.ContextProxy createWebContext() {
   final context = web.ContextProxy();
   final contextProvider = web.ContextProviderProxy();
   final contextProviderProxyRequest = contextProvider.ctrl.request();
-  StartupContext.fromStartupInfo().incoming.connectToServiceByNameWithChannel(
-      contextProvider.ctrl.$serviceName,
-      contextProviderProxyRequest.passChannel());
+  Incoming.fromSvcPath()
+    ..connectToServiceByNameWithChannel(contextProvider.ctrl.$serviceName,
+        contextProviderProxyRequest.passChannel())
+    ..close();
   final channel = Channel.fromFile('/svc');
   final webFeatures = web.ContextFeatureFlags.network |
       web.ContextFeatureFlags.audio |

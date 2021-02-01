@@ -131,7 +131,7 @@ class ErmineStory {
       Suggestion suggestion, ElementControllerProxy elementController) async {
     final proxy = ElementManagerProxy();
 
-    StartupContext.fromStartupInfo().incoming.connectToService(proxy);
+    final incoming = Incoming.fromSvcPath()..connectToService(proxy);
 
     final annotations = Annotations(customAnnotations: [
       Annotation(
@@ -159,6 +159,7 @@ class ErmineStory {
     });
 
     proxy.ctrl.close();
+    await incoming.close();
   }
 
   void presentView(

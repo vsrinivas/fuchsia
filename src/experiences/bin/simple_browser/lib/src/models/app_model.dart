@@ -33,7 +33,9 @@ class AppModel {
     KeyboardShortcuts keyboardShortcuts,
   }) {
     final _intl = PropertyProviderProxy();
-    StartupContext.fromStartupInfo().incoming.connectToService(_intl);
+    Incoming.fromSvcPath()
+      ..connectToService(_intl)
+      ..close();
     final localStream = LocaleSource(_intl).stream().asBroadcastStream();
 
     return AppModel(

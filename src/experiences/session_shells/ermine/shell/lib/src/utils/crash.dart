@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fidl_fuchsia_feedback/fidl_async.dart';
 import 'package:fidl_fuchsia_mem/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:zircon/zircon.dart';
 
 /// Defines a class to run programs under an error [Zone].
@@ -90,9 +90,10 @@ class CrashReportingRunner {
       await reporter.file(report);
     } else {
       final reporterProxy = CrashReporterProxy();
-      StartupContext.fromStartupInfo().incoming.connectToService(reporterProxy);
+      final incoming = Incoming.fromSvcPath()..connectToService(reporterProxy);
       await reporterProxy.file(report);
       reporterProxy.ctrl.close();
+      await incoming.close();
     }
   }
 

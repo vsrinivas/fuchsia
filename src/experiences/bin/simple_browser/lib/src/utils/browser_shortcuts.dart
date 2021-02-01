@@ -43,7 +43,9 @@ class BrowserShortcuts {
     this.actions,
   }) {
     registryProxy = ui_shortcut.RegistryProxy();
-    StartupContext.fromStartupInfo().incoming.connectToService(registryProxy);
+    Incoming.fromSvcPath()
+      ..connectToService(registryProxy)
+      ..close();
 
     actions ??= defaultActions();
   }
