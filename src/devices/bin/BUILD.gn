@@ -4,6 +4,7 @@
 
 group("bin") {
   deps = [
+    "driver-index",
     "driver_host",
     "driver_manager",
   ]
@@ -12,6 +13,7 @@ group("bin") {
 group("tests") {
   testonly = true
   deps = [
+    "driver-index:tests",
     "driver_host:tests",
     "driver_host2:tests",
     "driver_manager:tests",

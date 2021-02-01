@@ -1,0 +1,25 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/driver_index_bin_test",
+    },
+    capabilities: [
+        // This protocol needs to be defined here so it can be exposed from self below.
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
+        { runner: "rust_test_runner" },
+    ],
+    expose: [
+        // The Test Runner Framework expects this protocol to be exposed
+        // from the test component. The Rust test adapter provides this protocol.
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

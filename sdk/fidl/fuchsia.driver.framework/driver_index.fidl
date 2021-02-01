@@ -9,9 +9,9 @@ using fuchsia.url;
 using zx;
 
 /// Protocol through which the driver index can be queried.
+[Discoverable]
 protocol DriverIndex {
     /// Match a set of device arguments to a driver package URL.
-    Match(NodeAddArgs args)
-        -> (string:fuchsia.url.MAX_URL_LENGTH url, NodeAddArgs matched_args)
-        error zx.status;
+    MatchDriver(NodeAddArgs args)
+        -> (string:fuchsia.url.MAX_URL_LENGTH url, NodeAddArgs matched_args) error zx.status;
 };

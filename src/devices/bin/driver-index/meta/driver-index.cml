@@ -1,0 +1,28 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+
+    // The binary to run for this component.
+    program: {
+        binary: "bin/driver_index",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+        },
+    ],
+
+    // Capabilities used by this component.
+    use: [
+        // Use the built-in ELF runner to run native binaries.
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+            from: "self",
+        },
+    ],
+}
