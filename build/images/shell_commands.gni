@@ -141,7 +141,7 @@ template("shell_command") {
       "--input-distribution-manifest",
       rebase_path(distribution_manifest, root_build_dir),
       "--output-directory",
-      rebase_path("$target_out_dir/shell_commands/", root_build_dir),
+      rebase_path(target_gen_dir, root_build_dir),
       "--output-distribution-manifest",
       rebase_path(output, root_build_dir),
       "--depfile",

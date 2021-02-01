@@ -629,11 +629,6 @@ foreach(_target_type,
           args += [ "--no-check-access-permissions" ]
         }
 
-        # TODO(fangism): Add suppressions to the code base that will let us
-        # disallow writing of inputs to the majority of actions.
-        # Goal: Remove this flag eventually
-        args += [ "--writeable-depfile-inputs" ]
-
         if (!all_outputs_fresh) {
           args += [ "--no-check-output-freshness" ]
         }

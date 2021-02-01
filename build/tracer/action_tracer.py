@@ -618,6 +618,10 @@ def main():
     ignored_path_parts = {
         # Python creates these directories with bytecode caches
         "__pycache__",
+        # fxbug.dev/68397: some actions are known to generate implicit outputs in
+        # these directories that are unknown before the metadata collection phase.
+        # It was decided to tolerate this behavior.
+        "__shebang__",
     }
     # TODO(fangism): for suffixes that we always ignore for writing, such as
     # safe or intended side-effect byproducts, make sure no declared inputs ever
