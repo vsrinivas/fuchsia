@@ -33,7 +33,9 @@ class FuchsiaLogWriter extends LogWriter {
 
   void _connectToSysLogger() {
     final proxy = fidl_logger.LogSinkProxy();
-    StartupContext.fromStartupInfo().incoming.connectToService(proxy);
+    Incoming.fromSvcPath()
+      ..connectToService(proxy)
+      ..close();
 
     final socketPair = zircon.SocketPair(zircon.Socket.DATAGRAM);
     proxy.connect(socketPair.second!).then((_) {

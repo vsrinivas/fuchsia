@@ -32,9 +32,7 @@ class CodelabEnvironment {
     }
 
     final environmentProxy = EnvironmentProxy();
-    StartupContext.fromStartupInfo()
-        .incoming
-        .connectToService(environmentProxy);
+    final incoming = Incoming.fromSvcPath()..connectToService(environmentProxy);
 
     _childEnvironment = EnvironmentProxy();
     _childEnvironmentController = EnvironmentControllerProxy();
@@ -70,6 +68,7 @@ class CodelabEnvironment {
     _launcher = LauncherProxy();
     await _childEnvironment.getLauncher(_launcher.ctrl.request());
 
+    await incoming.close();
     _isCreated = true;
   }
 

@@ -43,7 +43,7 @@ void main() {
 
   Future<Map<String, dynamic>> getInspectHierarchy() async {
     final archive = ArchiveProxy();
-    StartupContext.fromStartupInfo().incoming.connectToService(archive);
+    final incoming = Incoming.fromSvcPath()..connectToService(archive);
 
     final params = StreamParameters(
         dataType: DataType.inspect,
@@ -63,6 +63,7 @@ void main() {
         final jsonData = readBuffer(entry.json);
         if (jsonData.contains('fuchsia.inspect.Health') &&
             !jsonData.contains('STARTING_UP')) {
+          await incoming.close();
           return json.decode(jsonData);
         }
       }

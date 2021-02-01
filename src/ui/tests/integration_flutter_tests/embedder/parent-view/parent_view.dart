@@ -105,7 +105,9 @@ ViewHolderToken _launchApp(String componentUrl) {
   final componentController = ComponentControllerProxy();
 
   final launcher = LauncherProxy();
-  StartupContext.fromStartupInfo().incoming.connectToService(launcher);
+  Incoming.fromSvcPath()
+    ..connectToService(launcher)
+    ..close();
   launcher.createComponent(
     LaunchInfo(
       url: componentUrl,

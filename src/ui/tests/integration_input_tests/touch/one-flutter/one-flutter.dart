@@ -46,9 +46,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final _responseListener = fidl_test_ui.ResponseListenerProxy();
 
   _MyHomePageState() {
-    StartupContext.fromStartupInfo()
-        .incoming
-        .connectToService(_responseListener);
+    Incoming.fromSvcPath()
+      ..connectToService(_responseListener)
+      ..close();
 
     // We inspect the lower-level data packets, instead of using the higher-level gesture library.
     WidgetsBinding.instance.window.onPointerDataPacket =

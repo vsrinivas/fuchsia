@@ -64,18 +64,6 @@ class StartupContextImpl implements StartupContext {
   /// underlying services for them.
   factory StartupContextImpl.fromStartupInfo() {
     if (Platform.isFuchsia) {
-      if (!Directory(_serviceRootPath).existsSync()) {
-        final componentName = Platform.script.pathSegments
-            .lastWhere((_) => true, orElse: () => '???');
-        throw Exception(
-            'Attempting to launch component [$componentName] without a valid /svc directory. '
-            'This is an indication that the system is not in a valid state.');
-      }
-      final channel = Channel.fromFile(_serviceRootPath);
-      final directory = fidl_io.DirectoryProxy()
-        ..ctrl.bind(InterfaceHandle<fidl_io.Directory>(channel));
-      final incoming = Incoming.withDirectory(directory);
-
       // Note takeOutgoingServices shouldn't be called more than once per pid
       final outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
 
@@ -88,7 +76,7 @@ class StartupContextImpl implements StartupContext {
       } on Exception catch (_) {}
 
       return StartupContextImpl(
-        incoming: incoming,
+        incoming: Incoming.fromSvcPath(),
         outgoing: _getOutgoingFromHandle(outgoingServicesHandle),
         viewRef: viewRef,
       );

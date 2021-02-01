@@ -6,19 +6,20 @@
 import 'dart:async';
 
 import 'package:fidl_fuchsia_examples/fidl_async.dart' as fidl_echo;
-import 'package:fuchsia_services/services.dart' as sys;
+import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia/fuchsia.dart' show exit;
 import 'package:fuchsia_logger/logger.dart';
 // [END imports]
 
 // [START main]
 Future<void> main(List<String> args) async {
+  final context = StartupContext.fromStartupInfo();
   setupLogger(name: 'echo-client');
 
   // Bind. We bind EchoProxy, a generated proxy class, to the remote Echo
   // service.
   final client = fidl_echo.EchoProxy();
-  sys.StartupContext.fromStartupInfo().incoming.connectToService(client);
+  context.incoming.connectToService(client);
 
   // Invoke echoString with a value and print its response.
   final response = await client.echoString('hello');

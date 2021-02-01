@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
+import 'dart:io' as io;
+
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:zircon/zircon.dart';
@@ -30,7 +32,8 @@ import 'package:zircon/zircon.dart';
 /// These services have been offered to this component by its parent or are
 /// ambiently offered by the Component Framework.
 class Incoming {
-  DirectoryProxy _dirProxy;
+  static const String _serviceRootPath = '/svc';
+  final DirectoryProxy _dirProxy;
 
   /// Initializes [Incoming] with an unbound [DirectoryProxy] which can be used
   /// to bind to a launched component's services.
@@ -42,6 +45,25 @@ class Incoming {
   /// If you are launching a component use the [Incoming()] constructor
   /// to get an unbound directory.
   Incoming.withDirectory(this._dirProxy);
+
+  /// Initializes [Incoming] with a [Directory] that is bound to `/svc` of this
+  /// component.
+  ///
+  /// If you are launching a component use the [Incoming()] constructor
+  /// to get an unbound directory.
+  factory Incoming.fromSvcPath() {
+    if (!io.Directory(_serviceRootPath).existsSync()) {
+      final componentName = io.Platform.script.pathSegments
+          .lastWhere((_) => true, orElse: () => '???');
+      throw Exception(
+          'Attempting to connect to the /svc directory for [$componentName] failed. '
+          'This is an indication that the system is not in a valid state.');
+    }
+    final channel = Channel.fromFile(_serviceRootPath);
+    final directory = DirectoryProxy()
+      ..ctrl.bind(InterfaceHandle<Directory>(channel));
+    return Incoming.withDirectory(directory);
+  }
 
   /// Terminates connection and return Zircon status.
   Future<int> close() async {

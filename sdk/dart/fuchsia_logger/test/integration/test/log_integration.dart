@@ -40,9 +40,10 @@ void main() {
 
 /// Retrieves a stream of logs from syslog which have the [testTag] tag.
 Stream<fidl_log.LogMessage> logStream() {
-  final context = StartupContext.fromStartupInfo();
   final logProxy = fidl_log.LogProxy();
-  context.incoming.connectToService(logProxy);
+  Incoming.fromSvcPath()
+    ..connectToService(logProxy)
+    ..close();
 
   final interfacePair = InterfacePair<fidl_log.LogListenerSafe>();
   logProxy.listenSafe(

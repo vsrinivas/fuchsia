@@ -18,7 +18,7 @@ class TestServerInstance {
   Future<void> start() async {
     // Create and connect to a Launcher service
     final launcherProxy = LauncherProxy();
-    StartupContext.fromStartupInfo().incoming.connectToService(launcherProxy);
+    final svc = Incoming.fromSvcPath()..connectToService(launcherProxy);
 
     final incoming = Incoming();
     final launchInfo = LaunchInfo(
@@ -27,6 +27,7 @@ class TestServerInstance {
     await launcherProxy.createComponent(launchInfo, controller.ctrl.request());
     // Close connection to launcher service
     launcherProxy.ctrl.close();
+    await svc.close();
 
     incoming.connectToService(proxy);
   }
