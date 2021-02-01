@@ -10,7 +10,7 @@ using fuchsia.hardware.usb.hubdescriptor;
 using fuchsia.hardware.usb.request;
 using zircon.hw.usb;
 
-[Layout="ddk-protocol"]
+[BanjoLayout="ddk-protocol"]
 protocol UsbHci {
     /// Queues a USB request with the HCI driver.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,

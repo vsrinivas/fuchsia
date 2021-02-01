@@ -6,7 +6,7 @@ library fuchsia.hardware.badblock;
 
 using zx;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol BadBlock {
     /// Fills in |bad_blocks| with a list of bad blocks, up until
     /// |bad_blocks_count|. The order of blocks is undefined.

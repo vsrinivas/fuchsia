@@ -27,7 +27,7 @@ struct MailboxChannel {
     [Buffer] vector<uint8> rx;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Mailbox {
     SendCommand(MailboxChannel channel, MailboxDataBuf mdata) -> (zx.status s);
 };

@@ -75,7 +75,7 @@ BanjoAst {
                 attributes: Attrs(
                     [
                         Attr {
-                            key: "Layout",
+                            key: "BanjoLayout",
                             val: Some(
                                 "ddk-interface",
                             ),
@@ -241,7 +241,7 @@ BanjoAst {
                 attributes: Attrs(
                     [
                         Attr {
-                            key: "Layout",
+                            key: "BanjoLayout",
                             val: Some(
                                 "ddk-protocol",
                             ),

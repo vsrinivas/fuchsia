@@ -13,7 +13,7 @@ struct Uuid {
     array<uint8>:8 clock_seq_and_node;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Tee {
     /// Takes the server end of a FIDL connection that'll serve fuchsia.tee.Application for the
     /// given application_uuid.

@@ -116,7 +116,7 @@ enum PciIrqMode : uint8 {
 
 
 /// fxbug.dev/33713: Remove the zx_pcie types and implement them here
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Pci {
     GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
     EnableBusMaster(bool enable) -> (zx.status s);

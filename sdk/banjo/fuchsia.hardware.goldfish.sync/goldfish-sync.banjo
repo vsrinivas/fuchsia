@@ -6,7 +6,7 @@ library fuchsia.hardware.goldfish.sync;
 
 using zx;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol GoldfishSync {
     CreateTimeline(handle<channel> timeline_req) -> (zx.status s);
 };

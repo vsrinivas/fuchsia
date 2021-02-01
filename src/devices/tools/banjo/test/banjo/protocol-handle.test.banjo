@@ -6,7 +6,7 @@ library banjo.examples.protocol.handle;
 
 // TODO(surajmalhotra): Reference for handles.
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol SynchronousHandle {
     Handle(handle h) -> (handle h, handle h2);
     Process(handle<process> h) -> (handle<process> h, handle<process> h2);
@@ -28,12 +28,12 @@ protocol SynchronousHandle {
     Profile(handle<profile> h) -> (handle<profile> h, handle<profile> h2);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol AnotherSynchronousHandle {
     Handle(handle h) -> (handle @h, handle @h2);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol AsyncHandle {
     [Async]
     Handle(handle h) -> (handle h, handle h2);

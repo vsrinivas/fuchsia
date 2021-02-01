@@ -7,7 +7,7 @@ library fuchsia.hardware.rawnand;
 using fuchsia.hardware.nandinfo;
 using zx;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol RawNand {
     /// Read one NAND page and its out-of-band data with hardware ECC.
     ReadPageHwecc(uint32 nandpage) -> (zx.status s, [Buffer] vector<uint8> data, [Buffer] vector<uint8> oob,

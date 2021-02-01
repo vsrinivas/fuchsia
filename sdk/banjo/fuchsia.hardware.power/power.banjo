@@ -11,7 +11,7 @@ enum PowerDomainStatus : uint8 {
     ENABLED =  2;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Power {
     /// Register the callee for this power domain. The callee will be registered until
     /// UnregisterPowerDomain is called. Any voltage changes to the power domain will

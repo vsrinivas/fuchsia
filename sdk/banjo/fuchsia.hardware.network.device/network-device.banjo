@@ -202,7 +202,7 @@ struct TxResult {
   zx.status status;
 };
 
-[Layout = "ddk-interface"]
+[BanjoLayout = "ddk-interface"]
 protocol NetworkDeviceIfc {
   /// Notifies interface of changes to device status.
   StatusChanged(Status new_status);
@@ -321,7 +321,7 @@ struct Status {
   uint32 flags;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol NetworkDeviceImpl {
   /// Initializes the network device.
   /// `Init` is only called once during the lifetime of the device to register `iface` as the

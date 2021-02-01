@@ -12,7 +12,7 @@ enum SerialState : uint32 {
     WRITABLE = 0x2;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol SerialImplAsync {
     GetInfo() -> (zx.status s, fuchsia.hardware.serial.SerialPortInfo info);
     /// Configures the given serial port.

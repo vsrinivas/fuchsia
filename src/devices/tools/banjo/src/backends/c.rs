@@ -107,7 +107,7 @@ fn protocol_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Er
 
 pub fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
     if let Some(attributes) = ast.id_to_attributes(id) {
-        if let Some(layout) = attributes.get_attribute("Layout") {
+        if let Some(layout) = attributes.get_attribute("BanjoLayout") {
             if layout == "ddk-callback" {
                 return false;
             }
@@ -479,7 +479,7 @@ enum ProtocolType {
 
 impl From<&Attrs> for ProtocolType {
     fn from(attributes: &Attrs) -> Self {
-        if let Some(layout) = attributes.get_attribute("Layout") {
+        if let Some(layout) = attributes.get_attribute("BanjoLayout") {
             if layout == "ddk-callback" {
                 ProtocolType::Callback
             } else if layout == "ddk-interface" {

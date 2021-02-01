@@ -7,7 +7,7 @@ library banjo.examples.protocol.array;
 // TODO(surajmalhotra): Async for arrays.
 // TODO(surajmalhotra): Reference for arrays.
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Array {
     Bool(array<bool>:1 b) -> (array<bool>:1 b);
     Int8(array<int8>:1 i8) -> (array<int8>:1 i8);
@@ -25,7 +25,7 @@ protocol Array {
 
 const uint32 array_size = 32;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Array2 {
     Bool(array<bool>:array_size b) -> (array<bool>:array_size b);
     Int8(array<int8>:array_size i8) -> (array<int8>:array_size i8);
@@ -41,7 +41,7 @@ protocol Array2 {
     Handle(array<handle>:array_size u64) -> (array<handle>:array_size f64);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol ArrayofArrays {
     Bool(array<array<bool>:4>:array_size b) -> (array<array<bool>:4>:array_size b);
     Int8(array<array<int8>:4>:array_size i8) -> (array<array<int8>:4>:array_size i8);

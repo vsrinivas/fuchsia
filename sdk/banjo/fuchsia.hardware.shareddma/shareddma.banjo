@@ -15,12 +15,12 @@ enum DmaState : uint32 {
     FAILED = 0x2;
 };
 
-[Layout = "ddk-callback"]
+[BanjoLayout = "ddk-callback"]
 protocol DmaNotify {
     Callback(DmaState state) -> ();
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol SharedDma {
 
     /// Initializes and provides a VMO for memory source or destination.

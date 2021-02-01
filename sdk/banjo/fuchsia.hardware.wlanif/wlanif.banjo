@@ -695,7 +695,7 @@ struct WlanifPmkInfo {
     vector<uint8> pmkid;
 };
 
-[Layout = "ddk-interface"]
+[BanjoLayout = "ddk-interface"]
 protocol WlanifImplIfc {
     // MLME operations
     OnScanResult(WlanifScanResult result) -> ();
@@ -728,7 +728,7 @@ protocol WlanifImplIfc {
     DataRecv([Buffer] vector<uint8> data, uint32 flags) -> ();
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol WlanifImpl {
     // Lifecycle operations
     Start(WlanifImplIfc ifc) -> (zx.status status, handle<channel> sme_channel);

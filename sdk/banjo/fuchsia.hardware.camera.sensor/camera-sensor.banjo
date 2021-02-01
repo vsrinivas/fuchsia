@@ -106,7 +106,7 @@ struct FrameRateInfo  {
 // TODO(fxbug.dev/55428): Incorporate muting behavior into documentation. Add arg/return value info.
 // TODO(fxbug.dev/56558): Add a versioning mechanism.
 // TODO(fxbug.dev/55430): Transition methods to use [Async].
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol CameraSensor2 {
     /// Initializes the sensor.
     Init() -> (zx.status s);

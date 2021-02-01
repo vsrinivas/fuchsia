@@ -235,7 +235,7 @@ const uint32 BLOCK_GROUP_ITEM = 0x00000400;
 const uint32 BLOCK_GROUP_LAST = 0x00000800;
 const uint32 BLOCK_FLAG_MASK = 0x0000FF00;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol BlockImpl {
     /// Obtains the parameters of the block device (block_info_t) and
     /// the required size of block_txn_t.  The block_txn_t's submitted
@@ -251,7 +251,7 @@ protocol BlockImpl {
     Queue([InOut] BlockOp txn) -> (zx.status status, [Mutable] BlockOp op);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Block {
     /// Obtains the parameters of the block device (block_info_t) and
     /// the required size of block_txn_t.  The block_txn_t's submitted

@@ -33,7 +33,7 @@ struct PwmConfig {
    [Mutable] vector<voidptr> mode_config;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Pwm {
     /// Gets the current config of the PWM.
     /// @Returns : |s| : ZX_OK if success.
@@ -54,7 +54,7 @@ protocol Pwm {
     Disable() -> (zx.status s);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol PwmImpl {
     /// Gets the current config of the PWM.
     /// |idx| : Index of requested PWM.

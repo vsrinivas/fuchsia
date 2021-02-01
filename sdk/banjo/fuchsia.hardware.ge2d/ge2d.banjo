@@ -36,7 +36,7 @@ struct WaterMarkInfo {
     float32 global_alpha;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Ge2d {
     // Registers the buffer collections and configuration which the GE2D will be using
     // for this task and also the callback functions for a particular task and

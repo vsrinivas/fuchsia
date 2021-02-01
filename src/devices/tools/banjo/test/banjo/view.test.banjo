@@ -6,7 +6,7 @@ library banjo.examples.libraryb;
 
 using banjo.examples.librarya;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol View {
     MoveTo(banjo.examples.librarya.Point p) -> ();
 };

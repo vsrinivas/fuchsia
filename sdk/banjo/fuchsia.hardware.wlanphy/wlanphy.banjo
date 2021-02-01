@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.wlanphy;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Wlanphy {
     /// No operations at the present. One dummy operation is provided to pad the protocol struct.
     Dummy() -> ();

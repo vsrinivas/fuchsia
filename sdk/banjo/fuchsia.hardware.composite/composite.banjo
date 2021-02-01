@@ -7,7 +7,7 @@ library fuchsia.hardware.composite;
 using ddk.device;
 using zx;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Composite {
     /// Returns the number of fragments that can be returned by GetFragments().
     GetFragmentCount() -> (uint32 count);

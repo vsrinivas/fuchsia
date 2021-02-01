@@ -8,7 +8,7 @@ using fuchsia.hardware.usb.request;
 using zircon.hw.usb;
 using zx;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol UsbFunction {
     /// Registers callbacks to the USB function driver.
     SetInterface(UsbFunctionInterface @interface) -> (zx.status s);
@@ -48,7 +48,7 @@ protocol UsbFunction {
 };
 
 /// Interface implemented by the USB function driver.
-[Layout = "ddk-interface"]
+[BanjoLayout = "ddk-interface"]
 protocol UsbFunctionInterface {
     /// Returns the size of the descriptor list for the function.
     GetDescriptorsSize() -> (usize size);

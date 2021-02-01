@@ -42,7 +42,7 @@ union WlanphyCountry {
     uint16 val;
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol WlanphyImpl {
     /// Get information about the capabilities of the physical device.
     Query() -> (zx.status s, WlanphyImplInfo info);

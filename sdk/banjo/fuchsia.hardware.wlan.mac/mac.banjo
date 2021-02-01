@@ -224,7 +224,7 @@ struct WlanBcnConfig {
     uint16 beacon_interval;
 };
 
-[Layout = "ddk-interface"]
+[BanjoLayout = "ddk-interface"]
 protocol WlanmacIfc {
     /// Report the status of the wlanmac device.
     Status(uint32 status) -> ();
@@ -252,7 +252,7 @@ protocol WlanmacIfc {
     HwScanComplete(WlanHwScanResult result);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Wlanmac {
     /// Obtain information about the device and supported features
     /// Safe to call at any time.

@@ -11,12 +11,12 @@ using zx;
 enum ZxUnownedHandle : uint32 {
 };
 
-[Layout = "ddk-interface"]
+[BanjoLayout = "ddk-interface"]
 protocol DisplayCaptureInterface {
   OnCaptureComplete() -> ();
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol DisplayCaptureImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.

@@ -18,7 +18,7 @@ enum ThisIsAnEnum {
 
 const uint32 strings_size = 32;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol OtherTypes {
     Struct(ThisIsAStruct s) -> (ThisIsAStruct s);
     Union(ThisIsAUnion u) -> (ThisIsAUnion u);
@@ -28,7 +28,7 @@ protocol OtherTypes {
     StringSized2(string:strings_size s) -> (string:strings_size s);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol OtherTypesAsync {
     [Async]
     Struct(ThisIsAStruct s) -> (ThisIsAStruct s);
@@ -44,7 +44,7 @@ protocol OtherTypesAsync {
     StringSized2(string:strings_size s) -> (string:strings_size s);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol OtherTypesReference {
     Struct(ThisIsAStruct? s) -> (ThisIsAStruct? s);
     Union(ThisIsAUnion? u) -> (ThisIsAUnion? u);
@@ -53,7 +53,7 @@ protocol OtherTypesReference {
     StringSized2(string:strings_size? s) -> (string:strings_size? s);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol OtherTypesAsyncReference {
     [Async]
     Struct(ThisIsAStruct? s) -> (ThisIsAStruct? s);
@@ -67,7 +67,7 @@ protocol OtherTypesAsyncReference {
     StringSized2(string:strings_size? s) -> (string:strings_size? s);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Interface {
    Value(OtherTypes intf) -> (OtherTypes intf);
    Reference(OtherTypes? intf) -> (OtherTypes? intf);

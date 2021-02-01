@@ -6,7 +6,7 @@ BanjoAst {
                 attributes: Attrs(
                     [
                         Attr {
-                            key: "Layout",
+                            key: "BanjoLayout",
                             val: Some(
                                 "ddk-protocol",
                             ),
@@ -746,7 +746,7 @@ BanjoAst {
                 attributes: Attrs(
                     [
                         Attr {
-                            key: "Layout",
+                            key: "BanjoLayout",
                             val: Some(
                                 "ddk-protocol",
                             ),
@@ -806,7 +806,7 @@ BanjoAst {
                 attributes: Attrs(
                     [
                         Attr {
-                            key: "Layout",
+                            key: "BanjoLayout",
                             val: Some(
                                 "ddk-protocol",
                             ),

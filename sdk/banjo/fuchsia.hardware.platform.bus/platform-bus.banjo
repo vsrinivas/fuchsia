@@ -86,14 +86,14 @@ struct PbusBootloaderInfo {
     string:32 vendor;
 };
 
-[Layout = "ddk-callback"]
+[BanjoLayout = "ddk-callback"]
 protocol PbusSysSuspend {
     Callback(uint8 requested_state, bool enable_wake,
              uint8 suspend_reason) -> (zx.status out_status, uint8 out_state);
 };
 
 
-[Layout="ddk-protocol", DefaultProtocol]
+[BanjoLayout="ddk-protocol", DefaultProtocol]
 protocol PBus {
     /// Adds a new platform device to the bus, using configuration provided by |dev|.
     /// Platform devices are created in their own separate devhosts.

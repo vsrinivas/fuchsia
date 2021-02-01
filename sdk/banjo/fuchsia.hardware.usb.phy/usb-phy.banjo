@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.usb.phy;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol UsbPhy {
     /// Informs the PHY when peripheral role connect status changed.
     ConnectStatusChanged(bool connected);

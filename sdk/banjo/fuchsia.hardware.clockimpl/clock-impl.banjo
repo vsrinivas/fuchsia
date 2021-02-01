@@ -13,7 +13,7 @@ using zx;
 /// Conversely, each instance of ZX_PROTOCOL_CLOCK pertains to only one clock
 /// in the system.
 /// See clock.banjo for documentation for each method.
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol ClockImpl {
     /// Clock Gating Control.
     Enable(uint32 id) -> (zx.status s);

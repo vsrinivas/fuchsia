@@ -12,12 +12,12 @@ struct TestReport {
     uint32 n_failed;
 };
 
-[Layout = "ddk-callback"]
+[BanjoLayout = "ddk-callback"]
 protocol TestFunc {
     Callback() -> (zx.status s, TestReport report);
 };
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol Test {
     /// Sets test output socket.
     SetOutputSocket(handle<socket> @handle) -> ();

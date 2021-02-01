@@ -8,7 +8,7 @@ using fuchsia.hardware.usb.request;
 using zircon.hw.usb;
 using zx;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol UsbDci {
     /// Queues a USB request with the DCI driver.
     RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
@@ -32,7 +32,7 @@ protocol UsbDci {
 };
 
 /// Interface for use by the DCI controller to call into the USB peripheral driver.
-[Layout = "ddk-interface"]
+[BanjoLayout = "ddk-interface"]
 protocol UsbDciInterface {
     /// Callback for handling ep0 control requests.
     Control(zircon.hw.usb.UsbSetup setup, vector<voidptr> write) -> (zx.status status,

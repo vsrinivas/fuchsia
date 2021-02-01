@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.ethernet.board;
 
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol EthBoard {
     ResetPhy() -> (zx.status s);
 };
