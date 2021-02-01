@@ -41,6 +41,14 @@ struct AllocatorAndStorage {
   Allocator allocator;
 };
 
+TEST(Range, Equality) {
+  EXPECT_EQ(Range::FromFirstAndLast(0, 1), Range::FromFirstAndLast(0, 1));
+
+  EXPECT_NE(Range::FromFirstAndLast(0, 1), Range::FromFirstAndLast(0, 0));
+  EXPECT_NE(Range::FromFirstAndLast(0, 1), Range::FromFirstAndLast(1, 1));
+  EXPECT_NE(Range::FromFirstAndLast(0, 1), Range::FromFirstAndLast(1, 0));
+}
+
 TEST(Allocator, EmptyAllocator) {
   Allocator allocator{fbl::Span<RangeStorage>{}};
   EXPECT_THAT(allocator.Allocate(1), HasError(ZX_ERR_NO_RESOURCES));
@@ -252,6 +260,64 @@ TEST(Allocator, RemoveRange) {
 
   // Remove end of one range and the beginning of another.
   EXPECT_EQ(AddThenRemove({{0, 2}, {8, 2}}, {{1, 8}}), 2u);
+}
+
+TEST(Allocator, IterateEmpty) {
+  Allocator allocator{fbl::Span<RangeStorage>{}};
+
+  // Expect the iterator begin and end to be the same.
+  EXPECT_EQ(allocator.begin(), allocator.end());
+
+  // Ensure the standard library can successfully iterate over us.
+  std::vector<Range> ranges(allocator.begin(), allocator.end());
+  EXPECT_TRUE(ranges.empty());
+}
+
+TEST(Allocator, ManualIterationSingleRange) {
+  AllocatorAndStorage storage;
+  Allocator& allocator = storage.allocator;
+
+  // Add a range.
+  EXPECT_THAT(allocator.AddRange(42, 10), IsOk());
+
+  // Ensure we see it during iteration.
+  auto it = allocator.begin();
+  EXPECT_EQ(it->first, 42u);
+  EXPECT_EQ(it->last, 51u);
+
+  // Expect end of iteration.
+  ++it;
+  EXPECT_EQ(it, allocator.end());
+}
+
+TEST(Allocator, IterateContiguousRanges) {
+  AllocatorAndStorage storage;
+  Allocator& allocator = storage.allocator;
+
+  // Add multiple, contiguous ranges.
+  EXPECT_THAT(allocator.AddRange(1, 1), IsOk());
+  EXPECT_THAT(allocator.AddRange(2, 1), IsOk());
+  EXPECT_THAT(allocator.AddRange(3, 1), IsOk());
+
+  // We expect just a single range at the end.
+  std::vector<Range> ranges(allocator.begin(), allocator.end());
+  EXPECT_THAT(ranges, testing::ElementsAre(Range::FromFirstAndLast(1, 3)));
+}
+
+TEST(Allocator, IterateNonContiguousRanges) {
+  AllocatorAndStorage storage;
+  Allocator& allocator = storage.allocator;
+
+  // Add multiple, contiguous ranges.
+  EXPECT_THAT(allocator.AddRange(3, 1), IsOk());
+  EXPECT_THAT(allocator.AddRange(1, 1), IsOk());
+  EXPECT_THAT(allocator.AddRange(5, 1), IsOk());
+
+  // We expect to see all three ranges in order.
+  std::vector<Range> ranges(allocator.begin(), allocator.end());
+  EXPECT_THAT(ranges,
+              testing::ElementsAre(Range::FromFirstAndLast(1, 1), Range::FromFirstAndLast(3, 3),
+                                   Range::FromFirstAndLast(5, 5)));
 }
 
 }  // namespace
