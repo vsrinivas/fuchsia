@@ -95,7 +95,7 @@ fn listen_to_logs(
         let from_archivist = m.tags.iter().any(|t| t == "archivist");
         async move { !from_archivist }
     });
-    let (new_logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap();
+    let (new_logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
 
     let _check_errors = Task::spawn(async move {
         loop {

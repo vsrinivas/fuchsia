@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/58038) use thiserror for library errors
-use anyhow::{Context as _, Error};
 use diagnostics_data::{DiagnosticsData, InspectData};
 use fidl;
 use fidl_fuchsia_diagnostics::{
     ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
-    ClientSelectorConfiguration, Format, FormattedContent, PerformanceConfiguration,
+    ClientSelectorConfiguration, Format, FormattedContent, PerformanceConfiguration, ReaderError,
     SelectorArgument, StreamMode, StreamParameters,
 };
 use fuchsia_async::{self as fasync, DurationExt, Task, TimeoutExt};
 use fuchsia_component::client;
-use fuchsia_zircon::{Duration, DurationNum};
+use fuchsia_zircon::{self as zx, Duration, DurationNum};
 use futures::{channel::mpsc, prelude::*, sink::SinkExt, stream::FusedStream};
 use pin_project::pin_project;
 use serde_json::Value as JsonValue;
@@ -22,6 +20,7 @@ use std::{
     sync::Arc,
     task::{Context, Poll},
 };
+use thiserror::Error;
 
 use parking_lot::Mutex;
 
@@ -32,6 +31,34 @@ pub use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
 pub use fidl_fuchsia_diagnostics::DataType;
 
 const RETRY_DELAY_MS: i64 = 300;
+
+/// Errors that this library can return
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Failed to connect to the archive accessor")]
+    ConnectToArchive(#[source] anyhow::Error),
+
+    #[error("Failed to create the BatchIterator channel ends")]
+    CreateIteratorProxy(#[source] fidl::Error),
+
+    #[error("Failed to stream diagnostics from the accessor")]
+    StreamDiagnostics(#[source] fidl::Error),
+
+    #[error("Failed to call iterator server")]
+    GetNextCall(#[source] fidl::Error),
+
+    #[error("Received error from the GetNext response: {0:?}")]
+    GetNextReaderError(ReaderError),
+
+    #[error("Failed to read json received")]
+    ReadJson(#[source] serde_json::Error),
+
+    #[error("Failed to parse the diagnostics data from the json received")]
+    ParseDiagnosticsData(#[source] serde_json::Error),
+
+    #[error("Failed to read vmo from the response")]
+    ReadVmo(#[source] zx::Status),
+}
 
 /// An inspect tree selector for a component.
 pub struct ComponentSelector {
@@ -183,12 +210,10 @@ impl ArchiveReader {
         D: DiagnosticsData,
     {
         let raw_json = self.snapshot_raw(D::DATA_TYPE).await?;
-        Ok(serde_json::from_value(raw_json)?)
+        Ok(serde_json::from_value(raw_json).map_err(Error::ReadJson)?)
     }
 
-    pub fn snapshot_then_subscribe<M>(
-        &self,
-    ) -> Result<(Subscription<M>, mpsc::Receiver<Error>), Error>
+    pub fn snapshot_then_subscribe<M>(&self) -> Result<Subscription<M>, Error>
     where
         M: DiagnosticsData + 'static,
     {
@@ -242,14 +267,14 @@ impl ArchiveReader {
         if archive.is_none() {
             *archive = Some(
                 client::connect_to_service::<ArchiveAccessorMarker>()
-                    .context("connect to archive")?,
+                    .map_err(Error::ConnectToArchive)?,
             )
         }
 
         let archive = archive.as_ref().unwrap();
 
         let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
-            .context("failed to create iterator proxy")?;
+            .map_err(Error::CreateIteratorProxy)?;
 
         let mut stream_parameters = StreamParameters::EMPTY;
         stream_parameters.stream_mode = Some(mode);
@@ -273,7 +298,9 @@ impl ArchiveReader {
             ..PerformanceConfiguration::EMPTY
         });
 
-        archive.stream_diagnostics(stream_parameters, server_end).context("get BatchIterator")?;
+        archive
+            .stream_diagnostics(stream_parameters, server_end)
+            .map_err(Error::StreamDiagnostics)?;
         Ok(iterator)
     }
 }
@@ -286,7 +313,11 @@ where
     Fut: Future<Output = ()>,
 {
     loop {
-        let next_batch = iterator.get_next().await.context("getting batch")?.unwrap();
+        let next_batch = iterator
+            .get_next()
+            .await
+            .map_err(Error::GetNextCall)?
+            .map_err(Error::GetNextReaderError)?;
         if next_batch.is_empty() {
             return Ok(());
         }
@@ -294,10 +325,10 @@ where
             match formatted_content {
                 FormattedContent::Json(data) => {
                     let mut buf = vec![0; data.size as usize];
-                    data.vmo.read(&mut buf, 0).context("reading vmo")?;
+                    data.vmo.read(&mut buf, 0).map_err(Error::ReadVmo)?;
                     let hierarchy_json = std::str::from_utf8(&buf).unwrap();
                     let output: JsonValue =
-                        serde_json::from_str(&hierarchy_json).context("valid json")?;
+                        serde_json::from_str(&hierarchy_json).map_err(Error::ReadJson)?;
 
                     match output {
                         output @ JsonValue::Object(_) => {
@@ -322,7 +353,7 @@ where
 #[pin_project]
 pub struct Subscription<M: DiagnosticsData> {
     #[pin]
-    recv: mpsc::Receiver<Data<M>>,
+    recv: mpsc::Receiver<Result<Data<M>, Error>>,
     _drain_task: Task<()>,
 }
 
@@ -333,34 +364,74 @@ impl<M> Subscription<M>
 where
     M: DiagnosticsData + 'static,
 {
-    fn new(iterator: BatchIteratorProxy) -> (Self, mpsc::Receiver<Error>) {
-        let (send, recv) = mpsc::channel(DATA_CHANNEL_SIZE);
-        let (send_error, errors) = mpsc::channel(ERROR_CHANNEL_SIZE);
-        let mut send_drain_error = send_error.clone();
+    fn new(iterator: BatchIteratorProxy) -> Self {
+        let (mut sender, recv) = mpsc::channel(DATA_CHANNEL_SIZE);
 
         let _drain_task = Task::spawn(async move {
             let drain_result = drain_batch_iterator(iterator, |d| {
-                let mut send = send.clone();
-                let mut send_error = send_error.clone();
+                let mut sender = sender.clone();
                 async move {
                     match serde_json::from_value(d) {
-                        Ok(d) => send.send(d).await.unwrap(),
-                        Err(e) => send_error.send(e.into()).await.unwrap(),
-                    }
+                        Ok(d) => sender.send(Ok(d)).await.ok(),
+                        Err(e) => sender.send(Err(Error::ParseDiagnosticsData(e))).await.ok(),
+                    };
                 }
             })
             .await;
 
             if let Err(e) = drain_result {
-                send_drain_error.send(e).await.unwrap();
+                sender.send(Err(e)).await.ok();
             }
         });
 
-        (Subscription { recv, _drain_task }, errors)
+        Subscription { recv, _drain_task }
+    }
+
+    /// Splits the subscription into two separate streams: results and errors.
+    pub fn split_streams(mut self) -> (SubscriptionResultsStream<M>, mpsc::Receiver<Error>) {
+        let (mut errors_sender, errors) = mpsc::channel(ERROR_CHANNEL_SIZE);
+        let (mut results_sender, recv) = mpsc::channel(DATA_CHANNEL_SIZE);
+        let _drain_task = fasync::Task::spawn(async move {
+            while let Some(result) = self.next().await {
+                match result {
+                    Ok(value) => results_sender.send(value).await.ok(),
+                    Err(e) => errors_sender.send(e).await.ok(),
+                };
+            }
+        });
+        (SubscriptionResultsStream { recv, _drain_task }, errors)
     }
 }
 
 impl<M> Stream for Subscription<M>
+where
+    M: DiagnosticsData + 'static,
+{
+    type Item = Result<Data<M>, Error>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+        this.recv.poll_next(cx)
+    }
+}
+
+impl<M> FusedStream for Subscription<M>
+where
+    M: DiagnosticsData + 'static,
+{
+    fn is_terminated(&self) -> bool {
+        self.recv.is_terminated()
+    }
+}
+
+#[pin_project]
+pub struct SubscriptionResultsStream<M: DiagnosticsData> {
+    #[pin]
+    recv: mpsc::Receiver<Data<M>>,
+    _drain_task: fasync::Task<()>,
+}
+
+impl<M> Stream for SubscriptionResultsStream<M>
 where
     M: DiagnosticsData + 'static,
 {
@@ -372,7 +443,7 @@ where
     }
 }
 
-impl<M> FusedStream for Subscription<M>
+impl<M> FusedStream for SubscriptionResultsStream<M>
 where
     M: DiagnosticsData + 'static,
 {
@@ -401,7 +472,7 @@ mod tests {
     const TEST_COMPONENT_URL: &str =
         "fuchsia-pkg://fuchsia.com/diagnostics-reader-tests#meta/inspect_test_component.cmx";
 
-    async fn start_component(env_label: &str) -> Result<(NestedEnvironment, App), Error> {
+    async fn start_component(env_label: &str) -> Result<(NestedEnvironment, App), anyhow::Error> {
         let mut service_fs = ServiceFs::new();
         let env = service_fs.create_nested_environment(env_label)?;
         let app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;
@@ -457,7 +528,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn inspect_data_for_component() -> Result<(), Error> {
+    async fn inspect_data_for_component() -> Result<(), anyhow::Error> {
         let (_env, _app) = start_component("test-ok").await?;
 
         let results = ArchiveReader::new()
@@ -501,7 +572,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn timeout() -> Result<(), Error> {
+    async fn timeout() -> Result<(), anyhow::Error> {
         let (_env, _app) = start_component("test-timeout").await?;
 
         let result = ArchiveReader::new()

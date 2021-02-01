@@ -47,7 +47,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
 async fn maintain(mut stats: LogManagerStats, archive: ArchiveAccessorProxy) {
     let reader = ArchiveReader::new().with_archive(archive);
 
-    let (mut logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap();
+    let (mut logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
     let _errors = fasync::Task::spawn(async move {
         while let Some(error) = errors.next().await {
             panic!("Error encountered while retrieving logs: {}", error);

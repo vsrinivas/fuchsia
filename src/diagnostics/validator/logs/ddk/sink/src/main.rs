@@ -53,7 +53,8 @@ impl Puppet {
         let test_log = "test_log";
         info!("Ensuring we received the init message.");
         let reader = ArchiveReader::new();
-        let (mut logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap();
+        let (mut logs, mut errors) =
+            reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
         let _errors = Task::spawn(async move {
             while let Some(e) = errors.next().await {
                 panic!("error in subscription: {}", e);

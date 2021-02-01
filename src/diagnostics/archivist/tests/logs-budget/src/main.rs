@@ -8,7 +8,7 @@ use archivist_lib::{
 };
 use diagnostics_data::{Data, LogError, Logs, Severity};
 use diagnostics_hierarchy::{trie::TrieIterableNode, DiagnosticsHierarchy};
-use diagnostics_reader::{ArchiveReader, Inspect, Subscription};
+use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::LogSinkMarker;
@@ -64,7 +64,7 @@ struct PuppetEnv {
     running_puppets: Vec<Puppet>,
     inspect_reader: ArchiveReader,
     log_reader: ArchiveReader,
-    log_subscription: Subscription<Logs>,
+    log_subscription: SubscriptionResultsStream<Logs>,
     rng: StdRng,
     _serve_fs: Task<()>,
     _log_errors: Task<()>,
@@ -120,7 +120,8 @@ impl PuppetEnv {
             .with_archive(archive())
             .with_minimum_schema_count(0) // we want this to return even when no log messages
             .retry_if_empty(false);
-        let (log_subscription, mut errors) = log_reader.snapshot_then_subscribe::<Logs>().unwrap();
+        let (log_subscription, mut errors) =
+            log_reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
 
         let _log_errors = Task::spawn(async move {
             if let Some(error) = errors.next().await {

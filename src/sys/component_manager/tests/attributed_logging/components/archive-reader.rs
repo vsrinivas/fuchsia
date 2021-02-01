@@ -55,8 +55,8 @@ async fn main() {
         ]],
     );
 
-    if let Ok((mut result, _)) = reader.snapshot_then_subscribe::<Logs>() {
-        while let Some(log_record) = result.next().await {
+    if let Ok(mut results) = reader.snapshot_then_subscribe::<Logs>() {
+        while let Some(Ok(log_record)) = results.next().await {
             if let Some(log_str) = log_record.msg() {
                 match treasure.get_mut(&log_record.moniker) {
                     None => non_matching_logs.push(log_record),

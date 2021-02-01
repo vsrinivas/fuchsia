@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow, serde_json, std::str::FromStr, thiserror::Error};
+use {anyhow, diagnostics_reader as reader, serde_json, std::str::FromStr, thiserror::Error};
 
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Error while fetching data: {0}")]
-    Fetch(anyhow::Error),
+    Fetch(reader::Error),
 
     #[error("Invalid format: {0}")]
     InvalidFormat(String),

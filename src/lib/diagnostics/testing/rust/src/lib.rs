@@ -217,7 +217,8 @@ impl AppReader {
 
     /// Returns a stream of log messages for this component.
     pub fn logs(&mut self) -> impl Stream<Item = Data<Logs>> {
-        let (sub, mut errors) = self.reader.snapshot_then_subscribe::<Logs>().unwrap();
+        let (sub, mut errors) =
+            self.reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
 
         self._logs_tasks.push(Task::spawn(async move {
             loop {

@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context as _, Error, Result},
     diagnostics_data::{Logs, LogsData, LogsField, LogsHierarchy, LogsProperty},
-    diagnostics_reader::ArchiveReader,
+    diagnostics_reader::{ArchiveReader, Error as ReaderError},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
@@ -24,15 +24,21 @@ use {
     },
     std::cmp::max,
     std::convert::TryInto,
+    std::fmt::Debug,
     std::sync::Arc,
     tracing::{info, warn},
 };
 
 // This lets us mock out the ArchiveReader in tests
 pub trait ArchiveReaderManager {
+    type Error: Debug + Send + 'static;
+
     fn start_log_stream(
         &mut self,
-    ) -> Result<(Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Error>), StreamError>;
+    ) -> Result<
+        (Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Self::Error>),
+        StreamError,
+    >;
 
     /// Provides an implementation of an ArchiveIterator server. Intended to be used by clients who
     /// wish to spawn an ArchiveIterator server given an implementation of `start_log_stream`..
@@ -53,7 +59,7 @@ pub trait ArchiveReaderManager {
                     ArchiveIteratorRequest::GetNext { responder } => {
                         let logs = select! {
                             err = err_chan.select_next_some() => {
-                                warn!(%err, "Data read error");
+                                warn!(?err, "Data read error");
                                 responder.send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
                                 continue;
                             }
@@ -71,7 +77,7 @@ pub trait ArchiveReaderManager {
                         let (truncated_logs, truncated_chars) = match truncate_log_msg(logs) {
                             Ok(t) => t,
                             Err(err) => {
-                                warn!(%err, "failed to truncate log message");
+                                warn!(?err, "failed to truncate log message");
                                 responder.send(&mut Err(ArchiveIteratorError::TruncationFailed))?;
                                 continue;
                             }
@@ -106,15 +112,22 @@ impl ArchiveReaderManagerImpl {
 }
 
 impl ArchiveReaderManager for ArchiveReaderManagerImpl {
+    type Error = ReaderError;
+
     fn start_log_stream(
         &mut self,
-    ) -> Result<(Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Error>), StreamError>
-    {
-        let (log_stream, err_chan) =
-            self.reader.snapshot_then_subscribe::<Logs>().map_err(|err| {
+    ) -> Result<
+        (Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Self::Error>),
+        StreamError,
+    > {
+        let (log_stream, err_chan) = self
+            .reader
+            .snapshot_then_subscribe::<Logs>()
+            .map_err(|err| {
                 warn!(%err, "Got error creating log subscription");
                 StreamError::SetupSubscriptionFailed
-            })?;
+            })?
+            .split_streams();
 
         Ok((Box::new(log_stream), err_chan))
     }
@@ -156,19 +169,21 @@ fn truncate_log_msg(mut logs: LogsData) -> Result<(LogsData, u32)> {
     return Ok((logs, max(0, truncated_chars).try_into()?));
 }
 
-pub struct RemoteDiagnosticsBridge<F>
+pub struct RemoteDiagnosticsBridge<E, F>
 where
-    F: Fn(BridgeStreamParameters) -> Box<dyn ArchiveReaderManager>,
+    F: Fn(BridgeStreamParameters) -> Box<dyn ArchiveReaderManager<Error = E>>,
+    E: Into<anyhow::Error> + Send,
 {
     archive_accessor: F,
 }
 
-impl<F> RemoteDiagnosticsBridge<F>
+impl<E, F> RemoteDiagnosticsBridge<E, F>
 where
-    F: Fn(BridgeStreamParameters) -> Box<dyn ArchiveReaderManager>
+    F: Fn(BridgeStreamParameters) -> Box<dyn ArchiveReaderManager<Error = E>>
         + std::marker::Send
         + std::marker::Sync
         + 'static,
+    E: Into<anyhow::Error> + Send + Debug + 'static,
 {
     pub fn new(archive_accessor: F) -> Result<Self> {
         return Ok(RemoteDiagnosticsBridge { archive_accessor: archive_accessor });
@@ -298,10 +313,12 @@ mod test {
     }
 
     impl ArchiveReaderManager for FakeArchiveReaderManager {
+        type Error = anyhow::Error;
+
         fn start_log_stream(
             &mut self,
         ) -> Result<
-            (Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Error>),
+            (Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Self::Error>),
             StreamError,
         > {
             if let Some(cerr) = self.connection_error {
@@ -320,7 +337,7 @@ mod test {
 
     fn setup_diagnostics_bridge_proxy<F>(service: F) -> RemoteDiagnosticsBridgeProxy
     where
-        F: Fn(BridgeStreamParameters) -> Box<dyn ArchiveReaderManager>
+        F: Fn(BridgeStreamParameters) -> Box<dyn ArchiveReaderManager<Error = anyhow::Error>>
             + std::marker::Send
             + std::marker::Sync
             + 'static,

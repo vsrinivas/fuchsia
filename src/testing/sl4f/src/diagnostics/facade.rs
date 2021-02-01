@@ -26,12 +26,13 @@ impl DiagnosticsFacade {
         let service_path = format!("/svc/{}", args.service_name);
         let proxy =
             client::connect_to_service_at_path::<ArchiveAccessorMarker>(&service_path).unwrap();
-        ArchiveReader::new()
+        let value = ArchiveReader::new()
             .retry_if_empty(false)
             .with_archive(proxy)
             .add_selectors(args.selectors.into_iter())
             .with_batch_retrieval_timeout_seconds(BATCH_RETRIEVAL_TIMEOUT_SECONDS)
             .snapshot_raw(DataType::Inspect)
-            .await
+            .await?;
+        Ok(value)
     }
 }

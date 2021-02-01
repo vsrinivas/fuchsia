@@ -43,12 +43,12 @@ async fn read_v2_components_inspect() {
 #[fasync::run_singlethreaded(test)]
 async fn log_attribution() {
     fuchsia_syslog::init().unwrap();
-    let (mut result, _errors) =
+    let mut result =
         ArchiveReader::new().snapshot_then_subscribe::<Logs>().expect("snapshot then subscribe");
 
     for log_str in &["This is a syslog message", "This is another syslog message"] {
         info!("{}", log_str);
-        let log_record = result.next().await.expect("received log");
+        let log_record = result.next().await.expect("received log").expect("log is not an error");
 
         assert_eq!(log_record.moniker, "driver");
         assert_eq!(log_record.metadata.component_url, DRIVER_COMPONENT);
