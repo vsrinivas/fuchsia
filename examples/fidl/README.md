@@ -10,6 +10,17 @@ up to date. To run tests:
     fx set core.x64 --with //examples/fidl:tests
     fx test -vo //examples/fidl
 
+Included in this are integration tests which will launch and run client/server
+examples against eachother and check for successful exist codes. To run just the
+integration test:
+
+    fx test -vo examples-integration-test
+
+This test is written using gtest, so you can filter for specific
+client/server pairs as you would any other gtest:
+
+    fx test -vo examples-integration-test -- '--gtest_filter=IntegrationTest.Llcpp*'
+
 All major FIDL code examples used in documentation should preferably be
 included from a source file somewhere in this documentation that is covered
 by tests. This eliminates sample code duplication and ensures that example
