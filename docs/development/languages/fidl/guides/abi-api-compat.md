@@ -263,6 +263,9 @@ Changing a bits declaration from `flexible` to `strict` is:
   * In Rust, certain methods are provided for both strict and flexible bits, but
     usages for strict bits cause a deprecation warning during compation which
     could become errors if using `-Dwarning` or `#![deny(warnings)]`.
+  * In HLCPP, the bit mask is a `const` in the top level library namespace for
+    strict bits, but a `static const` member of the generated class for flexible
+    bits.
 
 #### Enums
 
