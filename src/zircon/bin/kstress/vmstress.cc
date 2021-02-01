@@ -180,7 +180,7 @@ int SingleVmoTestInstance::vmo_thread() {
   uint64_t idx = vmo_thread_idx_++;
 
   // allocate a local buffer
-  const size_t buf_size = PAGE_SIZE * 16;
+  const size_t buf_size = zx_system_get_page_size() * 16;
   bufs_[idx] = fbl::Array<uint8_t>(new uint8_t[buf_size], buf_size);
   const fbl::Array<uint8_t>& buf = bufs_[idx];
 
@@ -192,7 +192,7 @@ int SingleVmoTestInstance::vmo_thread() {
     *out_offset = uniform_rand(vmo_size_, rng);
     *out_size = std::min(uniform_rand(vmo_size_, rng), vmo_size_ - *out_offset);
   };
-  auto rand_buffer_range = [this, &rng](uint64_t* out_offset, uint64_t* out_size) {
+  auto rand_buffer_range = [this, &rng, buf_size](uint64_t* out_offset, uint64_t* out_size) {
     *out_size = uniform_rand(buf_size, rng);
     *out_offset = uniform_rand(vmo_size_ - *out_size, rng);
   };
@@ -281,7 +281,7 @@ static bool is_thread_blocked(zx_handle_t handle) {
 int SingleVmoTestInstance::pager_thread() {
   zx_status_t status;
 
-  uint64_t vmo_page_count = vmo_size_ / ZX_PAGE_SIZE;
+  uint64_t vmo_page_count = vmo_size_ / zx_system_get_page_size();
   ZX_ASSERT(vmo_page_count > 0);
 
   auto supply_pages = [this](uint64_t off, uint64_t len) {
@@ -319,7 +319,7 @@ int SingleVmoTestInstance::pager_thread() {
       {
         off = uniform_rand(vmo_page_count, rng);
         size = std::min(uniform_rand(vmo_page_count, rng), vmo_page_count - off);
-        supply_pages(off * PAGE_SIZE, size * PAGE_SIZE);
+        supply_pages(off * zx_system_get_page_size(), size * zx_system_get_page_size());
         break;
       }
       case 5 ... 54:  // read from the port
@@ -627,7 +627,7 @@ zx_status_t CowCloneTestInstance::Stop() {
   for (unsigned i = 0; i < kMaxTestVmos; i++) {
     if (test_datas_[i].vmo) {
       zx::vmar::root_self()->unmap(test_datas_[i].vmo->ptr,
-                                   test_datas_[i].vmo->page_count * ZX_PAGE_SIZE);
+                                   test_datas_[i].vmo->page_count * zx_system_get_page_size());
     }
   }
 
@@ -679,8 +679,9 @@ fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
       page_offset = uniform_rand(parent->page_count, rng);
 
       parent_clone_start_op_id = parent->next_op_id.load();
-      zx_status_t status = parent->vmo.create_child(
-          ZX_VMO_CHILD_COPY_ON_WRITE, page_offset * ZX_PAGE_SIZE, page_count * ZX_PAGE_SIZE, &vmo);
+      zx_status_t status = parent->vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE,
+                                                    page_offset * zx_system_get_page_size(),
+                                                    page_count * zx_system_get_page_size(), &vmo);
       ZX_ASSERT_MSG(status == ZX_OK, "Failed to clone vmo %d", status);
       parent_clone_end_op_id = parent->next_op_id.load();
     } else {
@@ -696,13 +697,13 @@ fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
 
   if (!parent) {
     parent_clone_start_op_id = parent_clone_end_op_id = 0;
-    zx_status_t status = zx::vmo::create(page_count * ZX_PAGE_SIZE, 0, &vmo);
+    zx_status_t status = zx::vmo::create(page_count * zx_system_get_page_size(), 0, &vmo);
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to clone vmo %d", status);
   }
 
   uintptr_t ptr;
   zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
-                             page_count * ZX_PAGE_SIZE, &ptr);
+                             page_count * zx_system_get_page_size(), &ptr);
 
   uint32_t vmo_id = next_vmo_id_.fetch_add(1);
   // The chance that an individual instance lives this long is vanishingly small, and it
@@ -720,7 +721,8 @@ bool CowCloneTestInstance::TestVmoWrite(uint32_t idx, const fbl::RefPtr<TestData
                                         StressTest::Rng& rng) {
   uint32_t page_idx = uniform_rand(test_data->page_count, rng);
 
-  auto p = reinterpret_cast<std::atomic_uint64_t*>(test_data->ptr + page_idx * ZX_PAGE_SIZE);
+  auto p = reinterpret_cast<std::atomic_uint64_t*>(test_data->ptr +
+                                                   page_idx * zx_system_get_page_size());
 
   // We want the ids to be atomically increasing. To prevent races between two
   // threads at the same location mixing up the order of their op-ids, do a cmpxchg
@@ -794,7 +796,7 @@ bool CowCloneTestInstance::TestVmoWrite(uint32_t idx, const fbl::RefPtr<TestData
     if (cur->parent->idx != cur->idx && maybe_parent.mtx.try_lock_shared()) {
       if (maybe_parent.vmo == cur->parent) {
         auto val = reinterpret_cast<std::atomic_uint64_t*>(maybe_parent.vmo->ptr +
-                                                           parent_idx * ZX_PAGE_SIZE)
+                                                           parent_idx * zx_system_get_page_size())
                        ->load();
         // If the clone sees a particular write_vmo_id, then that means the VMO
         // with the associated id wrote to that address before the clone operation.
@@ -840,7 +842,8 @@ int CowCloneTestInstance::op_thread() {
         test_data.vmo = CreateTestVmo(idx, rng);
       } else if (rand_op >= 15 && test_data.vmo != nullptr) {
         for (unsigned i = 0; i < test_data.vmo->page_count; i++) {
-          auto val = reinterpret_cast<std::atomic_uint64_t*>(test_data.vmo->ptr + i * ZX_PAGE_SIZE)
+          auto val = reinterpret_cast<std::atomic_uint64_t*>(test_data.vmo->ptr +
+                                                             i * zx_system_get_page_size())
                          ->load();
           // vmo ids are monotonically increasing, so we shouldn't see
           // any ids greater than the current vmo's.
@@ -852,7 +855,8 @@ int CowCloneTestInstance::op_thread() {
           }
         }
 
-        zx::vmar::root_self()->unmap(test_data.vmo->ptr, test_data.vmo->page_count * ZX_PAGE_SIZE);
+        zx::vmar::root_self()->unmap(test_data.vmo->ptr,
+                                     test_data.vmo->page_count * zx_system_get_page_size());
         test_data.vmo->vmo.reset();
         test_data.vmo = nullptr;
       }
@@ -881,7 +885,7 @@ class MultiVmoTestInstance : public TestInstance {
  public:
   MultiVmoTestInstance(VmStressTest* test, uint64_t mem_limit)
       : TestInstance(test),
-        memory_limit_pages_(mem_limit / ZX_PAGE_SIZE),
+        memory_limit_pages_(mem_limit / zx_system_get_page_size()),
         // Scale our maximum threads to ensure that if all threads allocate a full size vmo (via
         // copy-on-write or otherwise) we wouldn't exceed our memory limit
         max_threads_(memory_limit_pages_ / kMaxVmoPages) {}
@@ -933,7 +937,7 @@ class MultiVmoTestInstance : public TestInstance {
   void spawn_root_vmo(StressTest::Rng& rng) {
     zx::vmo vmo;
     bool reliable_mappings = true;
-    uint64_t vmo_size = uniform_rand(kMaxVmoPages, rng) * PAGE_SIZE;
+    uint64_t vmo_size = uniform_rand(kMaxVmoPages, rng) * zx_system_get_page_size();
 
     // Skew heavily away from contiguous VMOs as they are very limited in what operations are
     // supported and need less testing.
@@ -1085,7 +1089,7 @@ class MultiVmoTestInstance : public TestInstance {
     // this vmo calling set-size, but should ensure a decent hit rate of random range operations.
     uint64_t vmo_size;
     if (vmo.get_size(&vmo_size) != ZX_OK) {
-      vmo_size = kMaxVmoPages * ZX_PAGE_SIZE;
+      vmo_size = kMaxVmoPages * zx_system_get_page_size();
     }
     while (!shutdown_ && op_count->fetch_add(1) < kMaxOps) {
       // Produce a random offset and size up front since many ops will need it.
@@ -1151,7 +1155,7 @@ class MultiVmoTestInstance : public TestInstance {
         }
         case 4:  // vmo_set_size
           Printf("S");
-          vmo.set_size(uniform_rand(kMaxVmoPages * ZX_PAGE_SIZE, rng));
+          vmo.set_size(uniform_rand(kMaxVmoPages * zx_system_get_page_size(), rng));
           break;
         case 5: {  // vmo_op_range
           Printf("O");
@@ -1227,7 +1231,7 @@ class MultiVmoTestInstance : public TestInstance {
           if (bti_) {
             if (pmt || uniform_rand(2, rng) == 0) {
               zx::pmt new_pmt;
-              std::vector<zx_paddr_t> paddrs{op_size / PAGE_SIZE, 0};
+              std::vector<zx_paddr_t> paddrs{op_size / zx_system_get_page_size(), 0};
               if (bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo, op_off, op_size,
                            paddrs.data(), paddrs.size(), &new_pmt) == ZX_OK) {
                 if (pmt) {
@@ -1262,16 +1266,17 @@ class MultiVmoTestInstance : public TestInstance {
         *off_out = 0;
         break;
       case 1:  // Page aligned offset, in bounds
-        *off_out = uniform_rand(vmo_size / ZX_PAGE_SIZE, rng) * ZX_PAGE_SIZE;
+        *off_out =
+            uniform_rand(vmo_size / zx_system_get_page_size(), rng) * zx_system_get_page_size();
         break;
       case 2:  // Page aligned offset, out of bounds
-        *off_out = uniform_rand(kOobLimitPages, rng) * ZX_PAGE_SIZE;
+        *off_out = uniform_rand(kOobLimitPages, rng) * zx_system_get_page_size();
         break;
       case 3:  // In bounds
         *off_out = uniform_rand(vmo_size, rng);
         break;
       case 4:  // Out of bounds
-        *off_out = uniform_rand(kOobLimitPages * ZX_PAGE_SIZE, rng);
+        *off_out = uniform_rand(kOobLimitPages * zx_system_get_page_size(), rng);
         break;
     }
     const uint64_t remaining = vmo_size - std::min(vmo_size, *off_out);
@@ -1280,16 +1285,17 @@ class MultiVmoTestInstance : public TestInstance {
         *size_out = remaining;
         break;
       case 1:  // In range page aligned size
-        *size_out = uniform_rand(remaining / ZX_PAGE_SIZE, rng) * ZX_PAGE_SIZE;
+        *size_out =
+            uniform_rand(remaining / zx_system_get_page_size(), rng) * zx_system_get_page_size();
         break;
       case 2:  // Out of range page aligned size
-        *size_out = uniform_rand(kOobLimitPages, rng) * ZX_PAGE_SIZE;
+        *size_out = uniform_rand(kOobLimitPages, rng) * zx_system_get_page_size();
         break;
       case 3:  // In range size
         *size_out = uniform_rand(remaining, rng);
         break;
       case 4:  // Out of range size
-        *size_out = uniform_rand(kOobLimitPages * ZX_PAGE_SIZE, rng);
+        *size_out = uniform_rand(kOobLimitPages * zx_system_get_page_size(), rng);
         break;
     }
   }
