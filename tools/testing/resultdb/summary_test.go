@@ -125,17 +125,17 @@ func TestInvocationLevelArtifacts(t *testing.T) {
 		switch logName {
 		case "syslog.txt":
 			foundSyslog = true
-		case "serial_log.log":
+		case "serial_log.txt":
 			foundSerial = true
 		default:
-			t.Errorf("Found unexpected log (%s), expect only syslog.txt or serial_log.log", logName)
+			t.Errorf("Found unexpected log (%s), expect only syslog.txt or serial_log.txt", logName)
 		}
 	}
 	if !foundSyslog {
 		t.Errorf("Did not find syslog.txt in output")
 	}
 	if !foundSerial {
-		t.Errorf("Did not find serial_log.log in output")
+		t.Errorf("Did not find serial_log.txt in output")
 	}
 }
 func TestDetermineExpected(t *testing.T) {
