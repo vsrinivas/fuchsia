@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon.gni")
-
 declare_args() {
   # If non-empty, the given script will be invoked to produce a signed ZBI
   # image. The given script must accept -z for the input zbi path, and -o for
@@ -27,7 +25,7 @@ declare_args() {
 # The signing script is required to accept two parameters:
 #  -z  the path to the ZBI image to be signed
 #  -o  the path to the image file to be output
-#  -B  the path to the zircon build directory
+#  -B  the path to the build directory
 #
 # TODO(fxbug.dev/3128): add flags for producing depfiles
 # TODO(raggi): add support for custom flags (e.g. to switch keys)

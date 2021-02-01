@@ -316,8 +316,6 @@ if (current_toolchain != sysroot_toolchain) {
   # Build the common sysroot headers in a specialized toolchain() instance,
   # since this GN operation is pretty slow. The end result is either symlinked
   # or copied to other toolchain sysroots (see _create_sysroot() above).
-  import("//build/config/fuchsia/zircon.gni")
-
   import("//zircon/system/ulib/c/sysroot_entries.gni")
   import("//zircon/system/ulib/zircon/sysroot_entries.gni")
   sysroot_entries =

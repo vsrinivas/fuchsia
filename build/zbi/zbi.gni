@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon.gni")
+import("//build/zircon/tools.gni")
 import("zbi_input.gni")
 
 declare_args() {
@@ -107,12 +107,6 @@ template("zbi") {
   }
   json_output_file = "$output_file.json"
 
-  zbi_tool_target = "//zircon/tools/zbi($host_toolchain)"
-  zbi_tool = get_label_info(zbi_tool_target, "root_out_dir") + "/zbi"
-  if (host_os == "win") {
-    zbi_tool += ".exe"
-  }
-
   action(main_target) {
     forward_variables_from(invoker,
                            [
@@ -134,7 +128,7 @@ template("zbi") {
 
     inputs = [
       rsp_file,
-      zbi_tool,
+      zbi_tool_path,
     ]
     outputs = [
       output_file,
@@ -144,7 +138,7 @@ template("zbi") {
 
     args = [
       "--zbi",
-      rebase_path(zbi_tool, root_build_dir),
+      rebase_path(zbi_tool_path, root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
       "--rspfile",

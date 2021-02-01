@@ -5,7 +5,6 @@
 import("//build/board.gni")
 import("//build/config/build_api_module.gni")
 import("//build/config/compiler.gni")
-import("//build/config/fuchsia/zircon.gni")
 import("//build/dev.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
