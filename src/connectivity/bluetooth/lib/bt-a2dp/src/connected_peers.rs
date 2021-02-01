@@ -24,7 +24,7 @@ use {
     std::{collections::HashMap, pin::Pin, sync::Arc},
 };
 
-use crate::{codec::CodecNegotiation, peer::Peer, stream::Streams};
+use crate::{codec::CodecNegotiation, peer::Peer, permits::Permits, stream::Streams};
 
 /// ConnectedPeers manages the set of connected peers based on discovery, new connection, and
 /// peer session lifetime.
@@ -35,6 +35,8 @@ pub struct ConnectedPeers {
     descriptors: HashMap<PeerId, ProfileDescriptor>,
     /// A set of streams which can be used as a template for each newly connected peer.
     streams: Streams,
+    /// The permits that each peer uses to validate that we can start a stream.
+    permits: Permits,
     /// Codec Negotiation used to choose a compatible stream pair when starting streaming.
     codec_negotiation: CodecNegotiation,
     /// Profile Proxy, used to connect new transport sockets.
@@ -56,6 +58,7 @@ impl ConnectedPeers {
     pub fn new(
         streams: Streams,
         codec_negotiation: CodecNegotiation,
+        max_streams_active: usize,
         profile: ProfileProxy,
         cobalt_sender: Option<CobaltSender>,
     ) -> Self {
@@ -65,6 +68,7 @@ impl ConnectedPeers {
             streams,
             codec_negotiation,
             profile,
+            permits: Permits::new(max_streams_active),
             inspect: inspect::Node::default(),
             inspect_peer_direction: inspect::StringProperty::default(),
             cobalt_sender,
@@ -148,6 +152,7 @@ impl ConnectedPeers {
             id,
             avdtp_peer,
             self.streams.as_new(),
+            Some(self.permits.clone()),
             self.profile.clone(),
             self.cobalt_sender.clone(),
         );
@@ -314,6 +319,7 @@ mod tests {
         let peers = ConnectedPeers::new(
             Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
+            1,
             proxy,
             Some(cobalt_sender),
         );
@@ -434,7 +440,8 @@ mod tests {
         streams.insert(build_test_stream(SBC_SEID, sbc_codec.clone()));
         streams.insert(build_test_stream(AAC_SEID, aac_codec.clone()));
 
-        let peers = ConnectedPeers::new(streams, negotiation.clone(), proxy, Some(cobalt_sender));
+        let peers =
+            ConnectedPeers::new(streams, negotiation.clone(), 1, proxy, Some(cobalt_sender));
 
         (exec, peers, stream, sbc_codec, aac_codec)
     }

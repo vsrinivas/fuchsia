@@ -545,6 +545,7 @@ async fn main() -> Result<(), Error> {
     let mut peers = ConnectedPeers::new(
         stream_builder.streams()?,
         stream_builder.negotiation(),
+        1,
         profile_svc.clone(),
         Some(cobalt.clone()),
     );
@@ -667,6 +668,7 @@ mod tests {
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             stream::Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
+            1,
             proxy.clone(),
             Some(cobalt_sender),
         )));
