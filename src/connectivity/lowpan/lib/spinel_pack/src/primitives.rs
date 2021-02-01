@@ -27,6 +27,63 @@ macro_rules! impl_try_array_owned_unpack_sized(
     }
 );
 
+macro_rules! impl_try_pack_unpack_as_data(
+    (u8) => {
+        // We skip u8.
+    };
+    ($self:ty) => {
+        impl<'a> TryUnpackAs<'a, [u8]> for $self {
+            fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
+                Self::try_unpack(iter)
+            }
+        }
+        impl<'a> TryUnpackAs<'a, SpinelDataWlen> for $self {
+            fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
+                // Get a reference to the buffer.
+                let buffer: &'a[u8] = TryUnpackAs::<SpinelDataWlen>::try_unpack_as(iter)?;
+
+                // Unpack using that buffer.
+                TryUnpackAs::<[u8]>::try_unpack_as(&mut buffer.iter())
+            }
+        }
+        impl TryPackAs<[u8]> for $self {
+            fn pack_as_len(&self) -> io::Result<usize> {
+                self.pack_len()
+            }
+
+            fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+                self.try_pack(buffer)
+            }
+        }
+        impl TryPackAs<SpinelDataWlen> for $self {
+            fn pack_as_len(&self) -> io::Result<usize> {
+                self.pack_len().map(|x|x+2)
+            }
+
+            fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+                // Start with the length of the encoding
+                let mut len = TryPackAs::<[u8]>::pack_as_len(self)?;
+
+                // Encode the length of the buffer and add the
+                // length of that to our total length.
+                len += TryPackAs::<u16>::try_pack_as(&(len as u16), buffer)?;
+
+                // Encode the rest of the object into the buffer.
+                TryPackAs::<[u8]>::try_pack_as(self, buffer)?;
+
+                Ok(len)
+            }
+        }
+    };
+    ($self:ty $(,$next:ty)*,) => {
+        impl_try_pack_unpack_as_data!($self $(,$next)*);
+    };
+    ($self:ty $(,$next:ty)*) => {
+        impl_try_pack_unpack_as_data!($self);
+        impl_try_pack_unpack_as_data!($($next,)*);
+    };
+);
+
 /// Private convenience macro for defining the appropriate
 /// traits for primitive types with fixed encoding lengths.
 macro_rules! def_fixed_len(
@@ -34,6 +91,7 @@ macro_rules! def_fixed_len(
         def_fixed_len!($t, $len, $t, |$pack_buf, $pack_var|$pack_block, | $unpack_buf | $unpack_block);
     };
     ($t:ty, $len:expr, $pack_as:ty,  |$pack_buf:ident, $pack_var:ident| $pack_block:expr, | $unpack_buf:ident | $unpack_block:expr) => {
+        impl_try_pack_unpack_as_data!($t);
         impl TryPackAs<$pack_as> for $t {
             fn pack_as_len(&self) -> io::Result<usize> {
                 Ok(<$t>::FIXED_LEN)
@@ -361,17 +419,6 @@ impl TryPackAs<SpinelDataWlen> for &[u8] {
     }
 }
 
-impl TryPackAs<SpinelDataWlen> for Vec<u8> {
-    fn pack_as_len(&self) -> std::io::Result<usize> {
-        Ok(self.len() + 2)
-    }
-
-    fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> std::io::Result<usize> {
-        let slice: &[u8] = &*self;
-        TryPackAs::<SpinelDataWlen>::try_pack_as(slice, buffer)
-    }
-}
-
 impl TryPackAs<[u8]> for [u8] {
     fn pack_as_len(&self) -> std::io::Result<usize> {
         Ok(self.len())
@@ -386,17 +433,6 @@ impl TryPackAs<[u8]> for [u8] {
         } else {
             buffer.write_all(bytes).map(|_| len)
         }
-    }
-}
-
-impl TryPackAs<[u8]> for Vec<u8> {
-    fn pack_as_len(&self) -> std::io::Result<usize> {
-        Ok(self.len())
-    }
-
-    fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> std::io::Result<usize> {
-        let slice: &[u8] = &*self;
-        TryPackAs::<[u8]>::try_pack_as(slice, buffer)
     }
 }
 
@@ -473,12 +509,6 @@ impl<'a> TryUnpackAs<'a, [u8]> for &'a [u8] {
     }
 }
 
-impl<'a> TryUnpackAs<'a, [u8]> for Vec<u8> {
-    fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
-        Self::try_unpack(iter)
-    }
-}
-
 impl<'a> TryUnpackAs<'a, SpinelDataWlen> for &'a [u8] {
     fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
         let len = u16::try_unpack(iter)? as usize;
@@ -493,13 +523,6 @@ impl<'a> TryUnpackAs<'a, SpinelDataWlen> for &'a [u8] {
         *iter = ret[len..].iter();
 
         Ok(&ret[..len])
-    }
-}
-
-impl<'a> TryUnpackAs<'a, SpinelDataWlen> for Vec<u8> {
-    fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
-        let slice: &[u8] = TryUnpackAs::<SpinelDataWlen>::try_unpack_as(iter)?;
-        Ok(slice.to_owned())
     }
 }
 
@@ -707,6 +730,64 @@ where
     impl_try_array_unpack_sized!(Self, 'a);
 }
 
+impl<'a, T> TryUnpackAs<'a, [u8]> for Vec<T>
+where
+    Self: TryUnpack<'a, Unpacked = Vec<T>>,
+{
+    fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
+        Self::try_unpack(iter)
+    }
+}
+
+impl<'a, T> TryUnpackAs<'a, SpinelDataWlen> for Vec<T>
+where
+    Self: TryUnpackAs<'a, [u8]>,
+{
+    fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
+        // Get a reference to the buffer.
+        let buffer: &'a [u8] = TryUnpackAs::<SpinelDataWlen>::try_unpack_as(iter)?;
+
+        // Unpack using that buffer.
+        TryUnpackAs::<[u8]>::try_unpack_as(&mut buffer.iter())
+    }
+}
+
+impl<T> TryPackAs<[u8]> for Vec<T>
+where
+    Self: TryPack,
+{
+    fn pack_as_len(&self) -> io::Result<usize> {
+        self.pack_len()
+    }
+
+    fn try_pack_as<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        self.try_pack(buffer)
+    }
+}
+
+impl<T> TryPackAs<SpinelDataWlen> for Vec<T>
+where
+    Self: TryPackAs<[u8]>,
+{
+    fn pack_as_len(&self) -> io::Result<usize> {
+        TryPackAs::<[u8]>::pack_as_len(self).map(|x| x + 2)
+    }
+
+    fn try_pack_as<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        // Start with the length of the encoding
+        let mut len = TryPackAs::<[u8]>::pack_as_len(self)?;
+
+        // Encode the length of the buffer and add the
+        // length of that to our total length.
+        len += TryPackAs::<u16>::try_pack_as(&(len as u16), buffer)?;
+
+        // Encode the rest of the object into the buffer.
+        TryPackAs::<[u8]>::try_pack_as(self, buffer)?;
+
+        Ok(len)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -862,6 +943,62 @@ mod tests {
 
         assert!(out.contains("123"));
         assert!(out.contains("456"));
+    }
+
+    #[test]
+    fn test_u32_as_data_unpack() {
+        let buffer: &[u8] = &[0x67, 0x45, 0x23, 0x01, 0xfe, 0x0f, 0xdc, 0xba];
+
+        let out = Vec::<u32>::try_unpack_from_slice(buffer).unwrap();
+
+        assert_eq!(out, &[0x01234567, 0xbadc0ffe]);
+    }
+
+    #[test]
+    fn test_u32_as_data_unpack_wlen() {
+        let buffer: &[u8] = &[0x08, 0x00, 0x67, 0x45, 0x23, 0x01, 0xfe, 0x0f, 0xdc, 0xba];
+
+        let out = Vec::<u32>::try_array_unpack(&mut buffer.iter()).unwrap();
+
+        assert_eq!(out, &[0x01234567, 0xbadc0ffe]);
+    }
+
+    #[test]
+    fn test_u32_as_data_pack() {
+        let v: Vec<u32> = vec![0x01234567, 0xbadc0ffe];
+        let buffer: &[u8] = &[0x67, 0x45, 0x23, 0x01, 0xfe, 0x0f, 0xdc, 0xba];
+
+        let mut packed = Vec::with_capacity(v.pack_len().unwrap());
+        v.try_pack(&mut packed).unwrap();
+
+        assert_eq!(buffer, packed);
+    }
+
+    #[test]
+    fn test_u32_as_data_pack_wlen() {
+        let v: Vec<u32> = vec![0x01234567, 0xbadc0ffe];
+        let buffer: &[u8] = &[0x08, 0x00, 0x67, 0x45, 0x23, 0x01, 0xfe, 0x0f, 0xdc, 0xba];
+
+        let mut packed = Vec::with_capacity(v.array_pack_len().unwrap());
+        v.try_array_pack(&mut packed).unwrap();
+
+        assert_eq!(buffer, packed);
+    }
+
+    #[test]
+    fn test_u32_as_data_pack_struct() {
+        #[spinel_packed("d")]
+        #[derive(Debug, Hash, Clone, Eq, PartialEq)]
+        struct Blah {
+            v: Vec<u32>,
+        }
+        let v = Blah { v: vec![0x01234567, 0xbadc0ffe] };
+        let buffer: &[u8] = &[0x08, 0x00, 0x67, 0x45, 0x23, 0x01, 0xfe, 0x0f, 0xdc, 0xba];
+
+        let mut packed = Vec::with_capacity(v.pack_len().unwrap());
+        v.try_pack(&mut packed).unwrap();
+
+        assert_eq!(buffer, packed);
     }
 
     #[test]
