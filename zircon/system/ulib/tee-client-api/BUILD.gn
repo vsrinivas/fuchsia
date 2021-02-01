@@ -33,7 +33,4 @@ static_library("tee-client-api-static") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
