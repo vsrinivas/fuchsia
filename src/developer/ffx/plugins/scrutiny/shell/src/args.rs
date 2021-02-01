@@ -7,4 +7,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "shell", description = "Run the scrutiny shell")]
-pub struct ScrutinyShellCommand {}
+pub struct ScrutinyShellCommand {
+    #[argh(positional)]
+    pub command: Option<String>,
+}

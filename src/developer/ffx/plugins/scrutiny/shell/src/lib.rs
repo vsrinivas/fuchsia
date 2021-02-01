@@ -6,10 +6,24 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_shell_args::ScrutinyShellCommand,
-    scrutiny_frontend::{config::Config, launcher},
+    scrutiny_frontend::{
+        config::{Config, LaunchConfig, RuntimeConfig},
+        launcher
+    },
 };
 
 #[ffx_plugin()]
-pub async fn scrutiny_shell(_cmd: ScrutinyShellCommand) -> Result<(), Error> {
-    launcher::launch_from_config(Config::default())
+pub async fn scrutiny_shell(cmd: ScrutinyShellCommand) -> Result<(), Error> {
+    if let Some(command) = cmd.command {
+        let launch_config = LaunchConfig {
+            command: Some(command),
+            script_path: None,
+        };
+        launcher::launch_from_config(Config {
+            launch: launch_config,
+            runtime: RuntimeConfig::minimal()
+        })
+    } else {
+        launcher::launch_from_config(Config::default())
+    }
 }
