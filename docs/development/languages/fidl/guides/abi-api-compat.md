@@ -79,19 +79,25 @@ level when some clients cannot be migrated atomically:
 
 ### Removing a library declaration {#library-declaration-remove}
 
-ABI: It is binary-compatible to remove a library declaration.
+**ABI**
 
-API: Before removing a library declaration, ensure that no uses of this
-declaration exists.
+It is binary-compatible to remove a library declaration.
+
+**API**
+
+Before removing a library declaration, ensure that no uses of this declaration
+exists.
 
 ## Protocols {#protocol}
 
 ### Adding a method to a protocol {#protocol-method-add}
 
 **ABI**
+
 It is binary-compatible to add a method to a protocol.
 
 **API**
+
 To safely add a method to a protocol, mark the new method with
 [`[Transitional]`][transitional]. Once all implementations of the new method are
 in place, you can remove the [`[Transitional]`][transitional] attribute.
@@ -102,9 +108,11 @@ method][example-method-remove].
 ### Removing a method from a protocol {#protocol-method-remove}
 
 **ABI**
+
 It is binary-compatible to remove a method from a protocol.
 
 **API**
+
 To safely remove a method from a protocol, start by marking the method with
 [`[Transitional]`][transitional]. Once this has fully propagated, you can remove
 all implementations of the method, then remove the method from the FIDL
@@ -119,117 +127,171 @@ Examples: adding [an event][example-event-add], [a method][example-method-add].
 
 ### Renaming a method {#protocol-method-rename}
 
-ABI: Method renames can be made safe with use of the [`[Selector = "..."]`
+**ABI**
+
+Method renames can be made safe with use of the [`[Selector = "..."]`
 attribute][selector].
 
-API: It is not possible to rename a method in a source-compatible way.
+**API**
+
+It is not possible to rename a method in a source-compatible way.
 
 ## Method {#method}
 
 ### Renaming a method parameter {#method-parameter-rename}
 
-ABI: It is binary-compatible to rename a method parameter.
+**ABI**
 
-API: Bindings typically rely on positional arguments, such that renaming a
-method parameter is source-compatible.
+It is binary-compatible to rename a method parameter.
+
+**API**
+
+Bindings typically rely on positional arguments, such that renaming a method
+parameter is source-compatible.
 
 ## Table {#table}
 
 ### Adding a table field {#table-field-add}
 
-ABI: It is binary-compatible to add a table field.
+**ABI**
 
-API: It is source-compatible to add a table field.
+It is binary-compatible to add a table field.
+
+**API**
+
+It is source-compatible to add a table field.
 
 ### Removing a table field {#table-field-remove}
 
-ABI: It is binary-compatible to remove a table field.
+**ABI**
 
-API: There must not be any use of the field to ensure a source-compatible
-removal.
+It is binary-compatible to remove a table field.
+
+**API**
+
+There must not be any use of the field to ensure a source-compatible removal.
 
 ### Renaming a table field {#table-field-rename}
 
-ABI: It is binary-compatible to rename a table field.
+**ABI**
 
-API: It is not source-compatible to rename a table field.
+It is binary-compatible to rename a table field.
+
+**API**
+
+It is not source-compatible to rename a table field.
 
 ## Union {#union}
 
 ### Adding a union variant {#union-variant-add}
 
-ABI: It is binary-compatible to add a union variant. To ensure the added union
+**ABI**
+
+It is binary-compatible to add a union variant. To ensure the added union
 variant is not rejected during runtime validation, it must have propagated to
 readers ahead of it being used by writers.
 
-API: Care must be taken to transition [switches on the union
+**API**
+
+Care must be taken to transition [switches on the union
 tag](#switch-evolvability).
 
 ### Removing a union variant {#union-variant-remove}
 
-ABI: It is binary-compatible to remove a union variant. To ensure the removed
-union variant is not rejected during runtime validation, no writer may use the
-union variant when it is removed.
+**ABI**
 
-API: Care must be taken to transition [switches on the union
+It is binary-compatible to remove a union variant. To ensure the removed union
+variant is not rejected during runtime validation, no writer may use the union
+variant when it is removed.
+
+**API**
+
+Care must be taken to transition [switches on the union
 tag](#switch-evolvability).
 
 ### Renaming a union variant {#union-variant-rename}
 
-ABI: It is binary-compatible to rename a union variant.
+**ABI**
 
-API: It is not source-compatible to rename a union variant.
+It is binary-compatible to rename a union variant.
+
+**API**
+
+It is not source-compatible to rename a union variant.
 
 ## Enum {#enum}
 
 ### Adding an enum member {#enum-member-add}
 
-ABI: It is binary-compatible to add an enum member. To ensure the added enum
-member is not rejected during runtime validation, it must have propagated to
-readers ahead of it being used by writers.
+**ABI**
 
-API: Care must be taken to transition [switches on the
-enum](#switch-evolvability).
+It is binary-compatible to add an enum member. To ensure the added enum member
+is not rejected during runtime validation, it must have propagated to readers
+ahead of it being used by writers.
+
+**API**
+
+Care must be taken to transition [switches on the enum](#switch-evolvability).
 
 ### Removing an enum member {#enum-member-remove}
 
-ABI: It is binary-compatible to remove an enum member. To ensure the removed
-enum member is not rejected during runtime validation, no writer may use the
-enum member when it is removed.
+**ABI**
 
-API: Care must be taken to transition [switches on the
-enum](#switch-evolvability). Ensure that no uses of this enum member exists.
+It is binary-compatible to remove an enum member. To ensure the removed enum
+member is not rejected during runtime validation, no writer may use the enum
+member when it is removed.
+
+**API**
+
+Care must be taken to transition [switches on the enum](#switch-evolvability).
+Ensure that no uses of this enum member exists.
 
 ### Renaming an enum member {#enum-member-rename}
 
-ABI: It is binary-compatible to rename an enum member.
+**ABI**
 
-API: It is not source-compatible to rename an enum member.
+It is binary-compatible to rename an enum member.
+
+**API**
+
+It is not source-compatible to rename an enum member.
 
 ## Bits {#bits}
 
 ### Adding a bits member {#bits-member-add}
 
-ABI: It is binary-compatible to add a bits member. To ensure the added bits
-member is not rejected during runtime validation, it must have propagated to
-readers ahead of it being used by writers.
+**ABI**
 
-API: It is source-compatible to add a bits member.
+It is binary-compatible to add a bits member. To ensure the added bits member is
+not rejected during runtime validation, it must have propagated to readers ahead
+of it being used by writers.
+
+**API**
+
+It is source-compatible to add a bits member.
 
 ### Removing a bits member {#bits-member-remove}
 
-ABI: It is binary-compatible to remove a bits member. To ensure the removed bits
+**ABI**
+
+It is binary-compatible to remove a bits member. To ensure the removed bits
 member is not rejected during runtime validation, no writer may use the bits
 member when it is removed.
 
-API: It is source-compatible to remove a bits member. Ensure that no uses of
-this bits member exists.
+**API**
+
+It is source-compatible to remove a bits member. Ensure that no uses of this
+bits member exists.
 
 ### Renaming a bits member {#bits-member-rename}
 
-ABI: It is binary-compatible to rename a bits member.
+**ABI**
 
-API: It is not source-compatible to rename a bits member.
+It is binary-compatible to rename a bits member.
+
+**API**
+
+It is not source-compatible to rename a bits member.
 
 ## Constant {#const}
 
@@ -255,6 +317,7 @@ Details for each declaration and binding are provided below.
 #### Bits
 
 **`strict` to `flexible`**
+
 Changing a bits declaration from `strict` to `flexible` is:
 
 * Source-compatible in LLCPP, Rust, Go, and Dart.
@@ -268,6 +331,7 @@ Example: [changing a bits declaration from `strict` to
 `flexible`][example-bits-strict-flexible].
 
 **`flexible` to `strict`**
+
 Changing a bits declaration from `flexible` to `strict` is:
 
 * Source-compatible Go, and Dart
@@ -287,6 +351,7 @@ Example: [changing a bits declaration from `flexible` to
 #### Enums
 
 **`strict` to `flexible`**
+
 Changing an enum declaration from `strict` to `flexible` is:
 
 * Source-compatible in Go and Dart.
@@ -309,6 +374,7 @@ Example: [changing an enum declaration from `strict` to
 `flexible`][example-enum-strict-flexible].
 
 **`flexible` to `strict`**
+
 Changing an enum declaration from `flexible` to `strict` is:
 
 * Source-incompatible in all bindings.
