@@ -14,6 +14,7 @@ go_library("make-fuchsia-vol_lib") {
     "abr.go",
     "abr_test.go",
     "make-fuchsia-vol.go",
+    "make-fuchsia-vol_test.go",
   ]
 }
 

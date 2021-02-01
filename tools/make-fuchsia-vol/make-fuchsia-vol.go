@@ -372,7 +372,7 @@ func main() {
 	var aStart, bStart, rStart uint64
 	var vbmetaAStart, vbmetaBStart, vbmetaRStart, miscStart uint64
 	if *abr {
-		aStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		aStart, end = optimalBlockAlign(end+1, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconA,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -381,7 +381,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		vbmetaAStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		vbmetaAStart, end = optimalBlockAlign(end+1, uint64(*vbmetaSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaVbmetaA,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -390,7 +390,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		bStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		bStart, end = optimalBlockAlign(end+1, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconB,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -399,7 +399,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		vbmetaBStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		vbmetaBStart, end = optimalBlockAlign(end+1, uint64(*vbmetaSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaVbmetaB,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -408,7 +408,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		rStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		rStart, end = optimalBlockAlign(end+1, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconR,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -417,7 +417,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		vbmetaRStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		vbmetaRStart, end = optimalBlockAlign(end+1, uint64(*vbmetaSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaVbmetaR,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -426,7 +426,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		miscStart, end = optimalBlockAlign(end, uint64(*vbmetaSize), logical, physical, optimal)
+		miscStart, end = optimalBlockAlign(end+1, uint64(*vbmetaSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaMisc,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -443,6 +443,7 @@ func main() {
 		if *fvmSize == 0 {
 			end = g.Primary.LastUsableLBA
 		}
+		end++
 		*fvmSize = int64((end - fvmStart) * logical)
 
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
@@ -687,7 +688,7 @@ func msCopyIn(root fs.Directory, src, dst string) {
 // optimalBlockAlign computes a start and end logical block address for a
 // partition that starts at or after first (block address), of size byteSize,
 // for a disk with logical, physical and optimal byte sizes. It returns the
-// start and end block addresses.
+// start block address and the address of the last block of the partition.
 func optimalBlockAlign(first, byteSize, logical, physical, optimal uint64) (start, end uint64) {
 	var alignTo = logical
 	if physical > alignTo {
@@ -699,16 +700,18 @@ func optimalBlockAlign(first, byteSize, logical, physical, optimal uint64) (star
 
 	lAlign := alignTo / logical
 
+	start = first
 	if d := first % lAlign; d != 0 {
 		start = first + lAlign - d
 	}
 
 	lSize := byteSize / logical
-	if byteSize%logical == 0 {
+	if byteSize%logical != 0 {
 		lSize++
 	}
 
-	end = start + lSize
+	// "start" is inclusive, so to get lSize blocks total, we need the first block + lSize - 1 extra blocks.
+	end = start + lSize - 1
 	return
 }
 
