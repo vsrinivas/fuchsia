@@ -48,15 +48,55 @@ impl Endpoint {
     }
 }
 
+#[derive(Default)]
+struct Wakeup(Option<Waker>);
+impl Wakeup {
+    #[must_use]
+    fn pending<R>(&mut self, ctx: &mut Context<'_>) -> Poll<R> {
+        self.0 = Some(ctx.waker().clone());
+        Poll::Pending
+    }
+
+    fn ready(&mut self) {
+        self.0.take().map(|w| w.wake());
+    }
+}
+
+#[derive(Default)]
+struct WakeupMap(BTreeMap<u64, Waker>);
+impl WakeupMap {
+    #[must_use]
+    fn pending<R>(&mut self, ctx: &mut Context<'_>, k: u64) -> Poll<R> {
+        self.0.insert(k, ctx.waker().clone());
+        Poll::Pending
+    }
+
+    fn ready(&mut self, k: u64) {
+        self.0.remove(&k).map(|w| w.wake());
+    }
+
+    fn ready_iter(&mut self, iter: impl Iterator<Item = u64>) {
+        for k in iter {
+            self.ready(k)
+        }
+    }
+
+    fn all_ready(&mut self) {
+        std::mem::replace(&mut self.0, BTreeMap::new()).into_iter().for_each(|(_, w)| w.wake());
+    }
+}
+
 /// Current state of a connection - mutex guarded by AsyncConnection.
 pub struct ConnState {
     conn: Pin<Box<Connection>>,
     seen_established: bool,
     closed: bool,
-    waiting_for_conn_send: Option<Waker>,
-    waiting_for_stream_recv: BTreeMap<u64, Waker>,
-    waiting_for_stream_send: BTreeMap<u64, Waker>,
-    new_timeout: Option<Waker>,
+    conn_send: Wakeup,
+    stream_recv: WakeupMap,
+    stream_send: WakeupMap,
+    dgram_send: Wakeup,
+    dgram_recv: Wakeup,
+    new_timeout: Wakeup,
     timeout: Option<Instant>,
 }
 
@@ -76,64 +116,27 @@ impl ConnState {
             Ok(n) => {
                 self.update_timeout();
                 self.wake_stream_io();
+                self.dgram_send.ready();
                 Poll::Ready(Ok(Some(n)))
             }
             Err(quiche::Error::Done) if self.conn.is_closed() => Poll::Ready(Ok(None)),
             Err(quiche::Error::Done) => {
                 self.update_timeout();
-                self.wait_for_conn_send(ctx)
+                self.conn_send.pending(ctx)
             }
             Err(e) => Poll::Ready(Err(e.into())),
         }
     }
 
-    fn wake_conn_send(&mut self) {
-        self.waiting_for_conn_send.take().map(|w| w.wake());
-    }
-
-    fn wait_for_conn_send<R>(&mut self, ctx: &mut Context<'_>) -> Poll<R> {
-        self.waiting_for_conn_send = Some(ctx.waker().clone());
-        Poll::Pending
-    }
-
-    fn wait_for_stream_recv<R>(&mut self, stream: u64, ctx: &mut Context<'_>) -> Poll<R> {
-        self.waiting_for_stream_recv.insert(stream, ctx.waker().clone());
-        Poll::Pending
-    }
-
-    fn wait_for_stream_send<R>(&mut self, stream: u64, ctx: &mut Context<'_>) -> Poll<R> {
-        self.waiting_for_stream_send.insert(stream, ctx.waker().clone());
-        Poll::Pending
-    }
-
-    fn wake_stream_recv(&mut self, stream: u64) {
-        self.waiting_for_stream_recv.remove(&stream).map(|w| w.wake());
-    }
-
-    fn wake_stream_send(&mut self, stream: u64) {
-        self.waiting_for_stream_send.remove(&stream).map(|w| w.wake());
-    }
-
     fn wake_stream_io(&mut self) {
         if !self.seen_established && self.conn.is_established() {
             self.seen_established = true;
-            return self.wake_all_streams();
+            self.stream_recv.all_ready();
+            self.stream_send.all_ready();
+        } else {
+            self.stream_recv.ready_iter(self.conn.readable());
+            self.stream_send.ready_iter(self.conn.writable());
         }
-        for s in self.conn.readable() {
-            self.wake_stream_recv(s);
-        }
-        for s in self.conn.writable() {
-            self.wake_stream_send(s);
-        }
-    }
-
-    fn wake_all_streams(&mut self) {
-        std::mem::replace(&mut self.waiting_for_stream_recv, BTreeMap::new())
-            .into_iter()
-            .for_each(|(_, w)| w.wake());
-        std::mem::replace(&mut self.waiting_for_stream_send, BTreeMap::new())
-            .into_iter()
-            .for_each(|(_, w)| w.wake());
     }
 
     fn wait_for_new_timeout(
@@ -142,8 +145,7 @@ impl ConnState {
         last_seen: Option<Instant>,
     ) -> Poll<Option<Instant>> {
         if last_seen == self.timeout {
-            self.new_timeout = Some(ctx.waker().clone());
-            Poll::Pending
+            self.new_timeout.pending(ctx)
         } else {
             Poll::Ready(self.timeout)
         }
@@ -165,7 +167,7 @@ impl ConnState {
             _ => (),
         }
         self.timeout = new_timeout;
-        self.new_timeout.take().map(|w| w.wake());
+        self.new_timeout.ready();
     }
 }
 
@@ -196,11 +198,13 @@ impl AsyncConnection {
                 conn,
                 seen_established: false,
                 closed: false,
-                waiting_for_conn_send: None,
-                waiting_for_stream_recv: BTreeMap::new(),
-                waiting_for_stream_send: BTreeMap::new(),
+                conn_send: Default::default(),
+                stream_recv: Default::default(),
+                stream_send: Default::default(),
+                dgram_recv: Default::default(),
+                dgram_send: Default::default(),
                 timeout: None,
-                new_timeout: None,
+                new_timeout: Default::default(),
             }),
             next_bidi: AtomicU64::new(0),
             next_uni: AtomicU64::new(0),
@@ -234,7 +238,7 @@ impl AsyncConnection {
                     io.conn.on_timeout();
                     io.update_timeout();
                     io.wake_stream_io();
-                    io.wake_conn_send();
+                    io.conn_send.ready();
                 }
             }
         }
@@ -245,12 +249,17 @@ impl AsyncConnection {
         log::trace!("{:?} close()", self.debug_id());
         io.closed = true;
         let _ = io.conn.close(false, 0, b"");
-        io.wake_all_streams();
-        io.wake_conn_send();
+        io.stream_recv.all_ready();
+        io.stream_send.all_ready();
+        io.conn_send.ready();
     }
 
     pub fn poll_lock_state<'a>(&'a self) -> MutexTicket<'a, ConnState> {
         MutexTicket::new(&self.io)
+    }
+
+    pub async fn next_send(&self, frame: &mut [u8]) -> Result<Option<usize>, Error> {
+        self.poll_io(|io, ctx| io.poll_send(ctx, frame)).await
     }
 
     pub fn debug_id(&self) -> impl std::fmt::Debug + '_ {
@@ -268,8 +277,42 @@ impl AsyncConnection {
         }
         io.update_timeout();
         io.wake_stream_io();
-        io.wake_conn_send();
+        io.conn_send.ready();
+        io.dgram_recv.ready();
         Ok(())
+    }
+
+    pub async fn dgram_send(&self, packet: &mut [u8]) -> Result<(), Error> {
+        fn drop_frame<S: std::fmt::Display>(
+            p: &mut [u8],
+            make_reason: impl FnOnce() -> S,
+        ) -> Poll<Result<(), Error>> {
+            log::info!("Drop frame of length {}b: {}", p.len(), make_reason());
+            Poll::Ready(Ok(()))
+        }
+
+        self.poll_io(|io, ctx| match io.conn.dgram_send(packet) {
+            Ok(()) => {
+                io.conn_send.ready();
+                Poll::Ready(Ok(()))
+            }
+            Err(quiche::Error::Done) => io.dgram_send.pending(ctx),
+            Err(quiche::Error::InvalidState) => drop_frame(packet, || "invalid state"),
+            Err(quiche::Error::BufferTooShort) => drop_frame(packet, || {
+                format!("buffer too short (max = {:?})", io.conn.dgram_max_writable_len())
+            }),
+            Err(e) => Poll::Ready(Err(e.into())),
+        })
+        .await
+    }
+
+    pub async fn dgram_recv(&self, packet: &mut [u8]) -> Result<usize, Error> {
+        self.poll_io(|io, ctx| match io.conn.dgram_recv(packet) {
+            Ok(n) => Poll::Ready(Ok(n)),
+            Err(quiche::Error::Done) => io.dgram_recv.pending(ctx),
+            Err(e) => Poll::Ready(Err(e.into())),
+        })
+        .await
     }
 
     pub fn alloc_bidi(self: &Arc<Self>) -> (AsyncQuicStreamWriter, AsyncQuicStreamReader) {
@@ -322,6 +365,18 @@ impl AsyncConnection {
     pub async fn is_established(&self) -> bool {
         self.io.lock().await.conn.is_established()
     }
+
+    async fn poll_io<R>(
+        &self,
+        mut f: impl FnMut(&mut ConnState, &mut Context<'_>) -> Poll<R>,
+    ) -> R {
+        let mut lock = MutexTicket::new(&self.io);
+        poll_fn(|ctx| {
+            let mut guard = ready!(lock.poll(ctx));
+            f(&mut *guard, ctx)
+        })
+        .await
+    }
 }
 
 pub trait StreamProperties {
@@ -358,16 +413,30 @@ impl AsyncQuicStreamWriter {
 
     pub async fn send(&mut self, bytes: &[u8], fin: bool) -> Result<(), Error> {
         assert_eq!(self.sent_fin, false);
-        QuicSend {
-            conn: &*self.conn,
-            id: self.id,
-            bytes,
-            fin,
-            n: 0,
-            sent_fin: &mut self.sent_fin,
-            io_lock: MutexTicket::new(&self.conn.io),
-        }
-        .await
+        let mut sent = 0;
+        let sent_fin = &mut self.sent_fin;
+        let id = self.id;
+        self.conn
+            .poll_io(|io, ctx| {
+                if !io.conn.is_established() {
+                    return io.stream_send.pending(ctx, id);
+                }
+                let n = io
+                    .conn
+                    .stream_send(id, &bytes[sent..], fin)
+                    .with_context(|| format!("sending on stream {}", id))?;
+                io.conn_send.ready();
+                sent += n;
+                if sent == bytes.len() {
+                    if fin {
+                        *sent_fin = true;
+                    }
+                    Poll::Ready(Ok(()))
+                } else {
+                    io.stream_send.pending(ctx, id)
+                }
+            })
+            .await
     }
 }
 
@@ -392,49 +461,6 @@ impl StreamProperties for AsyncQuicStreamWriter {
 
     fn id(&self) -> u64 {
         self.id
-    }
-}
-
-pub struct QuicSend<'b> {
-    conn: &'b AsyncConnection,
-    id: u64,
-    bytes: &'b [u8],
-    n: usize,
-    fin: bool,
-    sent_fin: &'b mut bool,
-    io_lock: MutexTicket<'b, ConnState>,
-}
-
-impl<'b> QuicSend<'b> {
-    #[allow(dead_code)]
-    fn debug_id(&self) -> impl std::fmt::Debug {
-        (self.conn.endpoint, self.id)
-    }
-}
-
-impl<'b> Future for QuicSend<'b> {
-    type Output = Result<(), Error>;
-
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = Pin::into_inner(self);
-        let mut io = ready!(this.io_lock.poll(ctx));
-        if !io.conn.is_established() {
-            return io.wait_for_stream_send(this.id, ctx);
-        }
-        let n = io
-            .conn
-            .stream_send(this.id, &this.bytes[this.n..], this.fin)
-            .with_context(|| format!("sending on stream {}", this.id))?;
-        io.wake_conn_send();
-        this.n += n;
-        if this.n == this.bytes.len() {
-            if this.fin {
-                *this.sent_fin = true;
-            }
-            Poll::Ready(Ok(()))
-        } else {
-            io.wait_for_stream_send(this.id, ctx)
-        }
     }
 }
 
@@ -667,7 +693,7 @@ impl<'b> QuicRead<'b> {
         }
 
         let mut io = ready!(self.io_lock.poll(ctx));
-        io.wake_conn_send();
+        io.conn_send.ready();
         match io.conn.stream_recv(self.id, bytes) {
             Ok((n, fin)) => {
                 *self.ready = true;
@@ -683,11 +709,11 @@ impl<'b> QuicRead<'b> {
                     let _ = io.conn.stream_shutdown(self.id, Shutdown::Read, 0);
                     Poll::Ready(Ok((0, true)))
                 } else {
-                    io.wait_for_stream_recv(self.id, ctx)
+                    io.stream_recv.pending(ctx, self.id)
                 }
             }
             Err(quiche::Error::InvalidStreamState) if !*self.ready => {
-                io.wait_for_stream_recv(self.id, ctx)
+                io.stream_recv.pending(ctx, self.id)
             }
             Err(quiche::Error::InvalidStreamState) if io.conn.stream_finished(self.id) => {
                 Poll::Ready(Ok((0, true)))

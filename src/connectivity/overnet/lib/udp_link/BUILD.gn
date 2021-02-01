@@ -12,7 +12,7 @@ rustc_library("udp_link") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/core",
-    "//src/lib/async-utils",
+    "//src/connectivity/overnet/lib/quic",
     "//src/lib/fuchsia-async",
     "//third_party/rust-mirrors/quiche",
     "//third_party/rust_crates:anyhow",
