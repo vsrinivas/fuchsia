@@ -161,9 +161,14 @@ TEST_F(ScenicSessionTest, EventReporterFiltersViewDetachedAndAttachedEvents) {
   attached_event_3.set_view_attached_to_scene({.view_id = kViewId1});
   session.event_reporter()->EnqueueEvent(std::move(attached_event_3));
   fuchsia::ui::input::InputEvent input_event;
+  input_event.set_focus(fuchsia::ui::input::FocusEvent());
   session.event_reporter()->EnqueueEvent(std::move(input_event));
   RunLoopUntilIdle();
-  EXPECT_EQ(test_session_listener.events_.size(), 1u);
+  EXPECT_EQ(test_session_listener.events_.size(), 2u);
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
+            test_session_listener.events_[0].gfx().Which());
+  EXPECT_EQ(fuchsia::ui::input::InputEvent::Tag::kFocus,
+            test_session_listener.events_[1].input().Which());
 
   // Check Detach-Attach pair with different view ids.
   fuchsia::ui::gfx::Event detached_event_3;
@@ -174,11 +179,11 @@ TEST_F(ScenicSessionTest, EventReporterFiltersViewDetachedAndAttachedEvents) {
   attached_event_4.set_view_attached_to_scene({.view_id = kViewId2});
   session.event_reporter()->EnqueueEvent(std::move(attached_event_4));
   RunLoopUntilIdle();
-  EXPECT_EQ(test_session_listener.events_.size(), 3u);
+  EXPECT_EQ(test_session_listener.events_.size(), 4u);
   EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene,
-            test_session_listener.events_[1].gfx().Which());
-  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
             test_session_listener.events_[2].gfx().Which());
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
+            test_session_listener.events_[3].gfx().Which());
 
   // Check Detach-Attach-Detach sequence.
   fuchsia::ui::gfx::Event detached_event_4;
@@ -191,9 +196,9 @@ TEST_F(ScenicSessionTest, EventReporterFiltersViewDetachedAndAttachedEvents) {
   detached_event_5.set_view_detached_from_scene({.view_id = kViewId1});
   session.event_reporter()->EnqueueEvent(std::move(detached_event_5));
   RunLoopUntilIdle();
-  EXPECT_EQ(test_session_listener.events_.size(), 4u);
+  EXPECT_EQ(test_session_listener.events_.size(), 5u);
   EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene,
-            test_session_listener.events_[1].gfx().Which());
+            test_session_listener.events_[2].gfx().Which());
 }
 
 TEST_F(ScenicSessionTest, ScheduleUpdateOutOfOrder_ShouldGiveErrorAndDestroySession) {
