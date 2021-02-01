@@ -30,11 +30,12 @@ func TestShellEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           filepath.Join(exPath, "..", "fuchsia.zbi"),
-		AppendCmdline: "devmgr.log-to-debuglog console.shell=true",
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=true")
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)
@@ -74,12 +75,16 @@ func TestAutorunEnabled(t *testing.T) {
 	}
 
 	tokenFromSerial := randomTokenAsString(t)
-	i := distro.Create(emulator.Params{
-		Arch: arch,
-		ZBI:  filepath.Join(exPath, "..", "fuchsia.zbi"),
-		AppendCmdline: "devmgr.log-to-debuglog console.shell=true " +
-			"zircon.autorun.boot=/boot/bin/sh+-c+echo+" + tokenFromSerial,
-	})
+
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs,
+		"devmgr.log-to-debuglog",
+		"console.shell=true",
+		"zircon.autorun.boot=/boot/bin/sh+-c+echo+"+tokenFromSerial)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)

@@ -11,7 +11,7 @@ import (
 )
 
 func TestInitPartitionTables(t *testing.T) {
-	_ = bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
+	_ = bootservertest.StartQemu(t, []string{"netsvc.all-features=true", "netsvc.netboot=true"}, "full")
 
 	logPattern := []bootservertest.LogMatch{
 		{Pattern: "Received request from ", ShouldMatch: true},

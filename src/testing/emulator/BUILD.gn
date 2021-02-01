@@ -76,24 +76,35 @@ if (is_linux) {
     }
 
     sources = [ "$root_build_dir/$kernel_binary" ]
-    outputs = [ "$root_out_dir/test_data/emulator/$kernel_binary" ]
   }
 
-  target_cpu_txt = "$root_out_dir/test_data/emulator/target_cpu.txt"
-  generated_file("target_cpu_txt") {
+  generated_file("buildinfo.ini") {
     testonly = true
-    contents = target_cpu
-    outputs = [ target_cpu_txt ]
+    contents = [
+      # The path to images.json relative to the test data directory. This must be relative
+      # the test data directory specifically, rather than the build directory because the
+      # build directory is not guaranteed to exist at runtime, especially on CI.
+      "image_manifest_path=" + rebase_path("$root_build_dir/images.json",
+                                           "$root_out_dir/test_data/emulator"),
+      "target_cpu=$target_cpu",
+    ]
+    outputs = [ "$root_out_dir/test_data/emulator/buildinfo.ini" ]
   }
 
   host_test_data("test_data") {
-    sources = [ target_cpu_txt ] + get_target_outputs(":archive-qemu") +
-              get_target_outputs(":archive-femu")
+    sources = get_target_outputs(":buildinfo.ini") +
+              get_target_outputs(":archive-qemu") +
+              get_target_outputs(":archive-femu") +
+              [
+                # Any files referenced by :buildinfo.ini should be listed here.
+                "$root_build_dir/images.json",
+              ]
+
     deps = [
       ":archive-femu",
       ":archive-qemu",
+      ":buildinfo.ini",
       ":kernel",
-      ":target_cpu_txt",
     ]
   }
 
@@ -102,14 +113,17 @@ if (is_linux) {
     non_go_deps = [
       ":archive-femu",
       ":archive-qemu",
-      ":kernel",
       ":test_data",
     ]
     sources = [
       "emulator.go",
       "emulator_test.go",
     ]
-    deps = [ "//tools/qemu" ]
+    deps = [
+      "//tools/qemu",
+      "//tools/virtual_device",
+      "//tools/virtual_device:proto",
+    ]
   }
 
   go_test("emulator_tests") {

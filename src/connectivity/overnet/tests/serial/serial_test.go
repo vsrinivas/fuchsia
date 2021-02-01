@@ -24,11 +24,6 @@ func execDir(t *testing.T) string {
 	return filepath.Dir(ex)
 }
 
-func zbiPath(t *testing.T) string {
-	exPath := execDir(t)
-	return filepath.Join(exPath, "../obj/build/images/overnet/overnet.zbi")
-}
-
 func ascenddPath(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {
@@ -61,11 +56,13 @@ func TestOvernetSerial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: "devmgr.log-to-debuglog console.shell=false kernel.enable-debugging-syscalls=true kernel.enable-serial-syscalls=true",
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.Initrd = "overnet"
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=false kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true")
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ascendd := startAscendd(t)
 	err = i.StartPiped(ascendd)
@@ -92,11 +89,13 @@ func TestNoSpinningIfNoSerial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: "console.shell=false kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=false",
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.Initrd = "overnet"
+	device.KernelArgs = append(device.KernelArgs, "console.shell=false", "kernel.enable-debugging-syscalls=false", "kernel.enable-serial-syscalls=false")
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ascendd := startAscendd(t)
 	err = i.StartPiped(ascendd)

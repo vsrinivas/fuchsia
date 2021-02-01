@@ -12,16 +12,10 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-const cmdline = "kernel.halt-on-panic=true kernel.bypass-debuglog=true zircon.autorun.boot=/boot/bin/sh+-c+k"
-
-func zbiPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
+var cmdline = []string{
+	"kernel.halt-on-panic=true",
+	"kernel.bypass-debuglog=true",
+	"zircon.autorun.boot=/boot/bin/sh+-c+k",
 }
 
 // See that `k crash` crashes the kernel.
@@ -39,11 +33,13 @@ func TestBasicCrash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: cmdline,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = i.Start()
 	if err != nil {
@@ -81,11 +77,12 @@ func TestSMAPViolation(t *testing.T) {
 		return
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: cmdline,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = i.Start()
 	if err != nil {
@@ -126,11 +123,12 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 		return
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: cmdline,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = i.Start()
 	if err != nil {
@@ -199,11 +197,12 @@ func TestCrashAssert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: cmdline,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = i.Start()
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 )
 
 func TestPaveNoBindFailure(t *testing.T) {
-	_ = bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=false", "full")
+	_ = bootservertest.StartQemu(t, []string{"netsvc.all-features=true", "netsvc.netboot=false"}, "full")
 
 	// Test that advertise request is NOT serviced and paving does NOT start
 	// as netsvc.netboot=false

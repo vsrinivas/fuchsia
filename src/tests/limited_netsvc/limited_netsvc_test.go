@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -20,20 +19,11 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
+	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
 // The default nodename given to an target with the default QEMU MAC address.
 const defaultNodename = "swarm-donut-petri-acre"
-
-func zbiPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
-}
 
 func toolPath(t *testing.T, name string) string {
 	ex, err := os.Executable()
@@ -190,7 +180,7 @@ func attemptLoglistener(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	}
 }
 
-func setupQemu(t *testing.T, appendCmdline string, modeString string) (*emulator.Instance, func()) {
+func setupQemu(t *testing.T, appendCmdline []string, modeString string) (*emulator.Instance, func()) {
 	exDir := execDir(t)
 	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -203,12 +193,20 @@ func setupQemu(t *testing.T, appendCmdline string, modeString string) (*emulator
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: appendCmdline,
-		Networking:    true,
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, appendCmdline...)
+
+	// Note: To run this test locally on linux, you must create the TAP interface:
+	// $ sudo ip tuntap add mode tap qemu
+	device.Hw.NetworkDevices = append(device.Hw.NetworkDevices, &fvdpb.Netdev{
+		Id:     "qemu",
+		Kind:   "tap",
+		Device: &fvdpb.Device{Model: "virtio-net-pci"},
 	})
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	i.Start()
 	if err != nil {
@@ -228,7 +226,8 @@ func setupQemu(t *testing.T, appendCmdline string, modeString string) (*emulator
 }
 
 func TestNetsvcAllFeatures(t *testing.T) {
-	i, cleanup := setupQemu(t, "netsvc.all-features=true", "full")
+	cmdline := []string{"netsvc.all-features=true"}
+	i, cleanup := setupQemu(t, cmdline, "full")
 	defer cleanup()
 
 	// Setting all-features to true means netsvc will work normally, and all
@@ -242,7 +241,8 @@ func TestNetsvcAllFeatures(t *testing.T) {
 }
 
 func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
-	i, cleanup := setupQemu(t, fmt.Sprintf("netsvc.all-features=true zircon.nodename=%s", defaultNodename), "full")
+	cmdline := []string{"netsvc.all-features=true", "zircon.nodename=" + defaultNodename}
+	i, cleanup := setupQemu(t, cmdline, "full")
 	defer cleanup()
 
 	// Setting all-features to true means netsvc will work normally, and all
@@ -256,7 +256,8 @@ func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
 }
 
 func TestNetsvcLimited(t *testing.T) {
-	i, cleanup := setupQemu(t, "netsvc.all-features=false", "limited")
+	cmdline := []string{"netsvc.all-features=false"}
+	i, cleanup := setupQemu(t, cmdline, "limited")
 	defer cleanup()
 
 	// Explicitly setting all-features to false should be the same as default, and

@@ -36,6 +36,16 @@ assemble_system("overnet") {
     "//src/power/power-manager:base_config",
   ]
   ramdisk_fvm_in_zbi = true
+
+  metadata = {
+    images = [
+      {
+        name = "overnet"
+        path = rebase_path("$target_out_dir/overnet.zbi", root_build_dir)
+        type = "zbi"
+      },
+    ]
+  }
 }
 
 if (is_host) {

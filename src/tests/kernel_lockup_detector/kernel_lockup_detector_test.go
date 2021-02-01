@@ -12,16 +12,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-func zbiPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
-}
-
 func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 	exDir := execDir(t)
 	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
@@ -36,18 +26,18 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := distro.Create(emulator.Params{
-		Arch: arch,
-		ZBI:  zbiPath(t),
+	device := emulator.DefaultVirtualDevice(string(arch))
 
-		// Enable the lockup detector.
-		//
-		// Upon booting run "k", which will print a usage message.  By waiting for the usage
-		// message, we can be sure the system has booted and is ready to accept "k"
-		// commands.
-		AppendCmdline: "kernel.lockup-detector.critical-section-threshold-ms=500 " +
-			"zircon.autorun.boot=/boot/bin/sh+-c+k",
-	})
+	// Enable the lockup detector.
+	//
+	// Upon booting run "k", which will print a usage message.  By waiting for the usage
+	// message, we can be sure the system has booted and is ready to accept "k"
+	// commands.
+	device.KernelArgs = append(device.KernelArgs, "kernel.lockup-detector.critical-section-threshold-ms=500", "zircon.autorun.boot=/boot/bin/sh+-c+k")
+	d, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Boot.
 	d.Start()
@@ -87,19 +77,21 @@ func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := distro.Create(emulator.Params{
-		Arch: arch,
-		ZBI:  zbiPath(t),
-
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs,
 		// Enable the lockup detector.
 		//
 		// Upon booting run "k", which will print a usage message.  By waiting for the usage
 		// message, we can be sure the system has booted and is ready to accept "k"
 		// commands.
-		AppendCmdline: "kernel.lockup-detector.heartbeat-period-ms=50 " +
-			"kernel.lockup-detector.heartbeat-age-threshold-ms=200 " +
-			"zircon.autorun.boot=/boot/bin/sh+-c+k",
-	})
+		"kernel.lockup-detector.heartbeat-period-ms=50",
+		"kernel.lockup-detector.heartbeat-age-threshold-ms=200",
+		"zircon.autorun.boot=/boot/bin/sh+-c+k",
+	)
+	d, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Boot.
 	d.Start()

@@ -27,15 +27,16 @@ func TestDisableDebuggingDisableSerialSyscalls(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.Initrd = "zircon-r" // zedboot zbi.
+	device.KernelArgs = append(device.KernelArgs, "kernel.enable-debugging-syscalls=false", "kernel.enable-serial-syscalls=false")
+
 	stdout, stderr, err := distro.RunNonInteractive(
 		"/boot/bin/syscall-check",
 		support.ToolPath(t, "minfs"),
 		support.ToolPath(t, "zbi"),
-		emulator.Params{
-			Arch:          arch,
-			ZBI:           support.ZbiPath(t),
-			AppendCmdline: "kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=false",
-		})
+		device,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

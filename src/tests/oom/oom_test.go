@@ -12,17 +12,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-const cmdline = "devmgr.log-to-debuglog kernel.oom.behavior=reboot"
-
-func zbiPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
-}
+var cmdline = []string{"devmgr.log-to-debuglog", "kernel.oom.behavior=reboot"}
 
 // Triggers the OOM signal without leaking memory. Verifies that fileystems are shut down and the
 // system reboots in a somewhat orderly fashion.
@@ -44,11 +34,12 @@ func TestOOMSignal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: cmdline,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)
@@ -121,11 +112,12 @@ func TestOOM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: cmdline,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)
@@ -197,11 +189,12 @@ func TestOOMHard(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: cmdline,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)

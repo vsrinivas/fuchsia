@@ -11,7 +11,7 @@ import (
 )
 
 func TestWriteFirmwareNoType(t *testing.T) {
-	instance := bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
+	instance := bootservertest.StartQemu(t, []string{"netsvc.all-features=true", "netsvc.netboot=true"}, "full")
 
 	logPattern := []bootservertest.LogMatch{
 		{Pattern: "Received request from ", ShouldMatch: true},

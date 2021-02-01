@@ -73,6 +73,7 @@ if (is_linux) {
       ":lib",
       "//tools/net/netutil",
       "//tools/net/tftp",
+      "//tools/virtual_device:proto",
     ]
     non_go_deps = [
       ":main_zbi",

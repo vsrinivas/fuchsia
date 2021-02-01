@@ -12,16 +12,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-func zbiPath(t *testing.T, zbi_name string) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../"+zbi_name)
-}
-
 type ExpectedRebootType int
 
 const (
@@ -48,11 +38,14 @@ func RebootWithCommandAndZbi(t *testing.T, cmd string, kind ExpectedRebootType, 
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t, zbi_name),
-		AppendCmdline: "devmgr.log-to-debuglog",
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog")
+	device.Drive = nil
+
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	i.Start()
 	if err != nil {

@@ -15,7 +15,7 @@ import (
 )
 
 func TestAdvertFrequency(t *testing.T) {
-	_ = bootservertest.StartQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
+	_ = bootservertest.StartQemu(t, []string{"netsvc.all-features=true", "netsvc.netboot=true"}, "full")
 
 	// Get the node ipv6 address
 	out := bootservertest.CmdWithOutput(t, bootservertest.ToolPath("netls"))

@@ -15,10 +15,9 @@ import (
 // TestUnpack checks that we can unpack emulator.
 func TestBoot(t *testing.T) {
 	exPath := execDir(t)
-	distro, err := emulator.UnpackFrom(filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
-	if err != nil {
-		t.Fatal(err)
-	}
+	distro, err := emulator.UnpackFrom(filepath.Join(exPath, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
 	defer func() {
 		if err := distro.Delete(); err != nil {
 			t.Error(err)
@@ -30,11 +29,12 @@ func TestBoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch: arch,
-		// TODO(fxbug.dev/47555): get the path from a build API instead.
-		ZBI: filepath.Join(exPath, "..", "obj", "build", "images", "recovery", "recovery-eng.zbi"),
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.Initrd = "recovery-eng"
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)

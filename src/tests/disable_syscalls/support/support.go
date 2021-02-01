@@ -11,17 +11,6 @@ import (
 	"testing"
 )
 
-func ZbiPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-
-	return filepath.Join(exPath, "../zedboot.zbi")
-}
-
 func ToolPath(t *testing.T, name string) string {
 	ex, err := os.Executable()
 	if err != nil {

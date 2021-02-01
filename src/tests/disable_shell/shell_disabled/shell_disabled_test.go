@@ -31,11 +31,12 @@ func TestShellDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           filepath.Join(exPath, "..", "fuchsia.zbi"),
-		AppendCmdline: "devmgr.log-to-debuglog console.shell=false",
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=false")
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)
@@ -74,11 +75,12 @@ func TestAutorunDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           filepath.Join(exPath, "..", "fuchsia.zbi"),
-		AppendCmdline: "devmgr.log-to-debuglog console.shell=false zircon.autorun.boot=foobar",
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=false", "zircon.autorun.boot=foobar")
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)

@@ -36,7 +36,8 @@ if (is_linux) {
     deps = [ ":lib" ]
     non_go_deps = [
       ":ascendd",
-      "//build/images/overnet:test_data",
+      "//build/images/overnet:test_data($host_toolchain)",
+      "//build/images/overnet($target_toolchain)",
     ]
   }
 }

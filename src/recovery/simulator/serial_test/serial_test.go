@@ -32,12 +32,13 @@ func TestSerialShellEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch: arch,
-		// TODO(fxbug.dev/47555): get the path from a build API instead.
-		ZBI:           filepath.Join(exPath, "..", "obj", "build", "images", "recovery", "recovery-eng.zbi"),
-		AppendCmdline: "devmgr.log-to-debuglog",
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.Initrd = "recovery-eng"
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog")
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = i.Start(); err != nil {
 		t.Fatal(err)

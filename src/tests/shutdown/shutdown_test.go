@@ -13,16 +13,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-func zbiPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
-}
-
 func TestShutdown(t *testing.T) {
 	exDir := execDir(t)
 	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
@@ -37,12 +27,13 @@ func TestShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch:             arch,
-		ZBI:              zbiPath(t),
-		AppendCmdline:    "devmgr.log-to-debuglog",
-		DisableDebugExit: true,
-	})
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog")
+
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = i.Start()
 	if err != nil {
@@ -51,7 +42,7 @@ func TestShutdown(t *testing.T) {
 
 	i.WaitForLogMessage("initializing platform")
 
-	// Make sure the shell is ready to accept commands over serial.
+	// Make sure the shell is ready to accept zcommands over serial.
 	i.WaitForLogMessage("console.shell: enabled")
 
 	if arch == emulator.X64 {

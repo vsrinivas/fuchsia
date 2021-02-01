@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
 var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runtime.GOARCH]
@@ -179,7 +180,7 @@ func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 }
 
 // StartQemu starts a QEMU instance with the given kernel commandline args.
-func StartQemu(t *testing.T, appendCmdline, modeString string) *emulator.Instance {
+func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulator.Instance {
 	distro, err := emulator.UnpackFrom(*TestDataDir, emulator.DistributionParams{})
 	if err != nil {
 		t.Fatalf("Failed to unpack QEMU: %s", err)
@@ -193,16 +194,24 @@ func StartQemu(t *testing.T, appendCmdline, modeString string) *emulator.Instanc
 	if err != nil {
 		t.Fatalf("Failed to get distro CPU: %s", err)
 	}
-	zbi, err := filepath.Abs(filepath.Join(*TestDataDir, "..", "..", "fuchsia.zbi"))
+
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, appendCmdline...)
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true", "zircon.nodename="+DefaultNodename)
+
+	// To run locally on linux, you need to configure a tuntap interface:
+	// $ sudo ip add mode tap qemu user `whoami`
+	// $ sudo ip link set qemu up
+	device.Hw.NetworkDevices = append(device.Hw.NetworkDevices, &fvdpb.Netdev{
+		Id:     "qemu",
+		Kind:   "tap",
+		Device: &fvdpb.Device{Model: "virtio-net-pci"},
+	})
+	instance, err := distro.Create(device)
 	if err != nil {
 		t.Fatal(err)
 	}
-	instance := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           zbi,
-		AppendCmdline: appendCmdline,
-		Networking:    true,
-	})
+
 	if err := instance.Start(); err != nil {
 		t.Fatalf("Failed to start QEMU instance: %s", err)
 	}

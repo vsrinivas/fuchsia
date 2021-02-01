@@ -12,16 +12,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-func zbiPath(t *testing.T) string {
-	ex, err := os.Executable()
-	if err != nil {
-		t.Fatal(err)
-		return ""
-	}
-	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
-}
-
 type specific func(*emulator.Instance)
 
 // Boots an instance, |crash_cmd|, waits for the system to reboot, prints the recovered crash report
@@ -46,18 +36,21 @@ func testCommon(t *testing.T, crash_cmd string, s specific) {
 		return
 	}
 
-	i := distro.Create(emulator.Params{
-		Arch: arch,
-		ZBI:  zbiPath(t),
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.Hw.EnableKvm = false
 
-		// Be sure to reboot intead of halt so the newly booted kernel instance can retrieve
-		// the previous instance's crashlog.
-		//
-		// Upon booting run "k", which will print a usage message.  By waiting for the usage
-		// message, we can be sure the system has booted and is ready to accept "k"
-		// commands.
-		AppendCmdline: "kernel.halt-on-panic=false zircon.autorun.boot=/boot/bin/sh+-c+k",
-	})
+	// Be sure to reboot instead of halt so the newly booted kernel instance can retrieve
+	// the previous instance's crashlog.
+	//
+	// Upon booting run "k", which will print a usage message.  By waiting for the usage
+	// message, we can be sure the system has booted and is ready to accept "k"
+	// commands.
+	device.KernelArgs = append(device.KernelArgs, "kernel.halt-on-panic=false", "zircon.autorun.boot=/boot/bin/sh+-c+k")
+
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Boot.
 	i.Start()

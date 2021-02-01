@@ -26,6 +26,10 @@ if (is_linux) {
 
   go_test("femu_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/femu" ]
-    deps = [ ":lib" ]
+    deps = [
+      ":lib",
+      "//tools/virtual_device",
+      "//tools/virtual_device:proto",
+    ]
   }
 }

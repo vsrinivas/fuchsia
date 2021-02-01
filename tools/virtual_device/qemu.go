@@ -110,16 +110,15 @@ func QEMUCommand(b *qemu.QEMUCommandBuilder, fvd *fvdpb.VirtualDevice, images bu
 
 	for _, d := range fvd.Hw.NetworkDevices {
 		// TODO(kjharland): Switch all tests to -nic, which is newer than -netdev.
-		netdev := qemu.Netdev{
-			ID:     d.Id,
-			Device: qemu.Device{Model: d.Device.Model},
-		}
-
-		for _, option := range d.Device.Options {
-			if opt := strings.SplitN(option, "=", 2); len(opt) == 2 {
-				netdev.Device.AddOption(opt[0], opt[1])
-			} else {
-				return fmt.Errorf("invalid option: %q", option)
+		netdev := qemu.Netdev{ID: d.Id}
+		if d.Device != nil {
+			netdev.Device = qemu.Device{Model: d.Device.Model}
+			for _, option := range d.Device.Options {
+				if opt := strings.SplitN(option, "=", 2); len(opt) == 2 {
+					netdev.Device.AddOption(opt[0], opt[1])
+				} else {
+					return fmt.Errorf("invalid option: %q", option)
+				}
 			}
 		}
 
@@ -130,7 +129,7 @@ func QEMUCommand(b *qemu.QEMUCommandBuilder, fvd *fvdpb.VirtualDevice, images bu
 			netdev.Tap = &qemu.NetdevTap{Name: d.Id}
 		default:
 			// TODO(kjharland): Check this in Validate()
-			return fmt.Errorf("unimplemented network device model: %q", d.Device.Model)
+			return fmt.Errorf("unimplemented network device kind: %q", d.Kind)
 		}
 		b.AddNetwork(netdev)
 	}

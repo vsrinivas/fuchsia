@@ -10,9 +10,10 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
+	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
-const cmdline = "kernel.halt-on-panic=true kernel.bypass-debuglog=true"
+var cmdline = []string{"kernel.halt-on-panic=true", "kernel.bypass-debuglog=true"}
 
 func execDir(t *testing.T) string {
 	ex, err := os.Executable()
@@ -37,11 +38,13 @@ func TestFemu(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           filepath.Join(exDir, "../fuchsia.zbi"),
-		AppendCmdline: cmdline,
-	})
+
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = i.Start()
 	if err != nil {
@@ -67,18 +70,22 @@ func TestFemuWithDisk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i := distro.Create(emulator.Params{
-		Arch:          arch,
-		ZBI:           filepath.Join(exDir, "../fuchsia.zbi"),
-		AppendCmdline: cmdline,
-		Disks: []emulator.Disk{
-			{
-				// Doesn't have to be in a "real" disk format, it just has to be there so we can validate that it's detected.
-				Path: filepath.Join(exDir, "../fuchsia.zbi"),
-				USB:  false,
-			},
-		},
+
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+
+	// This doesn't have to be in a "real" disk format, it just has to be there so we can validate that it's detected.
+	device.Hw.Drives = append(device.Hw.Drives, &fvdpb.Drive{
+		Id:         "disk00",
+		Image:      filepath.Join(exDir, "../fuchsia.zbi"),
+		IsFilename: true,
+		Device:     &fvdpb.Device{Model: "virtio-blk-pci"},
 	})
+
+	i, err := distro.Create(device)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = i.Start()
 	if err != nil {

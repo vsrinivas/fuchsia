@@ -92,6 +92,16 @@ assemble_system("recovery-eng") {
       [ "//src/sys/component_manager:component_manager_bootfs_config" ]
 
   sysmgr_golden = "sysmgr-eng-golden.json"
+
+  metadata = {
+    images = [
+      {
+        name = "recovery-eng"
+        path = rebase_path("$target_out_dir/recovery-eng.zbi", root_build_dir)
+        type = "zbi"
+      },
+    ]
+  }
 }
 
 assemble_system("recovery-fdr") {
