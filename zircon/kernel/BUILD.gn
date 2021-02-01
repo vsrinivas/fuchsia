@@ -497,17 +497,11 @@ if (is_kernel) {
     }
   }
 
-  # Link gdb extension script file needed for kernel debugging.
-  action("gdb_extension") {
+  # Copy gdb extension script file needed for kernel debugging.
+  copy("gdb_extension") {
     visibility = [ ":*" ]
     sources = [ "scripts/zircon.elf-gdb.py" ]
     outputs = [ "$target_out_dir/zircon.elf-gdb.py" ]
-    script = "/bin/ln"
-    args = [
-      "-sf",
-      rebase_path("scripts/zircon.elf-gdb.py", target_out_dir),
-      rebase_path(target_out_dir, root_build_dir),
-    ]
   }
 
   # This needs to be in a config() rather than directly in the executable()

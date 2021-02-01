@@ -55,19 +55,13 @@ template("generate_response_file") {
         defined(response_file_contents),
         "generate_response_file(\"${target_name}\") must define response_file_contents")
 
+    script = "/bin/cp"
+    args = [ "-f" ]
     if (response_file_contents == []) {
       # GN doesn't allow an empty response file.
-      script = "/bin/cp"
-      args = [
-        "-f",
-        "/dev/null",
-      ]
+      args += [ "/dev/null" ]
     } else {
-      script = "/bin/ln"
-      args = [
-        "-f",
-        "{{response_file_name}}",
-      ]
+      args += [ "{{response_file_name}}" ]
     }
     args += rebase_path(outputs, root_build_dir)
   }
