@@ -11,3 +11,6 @@ toc:
 - title: "USB development"
   section:
   - include: /docs/development/drivers/usb/_toc.yaml
+- title: "Display drivers"
+  section:
+  - include: /docs/development/drivers/display/_toc.yaml
