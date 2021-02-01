@@ -74,6 +74,9 @@ type endpoint struct {
 	remote     []*endpoint
 	// onWritePacket returns the packet to send or nil if no packets should be sent.
 	onWritePacket func(*stack.PacketBuffer) *stack.PacketBuffer
+	// onPacketDelivered is called after a packet is delivered to each of remote's
+	// network dispatchers.
+	onPacketDelivered func()
 
 	stack.LinkEndpoint
 }
@@ -117,24 +120,37 @@ func (e *endpoint) WritePacket(r stack.RouteInfo, _ *stack.GSO, protocol tcpip.N
 			pkt = p
 		}
 	}
-	for _, remote := range e.remote {
-		if !remote.IsAttached() {
-			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
+
+	// DeliverNetworkPacket needs to be called in a new goroutine to avoid a
+	// deadlock. However, tests use onPacketDelivered as a way to synchronize
+	// tests with packet delivery so it also needs to be called in the goroutine.
+	//
+	// As of writing, a deadlock may occur when performing link resolution as
+	// the neighbor table will send a solicitation while holding a lock and the
+	// response advertisement will be sent in the same stack that sent the
+	// solictation. When the response is received, the stack attempts to take
+	// the same lock it already took before sending the solicitation, leading to
+	// a deadlock. Basically, we attempt to lock the same lock twice in the same
+	// call stack.
+	//
+	// TODO(gvisor.dev/issue/5289): don't use a new goroutine once we support
+	// send and receive queues.
+	go func() {
+		for _, remote := range e.remote {
+			if !remote.IsAttached() {
+				panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
+			}
+			// the "remote" address for `other` is our local address and vice versa.
+			remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
 		}
-		// the "remote" address for `other` is our local address and vice versa.
-		//
-		// As of writing, a deadlock may occur when performing link resolution as
-		// the neighbor table will send a solicitation while holding a lock and the
-		// response advertisement will be sent in the same stack that sent the
-		// solictation. When the response is received, the stack attempts to take
-		// the same lock it already took before sending the solicitation, leading to
-		// a deadlock. Basically, we attempt to lock the same lock twice in the same
-		// call stack.
-		//
-		// TODO(gvisor.dev/issue/5289): don't use a new goroutine once we support
-		// send and receive queues.
-		go remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
-	}
+
+		if protocol == ipv4.ProtocolNumber {
+			if fn := e.onPacketDelivered; fn != nil {
+				fn()
+			}
+		}
+	}()
+
 	return nil
 }
 
@@ -1008,22 +1024,24 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	}
 
 	requestSent := make(chan struct{})
-	clientEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
-		defer signal(ctx, requestSent)
-		return b
+	clientEP.onPacketDelivered = func() {
+		signal(ctx, requestSent)
 	}
 
 	unblockResponse := make(chan struct{})
 	responseSent := make(chan struct{})
+
 	var serverShouldDecline bool
 	serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
-		defer signal(ctx, responseSent)
 		waitForSignal(ctx, unblockResponse)
 
 		if serverShouldDecline {
 			b = mustCloneWithNewMsgType(t, b, dhcpDECLINE)
 		}
 		return b
+	}
+	serverEP.onPacketDelivered = func() {
+		signal(ctx, responseSent)
 	}
 
 	var wg sync.WaitGroup
