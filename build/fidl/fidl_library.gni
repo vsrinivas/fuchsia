@@ -38,11 +38,6 @@ template("fidl_library") {
     library_name = invoker.name
   }
 
-  excluded_checks = []
-  if (defined(invoker.excluded_checks)) {
-    excluded_checks = invoker.excluded_checks
-  }
-
   experimental_flags = []
   if (defined(invoker.experimental_flags)) {
     experimental_flags = invoker.experimental_flags
@@ -213,6 +208,11 @@ template("fidl_library") {
       args += [ ":" ]  # NOOP - Nothing to lint, but touch the stamp file
     } else {
       args += [ rebase_path(host_executable, root_build_dir) ]
+
+      excluded_checks = []
+      if (defined(invoker.excluded_checks)) {
+        excluded_checks = invoker.excluded_checks
+      }
 
       if (excluded_checks != []) {
         # Add path to fidl-lint executable, and --must-find-excluded-checks option, so fidl-lint will

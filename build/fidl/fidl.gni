@@ -122,40 +122,6 @@ template("fidl") {
     if (current_toolchain == fidl_toolchain) {
       import("//build/fidl/fidl_library.gni")
 
-      if (string_replace(invoker.target_out_dir, "zircon/public", "") !=
-          invoker.target_out_dir) {
-        # For now, with //zircon dependencies, we will exclude all known checks on their FIDL
-        # libraries. I need to figure out how to set excluded_checks in a BUILD.gn file somewhere.
-        # I'm trying to find out where the zircon fidl() templates are being invoked. It doesn't
-        # seem to be from the zircon/system/fidl/<xyz>/BUILD.gn file's zircon version of
-        # fidl_library() template. Setting "excluded_checks" there has no effect on the non-zircon,
-        # "//build/fidl"-based deps.
-        excluded_checks = [
-          "too-many-nested-libraries",
-          "disallowed-library-name-component",
-          "name-repeats-library-name",
-          "wrong-prefix-for-platform-source-library",
-          "invalid-copyright-for-platform-source-library",
-          "todo-should-not-be-doc-comment",
-          "copyright-should-not-be-doc-comment",
-          "no-trailing-comment",
-          "invalid-case-for-primitive-alias",
-          "invalid-case-for-constant",
-          "invalid-case-for-decl-name",
-          "name-repeats-enclosing-type-name",
-          "protocol-name-includes-service",
-          "event-names-must-start-with-on",
-          "invalid-case-for-decl-member",
-          "string-bounds-not-specified",
-          "vector-bounds-not-specified",
-        ]
-      } else {
-        excluded_checks = []
-      }
-
-      if (defined(invoker.excluded_checks)) {
-        excluded_checks = invoker.excluded_checks
-      }
       fidl_library(target_name) {
         forward_variables_from(invoker, "*")
       }
