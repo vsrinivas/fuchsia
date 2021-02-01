@@ -2,4 +2,4 @@ include /src/storage/OWNERS
 bradenkell@google.com
 hansens@google.com
 
-# COMPONENT: Zircon>storage, Zircon>drivers
+# COMPONENT: Storage, Zircon>drivers
