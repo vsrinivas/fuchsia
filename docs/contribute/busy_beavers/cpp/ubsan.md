@@ -111,7 +111,7 @@ Find reviewers via owners and merge your change.
 ## Examples
 
 *   [464343: [volume_image] Fix ubsan issue](https://fuchsia-review.googlesource.com/c/fuchsia/+/464343)
-*   [461437: [ubsan] Fix memcpy from nullptr](https://fuchsia-review.googlesource.com/c/fuchsia/+/461437)
+*   [461437: \[ubsan\] Fix memcpy from nullptr](https://fuchsia-review.googlesource.com/c/fuchsia/+/461437)
 *   [460020: [quickjs] Fix UBSan bugs](https://fuchsia-review.googlesource.com/c/third_party/quickjs/+/460020)
 *   [460140: [UBSan][roughtime] Fix unaligned reads, reenable UBSan](https://fuchsia-review.googlesource.com/c/third_party/roughtime/+/460140)
 
