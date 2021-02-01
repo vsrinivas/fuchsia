@@ -36,6 +36,7 @@ enum RawOp {
 }
 
 #[allow(dead_code)]
+#[derive(Clone)]
 enum RawValueType {
     Key = 0,
     NumberValue,
@@ -214,6 +215,14 @@ mod test {
     use crate::parser_common::CompoundIdentifier;
     use std::collections::HashMap;
 
+    // Constants representing the number of bytes in an operand and value.
+    const OP_BYTES: u32 = 1;
+    const VALUE_BYTES: u32 = 5;
+
+    // Constants representing the number of bytes in each instruction.
+    const UNCOND_ABORT_BYTES: u32 = OP_BYTES;
+    const COND_ABORT_BYTES: u32 = OP_BYTES + VALUE_BYTES + VALUE_BYTES;
+
     struct BytecodeChecker {
         iter: std::vec::IntoIter<u8>,
     }
@@ -223,20 +232,20 @@ mod test {
             BytecodeChecker { iter: bytecode.into_iter() }
         }
 
-        pub fn verify_next_u8(&mut self, expected: u8) {
+        fn verify_next_u8(&mut self, expected: u8) {
             assert_eq!(expected, self.iter.next().unwrap());
         }
 
         // Verify the expected value as little-endian and advance the iterator to the next four
         // bytes. This function shouldn't be used for magic numbers, which is in big-endian.
-        pub fn verify_next_u32(&mut self, expected: u32) {
+        fn verify_next_u32(&mut self, expected: u32) {
             let bytecode = expected.to_le_bytes();
             for i in &bytecode {
                 self.verify_next_u8(*i);
             }
         }
 
-        pub fn verify_magic_num(&mut self, expected: u32) {
+        fn verify_magic_num(&mut self, expected: u32) {
             let bytecode = expected.to_be_bytes();
             for i in &bytecode {
                 self.verify_next_u8(*i);
@@ -250,15 +259,57 @@ mod test {
             self.verify_next_u8(0);
         }
 
-        pub fn verify_value(&mut self, expected_type: RawValueType, expected_value: u32) {
+        fn verify_value(&mut self, expected_type: RawValueType, expected_value: u32) {
             self.verify_next_u8(expected_type as u8);
             self.verify_next_u32(expected_value);
+        }
+
+        pub fn verify_bind_program_header(&mut self) {
+            self.verify_magic_num(BIND_MAGIC_NUM);
+            self.verify_next_u32(BYTECODE_VERSION);
+        }
+
+        pub fn verify_sym_table_header(&mut self, num_of_bytes: u32) {
+            self.verify_magic_num(SYMB_MAGIC_NUM);
+            self.verify_next_u32(num_of_bytes);
+        }
+
+        pub fn verify_instructions_header(&mut self, num_of_bytes: u32) {
+            self.verify_magic_num(INSTRUCTION_MAGIC_NUM);
+            self.verify_next_u32(num_of_bytes);
+        }
+
+        pub fn verify_unconditional_abort(&mut self) {
+            self.verify_next_u8(0x30);
+        }
+
+        pub fn verify_abort_not_equal(&mut self, value_type: RawValueType, lhs: u32, rhs: u32) {
+            self.verify_next_u8(0x01);
+            self.verify_value(value_type.clone(), lhs);
+            self.verify_value(value_type, rhs);
+        }
+
+        pub fn verify_abort_equal(&mut self, value_type: RawValueType, lhs: u32, rhs: u32) {
+            self.verify_next_u8(0x02);
+            self.verify_value(value_type.clone(), lhs);
+            self.verify_value(value_type, rhs);
         }
 
         // Verify that the iterator reached the end of the bytecode.
         pub fn verify_end(&mut self) {
             assert_eq!(None, self.iter.next());
         }
+    }
+
+    // Converts a vector of SymbolicInstruction into a vector of SymbolicInstructionInfo.
+    // The location value for each element is set to None.
+    fn to_symbolic_inst_info<'a>(
+        instructions: Vec<SymbolicInstruction>,
+    ) -> Vec<SymbolicInstructionInfo<'a>> {
+        instructions
+            .into_iter()
+            .map(|inst| SymbolicInstructionInfo { location: None, instruction: inst })
+            .collect()
     }
 
     #[test]
@@ -287,24 +338,15 @@ mod test {
             .collect();
 
         let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::UnconditionalAbort,
-            }],
+            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: symbol_table,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(31);
 
-        // Verify the header.
-        checker.verify_magic_num(BIND_MAGIC_NUM);
-        checker.verify_next_u32(BYTECODE_VERSION);
-
-        // Verify symbol table. Only the symbols with string values should
-        // be in the table.
-        checker.verify_magic_num(SYMB_MAGIC_NUM);
-        checker.verify_next_u32(31);
-
+        // Only the symbols with string values should be in the symbol table.
         let mut unique_id = 1;
         symbol_table_values.into_iter().for_each(|value| {
             checker.verify_next_u32(unique_id);
@@ -312,57 +354,37 @@ mod test {
             unique_id += 1;
         });
 
-        // Verify the instruction section.
-        checker.verify_magic_num(INSTRUCTION_MAGIC_NUM);
-        checker.verify_next_u32(1);
-        checker.verify_next_u8(0x30);
-
+        checker.verify_instructions_header(UNCOND_ABORT_BYTES);
+        checker.verify_unconditional_abort();
         checker.verify_end();
     }
 
     #[test]
     fn test_empty_symbol_table() {
         let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::UnconditionalAbort,
-            }],
+            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: HashMap::new(),
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
 
-        // Verify the header.
-        checker.verify_magic_num(BIND_MAGIC_NUM);
-        checker.verify_next_u32(BYTECODE_VERSION);
-
-        // Verify symbol table. Only the symbols with string values should
-        // be in the table.
-        checker.verify_magic_num(SYMB_MAGIC_NUM);
-        checker.verify_next_u32(0);
-
-        // Verify the instruction section.
-        checker.verify_magic_num(INSTRUCTION_MAGIC_NUM);
-        checker.verify_next_u32(1);
-        checker.verify_next_u8(0x30);
-
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+        checker.verify_instructions_header(UNCOND_ABORT_BYTES);
+        checker.verify_unconditional_abort();
         checker.verify_end();
     }
 
     #[test]
     fn test_duplicates_in_symbol_table() {
         let mut symbol_table: SymbolTable = HashMap::new();
-
         symbol_table
             .insert(make_identifier!("curlew"), Symbol::StringValue("sandpiper".to_string()));
         symbol_table
             .insert(make_identifier!("turnstone"), Symbol::StringValue("sandpiper".to_string()));
 
         let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::UnconditionalAbort,
-            }],
+            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: symbol_table,
         };
 
@@ -391,10 +413,7 @@ mod test {
             .insert(make_identifier!("long"), Symbol::StringValue(long_str.clone().to_string()));
 
         let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::UnconditionalAbort,
-            }],
+            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: symbol_table,
         };
 
@@ -406,65 +425,44 @@ mod test {
 
     #[test]
     fn test_abort_instructions() {
+        let instructions = vec![
+            SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::NumberValue(5),
+                rhs: Symbol::NumberValue(100),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::BoolValue(true),
+                rhs: Symbol::BoolValue(false),
+            },
+        ];
+
         let bind_program = BindProgram {
-            instructions: vec![
-                SymbolicInstructionInfo {
-                    location: None,
-                    instruction: SymbolicInstruction::AbortIfNotEqual {
-                        lhs: Symbol::NumberValue(5),
-                        rhs: Symbol::NumberValue(100),
-                    },
-                },
-                SymbolicInstructionInfo {
-                    location: None,
-                    instruction: SymbolicInstruction::AbortIfEqual {
-                        lhs: Symbol::BoolValue(true),
-                        rhs: Symbol::BoolValue(false),
-                    },
-                },
-            ],
+            instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
 
-        // Check Bind header section.
-        checker.verify_magic_num(BIND_MAGIC_NUM);
-        checker.verify_next_u32(BYTECODE_VERSION);
-
-        // Verify the symbol table.
-        checker.verify_magic_num(SYMB_MAGIC_NUM);
-        checker.verify_next_u32(0);
-
-        // Check Instruction section.
-        checker.verify_magic_num(INSTRUCTION_MAGIC_NUM);
-        checker.verify_next_u32(22);
-
-        // Verify AbortIfNotEqual instruction.
-        checker.verify_next_u8(0x01);
-        checker.verify_value(RawValueType::NumberValue, 5);
-        checker.verify_value(RawValueType::NumberValue, 100);
-
-        // Verify AbortIfNotEqual instruction.
-        checker.verify_next_u8(0x02);
-        checker.verify_value(RawValueType::BoolValue, 1);
-        checker.verify_value(RawValueType::BoolValue, 0);
-
+        checker.verify_instructions_header(COND_ABORT_BYTES + COND_ABORT_BYTES);
+        checker.verify_abort_not_equal(RawValueType::NumberValue, 5, 100);
+        checker.verify_abort_equal(RawValueType::BoolValue, 1, 0);
         checker.verify_end();
     }
 
     #[test]
     fn test_mismatch_value_types() {
+        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
+            lhs: Symbol::NumberValue(5),
+            rhs: Symbol::BoolValue(true),
+        }];
+
         let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::AbortIfNotEqual {
-                    lhs: Symbol::NumberValue(5),
-                    rhs: Symbol::BoolValue(true),
-                },
-            }],
+            instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
         };
+
         assert_eq!(
             Err(BindProgramEncodeError::MismatchValueTypes(
                 Symbol::NumberValue(5),
@@ -474,13 +472,10 @@ mod test {
         );
 
         let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::AbortIfNotEqual {
-                    lhs: Symbol::StringValue("5".to_string()),
-                    rhs: Symbol::NumberValue(5),
-                },
-            }],
+            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::StringValue("5".to_string()),
+                rhs: Symbol::NumberValue(5),
+            }]),
             symbol_table: HashMap::new(),
         };
         assert_eq!(
@@ -494,14 +489,13 @@ mod test {
 
     #[test]
     fn test_missing_string_in_symbol_table() {
+        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
+            lhs: Symbol::StringValue("wallcreeper".to_string()),
+            rhs: Symbol::StringValue("treecreeper".to_string()),
+        }];
+
         let bind_program = BindProgram {
-            instructions: vec![SymbolicInstructionInfo {
-                location: None,
-                instruction: SymbolicInstruction::AbortIfNotEqual {
-                    lhs: Symbol::StringValue("wallcreeper".to_string()),
-                    rhs: Symbol::StringValue("treecreeper".to_string()),
-                },
-            }],
+            instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
         };
 
