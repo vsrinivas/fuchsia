@@ -169,6 +169,11 @@ class Scheduler {
   static void ChangeDeadline(Thread* t, const zx_sched_deadline_params_t& params)
       TA_REQ(thread_lock);
 
+  // Return the time at which the current thread should be preempted.
+  //
+  // May only be called with preemption disabled.
+  static zx_time_t GetTargetPreemptionTime() TA_EXCL(thread_lock);
+
  private:
   // Allow percpu to init our cpu number and performance scale.
   friend struct percpu;

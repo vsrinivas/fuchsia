@@ -2069,3 +2069,10 @@ void Scheduler::ChangeDeadline(Thread* thread, const zx_sched_deadline_params_t&
     mp_reschedule(cpus_to_reschedule_mask, 0);
   }
 }
+
+zx_time_t Scheduler::GetTargetPreemptionTime() {
+  DEBUG_ASSERT(Thread::Current::preemption_state().PreemptDisableCount() > 0);
+  Scheduler* const current = Get();
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  return current->target_preemption_time_ns_.raw_value();
+}
