@@ -44,6 +44,7 @@ async fn create_test_environment() -> TestEnvironment {
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[SettingType::Audio])
+        .policies(&[PolicyType::Audio])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

@@ -7,6 +7,8 @@ use {
     crate::config::default_settings::DefaultSetting,
     crate::handler::device_storage::testing::*,
     crate::policy::base::PolicyType,
+    crate::tests::fakes::audio_core_service,
+    crate::tests::fakes::service_registry::ServiceRegistry,
     crate::AgentConfiguration,
     crate::EnabledPoliciesConfiguration,
     crate::EnabledServicesConfiguration,
@@ -14,17 +16,18 @@ use {
     crate::ServiceConfiguration,
     crate::ServiceFlags,
     fidl_fuchsia_settings::{AccessibilityMarker, PrivacyMarker},
+    fidl_fuchsia_settings_policy::VolumePolicyControllerMarker,
     std::collections::HashSet,
 };
 
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
 
 pub fn get_test_settings_types() -> HashSet<SettingType> {
-    return vec![SettingType::Accessibility, SettingType::Privacy].into_iter().collect();
+    return [SettingType::Accessibility, SettingType::Privacy].iter().copied().collect();
 }
 
 pub fn get_test_policy_types() -> HashSet<PolicyType> {
-    return vec![PolicyType::Unknown].into_iter().collect();
+    return [PolicyType::Unknown].iter().copied().collect();
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -55,8 +58,11 @@ async fn test_no_configuration_provided() {
     let service = env.connect_to_service::<AccessibilityMarker>().expect("Connected to service");
     service.watch().await.expect("watch completed");
 
-    // TODO(fxbug.dev/60925): verify that the volume policy service can't be connected to once the
-    // configuration is used.
+    // No ServiceConfiguration provided, audio policy should not be able to connect.
+    let policy = env
+        .connect_to_service::<VolumePolicyControllerMarker>()
+        .expect("Connected to policy service");
+    policy.get_properties().await.expect_err("Policy get should fail");
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -68,16 +74,11 @@ async fn test_default_configuration_provided() {
         .get_default_value()
         .expect("no enabled service configuration provided");
 
-    // Load test configuration for policy, which includes Audio, default will not be used.
-    let policy_configuration = DefaultSetting::new(None, "/config/data/policy_configuration.json")
-        .get_default_value()
-        .expect("no enabled policy configuration provided");
-
     let flags = ServiceFlags::default();
     let configuration = ServiceConfiguration::from(
         AgentConfiguration::default(),
         configuration,
-        policy_configuration,
+        EnabledPoliciesConfiguration::with_policies(get_test_policy_types()),
         flags,
     );
 
@@ -92,7 +93,45 @@ async fn test_default_configuration_provided() {
     // Any calls to the privacy service should fail since the service isn't included in the configuration.
     let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
     privacy_service.watch().await.expect_err("watch completed");
+}
 
-    // TODO(fxbug.dev/60925): verify that the volume policy service can be connected to once the
-    // configuration is used.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_default_policy_configuration_provided() {
+    let factory = InMemoryStorageFactory::create();
+
+    // Load test configuration for policy which includes Audio, default will not be used.
+    let policy_configuration = DefaultSetting::new(None, "/config/data/policy_configuration.json")
+        .get_default_value()
+        .expect("no enabled policy configuration provided");
+
+    let flags = ServiceFlags::default();
+    let configuration = ServiceConfiguration::from(
+        AgentConfiguration::default(),
+        // Include audio setting so audio policy works.
+        EnabledServicesConfiguration::with_services([SettingType::Audio].iter().copied().collect()),
+        policy_configuration,
+        flags,
+    );
+
+    // Include fake audio core service so we can be sure there's no funkiness if audio setting
+    // connects to the real audio core.
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = audio_core_service::Builder::new().build();
+    service_registry.lock().await.register_service(audio_core_service_handle.clone());
+
+    let env = EnvironmentBuilder::new(factory)
+        .service(ServiceRegistry::serve(service_registry))
+        .configuration(configuration)
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
+
+    env.connect_to_service::<AccessibilityMarker>().expect("Connected to service");
+
+    // Service configuration includes volume policy and audio setting, so calls to volume policy
+    // will succeed.
+    let policy = env
+        .connect_to_service::<VolumePolicyControllerMarker>()
+        .expect("Connected to policy service");
+    policy.get_properties().await.expect("Policy get should succeed");
 }

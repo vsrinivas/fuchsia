@@ -183,6 +183,10 @@ impl ServiceConfiguration {
         self.services = services;
     }
 
+    fn set_policies(&mut self, policies: HashSet<PolicyType>) {
+        self.policies = policies;
+    }
+
     fn set_controller_flags(&mut self, controller_flags: HashSet<ControllerFlag>) {
         self.controller_flags = controller_flags;
     }
@@ -280,9 +284,17 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.configuration = Some(ServiceConfiguration::default());
         }
 
-        self.configuration
-            .as_mut()
-            .map(|c| c.set_services(settings.to_vec().into_iter().collect()));
+        self.configuration.as_mut().map(|c| c.set_services(settings.iter().copied().collect()));
+        self
+    }
+
+    /// Sets policies types that are enabled.
+    pub fn policies(mut self, policies: &[PolicyType]) -> EnvironmentBuilder<T> {
+        if self.configuration.is_none() {
+            self.configuration = Some(ServiceConfiguration::default());
+        }
+
+        self.configuration.as_mut().map(|c| c.set_policies(policies.iter().copied().collect()));
         self
     }
 
@@ -347,7 +359,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         // Define top level MessageHub for service communication.
         let messenger_factory = service::message::create_hub();
 
-        let (agent_types, settings, _policies, flags) = match self.configuration {
+        let (agent_types, settings, policies, flags) = match self.configuration {
             Some(configuration) => (
                 configuration.agent_types,
                 configuration.services,
@@ -370,8 +382,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             context_id_counter.clone(),
         );
 
-        // TODO(fxbug.dev/60925): use provided configuration for policy API
-        let policies: HashSet<PolicyType> = [PolicyType::Audio].iter().copied().collect();
         // Create the policy handler factory and register policy handlers.
         let mut policy_handler_factory = PolicyHandlerFactoryImpl::new(
             policies.clone(),
