@@ -21,9 +21,11 @@ use {
         DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MODE_TYPE_DIRECTORY,
         OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
     },
-    fuchsia_zircon as zx,
     std::path::{Component, Path},
 };
+
+#[cfg(target_os = "fuchsia")]
+use {fuchsia_zircon as zx, fuchsia_zircon_status as zx_status};
 
 pub mod directory;
 pub mod file;
@@ -113,16 +115,18 @@ pub fn create_sub_directories(
 // be asynchronous.
 
 /// Connect a zx::Channel to a path in the namespace.
+#[cfg(target_os = "fuchsia")]
 pub fn connect_in_namespace(
     path: &str,
     server_chan: zx::Channel,
     flags: u32,
-) -> Result<(), zx::Status> {
+) -> Result<(), zx_status::Status> {
     node::connect_in_namespace(path, flags, server_chan)
 }
 
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
 /// stored in fdio. The path argument must be an absolute path.
+#[cfg(target_os = "fuchsia")]
 pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error> {
     let node = node::open_in_namespace(path, flags)?;
     Ok(node)
@@ -130,6 +134,7 @@ pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error
 
 /// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
 /// DirectoryProxy. The path argument must be an absolute path.
+#[cfg(target_os = "fuchsia")]
 pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, Error> {
     let node = directory::open_in_namespace(path, flags)?;
     Ok(node)
@@ -137,6 +142,7 @@ pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<DirectoryPr
 
 /// open_file_in_namespace will open a NodeProxy to the given path and convert it into a FileProxy.
 /// The path argument must be an absolute path.
+#[cfg(target_os = "fuchsia")]
 pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<FileProxy, Error> {
     let node = file::open_in_namespace(path, flags)?;
     Ok(node)
@@ -167,6 +173,7 @@ pub async fn write_file(file: &FileProxy, data: &str) -> Result<(), Error> {
 /// Write the given bytes into a file at `path`. The path must be an absolute path.
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
+#[cfg(target_os = "fuchsia")]
 pub async fn write_path_bytes(path: &str, data: &[u8]) -> Result<(), Error> {
     file::write_in_namespace(path, data).await?;
     Ok(())
@@ -185,6 +192,7 @@ pub async fn read_file_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> 
 /// FIDL structure should be provided at a read time.
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
+#[cfg(target_os = "fuchsia")]
 pub async fn read_path_fidl<T: Decodable>(path: &str) -> Result<T, Error> {
     Ok(file::read_in_namespace_to_fidl(path).await?)
 }
@@ -198,6 +206,7 @@ pub async fn write_file_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Re
 /// Write the given FIDL encoded message into a file at `path`. The path must be an absolute path.
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
+#[cfg(target_os = "fuchsia")]
 pub async fn write_path_fidl<T: Encodable>(path: &str, data: &mut T) -> Result<(), Error> {
     file::write_fidl_in_namespace(path, data).await?;
     Ok(())
@@ -255,7 +264,7 @@ mod tests {
         super::*,
         fidl::endpoints::{Proxy, ServerEnd},
         fidl_fuchsia_io::DirectoryMarker,
-        fuchsia_async as fasync,
+        fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
         futures::future,
         std::fs,
         tempfile::{NamedTempFile, TempDir},
@@ -377,9 +386,12 @@ mod tests {
             }
             if flags & OPEN_RIGHT_WRITABLE != 0 {
                 let (s, _) = file_proxy.write(b"write_only").await?;
-                assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
+                assert_eq!(zx_status::Status::OK, zx_status::Status::from_raw(s));
             }
-            assert_eq!(zx::Status::OK, zx::Status::from_raw(file_proxy.close().await?));
+            assert_eq!(
+                zx_status::Status::OK,
+                zx_status::Status::from_raw(file_proxy.close().await?)
+            );
         }
         Ok(())
     }

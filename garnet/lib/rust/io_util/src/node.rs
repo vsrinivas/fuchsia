@@ -5,13 +5,16 @@
 //! Utility functions for fuchsia.io nodes.
 
 use {
-    fidl_fuchsia_io::{
-        DirectoryEvent, DirectoryObject, DirectoryProxy, FileEvent, FileObject, FileProxy,
-        NodeInfo, NodeMarker, NodeProxy,
-    },
-    fuchsia_zircon::{self as zx, Status},
+    fidl_fuchsia_io::{DirectoryEvent, DirectoryObject, DirectoryProxy, NodeInfo, NodeProxy},
+    fuchsia_zircon_status as zx_status,
     futures::prelude::*,
     thiserror::Error,
+};
+
+#[cfg(target_os = "fuchsia")]
+use {
+    fidl_fuchsia_io::{FileEvent, FileObject, FileProxy, NodeMarker},
+    fuchsia_zircon as zx,
 };
 
 /// An error encountered while opening a node
@@ -22,7 +25,7 @@ pub enum OpenError {
     CreateProxy(#[source] fidl::Error),
 
     #[error("while opening from namespace: {0}")]
-    Namespace(#[source] Status),
+    Namespace(#[source] zx_status::Status),
 
     #[error("while sending open request: {0}")]
     SendOpenRequest(#[source] fidl::Error),
@@ -34,7 +37,7 @@ pub enum OpenError {
     OnOpenDecode(#[source] fidl::Error),
 
     #[error("open failed with status: {0}")]
-    OpenError(#[source] Status),
+    OpenError(#[source] zx_status::Status),
 
     #[error("remote responded with success but provided no node info")]
     MissingOnOpenInfo,
@@ -62,7 +65,7 @@ pub enum CloseError {
     SendCloseRequest(#[source] fidl::Error),
 
     #[error("close failed with status: {0}")]
-    CloseError(#[source] Status),
+    CloseError(#[source] zx_status::Status),
 }
 
 /// The type of a filesystem node
@@ -95,9 +98,9 @@ impl Kind {
         }
     }
 
-    fn expect_file(info: NodeInfo) -> Result<Option<zx::Event>, Kind> {
+    fn expect_file(info: NodeInfo) -> Result<(), Kind> {
         match info {
-            NodeInfo::File(FileObject { event, stream: None }) => Ok(event),
+            NodeInfo::File(FileObject { event: _, stream: None }) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }
@@ -114,7 +117,12 @@ impl Kind {
 // remote directories.  If/when fdio exposes the root namespace mapping or an API to connect to
 // nodes asynchronously, this function should be updated to use that.
 /// Connect a zx::Channel to a path in the current namespace.
-pub fn connect_in_namespace(path: &str, flags: u32, chan: zx::Channel) -> Result<(), zx::Status> {
+#[cfg(target_os = "fuchsia")]
+pub fn connect_in_namespace(
+    path: &str,
+    flags: u32,
+    chan: zx::Channel,
+) -> Result<(), zx_status::Status> {
     let namespace = fdio::Namespace::installed()?;
     namespace.connect(path, flags, chan)?;
     Ok(())
@@ -122,6 +130,7 @@ pub fn connect_in_namespace(path: &str, flags: u32, chan: zx::Channel) -> Result
 
 /// Opens the given `path` from the current namespace as a [`NodeProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Node protocol.
+#[cfg(target_os = "fuchsia")]
 pub fn open_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, OpenError> {
     let (node, server_end) =
         fidl::endpoints::create_proxy::<NodeMarker>().map_err(OpenError::CreateProxy)?;
@@ -134,7 +143,7 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, OpenError>
 /// Gracefully closes the node proxy from the remote end.
 pub async fn close(node: NodeProxy) -> Result<(), CloseError> {
     let status = node.close().await.map_err(CloseError::SendCloseRequest)?;
-    Status::ok(status).map_err(CloseError::CloseError)
+    zx_status::Status::ok(status).map_err(CloseError::CloseError)
 }
 
 /// Consume the first event from this DirectoryProxy's event stream, returning the proxy if it is
@@ -149,7 +158,7 @@ pub(crate) async fn verify_directory_describe_event(
         .ok_or(OpenError::OnOpenEventStreamClosed)?
         .map_err(OpenError::OnOpenDecode)?;
 
-    let () = Status::ok(status).map_err(OpenError::OpenError)?;
+    let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
 
     let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
 
@@ -169,7 +178,7 @@ pub(crate) async fn verify_file_describe_event(node: FileProxy) -> Result<FilePr
         .ok_or(OpenError::OnOpenEventStreamClosed)?
         .map_err(OpenError::OnOpenDecode)?;
 
-    let () = Status::ok(status).map_err(OpenError::OpenError)?;
+    let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
 
     let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
 
@@ -189,7 +198,7 @@ mod tests {
     async fn open_in_namespace_opens_real_node() {
         let file_node = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
         let info = file_node.describe().await.unwrap();
-        assert_matches!(Kind::expect_file(info), Ok(Some(_)));
+        assert_matches!(Kind::expect_file(info), Ok(()));
 
         let dir_node = open_in_namespace("/pkg/data", OPEN_RIGHT_READABLE).unwrap();
         let info = dir_node.describe().await.unwrap();
@@ -207,7 +216,7 @@ mod tests {
     async fn open_in_namespace_rejects_fake_root_namespace_entry() {
         assert_matches!(
             open_in_namespace("/fake", OPEN_RIGHT_READABLE),
-            Err(OpenError::Namespace(Status::NOT_FOUND))
+            Err(OpenError::Namespace(zx_status::Status::NOT_FOUND))
         );
     }
 }

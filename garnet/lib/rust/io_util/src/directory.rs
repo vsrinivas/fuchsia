@@ -10,11 +10,12 @@ use {
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeMarker, NodeProxy,
     },
-    fuchsia_zircon::Status,
+    fuchsia_zircon_status as zx_status,
 };
 
 /// Opens the given `path` from the current namespace as a [`DirectoryProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.Directory protocol.
+#[cfg(target_os = "fuchsia")]
 pub fn open_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, OpenError> {
     let (dir, server_end) =
         fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(OpenError::CreateProxy)?;
@@ -182,7 +183,7 @@ pub fn clone_onto_no_describe(
 /// Gracefully closes the directory proxy from the remote end.
 pub async fn close(dir: DirectoryProxy) -> Result<(), CloseError> {
     let status = dir.close().await.map_err(CloseError::SendCloseRequest)?;
-    Status::ok(status).map_err(CloseError::CloseError)
+    zx_status::Status::ok(status).map_err(CloseError::CloseError)
 }
 
 #[cfg(test)]
@@ -240,7 +241,7 @@ mod tests {
     async fn open_in_namespace_rejects_fake_root_namespace_entry() {
         assert_matches!(
             open_in_namespace("/fake", OPEN_RIGHT_READABLE),
-            Err(OpenError::Namespace(Status::NOT_FOUND))
+            Err(OpenError::Namespace(zx_status::Status::NOT_FOUND))
         );
     }
 
@@ -276,7 +277,7 @@ mod tests {
 
         assert_matches!(
             open_directory(&pkg, "fake", OPEN_RIGHT_READABLE).await,
-            Err(OpenError::OpenError(Status::NOT_FOUND))
+            Err(OpenError::OpenError(zx_status::Status::NOT_FOUND))
         );
     }
 
@@ -286,7 +287,7 @@ mod tests {
 
         assert_matches!(
             open_directory(&pkg, "data/file", OPEN_RIGHT_READABLE).await,
-            Err(OpenError::OpenError(Status::NOT_DIR))
+            Err(OpenError::OpenError(zx_status::Status::NOT_DIR))
         );
     }
 
@@ -361,7 +362,7 @@ mod tests {
         let file = open_file(&pkg, "data/file", OPEN_RIGHT_READABLE).await.unwrap();
         assert_eq!(
             file.seek(0, fidl_fuchsia_io::SeekOrigin::End).await.unwrap(),
-            (Status::OK.into_raw(), DATA_FILE_CONTENTS.len() as u64)
+            (zx_status::Status::OK.into_raw(), DATA_FILE_CONTENTS.len() as u64)
         );
         crate::file::close(file).await.unwrap();
     }
@@ -372,7 +373,7 @@ mod tests {
 
         assert_matches!(
             open_file(&pkg, "data/fake", OPEN_RIGHT_READABLE).await,
-            Err(OpenError::OpenError(Status::NOT_FOUND))
+            Err(OpenError::OpenError(zx_status::Status::NOT_FOUND))
         );
     }
 
@@ -440,7 +441,7 @@ mod tests {
             }
             if flags & OPEN_RIGHT_WRITABLE != 0 {
                 let (s, _) = file.write(b"write_only").await.unwrap();
-                assert_eq!(Status::ok(s), Ok(()));
+                assert_eq!(zx_status::Status::ok(s), Ok(()));
             }
             crate::file::close(file).await.unwrap();
 
@@ -453,7 +454,7 @@ mod tests {
                     }
                     if flags & OPEN_RIGHT_WRITABLE != 0 {
                         let (s, _) = file.write(b"write_only").await.unwrap();
-                        assert_eq!(Status::ok(s), Ok(()));
+                        assert_eq!(zx_status::Status::ok(s), Ok(()));
                     }
                     crate::file::close(file).await.unwrap();
                 }

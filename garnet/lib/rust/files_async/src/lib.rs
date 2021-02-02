@@ -8,14 +8,18 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, MAX_BUF, MODE_TYPE_DIRECTORY},
+    fuchsia_zircon_status as zx_status,
+    futures::future::BoxFuture,
+    std::{mem, str::Utf8Error},
+    thiserror::{self, Error},
+};
+
+#[cfg(target_os = "fuchsia")]
+use {
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
-    futures::{
-        future::BoxFuture,
-        stream::{self, BoxStream, StreamExt},
-    },
-    std::{collections::VecDeque, mem, str::Utf8Error},
-    thiserror::{self, Error},
+    futures::stream::{self, BoxStream, StreamExt},
+    std::collections::VecDeque,
 };
 
 /// Error returned by files_async library.
@@ -28,16 +32,16 @@ pub enum Error {
     Fidl(&'static str, fidl::Error),
 
     #[error("`read_dirents` failed with status {:?}", _0)]
-    ReadDirents(zx::Status),
+    ReadDirents(zx_status::Status),
 
     #[error("`unlink` failed with status {:?}", _0)]
-    Unlink(zx::Status),
+    Unlink(zx_status::Status),
 
     #[error("timeout")]
     Timeout,
 
     #[error("`rewind` failed with status {:?}", _0)]
-    Rewind(zx::Status),
+    Rewind(zx_status::Status),
 
     #[error("Failed to read directory {}: {:?}", name, err)]
     ReadDir { name: String, err: anyhow::Error },
@@ -87,6 +91,7 @@ pub struct DirEntry {
     pub kind: DirentKind,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl DirEntry {
     fn root() -> Self {
         Self { name: "".to_string(), kind: DirentKind::Directory }
@@ -113,6 +118,7 @@ impl DirEntry {
 /// proxy. The returned entries will not include ".".
 /// |timeout| can be provided optionally to specify the maximum time to wait for a directory to be
 /// read.
+#[cfg(target_os = "fuchsia")]
 pub fn readdir_recursive(
     dir: &DirectoryProxy,
     timeout: Option<zx::Duration>,
@@ -204,14 +210,14 @@ pub fn readdir_recursive(
 /// returned entries will not include "." or nodes from any subdirectories.
 pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     let status = dir.rewind().await.map_err(|e| Error::Fidl("rewind", e))?;
-    zx::Status::ok(status).map_err(Error::Rewind)?;
+    zx_status::Status::ok(status).map_err(Error::Rewind)?;
 
     let mut entries = vec![];
 
     loop {
         let (status, buf) =
             dir.read_dirents(MAX_BUF).await.map_err(|e| Error::Fidl("read_dirents", e))?;
-        zx::Status::ok(status).map_err(Error::ReadDirents)?;
+        zx_status::Status::ok(status).map_err(Error::ReadDirents)?;
 
         if buf.is_empty() {
             break;
@@ -233,6 +239,7 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
 /// Returns a sorted Vec of directory entries contained directly in the given directory proxy. The
 /// returned entries will not include "." or nodes from any subdirectories. Timeouts if the read
 /// takes longer than the given `timeout` duration.
+#[cfg(target_os = "fuchsia")]
 pub async fn readdir_with_timeout(
     dir: &DirectoryProxy,
     timeout: zx::Duration,
@@ -249,6 +256,7 @@ pub async fn dir_contains(dir: &DirectoryProxy, name: &str) -> Result<bool, Erro
 ///
 /// Timesout if reading the directory's entries takes longer than the given `timeout`
 /// duration.
+#[cfg(target_os = "fuchsia")]
 pub async fn dir_contains_with_timeout(
     dir: &DirectoryProxy,
     name: &str,
@@ -325,7 +333,7 @@ pub async fn remove_dir_recursive(root_dir: &DirectoryProxy, name: &str) -> Resu
         .map_err(|e| Error::Fidl("open", e))?;
     remove_dir_contents(dir).await?;
     let s = root_dir.unlink(name).await.map_err(|e| Error::Fidl("unlink", e))?;
-    zx::Status::ok(s).map_err(Error::Unlink)?;
+    zx_status::Status::ok(s).map_err(Error::Unlink)?;
     Ok(())
 }
 
@@ -350,7 +358,7 @@ fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Err
                 _ => {}
             }
             let s = dir.unlink(&dirent.name).await.map_err(|e| Error::Fidl("unlink", e))?;
-            zx::Status::ok(s).map_err(Error::Unlink)?;
+            zx_status::Status::ok(s).map_err(Error::Unlink)?;
         }
         Ok(())
     };
@@ -695,7 +703,7 @@ mod tests {
             let tempdir = TempDir::new().expect("failed to create tmp dir");
             let dir = create_nested_dir(&tempdir).await;
             let res = remove_dir_recursive(&dir, ".").await;
-            let expected: Result<(), Error> = Err(Error::Unlink(zx::Status::UNAVAILABLE));
+            let expected: Result<(), Error> = Err(Error::Unlink(zx_status::Status::UNAVAILABLE));
             assert_eq!(format!("{:?}", res), format!("{:?}", expected));
         }
     }

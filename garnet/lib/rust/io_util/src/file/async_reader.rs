@@ -5,7 +5,7 @@
 use {
     fidl::{client::QueryResponseFut, endpoints::Proxy as _},
     fidl_fuchsia_io::FileProxy,
-    fuchsia_zircon::Status,
+    fuchsia_zircon_status as zx_status,
     futures::io::AsyncRead,
     std::{
         cmp::min,
@@ -74,7 +74,7 @@ impl AsyncRead for AsyncReader {
                 State::Forwarding { ref mut fut, ref zero_byte_request } => {
                     match futures::ready!(Pin::new(fut).poll(cx)) {
                         Ok((status, bytes)) => {
-                            if let Err(e) = Status::ok(status) {
+                            if let Err(e) = zx_status::Status::ok(status) {
                                 self.state = State::Empty;
                                 return Poll::Ready(Err(std::io::Error::new(
                                     std::io::ErrorKind::Other,
@@ -235,7 +235,9 @@ mod tests {
                 match req {
                     FileRequest::Read { count, responder } => {
                         assert_eq!(count, 1);
-                        responder.send(Status::OK.into_raw(), &[file_read_requests]).unwrap();
+                        responder
+                            .send(zx_status::Status::OK.into_raw(), &[file_read_requests])
+                            .unwrap();
                     }
                     req => panic!("unhandled request {:?}", req),
                 }
@@ -266,7 +268,7 @@ mod tests {
             match stream.next().await.unwrap().unwrap() {
                 FileRequest::Read { count, responder } => {
                     assert_eq!(count, 3);
-                    responder.send(Status::OK.into_raw(), b"012").unwrap();
+                    responder.send(zx_status::Status::OK.into_raw(), b"012").unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -300,7 +302,7 @@ mod tests {
             match stream.next().await.unwrap().unwrap() {
                 FileRequest::Read { count, responder } => {
                     assert_eq!(count, 4);
-                    responder.send(Status::OK.into_raw(), b"3456").unwrap();
+                    responder.send(zx_status::Status::OK.into_raw(), b"3456").unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -348,7 +350,7 @@ mod tests {
             match stream.next().await.unwrap().unwrap() {
                 FileRequest::Read { count, responder } => {
                     assert_eq!(count, 1);
-                    responder.send(Status::NO_MEMORY.into_raw(), b"").unwrap();
+                    responder.send(zx_status::Status::NO_MEMORY.into_raw(), b"").unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -366,7 +368,7 @@ mod tests {
             match stream.next().await.unwrap().unwrap() {
                 FileRequest::Read { count, responder } => {
                     assert_eq!(count, 1);
-                    responder.send(Status::OK.into_raw(), b"0").unwrap();
+                    responder.send(zx_status::Status::OK.into_raw(), b"0").unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -394,7 +396,7 @@ mod tests {
         match stream.next().await.unwrap().unwrap() {
             FileRequest::Read { count, responder } => {
                 assert_eq!(count, 0);
-                responder.send(Status::OK.into_raw(), &[]).unwrap();
+                responder.send(zx_status::Status::OK.into_raw(), &[]).unwrap();
             }
             req => panic!("unhandled request {:?}", req),
         }
@@ -411,7 +413,7 @@ mod tests {
             match stream.next().await.unwrap().unwrap() {
                 FileRequest::Read { count, responder } => {
                     assert_eq!(count, 1);
-                    responder.send(Status::OK.into_raw(), &[1]).unwrap();
+                    responder.send(zx_status::Status::OK.into_raw(), &[1]).unwrap();
                 }
                 req => panic!("unhandled request {:?}", req),
             }
@@ -452,7 +454,7 @@ mod tests {
                         FileRequest::Read { count, responder } => {
                             assert_eq!(count, first_poll_read_len.try_into().unwrap());
                             let resp = vec![7u8; min(file_size, first_poll_read_len)];
-                            responder.send(Status::OK.into_raw(), &resp).unwrap();
+                            responder.send(zx_status::Status::OK.into_raw(), &resp).unwrap();
                         }
                         req => panic!("unhandled request {:?}", req),
                     }
@@ -469,7 +471,9 @@ mod tests {
                                 FileRequest::Read { count, responder } => {
                                     assert_eq!(count, second_poll_read_len.try_into().unwrap());
                                     let resp = vec![7u8; min(file_size, second_poll_read_len)];
-                                    responder.send(Status::OK.into_raw(), &resp).unwrap();
+                                    responder
+                                        .send(zx_status::Status::OK.into_raw(), &resp)
+                                        .unwrap();
                                 }
                                 req => panic!("unhandled request {:?}", req),
                             }

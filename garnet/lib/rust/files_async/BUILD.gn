@@ -12,8 +12,7 @@ rustc_library("files_async") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
@@ -28,6 +27,13 @@ rustc_library("files_async") {
   ]
 
   sources = [ "src/lib.rs" ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//src/lib/fuchsia-async",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+    ]
+  }
 }
 
 test_package("files_async_tests") {

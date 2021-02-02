@@ -5,17 +5,24 @@
 //! Utility functions for fuchsia.io files.
 
 use {
-    crate::node::{self, CloseError, OpenError},
+    crate::node::{CloseError, OpenError},
     anyhow::Error,
     fidl::encoding::{decode_persistent, encode_persistent, Decodable, Encodable},
-    fidl_fuchsia_io::{FileMarker, FileProxy, MAX_BUF},
-    fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_zircon::{Duration, Status},
+    fidl_fuchsia_io::{FileProxy, MAX_BUF},
+    fuchsia_zircon_status as zx_status,
     thiserror::Error,
 };
 
 mod async_reader;
 pub use async_reader::AsyncReader;
+
+#[cfg(target_os = "fuchsia")]
+use {
+    crate::node,
+    fidl_fuchsia_io::FileMarker,
+    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_zircon::Duration,
+};
 
 /// An error encountered while reading a file
 #[derive(Debug, Error)]
@@ -28,7 +35,7 @@ pub enum ReadError {
     Fidl(#[from] fidl::Error),
 
     #[error("read failed with status: {0}")]
-    ReadError(#[source] Status),
+    ReadError(#[source] zx_status::Status),
 
     #[error("file was not a utf-8 encoded string: {0}")]
     InvalidUtf8(#[from] std::string::FromUtf8Error),
@@ -70,7 +77,7 @@ pub enum WriteError {
     Fidl(#[from] fidl::Error),
 
     #[error("write failed with status: {0}")]
-    WriteError(#[source] Status),
+    WriteError(#[source] zx_status::Status),
 
     #[error("file endpoint reported more bytes written than were provided")]
     Overwrite,
@@ -100,6 +107,7 @@ impl WriteNamedError {
 
 /// Opens the given `path` from the current namespace as a [`FileProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.File protocol.
+#[cfg(target_os = "fuchsia")]
 pub fn open_in_namespace(path: &str, flags: u32) -> Result<FileProxy, OpenError> {
     let (dir, server_end) =
         fidl::endpoints::create_proxy::<FileMarker>().map_err(OpenError::CreateProxy)?;
@@ -113,13 +121,14 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<FileProxy, OpenError>
 /// Gracefully closes the file proxy from the remote end.
 pub async fn close(file: FileProxy) -> Result<(), CloseError> {
     let status = file.close().await.map_err(CloseError::SendCloseRequest)?;
-    Status::ok(status).map_err(CloseError::CloseError)
+    zx_status::Status::ok(status).map_err(CloseError::CloseError)
 }
 
 /// Write the given data into a file at `path` in the current namespace. The path must be an
 /// absolute path.
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
+#[cfg(target_os = "fuchsia")]
 pub async fn write_in_namespace<D>(path: &str, data: D) -> Result<(), WriteNamedError>
 where
     D: AsRef<[u8]>,
@@ -149,7 +158,7 @@ where
     while !data.is_empty() {
         let (status, bytes_written) =
             file.write(&data[..std::cmp::min(MAX_BUF as usize, data.len())]).await?;
-        Status::ok(status).map_err(WriteError::WriteError)?;
+        zx_status::Status::ok(status).map_err(WriteError::WriteError)?;
 
         if bytes_written > data.len() as u64 {
             return Err(WriteError::Overwrite);
@@ -169,6 +178,7 @@ pub async fn write_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Result<
 /// Write the given FIDL encoded message into a file at `path`. The path must be an absolute path.
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
+#[cfg(target_os = "fuchsia")]
 pub async fn write_fidl_in_namespace<T: Encodable>(path: &str, data: &mut T) -> Result<(), Error> {
     write_in_namespace(path, encode_persistent(data)?).await?;
     Ok(())
@@ -180,7 +190,7 @@ pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
 
     loop {
         let (status, mut bytes) = file.read(MAX_BUF).await?;
-        Status::ok(status).map_err(ReadError::ReadError)?;
+        zx_status::Status::ok(status).map_err(ReadError::ReadError)?;
 
         if bytes.is_empty() {
             break;
@@ -201,7 +211,7 @@ pub async fn read_num_bytes(file: &FileProxy, num_bytes: u64) -> Result<Vec<u8>,
     while bytes_left > 0 {
         let bytes_to_read = std::cmp::min(bytes_left, MAX_BUF);
         let (status, mut bytes) = file.read(bytes_to_read).await?;
-        Status::ok(status).map_err(ReadError::ReadError)?;
+        zx_status::Status::ok(status).map_err(ReadError::ReadError)?;
 
         if bytes.is_empty() {
             break;
@@ -222,6 +232,7 @@ pub async fn read_num_bytes(file: &FileProxy, num_bytes: u64) -> Result<Vec<u8>,
 
 /// Reads all data from the file at `path` in the current namespace. The path must be an absolute
 /// path.
+#[cfg(target_os = "fuchsia")]
 pub async fn read_in_namespace(path: &str) -> Result<Vec<u8>, ReadNamedError> {
     async {
         let file = open_in_namespace(path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)?;
@@ -240,6 +251,7 @@ pub async fn read_to_string(file: &FileProxy) -> Result<String, ReadError> {
 
 /// Reads a utf-8 encoded string from the file at `path` in the current namespace. The path must be
 /// an absolute path.
+#[cfg(target_os = "fuchsia")]
 pub async fn read_in_namespace_to_string(path: &str) -> Result<String, ReadNamedError> {
     let bytes = read_in_namespace(path).await?;
     let string = String::from_utf8(bytes)
@@ -249,6 +261,7 @@ pub async fn read_in_namespace_to_string(path: &str) -> Result<String, ReadNamed
 
 /// Reads a utf-8 encoded string from the file at `path` in the current namespace. The path must be
 /// an absolute path. Times out if the read takes longer than the given `timeout` duration.
+#[cfg(target_os = "fuchsia")]
 pub async fn read_in_namespace_to_string_with_timeout(
     path: &str,
     timeout: Duration,
@@ -274,6 +287,7 @@ pub async fn read_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> {
 /// FIDL structure should be provided at a read time.
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
+#[cfg(target_os = "fuchsia")]
 pub async fn read_in_namespace_to_fidl<T: Decodable>(path: &str) -> Result<T, Error> {
     let bytes = read_in_namespace(path).await?;
     Ok(decode_persistent(&bytes)?)
@@ -313,7 +327,7 @@ mod tests {
     async fn open_in_namespace_rejects_fake_root_namespace_entry() {
         assert_matches!(
             open_in_namespace("/fake", OPEN_RIGHT_READABLE),
-            Err(OpenError::Namespace(Status::NOT_FOUND))
+            Err(OpenError::Namespace(zx_status::Status::NOT_FOUND))
         );
     }
 
