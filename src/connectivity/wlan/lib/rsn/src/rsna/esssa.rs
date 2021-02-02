@@ -227,6 +227,11 @@ impl EssSa {
         }
     }
 
+    pub fn reset_replay_counter(&mut self) {
+        info!("resetting ESSSA replay counter");
+        self.key_replay_counter = 0;
+    }
+
     pub fn reset_security_associations(&mut self) {
         info!("resetting ESSSA security associations");
         self.pmksa.replace_state(|state| state.reset());
@@ -738,6 +743,16 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(5, supplicant.esssa.key_replay_counter);
         assert!(updates.is_empty());
+
+        // After reset, first message should not be dropped.
+        supplicant.reset();
+        supplicant.start().expect("Failed starting Supplicant");
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(0);
+        });
+        assert!(result.is_ok());
+        expect_eapol_resp(&updates[..]);
     }
 
     #[test]

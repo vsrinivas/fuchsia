@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -552,6 +552,7 @@ impl Associated {
 
         // Client is disassociating. The ESS-SA must be kept alive but reset.
         if let Protection::Rsna(rsna) = &mut protection {
+            // Reset the state of the ESS-SA and its replay counter to zero per IEEE 802.11-2016 12.7.2.
             rsna.supplicant.reset();
         }
 
