@@ -1,0 +1,50 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.sharedmemory;
+using fuchsia.mem;
+
+using zx;
+
+flexible bits SharedVmoRight : uint32 {
+    /// The protocol implementation can read from this VMO (used for transmit requests).
+    READ = 0x1;
+    /// The protocol implementation can write to this VMO (used for receive requests).
+    WRITE = 0x2;
+};
+
+struct SharedVmoBuffer {
+    uint32 vmo_id;
+    uint64 offset;
+    uint64 size;
+};
+
+/// This is a generic protocol for sharing VMOs that drivers may compose.
+protocol SharedVmoRegister {
+    /// Registers a VMO and transfers ownership to the driver.
+    /// vmo_id: The ID chosen by the client that will be used in operations on this VMO.
+    /// vmo: The handle, offset, and size of this VMO. IO operations on this VMO will be relative to
+    /// the offset and size specified here.
+    /// rights: A bit field of SharedVmoRight values indicating how this VMO may be used. Callers
+    /// should assume that the driver will map and/or pin the VMO using these rights.
+    RegisterVmo(uint32 vmo_id, fuchsia.mem.Range vmo, SharedVmoRight rights) -> () error zx.status;
+
+    /// Unmaps and/or unpins the VMO and returns the handle to the caller.
+    UnregisterVmo(uint32 vmo_id) -> (zx.handle:VMO vmo) error zx.status;
+};
+
+/// This is a generic protocol for driver IO using shared VMOs. Drivers may compose this protocol
+/// and choose which methods to implement based on the uses of the hardware. This protocol is only
+/// intended for simple use cases.
+protocol SharedVmoIo {
+    /// Sends the data in buffer to the device.
+    Transmit(SharedVmoBuffer buffer) -> () error zx.status;
+
+    /// Receives data from the device into buffer.
+    Receive(SharedVmoBuffer buffer) -> () error zx.status;
+
+    /// Simultaneously transmits and receives data. The size fields of tx_buffer and rx_buffer must
+    /// be the same.
+    Exchange(SharedVmoBuffer tx_buffer, SharedVmoBuffer rx_buffer) -> () error zx.status;
+};
