@@ -238,6 +238,7 @@ ntapi = { path = "tiny_mirrors/ntapi" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
 regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
+rustls = { path = "tiny_mirrors/rustls" }
 security-framework = { path = "tiny_mirrors/security-framework" }
 serde_json5 = { path = "../rust-mirrors/serde_json5" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
