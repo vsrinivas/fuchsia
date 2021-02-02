@@ -176,7 +176,7 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
                               [&is_rendering](fuchsia::ui::gfx::ViewState view_state) {
                                 is_rendering = view_state.is_rendering;
                               });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kCallTimeout));
+    RunLoopUntil([&is_rendering] { return is_rendering; });
     FX_LOGS(INFO) << "Launched component: " << component_url;
   }
 

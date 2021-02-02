@@ -5,8 +5,5 @@
 group("integration_flutter_tests") {
   testonly = true
 
-  deps = [
-    # TODO(fxb/67464): Re-enable flutter-embedder-test.
-    # "embedder:tests"
-  ]
+  deps = [ "embedder:tests" ]
 }
