@@ -160,10 +160,6 @@ impl LogStats {
         }
     }
 
-    pub fn get_by_url(&self, url: &str) -> Option<&ComponentLogStats> {
-        self.stats_list.iter().filter(|x| x.component_url == url).next()
-    }
-
     // Extracts the component start times from the inspect hierarchy.
     fn extract_component_start_times(
         inspect_root: &DiagnosticsHierarchy,

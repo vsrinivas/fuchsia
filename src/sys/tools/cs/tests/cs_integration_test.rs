@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    cs::v2::{ElfRuntime, Execution, V2Component},
+    cs::{
+        io::Directory,
+        v2::{ElfRuntime, Execution, V2Component},
+    },
     test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
 };
 
@@ -77,7 +80,8 @@ async fn empty_component() {
     event.resume().await.unwrap();
 
     let hub_v2_path = test.get_hub_v2_path();
-    let actual_root_component = V2Component::explore(hub_v2_path).await;
+    let root_dir = Directory::from_namespace(hub_v2_path).unwrap();
+    let actual_root_component = V2Component::explore(root_dir).await;
 
     let expected_root_component = V2Component {
         name: "<root>".to_string(),
@@ -123,7 +127,8 @@ async fn tree() {
     }
 
     let hub_v2_path = test.get_hub_v2_path();
-    let actual_root_component = V2Component::explore(hub_v2_path).await;
+    let root_dir = Directory::from_namespace(hub_v2_path).unwrap();
+    let actual_root_component = V2Component::explore(root_dir).await;
 
     let expected_root_component = V2Component {
         name: "<root>".to_string(),
@@ -257,7 +262,8 @@ async fn echo_realm() {
     }
 
     let hub_v2_path = test.get_hub_v2_path();
-    let actual_root_component = V2Component::explore(hub_v2_path).await;
+    let root_dir = Directory::from_namespace(hub_v2_path).unwrap();
+    let actual_root_component = V2Component::explore(root_dir).await;
 
     let expected_root_component = V2Component {
         name: "<root>".to_string(),

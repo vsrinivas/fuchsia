@@ -6,15 +6,15 @@
 
 //! `cs` performs a Component Search on the current system.
 
+mod freq;
+mod log_stats;
+
 use {
     anyhow::Error,
-    cs::{
-        freq::BlobFrequencies,
-        io::Directory,
-        log_stats::{LogSeverity, LogStats},
-        v2::V2Component,
-    },
+    cs::{io::Directory, v2::V2Component},
+    freq::BlobFrequencies,
     fuchsia_async as fasync,
+    log_stats::{LogSeverity, LogStats},
     std::path::PathBuf,
     structopt::StructOpt,
 };
@@ -50,10 +50,10 @@ enum Opt {
     PageInFrequencies,
 }
 
-fn validate_hub_directory() -> Option<PathBuf> {
+fn validate_hub_directory() -> Option<Directory> {
     let hub_path = PathBuf::from("/hub-v2");
     match Directory::from_namespace(hub_path.clone()) {
-        Ok(_) => return Some(hub_path),
+        Ok(hub_dir) => return Some(hub_dir),
         Err(e) => {
             eprintln!("`/hub-v2` could not be opened: {:?}", e);
             eprintln!("Do not run `cs` from the serial console. Use `fx shell` instead.");
@@ -75,14 +75,14 @@ async fn main() -> Result<(), Error> {
             println!("{}", log_stats);
         }
         Opt::Info { filter } => {
-            if let Some(hub_path) = validate_hub_directory() {
-                let component = V2Component::explore(hub_path).await;
+            if let Some(hub_dir) = validate_hub_directory() {
+                let component = V2Component::explore(hub_dir).await;
                 component.print_details(&filter);
             }
         }
         Opt::Tree => {
-            if let Some(hub_path) = validate_hub_directory() {
-                let component = V2Component::explore(hub_path).await;
+            if let Some(hub_dir) = validate_hub_directory() {
+                let component = V2Component::explore(hub_dir).await;
                 component.print_tree();
             }
         }

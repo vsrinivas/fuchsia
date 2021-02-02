@@ -6,7 +6,6 @@ use {
     crate::io::Directory,
     crate::v1::V1Realm,
     futures::future::{BoxFuture, FutureExt},
-    std::path::PathBuf,
 };
 
 static SPACER: &str = "  ";
@@ -28,10 +27,8 @@ async fn get_capabilities(capability_dir: Directory) -> Vec<String> {
     entries
 }
 
-fn explore(name: String, hub_path: PathBuf) -> BoxFuture<'static, V2Component> {
+fn explore(name: String, hub_dir: Directory) -> BoxFuture<'static, V2Component> {
     async move {
-        let hub_dir = Directory::from_namespace(hub_path.clone()).unwrap();
-
         let url = hub_dir.read_file("url").await.unwrap();
         let id = hub_dir.read_file("id").await.unwrap().parse::<u32>().unwrap();
         let component_type = hub_dir.read_file("component_type").await.unwrap();
@@ -46,17 +43,16 @@ fn explore(name: String, hub_path: PathBuf) -> BoxFuture<'static, V2Component> {
 
         // Recurse on the children
         let mut children: Vec<V2Component> = vec![];
-        let child_dir = hub_dir.open_dir("children").await;
-        for child_name in child_dir.entries().await {
-            let child_path = hub_path.join("children").join(&child_name);
-            let child = explore(child_name, child_path).await;
+        let children_dir = hub_dir.open_dir("children").await;
+        for child_name in children_dir.entries().await {
+            let child_dir = children_dir.open_dir(&child_name).await;
+            let child = explore(child_name, child_dir).await;
             children.push(child);
         }
 
         // If this component is appmgr, use it to explore the v1 component world
         let appmgr_root_v1_realm = if name == "appmgr" {
-            let v1_hub_path = hub_path.join("exec/out/hub");
-            let v1_hub_dir = Directory::from_namespace(v1_hub_path).unwrap();
+            let v1_hub_dir = hub_dir.open_dir("exec/out/hub").await;
             Some(V1Realm::create(v1_hub_dir).await)
         } else {
             None
@@ -185,8 +181,8 @@ pub struct V2Component {
 }
 
 impl V2Component {
-    pub async fn explore(hub_path: PathBuf) -> Self {
-        explore("<root>".to_string(), hub_path).await
+    pub async fn explore(hub_dir: Directory) -> Self {
+        explore("<root>".to_string(), hub_dir).await
     }
 
     pub fn print_tree(&self) {
@@ -535,7 +531,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
             .unwrap();
 
-        let v2_component = V2Component::explore(root.to_path_buf()).await;
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let v2_component = V2Component::explore(root_dir).await;
 
         assert!(v2_component.appmgr_root_v1_realm.is_none());
         assert_eq!(v2_component.children, vec![]);
@@ -583,7 +580,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
             .unwrap();
 
-        let v2_component = V2Component::explore(root.to_path_buf()).await;
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let v2_component = V2Component::explore(root_dir).await;
 
         assert_eq!(
             v2_component.children,
@@ -639,7 +637,8 @@ mod tests {
             .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
             .unwrap();
 
-        let v2_component = V2Component::explore(root.to_path_buf()).await;
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let v2_component = V2Component::explore(root_dir).await;
 
         assert_eq!(
             v2_component.execution.unwrap().elf_runtime.unwrap(),
@@ -707,7 +706,8 @@ mod tests {
             .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
             .unwrap();
 
-        let v2_component = V2Component::explore(root.to_path_buf()).await;
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let v2_component = V2Component::explore(root_dir).await;
 
         let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub")).unwrap();
         assert!(v2_component.appmgr_root_v1_realm.is_none());
