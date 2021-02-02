@@ -14,12 +14,13 @@ use {
     crate::handler::setting_handler::{
         controller, persist, persist::controller as data_controller, persist::write,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
-        BoxedController, ClientImpl, ClientProxy, Command, ControllerError, GenerateController,
-        Handler, Payload, SettingHandlerResult, State,
+        BoxedController, ClientImpl, ClientProxy, Command, ControllerError, Event,
+        GenerateController, Handler, Payload, SettingHandlerResult, State,
     },
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::service,
     crate::switchboard::base::{get_all_setting_types, ControllerStateResult},
+    crate::tests::message_utils::verify_payload,
     crate::EnvironmentBuilder,
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},
@@ -355,6 +356,63 @@ async fn test_event_propagation() {
     assert_eq!(None, event_rx.next().await);
 }
 
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_rebroadcast() {
+    let factory = service::message::create_hub();
+    let setting_type = SettingType::Unknown;
+
+    // This messenger represents the outside client for the setting controller, which would be
+    // the setting proxy in most cases.
+    let (messenger, mut receptor) = factory.create(MessengerType::Unbound).await.unwrap();
+
+    // The handler messenger is handed to controllers to communicate with the wrapping handler
+    // logic, which listens on counterpart receptor.
+    let (handler_messenger, handler_receptor) =
+        factory.create(MessengerType::Unbound).await.unwrap();
+
+    let signature = handler_receptor.get_signature();
+
+    let context = ContextBuilder::new(
+        setting_type,
+        InMemoryStorageFactory::create(),
+        handler_messenger,
+        handler_receptor,
+        receptor.get_signature(),
+        CONTEXT_ID,
+    )
+    .build();
+
+    ClientImpl::create(
+        context,
+        StubControllerBuilder::new()
+            .add_request_mapping(Request::Get, Ok(Some(SettingInfo::Unknown)))
+            .build(),
+    )
+    .await
+    .expect("creating controller should succeed");
+
+    // Begin listening, enabling notifications.
+    messenger
+        .message(
+            Payload::Command(Command::ChangeState(State::Listen)).into(),
+            Audience::Messenger(signature),
+        )
+        .send()
+        .ack();
+
+    // Request rebroadcast of data.
+    messenger
+        .message(
+            Payload::Command(Command::HandleRequest(Request::Rebroadcast)).into(),
+            Audience::Messenger(signature),
+        )
+        .send()
+        .ack();
+
+    verify_payload(Payload::Event(Event::Changed(SettingInfo::Unknown)).into(), &mut receptor, None)
+        .await
+}
+
 // Test that the controller state is entered [n] times.
 async fn verify_controller_state(state: State, n: u8) {
     let factory = service::message::create_hub();
@@ -409,21 +467,47 @@ async fn test_teardown_state() {
     verify_controller_state(State::Teardown, 1).await;
 }
 
-/// Empty controller that handles no commands or events.
-struct StubController {}
+struct StubControllerBuilder {
+    request_mapping: Vec<(Request, SettingHandlerResult)>,
+}
 
-impl StubController {
-    pub fn create_generator() -> GenerateController {
+impl StubControllerBuilder {
+    pub fn new() -> Self {
+        Self { request_mapping: Vec::new() }
+    }
+
+    /// Maps a preset [`SettingHandlerResult`] to return when the specified [`Request`] is
+    /// encountered.
+    pub fn add_request_mapping(mut self, request: Request, result: SettingHandlerResult) -> Self {
+        self.request_mapping.retain(|(target_request, _)| *target_request != request);
+        self.request_mapping.push((request, result));
+
+        self
+    }
+
+    pub fn build(self) -> GenerateController {
+        let request_mapping = self.request_mapping;
         Box::new(move |_| {
-            Box::pin(async move { Ok(Box::new(StubController {}) as BoxedController) })
+            let request_mapping = request_mapping.clone();
+            Box::pin(
+                async move { Ok(Box::new(StubController { request_mapping }) as BoxedController) },
+            )
         })
     }
 }
 
+/// Controller that responds to requests based on a mapping to preset responses.
+struct StubController {
+    request_mapping: Vec<(Request, SettingHandlerResult)>,
+}
+
 #[async_trait]
 impl controller::Handle for StubController {
-    async fn handle(&self, _: Request) -> Option<SettingHandlerResult> {
-        return None;
+    async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
+        self.request_mapping
+            .iter()
+            .find(|(key, _)| *key == request)
+            .map_or(None, |x| Some(x.1.clone()))
     }
 
     async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
@@ -452,7 +536,7 @@ async fn test_unimplemented_error() {
         )
         .build();
 
-        assert!(ClientImpl::create(context, StubController::create_generator()).await.is_ok());
+        assert!(ClientImpl::create(context, StubControllerBuilder::new().build()).await.is_ok());
 
         let mut reply_receptor = messenger
             .message(

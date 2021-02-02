@@ -219,6 +219,21 @@ impl ClientImpl {
                 )
                 .expect("should only receive commands")
                 {
+                    // Rebroadcasting requires special handling. The handler will request the
+                    // current value from controller and then notify the caller as if it was a
+                    // change in value.
+                    Command::HandleRequest(Request::Rebroadcast) => {
+                        // Fetch the current value
+                        let controller_reply =
+                            Self::process_request(setting_type, &controller, Request::Get).await;
+
+                        // notify proxy of value
+                        if let Ok(Some(info)) = &controller_reply {
+                            client.lock().await.notify(Event::Changed(info.clone())).await;
+                        }
+
+                        reply(message_client, controller_reply);
+                    }
                     Command::HandleRequest(request) => reply(
                         message_client,
                         Self::process_request(setting_type, &controller, request.clone()).await,

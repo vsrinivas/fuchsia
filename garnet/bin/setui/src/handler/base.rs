@@ -97,6 +97,9 @@ pub enum Request {
     // Restores settings to outside dependencies.
     Restore,
 
+    // Instructs handler to rebroadcast its current value.
+    Rebroadcast,
+
     // Privacy requests.
     SetUserDataSharingConsent(Option<bool>),
 
@@ -147,6 +150,7 @@ impl Request {
             Request::SetLightGroupValue(_, _) => "SetLightGroupValue",
             Request::SetNightModeInfo(_) => "SetNightModeInfo",
             Request::Reboot => "Reboot",
+            Request::Rebroadcast => "Rebroadcast",
             Request::Restore => "Restore",
             Request::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
             Request::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
