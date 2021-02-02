@@ -11,7 +11,4 @@ zx_library("elf-psabi") {
   sdk_headers = [ "lib/elf-psabi/sp.h" ]
   sdk_migrated = true
   sources = []
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config/zircon:Wno-conversion" ]
 }

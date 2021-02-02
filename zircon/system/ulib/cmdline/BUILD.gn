@@ -15,9 +15,6 @@ zx_library("cmdline") {
   host = true
 
   sources = [ "args_parser.cc" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config/zircon:Wno-conversion" ]
 }
 
 group("tests") {

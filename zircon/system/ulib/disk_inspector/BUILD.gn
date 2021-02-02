@@ -54,9 +54,6 @@ if (is_fuchsia) {
         "//zircon/system/ulib/storage/operation",
       ]
     }
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 } else {
   config("headers_config") {
@@ -80,8 +77,5 @@ if (is_fuchsia) {
     ]
 
     public_configs = [ ":headers_config" ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
