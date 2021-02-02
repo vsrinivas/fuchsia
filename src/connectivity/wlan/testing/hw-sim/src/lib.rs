@@ -342,7 +342,7 @@ pub fn create_wpa2_psk_authenticator(
 }
 
 fn process_auth_update(
-    updates: &mut wlan_rsn::rsna::UpdateSink,
+    updates: &wlan_rsn::rsna::UpdateSink,
     channel: &WlanChan,
     bssid: &mac::Bssid,
     phy: &WlantapPhyProxy,
@@ -376,11 +376,20 @@ pub fn handle_set_channel_event(
     }
 }
 
-pub fn handle_tx_event(
+pub fn handle_tx_event<
+    F: FnMut(
+        &mut wlan_rsn::Authenticator,
+        &wlan_rsn::rsna::UpdateSink,
+        &WlanChan,
+        &mac::Bssid,
+        &WlantapPhyProxy,
+    ),
+>(
     args: &TxArgs,
     phy: &WlantapPhyProxy,
     bssid: &mac::Bssid,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
+    mut post_process_auth_update: F,
 ) {
     debug!("Handling tx event.");
     match mac::MacFrame::parse(&args.packet.data[..], false) {
@@ -399,6 +408,7 @@ pub fn handle_tx_event(
                         authenticator.initiate(&mut updates).expect("initiating authenticator");
                         process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
                             .expect("processing authenticator updates after initiation");
+                        post_process_auth_update(authenticator, &updates, &CHANNEL, bssid, &phy);
                     }
                 }
                 _ => {}
@@ -420,8 +430,9 @@ pub fn handle_tx_event(
                     {
                         error!("error sending EAPOL frame to authenticator: {}", e);
                     }
-                    process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
+                    process_auth_update(&updates, &CHANNEL, bssid, &phy)
                         .expect("processing authenticator updates after EAPOL frame");
+                    post_process_auth_update(authenticator, &updates, &CHANNEL, bssid, &phy);
                 }
             }
         }
@@ -441,7 +452,9 @@ pub fn handle_connect_events(
         WlantapPhyEvent::SetChannel { args } => {
             handle_set_channel_event(&args, phy, ssid, bssid, protection)
         }
-        WlantapPhyEvent::Tx { args } => handle_tx_event(&args, phy, bssid, authenticator),
+        WlantapPhyEvent::Tx { args } => {
+            handle_tx_event(&args, phy, bssid, authenticator, |_, _, _, _, _| {})
+        }
         _ => (),
     }
 }
