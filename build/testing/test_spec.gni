@@ -111,6 +111,8 @@ template("test_spec") {
     assert(_max_severity_allowed_val + [ _log_settings.max_severity ] -
                [ _log_settings.max_severity ] != _max_severity_allowed_val,
            "Invalid 'log_settings.max_severity': " + _log_settings.max_severity)
+  } else {
+    not_needed(invoker, [ "log_settings" ])
   }
 
   if (defined(invoker.parallel)) {
