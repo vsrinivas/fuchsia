@@ -85,7 +85,7 @@ class AppendBuffer final {
   void Append(const T* data, size_t bytes = sizeof(T)) {
     if (bytes != 0) {
       ptr_ = static_cast<std::byte*>(
-                memcpy(static_cast<void*>(ptr_), static_cast<const void*>(data), bytes)) +
+                 memcpy(static_cast<void*>(ptr_), static_cast<const void*>(data), bytes)) +
              bytes;
     }
   }
@@ -1492,7 +1492,8 @@ Extracted items use the file names shown below:\n\
   }
 
   // Create from raw file contents.
-  static ItemPtr CreateFromFile(const File* filenode, uint32_t type, Compressor::Config compress) {
+  static ItemPtr CreateFromFile(const File* filenode, const char* file_name, uint32_t type,
+                                Compressor::Config compress) {
     bool null_terminate = type == ZBI_TYPE_CMDLINE;
     if (!zbitl::TypeIsStorage(type)) {
       compress.clear();
@@ -1501,7 +1502,8 @@ Extracted items use the file names shown below:\n\
     const auto file = filenode->AsContents();
     size_t size = file->exact_size() + (null_terminate ? 1 : 0);
     if (size > UINT32_MAX) {
-      fprintf(stderr, "input file too large\n");
+      fprintf(stderr, "size of input file %s (%zu) is larger than format maximum (%u)\n", file_name,
+              size, UINT32_MAX);
       exit(1);
     }
     auto item = MakeItem(NewHeader(type, static_cast<uint32_t>(size)), compress);
@@ -2557,8 +2559,9 @@ int main(int argc, char** argv) {
           fprintf(stderr, "cannot use --entry (-e) with --target=CONTAINER\n");
           exit(1);
         } else {
-          items.push_back(Item::CreateFromFile(
-              opener.Emplace(optarg, input_type == ZBI_TYPE_CMDLINE), input_type, compressed));
+          items.push_back(
+              Item::CreateFromFile(opener.Emplace(optarg, input_type == ZBI_TYPE_CMDLINE),
+                                   "<command-line>", input_type, compressed));
           if (input_type == ZBI_TYPE_STORAGE_BOOTFS) {
             bootfs.push_back(&items.back());
           }
@@ -2594,7 +2597,7 @@ int main(int argc, char** argv) {
       }
     } else {
       // --type told us how to pack it.
-      items.push_back(Item::CreateFromFile(input, input_type, compressed));
+      items.push_back(Item::CreateFromFile(input, optarg, input_type, compressed));
     }
   }
 
