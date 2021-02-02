@@ -61,8 +61,30 @@ class TestObserver : public zxtest::LifecycleObserver {
 
 TestObserver test_observer;
 
+zx_status_t connect_to_sysmem_service(zx::channel* allocator2_client_param);
+zx_status_t verify_connectivity(zx::channel& allocator2_client);
+
+bool have_waited_for_sysmem_availability = false;
+
+// Wait for the sysmem devnode to exist. If this test runs immediately after boot then the sysmem
+// driver may not have been created yet, so we need to wait.
+void WaitForSysmemAvailability() {
+  if (have_waited_for_sysmem_availability)
+    return;
+
+  have_waited_for_sysmem_availability = true;
+
+  zx::channel allocator_client;
+  // The sysmem connector service handle waiting for the device to become available, so once we have
+  // connectivity through that we should have connectivity directly.
+  ASSERT_OK(connect_to_sysmem_service(&allocator_client));
+  ASSERT_OK(verify_connectivity(allocator_client));
+}
+
 zx_status_t connect_to_sysmem_driver(zx::channel* allocator2_client_param) {
   zx_status_t status;
+
+  WaitForSysmemAvailability();
 
   zx::channel driver_client;
   zx::channel driver_server;
