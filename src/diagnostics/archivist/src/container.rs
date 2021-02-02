@@ -5,7 +5,7 @@ use {
     crate::{
         events::{
             error::EventError,
-            types::{ComponentIdentifier, Moniker, RealmPath, UniqueKey, ValidatedSourceIdentity},
+            types::{ComponentIdentifier, Moniker, UniqueKey, ValidatedSourceIdentity},
         },
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
@@ -68,9 +68,8 @@ impl ComponentIdentity {
     pub fn unknown() -> Self {
         Self::from_identifier_and_url(
             &ComponentIdentifier::Legacy {
-                component_name: "UNKNOWN".into(),
                 instance_id: "0".to_string(),
-                realm_path: RealmPath::empty(),
+                moniker: vec!["UNKNOWN"].into(),
             },
             "fuchsia-pkg://UNKNOWN",
         )
@@ -81,10 +80,11 @@ impl TryFrom<SourceIdentity> for ComponentIdentity {
     type Error = EventError;
     fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
         let component: ValidatedSourceIdentity = ValidatedSourceIdentity::try_from(component)?;
+        let mut moniker = component.realm_path;
+        moniker.push(component.component_name);
         let id = ComponentIdentifier::Legacy {
-            component_name: component.component_name,
+            moniker: moniker.into(),
             instance_id: component.instance_id,
-            realm_path: component.realm_path.into(),
         };
         Ok(Self::from_identifier_and_url(&id, component.component_url))
     }

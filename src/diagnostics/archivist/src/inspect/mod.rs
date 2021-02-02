@@ -330,7 +330,7 @@ mod tests {
             accessor::BatchIterator,
             container::ComponentIdentity,
             diagnostics,
-            events::types::{ComponentIdentifier, InspectData, RealmPath},
+            events::types::{ComponentIdentifier, InspectData},
             pipeline::Pipeline,
             repository::DataRepo,
         },
@@ -637,15 +637,10 @@ mod tests {
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
-        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let identity = ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy {
-                instance_id,
-                realm_path,
-                component_name: "foo.cmx".into(),
-            },
+            &ComponentIdentifier::Legacy { instance_id, moniker: vec!["a", "b", "foo.cmx"].into() },
             TEST_URL,
         );
         let (proxy, _) =
@@ -763,8 +758,7 @@ mod tests {
                                 .unwrap();
                             let unique_cid = ComponentIdentifier::Legacy {
                                 instance_id: "1234".into(),
-                                realm_path: RealmPath::empty(),
-                                component_name: format!("component_{}.cmx", dir).into(),
+                                moniker: vec![format!("component_{}.cmx", dir)].into(),
                             };
                             (unique_cid, proxy)
                         }
@@ -855,8 +849,7 @@ mod tests {
         // selector, so any path would match.
         let component_id = ComponentIdentifier::Legacy {
             instance_id: "1234".into(),
-            realm_path: RealmPath::empty(),
-            component_name: "test_component.cmx".into(),
+            moniker: vec!["test_component.cmx"].into(),
         };
 
         let inspector = Inspector::new();

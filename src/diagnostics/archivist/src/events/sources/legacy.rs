@@ -157,12 +157,13 @@ mod tests {
 
     impl Into<EventMetadata> for ClonableSourceIdentity {
         fn into(self) -> EventMetadata {
+            let mut moniker = self.realm_path;
+            moniker.push(self.component_name);
             EventMetadata {
                 identity: ComponentIdentity::from_identifier_and_url(
                     &ComponentIdentifier::Legacy {
-                        component_name: self.component_name,
+                        moniker: moniker.into(),
                         instance_id: self.instance_id,
-                        realm_path: self.realm_path.into(),
                     },
                     &*MOCK_URL,
                 ),

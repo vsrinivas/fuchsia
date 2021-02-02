@@ -108,8 +108,7 @@ mod tests {
     fn test_message() -> Message {
         let identity = ComponentIdentity::from_identifier_and_url(
             &ComponentIdentifier::Legacy {
-                realm_path: vec!["bogus".to_string()].into(),
-                component_name: "specious-at-best.cmx".to_string(),
+                moniker: vec!["bogus", "specious-at-best.cmx"].into(),
                 instance_id: "0".into(),
             },
             "fuchsia-pkg://not-a-package",

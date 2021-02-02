@@ -187,8 +187,7 @@ mod tests {
         let log_reader1 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
                 &ComponentIdentifier::Legacy {
-                    realm_path: vec![".".to_string()].into(),
-                    component_name: "foo".into(),
+                    moniker: vec![".", "foo"].into(),
                     instance_id: "0".into(),
                 },
                 "http://foo.com",
@@ -197,8 +196,7 @@ mod tests {
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
                 &ComponentIdentifier::Legacy {
-                    realm_path: vec![".".to_string()].into(),
-                    component_name: "bar".into(),
+                    moniker: vec![".", "bar"].into(),
                     instance_id: "0".into(),
                 },
                 "http://bar.com",
@@ -231,8 +229,7 @@ mod tests {
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
                 &ComponentIdentifier::Legacy {
-                    realm_path: vec!["."].into(),
-                    component_name: "bar".into(),
+                    moniker: vec![".", "bar"].into(),
                     instance_id: "0".into(),
                 },
                 "http://bar.com",

@@ -19,10 +19,7 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream},
     io_util,
-    std::{
-        convert::TryFrom,
-        ops::{Deref, DerefMut},
-    },
+    std::{convert::TryFrom, ops::Deref},
 };
 
 #[async_trait]
@@ -33,49 +30,7 @@ pub trait EventSource: Sync + Send {
 /// The capacity for bounded channels used by this implementation.
 pub static CHANNEL_CAPACITY: usize = 1024;
 
-/// A realm path is a vector of realm names.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct RealmPath(Vec<String>);
-
-impl RealmPath {
-    pub fn empty() -> Self {
-        Self(vec![])
-    }
-}
-
-impl Deref for RealmPath {
-    type Target = Vec<String>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for RealmPath {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl From<Vec<String>> for RealmPath {
-    fn from(v: Vec<String>) -> Self {
-        RealmPath(v)
-    }
-}
-
-impl From<Vec<&str>> for RealmPath {
-    fn from(v: Vec<&str>) -> Self {
-        RealmPath(v.into_iter().map(|s| s.to_string()).collect())
-    }
-}
-
-impl Into<String> for RealmPath {
-    fn into(self) -> String {
-        self.0.join("/").to_string()
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Moniker(Vec<String>);
 
 impl Deref for Moniker {
@@ -88,6 +43,12 @@ impl Deref for Moniker {
 impl Into<Moniker> for Vec<&str> {
     fn into(self) -> Moniker {
         Moniker(self.into_iter().map(|s| s.to_string()).collect())
+    }
+}
+
+impl Into<Moniker> for Vec<String> {
+    fn into(self) -> Moniker {
+        Moniker(self)
     }
 }
 
@@ -111,14 +72,11 @@ impl Into<UniqueKey> for Vec<&str> {
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum ComponentIdentifier {
     Legacy {
-        /// The name of the component.
-        component_name: String,
+        /// The realm path plus the name of the component.
+        moniker: Moniker,
 
         /// The instance ID of the component.
         instance_id: String,
-
-        /// The path to the component's realm.
-        realm_path: RealmPath,
     },
     Moniker(Vec<MonikerSegment>),
 }
@@ -128,11 +86,7 @@ impl ComponentIdentifier {
     /// For legacy components (v1), this is the relative moniker with respect to the root realm.
     pub fn relative_moniker_for_selectors(&self) -> Moniker {
         match self {
-            Self::Legacy { realm_path, component_name, .. } => {
-                let mut moniker = realm_path.clone();
-                moniker.push(component_name.clone());
-                Moniker(moniker.0)
-            }
+            Self::Legacy { moniker, .. } => moniker.clone(),
             Self::Moniker(segments) => {
                 if segments.is_empty() {
                     Moniker(vec![])
@@ -199,11 +153,14 @@ impl ComponentIdentifier {
 impl std::fmt::Display for ComponentIdentifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Legacy { component_name, instance_id, realm_path } => {
-                for segment in &**realm_path {
-                    write!(f, "{}/", segment)?;
+            Self::Legacy { moniker, instance_id } => {
+                for (i, segment) in moniker.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "/")?;
+                    }
+                    write!(f, "{}", segment)?;
                 }
-                write!(f, "{}:{}", component_name, instance_id)
+                write!(f, ":{}", instance_id)
             }
             Self::Moniker(segments) => {
                 if segments.is_empty() {
@@ -226,11 +183,11 @@ impl std::fmt::Display for ComponentIdentifier {
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct MonikerSegment {
     /// The name of the component's collection, if any.
-    collection: Option<String>,
+    pub collection: Option<String>,
     /// The name of the component.
-    name: String,
+    pub name: String,
     /// The instance of the component.
-    instance_id: String,
+    pub instance_id: String,
 }
 
 impl std::fmt::Display for MonikerSegment {

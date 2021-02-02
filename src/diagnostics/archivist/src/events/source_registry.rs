@@ -240,9 +240,8 @@ mod tests {
     lazy_static! {
         static ref TEST_URL: String = "NO-OP URL".to_string();
         static ref LEGACY_ID: ComponentIdentifier = ComponentIdentifier::Legacy {
-            component_name: "foo.cmx".to_string(),
             instance_id: "12345".to_string(),
-            realm_path: vec!["a", "b"].into(),
+            moniker: vec!["a", "b", "foo.cmx"].into(),
         };
         static ref LEGACY_IDENTITY: ComponentIdentity =
             ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL);

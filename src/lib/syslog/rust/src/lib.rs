@@ -493,8 +493,7 @@ mod test {
         let read_len = tx.read(&mut buffer).expect("socket read failed");
         let src_id = ComponentIdentity::from_identifier_and_url(
             &ComponentIdentifier::Legacy {
-                realm_path: vec!["fake-test-env".to_string()].into(),
-                component_name: "test-component.cm".into(),
+                moniker: vec!["fake-test-env", "test-component.cmx"].into(),
                 instance_id: "".into(),
             },
             "fuchsia-pkg://fuchsia.com/testing123#test-component.cm",

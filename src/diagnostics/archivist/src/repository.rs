@@ -506,10 +506,8 @@ impl DataRepoState {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::events::types::{ComponentIdentifier, RealmPath},
-        diagnostics_hierarchy::trie::TrieIterableNode,
-        fidl_fuchsia_io::DirectoryMarker,
+        super::*, crate::events::types::ComponentIdentifier,
+        diagnostics_hierarchy::trie::TrieIterableNode, fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,
     };
 
@@ -519,14 +517,10 @@ mod tests {
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
-        let realm_path: RealmPath = vec!["a", "b"].into();
+        let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy {
-            instance_id,
-            realm_path,
-            component_name: "foo.cmx".into(),
-        };
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let (proxy, _) =
@@ -553,14 +547,10 @@ mod tests {
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path: RealmPath = vec!["a", "b"].into();
+        let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy {
-            instance_id,
-            realm_path,
-            component_name: "foo.cmx".into(),
-        };
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -587,14 +577,10 @@ mod tests {
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path: RealmPath = vec!["a", "b"].into();
+        let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy {
-            instance_id,
-            realm_path,
-            component_name: "foo.cmx".into(),
-        };
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -624,14 +610,10 @@ mod tests {
     async fn running_components_provide_start_time() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path: RealmPath = vec!["a", "b"].into();
+        let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy {
-            instance_id,
-            realm_path,
-            component_name: "foo.cmx".into(),
-        };
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let component_insertion = data_repo.add_new_component(
@@ -658,14 +640,10 @@ mod tests {
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path = vec!["a", "b"].into();
+        let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy {
-            instance_id,
-            realm_path,
-            component_name: "foo.cmx".into(),
-        };
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         let (proxy, _) =
@@ -695,14 +673,10 @@ mod tests {
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path: RealmPath = vec!["a", "b"].into();
+        let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy {
-            instance_id,
-            realm_path,
-            component_name: "foo.cmx".into(),
-        };
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -729,14 +703,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_filters_inspect_by_selectors() {
         let data_repo = DataRepo::default();
-        let realm_path: RealmPath = vec!["a", "b"].into();
+        let realm_path = vec!["a".to_string(), "b".to_string()];
         let instance_id = "1234".to_string();
 
-        let component_id = ComponentIdentifier::Legacy {
-            instance_id,
-            realm_path: realm_path.clone(),
-            component_name: "foo.cmx".into(),
-        };
+        let mut moniker = realm_path.clone();
+        moniker.push("foo.cmx".to_string());
+        let component_id = ComponentIdentifier::Legacy { instance_id, moniker: moniker.into() };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
 
         data_repo
@@ -754,10 +726,11 @@ mod tests {
             )
             .expect("add inspect artifacts");
 
+        let mut moniker = realm_path;
+        moniker.push("foo2.cmx".to_string());
         let component_id2 = ComponentIdentifier::Legacy {
             instance_id: "12345".to_string(),
-            realm_path,
-            component_name: "foo2.cmx".into(),
+            moniker: moniker.into(),
         };
         let identity2 = ComponentIdentity::from_identifier_and_url(&component_id2, TEST_URL);
 
