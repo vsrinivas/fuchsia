@@ -68,7 +68,7 @@ struct ByteAndBytes {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           ByteAndBytes* value)
         : message_(bytes, byte_size, sizeof(ByteAndBytes), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<ByteAndBytes>(value);
+      message_.Encode<ByteAndBytes>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -82,10 +82,10 @@ struct ByteAndBytes {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -106,7 +106,7 @@ struct ByteAndBytes {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -157,7 +157,7 @@ struct ByteAndBytes {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct ByteAndBytes>();

@@ -65,7 +65,7 @@ struct ExampleUseOfVectors {
                           ExampleUseOfVectors* value)
         : message_(bytes, byte_size, sizeof(ExampleUseOfVectors), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<ExampleUseOfVectors>(value);
+      message_.Encode<ExampleUseOfVectors>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -79,10 +79,10 @@ struct ExampleUseOfVectors {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -103,7 +103,7 @@ struct ExampleUseOfVectors {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -154,7 +154,7 @@ struct ExampleUseOfVectors {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct ExampleUseOfVectors>();

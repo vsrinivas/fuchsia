@@ -80,7 +80,7 @@ struct Padding7ByteMiddle {
                           Padding7ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding7ByteMiddle), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Padding7ByteMiddle>(value);
+      message_.Encode<Padding7ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -94,10 +94,10 @@ struct Padding7ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -116,7 +116,7 @@ struct Padding7ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -167,7 +167,7 @@ struct Padding7ByteMiddle {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding7ByteMiddle>();
@@ -195,7 +195,7 @@ struct Padding7ByteEnd {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           Padding7ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding7ByteEnd), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding7ByteEnd>(value);
+      message_.Encode<Padding7ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -209,10 +209,10 @@ struct Padding7ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -231,7 +231,7 @@ struct Padding7ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -282,7 +282,7 @@ struct Padding7ByteEnd {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding7ByteEnd>();
@@ -311,7 +311,7 @@ struct Padding6ByteMiddle {
                           Padding6ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding6ByteMiddle), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Padding6ByteMiddle>(value);
+      message_.Encode<Padding6ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -325,10 +325,10 @@ struct Padding6ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -347,7 +347,7 @@ struct Padding6ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -398,7 +398,7 @@ struct Padding6ByteMiddle {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding6ByteMiddle>();
@@ -426,7 +426,7 @@ struct Padding6ByteEnd {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           Padding6ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding6ByteEnd), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding6ByteEnd>(value);
+      message_.Encode<Padding6ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -440,10 +440,10 @@ struct Padding6ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -462,7 +462,7 @@ struct Padding6ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -513,7 +513,7 @@ struct Padding6ByteEnd {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding6ByteEnd>();
@@ -544,7 +544,7 @@ struct Padding5ByteMiddle {
                           Padding5ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding5ByteMiddle), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Padding5ByteMiddle>(value);
+      message_.Encode<Padding5ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -558,10 +558,10 @@ struct Padding5ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -580,7 +580,7 @@ struct Padding5ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -631,7 +631,7 @@ struct Padding5ByteMiddle {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding5ByteMiddle>();
@@ -661,7 +661,7 @@ struct Padding5ByteEnd {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           Padding5ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding5ByteEnd), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding5ByteEnd>(value);
+      message_.Encode<Padding5ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -675,10 +675,10 @@ struct Padding5ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -697,7 +697,7 @@ struct Padding5ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -748,7 +748,7 @@ struct Padding5ByteEnd {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding5ByteEnd>();
@@ -777,7 +777,7 @@ struct Padding4ByteMiddle {
                           Padding4ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding4ByteMiddle), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Padding4ByteMiddle>(value);
+      message_.Encode<Padding4ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -791,10 +791,10 @@ struct Padding4ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -813,7 +813,7 @@ struct Padding4ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -864,7 +864,7 @@ struct Padding4ByteMiddle {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding4ByteMiddle>();
@@ -892,7 +892,7 @@ struct Padding4ByteEnd {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           Padding4ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding4ByteEnd), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding4ByteEnd>(value);
+      message_.Encode<Padding4ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -906,10 +906,10 @@ struct Padding4ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -928,7 +928,7 @@ struct Padding4ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -979,7 +979,7 @@ struct Padding4ByteEnd {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding4ByteEnd>();
@@ -1013,7 +1013,7 @@ struct Padding4ByteAlignmentLength12 {
                           Padding4ByteAlignmentLength12* value)
         : message_(bytes, byte_size, sizeof(Padding4ByteAlignmentLength12),
                    nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding4ByteAlignmentLength12>(value);
+      message_.Encode<Padding4ByteAlignmentLength12>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1027,10 +1027,10 @@ struct Padding4ByteAlignmentLength12 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1049,7 +1049,7 @@ struct Padding4ByteAlignmentLength12 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1100,7 +1100,7 @@ struct Padding4ByteAlignmentLength12 {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding4ByteAlignmentLength12>();
@@ -1129,7 +1129,7 @@ struct Padding3ByteMiddle {
                           Padding3ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding3ByteMiddle), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Padding3ByteMiddle>(value);
+      message_.Encode<Padding3ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1143,10 +1143,10 @@ struct Padding3ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1165,7 +1165,7 @@ struct Padding3ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1216,7 +1216,7 @@ struct Padding3ByteMiddle {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding3ByteMiddle>();
@@ -1244,7 +1244,7 @@ struct Padding3ByteEnd {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           Padding3ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding3ByteEnd), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding3ByteEnd>(value);
+      message_.Encode<Padding3ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1258,10 +1258,10 @@ struct Padding3ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1280,7 +1280,7 @@ struct Padding3ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1331,7 +1331,7 @@ struct Padding3ByteEnd {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding3ByteEnd>();
@@ -1360,7 +1360,7 @@ struct Padding2ByteMiddle {
                           Padding2ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding2ByteMiddle), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Padding2ByteMiddle>(value);
+      message_.Encode<Padding2ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1374,10 +1374,10 @@ struct Padding2ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1396,7 +1396,7 @@ struct Padding2ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1447,7 +1447,7 @@ struct Padding2ByteMiddle {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding2ByteMiddle>();
@@ -1475,7 +1475,7 @@ struct Padding2ByteEnd {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           Padding2ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding2ByteEnd), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding2ByteEnd>(value);
+      message_.Encode<Padding2ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1489,10 +1489,10 @@ struct Padding2ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1511,7 +1511,7 @@ struct Padding2ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1562,7 +1562,7 @@ struct Padding2ByteEnd {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding2ByteEnd>();
@@ -1594,7 +1594,7 @@ struct Padding2ByteAlignmentLength6 {
                           Padding2ByteAlignmentLength6* value)
         : message_(bytes, byte_size, sizeof(Padding2ByteAlignmentLength6),
                    nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding2ByteAlignmentLength6>(value);
+      message_.Encode<Padding2ByteAlignmentLength6>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1608,10 +1608,10 @@ struct Padding2ByteAlignmentLength6 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1630,7 +1630,7 @@ struct Padding2ByteAlignmentLength6 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1681,7 +1681,7 @@ struct Padding2ByteAlignmentLength6 {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding2ByteAlignmentLength6>();
@@ -1710,7 +1710,7 @@ struct Padding1ByteMiddle {
                           Padding1ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding1ByteMiddle), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Padding1ByteMiddle>(value);
+      message_.Encode<Padding1ByteMiddle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1724,10 +1724,10 @@ struct Padding1ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1746,7 +1746,7 @@ struct Padding1ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1797,7 +1797,7 @@ struct Padding1ByteMiddle {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding1ByteMiddle>();
@@ -1825,7 +1825,7 @@ struct Padding1ByteEnd {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           Padding1ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding1ByteEnd), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Padding1ByteEnd>(value);
+      message_.Encode<Padding1ByteEnd>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1839,10 +1839,10 @@ struct Padding1ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1861,7 +1861,7 @@ struct Padding1ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1912,7 +1912,7 @@ struct Padding1ByteEnd {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Padding1ByteEnd>();

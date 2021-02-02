@@ -84,13 +84,13 @@ class SecondProtocol final {
           : message_(_bytes, _byte_size, sizeof(MethodOnSecondRequest), nullptr,
                      0, 0) {
         FIDL_ALIGNDECL MethodOnSecondRequest _request(_txid);
-        message_.LinearizeAndEncode<MethodOnSecondRequest>(&_request);
+        message_.Encode<MethodOnSecondRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             MethodOnSecondRequest* request)
           : message_(bytes, byte_size, sizeof(MethodOnSecondRequest), nullptr,
                      0, 0) {
-        message_.LinearizeAndEncode<MethodOnSecondRequest>(request);
+        message_.Encode<MethodOnSecondRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -104,7 +104,7 @@ class SecondProtocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -112,10 +112,7 @@ class SecondProtocol final {
       }
 
      private:
-      MethodOnSecondRequest& Message() {
-        return *reinterpret_cast<MethodOnSecondRequest*>(message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -136,7 +133,7 @@ class SecondProtocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -192,7 +189,7 @@ class SecondProtocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<MethodOnSecondRequest>();
@@ -400,13 +397,13 @@ class FirstProtocol final {
           : message_(_bytes, _byte_size, sizeof(MethodOnFirstRequest), nullptr,
                      0, 0) {
         FIDL_ALIGNDECL MethodOnFirstRequest _request(_txid);
-        message_.LinearizeAndEncode<MethodOnFirstRequest>(&_request);
+        message_.Encode<MethodOnFirstRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             MethodOnFirstRequest* request)
           : message_(bytes, byte_size, sizeof(MethodOnFirstRequest), nullptr, 0,
                      0) {
-        message_.LinearizeAndEncode<MethodOnFirstRequest>(request);
+        message_.Encode<MethodOnFirstRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -420,7 +417,7 @@ class FirstProtocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -428,10 +425,7 @@ class FirstProtocol final {
       }
 
      private:
-      MethodOnFirstRequest& Message() {
-        return *reinterpret_cast<MethodOnFirstRequest*>(message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -452,7 +446,7 @@ class FirstProtocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -508,7 +502,7 @@ class FirstProtocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<MethodOnFirstRequest>();

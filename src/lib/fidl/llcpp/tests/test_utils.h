@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <zircon/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 

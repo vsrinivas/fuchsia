@@ -171,7 +171,7 @@ class SimpleTable final {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           SimpleTable* value)
         : message_(bytes, byte_size, sizeof(SimpleTable), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<SimpleTable>(value);
+      message_.Encode<SimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -185,10 +185,10 @@ class SimpleTable final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -207,7 +207,7 @@ class SimpleTable final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -258,7 +258,7 @@ class SimpleTable final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<SimpleTable>();
@@ -593,7 +593,7 @@ class ReverseOrdinalTable final {
                           ReverseOrdinalTable* value)
         : message_(bytes, byte_size, sizeof(ReverseOrdinalTable), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<ReverseOrdinalTable>(value);
+      message_.Encode<ReverseOrdinalTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -607,10 +607,10 @@ class ReverseOrdinalTable final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -629,7 +629,7 @@ class ReverseOrdinalTable final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -680,7 +680,7 @@ class ReverseOrdinalTable final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<ReverseOrdinalTable>();
@@ -974,7 +974,7 @@ class OlderSimpleTable final {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           OlderSimpleTable* value)
         : message_(bytes, byte_size, sizeof(OlderSimpleTable), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<OlderSimpleTable>(value);
+      message_.Encode<OlderSimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -988,10 +988,10 @@ class OlderSimpleTable final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1010,7 +1010,7 @@ class OlderSimpleTable final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1061,7 +1061,7 @@ class OlderSimpleTable final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<OlderSimpleTable>();
@@ -1353,7 +1353,7 @@ class NewerSimpleTable final {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           NewerSimpleTable* value)
         : message_(bytes, byte_size, sizeof(NewerSimpleTable), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<NewerSimpleTable>(value);
+      message_.Encode<NewerSimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1367,10 +1367,10 @@ class NewerSimpleTable final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1389,7 +1389,7 @@ class NewerSimpleTable final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1440,7 +1440,7 @@ class NewerSimpleTable final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<NewerSimpleTable>();
@@ -1696,7 +1696,7 @@ class EmptyTable final {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, EmptyTable* value)
         : message_(bytes, byte_size, sizeof(EmptyTable), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<EmptyTable>(value);
+      message_.Encode<EmptyTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1710,10 +1710,10 @@ class EmptyTable final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1732,7 +1732,7 @@ class EmptyTable final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1783,7 +1783,7 @@ class EmptyTable final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<EmptyTable>();

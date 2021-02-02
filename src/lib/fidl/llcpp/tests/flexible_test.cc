@@ -47,7 +47,9 @@ class RewriteTransaction : public fidl::Transaction {
 
   zx_status_t Reply(fidl::OutgoingMessage* indicator_msg) override {
     ZX_ASSERT(txid_ != 0);
-    ZX_ASSERT(indicator_msg->byte_actual() >=
+    ZX_ASSERT(indicator_msg->message()->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+    auto indicator_byte_msg = static_cast<fidl::OutgoingByteMessage*>(indicator_msg);
+    ZX_ASSERT(indicator_byte_msg->byte_actual() >=
               sizeof(test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse));
 
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
@@ -65,8 +67,8 @@ class RewriteTransaction : public fidl::Transaction {
     };
 
     // Determine if |indicator_msg| has a xunion or a table, by inspecting the first few bytes.
-    auto maybe_vector =
-        reinterpret_cast<fidl_vector_t*>(indicator_msg->bytes() + sizeof(fidl_message_header_t));
+    auto maybe_vector = reinterpret_cast<const fidl_vector_t*>(indicator_byte_msg->bytes() +
+                                                               sizeof(fidl_message_header_t));
     if ((maybe_vector->count == 1 || maybe_vector->count == 2) &&
         reinterpret_cast<uintptr_t>(maybe_vector->data) == FIDL_ALLOC_PRESENT) {
       // Table
@@ -128,9 +130,9 @@ class RewriteTransaction : public fidl::Transaction {
           reinterpret_cast<fidl_xunion_t*>(&real_msg_bytes[sizeof(fidl_message_header_t)]);
       real_response->tag = kBadOrdinal;
 
-      auto indicator_response =
-          reinterpret_cast<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse*>(
-              indicator_msg->bytes());
+      auto indicator_response = reinterpret_cast<
+          const test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse*>(
+          indicator_byte_msg->bytes());
       switch (indicator_response->xu.which()) {
         case test::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
           // Create a message with more bytes than expected

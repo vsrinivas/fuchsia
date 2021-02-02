@@ -411,16 +411,14 @@ class Protocol final {
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response{f};
-        message_.LinearizeAndEncode<RequestStrictResponseFlexibleResponse>(
-            &_response);
+        message_.Encode<RequestStrictResponseFlexibleResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             RequestStrictResponseFlexibleResponse* response)
           : message_(bytes, byte_size,
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
-        message_.LinearizeAndEncode<RequestStrictResponseFlexibleResponse>(
-            response);
+        message_.Encode<RequestStrictResponseFlexibleResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -434,7 +432,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -442,11 +440,7 @@ class Protocol final {
       }
 
      private:
-      RequestStrictResponseFlexibleResponse& Message() {
-        return *reinterpret_cast<RequestStrictResponseFlexibleResponse*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -473,7 +467,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -530,7 +524,7 @@ class Protocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<RequestStrictResponseFlexibleResponse>();
@@ -577,16 +571,14 @@ class Protocol final {
                      sizeof(RequestStrictResponseFlexibleRequest), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL RequestStrictResponseFlexibleRequest _request(_txid, s);
-        message_.LinearizeAndEncode<RequestStrictResponseFlexibleRequest>(
-            &_request);
+        message_.Encode<RequestStrictResponseFlexibleRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             RequestStrictResponseFlexibleRequest* request)
           : message_(bytes, byte_size,
                      sizeof(RequestStrictResponseFlexibleRequest), nullptr, 0,
                      0) {
-        message_.LinearizeAndEncode<RequestStrictResponseFlexibleRequest>(
-            request);
+        message_.Encode<RequestStrictResponseFlexibleRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -600,7 +592,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -608,11 +600,7 @@ class Protocol final {
       }
 
      private:
-      RequestStrictResponseFlexibleRequest& Message() {
-        return *reinterpret_cast<RequestStrictResponseFlexibleRequest*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -640,7 +628,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -696,7 +684,7 @@ class Protocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<RequestStrictResponseFlexibleRequest>();
@@ -738,16 +726,14 @@ class Protocol final {
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response{f};
-        message_.LinearizeAndEncode<RequestFlexibleResponseStrictResponse>(
-            &_response);
+        message_.Encode<RequestFlexibleResponseStrictResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             RequestFlexibleResponseStrictResponse* response)
           : message_(bytes, byte_size,
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
-        message_.LinearizeAndEncode<RequestFlexibleResponseStrictResponse>(
-            response);
+        message_.Encode<RequestFlexibleResponseStrictResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -761,7 +747,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -769,11 +755,7 @@ class Protocol final {
       }
 
      private:
-      RequestFlexibleResponseStrictResponse& Message() {
-        return *reinterpret_cast<RequestFlexibleResponseStrictResponse*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -800,7 +782,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -857,7 +839,7 @@ class Protocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<RequestFlexibleResponseStrictResponse>();
@@ -904,16 +886,14 @@ class Protocol final {
                      sizeof(RequestFlexibleResponseStrictRequest), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL RequestFlexibleResponseStrictRequest _request(_txid, s);
-        message_.LinearizeAndEncode<RequestFlexibleResponseStrictRequest>(
-            &_request);
+        message_.Encode<RequestFlexibleResponseStrictRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             RequestFlexibleResponseStrictRequest* request)
           : message_(bytes, byte_size,
                      sizeof(RequestFlexibleResponseStrictRequest), nullptr, 0,
                      0) {
-        message_.LinearizeAndEncode<RequestFlexibleResponseStrictRequest>(
-            request);
+        message_.Encode<RequestFlexibleResponseStrictRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -927,7 +907,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -935,11 +915,7 @@ class Protocol final {
       }
 
      private:
-      RequestFlexibleResponseStrictRequest& Message() {
-        return *reinterpret_cast<RequestFlexibleResponseStrictRequest*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -967,7 +943,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -1023,7 +999,7 @@ class Protocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<RequestFlexibleResponseStrictRequest>();

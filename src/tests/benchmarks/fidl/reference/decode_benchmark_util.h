@@ -24,7 +24,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   fidl::aligned<FidlType> aligned_value = builder();
   fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value.value);
   ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
-  fidl::OutgoingMessage& encoded_message = encoded.GetOutgoingMessage();
+  fidl::OutgoingByteMessage& encoded_message = encoded.GetOutgoingMessage();
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
@@ -52,7 +52,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
     return false;
   }
 
-  fidl::OutgoingMessage& reencoded_message = reencoded.GetOutgoingMessage();
+  fidl::OutgoingByteMessage& reencoded_message = reencoded.GetOutgoingMessage();
   if (encoded_message.byte_actual() != reencoded_message.byte_actual()) {
     std::cout << "output size mismatch - reencoded size was " << reencoded_message.byte_actual()
               << " but expected encode result size was" << encoded_message.byte_actual()

@@ -93,13 +93,13 @@ class Parent final {
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL FirstRequest _request(_txid, request);
-        message_.LinearizeAndEncode<FirstRequest>(&_request);
+        message_.Encode<FirstRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             FirstRequest* request)
           : message_(bytes, byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        message_.LinearizeAndEncode<FirstRequest>(request);
+        message_.Encode<FirstRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -113,7 +113,7 @@ class Parent final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -121,12 +121,9 @@ class Parent final {
       }
 
      private:
-      FirstRequest& Message() {
-        return *reinterpret_cast<FirstRequest*>(message_.bytes());
-      }
       zx_handle_disposition_t
           handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -151,7 +148,7 @@ class Parent final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -212,7 +209,7 @@ class Parent final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
@@ -492,13 +489,13 @@ class Child final {
           : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL FirstRequest _request(_txid, request);
-        message_.LinearizeAndEncode<FirstRequest>(&_request);
+        message_.Encode<FirstRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             FirstRequest* request)
           : message_(bytes, byte_size, sizeof(FirstRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        message_.LinearizeAndEncode<FirstRequest>(request);
+        message_.Encode<FirstRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -512,7 +509,7 @@ class Child final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -520,12 +517,9 @@ class Child final {
       }
 
      private:
-      FirstRequest& Message() {
-        return *reinterpret_cast<FirstRequest*>(message_.bytes());
-      }
       zx_handle_disposition_t
           handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -550,7 +544,7 @@ class Child final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -611,7 +605,7 @@ class Child final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,
@@ -663,13 +657,13 @@ class Child final {
           : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL SecondRequest _request(_txid, request);
-        message_.LinearizeAndEncode<SecondRequest>(&_request);
+        message_.Encode<SecondRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             SecondRequest* request)
           : message_(bytes, byte_size, sizeof(SecondRequest), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        message_.LinearizeAndEncode<SecondRequest>(request);
+        message_.Encode<SecondRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -683,7 +677,7 @@ class Child final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -691,12 +685,9 @@ class Child final {
       }
 
      private:
-      SecondRequest& Message() {
-        return *reinterpret_cast<SecondRequest*>(message_.bytes());
-      }
       zx_handle_disposition_t
           handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -721,7 +712,7 @@ class Child final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -782,7 +773,7 @@ class Child final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         zx_handle_info_t
             handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
         Init(outgoing_message, handles,

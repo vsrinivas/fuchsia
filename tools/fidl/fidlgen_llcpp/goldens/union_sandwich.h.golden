@@ -521,7 +521,7 @@ struct SandwichUnionSize8Alignment4 {
                           SandwichUnionSize8Alignment4* value)
         : message_(bytes, byte_size, sizeof(SandwichUnionSize8Alignment4),
                    nullptr, 0, 0) {
-      message_.LinearizeAndEncode<SandwichUnionSize8Alignment4>(value);
+      message_.Encode<SandwichUnionSize8Alignment4>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -535,10 +535,10 @@ struct SandwichUnionSize8Alignment4 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -557,7 +557,7 @@ struct SandwichUnionSize8Alignment4 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -608,7 +608,7 @@ struct SandwichUnionSize8Alignment4 {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct SandwichUnionSize8Alignment4>();
@@ -640,7 +640,7 @@ struct SandwichUnionSize36Alignment4 {
                           SandwichUnionSize36Alignment4* value)
         : message_(bytes, byte_size, sizeof(SandwichUnionSize36Alignment4),
                    nullptr, 0, 0) {
-      message_.LinearizeAndEncode<SandwichUnionSize36Alignment4>(value);
+      message_.Encode<SandwichUnionSize36Alignment4>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -654,10 +654,10 @@ struct SandwichUnionSize36Alignment4 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -676,7 +676,7 @@ struct SandwichUnionSize36Alignment4 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -727,7 +727,7 @@ struct SandwichUnionSize36Alignment4 {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct SandwichUnionSize36Alignment4>();
@@ -759,7 +759,7 @@ struct SandwichUnionSize12Alignment4 {
                           SandwichUnionSize12Alignment4* value)
         : message_(bytes, byte_size, sizeof(SandwichUnionSize12Alignment4),
                    nullptr, 0, 0) {
-      message_.LinearizeAndEncode<SandwichUnionSize12Alignment4>(value);
+      message_.Encode<SandwichUnionSize12Alignment4>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -773,10 +773,10 @@ struct SandwichUnionSize12Alignment4 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -795,7 +795,7 @@ struct SandwichUnionSize12Alignment4 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -846,7 +846,7 @@ struct SandwichUnionSize12Alignment4 {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct SandwichUnionSize12Alignment4>();
@@ -876,7 +876,7 @@ struct StructSize16Alignment8 {
                           StructSize16Alignment8* value)
         : message_(bytes, byte_size, sizeof(StructSize16Alignment8), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<StructSize16Alignment8>(value);
+      message_.Encode<StructSize16Alignment8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -890,10 +890,10 @@ struct StructSize16Alignment8 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -912,7 +912,7 @@ struct StructSize16Alignment8 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -963,7 +963,7 @@ struct StructSize16Alignment8 {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct StructSize16Alignment8>();
@@ -995,7 +995,7 @@ struct SandwichUnionSize24Alignment8 {
                           SandwichUnionSize24Alignment8* value)
         : message_(bytes, byte_size, sizeof(SandwichUnionSize24Alignment8),
                    nullptr, 0, 0) {
-      message_.LinearizeAndEncode<SandwichUnionSize24Alignment8>(value);
+      message_.Encode<SandwichUnionSize24Alignment8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1009,10 +1009,10 @@ struct SandwichUnionSize24Alignment8 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1031,7 +1031,7 @@ struct SandwichUnionSize24Alignment8 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1082,7 +1082,7 @@ struct SandwichUnionSize24Alignment8 {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct SandwichUnionSize24Alignment8>();

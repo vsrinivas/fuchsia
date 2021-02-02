@@ -353,7 +353,10 @@ namespace {
 
 // Reply originating from driver.
 zx_status_t DdkReply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
-  fidl::OutgoingMessage message(msg);
+  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+  fidl::OutgoingByteMessage message(reinterpret_cast<uint8_t*>(msg->byte.bytes),
+                                    msg->byte.num_bytes, msg->byte.num_bytes, msg->byte.handles,
+                                    msg->byte.num_handles, msg->byte.num_handles);
 
   // If FromDdkInternalTransaction returns a unique_ptr variant, it will be destroyed when exiting
   // this scope.

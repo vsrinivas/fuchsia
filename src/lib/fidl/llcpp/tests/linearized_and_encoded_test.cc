@@ -16,9 +16,10 @@ TEST(LinearizedAndEncoded, FullyLinearizedAndEncoded) {
   fidl::OwnedEncodedMessage<fidl_linearized::FullyLinearizedStruct> encoded(&input);
   EXPECT_TRUE(encoded.ok());
 
-  auto encoded_obj = reinterpret_cast<fidl_linearized::FullyLinearizedStruct*>(
+  auto encoded_obj = reinterpret_cast<const fidl_linearized::FullyLinearizedStruct*>(
       encoded.GetOutgoingMessage().bytes());
   EXPECT_NE(encoded_obj, &input);
-  EXPECT_EQ(*reinterpret_cast<uintptr_t*>(&encoded_obj->ptr), FIDL_ALLOC_PRESENT);
-  EXPECT_EQ(reinterpret_cast<fidl_linearized::InnerStruct*>(encoded_obj + 1)->x, input.ptr->x);
+  EXPECT_EQ(*reinterpret_cast<const uintptr_t*>(&encoded_obj->ptr), FIDL_ALLOC_PRESENT);
+  EXPECT_EQ(reinterpret_cast<const fidl_linearized::InnerStruct*>(encoded_obj + 1)->x,
+            input.ptr->x);
 }

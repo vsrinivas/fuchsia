@@ -250,7 +250,7 @@ class TableWithHandle final {
                           TableWithHandle* value)
         : message_(bytes, byte_size, sizeof(TableWithHandle), handles_,
                    std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-      message_.LinearizeAndEncode<TableWithHandle>(value);
+      message_.Encode<TableWithHandle>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -264,12 +264,12 @@ class TableWithHandle final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -288,7 +288,7 @@ class TableWithHandle final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -344,7 +344,7 @@ class TableWithHandle final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       zx_handle_info_t
           handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       Init(outgoing_message, handles,
@@ -509,7 +509,7 @@ struct HandlesInTypes {
                           HandlesInTypes* value)
         : message_(bytes, byte_size, sizeof(HandlesInTypes), handles_,
                    std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-      message_.LinearizeAndEncode<HandlesInTypes>(value);
+      message_.Encode<HandlesInTypes>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -523,12 +523,12 @@ struct HandlesInTypes {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
     zx_handle_disposition_t
         handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -549,7 +549,7 @@ struct HandlesInTypes {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -605,7 +605,7 @@ struct HandlesInTypes {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       zx_handle_info_t
           handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       Init(outgoing_message, handles,

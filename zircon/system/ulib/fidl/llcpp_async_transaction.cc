@@ -53,10 +53,7 @@ zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message) {
   if (!binding)
     return ZX_ERR_CANCELED;
 
-  // The encoding process should ensure that the message is valid.
-  ZX_ASSERT(message->byte_actual() >= sizeof(fidl_message_header_t));
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
-  hdr->txid = txid;
+  message->set_txid(txid);
   message->Write(binding->channel());
   return message->status();
 }

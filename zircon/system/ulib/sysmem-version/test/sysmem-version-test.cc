@@ -63,7 +63,7 @@ class LinearSnap {
     ZX_ASSERT(encoded.ok());
     ZX_ASSERT(encoded.error() == nullptr);
 
-    fidl::OutgoingMessage& outgoing_message = encoded.GetOutgoingMessage();
+    fidl::OutgoingByteMessage& outgoing_message = encoded.GetOutgoingMessage();
     ZX_ASSERT(outgoing_message.byte_actual() <= sizeof(snap_data_));
     memcpy(snap_data_, outgoing_message.bytes(), outgoing_message.byte_actual());
     snap_data_size_ = outgoing_message.byte_actual();

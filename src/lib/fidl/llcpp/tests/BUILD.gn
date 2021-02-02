@@ -106,6 +106,7 @@ executable("fidl_llcpp_type_tests_bin") {
     "flexible_test.cc",
     "handle_rights_test.cc",
     "handle_test.cc",
+    "iovec_test.cc",
     "linearized_and_encoded_test.cc",
     "outgoing_to_incoming_message_test.cc",
     "protocol_test.cc",

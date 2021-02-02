@@ -243,7 +243,7 @@ struct Example_foo_Response {
                           Example_foo_Response* value)
         : message_(bytes, byte_size, sizeof(Example_foo_Response), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<Example_foo_Response>(value);
+      message_.Encode<Example_foo_Response>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -257,10 +257,10 @@ struct Example_foo_Response {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -279,7 +279,7 @@ struct Example_foo_Response {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -330,7 +330,7 @@ struct Example_foo_Response {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Example_foo_Response>();
@@ -373,12 +373,12 @@ class Example final {
           ::llcpp::fidl::test::error::Example_foo_Result& result)
           : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
         FIDL_ALIGNDECL fooResponse _response{result};
-        message_.LinearizeAndEncode<fooResponse>(&_response);
+        message_.Encode<fooResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             fooResponse* response)
           : message_(bytes, byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-        message_.LinearizeAndEncode<fooResponse>(response);
+        message_.Encode<fooResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -392,7 +392,7 @@ class Example final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -400,10 +400,7 @@ class Example final {
       }
 
      private:
-      fooResponse& Message() {
-        return *reinterpret_cast<fooResponse*>(message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -425,7 +422,7 @@ class Example final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -481,7 +478,7 @@ class Example final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<fooResponse>();
@@ -521,12 +518,12 @@ class Example final {
                             zx_txid_t _txid, const ::fidl::StringView& s)
           : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
         FIDL_ALIGNDECL fooRequest _request(_txid, s);
-        message_.LinearizeAndEncode<fooRequest>(&_request);
+        message_.Encode<fooRequest>(&_request);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             fooRequest* request)
           : message_(bytes, byte_size, sizeof(fooRequest), nullptr, 0, 0) {
-        message_.LinearizeAndEncode<fooRequest>(request);
+        message_.Encode<fooRequest>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -540,7 +537,7 @@ class Example final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -548,10 +545,7 @@ class Example final {
       }
 
      private:
-      fooRequest& Message() {
-        return *reinterpret_cast<fooRequest*>(message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -576,7 +570,7 @@ class Example final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -632,7 +626,7 @@ class Example final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<fooRequest>();

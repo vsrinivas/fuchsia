@@ -346,7 +346,7 @@ class TableSmallArray final {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           TableSmallArray* value)
         : message_(bytes, byte_size, sizeof(TableSmallArray), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<TableSmallArray>(value);
+      message_.Encode<TableSmallArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -360,10 +360,10 @@ class TableSmallArray final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -382,7 +382,7 @@ class TableSmallArray final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -433,7 +433,7 @@ class TableSmallArray final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<TableSmallArray>();
@@ -647,7 +647,7 @@ class TableLargeArray final {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           TableLargeArray* value)
         : message_(bytes, byte_size, sizeof(TableLargeArray), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<TableLargeArray>(value);
+      message_.Encode<TableLargeArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -661,10 +661,10 @@ class TableLargeArray final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -683,7 +683,7 @@ class TableLargeArray final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -734,7 +734,7 @@ class TableLargeArray final {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<TableLargeArray>();
@@ -881,7 +881,7 @@ struct StructSmallArray {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           StructSmallArray* value)
         : message_(bytes, byte_size, sizeof(StructSmallArray), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<StructSmallArray>(value);
+      message_.Encode<StructSmallArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -895,10 +895,10 @@ struct StructSmallArray {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -917,7 +917,7 @@ struct StructSmallArray {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -968,7 +968,7 @@ struct StructSmallArray {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct StructSmallArray>();
@@ -994,7 +994,7 @@ struct StructLargeArray {
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                           StructLargeArray* value)
         : message_(bytes, byte_size, sizeof(StructLargeArray), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<StructLargeArray>(value);
+      message_.Encode<StructLargeArray>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1008,10 +1008,10 @@ struct StructLargeArray {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -1030,7 +1030,7 @@ struct StructLargeArray {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -1081,7 +1081,7 @@ struct StructLargeArray {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct StructLargeArray>();

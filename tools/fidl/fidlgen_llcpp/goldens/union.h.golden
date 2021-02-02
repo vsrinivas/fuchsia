@@ -3591,7 +3591,7 @@ struct StructWithNullableXUnion {
                           StructWithNullableXUnion* value)
         : message_(bytes, byte_size, sizeof(StructWithNullableXUnion), nullptr,
                    0, 0) {
-      message_.LinearizeAndEncode<StructWithNullableXUnion>(value);
+      message_.Encode<StructWithNullableXUnion>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -3605,10 +3605,10 @@ struct StructWithNullableXUnion {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -3627,7 +3627,7 @@ struct StructWithNullableXUnion {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -3678,7 +3678,7 @@ struct StructWithNullableXUnion {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct StructWithNullableXUnion>();
@@ -3702,7 +3702,7 @@ struct Pizza {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Pizza* value)
         : message_(bytes, byte_size, sizeof(Pizza), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Pizza>(value);
+      message_.Encode<Pizza>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -3716,10 +3716,10 @@ struct Pizza {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -3740,7 +3740,7 @@ struct Pizza {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -3791,7 +3791,7 @@ struct Pizza {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Pizza>();
@@ -3815,7 +3815,7 @@ struct Pasta {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Pasta* value)
         : message_(bytes, byte_size, sizeof(Pasta), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Pasta>(value);
+      message_.Encode<Pasta>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -3829,10 +3829,10 @@ struct Pasta {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -3851,7 +3851,7 @@ struct Pasta {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -3902,7 +3902,7 @@ struct Pasta {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Pasta>();
@@ -3956,8 +3956,8 @@ class TestProtocol final {
                 nullptr, 0, 0) {
         FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedResponse
             _response{xu};
-        message_.LinearizeAndEncode<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse>(&_response);
+        message_.Encode<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
+            &_response);
       }
       UnownedEncodedMessage(
           uint8_t* bytes, uint32_t byte_size,
@@ -3966,8 +3966,8 @@ class TestProtocol final {
                 bytes, byte_size,
                 sizeof(StrictXUnionHenceResponseMayBeStackAllocatedResponse),
                 nullptr, 0, 0) {
-        message_.LinearizeAndEncode<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse>(response);
+        message_.Encode<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -3981,7 +3981,7 @@ class TestProtocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -3989,12 +3989,7 @@ class TestProtocol final {
       }
 
      private:
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse& Message() {
-        return *reinterpret_cast<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -4017,7 +4012,7 @@ class TestProtocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -4074,7 +4069,7 @@ class TestProtocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<StrictXUnionHenceResponseMayBeStackAllocatedResponse>();
@@ -4116,8 +4111,8 @@ class TestProtocol final {
                 nullptr, 0, 0) {
         FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedRequest
             _request(_txid);
-        message_.LinearizeAndEncode<
-            StrictXUnionHenceResponseMayBeStackAllocatedRequest>(&_request);
+        message_.Encode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(
+            &_request);
       }
       UnownedEncodedMessage(
           uint8_t* bytes, uint32_t byte_size,
@@ -4126,8 +4121,8 @@ class TestProtocol final {
                 bytes, byte_size,
                 sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest),
                 nullptr, 0, 0) {
-        message_.LinearizeAndEncode<
-            StrictXUnionHenceResponseMayBeStackAllocatedRequest>(request);
+        message_.Encode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(
+            request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -4141,7 +4136,7 @@ class TestProtocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -4149,12 +4144,7 @@ class TestProtocol final {
       }
 
      private:
-      StrictXUnionHenceResponseMayBeStackAllocatedRequest& Message() {
-        return *reinterpret_cast<
-            StrictXUnionHenceResponseMayBeStackAllocatedRequest*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -4176,7 +4166,7 @@ class TestProtocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -4233,7 +4223,7 @@ class TestProtocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>();
@@ -4276,8 +4266,8 @@ class TestProtocol final {
                 nullptr, 0, 0) {
         FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
             _response{xu};
-        message_.LinearizeAndEncode<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(&_response);
+        message_.Encode<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
+            &_response);
       }
       UnownedEncodedMessage(
           uint8_t* bytes, uint32_t byte_size,
@@ -4286,8 +4276,8 @@ class TestProtocol final {
                 bytes, byte_size,
                 sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse),
                 nullptr, 0, 0) {
-        message_.LinearizeAndEncode<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(response);
+        message_.Encode<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -4301,7 +4291,7 @@ class TestProtocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -4309,12 +4299,7 @@ class TestProtocol final {
       }
 
      private:
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& Message() {
-        return *reinterpret_cast<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -4337,7 +4322,7 @@ class TestProtocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -4394,7 +4379,7 @@ class TestProtocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>();
@@ -4436,8 +4421,8 @@ class TestProtocol final {
                 nullptr, 0, 0) {
         FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest
             _request(_txid);
-        message_.LinearizeAndEncode<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(&_request);
+        message_.Encode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(
+            &_request);
       }
       UnownedEncodedMessage(
           uint8_t* bytes, uint32_t byte_size,
@@ -4446,8 +4431,8 @@ class TestProtocol final {
                 bytes, byte_size,
                 sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest),
                 nullptr, 0, 0) {
-        message_.LinearizeAndEncode<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(request);
+        message_.Encode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(
+            request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -4461,7 +4446,7 @@ class TestProtocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
       template <typename ChannelLike>
       void Write(ChannelLike&& client) {
@@ -4469,12 +4454,7 @@ class TestProtocol final {
       }
 
      private:
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest& Message() {
-        return *reinterpret_cast<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest*>(
-            message_.bytes());
-      }
-      ::fidl::OutgoingMessage message_;
+      ::fidl::OutgoingByteMessage message_;
     };
 
     class OwnedEncodedMessage final {
@@ -4496,7 +4476,7 @@ class TestProtocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -4553,7 +4533,7 @@ class TestProtocol final {
       }
 
      private:
-      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
         Init(outgoing_message, nullptr, 0);
         if (ok()) {
           Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>();
@@ -5088,7 +5068,7 @@ struct NullableUnionStruct {
                           NullableUnionStruct* value)
         : message_(bytes, byte_size, sizeof(NullableUnionStruct), nullptr, 0,
                    0) {
-      message_.LinearizeAndEncode<NullableUnionStruct>(value);
+      message_.Encode<NullableUnionStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -5102,10 +5082,10 @@ struct NullableUnionStruct {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -5126,7 +5106,7 @@ struct NullableUnionStruct {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -5177,7 +5157,7 @@ struct NullableUnionStruct {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct NullableUnionStruct>();
@@ -5201,7 +5181,7 @@ struct Empty {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Empty* value)
         : message_(bytes, byte_size, sizeof(Empty), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<Empty>(value);
+      message_.Encode<Empty>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
     UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -5215,10 +5195,10 @@ struct Empty {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingMessage message_;
+    ::fidl::OutgoingByteMessage message_;
   };
 
   class OwnedEncodedMessage final {
@@ -5237,7 +5217,7 @@ struct Empty {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
@@ -5288,7 +5268,7 @@ struct Empty {
     }
 
    private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
       Init(outgoing_message, nullptr, 0);
       if (ok()) {
         Decode<struct Empty>();
