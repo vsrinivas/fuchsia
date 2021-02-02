@@ -4,7 +4,7 @@
 
 #include <lib/devmgr-integration-test/fixture.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 TEST(DriverRunnerIntegrationTest, UseDriverRunner) {
   devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
@@ -12,5 +12,5 @@ TEST(DriverRunnerIntegrationTest, UseDriverRunner) {
   args.use_driver_runner = true;
 
   devmgr_integration_test::IsolatedDevmgr devmgr;
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr));
+  ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr));
 }

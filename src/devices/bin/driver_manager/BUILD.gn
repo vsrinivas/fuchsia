@@ -242,7 +242,7 @@ executable("driver_runner_integration_test") {
   deps = [
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
-    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
 }
