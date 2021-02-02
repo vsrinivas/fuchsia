@@ -50,7 +50,6 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::UInt16 => Ok(String::from("uint16_t")),
         ast::Ty::UInt32 => Ok(String::from("uint32_t")),
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
-        ast::Ty::USize => Ok(String::from("size_t")),
         ast::Ty::Float32 => Ok(String::from("float")),
         ast::Ty::Float64 => Ok(String::from("double")),
         ast::Ty::Voidptr => Ok(String::from("void")),
@@ -127,7 +126,7 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
         ast::Ty::UInt16 => String::from(format!("UINT16_C({})", size)),
         ast::Ty::UInt32 => String::from(format!("UINT32_C({})", size)),
         ast::Ty::UInt64 => String::from(format!("UINT64_C({})", size)),
-        ast::Ty::USize | ast::Ty::Bool | ast::Ty::Str { .. } => size.clone(),
+        ast::Ty::Bool | ast::Ty::Str { .. } => size.clone(),
         ast::Ty::Identifier { id, reference: _ } => {
             let decl = ast.id_to_decl(id).expect(format!("id: {:?}", id).as_str());
             if let Decl::Enum { ty: enum_ty, variants, .. } = decl {
@@ -310,7 +309,6 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                         | ast::Ty::UInt16
                         | ast::Ty::UInt32
                         | ast::Ty::UInt64
-                        | ast::Ty::USize
                         | ast::Ty::Voidptr => {
                             Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
                         }

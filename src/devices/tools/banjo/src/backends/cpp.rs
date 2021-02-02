@@ -78,7 +78,6 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
         ast::Ty::UInt16 => Ok(String::from("uint16_t")),
         ast::Ty::UInt32 => Ok(String::from("uint32_t")),
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
-        ast::Ty::USize => Ok(String::from("size_t")),
         ast::Ty::Float32 => Ok(String::from("float")),
         ast::Ty::Float64 => Ok(String::from("double")),
         ast::Ty::Voidptr => Ok(String::from("void")),

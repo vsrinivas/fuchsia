@@ -200,7 +200,6 @@ pub enum HandleTy {
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
 pub enum Ty {
     Voidptr,
-    USize,
     Bool,
     Int8,
     Int16,
@@ -268,7 +267,6 @@ impl Ty {
         let rule = pair.as_rule();
         match rule {
             Rule::primitive_type => match pair.as_str() {
-                "usize" => Ok(Ty::USize),
                 "bool" => Ok(Ty::Bool),
                 "int8" => Ok(Ty::Int8),
                 "int16" => Ok(Ty::Int16),
@@ -362,7 +360,6 @@ impl Ty {
                 Ok(Ty::Handle { ty, reference })
             }
             Rule::integer_type => match pair.as_str() {
-                "usize" => Ok(Ty::USize),
                 "int8" => Ok(Ty::Int8),
                 "int16" => Ok(Ty::Int16),
                 "int32" => Ok(Ty::Int32),
@@ -642,7 +639,6 @@ impl BanjoAst {
     pub fn id_to_type(&self, fq_ident: &Ident) -> Ty {
         let (ns, ident) = fq_ident.fq();
         match ident.as_str() {
-            "usize" => return Ty::USize,
             "bool" => return Ty::Bool,
             "int8" => return Ty::Int8,
             "int16" => return Ty::Int16,
@@ -1149,10 +1145,6 @@ impl BanjoAst {
                 }
                 Ty::Int64 => {
                     i64::from_str(string)
-                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
-                }
-                Ty::USize => {
-                    usize::from_str(string)
                         .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
                 }
                 Ty::UInt8 => {

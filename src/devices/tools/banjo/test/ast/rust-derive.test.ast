@@ -12,7 +12,7 @@ BanjoAst {
                     ),
                     name: "SMALL_ARRAY_SIZE",
                 },
-                ty: USize,
+                ty: UInt32,
                 value: Constant(
                     "8",
                 ),
@@ -27,7 +27,7 @@ BanjoAst {
                     ),
                     name: "LARGE_ARRAY_SIZE",
                 },
-                ty: USize,
+                ty: UInt32,
                 value: Constant(
                     "2048",
                 ),

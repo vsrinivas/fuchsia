@@ -10,8 +10,8 @@
 use fuchsia_zircon as zircon;
 
 
-pub const SMALL_ARRAY_SIZE: usize = 8;
-pub const LARGE_ARRAY_SIZE: usize = 2048;
+pub const SMALL_ARRAY_SIZE: u32 = 8;
+pub const LARGE_ARRAY_SIZE: u32 = 2048;
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct UnionParentStruct {

@@ -19,7 +19,7 @@ typedef struct some_data some_data_t;
 // Declarations
 struct some_data {
     uint32_t HELLO_WORLD;
-    size_t kSomeValue;
+    uint32_t kSomeValue;
     const char* one_more_field;
 };
 

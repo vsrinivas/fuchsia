@@ -7,6 +7,6 @@ library banjo.examples.preservenames;
 [PreserveCNames]
 struct SomeData {
   uint32 HELLO_WORLD;
-  usize kSomeValue;
+  uint32 kSomeValue;
   string one_more_field;
 };

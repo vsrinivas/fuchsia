@@ -4,8 +4,8 @@
 
 library banjo.examples.rust.derive;
 
-const usize SMALL_ARRAY_SIZE = 8;
-const usize LARGE_ARRAY_SIZE = 2048;
+const uint32 SMALL_ARRAY_SIZE = 8;
+const uint32 LARGE_ARRAY_SIZE = 2048;
 
 // Next three data structures intended for checking that type that doesn't derive
 // PartialEq causes type depending on it to not auto-derive PartialEq

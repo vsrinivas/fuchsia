@@ -40,7 +40,6 @@ fn can_derive_partialeq(
         | ast::Ty::UInt64
         | ast::Ty::Float32
         | ast::Ty::Float64
-        | ast::Ty::USize
         | ast::Ty::Protocol
         | ast::Ty::Voidptr
         | ast::Ty::Enum { .. } => {
@@ -120,7 +119,6 @@ fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty, parents: &mut HashSet<ast
         | ast::Ty::UInt64
         | ast::Ty::Float32
         | ast::Ty::Float64
-        | ast::Ty::USize
         | ast::Ty::Protocol
         | ast::Ty::Voidptr
         | ast::Ty::Enum { .. } => {
@@ -208,7 +206,6 @@ fn to_rust_type(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::UInt64 => Ok(String::from("u64")),
         ast::Ty::Float32 => Ok(String::from("f32")),
         ast::Ty::Float64 => Ok(String::from("f64")),
-        ast::Ty::USize => Ok(String::from("usize")),
         ast::Ty::Array { ty, size } => {
             let Constant(ref size) = size;
             Ok(format!(

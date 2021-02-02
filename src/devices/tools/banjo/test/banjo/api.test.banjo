@@ -29,7 +29,7 @@ protocol Api {
     vm_option(handle handle, zx.vm_option data) -> (zx.status status);
     struct(handle handle, array<zx_channel_call_args_t>:1 args) ->
         (zx.status status);
-    buffer(handle handle, array<voidptr>:size data, usize size) ->
+    buffer(handle handle, array<voidptr>:size data, uint32 size) ->
         (zx.status status);
 
     output_bool(handle handle) -> (zx.status status, bool result);
@@ -54,8 +54,8 @@ protocol Api {
     output_vm_option(handle handle) -> (zx.status status, zx.vm_option result);
     output_struct(handle handle) ->
         (zx.status status, array<zx_channel_call_args>:1 result);
-    output_buffer(handle handle, array<voidptr>:size data, usize size) ->
-        (zx.status status, usize actual);
+    output_buffer(handle handle, array<voidptr>:size data, uint32 size) ->
+        (zx.status status, uint32 actual);
 
     return_void(handle handle) -> ();
     return_status(handle handle) -> (zx.status status);

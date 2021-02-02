@@ -33,7 +33,7 @@ BanjoAst {
                         attributes: Attrs(
                             [],
                         ),
-                        ty: USize,
+                        ty: UInt32,
                         ident: Ident {
                             namespace: None,
                             name: "kSomeValue",
