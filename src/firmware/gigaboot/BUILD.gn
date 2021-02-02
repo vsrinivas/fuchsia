@@ -92,4 +92,9 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
   group("bootloader") {
     public_deps = [ ":bootloader(//src/firmware/gigaboot:efi_${current_cpu})" ]
   }
+
+  group("tests") {
+    testonly = true
+    deps = [ "src:tests" ]
+  }
 }

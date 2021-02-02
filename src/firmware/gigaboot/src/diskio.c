@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <diskio.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/hw/gpt.h>
@@ -13,6 +14,10 @@
 #include <efi/protocol/disk-io.h>
 #include <efi/protocol/loaded-image.h>
 #include <efi/protocol/simple-file-system.h>
+
+#ifdef GIGABOOT_HOST
+#include <host/stubs.h>
+#endif
 
 #include "osboot.h"
 
@@ -77,10 +82,9 @@ static efi_status disk_read(disk_t* disk, size_t offset, void* data, size_t leng
 
   uint64_t size = (disk->last - disk->first) * disk->blksz;
   if ((offset > size) || ((size - offset) < length)) {
-    printf(
-        "ERROR: Disk read invalid params. offset:%llu length:%llu disk: [%llu to %llu] size:%llu  "
-        "blksz:%d\n",
-        offset, size, length, disk->first, disk->last, disk->blksz);
+    printf("ERROR: Disk read invalid params. offset:%zu length:%zu disk: [%" PRIu64 " to %" PRIu64
+           "] size:%" PRIu64 " blksz:%d\n",
+           offset, length, disk->first, disk->last, size, disk->blksz);
     return EFI_INVALID_PARAMETER;
   }
 
@@ -165,7 +169,7 @@ int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* 
     if (verbose) {
       printf("BlockIO Device: ");
       print_path(bs, path);
-      printf("              : #%zu, %zuMB%s%s%s%s%s%s\n", n,
+      printf("              : #%zu, %" PRIu64 "MB%s%s%s%s%s%s\n", n,
              bio->Media->LastBlock * bio->Media->BlockSize / 1024 / 1024,
              bio->Media->RemovableMedia ? " Removable" : "",
              bio->Media->MediaPresent ? " Present" : "",
@@ -220,11 +224,11 @@ int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
 
   if (verbose) {
     printf("gpt: size:    %u\n", gpt.size);
-    printf("gpt: current: %zu\n", gpt.current);
-    printf("gpt: backup:  %zu\n", gpt.backup);
-    printf("gpt: first:   %zu\n", gpt.first);
-    printf("gpt: last:    %zu\n", gpt.last);
-    printf("gpt: entries: %zu\n", gpt.entries);
+    printf("gpt: current: %" PRIu64 "\n", gpt.current);
+    printf("gpt: backup:  %" PRIu64 "\n", gpt.backup);
+    printf("gpt: first:   %" PRIu64 "\n", gpt.first);
+    printf("gpt: last:    %" PRIu64 "\n", gpt.last);
+    printf("gpt: entries: %" PRIu64 "\n", gpt.entries);
     printf("gpt: e.count: %u\n", gpt.entries_count);
     printf("gpt: e.size:  %u\n", gpt.entries_size);
   }
@@ -278,8 +282,8 @@ int disk_find_partition(disk_t* disk, bool verbose, const uint8_t* guid_value,
         name[i] = c;
       }
       name[GPT_NAME_LEN / 2 - 1] = 0;
-      printf("#%03d %zu..%zu %zx name='%s' type='%s'\n", n, table[n].first, table[n].last,
-             table[n].flags, name, type);
+      printf("#%03d %" PRIu64 "..%" PRIu64 " %" PRIx64 " name='%s' type='%s'\n", n, table[n].first,
+             table[n].last, table[n].flags, name, type);
     }
   }
   disk->bs->FreePool(table);
@@ -389,7 +393,7 @@ efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t*
   return status;
 }
 
-int guid_value_from_name(char *guid_name, uint8_t *value) {
+int guid_value_from_name(const char* guid_name, uint8_t* value) {
   if (!strncmp(guid_name, GUID_ZIRCON_A_NAME, GPT_NAME_LEN)) {
     uint8_t guid_value[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
     memcpy(value, guid_value, GPT_GUID_LEN);

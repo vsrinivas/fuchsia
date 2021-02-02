@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_BOOTLOADER_SRC_DISKIO_H_
-#define ZIRCON_BOOTLOADER_SRC_DISKIO_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_SRC_DISKIO_H_
+#define SRC_FIRMWARE_GIGABOOT_SRC_DISKIO_H_
+
+#include <zircon/compiler.h>
 
 #include <efi/protocol/disk-io.h>
 #include <efi/system-table.h>
+
+__BEGIN_CDECLS
 
 typedef struct {
   efi_disk_io_protocol* io;
@@ -43,7 +47,8 @@ efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length);
 // guid_value_from_name takes in a GUID name and puts the associated GUID value
 // into value.
 // Returns 0 on success, -1 if the guid_name was not found.
-int guid_value_from_name(char *guid_name, uint8_t *value);
+int guid_value_from_name(const char* guid_name, uint8_t* value);
 
+__END_CDECLS
 
-#endif  // ZIRCON_BOOTLOADER_SRC_DISKIO_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_SRC_DISKIO_H_

@@ -3,27 +3,38 @@
 # found in the LICENSE file.
 
 import("//build/zircon/migrated_targets.gni")
-assert(toolchain.environment == "efi")
 
-source_set("lib") {
-  sources = [
-    "cmdline.c",
-    "console-printf.c",
-    "ctype.c",
-    "efi/guids.c",
-    "inet.c",
-    "loadfile.c",
-    "printf.c",
-    "stdlib.c",
-    "string.c",
-    "strings.c",
-    "utf_conversion.c",
-    "xefi.c",
-  ]
-  deps = [
-    "//zircon/kernel/lib/efi",
+# Device-side library. This doesn't play well with the host compiler, mostly
+# due to re-definition of a bunch of built-in types and functions, so as we
+# expand our host-side unittests we'll probably want to move more of the
+# portable code into the "shared" library below.
+if (toolchain.environment == "efi") {
+  source_set("lib") {
+    sources = [
+      "cmdline.c",
+      "console-printf.c",
+      "ctype.c",
+      "inet.c",
+      "loadfile.c",
+      "printf.c",
+      "stdlib.c",
+      "string.c",
+      "strings.c",
+      "utf_conversion.c",
+      "xefi.c",
+    ]
+    deps = [
+      ":shared",
 
-    # This only actually adds anything to the profile build.
-    "//zircon/kernel/lib/instrumentation:profile",
-  ]
+      # This only actually adds anything to the profile build.
+      "//zircon/kernel/lib/instrumentation:profile",
+    ]
+  }
+}
+
+# Shared library used by both the device-side lib and the host unittests.
+source_set("shared") {
+  sources = [ "efi/guids.c" ]
+
+  public_deps = [ "//zircon/kernel/lib/efi" ]
 }

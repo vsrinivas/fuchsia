@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
-
-assert(toolchain.environment == "efi")
 
 # TODO(fxbug.dev/54322): Keep in sync with BUILD.gn until the bootloader
 # is fully migrated to the Fuchsia build.
@@ -33,5 +32,31 @@ source_set("src") {
     "//zircon/system/ulib/gfx-font-data",
     "//zircon/system/ulib/tftp",
     "//zircon/third_party/ulib/cksum",
+  ]
+}
+
+# Gigaboot would be difficult to test on-device, so we run host unittests
+# instead, stubbing out the necessary functions.
+group("tests") {
+  testonly = true
+  deps = [ ":gigaboot_test($host_toolchain)" ]
+}
+
+test("gigaboot_test") {
+  # In order to make it easier to add tests incrementally, just add the source
+  # files we need here rather than depending on :src in full. This allows us to
+  # stub out the UEFI APIs as we need them, rather than all at once.
+  #
+  # Once we have enough functionality stubbed out host-side we can just depend
+  # on ":src" directly instead.
+  sources = [
+    "diskio.c",
+    "diskio_test.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    "../test/host",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/kernel/lib/efi",
   ]
 }
