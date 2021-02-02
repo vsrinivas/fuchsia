@@ -191,7 +191,7 @@ async fn make_execution_runtime(
     )?;
     let start_info = fcrunner::ComponentStartInfo {
         resolved_url: Some(url),
-        program: data::clone_option_dictionary(&decl.program),
+        program: decl.program.as_ref().map(|p| data::clone_dictionary(&p.info)),
         ns: Some(ns),
         outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
         runtime_dir: Some(ServerEnd::new(runtime_dir_server)),

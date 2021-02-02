@@ -65,7 +65,14 @@ pub fn compile(
 fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
     let all_capability_names = document.all_capability_names();
     Ok(fsys::ComponentDecl {
-        program: document.program.as_ref().map(translate_program).transpose()?,
+        program: document
+            .program
+            .as_ref()
+            .map(|p| -> Result<fsys::ProgramDecl, Error> {
+                let info = Some(translate_program(p)?);
+                Ok(fsys::ProgramDecl { info, ..fsys::ProgramDecl::EMPTY })
+            })
+            .transpose()?,
         uses: document.r#use.as_ref().map(translate_use).transpose()?,
         exposes: document
             .expose
@@ -1110,12 +1117,15 @@ mod tests {
                 ]
             }),
             output = fsys::ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner (
                     fsys::UseRunnerDecl {
@@ -1140,18 +1150,21 @@ mod tests {
                 ]
             }),
             output = fsys::ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![
-                        fdata::DictionaryEntry {
-                            key: "binary".to_string(),
-                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
-                        },
-                        fdata::DictionaryEntry {
-                            key: "lifecycle.stop_event".to_string(),
-                            value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
-                        },
-                    ]),
-                    ..fdata::Dictionary::EMPTY
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![
+                            fdata::DictionaryEntry {
+                                key: "binary".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                            },
+                            fdata::DictionaryEntry {
+                                key: "lifecycle.stop_event".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
+                            },
+                        ]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner (
                     fsys::UseRunnerDecl {
@@ -2686,12 +2699,15 @@ mod tests {
                 ],
             }),
             output = fsys::ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![
                     fsys::UseDecl::Service (
@@ -2980,12 +2996,17 @@ mod tests {
                 "program": { "binary": "bin/test" },
             }),
             fsys::ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                     source_name: Some("elf".to_string()),
@@ -3023,12 +3044,17 @@ mod tests {
                 "program": { "binary": "bin/test" },
             }),
             fsys::ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                     source_name: Some("elf".to_string()),
@@ -3140,12 +3166,17 @@ mod tests {
                 "use": [ { "runner": "elf" } ],
             }),
             fsys::ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![
                     fsys::UseDecl::Runner(fsys::UseRunnerDecl {

@@ -67,14 +67,17 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
 
 fn build_decl() -> fsys::ComponentDecl {
     let mut component_decl = fsys::ComponentDecl::EMPTY;
-    component_decl.program = Some(fdata::Dictionary {
-        entries: Some(vec![fdata::DictionaryEntry {
-            key: "binary".to_string(),
-            value: Some(Box::new(fdata::DictionaryValue::Str(
-                "bin/component_manager_test_resolvers_component".to_string(),
-            ))),
-        }]),
-        ..fdata::Dictionary::EMPTY
+    component_decl.program = Some(fsys::ProgramDecl {
+        info: Some(fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
+                key: "binary".to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str(
+                    "bin/component_manager_test_resolvers_component".to_string(),
+                ))),
+            }]),
+            ..fdata::Dictionary::EMPTY
+        }),
+        ..fsys::ProgramDecl::EMPTY
     });
     component_decl.capabilities = Some(vec![fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
         name: Some("fidl.test.components.Trigger".to_string()),

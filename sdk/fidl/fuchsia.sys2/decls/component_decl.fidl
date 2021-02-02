@@ -4,8 +4,6 @@
 
 library fuchsia.sys2;
 
-using fuchsia.data;
-
 /// A component declaration.
 ///
 /// This information is typically encoded in the component manifest (.cm file)
@@ -13,25 +11,8 @@ using fuchsia.data;
 /// those that don't.
 table ComponentDecl {
     /// Information about the program to run when the component is executed.
-    ///
-    /// The component manager provides the contents of this dictionary to the
-    /// component runner when executing the program. Each component runner can
-    /// freely define the contents of this dictionary as needed.
-    ///
-    /// The system's default runner understands the following entries:
-    ///
-    /// - "binary": string
-    ///   The path of the executable relative to the root of the package.
-    ///   Typically an ELF binary.
-    ///
-    /// - "args": vector of strings
-    ///   The command-line arguments to provide to the executable at runtime.
-    ///
-    /// - "env": dictionary of strings
-    ///   The environment variables to provide to the executable at runtime.
-    ///
-    /// Other runners may define different entries.
-    1: fuchsia.data.Dictionary program;
+    /// Omitted for non-executable components.
+    1: ProgramDecl program;
 
     /// List of capabilities used by the component. These consist of
     /// capabilities offered to the component that are installed in its incoming

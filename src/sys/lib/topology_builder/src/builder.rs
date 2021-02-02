@@ -1263,12 +1263,17 @@ mod tests {
                 (
                     "a",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "0".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![
                             UseDecl::Runner(UseRunnerDecl {
@@ -1315,12 +1320,17 @@ mod tests {
                 (
                     "a/b",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("1".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "1".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![
                             UseDecl::Runner(UseRunnerDecl {
@@ -1395,12 +1405,17 @@ mod tests {
                 (
                     "a",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "0".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![
                             UseDecl::Runner(UseRunnerDecl {
@@ -1522,12 +1537,17 @@ mod tests {
                 (
                     "a",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "0".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![UseDecl::Runner(UseRunnerDecl {
                             source_name: mock::RUNNER_NAME.try_into().unwrap(),
@@ -1548,12 +1568,17 @@ mod tests {
                 (
                     "b",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("1".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "1".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![
                             UseDecl::Runner(UseRunnerDecl {
@@ -1615,12 +1640,17 @@ mod tests {
                 (
                     "a",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "0".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![UseDecl::Runner(UseRunnerDecl {
                             source_name: mock::RUNNER_NAME.try_into().unwrap(),
@@ -1733,12 +1763,17 @@ mod tests {
                 (
                     "b",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "0".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![
                             UseDecl::Runner(UseRunnerDecl {
@@ -1990,12 +2025,17 @@ mod tests {
                 (
                     "c/d",
                     ComponentDecl {
-                        program: Some(fdata::Dictionary {
-                            entries: Some(vec![fdata::DictionaryEntry {
-                                key: mock::MOCK_ID_KEY.to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                            }]),
-                            ..fdata::Dictionary::EMPTY
+                        program: Some(ProgramDecl {
+                            runner: None,
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "0".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
                         }),
                         uses: vec![
                             UseDecl::Runner(UseRunnerDecl {

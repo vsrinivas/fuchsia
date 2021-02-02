@@ -28,9 +28,10 @@ table EnvironmentDecl {
 
     /// Expose capabilties to debug section when component manager allows it.
     ///
-    /// These capabilities are accessible to any component in the environment with a `use` declaration with `source == debug`.
-    /// Only capabilities intended to support development should be declared here, and they are only allowed if explicitly
-    /// included in the component manager allowlist.
+    /// These capabilities are accessible to any component in the environment
+    /// with a `use` declaration with `source == debug`.  Only capabilities
+    /// intended to support development should be declared here, and they are
+    /// only allowed if explicitly included in the component manager allowlist.
     5: vector<DebugRegistration>:MAX debug_capabilities;
 
     /// The duration in milliseconds that the component will have to stop before

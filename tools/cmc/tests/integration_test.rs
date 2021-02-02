@@ -17,18 +17,23 @@ fn main() {
     let cm_decl = read_cm("/pkg/meta/example.cm").expect("could not read cm file");
 
     let expected_decl = {
-        let program = fdata::Dictionary {
-            entries: Some(vec![
-                fdata::DictionaryEntry {
-                    key: "binary".to_string(),
-                    value: Some(Box::new(fdata::DictionaryValue::Str("bin/example".to_string()))),
-                },
-                fdata::DictionaryEntry {
-                    key: "lifecycle.stop_event".to_string(),
-                    value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
-                },
-            ]),
-            ..fdata::Dictionary::EMPTY
+        let program = ProgramDecl {
+            info: Some(fdata::Dictionary {
+                entries: Some(vec![
+                    fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            "bin/example".to_string(),
+                        ))),
+                    },
+                    fdata::DictionaryEntry {
+                        key: "lifecycle.stop_event".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
+                    },
+                ]),
+                ..fdata::Dictionary::EMPTY
+            }),
+            ..ProgramDecl::EMPTY
         };
         let uses = vec![
             UseDecl::Runner(UseRunnerDecl {

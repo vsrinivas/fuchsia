@@ -18,7 +18,7 @@ use {
             },
         },
     },
-    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
+    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl, ProgramDecl},
     cm_types::Url,
     fidl::encoding::encode_persistent,
     fidl::endpoints::{self, Proxy, ServerEnd},
@@ -157,7 +157,6 @@ pub async fn get_live_child<'a>(
 /// Returns an empty component decl for an executable component.
 pub fn default_component_decl() -> ComponentDecl {
     ComponentDecl {
-        program: Some(fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY }),
         ..Default::default()
     }
 }
@@ -171,7 +170,10 @@ pub const TEST_RUNNER_NAME: &str = "test_runner";
 /// runner.
 pub fn component_decl_with_test_runner() -> ComponentDecl {
     ComponentDecl {
-        program: Some(fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY }),
+        program: Some(ProgramDecl {
+            runner: None,
+            info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
+        }),
         uses: vec![cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl {
             source_name: TEST_RUNNER_NAME.into(),
         })],

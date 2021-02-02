@@ -172,7 +172,7 @@ macro_rules! fidl_into_vec {
 
 #[derive(Debug, PartialEq, Default)]
 pub struct ComponentDecl {
-    pub program: Option<fdata::Dictionary>,
+    pub program: Option<ProgramDecl>,
     pub uses: Vec<UseDecl>,
     pub exposes: Vec<ExposeDecl>,
     pub offers: Vec<OfferDecl>,
@@ -353,7 +353,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
 impl Clone for ComponentDecl {
     fn clone(&self) -> Self {
         ComponentDecl {
-            program: data::clone_option_dictionary(&self.program),
+            program: self.program.clone(),
             uses: self.uses.clone(),
             exposes: self.exposes.clone(),
             offers: self.offers.clone(),
@@ -980,6 +980,58 @@ fidl_translations_identical!(Option<fsys::Object>);
 fidl_translations_identical!(Option<fdata::Dictionary>);
 fidl_translations_identical!(Option<String>);
 
+// Custom implementation because `fdata::Dictionary` does not support derive Clone or Eq
+#[derive(Debug, PartialEq)]
+pub struct ProgramDecl {
+    pub runner: Option<CapabilityName>,
+    pub info: fdata::Dictionary,
+}
+
+impl Clone for ProgramDecl {
+    fn clone(&self) -> Self {
+        Self { runner: self.runner.clone(), info: data::clone_dictionary(&self.info) }
+    }
+}
+
+impl Default for ProgramDecl {
+    fn default() -> Self {
+        Self {
+            runner: None,
+            info: fdata::Dictionary {
+                ..fdata::Dictionary::EMPTY
+            },
+        }
+    }
+}
+
+impl FidlIntoNative<ProgramDecl> for fsys::ProgramDecl {
+    fn fidl_into_native(self) -> ProgramDecl {
+        ProgramDecl { runner: self.runner.fidl_into_native(), info: self.info.fidl_into_native() }
+    }
+}
+
+impl NativeIntoFidl<fsys::ProgramDecl> for ProgramDecl {
+    fn native_into_fidl(self) -> fsys::ProgramDecl {
+        fsys::ProgramDecl {
+            runner: self.runner.native_into_fidl(),
+            info: self.info.native_into_fidl(),
+            ..fsys::ProgramDecl::EMPTY
+        }
+    }
+}
+
+impl FidlIntoNative<Option<ProgramDecl>> for Option<fsys::ProgramDecl> {
+    fn fidl_into_native(self) -> Option<ProgramDecl> {
+        self.map(|d| d.fidl_into_native())
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::ProgramDecl>> for Option<ProgramDecl> {
+    fn native_into_fidl(self) -> Option<fsys::ProgramDecl> {
+        self.map(|d| d.native_into_fidl())
+    }
+}
+
 /// A path to a capability.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CapabilityPath {
@@ -1591,6 +1643,18 @@ impl NativeIntoFidl<Option<String>> for Option<PathBuf> {
     }
 }
 
+impl FidlIntoNative<Option<CapabilityName>> for Option<String> {
+    fn fidl_into_native(self) -> Option<CapabilityName> {
+        self.map(|s| s.into())
+    }
+}
+
+impl NativeIntoFidl<Option<String>> for Option<CapabilityName> {
+    fn native_into_fidl(self) -> Option<String> {
+        self.map(|s| s.to_string())
+    }
+}
+
 impl FidlIntoNative<CapabilityName> for Option<String> {
     fn fidl_into_native(self) -> CapabilityName {
         let s: &str = &self.unwrap();
@@ -2146,371 +2210,383 @@ mod tests {
         },
         try_from_all => {
             input = fsys::ComponentDecl {
-               program: Some(fdata::Dictionary{entries: Some(vec![
-                   fdata::DictionaryEntry {
-                       key: "args".to_string(),
-                       value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["foo".to_string(), "bar".to_string()]))),
-                   },
-                   fdata::DictionaryEntry {
-                       key: "binary".to_string(),
-                       value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
-                   },
-               ]), ..fdata::Dictionary::EMPTY}),
-               uses: Some(vec![
-                   fsys::UseDecl::Service(fsys::UseServiceDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("netstack".to_string()),
-                       target_path: Some("/svc/mynetstack".to_string()),
-                       ..fsys::UseServiceDecl::EMPTY
-                   }),
-                   fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("legacy_netstack".to_string()),
-                       target_path: Some("/svc/legacy_mynetstack".to_string()),
-                       ..fsys::UseProtocolDecl::EMPTY
-                   }),
-                   fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
-                       source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                       source_name: Some("dir".to_string()),
-                       target_path: Some("/data".to_string()),
-                       rights: Some(fio2::Operations::Connect),
-                       subdir: Some("foo/bar".to_string()),
-                       ..fsys::UseDirectoryDecl::EMPTY
-                   }),
-                   fsys::UseDecl::Storage(fsys::UseStorageDecl {
-                       source_name: Some("cache".to_string()),
-                       target_path: Some("/cache".to_string()),
-                       ..fsys::UseStorageDecl::EMPTY
-                   }),
-                   fsys::UseDecl::Storage(fsys::UseStorageDecl {
-                       source_name: Some("temp".to_string()),
-                       target_path: Some("/temp".to_string()),
-                       ..fsys::UseStorageDecl::EMPTY
-                   }),
-                   fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                       source_name: Some("myrunner".to_string()),
-                       ..fsys::UseRunnerDecl::EMPTY
-                   }),
-                   fsys::UseDecl::Event(fsys::UseEventDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("capability_ready".to_string()),
-                       target_name: Some("diagnostics_ready".to_string()),
-                       filter: Some(fdata::Dictionary{
-                           entries: Some(vec![
-                              fdata::DictionaryEntry {
-                                  key: "path".to_string(),
-                                  value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
-                              },
-                           ]),
-                           ..fdata::Dictionary::EMPTY
-                       }),
-                       mode: Some(fsys::EventMode::Sync),
-                       ..fsys::UseEventDecl::EMPTY
-                   }),
-               ]),
-               exposes: Some(vec![
-                   fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
-                       source: Some(fsys::Ref::Child(fsys::ChildRef {
-                           name: "netstack".to_string(),
-                           collection: None,
-                       })),
-                       source_name: Some("legacy_netstack".to_string()),
-                       target_name: Some("legacy_mynetstack".to_string()),
-                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       ..fsys::ExposeProtocolDecl::EMPTY
-                   }),
-                   fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
-                       source: Some(fsys::Ref::Child(fsys::ChildRef {
-                           name: "netstack".to_string(),
-                           collection: None,
-                       })),
-                       source_name: Some("dir".to_string()),
-                       target_name: Some("data".to_string()),
-                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       rights: Some(fio2::Operations::Connect),
-                       subdir: Some("foo/bar".to_string()),
-                       ..fsys::ExposeDirectoryDecl::EMPTY
-                   }),
-                   fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
-                       source: Some(fsys::Ref::Child(fsys::ChildRef {
-                           name: "netstack".to_string(),
-                           collection: None,
-                       })),
-                       source_name: Some("elf".to_string()),
-                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       target_name: Some("elf".to_string()),
-                       ..fsys::ExposeRunnerDecl::EMPTY
-                   }),
-                   fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl{
-                       source: Some(fsys::Ref::Child(fsys::ChildRef {
-                           name: "netstack".to_string(),
-                           collection: None,
-                       })),
-                       source_name: Some("pkg".to_string()),
-                       target: Some(fsys::Ref::Parent(fsys::ParentRef{})),
-                       target_name: Some("pkg".to_string()),
-                       ..fsys::ExposeResolverDecl::EMPTY
-                   }),
-                   fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                       source: Some(fsys::Ref::Child(fsys::ChildRef {
-                           name: "netstack".to_string(),
-                           collection: None,
-                       })),
-                       source_name: Some("netstack1".to_string()),
-                       target_name: Some("mynetstack".to_string()),
-                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       ..fsys::ExposeServiceDecl::EMPTY
-                   }),
-                   fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                       source: Some(fsys::Ref::Child(fsys::ChildRef {
-                           name: "netstack".to_string(),
-                           collection: None,
-                       })),
-                       source_name: Some("netstack2".to_string()),
-                       target_name: Some("mynetstack".to_string()),
-                       target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       ..fsys::ExposeServiceDecl::EMPTY
-                   }),
-               ]),
-               offers: Some(vec![
-                   fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("legacy_netstack".to_string()),
-                       target: Some(fsys::Ref::Child(
-                          fsys::ChildRef {
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![
+                            fdata::DictionaryEntry {
+                                key: "args".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["foo".to_string(), "bar".to_string()]))),
+                            },
+                            fdata::DictionaryEntry {
+                                key: "binary".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                            },
+                        ]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
+                }),
+                uses: Some(vec![
+                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("netstack".to_string()),
+                        target_path: Some("/svc/mynetstack".to_string()),
+                        ..fsys::UseServiceDecl::EMPTY
+                    }),
+                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("legacy_netstack".to_string()),
+                        target_path: Some("/svc/legacy_mynetstack".to_string()),
+                        ..fsys::UseProtocolDecl::EMPTY
+                    }),
+                    fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        source_name: Some("dir".to_string()),
+                        target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: Some("foo/bar".to_string()),
+                        ..fsys::UseDirectoryDecl::EMPTY
+                    }),
+                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
+                        source_name: Some("cache".to_string()),
+                        target_path: Some("/cache".to_string()),
+                        ..fsys::UseStorageDecl::EMPTY
+                    }),
+                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
+                        source_name: Some("temp".to_string()),
+                        target_path: Some("/temp".to_string()),
+                        ..fsys::UseStorageDecl::EMPTY
+                    }),
+                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                        source_name: Some("myrunner".to_string()),
+                        ..fsys::UseRunnerDecl::EMPTY
+                    }),
+                    fsys::UseDecl::Event(fsys::UseEventDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("capability_ready".to_string()),
+                        target_name: Some("diagnostics_ready".to_string()),
+                        filter: Some(fdata::Dictionary{
+                            entries: Some(vec![
+                               fdata::DictionaryEntry {
+                                   key: "path".to_string(),
+                                   value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
+                               },
+                            ]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        mode: Some(fsys::EventMode::Sync),
+                        ..fsys::UseEventDecl::EMPTY
+                    }),
+                ]),
+                exposes: Some(vec![
+                    fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("legacy_netstack".to_string()),
+                        target_name: Some("legacy_mynetstack".to_string()),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        ..fsys::ExposeProtocolDecl::EMPTY
+                    }),
+                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("dir".to_string()),
+                        target_name: Some("data".to_string()),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: Some("foo/bar".to_string()),
+                        ..fsys::ExposeDirectoryDecl::EMPTY
+                    }),
+                    fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("elf".to_string()),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        target_name: Some("elf".to_string()),
+                        ..fsys::ExposeRunnerDecl::EMPTY
+                    }),
+                    fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl{
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef{})),
+                        target_name: Some("pkg".to_string()),
+                        ..fsys::ExposeResolverDecl::EMPTY
+                    }),
+                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("netstack1".to_string()),
+                        target_name: Some("mynetstack".to_string()),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        ..fsys::ExposeServiceDecl::EMPTY
+                    }),
+                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("netstack2".to_string()),
+                        target_name: Some("mynetstack".to_string()),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        ..fsys::ExposeServiceDecl::EMPTY
+                    }),
+                ]),
+                offers: Some(vec![
+                    fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("legacy_netstack".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "echo".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("legacy_mynetstack".to_string()),
+                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                        ..fsys::OfferProtocolDecl::EMPTY
+                    }),
+                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("dir".to_string()),
+                        target: Some(fsys::Ref::Collection(
+                            fsys::CollectionRef { name: "modular".to_string() }
+                        )),
+                        target_name: Some("data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                        dependency_type: Some(fsys::DependencyType::Strong),
+                        ..fsys::OfferDirectoryDecl::EMPTY
+                    }),
+                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                        source_name: Some("cache".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        target: Some(fsys::Ref::Collection(
+                            fsys::CollectionRef { name: "modular".to_string() }
+                        )),
+                        target_name: Some("cache".to_string()),
+                        ..fsys::OfferStorageDecl::EMPTY
+                    }),
+                    fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("elf".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "echo".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("elf2".to_string()),
+                        ..fsys::OfferRunnerDecl::EMPTY
+                    }),
+                    fsys::OfferDecl::Resolver(fsys::OfferResolverDecl{
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
                               name: "echo".to_string(),
                               collection: None,
-                          }
-                       )),
-                       target_name: Some("legacy_mynetstack".to_string()),
-                       dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                       ..fsys::OfferProtocolDecl::EMPTY
-                   }),
-                   fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("dir".to_string()),
-                       target: Some(fsys::Ref::Collection(
-                           fsys::CollectionRef { name: "modular".to_string() }
-                       )),
-                       target_name: Some("data".to_string()),
-                       rights: Some(fio2::Operations::Connect),
-                       subdir: None,
-                       dependency_type: Some(fsys::DependencyType::Strong),
-                       ..fsys::OfferDirectoryDecl::EMPTY
-                   }),
-                   fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
-                       source_name: Some("cache".to_string()),
-                       source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                       target: Some(fsys::Ref::Collection(
-                           fsys::CollectionRef { name: "modular".to_string() }
-                       )),
-                       target_name: Some("cache".to_string()),
-                       ..fsys::OfferStorageDecl::EMPTY
-                   }),
-                   fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("elf".to_string()),
-                       target: Some(fsys::Ref::Child(
-                          fsys::ChildRef {
-                              name: "echo".to_string(),
-                              collection: None,
-                          }
-                       )),
-                       target_name: Some("elf2".to_string()),
-                       ..fsys::OfferRunnerDecl::EMPTY
-                   }),
-                   fsys::OfferDecl::Resolver(fsys::OfferResolverDecl{
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
-                       source_name: Some("pkg".to_string()),
-                       target: Some(fsys::Ref::Child(
-                          fsys::ChildRef {
-                             name: "echo".to_string(),
-                             collection: None,
-                          }
-                       )),
-                       target_name: Some("pkg".to_string()),
-                       ..fsys::OfferResolverDecl::EMPTY
-                   }),
-                   fsys::OfferDecl::Event(fsys::OfferEventDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("started".to_string()),
-                       target: Some(fsys::Ref::Child(
-                          fsys::ChildRef {
-                              name: "echo".to_string(),
-                              collection: None,
-                          }
-                       )),
-                       target_name: Some("mystarted".to_string()),
-                       filter: Some(fdata::Dictionary {
-                           entries: Some(vec![
-                              fdata::DictionaryEntry {
-                                  key: "path".to_string(),
-                                  value: Some(Box::new(fdata::DictionaryValue::Str("/a".to_string()))),
-                              },
-                           ]),
-                           ..fdata::Dictionary::EMPTY
-                       }),
-                       mode: Some(fsys::EventMode::Sync),
-                       ..fsys::OfferEventDecl::EMPTY
-                   }),
-                   fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("netstack1".to_string()),
-                       target: Some(fsys::Ref::Child(
-                          fsys::ChildRef {
-                              name: "echo".to_string(),
-                              collection: None,
-                          }
-                       )),
-                       target_name: Some("mynetstack".to_string()),
-                       ..fsys::OfferServiceDecl::EMPTY
-                   }),
-                   fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       source_name: Some("netstack2".to_string()),
-                       target: Some(fsys::Ref::Child(
-                          fsys::ChildRef {
-                              name: "echo".to_string(),
-                              collection: None,
-                          }
-                       )),
-                       target_name: Some("mynetstack".to_string()),
-                       ..fsys::OfferServiceDecl::EMPTY
-                   }),
-               ]),
-               capabilities: Some(vec![
-                   fsys::CapabilityDecl::Service(fsys::ServiceDecl {
-                       name: Some("netstack".to_string()),
-                       source_path: Some("/netstack".to_string()),
-                       ..fsys::ServiceDecl::EMPTY
-                   }),
-                   fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
-                       name: Some("netstack2".to_string()),
-                       source_path: Some("/netstack2".to_string()),
-                       ..fsys::ProtocolDecl::EMPTY
-                   }),
-                   fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
-                       name: Some("data".to_string()),
-                       source_path: Some("/data".to_string()),
-                       rights: Some(fio2::Operations::Connect),
-                       ..fsys::DirectoryDecl::EMPTY
-                   }),
-                   fsys::CapabilityDecl::Storage(fsys::StorageDecl {
-                       name: Some("cache".to_string()),
-                       backing_dir: Some("data".to_string()),
-                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       subdir: Some("cache".to_string()),
-                       ..fsys::StorageDecl::EMPTY
-                   }),
-                   fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
-                       name: Some("elf".to_string()),
-                       source_path: Some("/elf".to_string()),
-                       source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                       ..fsys::RunnerDecl::EMPTY
-                   }),
-                   fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
-                       name: Some("pkg".to_string()),
-                       source_path: Some("/pkg_resolver".to_string()),
-                       ..fsys::ResolverDecl::EMPTY
-                   }),
-               ]),
-               children: Some(vec![
-                    fsys::ChildDecl {
+                           }
+                        )),
+                        target_name: Some("pkg".to_string()),
+                        ..fsys::OfferResolverDecl::EMPTY
+                    }),
+                    fsys::OfferDecl::Event(fsys::OfferEventDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("started".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "echo".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("mystarted".to_string()),
+                        filter: Some(fdata::Dictionary {
+                            entries: Some(vec![
+                               fdata::DictionaryEntry {
+                                   key: "path".to_string(),
+                                   value: Some(Box::new(fdata::DictionaryValue::Str("/a".to_string()))),
+                               },
+                            ]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        mode: Some(fsys::EventMode::Sync),
+                        ..fsys::OfferEventDecl::EMPTY
+                    }),
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("netstack1".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "echo".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("mynetstack".to_string()),
+                        ..fsys::OfferServiceDecl::EMPTY
+                    }),
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("netstack2".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "echo".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("mynetstack".to_string()),
+                        ..fsys::OfferServiceDecl::EMPTY
+                    }),
+                ]),
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                         name: Some("netstack".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm"
-                                  .to_string()),
-                        startup: Some(fsys::StartupMode::Lazy),
-                        environment: None,
-                        ..fsys::ChildDecl::EMPTY
+                        source_path: Some("/netstack".to_string()),
+                        ..fsys::ServiceDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                        name: Some("netstack2".to_string()),
+                        source_path: Some("/netstack2".to_string()),
+                        ..fsys::ProtocolDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                        name: Some("data".to_string()),
+                        source_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        ..fsys::DirectoryDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                        name: Some("cache".to_string()),
+                        backing_dir: Some("data".to_string()),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        subdir: Some("cache".to_string()),
+                        ..fsys::StorageDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
+                        name: Some("elf".to_string()),
+                        source_path: Some("/elf".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        ..fsys::RunnerDecl::EMPTY
+                    }),
+                    fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
+                        name: Some("pkg".to_string()),
+                        source_path: Some("/pkg_resolver".to_string()),
+                        ..fsys::ResolverDecl::EMPTY
+                    }),
+                ]),
+                children: Some(vec![
+                     fsys::ChildDecl {
+                         name: Some("netstack".to_string()),
+                         url: Some("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm"
+                                   .to_string()),
+                         startup: Some(fsys::StartupMode::Lazy),
+                         environment: None,
+                         ..fsys::ChildDecl::EMPTY
+                     },
+                     fsys::ChildDecl {
+                         name: Some("gtest".to_string()),
+                         url: Some("fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string()),
+                         startup: Some(fsys::StartupMode::Lazy),
+                         environment: None,
+                         ..fsys::ChildDecl::EMPTY
+                     },
+                     fsys::ChildDecl {
+                         name: Some("echo".to_string()),
+                         url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
+                                   .to_string()),
+                         startup: Some(fsys::StartupMode::Eager),
+                         environment: Some("test_env".to_string()),
+                         ..fsys::ChildDecl::EMPTY
+                     },
+                ]),
+                collections: Some(vec![
+                     fsys::CollectionDecl {
+                         name: Some("modular".to_string()),
+                         durability: Some(fsys::Durability::Persistent),
+                         environment: None,
+                         ..fsys::CollectionDecl::EMPTY
+                     },
+                     fsys::CollectionDecl {
+                         name: Some("tests".to_string()),
+                         durability: Some(fsys::Durability::Transient),
+                         environment: Some("test_env".to_string()),
+                         ..fsys::CollectionDecl::EMPTY
+                     },
+                ]),
+                facets: Some(fsys::Object{entries: vec![
+                    fsys::Entry{
+                        key: "author".to_string(),
+                        value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
                     },
-                    fsys::ChildDecl {
-                        name: Some("gtest".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string()),
-                        startup: Some(fsys::StartupMode::Lazy),
-                        environment: None,
-                        ..fsys::ChildDecl::EMPTY
-                    },
-                    fsys::ChildDecl {
-                        name: Some("echo".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
-                                  .to_string()),
-                        startup: Some(fsys::StartupMode::Eager),
-                        environment: Some("test_env".to_string()),
-                        ..fsys::ChildDecl::EMPTY
-                    },
-               ]),
-               collections: Some(vec![
-                    fsys::CollectionDecl {
-                        name: Some("modular".to_string()),
-                        durability: Some(fsys::Durability::Persistent),
-                        environment: None,
-                        ..fsys::CollectionDecl::EMPTY
-                    },
-                    fsys::CollectionDecl {
-                        name: Some("tests".to_string()),
-                        durability: Some(fsys::Durability::Transient),
-                        environment: Some("test_env".to_string()),
-                        ..fsys::CollectionDecl::EMPTY
-                    },
-               ]),
-               facets: Some(fsys::Object{entries: vec![
-                   fsys::Entry{
-                       key: "author".to_string(),
-                       value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
-                   },
-               ]}),
-               environments: Some(vec![
-                   fsys::EnvironmentDecl {
-                       name: Some("test_env".to_string()),
-                       extends: Some(fsys::EnvironmentExtends::Realm),
-                       runners: Some(vec![
-                           fsys::RunnerRegistration {
-                               source_name: Some("runner".to_string()),
-                               source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                   name: "gtest".to_string(),
-                                   collection: None,
-                               })),
-                               target_name: Some("gtest-runner".to_string()),
-                               ..fsys::RunnerRegistration::EMPTY
-                           }
-                       ]),
-                       resolvers: Some(vec![
-                           fsys::ResolverRegistration {
-                               resolver: Some("pkg_resolver".to_string()),
-                               source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
-                               scheme: Some("fuchsia-pkg".to_string()),
-                               ..fsys::ResolverRegistration::EMPTY
-                           }
-                       ]),
-                       debug_capabilities: Some(vec![
-                        fsys::DebugRegistration::Protocol(fsys::DebugProtocolRegistration {
-                            source_name: Some("some_protocol".to_string()),
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "gtest".to_string(),
-                                collection: None,
-                            })),
-                            target_name: Some("some_protocol".to_string()),
-                            ..fsys::DebugProtocolRegistration::EMPTY
-                           })
-                       ]),
-                       stop_timeout_ms: Some(4567),
-                       ..fsys::EnvironmentDecl::EMPTY
-                   }
-               ]),
+                ]}),
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("test_env".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: Some(vec![
+                            fsys::RunnerRegistration {
+                                source_name: Some("runner".to_string()),
+                                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                    name: "gtest".to_string(),
+                                    collection: None,
+                                })),
+                                target_name: Some("gtest-runner".to_string()),
+                                ..fsys::RunnerRegistration::EMPTY
+                            }
+                        ]),
+                        resolvers: Some(vec![
+                            fsys::ResolverRegistration {
+                                resolver: Some("pkg_resolver".to_string()),
+                                source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
+                                scheme: Some("fuchsia-pkg".to_string()),
+                                ..fsys::ResolverRegistration::EMPTY
+                            }
+                        ]),
+                        debug_capabilities: Some(vec![
+                         fsys::DebugRegistration::Protocol(fsys::DebugProtocolRegistration {
+                             source_name: Some("some_protocol".to_string()),
+                             source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                 name: "gtest".to_string(),
+                                 collection: None,
+                             })),
+                             target_name: Some("some_protocol".to_string()),
+                             ..fsys::DebugProtocolRegistration::EMPTY
+                            })
+                        ]),
+                        stop_timeout_ms: Some(4567),
+                        ..fsys::EnvironmentDecl::EMPTY
+                    }
+                ]),
                 ..fsys::ComponentDecl::EMPTY
             },
             result = {
                 ComponentDecl {
-                    program: Some(fdata::Dictionary{entries: Some(vec![
-                        fdata::DictionaryEntry {
-                            key: "args".to_string(),
-                            value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["foo".to_string(), "bar".to_string()]))),
+                    program: Some(ProgramDecl {
+                        runner: None,
+                        info: fdata::Dictionary {
+                            entries: Some(vec![
+                                fdata::DictionaryEntry {
+                                    key: "args".to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["foo".to_string(), "bar".to_string()]))),
+                                },
+                                fdata::DictionaryEntry{
+                                    key: "binary".to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                                },
+                            ]),
+                            ..fdata::Dictionary::EMPTY
                         },
-                        fdata::DictionaryEntry{
-                            key: "binary".to_string(),
-                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
-                        },
-                    ]), ..fdata::Dictionary::EMPTY}),
+                    }),
                     uses: vec![
                         UseDecl::Service(UseServiceDecl {
                             source: UseSource::Parent,

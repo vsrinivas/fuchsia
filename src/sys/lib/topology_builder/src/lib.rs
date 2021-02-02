@@ -211,12 +211,15 @@ impl Topology {
             .map_err(TopologyError::FailedToUseFrameworkIntermediary)?;
         self.mocks_runner.register_mock(mock_id.clone(), mock).await;
         let decl = cm_rust::ComponentDecl {
-            program: Some(fdata::Dictionary {
-                entries: Some(vec![fdata::DictionaryEntry {
-                    key: mock::MOCK_ID_KEY.to_string(),
-                    value: Some(Box::new(fdata::DictionaryValue::Str(mock_id))),
-                }]),
-                ..fdata::Dictionary::EMPTY
+            program: Some(cm_rust::ProgramDecl {
+                runner: None,
+                info: fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: mock::MOCK_ID_KEY.to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(mock_id))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
             }),
             uses: vec![cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl {
                 source_name: mock::RUNNER_NAME.try_into().unwrap(),
@@ -547,12 +550,15 @@ mod tests {
         assert_eq!(
             *topology.get_decl_mut(&"a".into()).unwrap(),
             ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: mock::MOCK_ID_KEY.to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
+                program: Some(cm_rust::ProgramDecl {
+                    runner: None,
+                    info: fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: mock::MOCK_ID_KEY.to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    },
                 }),
                 uses: vec![
                     UseDecl::Runner(UseRunnerDecl {

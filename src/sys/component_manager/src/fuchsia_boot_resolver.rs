@@ -248,15 +248,15 @@ mod tests {
         // the resolver returned the right package dir.
         let fsys::Component { resolved_url, decl, package, .. } = component;
         assert_eq!(url, resolved_url.unwrap());
-        let program = fdata::Dictionary {
+        let info = Some(fdata::Dictionary {
             entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
                 value: Some(Box::new(fdata::DictionaryValue::Str("bin/hello_world".to_string()))),
             }]),
             ..fdata::Dictionary::EMPTY
-        };
+        });
         let expected_decl = ComponentDecl {
-            program: Some(program),
+            program: Some(fsys::ProgramDecl { info, ..fsys::ProgramDecl::EMPTY }),
             uses: Some(vec![
                 fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                     source_name: Some("elf".to_string()),

@@ -8,8 +8,7 @@ using fuchsia.component;
 using fuchsia.data;
 using fuchsia.io2;
 
-/// Declares a capability used by a component, which was offered to the
-/// component's environment.
+/// Declares a capability used by a component, which was offered to it.
 flexible union UseDecl {
     1: UseServiceDecl service;
     2: UseProtocolDecl protocol;
@@ -20,8 +19,7 @@ flexible union UseDecl {
     7: UseEventStreamDecl event_stream;
 };
 
-/// Declares a service used by a component, which was offered to the component's
-/// environment.
+/// Declares a service used by a component, which was offered to it.
 ///
 /// To learn more about services, see:
 /// https://fuchsia.dev/fuchsia-src/glossary#service
@@ -41,8 +39,7 @@ table UseServiceDecl {
     3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a protocol used by a component, which was offered to the
-/// component's environment.
+/// Declares a protocol used by a component, which was offered to it.
 ///
 /// A protocol is a service with a single instance, provided by a single FIDL
 /// protocol.
@@ -62,8 +59,7 @@ table UseProtocolDecl {
     3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a directory used by a component, which was offered to the
-/// component's environment.
+/// Declares a directory used by a component, which was offered to it.
 table UseDirectoryDecl {
     /// The provider of the directory relative to the component itself. Must
     /// be `parent` or `framework`.
@@ -86,8 +82,7 @@ table UseDirectoryDecl {
     5: string:fuchsia.component.MAX_PATH_LENGTH subdir;
 };
 
-/// Declares storage used by a component, which was offered to the component's
-/// environment.
+/// Declares storage used by a component, which was offered to it.
 table UseStorageDecl {
     /// Name identifying the storage, by which it was presented to this
     /// component.
@@ -100,15 +95,15 @@ table UseStorageDecl {
     2: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
-/// Declares a runner used by a component, which was offered to the component's
-/// environment.
+/// Declares a runner used by a component, which was present in its environment.
+// TODO(fxbug.dev/68827): Replace this with `ProgramDecl`.
 table UseRunnerDecl {
     /// The name of the runner, as it was presented to this component by the
     /// realm.
     1: fuchsia.component.name source_name;
 };
 
-/// Declares an event used by a component.
+/// Declares an event used by a component, which was offered to it.
 table UseEventDecl {
     /// The provider of the event. Must be |realm| or |framework|.
     1: Ref source;
