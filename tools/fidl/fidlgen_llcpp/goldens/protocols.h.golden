@@ -8591,6 +8591,7 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<Transitional>;
+  friend class ::fidl::internal::ControlBlock<Transitional>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}
@@ -8793,6 +8794,7 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<ChannelProtocol>;
+  friend class ::fidl::internal::ControlBlock<ChannelProtocol>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}
@@ -9045,6 +9047,7 @@ class WithAndWithoutRequestResponse::ClientImpl final
 
  private:
   friend class ::fidl::Client<WithAndWithoutRequestResponse>;
+  friend class ::fidl::internal::ControlBlock<WithAndWithoutRequestResponse>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}
@@ -9251,6 +9254,7 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<WithErrorSyntax>;
+  friend class ::fidl::internal::ControlBlock<WithErrorSyntax>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}

@@ -127,6 +127,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<{{ .Name }}>;
+  friend class ::fidl::internal::ControlBlock<{{ .Name }}>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}

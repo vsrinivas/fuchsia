@@ -1282,6 +1282,7 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<EmptyProtocol>;
+  friend class ::fidl::internal::ControlBlock<EmptyProtocol>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}

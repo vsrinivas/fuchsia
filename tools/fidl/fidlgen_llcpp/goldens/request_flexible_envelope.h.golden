@@ -1693,6 +1693,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<Protocol>;
+  friend class ::fidl::internal::ControlBlock<Protocol>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}

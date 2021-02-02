@@ -1908,6 +1908,7 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<Parent>;
+  friend class ::fidl::internal::ControlBlock<Parent>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}
@@ -1969,6 +1970,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<Child>;
+  friend class ::fidl::internal::ControlBlock<Child>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}

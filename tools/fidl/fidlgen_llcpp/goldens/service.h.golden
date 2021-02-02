@@ -1078,6 +1078,7 @@ class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<SecondProtocol>;
+  friend class ::fidl::internal::ControlBlock<SecondProtocol>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}
@@ -1147,6 +1148,7 @@ class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<FirstProtocol>;
+  friend class ::fidl::internal::ControlBlock<FirstProtocol>;
 
   explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
       : event_handler_(std::move(event_handler)) {}
