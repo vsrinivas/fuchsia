@@ -48,6 +48,7 @@ rustc_library("lib") {
   inputs = [
     "src/backends/templates/c/body.h",
     "src/backends/templates/c/header.h",
+    "src/backends/templates/c/struct.h",
     "src/backends/templates/dummy_c/dummy_c.h",
   ]
 

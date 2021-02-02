@@ -38,4 +38,8 @@ mod c {
 
     codegen_test!(constants, CBackend, "c/constants.h");
     codegen_test!(enums, CBackend, "c/enums.h");
+    codegen_test!(example0, CBackend, "c/example0.h");
+    codegen_test!(example1, CBackend, "c/example1.h");
+    codegen_test!(example2, CBackend, "c/example2.h");
+    codegen_test!(example3, CBackend, "c/example3.h");
 }

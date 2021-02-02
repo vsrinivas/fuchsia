@@ -17,6 +17,22 @@ _simple_libraries = [
     name = "enums"
     backends = [ "c" ]
   },
+  {
+    name = "example0"
+    backends = [ "c" ]
+  },
+  {
+    name = "example1"
+    backends = [ "c" ]
+  },
+  {
+    name = "example2"
+    backends = [ "c" ]
+  },
+  {
+    name = "example3"
+    backends = [ "c" ]
+  },
 ]
 
 _base_label = "//src/devices/tools/fidlgen_banjo/tests"
