@@ -81,7 +81,12 @@ zx_status_t ConnectListener(zx::channel listener, std::vector<std::string> allow
   for (auto& tag : allowed_log_tags) {
     tags.emplace_back(fidl::unowned_str(tag));
   }
-  llcpp::fuchsia::logger::LogFilterOptions options{.tags = fidl::unowned_vec(tags)};
+  llcpp::fuchsia::logger::LogFilterOptions options{
+      .filter_by_pid = false,
+      .filter_by_tid = false,
+      .min_severity = llcpp::fuchsia::logger::LogLevelFilter::TRACE,
+      .tags = fidl::unowned_vec(tags),
+  };
   auto result = log.ListenSafe(std::move(listener), fidl::unowned_ptr(&options));
   if (!result.ok()) {
     printf("console: fuchsia.logger.Log/ListenSafe() = %s\n", result.error());
