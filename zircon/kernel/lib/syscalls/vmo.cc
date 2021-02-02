@@ -155,7 +155,7 @@ zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, u
     return status;
   }
 
-  return vmo->RangeOp(op, offset, size, _buffer.reinterpret<char>(), buffer_size, rights);
+  return vmo->RangeOp(op, offset, size, _buffer, buffer_size, rights);
 }
 
 // zx_status_t zx_vmo_set_cache_policy

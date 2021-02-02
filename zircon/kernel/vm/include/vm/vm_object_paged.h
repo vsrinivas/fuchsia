@@ -126,6 +126,10 @@ class VmObjectPaged final : public VmObject {
     cow_pages_locked()->UnpinLocked(offset, len);
   }
 
+  zx_status_t LockRange(uint64_t offset, uint64_t len,
+                        zx_vmo_lock_state_t* lock_state_out) override;
+  zx_status_t TryLockRange(uint64_t offset, uint64_t len) override;
+  zx_status_t UnlockRange(uint64_t offset, uint64_t len) override;
   zx_status_t Read(void* ptr, uint64_t offset, size_t len) override;
   zx_status_t Write(const void* ptr, uint64_t offset, size_t len) override;
   zx_status_t Lookup(uint64_t offset, uint64_t len,

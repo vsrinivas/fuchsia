@@ -1687,8 +1687,10 @@ TEST(VmoTestCase, Discardable) {
   EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
   EXPECT_NE(0, info.flags & ZX_INFO_VMO_DISCARDABLE);
 
-  // TODO(rashaeqbal): Reading/writing will require locking once locking and discard are
-  // implemented.
+  // Lock the VMO.
+  zx_vmo_lock_state_t lock_state = {};
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, &lock_state, sizeof(lock_state)));
+
   // Make sure we read zeros.
   uint8_t buf[kSize];
   EXPECT_OK(vmo.read(buf, 0, sizeof(buf)));
@@ -1720,6 +1722,8 @@ TEST(VmoTestCase, Discardable) {
   EXPECT_OK(vmo.read(buf, 0, sizeof(buf)));
   EXPECT_BYTES_EQ(buf, comp, sizeof(buf));
 
+  // Unlock and unmap.
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
   EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, kSize));
 
   // Cannot create clones of any type for discardable VMOs.
@@ -1736,6 +1740,78 @@ TEST(VmoTestCase, Discardable) {
   EXPECT_OK(zx::port::create(0, &port));
   zx::vmo pager_vmo;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, pager.create_vmo(ZX_VMO_DISCARDABLE, port, 0, kSize, &pager_vmo));
+}
+
+TEST(VmoTestCase, LockUnlock) {
+  // Lock/unlock only works with discardable VMOs.
+  zx::vmo vmo;
+  constexpr size_t kSize = 3 * ZX_PAGE_SIZE;
+  ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, kSize, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
+
+  vmo.reset();
+  ASSERT_OK(zx::vmo::create(kSize, ZX_VMO_DISCARDABLE, &vmo));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, kSize, nullptr, 0));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
+  zx_vmo_lock_state_t lock_state = {};
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, &lock_state, sizeof(lock_state)));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
+
+  // Lock/unlock requires read/write rights.
+  zx_info_handle_basic_t info;
+  size_t a1, a2;
+  EXPECT_OK(vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &a1, &a2));
+  EXPECT_NE(0u, info.rights & ZX_RIGHT_READ);
+  EXPECT_NE(0u, info.rights & ZX_RIGHT_WRITE);
+
+  EXPECT_OK(vmo.replace(info.rights & ~ZX_RIGHT_WRITE, &vmo));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, kSize, nullptr, 0));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, &lock_state, sizeof(lock_state)));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
+
+  EXPECT_OK(vmo.replace(info.rights & ~(ZX_RIGHT_READ | ZX_RIGHT_WRITE), &vmo));
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED, vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, kSize, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+            vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, &lock_state, sizeof(lock_state)));
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED, vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
+
+  vmo.reset();
+  ASSERT_OK(zx::vmo::create(kSize, ZX_VMO_DISCARDABLE, &vmo));
+
+  // Lock/unlock work only on the entire VMO.
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_TRY_LOCK, 0, ZX_PAGE_SIZE, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo.op_range(ZX_VMO_OP_LOCK, 0, ZX_PAGE_SIZE, &lock_state, sizeof(lock_state)));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_UNLOCK, 0, ZX_PAGE_SIZE, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo.op_range(ZX_VMO_OP_TRY_LOCK, ZX_PAGE_SIZE, kSize - ZX_PAGE_SIZE, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_LOCK, ZX_PAGE_SIZE, kSize - ZX_PAGE_SIZE,
+                                              &lock_state, sizeof(lock_state)));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo.op_range(ZX_VMO_OP_UNLOCK, ZX_PAGE_SIZE, kSize - ZX_PAGE_SIZE, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo.op_range(ZX_VMO_OP_TRY_LOCK, ZX_PAGE_SIZE, ZX_PAGE_SIZE, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_LOCK, ZX_PAGE_SIZE, ZX_PAGE_SIZE,
+                                              &lock_state, sizeof(lock_state)));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo.op_range(ZX_VMO_OP_UNLOCK, ZX_PAGE_SIZE, ZX_PAGE_SIZE, nullptr, 0));
+
+  // Lock requires a zx_vmo_lock_state_t arg.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, &lock_state, 0));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, nullptr, sizeof(lock_state)));
+  uint64_t tmp;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, &tmp, sizeof(tmp)));
+
+  // Verify the lock state returned on a successful lock.
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_LOCK, 0, kSize, &lock_state, sizeof(lock_state)));
+  EXPECT_EQ(0u, lock_state.offset);
+  EXPECT_EQ(kSize, lock_state.size);
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
 }
 
 }  // namespace

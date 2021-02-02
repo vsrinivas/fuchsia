@@ -55,7 +55,7 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
                           uint64_t offset);
   zx_status_t SetSize(uint64_t);
   zx_status_t GetSize(uint64_t* size);
-  zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_inout_ptr<char> buffer,
+  zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_inout_ptr<void> buffer,
                       size_t buffer_size, zx_rights_t rights);
   zx_status_t CreateChild(uint32_t options, uint64_t offset, uint64_t size, bool copy_name,
                           fbl::RefPtr<VmObject>* child_vmo);

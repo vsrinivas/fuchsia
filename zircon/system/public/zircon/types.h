@@ -190,6 +190,22 @@ typedef struct zx_wait_item {
 #define ZX_VMO_OP_CACHE_CLEAN            ((uint32_t)8u)
 #define ZX_VMO_OP_CACHE_CLEAN_INVALIDATE ((uint32_t)9u)
 #define ZX_VMO_OP_ZERO                   ((uint32_t)10u)
+#define ZX_VMO_OP_TRY_LOCK               ((uint32_t)11u)
+
+// |buffer| for zx_vmo_op_range() with ZX_VMO_OP_LOCK.
+typedef struct zx_vmo_lock_state {
+  // |offset| and |size| track the locked range, and will be set to the |offset|
+  // and |size| arguments passed in if the ZX_VMO_OP_LOCK is successful.
+  uint64_t offset;
+  uint64_t size;
+  // |discarded_offset| and |discarded_size| track the discarded range prior to
+  // the lock operation. This is the maximal range within the locked range that
+  // contains discarded pages; not all pages within this range might have been
+  // discarded. Both |discarded_offset| and |discarded_size| will be set to 0 if
+  // the range was not discarded.
+  uint64_t discarded_offset;
+  uint64_t discarded_size;
+} zx_vmo_lock_state_t;
 
 // VMAR opcodes
 // Keep value in sync with ZX_VMO_OP_DECOMMIT.

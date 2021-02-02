@@ -203,6 +203,20 @@ class VmObject : public VmHierarchyBase,
   // usermode).
   virtual void Unpin(uint64_t offset, uint64_t len) = 0;
 
+  // Lock a range from being discarded by the kernel. Can fail if the range was already discarded.
+  virtual zx_status_t TryLockRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
+  // Lock a range from being discarded by the kernel. Guaranteed to succeed. |lock_state_out| is
+  // populated with relevant information about the locked and discarded ranges.
+  virtual zx_status_t LockRange(uint64_t offset, uint64_t len,
+                                zx_vmo_lock_state_t* lock_state_out) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Unlock a range, making it available for the kernel to discard. The range could have been locked
+  // either by |TryLockRange| or |LockRange|.
+  virtual zx_status_t UnlockRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
   // read/write operators against kernel pointers only
   virtual zx_status_t Read(void* ptr, uint64_t offset, size_t len) { return ZX_ERR_NOT_SUPPORTED; }
   virtual zx_status_t Write(const void* ptr, uint64_t offset, size_t len) {

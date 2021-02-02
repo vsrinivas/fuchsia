@@ -220,7 +220,7 @@ uint64_t VmObjectDispatcher::ExpandContentIfNeeded(uint64_t requested_content_si
 }
 
 zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
-                                        user_inout_ptr<char> buffer, size_t buffer_size,
+                                        user_inout_ptr<void> buffer, size_t buffer_size,
                                         zx_rights_t rights) {
   canary_.Assert();
 
@@ -244,11 +244,44 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
       auto status = vmo_->DecommitRange(offset, size);
       return status;
     }
-    case ZX_VMO_OP_LOCK:
-    case ZX_VMO_OP_UNLOCK:
-      // TODO: handle or remove
-      return ZX_ERR_NOT_SUPPORTED;
+    case ZX_VMO_OP_LOCK: {
+      if ((rights & (ZX_RIGHT_READ | ZX_RIGHT_WRITE)) == 0) {
+        return ZX_ERR_ACCESS_DENIED;
+      }
 
+      zx_vmo_lock_state_t lock_state = {};
+      zx_status_t status = vmo_->LockRange(offset, size, &lock_state);
+      if (status != ZX_OK) {
+        return status;
+      }
+      // If an error is encountered from this point on, the lock operation MUST be reverted
+      // before returning.
+
+      if (buffer_size < sizeof(zx_vmo_lock_state_t)) {
+        // Undo the lock before returning an error.
+        vmo_->UnlockRange(offset, size);
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      auto lock_state_out = buffer.reinterpret<zx_vmo_lock_state_t>();
+      if ((status = lock_state_out.copy_to_user(lock_state)) != ZX_OK) {
+        // Undo the lock before returning an error.
+        vmo_->UnlockRange(offset, size);
+        return status;
+      }
+
+      return status;
+    }
+    case ZX_VMO_OP_TRY_LOCK:
+      if ((rights & (ZX_RIGHT_READ | ZX_RIGHT_WRITE)) == 0) {
+        return ZX_ERR_ACCESS_DENIED;
+      }
+      return vmo_->TryLockRange(offset, size);
+    case ZX_VMO_OP_UNLOCK:
+      if ((rights & (ZX_RIGHT_READ | ZX_RIGHT_WRITE)) == 0) {
+        return ZX_ERR_ACCESS_DENIED;
+      }
+      return vmo_->UnlockRange(offset, size);
     case ZX_VMO_OP_CACHE_SYNC:
       if ((rights & ZX_RIGHT_READ) == 0) {
         return ZX_ERR_ACCESS_DENIED;
