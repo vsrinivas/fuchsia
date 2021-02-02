@@ -17,7 +17,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{
-        channel::mpsc::Receiver,
         prelude::*,
         select,
         stream::{FusedStream, TryStreamExt},
@@ -36,7 +35,7 @@ pub trait ArchiveReaderManager {
     fn start_log_stream(
         &mut self,
     ) -> Result<
-        (Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Self::Error>),
+        Box<dyn FusedStream<Item = Result<LogsData, Self::Error>> + Unpin + Send>,
         StreamError,
     >;
 
@@ -52,20 +51,22 @@ pub trait ArchiveReaderManager {
         };
         let task = fasync::Task::spawn(async move {
             let mut iter_stream = iterator.into_stream()?;
-            let (mut log_stream, mut err_chan) = stream_result;
+            let mut result_stream = stream_result;
 
             while let Some(request) = iter_stream.next().await {
                 match request? {
                     ArchiveIteratorRequest::GetNext { responder } => {
                         let logs = select! {
-                            err = err_chan.select_next_some() => {
-                                warn!(?err, "Data read error");
-                                responder.send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
-                                continue;
-                            }
-
-                            log = log_stream.select_next_some() => {
-                                log
+                            result = result_stream.select_next_some() => {
+                                match result {
+                                    Err(err) => {
+                                        warn!(?err, "Data read error");
+                                        responder.send(&mut Err(
+                                            ArchiveIteratorError::DataReadFailed))?;
+                                        continue;
+                                    }
+                                    Ok(log) => log,
+                                }
                             }
 
                             complete => {
@@ -117,19 +118,15 @@ impl ArchiveReaderManager for ArchiveReaderManagerImpl {
     fn start_log_stream(
         &mut self,
     ) -> Result<
-        (Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Self::Error>),
+        Box<dyn FusedStream<Item = Result<LogsData, Self::Error>> + Unpin + Send>,
         StreamError,
     > {
-        let (log_stream, err_chan) = self
-            .reader
-            .snapshot_then_subscribe::<Logs>()
-            .map_err(|err| {
-                warn!(%err, "Got error creating log subscription");
-                StreamError::SetupSubscriptionFailed
-            })?
-            .split_streams();
+        let result_stream = self.reader.snapshot_then_subscribe::<Logs>().map_err(|err| {
+            warn!(%err, "Got error creating log subscription");
+            StreamError::SetupSubscriptionFailed
+        })?;
 
-        Ok((Box::new(log_stream), err_chan))
+        Ok(Box::new(result_stream))
     }
 }
 
@@ -318,20 +315,25 @@ mod test {
         fn start_log_stream(
             &mut self,
         ) -> Result<
-            (Box<dyn FusedStream<Item = LogsData> + Unpin + Send>, Receiver<Self::Error>),
+            Box<dyn FusedStream<Item = Result<LogsData, Self::Error>> + Unpin + Send>,
             StreamError,
         > {
             if let Some(cerr) = self.connection_error {
                 return Err(cerr);
             }
 
-            let (mut sender, rec) = futures::channel::mpsc::channel::<Error>(0);
+            let (mut sender, rec) =
+                futures::channel::mpsc::channel::<Result<LogsData, Self::Error>>(0);
+            let logs = self.logs.clone();
             let errors = self.errors.get_mut().drain(..).collect::<Vec<Error>>();
             fasync::Task::local(async move {
-                sender.send_all(&mut iter(errors.into_iter().map(|e| Ok(e)))).await.unwrap();
+                sender.send_all(&mut iter(errors.into_iter().map(|e| Ok(Err(e))))).await.unwrap();
+                for log in logs {
+                    sender.send(Ok(log)).await.unwrap();
+                }
             })
             .detach();
-            Ok((Box::new(iter(self.logs.clone()).fuse()), rec))
+            Ok(Box::new(rec.fuse()))
         }
     }
 
