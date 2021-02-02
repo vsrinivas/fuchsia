@@ -16,7 +16,7 @@ use {
         channel::oneshot,
         future::{BoxFuture, Future, Shared},
         lock::Mutex,
-        select, FutureExt, StreamExt, TryFutureExt,
+        select, FutureExt, StreamExt,
     },
     log::{info, trace, warn},
     std::sync::Arc,
@@ -54,11 +54,33 @@ impl MediaTaskBuilder for SinkTaskBuilder {
         let peer_id = peer_id.clone();
         let codec_config = codec_config.clone();
         Box::pin(async move {
+            let (player_client, player_requests) = create_request_stream()
+                .map_err(|e| MediaTaskError::Other(format!("FIDL error: {:?}", e)))?;
+
+            let registration = sessions2::PlayerRegistration {
+                domain: Some(s.domain),
+                ..sessions2::PlayerRegistration::EMPTY
+            };
+
+            let (session_id, avrcp_task) =
+                match s.publisher.publish(player_client, registration).await {
+                    Ok(session_id) => {
+                        info!("Session ID: {}", session_id);
+                        // We ignore AVRCP relay errors, they are logged.
+                        (session_id, AvrcpRelay::start(peer_id.clone(), player_requests).ok())
+                    }
+                    Err(e) => {
+                        warn!("Couldn't publish session: {:?}", e);
+                        (0, None)
+                    }
+                };
+
             Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(ConfiguredSinkTask::new(
                 codec_config,
-                s,
+                s.cobalt_sender,
                 data_stream_inspect,
-                peer_id,
+                session_id,
+                avrcp_task,
             )))
         })
     }
@@ -67,98 +89,47 @@ impl MediaTaskBuilder for SinkTaskBuilder {
 struct ConfiguredSinkTask {
     /// Configuration providing the format of encoded audio requested.
     codec_config: MediaCodecConfig,
-    /// The ID of the peer that this is configured for.
-    peer_id: PeerId,
-    /// A clone of the Builder that this was configured from.
-    builder: SinkTaskBuilder,
+    /// Used to send statistics about the length of playback to cobalt.
+    cobalt_sender: CobaltSender,
     /// Data Stream inspect object for tracking total bytes / current transfer speed.
     stream_inspect: Arc<Mutex<DataStreamInspect>>,
-    /// Future that will return the Session ID for Media, if we have started the session.
-    session_id_fut: Option<Shared<oneshot::Receiver<u64>>>,
-    /// Session Task (AVRCP relay) if it is started
-    session_task: Option<fasync::Task<()>>,
+    /// Session ID for Media
+    session_id: u64,
+    /// Session Task (AVRCP relay)
+    _session_task: Option<fasync::Task<()>>,
 }
 
 impl ConfiguredSinkTask {
     fn new(
         codec_config: MediaCodecConfig,
-        builder: SinkTaskBuilder,
+        cobalt_sender: CobaltSender,
         stream_inspect: DataStreamInspect,
-        peer_id: PeerId,
+        session_id: u64,
+        session_task: Option<fasync::Task<()>>,
     ) -> Self {
         Self {
             codec_config,
-            builder,
-            peer_id,
+            cobalt_sender,
             stream_inspect: Arc::new(Mutex::new(stream_inspect)),
-            session_id_fut: None,
-            session_task: None,
+            session_id,
+            _session_task: session_task,
         }
-    }
-
-    fn establish_session(&mut self) -> impl Future<Output = u64> {
-        if self.session_id_fut.is_none() {
-            // Need to start the session task and send the result.
-            let (sender, recv) = futures::channel::oneshot::channel();
-            self.session_id_fut = Some(recv.shared());
-            let peer_id = self.peer_id.clone();
-            let builder = self.builder.clone();
-            let session_fut = async move {
-                let (player_client, player_requests) = match create_request_stream() {
-                    Ok((client, requests)) => (client, requests),
-                    Err(e) => {
-                        warn!("{}: Couldn't create player FIDL client: {:?}", peer_id, e);
-                        return;
-                    }
-                };
-
-                let registration = sessions2::PlayerRegistration {
-                    domain: Some(builder.domain),
-                    ..sessions2::PlayerRegistration::EMPTY
-                };
-
-                match builder.publisher.publish(player_client, registration).await {
-                    Ok(session_id) => {
-                        info!("{}: Published session {}", peer_id, session_id);
-                        // If the receiver has hung up, this task will be dropped.
-                        let _ = sender.send(session_id);
-                        // We ignore AVRCP relay errors, they are logged.
-                        if let Ok(relay_task) = AvrcpRelay::start(peer_id, player_requests) {
-                            relay_task.await;
-                        }
-                    }
-                    Err(e) => warn!("{}: Couldn't publish session: {:?}", peer_id, e),
-                };
-            };
-            self.session_task = Some(fasync::Task::local(session_fut));
-        }
-        self.session_id_fut
-            .as_ref()
-            .cloned()
-            .expect("just set this")
-            .map_ok_or_else(|_e| 0, |id| id)
     }
 }
 
 impl MediaTaskRunner for ConfiguredSinkTask {
     fn start(&mut self, stream: MediaStream) -> Result<Box<dyn MediaTask>, MediaTaskError> {
         let codec_config = self.codec_config.clone();
-        let stream_inspect = self.stream_inspect.clone();
-        let session_id_fut = self.establish_session();
-        let media_player_fut = async move {
-            let session_id = session_id_fut.await;
-            media_stream_task(
-                stream,
-                Box::new(move || player::Player::new(session_id, codec_config.clone())),
-                stream_inspect,
-            )
-            .await
-        };
+        let session_id = self.session_id;
+        let media_player_fut = media_stream_task(
+            stream,
+            Box::new(move || player::Player::new(session_id, codec_config.clone())),
+            self.stream_inspect.clone(),
+        );
 
         let _ = self.stream_inspect.try_lock().map(|mut l| l.start());
         let codec_type = self.codec_config.codec_type().clone();
-        let cobalt_sender = self.builder.cobalt_sender.clone();
-        let task = RunningSinkTask::start(media_player_fut, cobalt_sender, codec_type);
+        let task = RunningSinkTask::start(media_player_fut, self.cobalt_sender.clone(), codec_type);
         Ok(Box::new(task))
     }
 
@@ -344,18 +315,16 @@ mod tests {
             StreamSinkRequest,
         },
         fidl_fuchsia_media_sessions2::{PublisherMarker, PublisherRequest},
-        fuchsia_bluetooth::types::Channel,
         fuchsia_inspect as inspect,
         fuchsia_inspect_derive::WithInspect,
         fuchsia_zircon::DurationNum,
         futures::{channel::mpsc, pin_mut, task::Poll, StreamExt},
-        std::sync::RwLock,
     };
 
     use crate::tests::fake_cobalt_sender;
 
     #[test]
-    fn sink_task_works_without_session() {
+    fn sink_task_builds_without_session() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let (send, _recv) = fake_cobalt_sender();
         let (proxy, mut session_requests) =
@@ -367,20 +336,9 @@ mod tests {
             builder.configure(&PeerId(1), &sbc_config, DataStreamInspect::default());
         pin_mut!(configured_fut);
 
-        let mut configured_task =
-            exec.run_singlethreaded(&mut configured_fut).expect("ok configure");
+        // Pending on response from the proxy at first.
+        assert!(exec.run_until_stalled(&mut configured_fut).is_pending());
 
-        // Should't start session until we start a stream.
-        assert!(exec.run_until_stalled(&mut session_requests.next()).is_pending());
-
-        let (local, _remote) = Channel::create();
-        let local = Arc::new(RwLock::new(local));
-        let stream =
-            MediaStream::new(Arc::new(parking_lot::Mutex::new(true)), Arc::downgrade(&local));
-
-        let mut running_task = configured_task.start(stream).expect("media task should start");
-
-        // Should try to publish the session now.
         match exec.run_until_stalled(&mut session_requests.next()) {
             Poll::Ready(Some(Ok(PublisherRequest::Publish { responder, .. }))) => {
                 drop(responder);
@@ -388,12 +346,9 @@ mod tests {
             x => panic!("Expected a publisher request, got {:?}", x),
         };
         drop(session_requests);
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
-        let finished_fut = running_task.finished();
-        pin_mut!(finished_fut);
-
-        // Shouldn't end the running media task
-        assert!(exec.run_until_stalled(&mut finished_fut).is_pending());
+        exec.run_singlethreaded(&mut configured_fut).expect("ok response from configure");
     }
 
     fn setup_media_stream_test(
