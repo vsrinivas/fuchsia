@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_zircon::DurationNum,
-    futures::{channel::oneshot, join, TryFutureExt, TryStreamExt},
+    futures::{channel::oneshot, join, TryFutureExt},
     log::info,
     pin_utils::pin_mut,
     std::panic,
@@ -44,23 +44,11 @@ async fn initiate_connect(
     assert_eq!(response, fidl_common::RequestStatus::Acknowledged);
 
     // Monitor the update stream for the connected notification.
-    while let Some(update_request) = update_stream.try_next().await.expect("getting state update") {
-        let (update, responder) =
-            update_request.into_on_client_state_update().expect("converting to state update");
-        let _ = responder.send();
-
-        let networks = update.networks.expect("getting client networks");
-
-        for net_state in networks {
-            let id = net_state.id.expect("empty network ID");
-            let state = net_state.state.expect("empty network state");
-
-            if id.ssid == SSID.to_vec() && state == fidl_policy::ConnectionState::Connected {
-                sender.send(()).expect("done connecting, sending message to the other future");
-                return;
-            }
-        }
-    }
+    wait_until_client_state(&mut update_stream, |update| {
+        has_ssid_and_state(update, SSID, fidl_policy::ConnectionState::Connected)
+    })
+    .await;
+    sender.send(()).expect("done connecting, sending message to the other future");
 }
 
 /// At this stage client communicates with AP only, in order to establish connection
