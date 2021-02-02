@@ -114,8 +114,17 @@ class PmmNode {
   static int64_t get_alloc_failed_count();
 
  private:
-  void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
+  // Same as |FreeList| except for when already holding |lock_|.
   void FreeListLocked(list_node* list) TA_REQ(lock_);
+
+  // The following two methods are used to implement |FreeList|. When freeing a list of pages, some
+  // of the per-page work can be done before acquiring the lock (|FreeListPre|), while some of the
+  // work requires the lock (|FreeListPostLocked|).
+  //
+  // Perform the lock-not-required work to free |list| and return the number of pages in the |list|.
+  uint64_t FreeListPre(list_node* list);
+  // Perform the lock-required work to free |list|.
+  void FreeListPostLocked(list_node* list, uint64_t count) TA_REQ(lock_);
 
   void ProcessPendingRequests();
 
@@ -141,10 +150,6 @@ class PmmNode {
   bool InOomStateLocked() TA_REQ(lock_);
 
   void AllocPageHelperLocked(vm_page_t* page) TA_REQ(lock_);
-
-  void AsanPoisonPage(vm_page_t*, uint8_t) TA_REQ(lock_);
-
-  void AsanUnpoisonPage(vm_page_t*) TA_REQ(lock_);
 
   fbl::Canary<fbl::magic("PNOD")> canary_;
 
