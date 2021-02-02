@@ -263,4 +263,51 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
 
+// After a client is unbound, no more calls can be made on that client.
+TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
+  // Use a server to count the number of |OneWay| calls.
+  class Server : public Example::Interface {
+   public:
+    Server() = default;
+
+    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
+      ZX_PANIC("Not used in this test");
+    }
+
+    void OneWay(fidl::StringView, OneWayCompleter::Sync&) override { num_one_way_.fetch_add(1); }
+
+    int num_one_way() const { return num_one_way_.load(); }
+
+   private:
+    std::atomic<int> num_one_way_ = 0;
+  };
+
+  auto endpoints = fidl::CreateEndpoints<Example>();
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fidl::Client<Example> client(std::move(endpoints->client), loop.dispatcher());
+
+  auto server = std::make_unique<Server>();
+  auto* server_ptr = server.get();
+  auto server_binding =
+      fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), std::move(server));
+  ASSERT_TRUE(server_binding.is_ok());
+
+  ASSERT_OK(loop.RunUntilIdle());
+  EXPECT_EQ(0, server_ptr->num_one_way());
+
+  ASSERT_OK(client->OneWay("foo").status());
+
+  ASSERT_OK(loop.RunUntilIdle());
+  EXPECT_EQ(1, server_ptr->num_one_way());
+
+  client.Unbind();
+  ASSERT_OK(loop.RunUntilIdle());
+  EXPECT_EQ(1, server_ptr->num_one_way());
+
+  ASSERT_EQ(ZX_ERR_CANCELED, client->OneWay("foo").status());
+  ASSERT_OK(loop.RunUntilIdle());
+  EXPECT_EQ(1, server_ptr->num_one_way());
+}
+
 }  // namespace

@@ -93,13 +93,14 @@ void DestroyAndExtract(std::shared_ptr<ChannelRef>&& object, Callback&& callback
 }
 
 // ChannelRefTracker takes ownership of a channel, wrapping it in a ChannelRef. It is used to create
-// and track one or more strong references to the channel.
+// and track one or more strong references to the channel, and supports extracting out its owned
+// channel in a thread-safe manner.
 class ChannelRefTracker {
  public:
   // Set the given channel as the owned channel.
   void Init(zx::channel channel) __TA_EXCLUDES(lock_);
 
-  // If the ChannelRef is still alive, returns a strong reference to it.
+  // If the |ChannelRef| is still alive, returns a strong reference to it.
   std::shared_ptr<ChannelRef> Get() { return channel_weak_.lock(); }
 
   // Blocks on the release of any outstanding strong references to the channel and returns it. Only
@@ -135,12 +136,13 @@ class ClientBase {
   zx_status_t Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
                    async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound);
 
-  // Asynchronously unbind the channel from the dispatcher. on_unbound will be invoked on a
+  // Asynchronously unbind the client from the dispatcher. on_unbound will be invoked on a
   // dispatcher thread if provided.
   void Unbind();
 
   // Waits for all strong references to the channel to be released, then returns it. This
-  // necessarily triggers unbinding in order to release the binding's reference.
+  // necessarily triggers unbinding first in order to release the binding's reference.
+  //
   // NOTE: As this returns a zx::channel which owns the handle, only a single call is expected to
   // succeed. Additional calls will simply return an empty zx::channel.
   zx::channel WaitForChannel();
@@ -154,9 +156,17 @@ class ClientBase {
   // Releases all outstanding `ResponseContext`s. Invoked after the ClientBase is unbound.
   void ReleaseResponseContextsWithError();
 
-  // Returns a strong reference to the channel to prevent destruction during a zx_channel_call() or
-  // zx_channel_write(). The caller is responsible for releasing the reference.
-  std::shared_ptr<ChannelRef> GetChannel() { return channel_tracker_.Get(); }
+  // Returns a strong reference to the channel to prevent its destruction during a |zx_channel_call|
+  // or |zx_channel_write|. The caller must release the reference after making the call/write,
+  // so as not to indefinitely block operations such as |WaitForChannel|.
+  //
+  // If the client has been unbound, returns |nullptr|.
+  std::shared_ptr<ChannelRef> GetChannel() {
+    if (auto binding = binding_.lock()) {
+      return binding->GetChannel();
+    }
+    return nullptr;
+  }
 
   // For debugging.
   size_t GetTransactionCount() {

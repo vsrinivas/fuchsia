@@ -256,6 +256,8 @@ class AsyncClientBinding final : public AsyncBinding {
 
   virtual ~AsyncClientBinding() = default;
 
+  std::shared_ptr<ChannelRef> GetChannel() const { return channel_; }
+
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
                      std::shared_ptr<ClientBase> client, OnClientUnboundFn&& on_unbound_fn);

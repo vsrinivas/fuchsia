@@ -22,7 +22,7 @@ zx_status_t ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel cha
   auto binding = AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
                                             std::move(on_unbound));
   auto status = binding->BeginWait();
-  binding_ = std::move(binding);
+  binding_ = binding;
   return status;
 }
 
