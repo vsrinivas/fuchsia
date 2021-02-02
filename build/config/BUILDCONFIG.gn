@@ -570,7 +570,7 @@ foreach(_target_type,
         all_outputs_fresh = invoker.all_outputs_fresh
       }
 
-      if (!should_trace) {
+      if (!should_trace || (!hermetic_deps && !all_outputs_fresh)) {
         script = _invoker_script
         args = _invoker_args
       } else {
