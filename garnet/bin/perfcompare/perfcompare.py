@@ -271,10 +271,10 @@ def StatsFromBootDatasets(boot_datasets):
                 name = FormatTestName(test_case)
                 results_for_boot.setdefault(name, []).append(new_value)
                 units_map.setdefault(name, set()).add(test_case['unit'])
-        for label, values in results_for_boot.iteritems():
+        for label, values in results_for_boot.items():
             results_map.setdefault(label, []).append(Mean(values))
     return {name: Stats(values, FormatUnit(units_map[name]))
-            for name, values in results_map.iteritems()}
+            for name, values in results_map.items()}
 
 
 def StatsFromMultiBootDataset(multi_boot_dataset):
@@ -304,7 +304,7 @@ def FormatTable(heading_row, rows, out_fh):
         assert len(row) == column_count
     rows = [heading_row] + rows
     widths = [2 + max(len(row[col_number]) for row in rows)
-              for col_number in xrange(column_count)]
+              for col_number in range(column_count)]
     # Underline the heading row.
     rows.insert(1, ['-' * (width - 2) for width in widths])
     for row in rows:
@@ -344,7 +344,7 @@ def ComparePerf(args, out_fh):
     # Set of all test case names, including those added or removed.
     labels = set()
     for results_map in results_maps:
-        labels.update(results_map.iterkeys())
+        labels.update(results_map.keys())
 
     if len(results_maps) != 2:
         # Display the dataset(s) without doing any comparison.
@@ -353,7 +353,7 @@ def ComparePerf(args, out_fh):
             heading_row.extend(['Mean'])
         else:
             heading_row.extend(['Mean %d' % (idx + 1)
-                                for idx in xrange(len(results_maps))])
+                                for idx in range(len(results_maps))])
         rows = []
         for label in sorted(labels):
             row = [label]
@@ -417,7 +417,7 @@ def PrintMultibootDatasetTable(multiboot_dataset, out_fh):
     stats_map = StatsFromMultiBootDataset(multiboot_dataset)
     heading_row = ['Test case', 'Mean']
     rows = []
-    for name, stats in sorted(stats_map.iteritems()):
+    for name, stats in sorted(stats_map.items()):
         rows.append([name, stats.FormatConfidenceInterval()])
     FormatTable(heading_row, rows, out_fh)
 
@@ -440,7 +440,7 @@ def RunLocal(args, out_fh, run_cmd):
     os.mkdir(args.dest)
     os.mkdir(by_boot_dir)
 
-    for boot_idx in xrange(args.boots):
+    for boot_idx in range(args.boots):
         # This prefix enables error-checking in the shell commands, for
         # both safety and convenience.
         errexit_prefix = 'set -o errexit -o nounset; '
@@ -472,8 +472,8 @@ def IntervalsIntersect(interval1, interval2):
 # from the given set of intervals will be non-intersecting.
 def MismatchRate(intervals):
     mismatch_count = sum(int(not IntervalsIntersect(intervals[i], intervals[j]))
-                         for i in xrange(len(intervals))
-                         for j in xrange(i))
+                         for i in range(len(intervals))
+                         for j in range(i))
     comparisons_count = len(intervals) * (len(intervals) - 1) / 2
     return float(mismatch_count) / comparisons_count
 
@@ -488,18 +488,18 @@ def ValidatePerfCompare(args, out_fh):
     results_maps = [
         StatsFromBootDatasets(
             boot_datasets[i * group_size : (i + 1) * group_size])
-        for i in xrange(group_count)]
+        for i in range(group_count)]
 
     # Group by test name (label).
     by_test = {}
     for results_map in results_maps:
-        for label, stats in results_map.iteritems():
+        for label, stats in results_map.items():
             by_test.setdefault(label, []).append(stats)
 
     out_fh.write('Rate of mismatches (non-intersections) '
                  'of confidence intervals for each test:\n')
     mismatch_rates = []
-    for label, stats_list in sorted(by_test.iteritems()):
+    for label, stats_list in sorted(by_test.items()):
         mismatch_rate = MismatchRate([stats.interval for stats in stats_list])
         out_fh.write('%f %s\n' % (mismatch_rate, label))
         mismatch_rates.append(mismatch_rate)
