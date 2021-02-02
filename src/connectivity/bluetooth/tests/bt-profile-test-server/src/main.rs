@@ -341,7 +341,7 @@ impl TestProfileServerInner {
         match self.peers.entry(id) {
             Entry::Vacant(_) => Err(format_err!("Peer {} not registered.", id)),
             Entry::Occupied(mut entry) => {
-                let component_stream = entry.get_mut().launch_profile(launch_info)?;
+                let (_, component_stream) = entry.get_mut().launch_profile(launch_info)?;
                 fasync::Task::spawn(async move {
                     component_stream.map(|_| ()).collect::<()>().await;
                 })

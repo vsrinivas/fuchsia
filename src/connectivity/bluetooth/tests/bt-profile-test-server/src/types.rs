@@ -22,7 +22,7 @@ pub struct ServiceFoundResponse {
 }
 
 /// Arguments used to launch a profile.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LaunchInfo {
     pub url: String,
     pub arguments: Vec<String>,

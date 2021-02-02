@@ -133,6 +133,17 @@ impl MockPeer {
         next_profile_handle
     }
 
+    /// Attempts to terminate the launched profile associated with the `handle`.
+    #[cfg(test)]
+    fn terminate_profile(&mut self, handle: ProfileHandle) -> Result<(), Error> {
+        let profile = self
+            .launched_profiles
+            .get(&handle)
+            .and_then(|p| p.upgrade())
+            .ok_or(format_err!("Unable to terminate profile - profile not present"))?;
+        profile.1.controller().kill().map_err(|e| format_err!("{:?}", e))
+    }
+
     /// Attempts to launch the profile specified by the `launch_info`.
     ///
     /// Returns a stream that monitors component state. The returned stream _must_ be polled
@@ -141,7 +152,8 @@ impl MockPeer {
     pub fn launch_profile(
         &mut self,
         launch_info: LaunchInfo,
-    ) -> Result<impl Stream<Item = Result<ComponentStatus, fidl::Error>>, Error> {
+    ) -> Result<(ProfileHandle, impl Stream<Item = Result<ComponentStatus, fidl::Error>>), Error>
+    {
         let next_profile_handle = self.get_next_profile_handle();
         let profile_url = launch_info.url;
 
@@ -168,7 +180,7 @@ impl MockPeer {
             match event {
                 ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
                     info!(
-                        "Peer {:?}. Component {:?}, terminated. Code: {}. Reason: {:?}",
+                        "Peer {:?}: Component {:?} terminated. Code: {}. Reason: {:?}",
                         peer_id, handle, return_code, termination_reason
                     );
                     detached.detach();
@@ -180,7 +192,7 @@ impl MockPeer {
                 }
             }
         });
-        Ok(component_stream)
+        Ok((next_profile_handle, component_stream))
     }
 
     /// Notifies the `observer` with the ServiceFound update from the ServiceRecord.
@@ -337,16 +349,19 @@ impl MockPeer {
 mod tests {
     use super::*;
 
-    use crate::peer::service::tests::build_a2dp_service_record;
-    use crate::profile::tests::build_a2dp_service_definition;
-    use crate::types::RegisteredServiceId;
+    use crate::{
+        peer::service::tests::build_a2dp_service_record,
+        profile::tests::build_a2dp_service_definition, types::RegisteredServiceId,
+    };
 
-    use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_sys::EnvironmentOptions;
-    use fuchsia_async as fasync;
-    use fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs};
-    use futures::{lock::Mutex, pin_mut, task::Poll, StreamExt};
-    use std::sync::Arc;
+    use {
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_sys::EnvironmentOptions,
+        fuchsia_async as fasync,
+        fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs},
+        futures::{lock::Mutex, pin_mut, task::Poll, StreamExt},
+        std::sync::Arc,
+    };
 
     /// `TestEnvironment` is used to store the FIDL Client Ends of any requests
     /// over the `fuchsia.bluetooth.bredr.Profile` service. This is because if
@@ -375,14 +390,6 @@ mod tests {
         ) {
             self.adv.push((adv, responder));
         }
-
-        pub fn clear_searches(&mut self) {
-            self.search.clear();
-        }
-
-        pub fn clear_advertisements(&mut self) {
-            self.adv.clear();
-        }
     }
 
     /// Accepts requests over the `fuchsia.bluetooth.bredr.Profile` service and stores the search
@@ -394,7 +401,7 @@ mod tests {
         mut stream: bredr::ProfileRequestStream,
         env: Arc<Mutex<TestEnvironment>>,
     ) {
-        fasync::Task::spawn(async move {
+        fasync::Task::local(async move {
             while let Some(request) = stream.next().await {
                 if let Ok(req) = request {
                     match req {
@@ -420,11 +427,11 @@ mod tests {
     fn setup_environment(
         id: PeerId,
     ) -> Result<(NestedEnvironment, Arc<Mutex<TestEnvironment>>), Error> {
-        let env_variables = Arc::new(Mutex::new(TestEnvironment::new()));
-        let env_vars_clone = env_variables.clone();
+        let test_env = Arc::new(Mutex::new(TestEnvironment::new()));
+        let test_env_clone = test_env.clone();
         let mut service_fs = ServiceFs::new();
         service_fs
-            .add_fidl_service(move |stream| handle_profile_requests(stream, env_variables.clone()));
+            .add_fidl_service(move |stream| handle_profile_requests(stream, test_env.clone()));
         let env_name = format!("peer_{}", id);
         let options = EnvironmentOptions {
             inherit_parent_services: true,
@@ -432,10 +439,11 @@ mod tests {
             kill_on_oom: false,
             delete_storage_on_death: false,
         };
-        let env = service_fs.create_nested_environment_with_options(env_name.as_str(), options)?;
+        let env =
+            service_fs.create_salted_nested_environment_with_options(env_name.as_str(), options)?;
         fasync::Task::spawn(service_fs.collect()).detach();
 
-        Ok((env, env_vars_clone))
+        Ok((env, test_env_clone))
     }
 
     /// Creates a MockPeer with the sandboxed NestedEnvironment.
@@ -445,9 +453,31 @@ mod tests {
         id: PeerId,
     ) -> Result<(MockPeer, bredr::PeerObserverRequestStream, Arc<Mutex<TestEnvironment>>), Error>
     {
-        let (env, env_vars) = setup_environment(id)?;
+        let (env, test_env) = setup_environment(id)?;
         let (proxy, stream) = create_proxy_and_stream::<bredr::PeerObserverMarker>().unwrap();
-        Ok((MockPeer::new(id, env, Some(proxy)), stream, env_vars))
+        Ok((MockPeer::new(id, env, Some(proxy)), stream, test_env))
+    }
+
+    /// Returns the launch information for the bt-a2dp component.
+    ///
+    /// We disable A2DP Sink because the primary goal of these unit tests is to validate component
+    /// launching behavior, _not_ the profile itself. Furthermore, A2DP Sink mode requires extra
+    /// capabilities that don't improve the efficacy of these tests. We would need to inject a
+    /// large number of capabilities to enable Sink mode.
+    /// We disable AVRCP-Target because it would introduce additional latency in the component
+    /// launch process. This is because the A2DP component launches and manages its lifetime.
+    /// The inclusion of AVRCP-Target does not improve the robustness of the unit tests and is
+    /// therefore omitted.
+    fn a2dp_component_launch_information() -> LaunchInfo {
+        LaunchInfo {
+            url: fuchsia_single_component_package_url!("bt-a2dp").to_string(),
+            arguments: vec![
+                "--enable-sink".to_string(),
+                "false".to_string(),
+                "--enable-avrcp-target".to_string(),
+                "false".to_string(),
+            ],
+        }
     }
 
     /// Builds and registers a search for an `id` with no attributes.
@@ -491,19 +521,17 @@ mod tests {
     }
 
     /// Launches the profile specified by `profile_url`.
-    fn do_launch_profile(
-        exec: &mut fasync::Executor,
+    async fn do_launch_profile(
         mock_peer: &mut MockPeer,
         launch_info: LaunchInfo,
-    ) -> impl Stream<Item = Result<ComponentStatus, fidl::Error>> {
+    ) -> (ProfileHandle, impl Stream<Item = Result<ComponentStatus, fidl::Error>>) {
         let launch_res = mock_peer.launch_profile(launch_info);
-        let mut component_stream = launch_res.expect("profile should launch");
-        match exec.run_singlethreaded(&mut component_stream.next()) {
+        let (handle, mut component_stream) = launch_res.expect("profile should launch");
+        match component_stream.next().await {
             Some(Ok(ComponentStatus::DirectoryReady)) => {}
             x => panic!("Expected directory ready but got: {:?}", x),
         }
-
-        component_stream
+        (handle, component_stream)
     }
 
     /// Expects a ServiceFound call to the `stream`.
@@ -543,19 +571,15 @@ mod tests {
     /// Expects a ComponentTerminated call to the observer `stream`.
     /// Returns the URL of the terminated component.
     /// Panics if the call doesn't happen.
-    fn expect_observer_component_terminated(
-        exec: &mut fasync::Executor,
+    async fn expect_observer_component_terminated(
         stream: &mut bredr::PeerObserverRequestStream,
     ) -> String {
-        let observer_fut = stream.select_next_some();
-        pin_mut!(observer_fut);
-
-        match exec.run_until_stalled(&mut observer_fut) {
-            Poll::Ready(Ok(bredr::PeerObserverRequest::ComponentTerminated {
+        match stream.select_next_some().await {
+            Ok(bredr::PeerObserverRequest::ComponentTerminated {
                 component_url,
                 responder,
                 ..
-            })) => {
+            }) => {
                 let _ = responder.send();
                 return component_url;
             }
@@ -563,77 +587,48 @@ mod tests {
         }
     }
 
-    /// Tests the behavior of launching profiles.
-    /// Validates that the profiles can be launched successfully.
-    /// Validates that when the launched profile terminates, the task that listens
-    /// to component termination is correctly finished and removes the launched
-    /// component from the MockPeer state.
-    /// Validates that the observer relay is notified of component termination.
-    #[test]
-    fn launch_multiple_profiles_sucess() {
-        let mut exec = fasync::Executor::new().unwrap();
+    #[fasync::run_singlethreaded(test)]
+    async fn launched_profile_relays_events_upon_termination() {
+        let id = PeerId(201942);
+        let (mut mock_peer, mut observer_stream, _test_env) =
+            create_mock_peer(id).expect("Mock peer creation should succeed");
 
-        let id1 = PeerId(99);
-        let (mut mock_peer, mut observer_stream, env_vars) =
-            create_mock_peer(id1).expect("Mock peer creation should succeed");
+        // Launching the RFCOMM profile is OK.
+        let profile_url = fuchsia_single_component_package_url!("bt-rfcomm").to_string();
+        let launch_info = LaunchInfo { url: profile_url.clone(), arguments: vec![] };
+        let (handle, mut component_stream) = do_launch_profile(&mut mock_peer, launch_info).await;
 
-        let profile_url1 = fuchsia_single_component_package_url!("bt-a2dp").to_string();
-        let launch_info1 = LaunchInfo {
-            url: profile_url1.clone(),
-            arguments: vec![
-                "-c".to_string(),
-                "basic".to_string(),
-                "--enable-sink".to_string(),
-                "false".to_string(),
-            ],
-        };
-        let component_stream1 = do_launch_profile(&mut exec, &mut mock_peer, launch_info1);
-        pin_mut!(component_stream1);
+        // Manually kill the component.
+        assert!(mock_peer.terminate_profile(handle).is_ok());
+
+        // We expect a termination event on the component's event stream.
+        match component_stream.next().await {
+            Some(Ok(ComponentStatus::Terminated)) => {}
+            x => panic!("Expected component terminated but got: {:?}", x),
+        }
+        // The observer should be notified as well.
+        let url = expect_observer_component_terminated(&mut observer_stream).await;
+        assert_eq!(url, profile_url);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn launch_multiple_profiles_success() {
+        let id = PeerId(9634);
+        let (mut mock_peer, _observer_stream, _test_env) =
+            create_mock_peer(id).expect("Mock peer creation should succeed");
+
+        // Launching A2DP is OK.
+        let launch_info1 = a2dp_component_launch_information();
+        let _component_stream1 = do_launch_profile(&mut mock_peer, launch_info1).await;
 
         // Launching the same profile is OK.
-        let profile_url2 = fuchsia_single_component_package_url!("bt-a2dp").to_string();
-        let launch_info2 = LaunchInfo {
-            url: profile_url2.clone(),
-            arguments: vec!["--enable-sink".to_string(), "false".to_string()],
-        };
-        let component_stream2 = do_launch_profile(&mut exec, &mut mock_peer, launch_info2);
-        pin_mut!(component_stream2);
+        let launch_info2 = a2dp_component_launch_information();
+        let _component_stream2 = do_launch_profile(&mut mock_peer, launch_info2).await;
 
         // Launching a different profile is OK.
         let profile_url3 = fuchsia_single_component_package_url!("bt-avrcp").to_string();
-        let launch_info3 = LaunchInfo { url: profile_url3.clone(), arguments: vec![] };
-        let component_stream3 = do_launch_profile(&mut exec, &mut mock_peer, launch_info3);
-        pin_mut!(component_stream3);
-
-        // Dropping the client's searches and advertisements simulates component disconnection.
-        {
-            let mut w_env_vars = exec.run_singlethreaded(&mut env_vars.lock());
-            w_env_vars.clear_advertisements();
-            w_env_vars.clear_searches();
-            let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        }
-
-        // The component streams should resolve to the Terminated.
-        match exec.run_singlethreaded(&mut component_stream1.next()) {
-            Some(Ok(ComponentStatus::Terminated)) => {}
-            x => panic!("Expected terminated but got: {:?}", x),
-        }
-        match exec.run_singlethreaded(&mut component_stream2.next()) {
-            Some(Ok(ComponentStatus::Terminated)) => {}
-            x => panic!("Expected terminated but got: {:?}", x),
-        }
-        match exec.run_singlethreaded(&mut component_stream3.next()) {
-            Some(Ok(ComponentStatus::Terminated)) => {}
-            x => panic!("Expected terminated but got: {:?}", x),
-        }
-
-        // We should receive 3 updates about component termination.
-        let mut expected_urls = vec![profile_url1, profile_url2, profile_url3];
-        let mut actual_urls = vec![];
-        actual_urls.push(expect_observer_component_terminated(&mut exec, &mut observer_stream));
-        actual_urls.push(expect_observer_component_terminated(&mut exec, &mut observer_stream));
-        actual_urls.push(expect_observer_component_terminated(&mut exec, &mut observer_stream));
-        assert_eq!(expected_urls.sort(), actual_urls.sort());
+        let launch_info3 = LaunchInfo { url: profile_url3, arguments: vec![] };
+        let _component_stream3 = do_launch_profile(&mut mock_peer, launch_info3).await;
     }
 
     #[test]
@@ -641,7 +636,7 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         let id1 = PeerId(659);
-        let (mut mock_peer, _observer_stream, _env_vars) =
+        let (mut mock_peer, _observer_stream, _test_env) =
             create_mock_peer(id1).expect("Mock peer creation should succeed");
 
         // The invalid `arguments` here are specific to A2DP Source - the `-invalid` flag is not
@@ -651,7 +646,8 @@ mod tests {
             arguments: vec!["-invalid invalid_arg_123".to_string()],
         };
 
-        let mut component_stream = mock_peer.launch_profile(info).expect("profile should launch");
+        let (_, mut component_stream) =
+            mock_peer.launch_profile(info).expect("profile should launch");
         match exec.run_singlethreaded(&mut component_stream.next()) {
             Some(Ok(ComponentStatus::Terminated)) => {}
             x => panic!("Expected directory terminated but got: {:?}", x),
@@ -665,7 +661,7 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         let id = PeerId(234);
-        let (mut mock_peer, _observer_stream, _env_vars) = create_mock_peer(id)?;
+        let (mut mock_peer, _observer_stream, _test_env) = create_mock_peer(id)?;
 
         let (stream, adv_fut, svc_ids) = build_and_register_service(&mut mock_peer);
         pin_mut!(adv_fut);
@@ -693,8 +689,8 @@ mod tests {
     fn register_service_with_connection_success() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let id = PeerId(234);
-        let (mut mock_peer, mut observer_stream, _env_vars) = create_mock_peer(id)?;
+        let id = PeerId(2392);
+        let (mut mock_peer, mut observer_stream, _test_env) = create_mock_peer(id)?;
 
         // Build the A2DP Sink Service Definition.
         let (mut stream, _adv_fut, _svc_ids) = build_and_register_service(&mut mock_peer);
@@ -748,8 +744,8 @@ mod tests {
     fn register_multiple_searches_success() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let id = PeerId(234);
-        let (mut mock_peer, mut observer_stream, _env_vars) = create_mock_peer(id)?;
+        let id = PeerId(2824);
+        let (mut mock_peer, mut observer_stream, _test_env) = create_mock_peer(id)?;
 
         // The new search should be stored.
         let (mut stream1, search1) = build_and_register_search(
@@ -811,8 +807,8 @@ mod tests {
     fn service_search_terminates_when_client_disconnects() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let id = PeerId(564);
-        let (mut mock_peer, _observer_stream, _env_vars) = create_mock_peer(id)?;
+        let id = PeerId(5604);
+        let (mut mock_peer, _observer_stream, _test_env) = create_mock_peer(id)?;
 
         // The new search should be stored.
         let (stream1, search1) = build_and_register_search(
