@@ -12,19 +12,6 @@ use uuid::Uuid;
 
 pub use crate::env_info::*;
 
-// TODO(fxbug.dev/66008): use a more explicit variable for the purpose rather
-// than the output dir
-const TEST_ENV_VAR: &'static str = "FUCHSIA_TEST_OUTDIR";
-const ANALYTICS_DISABLED_ENV_VAR: &'static str = "FUCHSIA_ANALYTICS_DISABLED";
-
-pub fn is_test_env() -> bool {
-    std::env::var(TEST_ENV_VAR).is_ok()
-}
-
-pub fn is_analytics_disabled_by_env() -> bool {
-    std::env::var(ANALYTICS_DISABLED_ENV_VAR).is_ok()
-}
-
 pub fn is_new_user() -> bool {
     !analytics_status_file_exists()
 }
@@ -164,33 +151,4 @@ fn ffx_analytics_status_path() -> String {
 
 fn write_ffx_analytics_status() {
     write_boolean_to_file(&true, ffx_analytics_status_path())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    // Rust tests are run in parallel in threads, which means that this test is
-    // disruptive to other tests. There's little ROI to doing some kind of fork
-    // dance here, so the test is included, but not run by default.
-    #[ignore]
-    pub fn test_is_test_env() {
-        std::env::set_var(TEST_ENV_VAR, "somepath");
-        assert_eq!(true, is_test_env());
-        std::env::remove_var(TEST_ENV_VAR);
-        assert_eq!(false, is_test_env());
-    }
-
-    #[test]
-    // Rust tests are run in parallel in threads, which means that this test is
-    // disruptive to other tests. There's little ROI to doing some kind of fork
-    // dance here, so the test is included, but not run by default.
-    #[ignore]
-    pub fn test_is_analytics_disabled_env() {
-        std::env::set_var(ANALYTICS_DISABLED_ENV_VAR, "1");
-        assert_eq!(true, is_analytics_disabled_by_env());
-        std::env::remove_var(ANALYTICS_DISABLED_ENV_VAR);
-        assert_eq!(false, is_analytics_disabled_by_env());
-    }
 }

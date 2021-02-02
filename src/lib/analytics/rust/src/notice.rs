@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::user_status::*;
+pub use crate::env_info::*;
+use crate::user_status::*;
 
 use std::io::Write;
 
 // pub for ffx testing
-pub const FULL_NOTICE: &str =
-    "Welcome to Fuchsia! - https://fuchsia.dev
+pub const FULL_NOTICE: &str = "Welcome to Fuchsia! - https://fuchsia.dev
 
 Fuchsia core developer tools use Google Analytics to report feature usage
 statistics and basic crash reports. Google may examine the collected data
@@ -68,7 +68,7 @@ https://policies.google.com/privacy
 ";
 
 pub fn show_analytics_notice<W: Write>(mut writer: W) {
-    if is_analytics_disabled_by_env() || is_test_env() {
+    if is_analytics_disabled_by_env() {
         return;
     }
 

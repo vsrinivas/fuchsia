@@ -4,10 +4,10 @@
 
 #![allow(unused)]
 
+pub use env_info::is_analytics_disabled_by_env;
 pub use ga_event::*;
 pub use notice::*;
 use std::any::Any;
-pub use user_status::*;
 pub use user_status::*;
 use {
     anyhow::Error,
@@ -45,7 +45,7 @@ pub async fn add_custom_event(
     action: Option<&str>,
     label: Option<&str>,
 ) -> anyhow::Result<()> {
-    if is_analytics_disabled_by_env() || is_test_env() || !is_opted_in() {
+    if is_analytics_disabled_by_env() || !is_opted_in() {
         return Ok(());
     }
 
