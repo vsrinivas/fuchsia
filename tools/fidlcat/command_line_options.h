@@ -15,6 +15,7 @@
 namespace fidlcat {
 
 struct CommandLineOptions {
+  enum class AnalyticsMode { kEnable, kDisable, kSubLaunchFirst, kSubLaunchNormal, kUnspecified };
   // debug agent options:
   std::optional<std::string> connect;
   std::vector<std::string> symbol_index_files;
@@ -57,6 +58,10 @@ struct CommandLineOptions {
   std::vector<std::string> remote_pid;
   std::vector<std::string> remote_name;
   std::vector<std::string> extra_name;
+
+  // Analytics options:
+  AnalyticsMode analytics = AnalyticsMode::kUnspecified;
+  bool analytics_show = false;
 
   // --version in command line
   bool requested_version = false;

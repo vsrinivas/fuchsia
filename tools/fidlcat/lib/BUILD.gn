@@ -8,6 +8,7 @@ import("//third_party/protobuf/proto_library.gni")
 if (is_host) {
   static_library("host_lib") {
     public = [
+      "analytics.h",
       "code_generator/code_generator.h",
       "code_generator/cpp_visitor.h",
       "code_generator/test_generator.h",
@@ -51,6 +52,7 @@ if (is_host) {
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",
+      "//src/lib/analytics/cpp/core_dev_tools",
       "//src/lib/fidl_codec",
       "//src/lib/fidl_codec:value_proto",
       "//src/lib/fxl",

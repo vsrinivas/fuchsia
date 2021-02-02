@@ -21,12 +21,49 @@
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "tools/fidlcat/command_line_options.h"
+#include "tools/fidlcat/lib/analytics.h"
 #include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/interception_workflow.h"
 #include "tools/fidlcat/lib/replay.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
+
+namespace {
+
+void InitAnalytics(CommandLineOptions::AnalyticsMode analytics_option) {
+  analytics::core_dev_tools::SubLaunchStatus sub_launch_status;
+  if (analytics_option == CommandLineOptions::AnalyticsMode::kSubLaunchFirst) {
+    sub_launch_status = analytics::core_dev_tools::SubLaunchStatus::kSubLaunchedFirst;
+  } else if (analytics_option == CommandLineOptions::AnalyticsMode::kSubLaunchNormal) {
+    sub_launch_status = analytics::core_dev_tools::SubLaunchStatus::kSubLaunchedNormal;
+  } else {
+    sub_launch_status = analytics::core_dev_tools::SubLaunchStatus::kDirectlyLaunched;
+  }
+
+  Analytics::InitBotAware(sub_launch_status);
+}
+// Early processing of analytics options. Returns true if invoked with --analytics=enable|disable or
+// --show-analytics, indicating that we are expected to exit after analytics related actions.
+bool EarlyProcessAnalyticsOptions(const CommandLineOptions& options) {
+  bool should_exit_early = false;
+  if (options.analytics == CommandLineOptions::AnalyticsMode::kEnable) {
+    Analytics::PersistentEnable();
+    should_exit_early = true;
+  } else if (options.analytics == CommandLineOptions::AnalyticsMode::kDisable) {
+    Analytics::PersistentDisable();
+    should_exit_early = true;
+  }
+
+  if (options.analytics_show) {
+    Analytics::ShowAnalytics();
+    should_exit_early = true;
+  }
+
+  return should_exit_early;
+}
+
+}  // namespace
 
 static bool called_onexit_once_ = false;
 static std::atomic<InterceptionWorkflow*> workflow_;
@@ -116,7 +153,8 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
 
 int ConsoleMain(int argc, const char* argv[]) {
   debug_ipc::Curl::GlobalInit();
-  auto deferred_cleanup = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
@@ -133,6 +171,12 @@ int ConsoleMain(int argc, const char* argv[]) {
     printf("Version: %s\n", zxdb::kBuildVersion);
     return 0;
   }
+
+  if (EarlyProcessAnalyticsOptions(options)) {
+    return 0;
+  }
+  InitAnalytics(options.analytics);
+  Analytics::IfEnabledSendInvokeEvent();
 
   std::vector<std::string> paths;
   std::vector<std::string> bad_paths;
