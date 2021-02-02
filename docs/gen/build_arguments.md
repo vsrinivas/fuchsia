@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1424
+From //build/config/BUILDCONFIG.gn:1419
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/0b904d132a94096df16a844d3affd1defff007be/src/intel/vulkan/BUILD.gn#26)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/1859f14d98e68a7b661514bc71fd618e59e6098a/src/intel/vulkan/BUILD.gn#26)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/0b904d132a94096df16a844d3affd1defff007be/src/intel/vulkan/BUILD.gn#28)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/1859f14d98e68a7b661514bc71fd618e59e6098a/src/intel/vulkan/BUILD.gn#28)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -92,7 +92,7 @@ a different persistent data location for every session.
 
 **Current value (from the default):** `false`
 
-From //src/modular/bin/basemgr/BUILD.gn:13
+From //src/modular/bin/basemgr/BUILD.gn:11
 
 ### auto_update_packages
 Whether the component loader should automatically update packages.
@@ -135,7 +135,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:59
+From //BUILD.gn:58
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -150,7 +150,7 @@ From //out/not-default/args.gn:7
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:27
+From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
@@ -158,7 +158,7 @@ From //out/not-default/args.gn:7
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:27
+From //BUILD.gn:26
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -592,7 +592,7 @@ From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:34
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -600,7 +600,7 @@ From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:34
 
 ### camera_debug
 
@@ -619,6 +619,13 @@ From //src/camera/bin/camera-gym/BUILD.gn:11
 **Current value (from the default):** `false`
 
 From //src/camera/bin/camera-gym/BUILD.gn:12
+
+### carnelian_enable_vulkan_validation
+Include the vulkan validation layers in carnelian examples.
+
+**Current value (from the default):** `false`
+
+From //src/lib/ui/carnelian/BUILD.gn:15
 
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
@@ -749,14 +756,14 @@ starts with //).
 
 **Current value (from the default):** `""`
 
-From //build/images/custom_signing.gni:12
+From //build/images/custom_signing.gni:10
 
 ### custom_signing_script_deps
 If `custom_signing_script` is not empty, a list of dependencies for the script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/custom_signing.gni:15
+From //build/images/custom_signing.gni:13
 
 ### custom_signing_script_tools
 If `custom signing script` is not empty, a list of host tool labels, without
@@ -768,7 +775,7 @@ is actually parsed.
 
 **Current value (from the default):** `[]`
 
-From //build/images/custom_signing.gni:23
+From //build/images/custom_signing.gni:21
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -1061,7 +1068,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1203
+From //build/config/BUILDCONFIG.gn:1198
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1389,7 +1396,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -1397,7 +1404,7 @@ From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:53
 
 ### host_os
 
@@ -1755,7 +1762,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1071
+From //build/config/BUILDCONFIG.gn:1066
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2974,7 +2981,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1414
+From //build/config/BUILDCONFIG.gn:1409
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2983,7 +2990,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1419
+From //build/config/BUILDCONFIG.gn:1414
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3015,7 +3022,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1249
+From //build/config/BUILDCONFIG.gn:1244
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3172,7 +3179,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:41
+From //BUILD.gn:40
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -3285,7 +3292,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1233
+From //build/config/BUILDCONFIG.gn:1228
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3301,7 +3308,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:49
+From //BUILD.gn:48
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host"]`
 
@@ -3309,7 +3316,7 @@ From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:49
+From //BUILD.gn:48
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
