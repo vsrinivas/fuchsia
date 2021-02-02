@@ -24,7 +24,8 @@ func init() {
 					"size":         1,
 					"field_to_set": 1,
 				},
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				// Rust is removed from the allowlist because the benchmarks (not just this case) are timing out.
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/1_of_16",
@@ -33,7 +34,8 @@ func init() {
 					"size":         16,
 					"field_to_set": 1,
 				},
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				// Rust is removed from the allowlist because the benchmarks (not just this case) are timing out.
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/1_of_256",
@@ -52,7 +54,8 @@ func init() {
 					"size":         16,
 					"field_to_set": 16,
 				},
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				// Rust is removed from the allowlist because the benchmarks (not just this case) are timing out.
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/16_of_256",

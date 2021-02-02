@@ -23,7 +23,8 @@ func init() {
 				Config: config.Config{
 					"size": 1,
 				},
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				// Rust is removed from the allowlist because the benchmarks (not just this case) are timing out.
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/Unset/16",
@@ -31,7 +32,8 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				// Rust is removed from the allowlist because the benchmarks (not just this case) are timing out.
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/Unset/256",
