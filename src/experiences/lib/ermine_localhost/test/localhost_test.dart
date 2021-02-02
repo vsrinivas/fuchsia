@@ -1,6 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:ermine_localhost/localhost.dart';
@@ -20,15 +21,6 @@ void main() {
     final localhost = Localhost();
     final address = await localhost.bindServer(port: 8000);
     expect(address, 'http://127.0.0.1:8000');
-    localhost.stopServer();
-  });
-
-  test('passWebFile should ignore unsupported files', () async {
-    final localhost = Localhost();
-    final file = File('pkg/testdata/test.json');
-    expect(localhost.passWebFile(file), false);
-    expect(localhost.pages.length, 0);
-
     localhost.stopServer();
   });
 

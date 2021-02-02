@@ -1,12 +1,10 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
 
 import 'dart:io';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:mime/mime.dart';
 
 /// An object that serves a static local website for testing purpose.
 ///
@@ -72,29 +70,21 @@ class Localhost {
     );
     await for (var req in _server) {
       final fileName = req.uri.path.substring(1); // eleminates '/'
-      final fileType = fileName.split('.').last;
       final targetFile = _pages[fileName];
-
-      if (targetFile != null && targetFile.existsSync()) {
+      final mimeType = lookupMimeType(fileName);
+      if (mimeType == null) {
+        log.warning('Unsupported type of file: $fileName. ');
+        req.response
+          ..headers.contentType = ContentType.text
+          ..write('$fileName is not a supported type of file.');
+      } else if (targetFile != null && targetFile.existsSync()) {
         log.info('Serving $fileName');
-        switch (fileType) {
-          case 'html':
-            req.response.headers.contentType = ContentType.html;
-            break;
-          case 'css':
-            req.response.headers.contentType = ContentType.parse('text/css');
-            break;
-          case 'txt':
-            req.response.headers.contentType = ContentType.text;
-            break;
-          default:
-            break;
-        }
+        req.response.headers.contentType = ContentType.parse(mimeType);
         try {
           await req.response.addStream(targetFile.openRead());
           //ignore: avoid_catches_without_on_clauses
         } catch (e) {
-          log.shout('Something went wrong when reading the file: $e');
+          log.shout('Something went wrong while loading the file: $e');
         }
       } else {
         log.warning('No such file $fileName. '
@@ -115,15 +105,8 @@ class Localhost {
   /// url path. For example, if you want to access the file `example1_index.html`
   /// via the url `http://127.0.0.1:8080/index.html`, you have to call this
   /// method with this optional parameter: `passWebFile(File, name: 'index')`.
-  // TODO(fxr/68321): Support media type files too.
-  bool passWebFile(File file, {bool replace = true}) {
+  void passWebFile(File file, {bool replace = true}) {
     final fileName = file.path.split('/').last;
-    final fileType = fileName.split('.').last;
-    if (!['html', 'css', 'txt'].any((type) => fileType == type)) {
-      log.warning('Files that are not html, css, or txt-type are ignored.');
-      return false;
-    }
-
     _pages.update(
       fileName,
       (oldFile) {
@@ -139,7 +122,6 @@ class Localhost {
         return file;
       },
     );
-    return true;
   }
 
   /// Stops listening on http://127.0.0.1:<port_number>.

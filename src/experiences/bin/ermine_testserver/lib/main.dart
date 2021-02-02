@@ -17,7 +17,7 @@ void main(List<String> args) async {
   final url = await localhost.bindServer();
   log.info('Server is ready: $url');
 
-  final fileGroup = fileGroups[TestCase.navigation];
+  final fileGroup = fileGroups[TestCase.simpleBrowserTest];
   for (var fileName in fileGroup.fileList) {
     final index = fileGroup.fileList.indexOf(fileName);
     final path = fileGroup.getPath(index);

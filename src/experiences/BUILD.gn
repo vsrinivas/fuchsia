@@ -35,6 +35,7 @@ group("dart_unittests") {
   deps = [
     "bin:dart_unittests",
     "examples:dart_unittests",
+    "lib:dart_unittests",
     "session_shells:dart_unittests",
   ]
 }

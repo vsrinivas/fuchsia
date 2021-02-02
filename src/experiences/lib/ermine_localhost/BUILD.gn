@@ -5,7 +5,6 @@
 import("//build/dart/dart_library.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/dart/test.gni")
-import("//build/flutter/flutter_component.gni")
 import("//src/sys/build/components.gni")
 
 dart_library("ermine_localhost") {
@@ -14,7 +13,10 @@ dart_library("ermine_localhost") {
     "localhost.dart",
     "src/localhost.dart",
   ]
-  deps = [ dart_package_label.fuchsia_logger ]
+  deps = [
+    "//third_party/dart-pkg/pub/mime",
+    dart_package_label.fuchsia_logger,
+  ]
 }
 
 resource("testdata") {
@@ -32,7 +34,7 @@ resource("testdata_another") {
   outputs = [ "testdata/another/{{source_file_part}}" ]
 }
 
-dart_test("ermine_localhost_unittest") {
+dart_test("ermine_localhost_unittests") {
   sources = [ "localhost_test.dart" ]
 
   deps = [

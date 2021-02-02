@@ -21,14 +21,16 @@ dart_library("lib") {
   ]
 }
 
-resource("navigation_files") {
+resource("browser_test_files") {
   sources = [
-    "public/navigation/index.html",
-    "public/navigation/next.html",
-    "public/navigation/popup.html",
-    "public/navigation/style.css",
+    "public/simple_browser_test/index.html",
+    "public/simple_browser_test/next.html",
+    "public/simple_browser_test/popup.html",
+    "public/simple_browser_test/sample_video.mp4",
+    "public/simple_browser_test/style.css",
+    "public/simple_browser_test/video.html",
   ]
-  outputs = [ "data/navigation/{{source_file_part}}" ]
+  outputs = [ "data/simple_browser_test/{{source_file_part}}" ]
 }
 
 dart_component("component") {
@@ -36,8 +38,8 @@ dart_component("component") {
   manifest = "meta/ermine_testserver.cmx"
   main_package = "ermine_testserver"
   deps = [
+    ":browser_test_files",
     ":lib",
-    ":navigation_files",
   ]
 }
 

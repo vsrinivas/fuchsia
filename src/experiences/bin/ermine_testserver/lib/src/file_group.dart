@@ -4,7 +4,7 @@
 
 // TODO(fxb/68320): Add more test cases.
 enum TestCase {
-  navigation,
+  simpleBrowserTest,
 }
 
 /// Defines group of web files in the test case.
@@ -18,13 +18,15 @@ class FileGroup {
 }
 
 final fileGroups = <TestCase, FileGroup>{
-  TestCase.navigation: FileGroup(
-    'navigation',
+  TestCase.simpleBrowserTest: FileGroup(
+    'simple_browser_test',
     <String>[
       'index.html',
       'next.html',
       'popup.html',
+      'video.html',
       'style.css',
+      'sample_video.mp4',
     ],
   )
 };
