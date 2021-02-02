@@ -2,28 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-
-package("a11y_tts_log_engine") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "a11y_tts_log_engine"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/a11y_tts_log_engine.cmx")
-      dest = "a11y_tts_log_engine.cmx"
-    },
-    {
-      path = rebase_path("meta/a11y_tts_log_engine.cml")
-      dest = "a11y_tts_log_engine.cm"
-    },
-  ]
-}
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "a11y_tts_log_engine"
@@ -58,4 +37,9 @@ source_set("lib") {
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
+}
+
+fuchsia_package_with_single_component("a11y-tts-log-engine") {
+  manifest = "meta/a11y_tts_log_engine.cmx"
+  deps = [ ":bin" ]
 }

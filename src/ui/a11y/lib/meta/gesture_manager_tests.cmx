@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/gesture_manager_tests"
+        "binary": "bin/gesture_manager_tests"
     },
     "sandbox": {
         "services": [

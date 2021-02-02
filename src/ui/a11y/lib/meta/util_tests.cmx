@@ -1,6 +1,9 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
-        "binary": "test/util_tests"
+        "binary": "bin/util_tests"
     },
     "sandbox": {
         "services": [

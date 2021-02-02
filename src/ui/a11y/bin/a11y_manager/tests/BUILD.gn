@@ -49,16 +49,15 @@ executable("a11y_manager_apptests") {
 }
 
 resource("l10n_en_resource") {
-  sources = [ rebase_path(
-          "$target_gen_dir/../../../lib/screen_reader/i18n/en/l10n.json") ]
-  outputs = [ "assets/locales/en/l10n.json" ]
+  sources = [ "$target_gen_dir/../../../lib/screen_reader/i18n/en/l10n.json" ]
+  outputs = [ "data/assets/locales/en/l10n.json" ]
 }
 
 # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
 # be loaded from a file instead.
 resource("icudata_resource") {
-  sources = [ rebase_path("//third_party/icu/common/icudtl.dat") ]
-  outputs = [ "icudtl.dat" ]
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
 }
 
 fuchsia_unittest_package("a11y-tests") {

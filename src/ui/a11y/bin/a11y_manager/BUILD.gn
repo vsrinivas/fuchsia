@@ -30,97 +30,97 @@ l10n_files = [
   # Needed to load Screen Reader strings.
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/en/l10n.json"
-    dest = "assets/locales/en/l10n.json"
+    dest = "data/assets/locales/en/l10n.json"
     language = "en"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/ar-XB/l10n.json"
-    dest = "assets/locales/ar-XB/l10n.json"
+    dest = "data/assets/locales/ar-XB/l10n.json"
     language = "ar-XB"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/da/l10n.json"
-    dest = "assets/locales/da/l10n.json"
+    dest = "data/assets/locales/da/l10n.json"
     language = "da"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/de/l10n.json"
-    dest = "assets/locales/de/l10n.json"
+    dest = "data/assets/locales/de/l10n.json"
     language = "de"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/de-CH/l10n.json"
-    dest = "assets/locales/de-CH/l10n.json"
+    dest = "data/assets/locales/de-CH/l10n.json"
     language = "de-CH"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/en-GB/l10n.json"
-    dest = "assets/locales/en-GB/l10n.json"
+    dest = "data/assets/locales/en-GB/l10n.json"
     language = "en-GB"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/en-XA/l10n.json"
-    dest = "assets/locales/en-XA/l10n.json"
+    dest = "data/assets/locales/en-XA/l10n.json"
     language = "en-XA"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/en-XC/l10n.json"
-    dest = "assets/locales/en-XC/l10n.json"
+    dest = "data/assets/locales/en-XC/l10n.json"
     language = "en-XC"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/es/l10n.json"
-    dest = "assets/locales/es/l10n.json"
+    dest = "data/assets/locales/es/l10n.json"
     language = "es"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/es-419/l10n.json"
-    dest = "assets/locales/es-419/l10n.json"
+    dest = "data/assets/locales/es-419/l10n.json"
     language = "es-419"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/fr/l10n.json"
-    dest = "assets/locales/fr/l10n.json"
+    dest = "data/assets/locales/fr/l10n.json"
     language = "fr"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/fr-CA/l10n.json"
-    dest = "assets/locales/fr-CA/l10n.json"
+    dest = "data/assets/locales/fr-CA/l10n.json"
     language = "fr-CA"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/it/l10n.json"
-    dest = "assets/locales/it/l10n.json"
+    dest = "data/assets/locales/it/l10n.json"
     language = "it"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/ja/l10n.json"
-    dest = "assets/locales/ja/l10n.json"
+    dest = "data/assets/locales/ja/l10n.json"
     language = "ja"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/ko/l10n.json"
-    dest = "assets/locales/ko/l10n.json"
+    dest = "data/assets/locales/ko/l10n.json"
     language = "ko"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/nb/l10n.json"
-    dest = "assets/locales/nb/l10n.json"
+    dest = "data/assets/locales/nb/l10n.json"
     language = "nb"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/nl/l10n.json"
-    dest = "assets/locales/nl/l10n.json"
+    dest = "data/assets/locales/nl/l10n.json"
     language = "nl"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/no/l10n.json"
-    dest = "assets/locales/no/l10n.json"
+    dest = "data/assets/locales/no/l10n.json"
     language = "no"
   },
   {
     path = "$target_gen_dir/../../lib/screen_reader/i18n/sv/l10n.json"
-    dest = "assets/locales/sv/l10n.json"
+    dest = "data/assets/locales/sv/l10n.json"
     language = "sv"
   },
 ]
@@ -142,7 +142,7 @@ foreach(file, l10n_files) {
 # be loaded from a file instead.
 resource("icudata_resource") {
   sources = [ rebase_path("//third_party/icu/common/icudtl.dat") ]
-  outputs = [ "icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
 }
 
 fuchsia_package_with_single_component("a11y-manager") {

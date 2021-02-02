@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/annotation_tests"
+        "binary": "bin/annotation_tests"
     }
 }

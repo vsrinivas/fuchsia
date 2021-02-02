@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/screen_reader_tests"
+        "binary": "bin/screen_reader_tests"
     },
     "sandbox": {
         "services": [

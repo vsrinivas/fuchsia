@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/magnifier_tests"
+        "binary": "bin/magnifier_tests"
     }
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("lib") {
   public_deps = [
@@ -25,137 +25,147 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":a11y_lib_tests",
+    ":a11y-lib-tests",
     "semantics/tests:integration",
   ]
 }
 
-test_package("a11y_lib_tests") {
+resource("l10n_en_resource") {
+  sources = [ "$target_gen_dir/screen_reader/i18n/en/l10n.json" ]
+  outputs = [ "data/assets/locales/en/l10n.json" ]
+  deps = [ "//src/ui/a11y/lib/screen_reader/i18n:resources" ]
+}
+
+# Fuchsia's ICU does not have libicudata.so, and the locale data MUST
+# be loaded from a file instead.
+resource("icudata_resource") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
+}
+
+# needed for semantics_test
+resource("semantic_tree_data_resource") {
+  sources = [
+    "semantics/tests/testdata/cyclic_semantic_tree.json",
+    "semantics/tests/testdata/deleted_subtree_even_nodes.json",
+    "semantics/tests/testdata/semantic_tree_even_nodes.json",
+    "semantics/tests/testdata/semantic_tree_not_parseable.json",
+    "semantics/tests/testdata/semantic_tree_odd_nodes.json",
+    "semantics/tests/testdata/semantic_tree_single_node.json",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_component("annotation-tests-component") {
+  manifest = "meta/annotation_tests.cmx"
+  deps = [ "annotation/tests" ]
+}
+
+fuchsia_unittest_component("configuration-tests-component") {
+  manifest = "meta/configuration_tests.cmx"
+  deps = [ "configuration/tests" ]
+}
+
+fuchsia_unittest_component("focus-chain-manager-tests-component") {
+  manifest = "meta/focus_chain_manager_tests.cmx"
+  deps = [ "focus_chain/tests" ]
+}
+
+fuchsia_unittest_component("gesture-arena-tests-component") {
+  manifest = "meta/gesture_arena_tests.cmx"
+  deps = [ "gesture_manager/arena/tests" ]
+}
+
+fuchsia_unittest_component("gesture-recognizers-tests-component") {
+  manifest = "meta/gesture_recognizers_tests.cmx"
+  deps = [ "gesture_manager/recognizers/tests" ]
+}
+
+fuchsia_unittest_component("gesture-manager-tests-component") {
+  manifest = "meta/gesture_manager_tests.cmx"
+  deps = [ "gesture_manager/tests" ]
+}
+
+fuchsia_unittest_component("magnifier-tests-component") {
+  manifest = "meta/magnifier_tests.cmx"
+  deps = [ "magnifier/tests" ]
+}
+
+fuchsia_unittest_component("focus-manager-tests-component") {
+  manifest = "meta/focus_manager_tests.cmx"
+  deps = [ "screen_reader/focus/tests" ]
+}
+
+fuchsia_unittest_component("i18n-tests-component") {
+  manifest = "meta/i18n_tests.cmx"
+  deps = [ "screen_reader/i18n/tests" ]
+}
+
+fuchsia_unittest_component("screen-reader-tests-component") {
+  manifest = "meta/screen_reader_tests.cmx"
+  deps = [ "screen_reader/tests" ]
+}
+
+fuchsia_unittest_component("screen-reader-util-tests-component") {
+  manifest = "meta/screen_reader_util_tests.cmx"
+  deps = [ "screen_reader/util/tests" ]
+}
+
+fuchsia_unittest_component("semantics-tests-component") {
+  manifest = "meta/semantics_tests.cmx"
+  deps = [ "semantics/tests:unit" ]
+}
+
+fuchsia_unittest_component("semantics-util-tests-component") {
+  manifest = "meta/semantics_util_tests.cmx"
+  deps = [ "semantics/util/tests" ]
+}
+
+fuchsia_unittest_component("tts-manager-tests-component") {
+  manifest = "meta/tts_manager_tests.cmx"
+  deps = [ "tts/tests" ]
+}
+
+fuchsia_unittest_component("util-tests-component") {
+  manifest = "meta/util_tests.cmx"
+  deps = [ "util/tests" ]
+}
+
+fuchsia_unittest_component("view-tests-component") {
+  manifest = "meta/view_tests.cmx"
+  deps = [ "view/tests" ]
+}
+
+fuchsia_test_package("a11y-lib-tests") {
   deps = [
-    "annotation/tests",
-    "configuration/tests",
-    "focus_chain/tests",
-    "gesture_manager/arena/tests",
-    "gesture_manager/recognizers/tests",
-    "gesture_manager/tests",
-    "magnifier/tests",
-    "screen_reader/focus/tests",
-    "screen_reader/i18n/tests",
-    "screen_reader/tests",
-    "screen_reader/util/tests",
-    "semantics/tests:unit",
-    "semantics/util/tests",
-    "tts/tests",
-    "util/tests",
-    "view/tests",
+    ":icudata_resource",
+    ":l10n_en_resource",
+    ":semantic_tree_data_resource",
     "//src/ui/a11y/lib/screen_reader/i18n:resources",
   ]
-  resources = [
-    # needed for semantics_test
-    {
-      path = "semantics/tests/testdata/semantic_tree_single_node.json"
-      dest = "semantic_tree_single_node.json"
-    },
-    {
-      path = "semantics/tests/testdata/semantic_tree_even_nodes.json"
-      dest = "semantic_tree_even_nodes.json"
-    },
-    {
-      path = "semantics/tests/testdata/semantic_tree_odd_nodes.json"
-      dest = "semantic_tree_odd_nodes.json"
-    },
-    {
-      path = "semantics/tests/testdata/deleted_subtree_even_nodes.json"
-      dest = "deleted_subtree_even_nodes.json"
-    },
-    {
-      path = "semantics/tests/testdata/cyclic_semantic_tree.json"
-      dest = "cyclic_semantic_tree.json"
-    },
-    {
-      path = "semantics/tests/testdata/semantic_tree_not_parseable.json"
-      dest = "semantic_tree_not_parseable.json"
-    },
 
-    # Needed by screen_reader/i18n tests.
-    {
-      path = rebase_path("$target_gen_dir/screen_reader/i18n/en/l10n.json")
-      dest = "assets/locales/en/l10n.json"
-    },
-
-    # [START icudata_resource]
-    {
-      # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
-      # be loaded from a file instead.
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+  test_components = [
+    ":annotation-tests-component",
+    ":configuration-tests-component",
+    ":focus-chain-manager-tests-component",
+    ":gesture-arena-tests-component",
+    ":gesture-recognizers-tests-component",
+    ":gesture-manager-tests-component",
+    ":magnifier-tests-component",
+    ":focus-manager-tests-component",
+    ":i18n-tests-component",
+    ":screen-reader-tests-component",
+    ":screen-reader-util-tests-component",
+    ":semantics-tests-component",
+    ":semantics-util-tests-component",
+    ":tts-manager-tests-component",
+    ":util-tests-component",
+    ":view-tests-component",
   ]
 
-  tests = [
-    {
-      name = "annotation_tests"
-      environments = basic_envs
-    },
-    {
-      name = "configuration_tests"
-      environments = basic_envs
-    },
-    {
-      name = "focus_chain_manager_tests"
-      environments = basic_envs
-    },
-    {
-      name = "gesture_arena_tests"
-      environments = basic_envs
-    },
-    {
-      name = "gesture_manager_tests"
-      environments = basic_envs
-    },
-    {
-      name = "gesture_recognizers_tests"
-      environments = basic_envs
-    },
-    {
-      name = "magnifier_tests"
-      environments = basic_envs
-    },
-    {
-      name = "i18n_tests"
-      environments = basic_envs
-    },
-    {
-      name = "screen_reader_tests"
-      environments = basic_envs
-    },
-    {
-      name = "screen_reader_util_tests"
-      environments = basic_envs
-    },
-    {
-      name = "focus_manager_tests"
-      environments = basic_envs
-    },
-    {
-      name = "semantics_tests"
-      environments = basic_envs
-    },
-    {
-      name = "semantics_util_tests"
-      environments = basic_envs
-    },
-    {
-      name = "tts_manager_tests"
-      environments = basic_envs
-    },
-    {
-      name = "util_tests"
-      environments = basic_envs
-    },
-    {
-      name = "view_tests"
-      environments = basic_envs
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
