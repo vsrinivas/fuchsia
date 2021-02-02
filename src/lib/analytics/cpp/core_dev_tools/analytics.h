@@ -13,6 +13,7 @@
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_internal.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_messages.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_status.h"
+#include "src/lib/analytics/cpp/core_dev_tools/environment_status.h"
 #include "src/lib/analytics/cpp/core_dev_tools/general_parameters.h"
 #include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 #include "src/lib/analytics/cpp/core_dev_tools/persistent_status.h"
@@ -89,6 +90,15 @@ class Analytics {
       InitFirstRunOfOtherTool(persistent_status);
     } else {
       InitSubsequentRun();
+    }
+  }
+
+  // Same as Init() but will disable analytics when run by bot
+  static void InitBotAware(SubLaunchStatus sub_launch_status) {
+    if (IsRunByBot()) {
+      T::SetRuntimeAnalyticsStatus(AnalyticsStatus::kDisabled);
+    } else {
+      Init(sub_launch_status);
     }
   }
 

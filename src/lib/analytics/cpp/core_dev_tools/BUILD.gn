@@ -25,6 +25,8 @@ static_library("core_dev_tools") {
     "analytics_messages.cc",
     "analytics_messages.h",
     "analytics_status.h",
+    "environment_status.cc",
+    "environment_status.h",
     "general_parameters.cc",
     "general_parameters.h",
     "google_analytics_client.cc",
