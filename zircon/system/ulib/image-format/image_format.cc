@@ -557,16 +557,16 @@ bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem2::PixelFormat& a
 bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem::PixelFormat& a_v1,
                                    const llcpp::fuchsia::sysmem::PixelFormat& b_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat a = sysmem::V2CopyFromV1PixelFormat(&allocator, a_v1).build();
-  PixelFormat b = sysmem::V2CopyFromV1PixelFormat(&allocator, b_v1).build();
+  PixelFormat a = sysmem::V2CopyFromV1PixelFormat(&allocator, a_v1);
+  PixelFormat b = sysmem::V2CopyFromV1PixelFormat(&allocator, b_v1);
   return ImageFormatIsPixelFormatEqual(a, b);
 }
 
 bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a_v1,
                                    const fuchsia_sysmem_PixelFormat& b_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat a = sysmem::V2CopyFromV1PixelFormat(&allocator, a_v1).build();
-  PixelFormat b = sysmem::V2CopyFromV1PixelFormat(&allocator, b_v1).build();
+  PixelFormat a = sysmem::V2CopyFromV1PixelFormat(&allocator, a_v1);
+  PixelFormat b = sysmem::V2CopyFromV1PixelFormat(&allocator, b_v1);
   return ImageFormatIsPixelFormatEqual(a, b);
 }
 
@@ -609,8 +609,8 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
     const llcpp::fuchsia::sysmem::ColorSpace& color_space_v1,
     const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  ColorSpace color_space = sysmem::V2CopyFromV1ColorSpace(&allocator, color_space_v1).build();
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  ColorSpace color_space = sysmem::V2CopyFromV1ColorSpace(&allocator, color_space_v1);
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, pixel_format);
 }
 
@@ -618,8 +618,8 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
     const fuchsia_sysmem_ColorSpace& color_space_v1,
     const fuchsia_sysmem_PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  ColorSpace color_space = sysmem::V2CopyFromV1ColorSpace(&allocator, color_space_v1).build();
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  ColorSpace color_space = sysmem::V2CopyFromV1ColorSpace(&allocator, color_space_v1);
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, pixel_format);
 }
 
@@ -634,14 +634,14 @@ bool ImageFormatIsSupported(const llcpp::fuchsia::sysmem2::PixelFormat& pixel_fo
 
 bool ImageFormatIsSupported(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatIsSupported(pixel_format);
 }
 
 bool ImageFormatIsSupported(const fuchsia_sysmem_PixelFormat* pixel_format_v1) {
   ZX_DEBUG_ASSERT(pixel_format_v1);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1);
   return ImageFormatIsSupported(pixel_format);
 }
 
@@ -685,7 +685,7 @@ uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem2::PixelFormat& pix
 
 uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatBitsPerPixel(pixel_format);
 }
 
@@ -693,7 +693,7 @@ uint32_t ImageFormatBitsPerPixel(const llcpp::fuchsia::sysmem::PixelFormat& pixe
 uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format_v1) {
   ZX_DEBUG_ASSERT(pixel_format_v1);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1);
   return ImageFormatBitsPerPixel(pixel_format);
 }
 
@@ -743,14 +743,14 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
 uint32_t ImageFormatStrideBytesPerWidthPixel(
     const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatStrideBytesPerWidthPixel(pixel_format);
 }
 
 uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* pixel_format_v1) {
   ZX_DEBUG_ASSERT(pixel_format_v1);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1);
   return ImageFormatStrideBytesPerWidthPixel(pixel_format);
 }
 
@@ -768,7 +768,7 @@ uint64_t ImageFormatImageSize(const llcpp::fuchsia::sysmem2::ImageFormat& image_
 uint64_t ImageFormatImageSize(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
   ImageFormat image_format =
-      sysmem::V2CopyFromV1ImageFormat(&allocator, image_format_v1).take_value().build();
+      sysmem::V2CopyFromV1ImageFormat(&allocator, image_format_v1).take_value();
   return ImageFormatImageSize(image_format);
 }
 
@@ -776,7 +776,7 @@ uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format_v
   ZX_DEBUG_ASSERT(image_format_v1);
   fidl::BufferThenHeapAllocator<384> allocator;
   ImageFormat image_format =
-      sysmem::V2CopyFromV1ImageFormat(&allocator, *image_format_v1).take_value().build();
+      sysmem::V2CopyFromV1ImageFormat(&allocator, *image_format_v1).take_value();
   return ImageFormatImageSize(image_format);
 }
 
@@ -824,14 +824,14 @@ uint32_t ImageFormatCodedWidthMinDivisor(const llcpp::fuchsia::sysmem2::PixelFor
 uint32_t ImageFormatCodedWidthMinDivisor(
     const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatCodedWidthMinDivisor(pixel_format);
 }
 
 uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format_v1) {
   ZX_DEBUG_ASSERT(pixel_format_v1);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1);
   return ImageFormatCodedWidthMinDivisor(pixel_format);
 }
 
@@ -880,14 +880,14 @@ uint32_t ImageFormatCodedHeightMinDivisor(
 uint32_t ImageFormatCodedHeightMinDivisor(
     const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatCodedHeightMinDivisor(pixel_format);
 }
 
 uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem_PixelFormat* pixel_format_v1) {
   ZX_DEBUG_ASSERT(pixel_format_v1);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1);
   return ImageFormatCodedHeightMinDivisor(pixel_format);
 }
 
@@ -934,14 +934,14 @@ uint32_t ImageFormatSampleAlignment(const llcpp::fuchsia::sysmem2::PixelFormat& 
 
 uint32_t ImageFormatSampleAlignment(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatSampleAlignment(pixel_format);
 }
 
 uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_format_v1) {
   ZX_DEBUG_ASSERT(pixel_format_v1);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1);
   return ImageFormatSampleAlignment(pixel_format);
 }
 
@@ -985,8 +985,7 @@ bool ImageFormatMinimumRowBytes(
   fidl::BufferThenHeapAllocator<680> allocator;
   ImageFormatConstraints image_format_constraints =
       sysmem::V2CopyFromV1ImageFormatConstraints(&allocator, image_format_constraints_v1)
-          .take_value()
-          .build();
+          .take_value();
   return ImageFormatMinimumRowBytes(image_format_constraints, width, minimum_row_bytes_out);
 }
 
@@ -998,8 +997,7 @@ bool ImageFormatMinimumRowBytes(
   fidl::BufferThenHeapAllocator<680> allocator;
   ImageFormatConstraints image_format_constraints =
       sysmem::V2CopyFromV1ImageFormatConstraints(&allocator, *image_format_constraints_v1)
-          .take_value()
-          .build();
+          .take_value();
   return ImageFormatMinimumRowBytes(image_format_constraints, width, minimum_row_bytes_out);
 }
 
@@ -1047,7 +1045,7 @@ bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem::PixelFormat& pix
                                   zx_pixel_format_t* zx_pixel_format_out) {
   ZX_DEBUG_ASSERT(zx_pixel_format_out);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatConvertSysmemToZx(pixel_format, zx_pixel_format_out);
 }
 
@@ -1056,14 +1054,14 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
   ZX_DEBUG_ASSERT(pixel_format_v1);
   ZX_DEBUG_ASSERT(zx_pixel_format_out);
   fidl::BufferThenHeapAllocator<384> allocator;
-  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1).build();
+  PixelFormat pixel_format = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format_v1);
   return ImageFormatConvertSysmemToZx(pixel_format, zx_pixel_format_out);
 }
 
-fit::result<llcpp::fuchsia::sysmem2::PixelFormat::Builder> ImageFormatConvertZxToSysmem_v2(
+fit::result<llcpp::fuchsia::sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v2(
     fidl::Allocator* allocator, zx_pixel_format_t zx_pixel_format) {
   ZX_DEBUG_ASSERT(allocator);
-  PixelFormat::Builder v2b = allocator->make_table_builder<PixelFormat>();
+  PixelFormat v2b = allocator->make_table<PixelFormat>();
   v2b.set_format_modifier_value(
       sysmem::MakeTracking(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR));
   PixelFormatType out_type;
@@ -1115,7 +1113,7 @@ fit::result<llcpp::fuchsia::sysmem::PixelFormat> ImageFormatConvertZxToSysmem_v1
   if (!pixel_format_v2_result.is_ok()) {
     return fit::error();
   }
-  auto pixel_format_v2 = pixel_format_v2_result.take_value().build();
+  auto pixel_format_v2 = pixel_format_v2_result.take_value();
   auto pixel_format_v1 = sysmem::V1CopyFromV2PixelFormat(pixel_format_v2);
   return fit::ok(std::move(pixel_format_v1));
 }
@@ -1138,9 +1136,9 @@ bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
 // TODO(dustingreen): From here down need to be converted to operate on v2 natively similar to
 // above (merged while 1st sysmem v2 CL was in flight):
 
-fit::result<ImageFormat::Builder> ImageConstraintsToFormat(
-    fidl::Allocator* allocator, const ImageFormatConstraints& constraints, uint32_t width,
-    uint32_t height) {
+fit::result<ImageFormat> ImageConstraintsToFormat(fidl::Allocator* allocator,
+                                                  const ImageFormatConstraints& constraints,
+                                                  uint32_t width, uint32_t height) {
   if ((constraints.has_min_coded_height() && height < constraints.min_coded_height()) ||
       (constraints.has_max_coded_height() && height > constraints.max_coded_height())) {
     return fit::error();
@@ -1149,7 +1147,7 @@ fit::result<ImageFormat::Builder> ImageConstraintsToFormat(
       (constraints.has_max_coded_width() && width > constraints.max_coded_width())) {
     return fit::error();
   }
-  ImageFormat::Builder result(allocator->make<ImageFormat::Frame>());
+  ImageFormat result(allocator->make<ImageFormat::Frame>());
   uint32_t minimum_row_bytes;
   if (ImageFormatMinimumRowBytes(constraints, width, &minimum_row_bytes)) {
     result.set_bytes_per_row(allocator->make<uint32_t>(minimum_row_bytes));
@@ -1157,14 +1155,14 @@ fit::result<ImageFormat::Builder> ImageConstraintsToFormat(
     result.set_bytes_per_row(allocator->make<uint32_t>(0));
   }
   result.set_pixel_format(allocator->make<PixelFormat>(
-      sysmem::V2ClonePixelFormat(allocator, constraints.pixel_format()).build()));
+      sysmem::V2ClonePixelFormat(allocator, constraints.pixel_format())));
   result.set_coded_width(allocator->make<uint32_t>(width));
   result.set_coded_height(allocator->make<uint32_t>(height));
   result.set_display_width(allocator->make<uint32_t>(width));
   result.set_display_height(allocator->make<uint32_t>(height));
   if (constraints.has_color_spaces() && constraints.color_spaces().count()) {
     result.set_color_space(allocator->make<ColorSpace>(
-        sysmem::V2CloneColorSpace(allocator, constraints.color_spaces()[0]).build()));
+        sysmem::V2CloneColorSpace(allocator, constraints.color_spaces()[0])));
   }
   // result's has_pixel_aspect_ratio field remains un-set which is equivalent to false
   return fit::ok(std::move(result));
@@ -1176,14 +1174,13 @@ fit::result<llcpp::fuchsia::sysmem::ImageFormat_2> ImageConstraintsToFormat(
   fidl::BufferThenHeapAllocator<384> allocator;
   ImageFormatConstraints image_format_constraints_v2 =
       sysmem::V2CopyFromV1ImageFormatConstraints(&allocator, image_format_constraints_v1)
-          .take_value()
-          .build();
+          .take_value();
   auto v2_out_result =
       ImageConstraintsToFormat(&allocator, image_format_constraints_v2, width, height);
   if (!v2_out_result.is_ok()) {
     return fit::error();
   }
-  auto v2_out = v2_out_result.take_value().build();
+  auto v2_out = v2_out_result.take_value();
   auto v1_out_result = sysmem::V1CopyFromV2ImageFormat(v2_out);
   if (!v1_out_result.is_ok()) {
     return fit::error();
@@ -1199,14 +1196,13 @@ bool ImageConstraintsToFormat(
   fidl::BufferThenHeapAllocator<384> allocator;
   ImageFormatConstraints image_format_constraints_v2 =
       sysmem::V2CopyFromV1ImageFormatConstraints(&allocator, *image_format_constraints_v1)
-          .take_value()
-          .build();
+          .take_value();
   auto v2_out_result =
       ImageConstraintsToFormat(&allocator, image_format_constraints_v2, width, height);
   if (!v2_out_result.is_ok()) {
     return false;
   }
-  auto v2_out = v2_out_result.take_value().build();
+  auto v2_out = v2_out_result.take_value();
   auto v1_out_result = sysmem::V1CopyFromV2ImageFormat(v2_out);
   if (!v1_out_result.is_ok()) {
     return false;
@@ -1237,7 +1233,7 @@ bool ImageFormatPlaneByteOffset(const llcpp::fuchsia::sysmem::ImageFormat_2& ima
   if (!image_format_v2_result.is_ok()) {
     return false;
   }
-  auto image_format_v2 = image_format_v2_result.take_value().build();
+  auto image_format_v2 = image_format_v2_result.take_value();
   return ImageFormatPlaneByteOffset(image_format_v2, plane, offset_out);
 }
 
@@ -1250,7 +1246,7 @@ bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format
   if (!image_format_v2_result.is_ok()) {
     return false;
   }
-  auto image_format_v2 = image_format_v2_result.take_value().build();
+  auto image_format_v2 = image_format_v2_result.take_value();
   return ImageFormatPlaneByteOffset(image_format_v2, plane, offset_out);
 }
 
@@ -1273,7 +1269,7 @@ bool ImageFormatPlaneRowBytes(const llcpp::fuchsia::sysmem::ImageFormat_2& image
   if (!image_format_v2_result.is_ok()) {
     return false;
   }
-  auto image_format_v2 = image_format_v2_result.take_value().build();
+  auto image_format_v2 = image_format_v2_result.take_value();
   return ImageFormatPlaneRowBytes(image_format_v2, plane, row_bytes_out);
 }
 
@@ -1286,7 +1282,7 @@ bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, 
   if (!image_format_v2_result.is_ok()) {
     return false;
   }
-  auto image_format_v2 = image_format_v2_result.take_value().build();
+  auto image_format_v2 = image_format_v2_result.take_value();
   return ImageFormatPlaneRowBytes(image_format_v2, plane, row_bytes_out);
 }
 
@@ -1311,13 +1307,13 @@ bool ImageFormatCompatibleWithProtectedMemory(
 bool ImageFormatCompatibleWithProtectedMemory(
     const llcpp::fuchsia::sysmem::PixelFormat& pixel_format_v1) {
   fidl::BufferThenHeapAllocator<384> allocator;
-  auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1).build();
+  auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(&allocator, pixel_format_v1);
   return ImageFormatCompatibleWithProtectedMemory(pixel_format_v2);
 }
 
 bool ImageFormatCompatibleWithProtectedMemory(const fuchsia_sysmem_PixelFormat* pixel_format) {
   ZX_DEBUG_ASSERT(pixel_format);
   fidl::BufferThenHeapAllocator<384> allocator;
-  auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format).build();
+  auto pixel_format_v2 = sysmem::V2CopyFromV1PixelFormat(&allocator, *pixel_format);
   return ImageFormatCompatibleWithProtectedMemory(pixel_format_v2);
 }

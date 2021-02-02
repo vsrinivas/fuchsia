@@ -18,29 +18,29 @@ fidl::HeapAllocator heap_allocator;
 
 TEST(PixelFormatCost, Afbc) {
   auto constraints =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
   constraints.set_image_format_constraints(
       heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(2));
   constraints.image_format_constraints()[0] =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
-          .set_pixel_format(sysmem::MakeTracking(
-              &heap_allocator,
-              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-                  .set_type(sysmem::MakeTracking(&heap_allocator,
-                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-                  .build()))
-          .build();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
+  {
+    auto pixel_format = heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+    pixel_format.set_type(
+        sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
+    constraints.image_format_constraints()[0].set_pixel_format(
+        sysmem::MakeTracking(&heap_allocator, std::move(pixel_format)));
+  }
   constraints.image_format_constraints()[1] =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
-          .set_pixel_format(sysmem::MakeTracking(
-              &heap_allocator,
-              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-                  .set_type(sysmem::MakeTracking(&heap_allocator,
-                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-                  .set_format_modifier_value(sysmem::MakeTracking(
-                      &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8))
-                  .build()))
-          .build();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
+  {
+    auto pixel_format = heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+    pixel_format.set_type(
+        sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
+    pixel_format.set_format_modifier_value(sysmem::MakeTracking(
+        &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8));
+    constraints.image_format_constraints()[1].set_pixel_format(
+        sysmem::MakeTracking(&heap_allocator, std::move(pixel_format)));
+  }
 
   uint32_t amlogic_pids[] = {
       PDEV_PID_AMLOGIC_S912,
@@ -58,7 +58,7 @@ TEST(PixelFormatCost, Afbc) {
 
 TEST(PixelFormatCost, IntelTiling) {
   auto constraints =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
   constraints.set_image_format_constraints(
       heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(2));
   uint64_t tiling_types[] = {llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED,
@@ -66,26 +66,26 @@ TEST(PixelFormatCost, IntelTiling) {
                              llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED};
   for (auto modifier : tiling_types) {
     constraints.image_format_constraints()[0] =
-        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
-            .set_pixel_format(sysmem::MakeTracking(
-                &heap_allocator,
-                heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-                    .set_type(sysmem::MakeTracking(
-                        &heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-                    .set_format_modifier_value(sysmem::MakeTracking(
-                        &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR))
-                    .build()))
-            .build();
+        heap_allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
+    {
+      auto pixel_format = heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+      pixel_format.set_type(
+          sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
+      pixel_format.set_format_modifier_value(
+          sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR));
+      constraints.image_format_constraints()[0].set_pixel_format(
+          sysmem::MakeTracking(&heap_allocator, std::move(pixel_format)));
+    }
     constraints.image_format_constraints()[1] =
-        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
-            .set_pixel_format(sysmem::MakeTracking(
-                &heap_allocator,
-                heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-                    .set_type(sysmem::MakeTracking(
-                        &heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-                    .set_format_modifier_value(sysmem::MakeTracking(&heap_allocator, modifier))
-                    .build()))
-            .build();
+        heap_allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
+    {
+      auto pixel_format = heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+      pixel_format.set_type(
+          sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
+      pixel_format.set_format_modifier_value(sysmem::MakeTracking(&heap_allocator, modifier));
+      constraints.image_format_constraints()[1].set_pixel_format(
+          sysmem::MakeTracking(&heap_allocator, std::move(pixel_format)));
+    }
     constexpr uint32_t kUnknownPid = 0;
     constexpr uint32_t kUnknownVid = 0;
     EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
@@ -105,10 +105,9 @@ TEST(PixelFormatCost, IntelTiling) {
 
     // Explicit linear should be treated the same as no format modifier value.
     constraints.image_format_constraints()[0].pixel_format() =
-        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-            .set_type(sysmem::MakeTracking(&heap_allocator,
-                                           llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-            .build();
+        heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+    constraints.image_format_constraints()[0].pixel_format().set_type(
+        sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
     EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
     EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
   }
@@ -116,31 +115,31 @@ TEST(PixelFormatCost, IntelTiling) {
 
 TEST(PixelFormatCost, ArmTransactionElimination) {
   auto constraints =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
   constraints.set_image_format_constraints(
       heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(2));
   constraints.image_format_constraints()[0] =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
-          .set_pixel_format(sysmem::MakeTracking(
-              &heap_allocator,
-              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-                  .set_type(sysmem::MakeTracking(&heap_allocator,
-                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-                  .set_format_modifier_value(sysmem::MakeTracking(
-                      &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8))
-                  .build()))
-          .build();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
+  {
+    auto pixel_format = heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+    pixel_format.set_type(
+        sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
+    pixel_format.set_format_modifier_value(sysmem::MakeTracking(
+        &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8));
+    constraints.image_format_constraints()[0].set_pixel_format(
+        sysmem::MakeTracking(&heap_allocator, std::move(pixel_format)));
+  }
   constraints.image_format_constraints()[1] =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
-          .set_pixel_format(sysmem::MakeTracking(
-              &heap_allocator,
-              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-                  .set_type(sysmem::MakeTracking(&heap_allocator,
-                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-                  .set_format_modifier_value(sysmem::MakeTracking(
-                      &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE))
-                  .build()))
-          .build();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
+  {
+    auto pixel_format = heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+    pixel_format.set_type(
+        sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
+    pixel_format.set_format_modifier_value(sysmem::MakeTracking(
+        &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE));
+    constraints.image_format_constraints()[1].set_pixel_format(
+        sysmem::MakeTracking(&heap_allocator, std::move(pixel_format)));
+  }
 
   EXPECT_LT(
       0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, 0, 1));
@@ -163,23 +162,23 @@ TEST(PixelFormatCost, AfbcWithFlags) {
           FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
   };
   auto constraints =
-      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+      heap_allocator.make_table<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
   constraints.set_image_format_constraints(
       heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(
           modifier_list.size()));
 
   for (uint32_t i = 0; i < modifier_list.size(); ++i) {
     constraints.image_format_constraints()[i] =
-        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
-            .set_pixel_format(sysmem::MakeTracking(
-                &heap_allocator,
-                heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-                    .set_type(sysmem::MakeTracking(
-                        &heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
-                    .set_format_modifier_value(
-                        sysmem::MakeTracking(&heap_allocator, modifier_list[i]))
-                    .build()))
-            .build();
+        heap_allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
+    {
+      auto pixel_format = heap_allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+      pixel_format.set_type(
+          sysmem::MakeTracking(&heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32));
+      pixel_format.set_format_modifier_value(
+          sysmem::MakeTracking(&heap_allocator, modifier_list[i]));
+      constraints.image_format_constraints()[i].set_pixel_format(
+          sysmem::MakeTracking(&heap_allocator, std::move(pixel_format)));
+    }
   }
 
   for (uint32_t i = 1; i < modifier_list.size(); ++i) {

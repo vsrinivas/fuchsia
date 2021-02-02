@@ -63,12 +63,12 @@ class BufferCollection
   // has_constraints() must be true to call this.
   //
   // this can only be called if TakeConstraints() hasn't been called yet.
-  const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints();
+  const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints();
 
   // has_constraints() must be true to call this.
   //
   // this can only be called once
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder TakeConstraints();
+  llcpp::fuchsia::sysmem2::BufferCollectionConstraints TakeConstraints();
 
   LogicalBufferCollection* parent();
 
@@ -98,7 +98,7 @@ class BufferCollection
   // Hide parent method.
   void FailAsync(zx_status_t status, const char* format, ...);
 
-  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder> CloneResultForSendingV2(
+  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo> CloneResultForSendingV2(
       const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info);
 
   fit::result<V1CBufferCollectionInfo> CloneResultForSendingV1(
@@ -135,7 +135,7 @@ class BufferCollection
   //     SetConstraints()
   //
   // Either way, the constraints here are in v2 form.
-  std::optional<llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder> constraints_;
+  std::optional<llcpp::fuchsia::sysmem2::BufferCollectionConstraints> constraints_;
 
   // Stash BufferUsage aside for benefit of GetUsageBasedRightsAttenuation() despite
   // TakeConstraints().

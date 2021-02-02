@@ -95,20 +95,20 @@ static void AddRgbaPixelFormat(fidl::Allocator& allocator, uint64_t format_modif
   // Both RGBA and BGRA versions have similar cost, if they're supported.
   for (auto format : {llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32,
                       llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8}) {
+    auto pixel_format = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+    pixel_format.set_type(sysmem::MakeTracking(&allocator, format));
+    pixel_format.set_format_modifier_value(sysmem::MakeTracking(&allocator, format_modifier));
+    auto buffer_usage = allocator.make_table<llcpp::fuchsia::sysmem2::BufferUsage>();
+    buffer_usage.set_none(sysmem::MakeTracking(&allocator, 0u));
+    buffer_usage.set_cpu(sysmem::MakeTracking(&allocator, 0u));
+    buffer_usage.set_vulkan(sysmem::MakeTracking(&allocator, 0u));
+    buffer_usage.set_display(sysmem::MakeTracking(&allocator, 0u));
+    buffer_usage.set_video(sysmem::MakeTracking(&allocator, 0u));
     result.emplace_back(UsagePixelFormatCostEntry{
         // .pixel_format
-        allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-            .set_type(sysmem::MakeTracking(&allocator, format))
-            .set_format_modifier_value(sysmem::MakeTracking(&allocator, format_modifier))
-            .build(),
+        std::move(pixel_format),
         // .required_buffer_usage_bits
-        allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
-            .set_none(sysmem::MakeTracking(&allocator, 0u))
-            .set_cpu(sysmem::MakeTracking(&allocator, 0u))
-            .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
-            .set_display(sysmem::MakeTracking(&allocator, 0u))
-            .set_video(sysmem::MakeTracking(&allocator, 0u))
-            .build(),
+        std::move(buffer_usage),
         // .cost
         cost,
     });
@@ -181,26 +181,25 @@ const PlatformCostsEntry kArm_Mali_Costs = {
 
 const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
-  result.emplace_back(
-      // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
-      UsagePixelFormatCostEntry{
-          // .pixel_format
-          allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
-              .set_type(
-                  sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::NV12))
-              .build(),
-          // .required_buffer_usage_bits
-          allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
-              .set_none(sysmem::MakeTracking(&allocator, 0u))
-              .set_cpu(sysmem::MakeTracking(&allocator, 0u))
-              .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
-              .set_display(sysmem::MakeTracking(&allocator, 0u))
-              .set_video(
-                  sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_DECODER))
-              .build(),
-          // .cost
-          100.0L,
-      });
+  // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
+  auto pixel_format = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
+  pixel_format.set_type(
+      sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::NV12));
+  auto buffer_usage = allocator.make_table<llcpp::fuchsia::sysmem2::BufferUsage>();
+  buffer_usage.set_none(sysmem::MakeTracking(&allocator, 0u));
+  buffer_usage.set_cpu(sysmem::MakeTracking(&allocator, 0u));
+  buffer_usage.set_vulkan(sysmem::MakeTracking(&allocator, 0u));
+  buffer_usage.set_display(sysmem::MakeTracking(&allocator, 0u));
+  buffer_usage.set_video(
+      sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_DECODER));
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      std::move(pixel_format),
+      // .required_buffer_usage_bits
+      std::move(buffer_usage),
+      // .cost
+      100.0L,
+  });
   return result;
 }();
 
@@ -352,7 +351,7 @@ uint32_t SharedUsageBitsCount(const llcpp::fuchsia::sysmem2::BufferUsage& a,
 // |a| the new UsagePixelFormatCostEntry to consider
 //
 // |b| the existing UsagePixelFormatCostEntry that a is being compared against
-bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
+bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
                    uint32_t image_format_constraints_index, const UsagePixelFormatCostEntry* a,
                    const UsagePixelFormatCostEntry* b) {
   ZX_DEBUG_ASSERT(a);
@@ -386,9 +385,8 @@ bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::B
   return a_shared_bits > b_shared_bits;
 }
 
-double GetCostInternal(
-    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
-    uint32_t image_format_constraints_index, Platform platform) {
+double GetCostInternal(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
+                       uint32_t image_format_constraints_index, Platform platform) {
   const PlatformCostsEntry* platform_costs = FindPlatformCosts(platform);
   if (!platform_costs) {
     return kDefaultCost;
@@ -410,7 +408,7 @@ double GetCostInternal(
 }
 
 double GetCost(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-               const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
+               const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
                uint32_t image_format_constraints_index) {
   Platform platform = FindPlatform(pdev_device_info_vid, pdev_device_info_pid);
   if (platform == kPlatform_None) {
@@ -423,7 +421,7 @@ double GetCost(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
 
 int32_t UsagePixelFormatCost::Compare(
     uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
+    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
     uint32_t image_format_constraints_index_a, uint32_t image_format_constraints_index_b) {
   double cost_a = GetCost(pdev_device_info_vid, pdev_device_info_pid, constraints,
                           image_format_constraints_index_a);

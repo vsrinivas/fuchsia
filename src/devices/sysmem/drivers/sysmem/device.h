@@ -106,7 +106,7 @@ class Device final : public DdkDeviceType,
   // Get allocator for |settings|. Returns NULL if allocator is not
   // registered for settings.
   [[nodiscard]] MemoryAllocator* GetAllocator(
-      const llcpp::fuchsia::sysmem2::BufferMemorySettings::Builder& settings);
+      const llcpp::fuchsia::sysmem2::BufferMemorySettings& settings);
 
   // Get heap properties of a specific memory heap allocator.
   //

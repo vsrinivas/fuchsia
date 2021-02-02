@@ -237,7 +237,7 @@ zx_status_t BufferCollection::SetConstraints(
       // Not expected given current impl of sysmem-version.
       return ZX_ERR_INTERNAL;
     }
-    usage_.emplace(result.take_value().build());
+    usage_.emplace(result.take_value());
   }  // ~buffer_usage
 
   // LogicalBufferCollection will ask for constraints when it needs them,
@@ -417,7 +417,7 @@ void BufferCollection::FailAsync(zx_status_t status, const char* format, ...) {
   FidlServer::FailAsync(status, __FILE__, __LINE__, "");
 }
 
-fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder>
+fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo>
 BufferCollection::CloneResultForSendingV2(
     const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
   auto clone_result = sysmem::V2CloneBufferCollectionInfo(
@@ -447,12 +447,12 @@ BufferCollection::CloneResultForSendingV2(
 
 fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneResultForSendingV1(
     const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
-  auto v2_builder_result = CloneResultForSendingV2(buffer_collection_info);
-  if (!v2_builder_result.is_ok()) {
+  auto v2_result = CloneResultForSendingV2(buffer_collection_info);
+  if (!v2_result.is_ok()) {
     // FailAsync() already called.
     return fit::error();
   }
-  auto v1_result = sysmem::V1MoveFromV2BufferCollectionInfo(v2_builder_result.take_value().build());
+  auto v1_result = sysmem::V1MoveFromV2BufferCollectionInfo(v2_result.take_value());
   if (!v1_result.is_ok()) {
     FailAsync(ZX_ERR_INVALID_ARGS,
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
@@ -467,13 +467,12 @@ fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneRe
 fit::result<BufferCollection::V1CBufferCollectionInfo>
 BufferCollection::CloneAuxBuffersResultForSendingV1(
     const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
-  auto v2_builder_result = CloneResultForSendingV2(buffer_collection_info);
-  if (!v2_builder_result.is_ok()) {
+  auto v2_result = CloneResultForSendingV2(buffer_collection_info);
+  if (!v2_result.is_ok()) {
     // FailAsync() already called.
     return fit::error();
   }
-  auto v1_result =
-      sysmem::V1AuxBuffersMoveFromV2BufferCollectionInfo(v2_builder_result.take_value().build());
+  auto v1_result = sysmem::V1AuxBuffersMoveFromV2BufferCollectionInfo(v2_result.take_value());
   if (!v1_result.is_ok()) {
     FailAsync(ZX_ERR_INVALID_ARGS,
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
@@ -516,16 +515,14 @@ void BufferCollection::OnBuffersAllocated() {
 
 bool BufferCollection::has_constraints() { return !!constraints_; }
 
-const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder&
-BufferCollection::constraints() {
+const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& BufferCollection::constraints() {
   ZX_DEBUG_ASSERT(has_constraints());
   return constraints_.value();
 }
 
-llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder BufferCollection::TakeConstraints() {
+llcpp::fuchsia::sysmem2::BufferCollectionConstraints BufferCollection::TakeConstraints() {
   ZX_DEBUG_ASSERT(has_constraints());
-  llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder result =
-      std::move(constraints_.value());
+  llcpp::fuchsia::sysmem2::BufferCollectionConstraints result = std::move(constraints_.value());
   constraints_.reset();
   return result;
 }

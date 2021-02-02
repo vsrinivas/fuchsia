@@ -10,8 +10,6 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <zircon/pixelformat.h>
 
-// TODO(dustingreen): Also accept all the v2 Table::Builder(s).
-
 // Iff this returns true, the two pixel formats are equal.
 bool ImageFormatIsPixelFormatEqual(const llcpp::fuchsia::sysmem2::PixelFormat& a,
                                    const llcpp::fuchsia::sysmem2::PixelFormat& b);
@@ -105,14 +103,14 @@ bool ImageFormatConvertSysmemToZx(const llcpp::fuchsia::sysmem::PixelFormat& pix
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out);
 
-fit::result<llcpp::fuchsia::sysmem2::PixelFormat::Builder> ImageFormatConvertZxToSysmem_v2(
+fit::result<llcpp::fuchsia::sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v2(
     fidl::Allocator* allocator, zx_pixel_format_t zx_pixel_format);
 fit::result<llcpp::fuchsia::sysmem::PixelFormat> ImageFormatConvertZxToSysmem_v1(
     fidl::Allocator* allocator, zx_pixel_format_t zx_pixel_format);
 bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
                                   fuchsia_sysmem_PixelFormat* pixel_format_out);
 
-fit::result<llcpp::fuchsia::sysmem2::ImageFormat::Builder> ImageConstraintsToFormat(
+fit::result<llcpp::fuchsia::sysmem2::ImageFormat> ImageConstraintsToFormat(
     fidl::Allocator* allocator, const llcpp::fuchsia::sysmem2::ImageFormatConstraints& constraints,
     uint32_t width, uint32_t height);
 fit::result<llcpp::fuchsia::sysmem::ImageFormat_2> ImageConstraintsToFormat(

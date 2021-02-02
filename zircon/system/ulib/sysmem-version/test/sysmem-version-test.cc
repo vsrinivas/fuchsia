@@ -418,7 +418,7 @@ TEST(SysmemVersion, BufferUsage) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomBufferUsage();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2 = sysmem::V2CopyFromV1BufferUsage(&allocator, snap_1->value()).take_value().build();
+    auto v2 = sysmem::V2CopyFromV1BufferUsage(&allocator, snap_1->value()).take_value();
     auto v1_2 = sysmem::V1CopyFromV2BufferUsage(v2);
     auto snap_2 = SnapMoveFrom(std::move(v1_2));
     EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
@@ -429,8 +429,8 @@ TEST(SysmemVersion, PixelFormat) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomPixelFormat();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2_1 = sysmem::V2CopyFromV1PixelFormat(&allocator, snap_1->value()).build();
-    auto v2_2 = sysmem::V2ClonePixelFormat(&allocator, v2_1).build();
+    auto v2_1 = sysmem::V2CopyFromV1PixelFormat(&allocator, snap_1->value());
+    auto v2_2 = sysmem::V2ClonePixelFormat(&allocator, v2_1);
     auto v1_2 = sysmem::V1CopyFromV2PixelFormat(v2_2);
     auto snap_2 = SnapMoveFrom(std::move(v1_2));
     EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
@@ -441,8 +441,8 @@ TEST(SysmemVersion, ColorSpace) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomColorSpace();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2_1 = sysmem::V2CopyFromV1ColorSpace(&allocator, snap_1->value()).build();
-    auto v2_2 = sysmem::V2CloneColorSpace(&allocator, v2_1).build();
+    auto v2_1 = sysmem::V2CopyFromV1ColorSpace(&allocator, snap_1->value());
+    auto v2_2 = sysmem::V2CloneColorSpace(&allocator, v2_1);
     auto v1_2 = sysmem::V1CopyFromV2ColorSpace(v2_2);
     auto snap_2 = SnapMoveFrom(std::move(v1_2));
     EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
@@ -453,10 +453,9 @@ TEST(SysmemVersion, ImageFormatConstraints) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomImageFormatConstraints();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2_1 = sysmem::V2CopyFromV1ImageFormatConstraints(&allocator, snap_1->value())
-                    .take_value()
-                    .build();
-    auto v2_2 = sysmem::V2CloneImageFormatConstraints(&allocator, v2_1).build();
+    auto v2_1 =
+        sysmem::V2CopyFromV1ImageFormatConstraints(&allocator, snap_1->value()).take_value();
+    auto v2_2 = sysmem::V2CloneImageFormatConstraints(&allocator, v2_1);
     auto v1_2_result = sysmem::V1CopyFromV2ImageFormatConstraints(v2_2);
     EXPECT_TRUE(v1_2_result.is_ok());
     auto v1_2 = v1_2_result.take_value();
@@ -469,9 +468,7 @@ TEST(SysmemVersion, BufferMemoryConstraints) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomBufferMemoryConstraints();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2 = sysmem::V2CopyFromV1BufferMemoryConstraints(&allocator, snap_1->value())
-                  .take_value()
-                  .build();
+    auto v2 = sysmem::V2CopyFromV1BufferMemoryConstraints(&allocator, snap_1->value()).take_value();
     auto v1_2_result = sysmem::V1CopyFromV2BufferMemoryConstraints(v2);
     EXPECT_TRUE(v1_2_result.is_ok());
     auto v1_2 = v1_2_result.take_value();
@@ -484,7 +481,7 @@ TEST(SysmemVersion, ImageFormat) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomImageFormat();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2 = sysmem::V2CopyFromV1ImageFormat(&allocator, snap_1->value()).take_value().build();
+    auto v2 = sysmem::V2CopyFromV1ImageFormat(&allocator, snap_1->value()).take_value();
     auto v1_2_result = sysmem::V1CopyFromV2ImageFormat(v2);
     EXPECT_TRUE(v1_2_result.is_ok());
     auto v1_2 = v1_2_result.take_value();
@@ -497,8 +494,8 @@ TEST(SysmemVersion, BufferMemorySettings) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomBufferMemorySettings();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2_1 = sysmem::V2CopyFromV1BufferMemorySettings(&allocator, snap_1->value()).build();
-    auto v2_2 = sysmem::V2CloneBufferMemorySettings(&allocator, v2_1).build();
+    auto v2_1 = sysmem::V2CopyFromV1BufferMemorySettings(&allocator, snap_1->value());
+    auto v2_2 = sysmem::V2CloneBufferMemorySettings(&allocator, v2_1);
     auto v1_2 = sysmem::V1CopyFromV2BufferMemorySettings(v2_2);
     auto snap_2 = SnapMoveFrom(std::move(v1_2));
     EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
@@ -511,8 +508,8 @@ TEST(SysmemVersion, SingleBufferSettings) {
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1_result = sysmem::V2CopyFromV1SingleBufferSettings(&allocator, snap_1->value());
     EXPECT_TRUE(v2_1_result.is_ok());
-    auto v2_1 = v2_1_result.take_value().build();
-    auto v2_2 = sysmem::V2CloneSingleBufferSettings(&allocator, v2_1).build();
+    auto v2_1 = v2_1_result.take_value();
+    auto v2_2 = sysmem::V2CloneSingleBufferSettings(&allocator, v2_1);
     auto v1_2_result = sysmem::V1CopyFromV2SingleBufferSettings(v2_2);
     EXPECT_TRUE(v1_2_result.is_ok());
     auto v1_2 = v1_2_result.take_value();
@@ -521,9 +518,7 @@ TEST(SysmemVersion, SingleBufferSettings) {
 
     auto v2_builder_result = sysmem::V2CopyFromV1SingleBufferSettings(&allocator, snap_1->value());
     EXPECT_TRUE(v2_builder_result.is_ok());
-    auto v2_3_result =
-        sysmem::V2CloneSingleBufferSettingsBuilder(&allocator, v2_builder_result.value());
-    auto v2_3 = v2_3_result.build();
+    auto v2_3 = sysmem::V2CloneSingleBufferSettings(&allocator, v2_builder_result.value());
     auto v1_3_result = sysmem::V1CopyFromV2SingleBufferSettings(v2_3);
     EXPECT_TRUE(v1_3_result.is_ok());
     auto v1_3 = v1_3_result.take_value();
@@ -536,12 +531,12 @@ TEST(SysmemVersion, VmoBuffer) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
     auto v1_1 = V1RandomVmoBuffer();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
-    auto v2_1 = sysmem::V2MoveFromV1VmoBuffer(&allocator, std::move(snap_1->value())).build();
+    auto v2_1 = sysmem::V2MoveFromV1VmoBuffer(&allocator, std::move(snap_1->value()));
     auto v2_2_result =
         sysmem::V2CloneVmoBuffer(&allocator, v2_1, std::numeric_limits<uint32_t>::max(),
                                  std::numeric_limits<uint32_t>::max());
     EXPECT_TRUE(v2_2_result.is_ok());
-    auto v2_2 = v2_2_result.take_value().build();
+    auto v2_2 = v2_2_result.take_value();
     auto v1_2 = sysmem::V1MoveFromV2VmoBuffer(std::move(v2_1));
     auto snap_2 = SnapMoveFrom(std::move(v1_2));
     EXPECT_TRUE(IsEqual(*snap_1, *snap_2));
@@ -560,12 +555,12 @@ TEST(SysmemVersion, BufferCollectionInfo) {
     auto v2_1_result =
         sysmem::V2MoveFromV1BufferCollectionInfo(&allocator, std::move(snap_1->value()));
     EXPECT_TRUE(v2_1_result.is_ok());
-    auto v2_1 = v2_1_result.take_value().build();
+    auto v2_1 = v2_1_result.take_value();
     auto v2_2_result =
         sysmem::V2CloneBufferCollectionInfo(&allocator, v2_1, std::numeric_limits<uint32_t>::max(),
                                             std::numeric_limits<uint32_t>::max());
     EXPECT_TRUE(v2_2_result.is_ok());
-    auto v2_2 = v2_2_result.take_value().build();
+    auto v2_2 = v2_2_result.take_value();
     auto v1_2_result = sysmem::V1MoveFromV2BufferCollectionInfo(std::move(v2_1));
     EXPECT_TRUE(v1_2_result.is_ok());
     auto v1_2 = v1_2_result.take_value();
@@ -596,8 +591,7 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
     v1::BufferCollectionConstraints* maybe_main = has_main ? &snap_1->value() : nullptr;
     v1::BufferCollectionConstraintsAuxBuffers* maybe_aux = has_aux ? &snap_aux_1->value() : nullptr;
     auto v2 = sysmem::V2CopyFromV1BufferCollectionConstraints(&allocator, maybe_main, maybe_aux)
-                  .take_value()
-                  .build();
+                  .take_value();
     auto v1_2_result = sysmem::V1CopyFromV2BufferCollectionConstraints(v2);
     EXPECT_TRUE(v1_2_result.is_ok());
     auto v1_2_pair = v1_2_result.take_value();
@@ -633,15 +627,12 @@ TEST(SysmemVersion, CoherencyDomainSupport) {
     random(&ram_supported);
     random(&inaccessible_supported);
 
-    v2::CoherencyDomainSupport v2_1 =
-        allocator.make_table_builder<v2::CoherencyDomainSupport>()
-            .set_cpu_supported(allocator.make<bool>(cpu_supported))
-            .set_ram_supported(allocator.make<bool>(ram_supported))
-            .set_inaccessible_supported(allocator.make<bool>(inaccessible_supported))
-            .build();
+    v2::CoherencyDomainSupport v2_1 = allocator.make_table<v2::CoherencyDomainSupport>();
+    v2_1.set_cpu_supported(allocator.make<bool>(cpu_supported));
+    v2_1.set_ram_supported(allocator.make<bool>(ram_supported));
+    v2_1.set_inaccessible_supported(allocator.make<bool>(inaccessible_supported));
 
-    v2::CoherencyDomainSupport::Builder v2_2 =
-        sysmem::V2CloneCoherencyDomainSuppoort(&allocator, v2_1);
+    v2::CoherencyDomainSupport v2_2 = sysmem::V2CloneCoherencyDomainSuppoort(&allocator, v2_1);
     EXPECT_TRUE(v2_2.has_cpu_supported());
     EXPECT_TRUE(v2_2.has_ram_supported());
     EXPECT_TRUE(v2_2.has_inaccessible_supported());
@@ -663,18 +654,19 @@ TEST(SysmemVersion, HeapProperties) {
     random(&inaccessible_supported);
     random(&need_clear);
 
-    v2::HeapProperties v2_1 =
-        allocator.make_table_builder<v2::HeapProperties>()
-            .set_need_clear(allocator.make<bool>(need_clear))
-            .set_coherency_domain_support(allocator.make<v2::CoherencyDomainSupport>(
-                allocator.make_table_builder<v2::CoherencyDomainSupport>()
-                    .set_cpu_supported(allocator.make<bool>(cpu_supported))
-                    .set_ram_supported(allocator.make<bool>(ram_supported))
-                    .set_inaccessible_supported(allocator.make<bool>(inaccessible_supported))
-                    .build()))
-            .build();
+    v2::HeapProperties v2_1 = allocator.make_table<v2::HeapProperties>();
+    v2_1.set_need_clear(allocator.make<bool>(need_clear));
+    {
+      auto coherency_domain_support = allocator.make_table<v2::CoherencyDomainSupport>();
+      coherency_domain_support.set_cpu_supported(allocator.make<bool>(cpu_supported));
+      coherency_domain_support.set_ram_supported(allocator.make<bool>(ram_supported));
+      coherency_domain_support.set_inaccessible_supported(
+          allocator.make<bool>(inaccessible_supported));
+      v2_1.set_coherency_domain_support(
+          allocator.make<v2::CoherencyDomainSupport>(std::move(coherency_domain_support)));
+    }
 
-    v2::HeapProperties::Builder v2_2 = sysmem::V2CloneHeapProperties(&allocator, v2_1);
+    v2::HeapProperties v2_2 = sysmem::V2CloneHeapProperties(&allocator, v2_1);
     EXPECT_TRUE(v2_2.has_coherency_domain_support());
     EXPECT_TRUE(v2_2.coherency_domain_support().has_cpu_supported());
     EXPECT_TRUE(v2_2.coherency_domain_support().has_ram_supported());

@@ -59,7 +59,7 @@ bool IsNonZeroPowerOf2(T value) {
 #define FIELD_DEFAULT_1(builder_ptr_name, field_name)                                              \
   do {                                                                                             \
     auto builder_ptr = (builder_ptr_name);                                                         \
-    static_assert(fidl::IsTableBuilder<std::remove_pointer<decltype(builder_ptr)>::type>::value);  \
+    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(builder_ptr)>>::value);             \
     using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type;          \
     if (!builder_ptr->has_##field_name()) {                                                        \
       builder_ptr->set_##field_name(sysmem::MakeTracking(&allocator_, static_cast<FieldType>(1))); \
@@ -70,17 +70,17 @@ bool IsNonZeroPowerOf2(T value) {
 
 // TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
 // types.
-#define FIELD_DEFAULT_MAX(builder_ptr_name, field_name)                                           \
-  do {                                                                                            \
-    auto builder_ptr = (builder_ptr_name);                                                        \
-    static_assert(fidl::IsTableBuilder<std::remove_pointer<decltype(builder_ptr)>::type>::value); \
-    using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type;         \
-    if (!builder_ptr->has_##field_name()) {                                                       \
-      builder_ptr->set_##field_name(                                                              \
-          sysmem::MakeTracking(&allocator_, std::numeric_limits<FieldType>::max()));              \
-      ZX_DEBUG_ASSERT(builder_ptr->field_name() == std::numeric_limits<FieldType>::max());        \
-    }                                                                                             \
-    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                             \
+#define FIELD_DEFAULT_MAX(builder_ptr_name, field_name)                                    \
+  do {                                                                                     \
+    auto builder_ptr = (builder_ptr_name);                                                 \
+    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(builder_ptr)>>::value);     \
+    using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type;  \
+    if (!builder_ptr->has_##field_name()) {                                                \
+      builder_ptr->set_##field_name(                                                       \
+          sysmem::MakeTracking(&allocator_, std::numeric_limits<FieldType>::max()));       \
+      ZX_DEBUG_ASSERT(builder_ptr->field_name() == std::numeric_limits<FieldType>::max()); \
+    }                                                                                      \
+    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                      \
   } while (false)
 
 // TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
@@ -88,7 +88,7 @@ bool IsNonZeroPowerOf2(T value) {
 #define FIELD_DEFAULT_ZERO(builder_ptr_name, field_name)                                           \
   do {                                                                                             \
     auto builder_ptr = (builder_ptr_name);                                                         \
-    static_assert(fidl::IsTableBuilder<std::remove_pointer_t<decltype(builder_ptr)>>::value);      \
+    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(builder_ptr)>>::value);             \
     using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type;          \
     if (!builder_ptr->has_##field_name()) {                                                        \
       builder_ptr->set_##field_name(sysmem::MakeTracking(&allocator_, static_cast<FieldType>(0))); \
@@ -97,33 +97,33 @@ bool IsNonZeroPowerOf2(T value) {
     ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                              \
   } while (false)
 
-#define FIELD_DEFAULT_FALSE(builder_ptr_name, field_name)                                     \
-  do {                                                                                        \
-    auto builder_ptr = (builder_ptr_name);                                                    \
-    static_assert(fidl::IsTableBuilder<std::remove_pointer_t<decltype(builder_ptr)>>::value); \
-    using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type;     \
-    static_assert(std::is_same<FieldType, bool>::value);                                      \
-    if (!builder_ptr->has_##field_name()) {                                                   \
-      builder_ptr->set_##field_name(sysmem::MakeTracking(&allocator_, false));                \
-      ZX_DEBUG_ASSERT(!builder_ptr->field_name());                                            \
-    }                                                                                         \
-    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                         \
+#define FIELD_DEFAULT_FALSE(builder_ptr_name, field_name)                                 \
+  do {                                                                                    \
+    auto builder_ptr = (builder_ptr_name);                                                \
+    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(builder_ptr)>>::value);    \
+    using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type; \
+    static_assert(std::is_same<FieldType, bool>::value);                                  \
+    if (!builder_ptr->has_##field_name()) {                                               \
+      builder_ptr->set_##field_name(sysmem::MakeTracking(&allocator_, false));            \
+      ZX_DEBUG_ASSERT(!builder_ptr->field_name());                                        \
+    }                                                                                     \
+    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                     \
   } while (false)
 
-#define FIELD_DEFAULT(builder_ptr_name, field_name, value_name)                               \
-  do {                                                                                        \
-    auto builder_ptr = (builder_ptr_name);                                                    \
-    static_assert(fidl::IsTableBuilder<std::remove_pointer_t<decltype(builder_ptr)>>::value); \
-    using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type;     \
-    static_assert(!fidl::IsFidlObject<FieldType>::value);                                     \
-    static_assert(!fidl::IsVectorView<FieldType>::value);                                     \
-    static_assert(!fidl::IsStringView<FieldType>::value);                                     \
-    if (!builder_ptr->has_##field_name()) {                                                   \
-      auto field_value = (value_name);                                                        \
-      builder_ptr->set_##field_name(sysmem::MakeTracking(&allocator_, field_value));          \
-      ZX_DEBUG_ASSERT(builder_ptr->field_name() == field_value);                              \
-    }                                                                                         \
-    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                         \
+#define FIELD_DEFAULT(builder_ptr_name, field_name, value_name)                           \
+  do {                                                                                    \
+    auto builder_ptr = (builder_ptr_name);                                                \
+    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(builder_ptr)>>::value);    \
+    using FieldType = std::remove_reference<decltype((builder_ptr->field_name()))>::type; \
+    static_assert(!fidl::IsFidlObject<FieldType>::value);                                 \
+    static_assert(!fidl::IsVectorView<FieldType>::value);                                 \
+    static_assert(!fidl::IsStringView<FieldType>::value);                                 \
+    if (!builder_ptr->has_##field_name()) {                                               \
+      auto field_value = (value_name);                                                    \
+      builder_ptr->set_##field_name(sysmem::MakeTracking(&allocator_, field_value));      \
+      ZX_DEBUG_ASSERT(builder_ptr->field_name() == field_value);                          \
+    }                                                                                     \
+    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                     \
   } while (false)
 
 template <typename FieldRefType, typename Enable = void>
@@ -141,32 +141,32 @@ struct FieldDefaultCreator<fidl::VectorView<VectorItemType>, void> {
   }
 };
 
-#define FIELD_DEFAULT_SET(builder_ptr_name, field_name)                                       \
-  do {                                                                                        \
-    auto builder_ptr = (builder_ptr_name);                                                    \
-    static_assert(fidl::IsTableBuilder<std::remove_pointer_t<decltype(builder_ptr)>>::value); \
-    using TableType = std::remove_reference_t<decltype((builder_ptr->field_name()))>;         \
-    static_assert(fidl::IsTable<TableType>::value);                                           \
-    if (!builder_ptr->has_##field_name()) {                                                   \
-      builder_ptr->set_##field_name(                                                          \
-          sysmem::MakeTracking(&allocator_, allocator_.make_table_builder<TableType>()));     \
-    }                                                                                         \
-    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                         \
+#define FIELD_DEFAULT_SET(builder_ptr_name, field_name)                                \
+  do {                                                                                 \
+    auto builder_ptr = (builder_ptr_name);                                             \
+    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(builder_ptr)>>::value); \
+    using TableType = std::remove_reference_t<decltype((builder_ptr->field_name()))>;  \
+    static_assert(fidl::IsTable<TableType>::value);                                    \
+    if (!builder_ptr->has_##field_name()) {                                            \
+      builder_ptr->set_##field_name(                                                   \
+          sysmem::MakeTracking(&allocator_, allocator_.make_table<TableType>()));      \
+    }                                                                                  \
+    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                  \
   } while (false)
 
 // regardless of capacity, initial count is always 0
-#define FIELD_DEFAULT_SET_VECTOR(builder_ptr_name, field_name, capacity_param)                \
-  do {                                                                                        \
-    auto builder_ptr = (builder_ptr_name);                                                    \
-    static_assert(fidl::IsTableBuilder<std::remove_pointer_t<decltype(builder_ptr)>>::value); \
-    using VectorFieldType = std::remove_reference_t<decltype((builder_ptr->field_name()))>;   \
-    static_assert(fidl::IsVectorView<VectorFieldType>::value);                                \
-    using ElementType = typename VectorFieldType::elem_type;                                  \
-    if (!builder_ptr->has_##field_name()) {                                                   \
-      size_t capacity = (capacity_param);                                                     \
-      builder_ptr->set_##field_name(allocator_.make_vec_ptr<ElementType>(0, capacity));       \
-    }                                                                                         \
-    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                         \
+#define FIELD_DEFAULT_SET_VECTOR(builder_ptr_name, field_name, capacity_param)              \
+  do {                                                                                      \
+    auto builder_ptr = (builder_ptr_name);                                                  \
+    static_assert(fidl::IsTable<std::remove_pointer_t<decltype(builder_ptr)>>::value);      \
+    using VectorFieldType = std::remove_reference_t<decltype((builder_ptr->field_name()))>; \
+    static_assert(fidl::IsVectorView<VectorFieldType>::value);                              \
+    using ElementType = typename VectorFieldType::elem_type;                                \
+    if (!builder_ptr->has_##field_name()) {                                                 \
+      size_t capacity = (capacity_param);                                                   \
+      builder_ptr->set_##field_name(allocator_.make_vec_ptr<ElementType>(0, capacity));     \
+    }                                                                                       \
+    ZX_DEBUG_ASSERT(builder_ptr->has_##field_name());                                       \
   } while (false)
 
 template <typename T>
@@ -590,23 +590,23 @@ void LogicalBufferCollection::InitializeConstraintSnapshots(
   for (auto& constraints : constraints_list) {
     ConstraintInfoSnapshot snapshot;
     snapshot.node = node().CreateChild(CreateUniqueName("collection-at-allocation-"));
-    if (constraints.builder.has_min_buffer_count_for_camping()) {
+    if (constraints.constraints.has_min_buffer_count_for_camping()) {
       snapshot.node.CreateUint("min_buffer_count_for_camping",
-                               constraints.builder.min_buffer_count_for_camping(),
+                               constraints.constraints.min_buffer_count_for_camping(),
                                &snapshot.node_constraints);
     }
-    if (constraints.builder.has_min_buffer_count_for_shared_slack()) {
+    if (constraints.constraints.has_min_buffer_count_for_shared_slack()) {
       snapshot.node.CreateUint("min_buffer_count_for_shared_slack",
-                               constraints.builder.min_buffer_count_for_shared_slack(),
+                               constraints.constraints.min_buffer_count_for_shared_slack(),
                                &snapshot.node_constraints);
     }
-    if (constraints.builder.has_min_buffer_count_for_dedicated_slack()) {
+    if (constraints.constraints.has_min_buffer_count_for_dedicated_slack()) {
       snapshot.node.CreateUint("min_buffer_count_for_dedicated_slack",
-                               constraints.builder.min_buffer_count_for_dedicated_slack(),
+                               constraints.constraints.min_buffer_count_for_dedicated_slack(),
                                &snapshot.node_constraints);
     }
-    if (constraints.builder.has_min_buffer_count()) {
-      snapshot.node.CreateUint("min_buffer_count", constraints.builder.min_buffer_count(),
+    if (constraints.constraints.has_min_buffer_count()) {
+      snapshot.node.CreateUint("min_buffer_count", constraints.constraints.min_buffer_count(),
                                &snapshot.node_constraints);
     }
     snapshot.node.CreateUint("debug_id", constraints.client.id, &snapshot.node_constraints);
@@ -907,7 +907,7 @@ bool LogicalBufferCollection::CombineConstraints() {
   }
 
   // Start with empty constraints / unconstrained.
-  auto acc = allocator_.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+  auto acc = allocator_.make_table<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
   // Sanitize initial accumulation target to keep accumulation simpler.  This is guaranteed to
   // succeed; the input is always the same.
   bool result = CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kInitial, &acc);
@@ -919,11 +919,10 @@ bool LogicalBufferCollection::CombineConstraints() {
     current_client_info_ = &constraints_entry.client;
     auto defer_reset = fit::defer([this] { current_client_info_ = nullptr; });
     if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kNotAggregated,
-                                                  &constraints_entry.builder)) {
+                                                  &constraints_entry.constraints)) {
       return false;
     }
-    auto constraints = constraints_entry.builder.build();
-    if (!AccumulateConstraintBufferCollection(&acc, &constraints)) {
+    if (!AccumulateConstraintBufferCollection(&acc, &constraints_entry.constraints)) {
       // This is a failure.  The space of permitted settings contains no
       // points.
       return false;
@@ -946,9 +945,8 @@ bool LogicalBufferCollection::CombineConstraints() {
 //
 // TODO(dustingreen): From a particular participant, be more picky about which domains are supported
 // vs. which heaps are supported.
-static bool IsHeapPermitted(
-    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& constraints,
-    llcpp::fuchsia::sysmem2::HeapType heap) {
+static bool IsHeapPermitted(const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints,
+                            llcpp::fuchsia::sysmem2::HeapType heap) {
   if (constraints.heap_permitted().count()) {
     auto begin = constraints.heap_permitted().begin();
     auto end = constraints.heap_permitted().end();
@@ -958,8 +956,7 @@ static bool IsHeapPermitted(
   return true;
 }
 
-static bool IsSecurePermitted(
-    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& constraints) {
+static bool IsSecurePermitted(const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints) {
   // TODO(fxbug.dev/37452): Generalize this by finding if there's a heap that maps to secure
   // MemoryAllocator in the permitted heaps.
   return constraints.inaccessible_domain_supported() &&
@@ -973,7 +970,7 @@ static bool IsCpuAccessSupported(
 }
 
 bool LogicalBufferCollection::CheckSanitizeBufferUsage(
-    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferUsage::Builder* buffer_usage) {
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferUsage* buffer_usage) {
   FIELD_DEFAULT_ZERO(buffer_usage, none);
   FIELD_DEFAULT_ZERO(buffer_usage, cpu);
   FIELD_DEFAULT_ZERO(buffer_usage, vulkan);
@@ -1025,15 +1022,14 @@ size_t LogicalBufferCollection::InitialCapacityOrZero(CheckSanitizeStage stage,
 // constraint checks that are present under Accumulate* are commented explaining
 // why it's ok for them to be there.
 bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
-    CheckSanitizeStage stage,
-    llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder* constraints) {
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::BufferCollectionConstraints* constraints) {
   bool was_empty = constraints->IsEmpty();
   FIELD_DEFAULT_SET(constraints, usage);
   if (was_empty) {
     // Completely empty constraints are permitted, so convert to NONE_USAGE to avoid triggering the
     // check applied to non-empty constraints where at least one usage bit must be set (NONE_USAGE
     // counts for that check, and doesn't constrain anything).
-    FIELD_DEFAULT(&constraints->get_builder_usage(), none, llcpp::fuchsia::sysmem2::NONE_USAGE);
+    FIELD_DEFAULT(&constraints->usage(), none, llcpp::fuchsia::sysmem2::NONE_USAGE);
   }
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_camping);
   FIELD_DEFAULT_ZERO(constraints, min_buffer_count_for_dedicated_slack);
@@ -1048,7 +1044,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
   FIELD_DEFAULT_FALSE(constraints, need_clear_aux_buffers_for_secure);
   FIELD_DEFAULT(constraints, allow_clear_aux_buffers_for_secure,
                 !IsWriteUsage(constraints->usage()));
-  if (!CheckSanitizeBufferUsage(stage, &constraints->get_builder_usage())) {
+  if (!CheckSanitizeBufferUsage(stage, &constraints->usage())) {
     LogError(FROM_HERE, "CheckSanitizeBufferUsage() failed");
     return false;
   }
@@ -1060,8 +1056,8 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     LogError(FROM_HERE, "min_buffer_count > max_buffer_count");
     return false;
   }
-  if (!CheckSanitizeBufferMemoryConstraints(
-          stage, constraints->usage(), &constraints->get_builder_buffer_memory_constraints())) {
+  if (!CheckSanitizeBufferMemoryConstraints(stage, constraints->usage(),
+                                            &constraints->buffer_memory_constraints())) {
     return false;
   }
   if (stage != CheckSanitizeStage::kAggregated) {
@@ -1089,8 +1085,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     }
   }
   for (uint32_t i = 0; i < constraints->image_format_constraints().count(); ++i) {
-    if (!CheckSanitizeImageFormatConstraints(
-            stage, &constraints->get_builders_image_format_constraints()[i])) {
+    if (!CheckSanitizeImageFormatConstraints(stage, &constraints->image_format_constraints()[i])) {
       return false;
     }
   }
@@ -1113,7 +1108,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
 
 bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
     CheckSanitizeStage stage, const llcpp::fuchsia::sysmem2::BufferUsage& buffer_usage,
-    llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder* constraints) {
+    llcpp::fuchsia::sysmem2::BufferMemoryConstraints* constraints) {
   FIELD_DEFAULT_ZERO(constraints, min_size_bytes);
   FIELD_DEFAULT_MAX(constraints, max_size_bytes);
   FIELD_DEFAULT_FALSE(constraints, physically_contiguous_required);
@@ -1148,14 +1143,13 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
 }
 
 bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
-    CheckSanitizeStage stage,
-    llcpp::fuchsia::sysmem2::ImageFormatConstraints::Builder* constraints) {
+    CheckSanitizeStage stage, llcpp::fuchsia::sysmem2::ImageFormatConstraints* constraints) {
   // We never CheckSanitizeImageFormatConstraints() on empty (aka initial) constraints.
   ZX_DEBUG_ASSERT(stage != CheckSanitizeStage::kInitial);
 
   FIELD_DEFAULT_SET(constraints, pixel_format);
-  FIELD_DEFAULT_ZERO(&constraints->get_builder_pixel_format(), type);
-  FIELD_DEFAULT_ZERO(&constraints->get_builder_pixel_format(), format_modifier_value);
+  FIELD_DEFAULT_ZERO(&constraints->pixel_format(), type);
+  FIELD_DEFAULT_ZERO(&constraints->pixel_format(), format_modifier_value);
 
   FIELD_DEFAULT_SET_VECTOR(constraints, color_spaces, 0);
 
@@ -1315,7 +1309,7 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintsBufferUsage(
-    llcpp::fuchsia::sysmem2::BufferUsage::Builder* acc, llcpp::fuchsia::sysmem2::BufferUsage* c) {
+    llcpp::fuchsia::sysmem2::BufferUsage* acc, llcpp::fuchsia::sysmem2::BufferUsage* c) {
   // We accumulate "none" usage just like other usages, to make aggregation and CheckSanitize
   // consistent/uniform.
   acc->none() |= c->none();
@@ -1330,9 +1324,9 @@ bool LogicalBufferCollection::AccumulateConstraintsBufferUsage(
 //
 // |c| additional constraint to aggregate into acc
 bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
-    llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder* acc,
+    llcpp::fuchsia::sysmem2::BufferCollectionConstraints* acc,
     llcpp::fuchsia::sysmem2::BufferCollectionConstraints* c) {
-  if (!AccumulateConstraintsBufferUsage(&acc->get_builder_usage(), &c->usage())) {
+  if (!AccumulateConstraintsBufferUsage(&acc->usage(), &c->usage())) {
     return false;
   }
 
@@ -1352,7 +1346,7 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
   // buffer_collection_constraints, so we can assert that both acc and c "has_" one.
   ZX_DEBUG_ASSERT(acc->has_buffer_memory_constraints());
   ZX_DEBUG_ASSERT(c->has_buffer_memory_constraints());
-  if (!AccumulateConstraintBufferMemory(&acc->get_builder_buffer_memory_constraints(),
+  if (!AccumulateConstraintBufferMemory(&acc->buffer_memory_constraints(),
                                         &c->buffer_memory_constraints())) {
     return false;
   }
@@ -1365,7 +1359,7 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
   } else {
     ZX_DEBUG_ASSERT(acc->image_format_constraints().count());
     if (c->image_format_constraints().count()) {
-      if (!AccumulateConstraintImageFormats(&acc->get_builders_image_format_constraints(),
+      if (!AccumulateConstraintImageFormats(&acc->image_format_constraints(),
                                             &c->image_format_constraints())) {
         // We return false if we've seen non-zero
         // image_format_constraint_count from at least one participant
@@ -1435,7 +1429,7 @@ bool LogicalBufferCollection::AccumulateConstraintHeapPermitted(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
-    llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder* acc,
+    llcpp::fuchsia::sysmem2::BufferMemoryConstraints* acc,
     llcpp::fuchsia::sysmem2::BufferMemoryConstraints* c) {
   acc->min_size_bytes() = std::max(acc->min_size_bytes(), c->min_size_bytes());
 
@@ -1471,7 +1465,7 @@ bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintImageFormats(
-    fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints::Builder>* acc,
+    fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints>* acc,
     fidl::VectorView<llcpp::fuchsia::sysmem2::ImageFormatConstraints>* c) {
   // Remove any pixel_format in acc that's not in c.  Process any format
   // that's in both.  If processing the format results in empty set for that
@@ -1508,7 +1502,7 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
       } else {
         // Stuff under this item would get deleted later anyway, but delete now to avoid keeping
         // cruft we don't need.
-        (*acc)[ai] = llcpp::fuchsia::sysmem2::ImageFormatConstraints::Builder(nullptr);
+        (*acc)[ai] = llcpp::fuchsia::sysmem2::ImageFormatConstraints();
       }
       // remove last item
       acc->set_count(acc->count() - 1);
@@ -1532,7 +1526,7 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintImageFormat(
-    llcpp::fuchsia::sysmem2::ImageFormatConstraints::Builder* acc,
+    llcpp::fuchsia::sysmem2::ImageFormatConstraints* acc,
     llcpp::fuchsia::sysmem2::ImageFormatConstraints* c) {
   ZX_DEBUG_ASSERT(ImageFormatIsPixelFormatEqual(acc->pixel_format(), c->pixel_format()));
   // Checked previously.
@@ -1540,7 +1534,7 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormat(
   // Checked previously.
   ZX_DEBUG_ASSERT(c->color_spaces().count());
 
-  if (!AccumulateConstraintColorSpaces(&acc->get_builders_color_spaces(), &c->color_spaces())) {
+  if (!AccumulateConstraintColorSpaces(&acc->color_spaces(), &c->color_spaces())) {
     return false;
   }
   // Else AccumulateConstraintColorSpaces() would have returned false.
@@ -1603,7 +1597,7 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormat(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
-    fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace::Builder>* acc,
+    fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>* acc,
     fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>* c) {
   // Remove any color_space in acc that's not in c.  If zero color spaces
   // remain in acc, return false.
@@ -1626,7 +1620,7 @@ bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
       } else {
         // Stuff under this item would get deleted later anyway, but delete now to avoid keeping
         // cruft we don't need.
-        (*acc)[ai] = llcpp::fuchsia::sysmem2::ColorSpace::Builder(nullptr);
+        (*acc)[ai] = llcpp::fuchsia::sysmem2::ColorSpace();
       }
       // remove last item
       acc->set_count(acc->count() - 1);
@@ -1647,14 +1641,13 @@ bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
   return true;
 }
 
-bool LogicalBufferCollection::IsColorSpaceEqual(
-    const llcpp::fuchsia::sysmem2::ColorSpace::Builder& a,
-    const llcpp::fuchsia::sysmem2::ColorSpace& b) {
+bool LogicalBufferCollection::IsColorSpaceEqual(const llcpp::fuchsia::sysmem2::ColorSpace& a,
+                                                const llcpp::fuchsia::sysmem2::ColorSpace& b) {
   return a.type() == b.type();
 }
 
 static fit::result<llcpp::fuchsia::sysmem2::HeapType, zx_status_t> GetHeap(
-    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& constraints, Device* device) {
+    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& constraints, Device* device) {
   if (constraints.secure_required()) {
     // TODO(fxbug.dev/37452): Generalize this.
     //
@@ -1689,7 +1682,7 @@ static fit::result<llcpp::fuchsia::sysmem2::HeapType, zx_status_t> GetHeap(
 }
 
 static fit::result<llcpp::fuchsia::sysmem2::CoherencyDomain> GetCoherencyDomain(
-    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
+    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints& constraints,
     MemoryAllocator* memory_allocator) {
   ZX_DEBUG_ASSERT(constraints.has_buffer_memory_constraints());
 
@@ -1734,8 +1727,8 @@ LogicalBufferCollection::Allocate() {
   TRACE_DURATION("gfx", "LogicalBufferCollection:Allocate", "this", this);
   ZX_DEBUG_ASSERT(constraints_);
 
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder result =
-      allocator_.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionInfo>();
+  llcpp::fuchsia::sysmem2::BufferCollectionInfo result =
+      allocator_.make_table<llcpp::fuchsia::sysmem2::BufferCollectionInfo>();
 
   uint32_t min_buffer_count = constraints_->min_buffer_count_for_camping() +
                               constraints_->min_buffer_count_for_dedicated_slack() +
@@ -1765,15 +1758,14 @@ LogicalBufferCollection::Allocate() {
 
   result.set_settings(
       sysmem::MakeTracking<llcpp::fuchsia::sysmem2::SingleBufferSettings>(&allocator_));
-  llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder& settings = result.get_builder_settings();
+  llcpp::fuchsia::sysmem2::SingleBufferSettings& settings = result.settings();
   settings.set_buffer_settings(
       sysmem::MakeTracking<llcpp::fuchsia::sysmem2::BufferMemorySettings>(&allocator_));
-  llcpp::fuchsia::sysmem2::BufferMemorySettings::Builder& buffer_settings =
-      settings.get_builder_buffer_settings();
+  llcpp::fuchsia::sysmem2::BufferMemorySettings& buffer_settings = settings.buffer_settings();
 
   ZX_DEBUG_ASSERT(constraints_->has_buffer_memory_constraints());
-  const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& buffer_constraints =
-      constraints_->get_builder_buffer_memory_constraints();
+  const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& buffer_constraints =
+      constraints_->buffer_memory_constraints();
   buffer_settings.set_is_physically_contiguous(
       sysmem::MakeTracking(&allocator_, buffer_constraints.physically_contiguous_required()));
   // checked previously
@@ -1859,11 +1851,11 @@ LogicalBufferCollection::Allocate() {
   if (settings.has_image_format_constraints()) {
     const llcpp::fuchsia::sysmem2::ImageFormatConstraints& image_format_constraints =
         settings.image_format_constraints();
-    llcpp::fuchsia::sysmem2::ImageFormat::Builder min_image =
-        allocator_.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormat>();
+    llcpp::fuchsia::sysmem2::ImageFormat min_image =
+        allocator_.make_table<llcpp::fuchsia::sysmem2::ImageFormat>();
     min_image.set_pixel_format(sysmem::MakeTracking(
         &allocator_,
-        sysmem::V2ClonePixelFormat(&allocator_, image_format_constraints.pixel_format()).build()));
+        sysmem::V2ClonePixelFormat(&allocator_, image_format_constraints.pixel_format())));
     // We use required_max_coded_width because that's the max width that the producer (or
     // initiator) wants these buffers to be able to hold.
     min_image.set_coded_width(sysmem::MakeTracking(
@@ -1916,10 +1908,9 @@ LogicalBufferCollection::Allocate() {
     // color_space.type is a valid value.
     min_image.set_color_space(sysmem::MakeTracking(
         &allocator_,
-        sysmem::V2CloneColorSpace(&allocator_, image_format_constraints.color_spaces()[0])
-            .build()));
+        sysmem::V2CloneColorSpace(&allocator_, image_format_constraints.color_spaces()[0])));
 
-    uint64_t image_min_size_bytes = ImageFormatImageSize(min_image.build());
+    uint64_t image_min_size_bytes = ImageFormatImageSize(min_image);
 
     if (image_min_size_bytes > min_size_bytes) {
       if (image_min_size_bytes > max_size_bytes) {
@@ -1997,14 +1988,13 @@ LogicalBufferCollection::Allocate() {
 
   // Get memory allocator for aux buffers, if needed.
   MemoryAllocator* maybe_aux_allocator = nullptr;
-  std::optional<llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder> maybe_aux_settings;
+  std::optional<llcpp::fuchsia::sysmem2::SingleBufferSettings> maybe_aux_settings;
   if (buffer_settings.is_secure() && constraints_->need_clear_aux_buffers_for_secure()) {
     maybe_aux_settings.emplace(
-        allocator_.make_table_builder<llcpp::fuchsia::sysmem2::SingleBufferSettings>());
+        allocator_.make_table<llcpp::fuchsia::sysmem2::SingleBufferSettings>());
     maybe_aux_settings->set_buffer_settings(sysmem::MakeTracking(
-        &allocator_,
-        allocator_.make_table_builder<llcpp::fuchsia::sysmem2::BufferMemorySettings>().build()));
-    auto& aux_buffer_settings = maybe_aux_settings->get_builder_buffer_settings();
+        &allocator_, allocator_.make_table<llcpp::fuchsia::sysmem2::BufferMemorySettings>()));
+    auto& aux_buffer_settings = maybe_aux_settings->buffer_settings();
     aux_buffer_settings.set_size_bytes(
         sysmem::MakeTracking(&allocator_, buffer_settings.size_bytes()));
     aux_buffer_settings.set_is_physically_contiguous(sysmem::MakeTracking(&allocator_, false));
@@ -2034,7 +2024,7 @@ LogicalBufferCollection::Allocate() {
       return fit::error(ZX_ERR_NO_MEMORY);
     }
     zx::vmo vmo = allocate_result.take_value();
-    auto vmo_buffer = allocator_.make_table_builder<llcpp::fuchsia::sysmem2::VmoBuffer>();
+    auto vmo_buffer = allocator_.make_table<llcpp::fuchsia::sysmem2::VmoBuffer>();
     vmo_buffer.set_vmo(sysmem::MakeTracking(&allocator_, std::move(vmo)));
     vmo_buffer.set_vmo_usable_start(sysmem::MakeTracking(&allocator_, 0ul));
     if (maybe_aux_allocator) {
@@ -2047,7 +2037,7 @@ LogicalBufferCollection::Allocate() {
       zx::vmo aux_vmo = aux_allocate_result.take_value();
       vmo_buffer.set_aux_vmo(sysmem::MakeTracking(&allocator_, std::move(aux_vmo)));
     }
-    result.buffers()[i] = vmo_buffer.build();
+    result.buffers()[i] = std::move(vmo_buffer);
   }
   vmo_count_property_ = node_.CreateUint("vmo_count", result.buffers().count());
   // Make sure we have sufficient barrier after allocating/clearing/flushing any VMO newly allocated
@@ -2060,12 +2050,12 @@ LogicalBufferCollection::Allocate() {
   });
   memory_allocator_ = allocator;
 
-  return fit::ok(result.build());
+  return fit::ok(std::move(result));
 }
 
 fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
-    MemoryAllocator* allocator,
-    const llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder& settings, uint32_t index) {
+    MemoryAllocator* allocator, const llcpp::fuchsia::sysmem2::SingleBufferSettings& settings,
+    uint32_t index) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::AllocateVmo", "size_bytes",
                  settings.buffer_settings().size_bytes());
   zx::vmo child_vmo;
@@ -2205,9 +2195,8 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   ZX_DEBUG_ASSERT(emplace_result.second);
 
   // Now inform the allocator about the child VMO before we return it.
-  status = allocator->SetupChildVmo(
-      parent_vmo_ref.vmo(), local_child_vmo,
-      sysmem::V2CloneSingleBufferSettingsBuilder(&allocator_, settings).build());
+  status = allocator->SetupChildVmo(parent_vmo_ref.vmo(), local_child_vmo,
+                                    sysmem::V2CloneSingleBufferSettings(&allocator_, settings));
   if (status != ZX_OK) {
     LogError(FROM_HERE, "allocator->SetupChildVmo() failed - status: %d", status);
     // In this path, the ~local_child_vmo will async trigger parent_vmo_ref::OnZeroChildren()
