@@ -411,7 +411,7 @@ impl<'a> SymbolicInstructionInfo<'a> {
         }
     }
 
-    pub fn create_autobind() -> Self {
+    pub fn disable_autobind() -> Self {
         SymbolicInstructionInfo {
             location: None,
             instruction: SymbolicInstruction::AbortIfNotEqual {

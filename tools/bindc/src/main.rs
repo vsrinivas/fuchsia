@@ -7,6 +7,7 @@
 use anyhow::{anyhow, Context, Error};
 use bind_debugger::compiler::{
     self, encode_to_bytecode, encode_to_string, BindProgram, SymbolicInstructionInfo,
+    SymbolicInstruction,
 };
 use bind_debugger::{bind_library, linter, offline_debugger, test};
 use std::collections::{HashMap, HashSet};
@@ -267,12 +268,18 @@ fn handle_compile(
         program = read_file(&input)?;
         let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
         let mut bind_program = compiler::compile(&program, &includes, lint)?;
-        bind_program.instructions.insert(0, SymbolicInstructionInfo::create_autobind());
+        bind_program.instructions.insert(0, SymbolicInstructionInfo::disable_autobind());
         bind_program
     } else {
         // Autobind is disabled and there are no bind rules. Emit only the autobind check.
         BindProgram {
-            instructions: vec![SymbolicInstructionInfo::create_autobind()],
+            instructions: vec![
+                SymbolicInstructionInfo::disable_autobind(),
+                SymbolicInstructionInfo {
+                    location: None,
+                    instruction: SymbolicInstruction::UnconditionalBind,
+                },
+            ],
             symbol_table: HashMap::new(),
         }
     };
@@ -433,7 +440,6 @@ fn handle_generate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bind_debugger::compiler::SymbolicInstruction;
 
     fn get_test_fidl_template(ast: bind_library::Ast) -> Vec<String> {
         write_fidl_template(ast)
@@ -485,7 +491,7 @@ mod tests {
     fn disable_autobind() {
         let bind_program = BindProgram {
             instructions: vec![
-                SymbolicInstructionInfo::create_autobind(),
+                SymbolicInstructionInfo::disable_autobind(),
                 SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalBind,
@@ -499,7 +505,7 @@ mod tests {
 
         let bind_program = BindProgram {
             instructions: vec![
-                SymbolicInstructionInfo::create_autobind(),
+                SymbolicInstructionInfo::disable_autobind(),
                 SymbolicInstructionInfo {
                     location: None,
                     instruction: SymbolicInstruction::UnconditionalBind,
