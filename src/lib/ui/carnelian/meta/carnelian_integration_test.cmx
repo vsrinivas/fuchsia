@@ -9,10 +9,11 @@
         }
     },
     "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/carnelian_integration_test"
+        "binary": "bin/carnelian_integration_test"
     },
     "sandbox": {
         "services": [

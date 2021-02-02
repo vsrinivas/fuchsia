@@ -6,8 +6,12 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application.shard.cmx"
+    ],
     "program": {
-        "binary": "test/carnelian_fb_integration_test"
+        "binary": "bin/carnelian_fb_integration_test"
     },
     "sandbox": {
         "dev": [

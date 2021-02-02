@@ -266,7 +266,7 @@ impl SpinelContext {
             };
         }
 
-        let layers = if cfg!(debug_assertions) {
+        let layers = if cfg!(feature = "vulkan-validation") {
             vec![cstr!(b"VK_LAYER_KHRONOS_validation\0").as_ptr()]
         } else {
             vec![]
