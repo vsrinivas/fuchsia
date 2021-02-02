@@ -37,10 +37,10 @@ static inline void VmoCheck(const zx::vmo& vmo, uint32_t expected, uint64_t offs
 // Creates a vmo with |page_count| pages and writes (page_index + 1) to each page.
 static inline void InitPageTaggedVmo(uint32_t page_count, zx::vmo* vmo) {
   zx_status_t status;
-  status = zx::vmo::create(page_count * ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, vmo);
+  status = zx::vmo::create(page_count * zx_system_get_page_size(), ZX_VMO_RESIZABLE, vmo);
   ASSERT_OK(status, "create failed");
   for (unsigned i = 0; i < page_count; i++) {
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(*vmo, i + 1, i * ZX_PAGE_SIZE));
+    ASSERT_NO_FATAL_FAILURES(VmoWrite(*vmo, i + 1, i * zx_system_get_page_size()));
   }
 }
 

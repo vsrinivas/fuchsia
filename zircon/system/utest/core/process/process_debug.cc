@@ -4,11 +4,11 @@
 
 // Test for the debug interfaces specific to processes.
 
-#include <stdint.h>
-
 #include <lib/zx/process.h>
 #include <lib/zx/vmo.h>
+#include <stdint.h>
 #include <zircon/types.h>
+
 #include <zxtest/zxtest.h>
 
 constexpr size_t kVmoSize = 4096 * 3u;
@@ -114,8 +114,9 @@ TEST_F(ProcessDebugTest, ReadMemoryAtInvalidOffsetReturnsErrorNoMemory) {
   size_t actual = 0u;
   ASSERT_EQ(zx::process::self()->read_memory(0u, buf, 64, &actual), ZX_ERR_NO_MEMORY);
   // Either the first page or the last page of the mapping is invalid, use that address.
-  auto read_start =
-      (data_start() > vmar_start()) ? vmar_start() : vmar_start() + kVmarSize - ZX_PAGE_SIZE;
+  auto read_start = (data_start() > vmar_start())
+                        ? vmar_start()
+                        : vmar_start() + kVmarSize - zx_system_get_page_size();
   ASSERT_EQ(zx::process::self()->read_memory(read_start, buf, 64, &actual), ZX_ERR_NO_MEMORY);
 }
 
@@ -124,8 +125,9 @@ TEST_F(ProcessDebugTest, WriteAtInvalidOffsetReturnsErrorNoMemory) {
   size_t actual = 0u;
   ASSERT_EQ(zx::process::self()->write_memory(0u, buf, 64, &actual), ZX_ERR_NO_MEMORY);
   // Either the first page or the last page of the mapping is invalid, use that address.
-  auto write_start =
-      (data_start() > vmar_start()) ? vmar_start() : vmar_start() + kVmarSize - ZX_PAGE_SIZE;
+  auto write_start = (data_start() > vmar_start())
+                         ? vmar_start()
+                         : vmar_start() + kVmarSize - zx_system_get_page_size();
   ASSERT_EQ(zx::process::self()->write_memory(write_start, buf, 64, &actual), ZX_ERR_NO_MEMORY);
 }
 

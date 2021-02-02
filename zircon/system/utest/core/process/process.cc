@@ -375,7 +375,6 @@ TEST(ProcessTest, InfoReflectsProcessState) {
 // Helper class to encapsulate starting a process with up to kNumThreads no-op child threads.
 class TestProcess {
  public:
-
   // Creates the process handle, must be called first before any other function.
   void CreateProcess() {
     constexpr const char* kProcessName = "test_process";
@@ -834,10 +833,10 @@ TEST(ProcessTest, ProcessStartWriteThreadState) {
   // directly (rdfsbase) and it can only be used in a memory access.
   const uintptr_t kCheckValue = MINIP_THREAD_POINTER_CHECK_VALUE;
   zx_handle_t vmo;
-  ASSERT_OK(zx_vmo_create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx_vmo_create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(zx_vmo_write(vmo, &kCheckValue, 0, sizeof(kCheckValue)));
   uintptr_t addr;
-  ASSERT_OK(zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, PAGE_SIZE, &addr));
+  ASSERT_OK(zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, zx_system_get_page_size(), &addr));
   EXPECT_OK(zx_handle_close(vmo));
 
   // Wait for the new thread to reach quiescent suspended state.
@@ -968,7 +967,7 @@ TEST(ProcessTest, ProcessHwTraceContextIdProperty) {
     EXPECT_EQ(status, ZX_OK, "%s: zx_object_get_property failed: %d", test_name, status);
     // We can't verify the value, but we can at least check it's reasonable.
     EXPECT_NE(prop_aspace, 0, "%s", test_name);
-    EXPECT_EQ(prop_aspace & (PAGE_SIZE - 1), 0, "%s", test_name);
+    EXPECT_EQ(prop_aspace & (zx_system_get_page_size() - 1), 0, "%s", test_name);
   };
   auto unsupported_read_prop_test = [](const char* test_name) {
     zx_status_t status;

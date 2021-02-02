@@ -64,7 +64,7 @@ class ProcessFixture : public zxtest::Test {
     // Create a VMO whose handle we'll give to the test process.
     // It will not be mapped into the test process's VMAR.
     zx::vmo unmapped_vmo;
-    ASSERT_OK(zx::vmo::create(kUnmappedVmoSize, 0u, &unmapped_vmo),
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0u, &unmapped_vmo),
               "Failed to create unmapped_vmo.");
 
     zx_koid_t unmapped_vmo_koid = ZX_KOID_INVALID;
@@ -105,14 +105,14 @@ class ProcessFixture : public zxtest::Test {
     info_.mappings.reset(new Mapping[kNumMappings]);
 
     // Big enough to fit all of the mappings with some slop.
-    info_.vmar_size = PAGE_SIZE * kNumMappings * 16;
+    info_.vmar_size = zx_system_get_page_size() * kNumMappings * 16;
     zx::vmar sub_vmar;
 
     ASSERT_OK(vmar_.allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_EXECUTE, 0,
                               info_.vmar_size, &sub_vmar, &info_.vmar_base));
 
     zx::vmo vmo;
-    constexpr size_t kVmoSize = PAGE_SIZE * kNumMappings;
+    const size_t kVmoSize = zx_system_get_page_size() * kNumMappings;
     ASSERT_OK(zx::vmo::create(kVmoSize, 0u, &vmo), "Failed to create vmo.");
 
     zx_koid_t vmo_koid = ZX_KOID_INVALID;
@@ -132,7 +132,7 @@ class ProcessFixture : public zxtest::Test {
     info_.num_vmos = 2;
     info_.vmos.reset(new Vmo[2]);
     info_.vmos[0].koid = unmapped_vmo_koid;
-    info_.vmos[0].size = kUnmappedVmoSize;
+    info_.vmos[0].size = zx_system_get_page_size();
     info_.vmos[0].flags = ZX_INFO_VMO_VIA_HANDLE;
     info_.vmos[1].koid = vmo_koid;
     info_.vmos[1].size = kVmoSize;
@@ -141,7 +141,7 @@ class ProcessFixture : public zxtest::Test {
     // Map each page of the VMO to some arbitray location in the VMAR.
     for (size_t i = 0; i < kNumMappings; ++i) {
       Mapping& m = info_.mappings[i];
-      m.size = PAGE_SIZE;
+      m.size = zx_system_get_page_size();
 
       // Pick flags for this mapping; cycle through different
       // combinations for the test. Must always have READ set
@@ -154,7 +154,8 @@ class ProcessFixture : public zxtest::Test {
         m.flags |= ZX_VM_PERM_EXECUTE;
       }
 
-      ASSERT_OK(sub_vmar.map(m.flags, 0, vmo, i * PAGE_SIZE, PAGE_SIZE, &m.base),
+      ASSERT_OK(sub_vmar.map(m.flags, 0, vmo, i * zx_system_get_page_size(),
+                             zx_system_get_page_size(), &m.base),
                 "zx::vmar::map [%zd]", i);
     }
 
@@ -187,7 +188,6 @@ class ProcessFixture : public zxtest::Test {
   // Constants.
   static constexpr char kProcessName[] = "object-info-mini-proc";
   static constexpr char kUnmappedVmoName[] = "test:unmapped";
-  static constexpr size_t kUnmappedVmoSize = PAGE_SIZE;
   static constexpr char kThreadName[] = "object-info-mini-thrd";
   static constexpr size_t kNumMappings = 8;
 

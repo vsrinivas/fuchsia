@@ -20,7 +20,7 @@ TEST(VmoCloneTestCase, SizeAlign) {
   EXPECT_OK(status, "vm_object_create");
 
   // create clones with different sizes, make sure the created size is a multiple of a page size
-  for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
+  for (uint64_t s = 0; s < zx_system_get_page_size() * 4; s++) {
     zx_handle_t clone_vmo;
     EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, s, &clone_vmo), "vm_clone");
 
@@ -28,7 +28,8 @@ TEST(VmoCloneTestCase, SizeAlign) {
     uint64_t size = 0x99999999;
     zx_status_t status = zx_vmo_get_size(clone_vmo, &size);
     EXPECT_OK(status, "vm_object_get_size");
-    EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
+    EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(zx_system_get_page_size())), size,
+              "vm_object_get_size");
 
     // close the handle
     EXPECT_OK(zx_handle_close(clone_vmo), "handle_close");
@@ -44,7 +45,7 @@ TEST(VmoCloneTestCase, NameProperty) {
   zx_handle_t clone_vmo[2];
 
   // create a vmo
-  const size_t size = PAGE_SIZE * 4;
+  const size_t size = zx_system_get_page_size() * 4;
   EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
   EXPECT_OK(zx_object_set_property(vmo, ZX_PROP_NAME, "test1", 5), "zx_object_set_property");
 
@@ -82,7 +83,7 @@ TEST(VmoCloneTestCase, Decommit) {
   zx_handle_t clone_vmo;
 
   // create a vmo
-  const size_t size = PAGE_SIZE * 4;
+  const size_t size = zx_system_get_page_size() * 4;
   EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
   // clone it and map that
@@ -92,14 +93,15 @@ TEST(VmoCloneTestCase, Decommit) {
 
   // decommit is not supported on clones or plain vmos which have children
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
-            zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
+            zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, zx_system_get_page_size(), NULL, 0));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, zx_system_get_page_size(), NULL, 0));
 
   // close the clone handle
   EXPECT_OK(zx_handle_close(clone_vmo), "handle_close");
 
   // Once the clone is closed, decommit should work
-  EXPECT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
+  EXPECT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, zx_system_get_page_size(), NULL, 0));
 
   // close the original handle
   EXPECT_OK(zx_handle_close(vmo), "handle_close");
@@ -115,7 +117,7 @@ TEST(VmoCloneTestCase, Commit) {
   volatile uint32_t *cp;
 
   // create a vmo
-  const size_t size = PAGE_SIZE * 4;
+  const size_t size = zx_system_get_page_size() * 4;
   EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
   // map it
@@ -138,11 +140,11 @@ TEST(VmoCloneTestCase, Commit) {
   cp = (volatile uint32_t *)clone_ptr;
 
   // write to parent and make sure clone doesn't see it
-  memset((void *)p, 0x99, PAGE_SIZE);
+  memset((void *)p, 0x99, zx_system_get_page_size());
   EXPECT_EQ(0x99999999, p[0], "wrote to original");
   EXPECT_EQ(0, cp[0], "read back from clone");
 
-  EXPECT_OK(zx_vmo_op_range(clone_vmo, ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, NULL, 0));
+  EXPECT_OK(zx_vmo_op_range(clone_vmo, ZX_VMO_OP_COMMIT, 0, zx_system_get_page_size(), NULL, 0));
 
   // make sure that clone still has different contents
   EXPECT_EQ(0, cp[0], "read back from clone");
@@ -185,7 +187,7 @@ TEST(VmoCloneTestCase, Rights) {
       kOldVmoRights | ZX_RIGHT_WRITE | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY;
 
   zx_handle_t vmo;
-  ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
+  ASSERT_EQ(zx_vmo_create(zx_system_get_page_size(), 0, &vmo), ZX_OK);
   ASSERT_EQ(zx_object_set_property(vmo, ZX_PROP_NAME, kOldVmoName, sizeof(kOldVmoName)), ZX_OK);
   ASSERT_EQ(GetHandleRights(vmo) & kOldVmoRights, kOldVmoRights);
 
@@ -194,9 +196,9 @@ TEST(VmoCloneTestCase, Rights) {
   EXPECT_EQ(GetHandleRights(reduced_rights_vmo), kOldVmoRights);
 
   zx_handle_t clone;
-  ASSERT_EQ(
-      zx_vmo_create_child(reduced_rights_vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &clone),
-      ZX_OK);
+  ASSERT_EQ(zx_vmo_create_child(reduced_rights_vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0,
+                                zx_system_get_page_size(), &clone),
+            ZX_OK);
 
   EXPECT_OK(zx_handle_close(reduced_rights_vmo));
 
@@ -217,7 +219,7 @@ TEST(VmoCloneTestCase, Rights) {
 
 // Check that non-resizable VMOs cannot get resized.
 TEST(VmoCloneTestCase, NoResize) {
-  const size_t len = PAGE_SIZE * 4;
+  const size_t len = zx_system_get_page_size() * 4;
   zx_handle_t parent = ZX_HANDLE_INVALID;
   zx_handle_t vmo = ZX_HANDLE_INVALID;
 
@@ -227,10 +229,10 @@ TEST(VmoCloneTestCase, NoResize) {
   EXPECT_NE(vmo, ZX_HANDLE_INVALID);
 
   zx_status_t status;
-  status = zx_vmo_set_size(vmo, len + PAGE_SIZE);
+  status = zx_vmo_set_size(vmo, len + zx_system_get_page_size());
   EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "vm_object_set_size");
 
-  status = zx_vmo_set_size(vmo, len - PAGE_SIZE);
+  status = zx_vmo_set_size(vmo, len - zx_system_get_page_size());
   EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "vm_object_set_size");
 
   size_t size;

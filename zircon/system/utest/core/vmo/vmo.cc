@@ -44,7 +44,7 @@ TEST(VmoTestCase, Create) {
 
   // allocate a bunch of vmos then free them
   for (size_t i = 0; i < std::size(vmo); i++) {
-    status = zx_vmo_create(i * PAGE_SIZE, 0, &vmo[i]);
+    status = zx_vmo_create(i * zx_system_get_page_size(), 0, &vmo[i]);
     EXPECT_OK(status, "vm_object_create");
   }
 
@@ -59,15 +59,17 @@ TEST(VmoTestCase, ReadWriteBadLen) {
   zx_handle_t vmo;
 
   // allocate an object and attempt read/write from it, with bad length
-  const size_t len = PAGE_SIZE * 4;
+  const size_t len = zx_system_get_page_size() * 4;
   status = zx_vmo_create(len, 0, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
   char buf[len];
   for (int i = 1; i <= 2; i++) {
-    status = zx_vmo_read(vmo, buf, 0, std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
+    status = zx_vmo_read(vmo, buf, 0,
+                         std::numeric_limits<size_t>::max() - (zx_system_get_page_size() / i));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
-    status = zx_vmo_write(vmo, buf, 0, std::numeric_limits<size_t>::max() - (PAGE_SIZE / i));
+    status = zx_vmo_write(vmo, buf, 0,
+                          std::numeric_limits<size_t>::max() - (zx_system_get_page_size() / i));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status);
   }
   status = zx_vmo_read(vmo, buf, 0, len);
@@ -85,7 +87,7 @@ TEST(VmoTestCase, ReadWrite) {
   zx_handle_t vmo;
 
   // allocate an object and read/write from it
-  const size_t len = PAGE_SIZE * 4;
+  const size_t len = zx_system_get_page_size() * 4;
   status = zx_vmo_create(len, 0, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
@@ -130,7 +132,7 @@ TEST(VmoTestCase, ReadWriteRange) {
   zx_handle_t vmo;
 
   // allocate an object
-  const size_t len = PAGE_SIZE * 4;
+  const size_t len = zx_system_get_page_size() * 4;
   status = zx_vmo_create(len, 0, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
@@ -176,26 +178,28 @@ TEST(VmoTestCase, Map) {
   uintptr_t ptr[3] = {};
 
   // allocate a vmo
-  status = zx_vmo_create(4 * PAGE_SIZE, 0, &vmo);
+  status = zx_vmo_create(4 * zx_system_get_page_size(), 0, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
   // do a regular map
   ptr[0] = 0;
-  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, PAGE_SIZE, &ptr[0]);
+  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, zx_system_get_page_size(),
+                       &ptr[0]);
   EXPECT_OK(status, "map");
   EXPECT_NE(0u, ptr[0], "map address");
   // printf("mapped %#" PRIxPTR "\n", ptr[0]);
 
   // try to map something completely out of range without any fixed mapping, should succeed
   ptr[2] = UINTPTR_MAX;
-  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, PAGE_SIZE, &ptr[2]);
+  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, zx_system_get_page_size(),
+                       &ptr[2]);
   EXPECT_OK(status, "map");
   EXPECT_NE(0u, ptr[2], "map address");
 
   // try to map something completely out of range fixed, should fail
   uintptr_t map_addr;
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_SPECIFIC, UINTPTR_MAX, vmo, 0,
-                       PAGE_SIZE, &map_addr);
+                       zx_system_get_page_size(), &map_addr);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "map");
 
   // cleanup
@@ -204,7 +208,7 @@ TEST(VmoTestCase, Map) {
 
   for (auto p : ptr) {
     if (p) {
-      status = zx_vmar_unmap(zx_vmar_root_self(), p, PAGE_SIZE);
+      status = zx_vmar_unmap(zx_vmar_root_self(), p, zx_system_get_page_size());
       EXPECT_OK(status, "unmap");
     }
   }
@@ -213,16 +217,17 @@ TEST(VmoTestCase, Map) {
 TEST(VmoTestCase, MapRead) {
   zx::vmo vmo;
 
-  EXPECT_OK(zx::vmo::create(PAGE_SIZE * 2, 0, &vmo));
+  EXPECT_OK(zx::vmo::create(zx_system_get_page_size() * 2, 0, &vmo));
 
   uintptr_t vaddr;
   // Map in the first page
-  EXPECT_OK(
-      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, PAGE_SIZE, &vaddr));
+  EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                                       zx_system_get_page_size(), &vaddr));
 
   // Read from the second page of the vmo to mapping.
   // This should succeed and not deadlock in the kernel.
-  EXPECT_OK(vmo.read(reinterpret_cast<void *>(vaddr), PAGE_SIZE, PAGE_SIZE));
+  EXPECT_OK(vmo.read(reinterpret_cast<void *>(vaddr), zx_system_get_page_size(),
+                     zx_system_get_page_size()));
 }
 
 // This test attempts to write to a memory location from multiple threads
@@ -291,27 +296,27 @@ TEST(VmoTestCase, ParallelRead) {
   constexpr size_t kNumPages = 1024;
   zx::vmo vmo1, vmo2;
 
-  EXPECT_OK(zx::vmo::create(PAGE_SIZE * kNumPages, 0, &vmo1));
-  EXPECT_OK(zx::vmo::create(PAGE_SIZE * kNumPages, 0, &vmo2));
+  EXPECT_OK(zx::vmo::create(zx_system_get_page_size() * kNumPages, 0, &vmo1));
+  EXPECT_OK(zx::vmo::create(zx_system_get_page_size() * kNumPages, 0, &vmo2));
 
   uintptr_t vaddr1, vaddr2;
   // Map the bottom half of both in.
   EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo1, 0,
-                                       PAGE_SIZE * (kNumPages / 2), &vaddr1));
+                                       zx_system_get_page_size() * (kNumPages / 2), &vaddr1));
   EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo2, 0,
-                                       PAGE_SIZE * (kNumPages / 2), &vaddr2));
+                                       zx_system_get_page_size() * (kNumPages / 2), &vaddr2));
 
   // Spin up a thread to read from one of the vmos, whilst we read from the other
   auto vmo_read_closure = [&vmo1, &vaddr2] {
-    vmo1.read(reinterpret_cast<void *>(vaddr2), PAGE_SIZE * (kNumPages / 2),
-              PAGE_SIZE * (kNumPages / 2));
+    vmo1.read(reinterpret_cast<void *>(vaddr2), zx_system_get_page_size() * (kNumPages / 2),
+              zx_system_get_page_size() * (kNumPages / 2));
   };
   std::thread thread(vmo_read_closure);
   // As these two threads read from one vmo into the mapping from another vmo if there are any
   // scenarios where the kernel would try and hold both vmo locks at the same time (without
   // attempting to resolve lock ordering) then this should trigger a deadlock to occur.
-  EXPECT_OK(vmo2.read(reinterpret_cast<void *>(vaddr1), PAGE_SIZE * (kNumPages / 2),
-                      PAGE_SIZE * (kNumPages / 2)));
+  EXPECT_OK(vmo2.read(reinterpret_cast<void *>(vaddr1), zx_system_get_page_size() * (kNumPages / 2),
+                      zx_system_get_page_size() * (kNumPages / 2)));
   thread.join();
 }
 
@@ -320,7 +325,7 @@ TEST(VmoTestCase, ReadOnlyMap) {
   zx_handle_t vmo;
 
   // allocate an object and read/write from it
-  const size_t len = PAGE_SIZE;
+  const size_t len = zx_system_get_page_size();
   status = zx_vmo_create(len, 0, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
@@ -345,7 +350,7 @@ TEST(VmoTestCase, NoPermMap) {
   zx_handle_t vmo;
 
   // allocate an object and read/write from it
-  const size_t len = PAGE_SIZE;
+  const size_t len = zx_system_get_page_size();
   status = zx_vmo_create(len, 0, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
@@ -375,7 +380,7 @@ TEST(VmoTestCase, NoPermProtect) {
   zx_handle_t vmo;
 
   // allocate an object and read/write from it
-  const size_t len = PAGE_SIZE;
+  const size_t len = zx_system_get_page_size();
   status = zx_vmo_create(len, 0, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
@@ -412,7 +417,7 @@ TEST(VmoTestCase, Resize) {
   zx_handle_t vmo;
 
   // allocate an object
-  size_t len = PAGE_SIZE * 4;
+  size_t len = zx_system_get_page_size() * 4;
   status = zx_vmo_create(len, ZX_VMO_RESIZABLE, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
@@ -423,7 +428,7 @@ TEST(VmoTestCase, Resize) {
   EXPECT_EQ(len, size, "vm_object_get_size");
 
   // try to resize it
-  len += PAGE_SIZE;
+  len += zx_system_get_page_size();
   status = zx_vmo_set_size(vmo, len);
   EXPECT_OK(status, "vm_object_set_size");
 
@@ -445,8 +450,9 @@ TEST(VmoTestCase, Resize) {
   size = 0x99999999;
   status = zx_vmo_get_size(vmo, &size);
   EXPECT_OK(status, "vm_object_get_size");
-  EXPECT_EQ(fbl::round_up(len + 1u, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
-  len = fbl::round_up(len + 1u, static_cast<size_t>(PAGE_SIZE));
+  EXPECT_EQ(fbl::round_up(len + 1u, static_cast<size_t>(zx_system_get_page_size())), size,
+            "vm_object_get_size");
+  len = fbl::round_up(len + 1u, static_cast<size_t>(zx_system_get_page_size()));
 
   // map it
   uintptr_t ptr;
@@ -475,7 +481,7 @@ TEST(VmoTestCase, Resize) {
 
 // Check that non-resizable VMOs cannot get resized.
 TEST(VmoTestCase, NoResize) {
-  const size_t len = PAGE_SIZE * 4;
+  const size_t len = zx_system_get_page_size() * 4;
   zx_handle_t vmo = ZX_HANDLE_INVALID;
 
   zx_vmo_create(len, 0, &vmo);
@@ -483,10 +489,10 @@ TEST(VmoTestCase, NoResize) {
   EXPECT_NE(vmo, ZX_HANDLE_INVALID);
 
   zx_status_t status;
-  status = zx_vmo_set_size(vmo, len + PAGE_SIZE);
+  status = zx_vmo_set_size(vmo, len + zx_system_get_page_size());
   EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "vm_object_set_size");
 
-  status = zx_vmo_set_size(vmo, len - PAGE_SIZE);
+  status = zx_vmo_set_size(vmo, len - zx_system_get_page_size());
   EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "vm_object_set_size");
 
   size_t size;
@@ -509,7 +515,7 @@ TEST(VmoTestCase, NoResize) {
 }
 
 TEST(VmoTestCase, Info) {
-  size_t len = PAGE_SIZE * 4;
+  size_t len = zx_system_get_page_size() * 4;
   zx::vmo vmo;
   zx_info_vmo_t info;
   zx_status_t status;
@@ -530,7 +536,7 @@ TEST(VmoTestCase, Info) {
   EXPECT_EQ(info.cache_policy, ZX_CACHE_POLICY_CACHED, "vm_info_test: info_vmo.cache_policy");
 
   // Create a resizeable uncached VMO, query the INFO on it and dump it.
-  len = PAGE_SIZE * 8;
+  len = zx_system_get_page_size() * 8;
   zx::vmo::create(len, ZX_VMO_RESIZABLE, &vmo);
   EXPECT_OK(status, "vm_info_test: vmo_create");
   vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED);
@@ -561,7 +567,7 @@ TEST(VmoTestCase, Info) {
               ZX_OK);
     bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::Info");
 
-    len = PAGE_SIZE * 12;
+    len = zx_system_get_page_size() * 12;
     EXPECT_OK(zx::vmo::create_contiguous(bti, len, 0, &vmo));
 
     status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
@@ -575,7 +581,7 @@ TEST(VmoTestCase, Info) {
 }
 
 TEST(VmoTestCase, SizeAlign) {
-  for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
+  for (uint64_t s = 0; s < zx_system_get_page_size() * 4; s++) {
     zx_handle_t vmo;
 
     // create a new object with nonstandard size
@@ -586,7 +592,8 @@ TEST(VmoTestCase, SizeAlign) {
     uint64_t size = 0x99999999;
     status = zx_vmo_get_size(vmo, &size);
     EXPECT_OK(status, "vm_object_get_size");
-    EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
+    EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(zx_system_get_page_size())), size,
+              "vm_object_get_size");
 
     // close the handle
     EXPECT_OK(zx_handle_close(vmo), "handle_close");
@@ -600,7 +607,7 @@ TEST(VmoTestCase, ResizeAlign) {
   zx_status_t status = zx_vmo_create(0, ZX_VMO_RESIZABLE, &vmo);
   EXPECT_OK(status, "vm_object_create");
 
-  for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
+  for (uint64_t s = 0; s < zx_system_get_page_size() * 4; s++) {
     // set the size of the object
     zx_status_t status = zx_vmo_set_size(vmo, s);
     EXPECT_OK(status, "vm_object_create");
@@ -609,7 +616,8 @@ TEST(VmoTestCase, ResizeAlign) {
     uint64_t size = 0x99999999;
     status = zx_vmo_get_size(vmo, &size);
     EXPECT_OK(status, "vm_object_get_size");
-    EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
+    EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(zx_system_get_page_size())), size,
+              "vm_object_get_size");
   }
 
   // close the handle
@@ -620,7 +628,7 @@ TEST(VmoTestCase, ContentSize) {
   zx_status_t status;
   zx::vmo vmo;
 
-  size_t len = PAGE_SIZE * 4;
+  size_t len = zx_system_get_page_size() * 4;
   status = zx::vmo::create(len, 0, &vmo);
   EXPECT_OK(status, "zx::vmo::create");
 
@@ -680,24 +688,25 @@ void ChildPermsTestHelper(const zx_handle_t vmo) {
 
   // Make different kinds of children and ensure we get the correct rights.
   zx_handle_t child;
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &child));
+  EXPECT_OK(
+      zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &child));
   EXPECT_EQ(GetHandleRights(child),
             (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY | ZX_RIGHT_WRITE) &
                 ~ZX_RIGHT_EXECUTE);
   EXPECT_OK(zx_handle_close(child));
 
   EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NO_WRITE, 0,
-                                PAGE_SIZE, &child));
+                                zx_system_get_page_size(), &child));
   EXPECT_EQ(GetHandleRights(child),
             (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY) & ~ZX_RIGHT_WRITE);
   EXPECT_OK(zx_handle_close(child));
 
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SLICE, 0, PAGE_SIZE, &child));
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SLICE, 0, zx_system_get_page_size(), &child));
   EXPECT_EQ(GetHandleRights(child), parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY);
   EXPECT_OK(zx_handle_close(child));
 
-  EXPECT_OK(
-      zx_vmo_create_child(vmo, ZX_VMO_CHILD_SLICE | ZX_VMO_CHILD_NO_WRITE, 0, PAGE_SIZE, &child));
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SLICE | ZX_VMO_CHILD_NO_WRITE, 0,
+                                zx_system_get_page_size(), &child));
   EXPECT_EQ(GetHandleRights(child),
             (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY) & ~ZX_RIGHT_WRITE);
   EXPECT_OK(zx_handle_close(child));
@@ -705,7 +714,7 @@ void ChildPermsTestHelper(const zx_handle_t vmo) {
 
 TEST(VmoTestCase, Rights) {
   char buf[4096];
-  size_t len = PAGE_SIZE * 4;
+  size_t len = zx_system_get_page_size() * 4;
   zx_status_t status;
   zx_handle_t vmo, vmo2;
 
@@ -933,8 +942,8 @@ TEST(VmoTestCase, Commit) {
 
   // second mapping with an offset
   ptr2 = 0;
-  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, PAGE_SIZE,
-                       size, &ptr2);
+  status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo,
+                       zx_system_get_page_size(), size, &ptr2);
   EXPECT_OK(status, "map2");
   EXPECT_NE(ptr2, 0, "map address2");
 
@@ -945,8 +954,8 @@ TEST(VmoTestCase, Commit) {
   EXPECT_OK(status, "map3");
   EXPECT_NE(ptr3, 0, "map address3");
 
-  // write into it at offset PAGE_SIZE, read it back
-  volatile uint32_t *u32 = (volatile uint32_t *)(ptr + PAGE_SIZE);
+  // write into it at offset zx_system_get_page_size(), read it back
+  volatile uint32_t *u32 = (volatile uint32_t *)(ptr + zx_system_get_page_size());
   *u32 = 99;
   EXPECT_EQ(99u, (*u32), "written memory");
 
@@ -955,7 +964,7 @@ TEST(VmoTestCase, Commit) {
   EXPECT_EQ(99u, (*u32a), "written memory");
 
   // decommit page 0
-  status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, nullptr, 0);
+  status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, zx_system_get_page_size(), nullptr, 0);
   EXPECT_EQ(0, status, "vm decommit");
 
   // verify that it didn't get unmapped
@@ -964,7 +973,8 @@ TEST(VmoTestCase, Commit) {
   EXPECT_EQ(99u, (*u32a), "written memory2");
 
   // decommit page 1
-  status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, PAGE_SIZE, PAGE_SIZE, nullptr, 0);
+  status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, zx_system_get_page_size(),
+                           zx_system_get_page_size(), nullptr, 0);
   EXPECT_EQ(0, status, "vm decommit");
 
   // verify that it did get unmapped
@@ -991,7 +1001,7 @@ TEST(VmoTestCase, ZeroPage) {
   uintptr_t ptr[3];
 
   // create a vmo
-  const size_t size = PAGE_SIZE * 4;
+  const size_t size = zx_system_get_page_size() * 4;
 
   EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
@@ -1023,27 +1033,28 @@ TEST(VmoTestCase, ZeroPage) {
   EXPECT_EQ(99, *val, "read 99 from former zero page");
 
   // read fault in zeros on the second page
-  val = (volatile uint32_t *)(ptr[0] + PAGE_SIZE);
+  val = (volatile uint32_t *)(ptr[0] + zx_system_get_page_size());
   EXPECT_EQ(0, *val, "read zero");
 
   // write to the page via a vmo_write call
   uint32_t v = 100;
-  status = zx_vmo_write(vmo, &v, PAGE_SIZE, sizeof(v));
+  status = zx_vmo_write(vmo, &v, zx_system_get_page_size(), sizeof(v));
   EXPECT_OK(status, "writing to vmo");
 
   // expect it to read back the new value
   EXPECT_EQ(100, *val, "read 100 from former zero page");
 
   // read fault in zeros on the third page
-  val = (volatile uint32_t *)(ptr[0] + PAGE_SIZE * 2);
+  val = (volatile uint32_t *)(ptr[0] + zx_system_get_page_size() * 2);
   EXPECT_EQ(0, *val, "read zero");
 
   // commit this range of the vmo via a commit call
-  status = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, PAGE_SIZE * 2, PAGE_SIZE, nullptr, 0);
+  status = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, zx_system_get_page_size() * 2,
+                           zx_system_get_page_size(), nullptr, 0);
   EXPECT_OK(status, "committing memory");
 
   // write to the third page
-  status = zx_vmo_write(vmo, &v, PAGE_SIZE * 2, sizeof(v));
+  status = zx_vmo_write(vmo, &v, zx_system_get_page_size() * 2, sizeof(v));
   EXPECT_OK(status, "writing to vmo");
 
   // expect it to read back the new value
@@ -1059,7 +1070,7 @@ TEST(VmoTestCase, ZeroPage) {
 
 TEST(VmoTestCase, Cache) {
   zx::vmo vmo;
-  const size_t size = PAGE_SIZE;
+  const size_t size = zx_system_get_page_size();
 
   EXPECT_OK(zx::vmo::create(size, 0, &vmo), "creation for cache_policy");
 
@@ -1128,7 +1139,7 @@ TEST(VmoTestCase, PhysicalSlice) {
     phys = std::move(res.value());
   }
 
-  const size_t size = PAGE_SIZE * 2;
+  const size_t size = zx_system_get_page_size() * 2;
   ASSERT_GE(phys.size, size);
 
   // Switch to a cached policy as we are operating on real memory and do not need to be uncached.
@@ -1307,7 +1318,7 @@ TEST(VmoTestCase, CacheFlush) {
 
 TEST(VmoTestCase, DecommitMisaligned) {
   zx_handle_t vmo;
-  EXPECT_OK(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), "creation for decommit test");
+  EXPECT_OK(zx_vmo_create(zx_system_get_page_size() * 2, 0, &vmo), "creation for decommit test");
 
   // Forbid unaligned decommit, even if there's nothing committed.
   zx_status_t status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0x10, 0x100, NULL, 0);
@@ -1324,7 +1335,7 @@ TEST(VmoTestCase, DecommitMisaligned) {
 
 // Resizing a regular mapped VMO causes a fault.
 TEST(VmoTestCase, ResizeHazard) {
-  const size_t size = PAGE_SIZE * 2;
+  const size_t size = zx_system_get_page_size() * 2;
   zx_handle_t vmo;
   ASSERT_OK(zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo));
 
@@ -1405,7 +1416,7 @@ TEST(VmoTestCase, UncachedContiguous) {
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   bti = vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "VmoTestCase::UncachedContiguous");
 
-  constexpr uint64_t kSize = PAGE_SIZE * 4;
+  const uint64_t kSize = zx_system_get_page_size() * 4;
 
   zx::vmo contig_vmo;
   EXPECT_OK(zx::vmo::create_contiguous(bti, kSize, 0, &contig_vmo));
@@ -1421,7 +1432,8 @@ TEST(VmoTestCase, UncachedContiguous) {
   zx_paddr_t paddr;
 
   zx::pmt pmt;
-  EXPECT_OK(bti.pin(ZX_BTI_COMPRESS | ZX_BTI_PERM_READ, contig_vmo, 0, PAGE_SIZE, &paddr, 1, &pmt));
+  EXPECT_OK(bti.pin(ZX_BTI_COMPRESS | ZX_BTI_PERM_READ, contig_vmo, 0, zx_system_get_page_size(),
+                    &paddr, 1, &pmt));
 
   EXPECT_EQ(contig_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED), ZX_ERR_BAD_STATE);
 
@@ -1461,7 +1473,8 @@ TEST(VmoTestCase, PinTests) {
   for (auto flavor : FLAVORS) {
     struct Level {
       Level(size_t offset_pages, size_t size_pages)
-          : offset(offset_pages * PAGE_SIZE), size(size_pages * PAGE_SIZE) {}
+          : offset(offset_pages * zx_system_get_page_size()),
+            size(size_pages * zx_system_get_page_size()) {}
 
       zx::vmo vmo;
       const size_t offset;
@@ -1515,12 +1528,13 @@ TEST(VmoTestCase, PinTests) {
       // entirely inside of the VMO, in the region after the VMO but inside the
       // root VMO, and entirely outside of even the root VMO.
       size_t root_end = level.size + level.size_past_end;
-      for (size_t start = 0; start <= root_end; start += PAGE_SIZE) {
-        for (size_t end = start + PAGE_SIZE; end <= (root_end + PAGE_SIZE); end += PAGE_SIZE) {
+      for (size_t start = 0; start <= root_end; start += zx_system_get_page_size()) {
+        for (size_t end = start + zx_system_get_page_size();
+             end <= (root_end + zx_system_get_page_size()); end += zx_system_get_page_size()) {
           zx::pmt pmt;
           uint64_t paddrs[kTestPages];
           size_t size = end - start;
-          size_t expected_addrs = std::min(size / PAGE_SIZE, std::size(paddrs));
+          size_t expected_addrs = std::min(size / zx_system_get_page_size(), std::size(paddrs));
 
           zx_status_t expected_status =
               ((start >= level.size) || (end > level.size)) ? ZX_ERR_OUT_OF_RANGE : ZX_OK;
@@ -1545,7 +1559,8 @@ TEST(VmoTestCase, DecommitChildSliceTests) {
 
   struct Level {
     Level(size_t offset_pages, size_t size_pages)
-        : offset(offset_pages * PAGE_SIZE), size(size_pages * PAGE_SIZE) {}
+        : offset(offset_pages * zx_system_get_page_size()),
+          size(size_pages * zx_system_get_page_size()) {}
 
     zx::vmo vmo;
     const size_t offset;
@@ -1583,8 +1598,10 @@ TEST(VmoTestCase, DecommitChildSliceTests) {
     size_t root_end = level.size + level.size_past_end;
     bool exercised_out_of_range = false;
     bool exercised_ok = false;
-    for (size_t start = 0; start <= (root_end + PAGE_SIZE); start += PAGE_SIZE) {
-      for (size_t end = start + PAGE_SIZE; end <= (root_end + (2 * PAGE_SIZE)); end += PAGE_SIZE) {
+    for (size_t start = 0; start <= (root_end + zx_system_get_page_size());
+         start += zx_system_get_page_size()) {
+      for (size_t end = start + zx_system_get_page_size();
+           end <= (root_end + (2 * zx_system_get_page_size())); end += zx_system_get_page_size()) {
         size_t size = end - start;
 
         // Attempt to completely commit the root before the decommit operation.
@@ -1620,7 +1637,7 @@ TEST(VmoTestCase, DecommitChildSliceTests) {
 
 TEST(VmoTestCase, MetadataBytes) {
   zx::vmo vmo;
-  EXPECT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  EXPECT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   // Until we use the VMO we expect metadata to be zero
   zx_info_vmo_t info;
@@ -1637,7 +1654,7 @@ TEST(VmoTestCase, MetadataBytes) {
 
 TEST(VmoTestCase, V1Info) {
   zx::vmo vmo;
-  EXPECT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  EXPECT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
   // Check that the old info can be queried and makes sense
   zx_info_vmo_v1_t v1info;

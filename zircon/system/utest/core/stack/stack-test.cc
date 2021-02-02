@@ -15,7 +15,9 @@
 namespace {
 
 // We request one-page stacks, so collisions are easy to catch.
-uintptr_t PageOf(const void* ptr) { return reinterpret_cast<uintptr_t>(ptr) & -PAGE_SIZE; }
+uintptr_t PageOf(const void* ptr) {
+  return reinterpret_cast<uintptr_t>(ptr) & -static_cast<uintptr_t>(zx_system_get_page_size());
+}
 
 struct StackTestInfo {
   bool is_pthread;
@@ -104,11 +106,9 @@ void CheckThreadStackInfo(StackTestInfo* info) {
               "reported unsafe start and ptr not nearby");
   }
 
-  EXPECT_LE(info->unsafe_start, info->unsafe_ptr,
-            "unsafe ptr is out of bounds");
+  EXPECT_LE(info->unsafe_start, info->unsafe_ptr, "unsafe ptr is out of bounds");
 
-  EXPECT_LE(info->unsafe_ptr, info->unsafe_end,
-            "unsafe ptr is out of bounds");
+  EXPECT_LE(info->unsafe_ptr, info->unsafe_end, "unsafe ptr is out of bounds");
 
   EXPECT_EQ(PageOf(info->unsafe_stack), PageOf(info->unsafe_ptr),
             "unsafe stack and reported ptr not nearby");
@@ -123,8 +123,7 @@ void CheckThreadStackInfo(StackTestInfo* info) {
   EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->environ),
             "shadow call stack collides with environ");
 
-  EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->tls_buf),
-            "shadow call stack collides with TLS");
+  EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->tls_buf), "shadow call stack collides with TLS");
 
   EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->safe_stack),
             "shadow call stack collides with safe stack");
@@ -133,7 +132,7 @@ void CheckThreadStackInfo(StackTestInfo* info) {
             "shadow call stack collides with unsafe stack");
 
   EXPECT_NE(PageOf(info->scs_ptr), PageOf(info->tp),
-      "shadow call stack collides with thread pointer");
+            "shadow call stack collides with thread pointer");
 #elif defined(__clang__) && defined(__aarch64__)
 #error "This test should always be built with -fsanitize=shadow-call-stack"
 #endif
@@ -154,7 +153,7 @@ TEST(StackTest, MainThreadStack) {
 
 // Spawn a thread with a one-page stack.
 TEST(StackTest, ThreadStack) {
-  EXPECT_LE(PTHREAD_STACK_MIN, PAGE_SIZE);
+  EXPECT_LE(PTHREAD_STACK_MIN, zx_system_get_page_size());
 
   pthread_attr_t attr;
   ASSERT_EQ(0, pthread_attr_init(&attr));

@@ -72,7 +72,7 @@ VMO_VMAR_TEST(UncommittedSinglePageTest) {
   Vmo* vmo;
   ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
-  std::vector<uint8_t> data(PAGE_SIZE, 0);
+  std::vector<uint8_t> data(zx_system_get_page_size(), 0);
 
   TestThread t([vmo, check_vmar, &data]() -> bool {
     return check_buffer_data(vmo, 0, 1, data.data(), check_vmar);
@@ -83,7 +83,7 @@ VMO_VMAR_TEST(UncommittedSinglePageTest) {
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
 
   zx::vmo empty;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &empty));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &empty));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1, std::move(empty)));
 
   ASSERT_TRUE(t.Wait());
@@ -296,16 +296,16 @@ VMO_VMAR_TEST(OverlapSupplyTest) {
   ASSERT_TRUE(pager.CreateVmo(2, &vmo));
 
   zx::vmo alt_data_vmo;
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &alt_data_vmo), ZX_OK);
-  uint8_t alt_data[ZX_PAGE_SIZE];
-  vmo->GenerateBufferContents(alt_data, 1, 2);
-  ASSERT_EQ(alt_data_vmo.write(alt_data, 0, ZX_PAGE_SIZE), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &alt_data_vmo), ZX_OK);
+  std::vector<uint8_t> alt_data(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(alt_data.data(), 1, 2);
+  ASSERT_EQ(alt_data_vmo.write(alt_data.data(), 0, zx_system_get_page_size()), ZX_OK);
 
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1, std::move(alt_data_vmo)));
   ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
 
-  TestThread t([vmo, alt_data, check_vmar]() -> bool {
-    return check_buffer_data(vmo, 0, 1, alt_data, check_vmar) &&
+  TestThread t([vmo, &alt_data, check_vmar]() -> bool {
+    return check_buffer_data(vmo, 0, 1, alt_data.data(), check_vmar) &&
            check_buffer(vmo, 1, 1, check_vmar);
   });
 
@@ -438,9 +438,11 @@ TEST(Pager, VmarRemapTest) {
   ASSERT_TRUE(pager.ReplaceVmo(vmo, &old_vmo));
 
   zx::vmo tmp;
-  ASSERT_EQ(zx::vmo::create(kNumPages * ZX_PAGE_SIZE, 0, &tmp), ZX_OK);
-  ASSERT_EQ(tmp.op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-  ASSERT_EQ(pager.pager().supply_pages(old_vmo, 0, kNumPages * ZX_PAGE_SIZE, tmp, 0), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(kNumPages * zx_system_get_page_size(), 0, &tmp), ZX_OK);
+  ASSERT_EQ(tmp.op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * zx_system_get_page_size(), nullptr, 0),
+            ZX_OK);
+  ASSERT_EQ(pager.pager().supply_pages(old_vmo, 0, kNumPages * zx_system_get_page_size(), tmp, 0),
+            ZX_OK);
 
   for (unsigned i = 0; i < kNumPages; i++) {
     uint64_t offset, length;
@@ -467,7 +469,7 @@ TEST(Pager, VmarMapRangeTest) {
   uint64_t ptr;
   TestThread t([vmo, &ptr]() -> bool {
     ZX_ASSERT(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_MAP_RANGE, 0, vmo->vmo(), 0,
-                                         2 * ZX_PAGE_SIZE, &ptr) == ZX_OK);
+                                         2 * zx_system_get_page_size(), &ptr) == ZX_OK);
     return true;
   });
 
@@ -480,10 +482,10 @@ TEST(Pager, VmarMapRangeTest) {
   // Verify the buffer contents. This should generate a new request for
   // the second page, which we want to fulfill.
   TestThread t2([vmo, &ptr]() -> bool {
-    uint8_t data[2 * ZX_PAGE_SIZE];
+    uint8_t data[2 * zx_system_get_page_size()];
     vmo->GenerateBufferContents(data, 2, 0);
 
-    return memcmp(data, reinterpret_cast<uint8_t*>(ptr), 2 * ZX_PAGE_SIZE) == 0;
+    return memcmp(data, reinterpret_cast<uint8_t*>(ptr), 2 * zx_system_get_page_size()) == 0;
   });
 
   ASSERT_TRUE(t2.Start());
@@ -498,7 +500,7 @@ TEST(Pager, VmarMapRangeTest) {
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 
   // Cleanup the mapping we created.
-  zx::vmar::root_self()->unmap(ptr, 2 * ZX_PAGE_SIZE);
+  zx::vmar::root_self()->unmap(ptr, 2 * zx_system_get_page_size());
 }
 
 // Tests that reads don't block forever if a vmo is resized out from under a read.
@@ -559,7 +561,7 @@ TEST(Pager, VmoInfoPagerTest) {
   ASSERT_TRUE(pager.Init());
 
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(ZX_PAGE_SIZE, &vmo));
+  ASSERT_TRUE(pager.CreateVmo(zx_system_get_page_size(), &vmo));
 
   // Check that the flag is set on a pager created vmo.
   zx_info_vmo_t info;
@@ -568,7 +570,7 @@ TEST(Pager, VmoInfoPagerTest) {
 
   // Check that the flag isn't set on a regular vmo.
   zx::vmo plain_vmo;
-  ASSERT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0, &plain_vmo), "");
+  ASSERT_EQ(ZX_OK, zx::vmo::create(zx_system_get_page_size(), 0, &plain_vmo), "");
   ASSERT_EQ(ZX_OK, plain_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr), "");
   ASSERT_EQ(0, info.flags & ZX_INFO_VMO_PAGER_BACKED, "");
 }
@@ -613,7 +615,7 @@ VMO_VMAR_TEST(DecommitOnDetachTest) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  ASSERT_EQ(ZX_PAGE_SIZE, info.committed_bytes);
+  ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
 
   // Detach the VMO.
   pager.DetachVmo(vmo);
@@ -694,7 +696,8 @@ TEST(Pager, DetachNonMappingAccess) {
   TestThread t([vmo, &vmo_result]() -> bool {
     uint64_t val;
     // Do a read that strides two pages so we can succeed one and fail one.
-    vmo_result = vmo->vmo().read(&val, PAGE_SIZE - sizeof(uint64_t) / 2, sizeof(uint64_t));
+    vmo_result =
+        vmo->vmo().read(&val, zx_system_get_page_size() - sizeof(uint64_t) / 2, sizeof(uint64_t));
     return true;
   });
 
@@ -1035,23 +1038,24 @@ TEST(Pager, CloneDetachTest) {
   ASSERT_TRUE(pager.DetachVmo(vmo));
   ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
 
+  // Declare read buffer outside threads so we can free them as the threads themselves will fault.
+  std::vector<uint8_t> data(zx_system_get_page_size(), 0);
+
   // Read the third page. This page was not previously paged in (and not forked either) and should
   // result in a fatal page fault.
-  TestThread t3([clone = clone.get()]() -> bool {
-    uint8_t data[ZX_PAGE_SIZE] = {};
-    return check_buffer_data(clone, 2, 1, data, true);
+  TestThread t3([clone = clone.get(), &data]() -> bool {
+    return check_buffer_data(clone, 2, 1, data.data(), true);
   });
   ASSERT_TRUE(t3.Start());
-  ASSERT_TRUE(t3.WaitForCrash(clone->GetBaseAddr() + 2 * PAGE_SIZE));
+  ASSERT_TRUE(t3.WaitForCrash(clone->GetBaseAddr() + 2 * zx_system_get_page_size()));
 
   // Read the second page. This page was previously paged in but not forked, and should now have
   // been decomitted. Should result in a fatal page fault.
-  TestThread t4([clone = clone.get()]() -> bool {
-    uint8_t data[ZX_PAGE_SIZE] = {};
-    return check_buffer_data(clone, 1, 1, data, true);
+  TestThread t4([clone = clone.get(), &data]() -> bool {
+    return check_buffer_data(clone, 1, 1, data.data(), true);
   });
   ASSERT_TRUE(t4.Start());
-  ASSERT_TRUE(t4.WaitForCrash(clone->GetBaseAddr() + PAGE_SIZE));
+  ASSERT_TRUE(t4.WaitForCrash(clone->GetBaseAddr() + zx_system_get_page_size()));
 
   // Read the first page and verify its contents. This page was forked in the clone and should still
   // be valid.
@@ -1089,7 +1093,7 @@ TEST(Pager, CloneCommitTest) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 }
 
 // Tests that commit on the clone of a clone populates things properly.
@@ -1122,7 +1126,7 @@ TEST(Pager, CloneChainCommitTest) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 
   // Verify that the intermediate has no pages committed.
   ASSERT_EQ(ZX_OK, intermediate->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
@@ -1162,7 +1166,7 @@ TEST(Pager, CloneSplitCommitTest) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 }
 
 // Resizing a cloned VMO causes a fault.
@@ -1171,7 +1175,7 @@ TEST(Pager, CloneResizeCloneHazard) {
 
   ASSERT_TRUE(pager.Init());
 
-  static constexpr uint64_t kSize = 2 * ZX_PAGE_SIZE;
+  const uint64_t kSize = 2 * zx_system_get_page_size();
   Vmo* vmo;
   ASSERT_TRUE(pager.CreateVmo(2, &vmo));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
@@ -1201,7 +1205,7 @@ TEST(Pager, CloneResizeParentOK) {
 
   ASSERT_TRUE(pager.Init());
 
-  static constexpr uint64_t kSize = 2 * ZX_PAGE_SIZE;
+  const uint64_t kSize = 2 * zx_system_get_page_size();
   Vmo* vmo;
   ASSERT_TRUE(pager.CreateVmo(2, &vmo));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
@@ -1234,11 +1238,12 @@ TEST(Pager, CloneShrinkGrowParent) {
     uint64_t resize_size;
   } configs[3] = {
       // Aligned, truncate to parent offset.
-      {ZX_PAGE_SIZE, 0, ZX_PAGE_SIZE, 0, 0},
+      {zx_system_get_page_size(), 0, zx_system_get_page_size(), 0, 0},
       // Offset, truncate to before parent offset.
-      {2 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, ZX_PAGE_SIZE, 0, 0},
+      {2 * zx_system_get_page_size(), zx_system_get_page_size(), zx_system_get_page_size(), 0, 0},
       // Offset, truncate to partway through clone.
-      {3 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE, ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE},
+      {3 * zx_system_get_page_size(), zx_system_get_page_size(), 2 * zx_system_get_page_size(),
+       zx_system_get_page_size(), 2 * zx_system_get_page_size()},
   };
 
   for (auto& config : configs) {
@@ -1247,12 +1252,13 @@ TEST(Pager, CloneShrinkGrowParent) {
     ASSERT_TRUE(pager.Init());
 
     Vmo* vmo;
-    ASSERT_TRUE(pager.CreateVmo(config.vmo_size / ZX_PAGE_SIZE, &vmo));
+    ASSERT_TRUE(pager.CreateVmo(config.vmo_size / zx_system_get_page_size(), &vmo));
 
     zx::vmo aux;
     ASSERT_EQ(ZX_OK, zx::vmo::create(config.vmo_size, 0, &aux));
     ASSERT_EQ(ZX_OK, aux.op_range(ZX_VMO_OP_COMMIT, 0, config.vmo_size, nullptr, 0));
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, config.vmo_size / ZX_PAGE_SIZE, std::move(aux)));
+    ASSERT_TRUE(
+        pager.SupplyPages(vmo, 0, config.vmo_size / zx_system_get_page_size(), std::move(aux)));
 
     zx::vmo clone_vmo;
     ASSERT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, config.clone_offset,
@@ -1275,11 +1281,12 @@ TEST(Pager, CloneShrinkGrowParent) {
 
     EXPECT_EQ(0, *ptr);
 
-    EXPECT_TRUE(vmo->Resize(config.vmo_size / ZX_PAGE_SIZE));
+    EXPECT_TRUE(vmo->Resize(config.vmo_size / zx_system_get_page_size()));
 
     ASSERT_EQ(ZX_OK, zx::vmo::create(config.vmo_size, 0, &aux));
     ASSERT_EQ(ZX_OK, aux.op_range(ZX_VMO_OP_COMMIT, 0, config.vmo_size, nullptr, 0));
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, config.vmo_size / ZX_PAGE_SIZE, std::move(aux)));
+    ASSERT_TRUE(
+        pager.SupplyPages(vmo, 0, config.vmo_size / zx_system_get_page_size(), std::move(aux)));
 
     data = 2;
     EXPECT_EQ(ZX_OK, vmo->vmo().write(&data, vmo_offset, sizeof(data)));
@@ -1561,31 +1568,33 @@ TEST(Pager, InvalidPagerCreateVmo) {
   zx_handle_t vmo;
 
   // bad options
-  ASSERT_EQ(zx_pager_create_vmo(pager.get(), ~0u, port.get(), 0, ZX_PAGE_SIZE, &vmo),
+  ASSERT_EQ(zx_pager_create_vmo(pager.get(), ~0u, port.get(), 0, zx_system_get_page_size(), &vmo),
             ZX_ERR_INVALID_ARGS);
 
   // bad handles for pager and port
-  ASSERT_EQ(zx_pager_create_vmo(ZX_HANDLE_INVALID, 0, port.get(), 0, ZX_PAGE_SIZE, &vmo),
-            ZX_ERR_BAD_HANDLE);
-  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, ZX_HANDLE_INVALID, 0, ZX_PAGE_SIZE, &vmo),
-            ZX_ERR_BAD_HANDLE);
+  ASSERT_EQ(
+      zx_pager_create_vmo(ZX_HANDLE_INVALID, 0, port.get(), 0, zx_system_get_page_size(), &vmo),
+      ZX_ERR_BAD_HANDLE);
+  ASSERT_EQ(
+      zx_pager_create_vmo(pager.get(), 0, ZX_HANDLE_INVALID, 0, zx_system_get_page_size(), &vmo),
+      ZX_ERR_BAD_HANDLE);
 
   // missing write right on port
   zx::port ro_port;
   ASSERT_EQ(port.duplicate(ZX_DEFAULT_PORT_RIGHTS & ~ZX_RIGHT_WRITE, &ro_port), ZX_OK);
-  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, ro_port.get(), 0, ZX_PAGE_SIZE, &vmo),
+  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, ro_port.get(), 0, zx_system_get_page_size(), &vmo),
             ZX_ERR_ACCESS_DENIED);
 
   // bad handle types for pager and port
-  ASSERT_EQ(zx_pager_create_vmo(port.get(), 0, port.get(), 0, ZX_PAGE_SIZE, &vmo),
+  ASSERT_EQ(zx_pager_create_vmo(port.get(), 0, port.get(), 0, zx_system_get_page_size(), &vmo),
             ZX_ERR_WRONG_TYPE);
   zx::vmo tmp_vmo;  // writability handle 2 is checked before the type, so use a new vmo
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &tmp_vmo), ZX_OK);
-  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, tmp_vmo.get(), 0, ZX_PAGE_SIZE, &vmo),
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &tmp_vmo), ZX_OK);
+  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, tmp_vmo.get(), 0, zx_system_get_page_size(), &vmo),
             ZX_ERR_WRONG_TYPE);
 
   // invalid size
-  static constexpr uint64_t kBadSize = fbl::round_down(UINT64_MAX, ZX_PAGE_SIZE) + 1;
+  const uint64_t kBadSize = fbl::round_down(UINT64_MAX, zx_system_get_page_size()) + 1;
   ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, kBadSize, &vmo),
             ZX_ERR_OUT_OF_RANGE);
 }
@@ -1599,9 +1608,9 @@ TEST(Pager, InvalidPagerDetachVmo) {
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_EQ(
-      zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE, vmo.reset_and_get_address()),
-      ZX_OK);
+  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
+                                vmo.reset_and_get_address()),
+            ZX_OK);
 
   // bad handles
   ASSERT_EQ(zx_pager_detach_vmo(ZX_HANDLE_INVALID, vmo.get()), ZX_ERR_BAD_HANDLE);
@@ -1613,7 +1622,7 @@ TEST(Pager, InvalidPagerDetachVmo) {
 
   // detaching a non-paged vmo
   zx::vmo tmp_vmo;
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &tmp_vmo), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &tmp_vmo), ZX_OK);
   ASSERT_EQ(zx_pager_detach_vmo(pager.get(), tmp_vmo.get()), ZX_ERR_INVALID_ARGS);
 
   // detaching with the wrong pager
@@ -1631,12 +1640,12 @@ TEST(Pager, InvalidPagerSupplyPages) {
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_EQ(
-      zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE, vmo.reset_and_get_address()),
-      ZX_OK);
+  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
+                                vmo.reset_and_get_address()),
+            ZX_OK);
 
   zx::vmo aux_vmo;
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &aux_vmo), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &aux_vmo), ZX_OK);
 
   // bad handles
   ASSERT_EQ(zx_pager_supply_pages(ZX_HANDLE_INVALID, vmo.get(), 0, 0, aux_vmo.get(), 0),
@@ -1688,10 +1697,11 @@ TEST(Pager, InvalidPagerSupplyPages) {
     // kernel doesn't do any checks with the address if you're using the
     // root resource, just use addr 0.
     // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-    ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, ZX_PAGE_SIZE,
+    ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, zx_system_get_page_size(),
                                      physical_vmo.reset_and_get_address()),
               ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, ZX_PAGE_SIZE, physical_vmo.get(), 0),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, zx_system_get_page_size(),
+                                    physical_vmo.get(), 0),
               ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -1713,33 +1723,39 @@ TEST(Pager, InvalidPagerSupplyPages) {
     zx::vmo alt_vmo;  // alt vmo if clones are involved
 
     if (i == kIsClone) {
-      ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &alt_vmo), ZX_OK);
-      ASSERT_EQ(alt_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &aux_vmo), ZX_OK);
+      ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &alt_vmo), ZX_OK);
+      ASSERT_EQ(
+          alt_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &aux_vmo),
+          ZX_OK);
     } else if (i == kFromPager) {
-      ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE,
+      ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
                                     aux_vmo.reset_and_get_address()),
                 ZX_OK);
     } else {
-      ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &aux_vmo), ZX_OK);
+      ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &aux_vmo), ZX_OK);
     }
 
     fzl::VmoMapper mapper;
     if (i == kHasMapping) {
-      ASSERT_EQ(mapper.Map(aux_vmo, 0, ZX_PAGE_SIZE, ZX_VM_PERM_READ), ZX_OK);
+      ASSERT_EQ(mapper.Map(aux_vmo, 0, zx_system_get_page_size(), ZX_VM_PERM_READ), ZX_OK);
     }
 
     if (i == kHasClone) {
-      ASSERT_EQ(aux_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &alt_vmo), ZX_OK);
+      ASSERT_EQ(
+          aux_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &alt_vmo),
+          ZX_OK);
     }
 
     if (i == kFromPager) {
-      ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &alt_vmo), ZX_OK);
-      ASSERT_EQ(alt_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-      ASSERT_EQ(
-          zx_pager_supply_pages(pager.get(), aux_vmo.get(), 0, ZX_PAGE_SIZE, alt_vmo.get(), 0),
-          ZX_OK);
+      ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &alt_vmo), ZX_OK);
+      ASSERT_EQ(alt_vmo.op_range(ZX_VMO_OP_COMMIT, 0, zx_system_get_page_size(), nullptr, 0),
+                ZX_OK);
+      ASSERT_EQ(zx_pager_supply_pages(pager.get(), aux_vmo.get(), 0, zx_system_get_page_size(),
+                                      alt_vmo.get(), 0),
+                ZX_OK);
     } else {
-      ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
+      ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, zx_system_get_page_size(), nullptr, 0),
+                ZX_OK);
     }
 
     zx::iommu iommu;
@@ -1755,10 +1771,12 @@ TEST(Pager, InvalidPagerSupplyPages) {
                 ZX_OK);
       ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
       zx_paddr_t addr;
-      ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, aux_vmo, 0, ZX_PAGE_SIZE, &addr, 1, &pmt), ZX_OK);
+      ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, aux_vmo, 0, zx_system_get_page_size(), &addr, 1, &pmt),
+                ZX_OK);
     }
 
-    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, ZX_PAGE_SIZE, aux_vmo.get(), 0),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, zx_system_get_page_size(),
+                                    aux_vmo.get(), 0),
               ZX_ERR_BAD_STATE);
 
     if (pmt) {
@@ -1767,17 +1785,17 @@ TEST(Pager, InvalidPagerSupplyPages) {
   }
 
   // out of range pager_vmo region
-  ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-  ASSERT_EQ(
-      zx_pager_supply_pages(pager.get(), vmo.get(), ZX_PAGE_SIZE, ZX_PAGE_SIZE, aux_vmo.get(), 0),
-      ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, zx_system_get_page_size(), nullptr, 0), ZX_OK);
+  ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), zx_system_get_page_size(),
+                                  zx_system_get_page_size(), aux_vmo.get(), 0),
+            ZX_ERR_OUT_OF_RANGE);
 
   // out of range aux_vmo region
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &aux_vmo), ZX_OK);
-  ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-  ASSERT_EQ(
-      zx_pager_supply_pages(pager.get(), vmo.get(), 0, ZX_PAGE_SIZE, aux_vmo.get(), ZX_PAGE_SIZE),
-      ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &aux_vmo), ZX_OK);
+  ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, zx_system_get_page_size(), nullptr, 0), ZX_OK);
+  ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, zx_system_get_page_size(),
+                                  aux_vmo.get(), zx_system_get_page_size()),
+            ZX_ERR_OUT_OF_RANGE);
 }
 
 // Tests that resizing a non-resizable pager vmo fails.
@@ -1790,9 +1808,9 @@ TEST(Pager, ResizeNonresizableVmo) {
 
   zx::vmo vmo;
 
-  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+  ASSERT_EQ(pager.create_vmo(0, port, 0, zx_system_get_page_size(), &vmo), ZX_OK);
 
-  ASSERT_EQ(vmo.set_size(2 * ZX_PAGE_SIZE), ZX_ERR_UNAVAILABLE);
+  ASSERT_EQ(vmo.set_size(2 * zx_system_get_page_size()), ZX_ERR_UNAVAILABLE);
 }
 
 // Tests that decommiting a clone fails
@@ -1805,14 +1823,17 @@ TEST(Pager, DecommitTest) {
 
   zx::vmo vmo;
 
-  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+  ASSERT_EQ(pager.create_vmo(0, port, 0, zx_system_get_page_size(), &vmo), ZX_OK);
 
-  ASSERT_EQ(vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, zx_system_get_page_size(), nullptr, 0),
+            ZX_ERR_NOT_SUPPORTED);
 
   zx::vmo child;
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, ZX_PAGE_SIZE, &child), ZX_OK);
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, zx_system_get_page_size(), &child),
+            ZX_OK);
 
-  ASSERT_EQ(child.op_range(ZX_VMO_OP_DECOMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(child.op_range(ZX_VMO_OP_DECOMMIT, 0, zx_system_get_page_size(), nullptr, 0),
+            ZX_ERR_NOT_SUPPORTED);
 }
 
 // Test that supplying uncommitted pages prevents faults.
@@ -1825,12 +1846,12 @@ TEST(Pager, UncommittedSupply) {
 
   zx::vmo vmo;
 
-  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+  ASSERT_EQ(pager.create_vmo(0, port, 0, zx_system_get_page_size(), &vmo), ZX_OK);
 
   zx::vmo empty;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &empty));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &empty));
 
-  ASSERT_OK(pager.supply_pages(vmo, 0, ZX_PAGE_SIZE, empty, 0));
+  ASSERT_OK(pager.supply_pages(vmo, 0, zx_system_get_page_size(), empty, 0));
 
   // A read should not fault and give zeros.
   uint32_t val = 42;
@@ -1851,7 +1872,7 @@ TEST(Pager, InvalidPagerOpRange) {
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
     zx::vmo vmo;
-    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE,
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
                                   vmo.reset_and_get_address()),
               ZX_OK);
 
@@ -1867,7 +1888,7 @@ TEST(Pager, InvalidPagerOpRange) {
 
     // using a non-pager-backed vmo
     zx::vmo vmo2;
-    ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo2), ZX_OK);
+    ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &vmo2), ZX_OK);
     ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo2.get(), 0, 0, 0), ZX_ERR_INVALID_ARGS);
 
     // using a pager vmo from another pager
@@ -1880,8 +1901,8 @@ TEST(Pager, InvalidPagerOpRange) {
     ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 0, 1, 0), ZX_ERR_INVALID_ARGS);
 
     // out of range
-    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), ZX_PAGE_SIZE, ZX_PAGE_SIZE,
-                                ZX_ERR_BAD_STATE),
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), zx_system_get_page_size(),
+                                zx_system_get_page_size(), ZX_ERR_BAD_STATE),
               ZX_ERR_OUT_OF_RANGE);
 
     // invalid error code
@@ -1903,9 +1924,9 @@ TEST(Pager, InvalidPagerOpRange) {
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_EQ(
-      zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE, vmo.reset_and_get_address()),
-      ZX_OK);
+  ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
+                                vmo.reset_and_get_address()),
+            ZX_OK);
 
   // invalid opcode
   ASSERT_EQ(zx_pager_op_range(pager.get(), 0, vmo.get(), 0, 0, 0), ZX_ERR_NOT_SUPPORTED);
@@ -2207,8 +2228,8 @@ TEST(Pager, FailErrorCode) {
     zx_status_t status_commit;
     TestThread t_commit([vmo, &status_commit]() -> bool {
       // |status_commit| should get set to the error code passed in via FailPages.
-      status_commit =
-          vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * ZX_PAGE_SIZE, nullptr, 0);
+      status_commit = vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0,
+                                          kNumPages * zx_system_get_page_size(), nullptr, 0);
       return (status_commit == ZX_OK);
     });
 
@@ -2216,7 +2237,7 @@ TEST(Pager, FailErrorCode) {
     TestThread t_read([vmo, &status_read]() -> bool {
       zx::vmo tmp_vmo;
       zx_vaddr_t buf = 0;
-      constexpr uint64_t len = kNumPages * ZX_PAGE_SIZE;
+      const uint64_t len = kNumPages * zx_system_get_page_size();
 
       if (zx::vmo::create(len, ZX_VMO_RESIZABLE, &tmp_vmo) != ZX_OK) {
         return false;
@@ -2268,14 +2289,14 @@ TEST(Pager, WritingZeroFork) {
 
   zx::vmo vmo;
 
-  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+  ASSERT_EQ(pager.create_vmo(0, port, 0, zx_system_get_page_size(), &vmo), ZX_OK);
 
   zx::vmo empty;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &empty));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &empty));
 
   // Transferring the uncommitted page in empty can be implemented in the kernel by a zero page
   // marker in the pager backed vmo (and not a committed page).
-  ASSERT_OK(pager.supply_pages(vmo, 0, ZX_PAGE_SIZE, empty, 0));
+  ASSERT_OK(pager.supply_pages(vmo, 0, zx_system_get_page_size(), empty, 0));
 
   // Writing to this page may cause it to be committed, and if it was a marker it will fork from
   // the zero page.
@@ -2333,8 +2354,8 @@ TEST(Pager, ResizeBlockedPin) {
     zx_paddr_t addr;
     // Pin the second page so we can resize such that there is absolutely no overlap in the ranges.
     // The pin itself is expected to ultimately fail as the resize will complete first.
-    return bti.pin(ZX_BTI_PERM_READ, vmo->vmo(), ZX_PAGE_SIZE, ZX_PAGE_SIZE, &addr, 1, &pmt) ==
-           ZX_ERR_OUT_OF_RANGE;
+    return bti.pin(ZX_BTI_PERM_READ, vmo->vmo(), zx_system_get_page_size(),
+                   zx_system_get_page_size(), &addr, 1, &pmt) == ZX_ERR_OUT_OF_RANGE;
   });
 
   // Wait till the userpager gets the request.
@@ -2358,11 +2379,12 @@ TEST(Pager, DeepHierarchy) {
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+  ASSERT_EQ(pager.create_vmo(0, port, 0, zx_system_get_page_size(), &vmo), ZX_OK);
 
   for (int i = 0; i < 1000; i++) {
     zx::vmo temp;
-    EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, ZX_PAGE_SIZE, &temp));
+    EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0,
+                               zx_system_get_page_size(), &temp));
     vmo = std::move(temp);
   }
   vmo.reset();
@@ -2383,15 +2405,16 @@ TEST(Pager, CloneMightSeeIntermediateForks) {
 
   // Create a child that sees the full range, and put in an initial page fork
   // Create first child slightly inset.
-  std::unique_ptr<Vmo> child = root_vmo->Clone(0, ZX_PAGE_SIZE * 16);
+  std::unique_ptr<Vmo> child = root_vmo->Clone(0, zx_system_get_page_size() * 16);
   ASSERT_NOT_NULL(child);
   uint64_t val = 1;
-  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE * 8, sizeof(uint64_t)));
+  EXPECT_OK(child->vmo().write(&val, zx_system_get_page_size() * 8, sizeof(uint64_t)));
 
   // Create two children of this, one in the fully empty half and one with the forked page.
-  std::unique_ptr<Vmo> empty_child = child->Clone(0, ZX_PAGE_SIZE * 8);
+  std::unique_ptr<Vmo> empty_child = child->Clone(0, zx_system_get_page_size() * 8);
   ASSERT_NOT_NULL(empty_child);
-  std::unique_ptr<Vmo> forked_child = child->Clone(ZX_PAGE_SIZE * 8, ZX_PAGE_SIZE * 8);
+  std::unique_ptr<Vmo> forked_child =
+      child->Clone(zx_system_get_page_size() * 8, zx_system_get_page_size() * 8);
   ASSERT_NOT_NULL(forked_child);
 
   EXPECT_TRUE(empty_child->CheckVmo(0, 8));
@@ -2403,33 +2426,33 @@ TEST(Pager, CloneMightSeeIntermediateForks) {
   val = 2;
   EXPECT_OK(empty_child->vmo().write(&val, 0, sizeof(uint64_t)));
   val = 3;
-  EXPECT_OK(forked_child->vmo().write(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+  EXPECT_OK(forked_child->vmo().write(&val, zx_system_get_page_size(), sizeof(uint64_t)));
 
   // Fork these and other pages in the original child
   val = 4;
   EXPECT_OK(child->vmo().write(&val, 0, sizeof(uint64_t)));
   val = 5;
-  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE * 9, sizeof(uint64_t)));
+  EXPECT_OK(child->vmo().write(&val, zx_system_get_page_size() * 9, sizeof(uint64_t)));
   val = 6;
-  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+  EXPECT_OK(child->vmo().write(&val, zx_system_get_page_size(), sizeof(uint64_t)));
   val = 7;
-  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE * 10, sizeof(uint64_t)));
+  EXPECT_OK(child->vmo().write(&val, zx_system_get_page_size() * 10, sizeof(uint64_t)));
 
   // For the pages we had already forked in the child, we expect to see precisely what we wrote
   // originally, as we should have forked.
   EXPECT_OK(empty_child->vmo().read(&val, 0, sizeof(uint64_t)));
   EXPECT_EQ(val, 2u);
-  EXPECT_OK(forked_child->vmo().read(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+  EXPECT_OK(forked_child->vmo().read(&val, zx_system_get_page_size(), sizeof(uint64_t)));
   EXPECT_EQ(val, 3u);
 
   // For the other forked pages we should either see what child wrote, or the original contents.
   // With the current implementation we know deterministically that empty_child should see the
   // original contents, and forked_child should see the forked. The commented out checks represent
   // the equally correct, but not current implementation, behavior.
-  EXPECT_OK(empty_child->vmo().read(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+  EXPECT_OK(empty_child->vmo().read(&val, zx_system_get_page_size(), sizeof(uint64_t)));
   // EXPECT_EQ(val, 6u);
   EXPECT_TRUE(empty_child->CheckVmo(1, 1));
-  EXPECT_OK(forked_child->vmo().read(&val, ZX_PAGE_SIZE * 2, sizeof(uint64_t)));
+  EXPECT_OK(forked_child->vmo().read(&val, zx_system_get_page_size() * 2, sizeof(uint64_t)));
   EXPECT_EQ(val, 7u);
   // EXPECT_TRUE(forked_child->CheckVmo(2, 1));
 }
@@ -2450,23 +2473,24 @@ TEST(Pager, CloneSeesCorrectParentPages) {
   ASSERT_TRUE(pager.StartTaggedPageFaultHandler());
 
   // Create first child slightly inset.
-  std::unique_ptr<Vmo> child1 = root_vmo->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 14);
+  std::unique_ptr<Vmo> child1 =
+      root_vmo->Clone(zx_system_get_page_size(), zx_system_get_page_size() * 14);
   ASSERT_NOT_NULL(child1);
 
   // Fork some pages in the child.
   uint64_t val = 1;
   EXPECT_OK(child1->vmo().write(&val, 0, sizeof(uint64_t)));
   val = 2;
-  EXPECT_OK(child1->vmo().write(&val, ZX_PAGE_SIZE * 4, sizeof(uint64_t)));
+  EXPECT_OK(child1->vmo().write(&val, zx_system_get_page_size() * 4, sizeof(uint64_t)));
   val = 3;
-  EXPECT_OK(child1->vmo().write(&val, ZX_PAGE_SIZE * 8, sizeof(uint64_t)));
+  EXPECT_OK(child1->vmo().write(&val, zx_system_get_page_size() * 8, sizeof(uint64_t)));
 
   // Create a child that covers the full range.
   std::unique_ptr<Vmo> child2 = child1->Clone();
 
   // Create children that should always have at least 1 forked page (in child1), and validate they
   // see it.
-  std::unique_ptr<Vmo> child3 = child2->Clone(0, ZX_PAGE_SIZE * 4);
+  std::unique_ptr<Vmo> child3 = child2->Clone(0, zx_system_get_page_size() * 4);
   ASSERT_NOT_NULL(child2);
 
   EXPECT_OK(child3->vmo().read(&val, 0, sizeof(uint64_t)));
@@ -2474,47 +2498,49 @@ TEST(Pager, CloneSeesCorrectParentPages) {
   // Rest of the vmo should be unchanged.
   EXPECT_TRUE(child3->CheckVmo(1, 3));
   // Hanging a large child in the non-forked portion of child3/2 should not see more of child2.
-  std::unique_ptr<Vmo> child4 = child3->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 4);
+  std::unique_ptr<Vmo> child4 =
+      child3->Clone(zx_system_get_page_size(), zx_system_get_page_size() * 4);
   ASSERT_NOT_NULL(child4);
   // First 3 pages should be original content, full view back to the root and no forked pages.
   EXPECT_TRUE(child4->CheckVmo(0, 3));
   // In the fourth page we should *not* see the forked page in child1 as we should have been clipped
   // by the limits of child3, and thus see zeros instead.
-  EXPECT_OK(child4->vmo().read(&val, ZX_PAGE_SIZE * 3, sizeof(uint64_t)));
+  EXPECT_OK(child4->vmo().read(&val, zx_system_get_page_size() * 3, sizeof(uint64_t)));
   EXPECT_NE(val, 2u);
   EXPECT_EQ(val, 0u);
   child4.reset();
   child3.reset();
 
-  child3 = child2->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 7);
+  child3 = child2->Clone(zx_system_get_page_size(), zx_system_get_page_size() * 7);
   ASSERT_NOT_NULL(child3);
   // Here our page 3 should be the forked second page from child1, the rest should be original.
   EXPECT_TRUE(child3->CheckVmo(0, 2));
   EXPECT_TRUE(child3->CheckVmo(4, 3));
-  EXPECT_OK(child3->vmo().read(&val, ZX_PAGE_SIZE * 3, sizeof(uint64_t)));
+  EXPECT_OK(child3->vmo().read(&val, zx_system_get_page_size() * 3, sizeof(uint64_t)));
   EXPECT_EQ(val, 2u);
   // Create a child smaller than child3.
-  child4 = child3->Clone(0, ZX_PAGE_SIZE * 6);
+  child4 = child3->Clone(0, zx_system_get_page_size() * 6);
   ASSERT_NOT_NULL(child4);
   // Fork a new low page in child4
   val = 4;
   EXPECT_OK(child4->vmo().write(&val, 0, sizeof(uint64_t)));
   // Now create a child larger than child4
-  std::unique_ptr<Vmo> child5 = child4->Clone(0, ZX_PAGE_SIZE * 10);
+  std::unique_ptr<Vmo> child5 = child4->Clone(0, zx_system_get_page_size() * 10);
   ASSERT_NOT_NULL(child5);
   // Now create a child that skips the forked page in child 4, but sees the forked page in child1.
-  std::unique_ptr<Vmo> child6 = child5->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 7);
+  std::unique_ptr<Vmo> child6 =
+      child5->Clone(zx_system_get_page_size(), zx_system_get_page_size() * 7);
   ASSERT_NOT_NULL(child6);
   // Although we see the forked page in child1, due to our intermediate parent (child4) having a
   // limit of 5 pages relative to child6, that is the point at which our view back should terminate
   // and we should start seeing zeroes.
   EXPECT_TRUE(child6->CheckVmo(0, 2));
-  EXPECT_OK(child6->vmo().read(&val, ZX_PAGE_SIZE * 2, sizeof(uint64_t)));
+  EXPECT_OK(child6->vmo().read(&val, zx_system_get_page_size() * 2, sizeof(uint64_t)));
   EXPECT_EQ(val, 2u);
   EXPECT_TRUE(child6->CheckVmo(3, 2));
-  EXPECT_OK(child6->vmo().read(&val, ZX_PAGE_SIZE * 5, sizeof(uint64_t)));
+  EXPECT_OK(child6->vmo().read(&val, zx_system_get_page_size() * 5, sizeof(uint64_t)));
   EXPECT_EQ(val, 0u);
-  EXPECT_OK(child6->vmo().read(&val, ZX_PAGE_SIZE * 6, sizeof(uint64_t)));
+  EXPECT_OK(child6->vmo().read(&val, zx_system_get_page_size() * 6, sizeof(uint64_t)));
   EXPECT_EQ(val, 0u);
 }
 
@@ -2546,7 +2572,7 @@ TEST(Pager, CloneCommitSingleBatch) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 }
 
 // Tests that a commit on a clone generates two batch page requests when the parent has a page
@@ -2585,7 +2611,7 @@ TEST(Pager, CloneCommitTwoBatches) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 }
 
 // Tests that a commit on a clone generates three batch page requests when the parent has two
@@ -2629,7 +2655,7 @@ TEST(Pager, CloneCommitMultipleBatches) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 }
 
 // Tests that a commit on a clone populates pages as expected when the parent has some populated
@@ -2680,7 +2706,7 @@ TEST(Pager, CloneCommitRandomBatches) {
   zx_info_vmo_t info;
   uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
-  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 }
 
 }  // namespace pager_tests

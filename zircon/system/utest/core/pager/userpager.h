@@ -39,7 +39,7 @@ class Vmo : public fbl::DoublyLinkedListable<std::unique_ptr<Vmo>> {
   bool CheckVmo(uint64_t page_offset, uint64_t page_count, const void* expected = nullptr);
 
   bool Resize(uint64_t new_page_count) {
-    return vmo_.set_size(new_page_count * ZX_PAGE_SIZE) == ZX_OK;
+    return vmo_.set_size(new_page_count * zx_system_get_page_size()) == ZX_OK;
   }
 
   // Commits the specified pages in this vmo.

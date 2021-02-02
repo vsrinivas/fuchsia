@@ -218,17 +218,17 @@ void CheckPartiallyUnmappedBufferIsError(zx_object_info_topic_t topic,
   const auto& handle = provider();
 
   ASSERT_OK(zx::vmar::root_self()->allocate2(
-      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0, 2 * PAGE_SIZE, &vmar,
-      &vmar_addr));
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
+      2 * zx_system_get_page_size(), &vmar, &vmar_addr));
 
   // Create a one-page VMO.
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0u, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0u, &vmo));
 
   // Map the first page of the VMAR.
   uintptr_t vmo_addr;
-  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, PAGE_SIZE,
-                     &vmo_addr));
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                     zx_system_get_page_size(), &vmo_addr));
 
   // Once mapped, we need to destroy it before closing the handle.
   auto cleanup = fbl::MakeAutoCall([&vmar]() { vmar.destroy(); });
@@ -237,7 +237,7 @@ void CheckPartiallyUnmappedBufferIsError(zx_object_info_topic_t topic,
   // Point to a spot in the mapped page just before the unmapped region:
   // the first entry will hit mapped memory, the second entry will hit
   // unmapped memory.
-  EntryType* entries = (EntryType*)(vmo_addr + PAGE_SIZE) - 1;
+  EntryType* entries = (EntryType*)(vmo_addr + zx_system_get_page_size()) - 1;
 
   size_t actual;
   size_t avail;

@@ -44,7 +44,7 @@ TEST_F(KernelStatsGetInfoTest, KmemStats) {
   // Commit (and pin) some pages in regular and pager-backed VMOs, to check for non-zero vmo counts
   // returned by zx_object_get_info().
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   uint64_t buf = 17;
   vmo.write(&buf, 0, sizeof(buf));
 
@@ -55,10 +55,11 @@ TEST_F(KernelStatsGetInfoTest, KmemStats) {
   ASSERT_OK(zx::port::create(0, &port));
 
   zx::vmo pager_vmo;
-  ASSERT_OK(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE,
+  ASSERT_OK(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
                                 pager_vmo.reset_and_get_address()));
 
-  ASSERT_OK(zx_pager_supply_pages(pager.get(), pager_vmo.get(), 0, ZX_PAGE_SIZE, vmo.get(), 0));
+  ASSERT_OK(zx_pager_supply_pages(pager.get(), pager_vmo.get(), 0, zx_system_get_page_size(),
+                                  vmo.get(), 0));
 
   zx::iommu iommu;
   zx::bti bti;
@@ -68,7 +69,7 @@ TEST_F(KernelStatsGetInfoTest, KmemStats) {
                             iommu.reset_and_get_address()));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
   zx_paddr_t addr;
-  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, ZX_PAGE_SIZE, &addr, 1, &pmt));
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, zx_system_get_page_size(), &addr, 1, &pmt));
 
   zx_info_kmem_stats_t buffer;
   size_t actual, avail;
@@ -149,7 +150,7 @@ TEST_F(KernelStatsGetInfoTest, KmemStatsExtended) {
   // Commit (and pin) some pages in regular and pager-backed VMOs, to check for non-zero vmo counts
   // returned by zx_object_get_info().
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   uint64_t buf = 17;
   vmo.write(&buf, 0, sizeof(buf));
 
@@ -160,10 +161,11 @@ TEST_F(KernelStatsGetInfoTest, KmemStatsExtended) {
   ASSERT_OK(zx::port::create(0, &port));
 
   zx::vmo pager_vmo;
-  ASSERT_OK(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE,
+  ASSERT_OK(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
                                 pager_vmo.reset_and_get_address()));
 
-  ASSERT_OK(zx_pager_supply_pages(pager.get(), pager_vmo.get(), 0, ZX_PAGE_SIZE, vmo.get(), 0));
+  ASSERT_OK(zx_pager_supply_pages(pager.get(), pager_vmo.get(), 0, zx_system_get_page_size(),
+                                  vmo.get(), 0));
 
   zx::iommu iommu;
   zx::bti bti;
@@ -173,7 +175,7 @@ TEST_F(KernelStatsGetInfoTest, KmemStatsExtended) {
                             iommu.reset_and_get_address()));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
   zx_paddr_t addr;
-  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, ZX_PAGE_SIZE, &addr, 1, &pmt));
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo, 0, zx_system_get_page_size(), &addr, 1, &pmt));
 
   zx_info_kmem_stats_extended_t buffer;
   size_t actual, avail;

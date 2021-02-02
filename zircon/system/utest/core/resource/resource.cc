@@ -21,7 +21,7 @@ extern "C" zx_handle_t get_root_resource(void);
 extern "C" zx_handle_t get_mmio_root_resource(void);
 extern "C" zx_handle_t get_system_root_resource(void);
 
-static const size_t mmio_test_size = (PAGE_SIZE * 4);
+static const size_t mmio_test_size = (zx_system_get_page_size() * 4);
 static uint64_t mmio_test_base;
 
 const zx::unowned_resource root() {
@@ -179,9 +179,9 @@ TEST(Resource, VmoCreation) {
   ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, mmio_test_size, NULL,
                                  0, &mmio),
             ZX_OK);
-  EXPECT_EQ(
-      zx_vmo_create_physical(mmio.get(), mmio_test_base, PAGE_SIZE, vmo.reset_and_get_address()),
-      ZX_OK);
+  EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base, zx_system_get_page_size(),
+                                   vmo.reset_and_get_address()),
+            ZX_OK);
 }
 
 TEST(Resource, VmoCreationSmaller) {
@@ -189,17 +189,17 @@ TEST(Resource, VmoCreationSmaller) {
   // entire page.
   zx::resource mmio;
   zx::vmo vmo;
-  ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE / 2, NULL, 0,
-                                 &mmio),
+  ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                 zx_system_get_page_size() / 2, NULL, 0, &mmio),
             ZX_OK);
-  EXPECT_EQ(
-      zx_vmo_create_physical(mmio.get(), mmio_test_base, PAGE_SIZE, vmo.reset_and_get_address()),
-      ZX_OK);
+  EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base, zx_system_get_page_size(),
+                                   vmo.reset_and_get_address()),
+            ZX_OK);
 }
 
 TEST(Resource, VmoCreationUnaligned) {
   // Attempt to create an unaligned resource and ensure that the bounds are rounded appropriately
-  // to the proper PAGE_SIZE.
+  // to the proper zx_system_get_page_size().
   zx::resource mmio;
   zx::vmo vmo;
   ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base + 0x7800, 0x2000, NULL,
@@ -227,7 +227,7 @@ TEST(Resource, VmoReplaceAsExecutable) {
   zx::vmo vmo, vmo2, vmo3;
 
   // allocate an object
-  ASSERT_EQ(ZX_OK, zx_vmo_create(PAGE_SIZE, 0, vmo.reset_and_get_address()));
+  ASSERT_EQ(ZX_OK, zx_vmo_create(zx_system_get_page_size(), 0, vmo.reset_and_get_address()));
 
   // set-exec with valid VMEX resource
   ASSERT_EQ(ZX_OK, zx::resource::create(*system_root(), ZX_RSRC_KIND_SYSTEM,
@@ -253,72 +253,80 @@ TEST(Resource, VmoReplaceAsExecutable) {
 TEST(Resource, CreateResourceSlice) {
   {
     zx::resource mmio, smaller_mmio;
-    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE,
-                                          NULL, 0, &mmio));
+    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                          zx_system_get_page_size(), NULL, 0, &mmio));
     // A new resource shouldn't be able to create ROOT.
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_ROOT, mmio_test_base,
-                                                         PAGE_SIZE, NULL, 0, &smaller_mmio));
-    // Creating an identically sized resource with the wrong kind should fail.
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base,
-                                                         PAGE_SIZE, NULL, 0, &smaller_mmio));
-    // Creating a resource with a different base and the same size should fail.
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
-              zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base + PAGE_SIZE, PAGE_SIZE,
-                                   NULL, 0, &smaller_mmio));
+              zx::resource::create(mmio, ZX_RSRC_KIND_ROOT, mmio_test_base,
+                                   zx_system_get_page_size(), NULL, 0, &smaller_mmio));
+    // Creating an identically sized resource with the wrong kind should fail.
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+              zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base,
+                                   zx_system_get_page_size(), NULL, 0, &smaller_mmio));
+    // Creating a resource with a different base and the same size should fail.
+    EXPECT_EQ(
+        ZX_ERR_ACCESS_DENIED,
+        zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base + zx_system_get_page_size(),
+                             zx_system_get_page_size(), NULL, 0, &smaller_mmio));
     // Creating a resource with the same base and a different size should fail.
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
-                                                         PAGE_SIZE + 34u, NULL, 0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+              zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                   zx_system_get_page_size() + 34u, NULL, 0, &smaller_mmio));
   }
   {
     // Try to make a slice going from exclusive -> shared. This should fail.
     zx::resource mmio, smaller_mmio;
-    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
-                                          mmio_test_base, PAGE_SIZE, NULL, 0, &mmio));
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
-                                                        PAGE_SIZE, NULL, 0, &smaller_mmio));
+    ASSERT_EQ(ZX_OK,
+              zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
+                                   mmio_test_base, zx_system_get_page_size(), NULL, 0, &mmio));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                   zx_system_get_page_size(), NULL, 0, &smaller_mmio));
   }
   {
     // Try to make a slice going from shared -> exclusive. This should fail.
     zx::resource mmio, smaller_mmio;
-    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE,
-                                          NULL, 0, &mmio));
+    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                          zx_system_get_page_size(), NULL, 0, &mmio));
     EXPECT_EQ(ZX_ERR_INVALID_ARGS,
               zx::resource::create(mmio, ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE, mmio_test_base,
-                                   PAGE_SIZE, NULL, 0, &smaller_mmio));
+                                   zx_system_get_page_size(), NULL, 0, &smaller_mmio));
   }
   {
     // Try to make a slice going from exclusive -> exclusive. This should fail.
     zx::resource mmio, smaller_mmio;
-    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
-                                          mmio_test_base, PAGE_SIZE, NULL, 0, &mmio));
+    ASSERT_EQ(ZX_OK,
+              zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
+                                   mmio_test_base, zx_system_get_page_size(), NULL, 0, &mmio));
     EXPECT_EQ(ZX_ERR_INVALID_ARGS,
               zx::resource::create(mmio, ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE, mmio_test_base,
-                                   PAGE_SIZE, NULL, 0, &smaller_mmio));
+                                   zx_system_get_page_size(), NULL, 0, &smaller_mmio));
   }
   {
     // Creating a identically sized resource should succeed.
     zx::resource mmio, smaller_mmio;
-    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE,
-                                          NULL, 0, &mmio));
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE, NULL,
-                                          0, &smaller_mmio));
+    ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                          zx_system_get_page_size(), NULL, 0, &mmio));
+    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                          zx_system_get_page_size(), NULL, 0, &smaller_mmio));
   }
   {
     // Creating an smaller resource should succeed.
     zx::vmo vmo;
     zx::resource mmio, smaller_mmio;
-    EXPECT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE * 2,
-                                          NULL, 0, &mmio));
+    EXPECT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                          zx_system_get_page_size() * 2, NULL, 0, &mmio));
     // This will succeed at creating an MMIO resource that is a single page size.
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE, NULL,
-                                          0, &smaller_mmio));
+    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                          zx_system_get_page_size(), NULL, 0, &smaller_mmio));
     // Trying to create a VMO of the original size will fail
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
-              zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, PAGE_SIZE * 2,
-                                     vmo.reset_and_get_address()));
+              zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base,
+                                     zx_system_get_page_size() * 2, vmo.reset_and_get_address()));
     // Trying to create VMO that fits in the resource will succeed.
-    EXPECT_EQ(ZX_OK, zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, PAGE_SIZE,
-                                            vmo.reset_and_get_address()));
+    EXPECT_EQ(ZX_OK,
+              zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, zx_system_get_page_size(),
+                                     vmo.reset_and_get_address()));
   }
 }
 

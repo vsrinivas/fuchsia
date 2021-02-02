@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <zircon/syscalls/object.h>
 
+#include <vector>
+
 #include <zxtest/zxtest.h>
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
@@ -31,7 +33,7 @@ TEST(StreamTestCase, Create) {
   ASSERT_EQ(ZX_ERR_WRONG_TYPE, zx_stream_create(0, event.get(), 0, &raw_stream));
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 4, 0, &vmo));
 
   static_assert(!(ZX_DEFAULT_STREAM_RIGHTS & ZX_RIGHT_WRITE),
                 "Streams are not writable by default");
@@ -104,7 +106,7 @@ TEST(StreamTestCase, Create) {
 
 TEST(StreamTestCase, Seek) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 4, 0, &vmo));
   size_t content_size = 42u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
 
@@ -168,7 +170,7 @@ const char kAlphabet[] = "abcdefghijklmnopqrstuvwxyz";
 
 TEST(StreamTestCase, ReadV) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
   size_t content_size = 26u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
@@ -251,14 +253,14 @@ TEST(StreamTestCase, ReadV) {
 }
 
 std::string GetData(const zx::vmo& vmo) {
-  char buffer[PAGE_SIZE] = {};
-  EXPECT_OK(vmo.read(buffer, 0, sizeof(buffer)));
-  return std::string(buffer);
+  std::vector<char> buffer(zx_system_get_page_size(), '\0');
+  EXPECT_OK(vmo.read(buffer.data(), 0, buffer.size()));
+  return std::string(buffer.data());
 }
 
 TEST(StreamTestCase, WriteV) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
   size_t content_size = 26u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
@@ -324,7 +326,7 @@ size_t GetContentSize(const zx::vmo& vmo) {
 
 TEST(StreamTestCase, WriteExtendsContentSize) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
   size_t content_size = 3u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
@@ -355,7 +357,7 @@ TEST(StreamTestCase, WriteExtendsContentSize) {
   ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, 0, nullptr));
 
   vec.capacity = 10u;
-  for (size_t i = 1; i * 10 < PAGE_SIZE; ++i) {
+  for (size_t i = 1; i * 10 < zx_system_get_page_size(); ++i) {
     ASSERT_OK(stream.writev(0, &vec, 1, &actual));
     EXPECT_EQ(10u, actual);
   }
@@ -378,7 +380,7 @@ TEST(StreamTestCase, WriteExtendsContentSize) {
 
 TEST(StreamTestCase, WriteExtendsVMOSize) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo));
 
   zx::stream stream;
   char buffer[17] = "0123456789ABCDEF";
@@ -390,7 +392,7 @@ TEST(StreamTestCase, WriteExtendsVMOSize) {
 
   ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
   vec.capacity = 10u;
-  for (size_t i = 1; i * 10 < PAGE_SIZE; ++i) {
+  for (size_t i = 1; i * 10 < zx_system_get_page_size(); ++i) {
     ASSERT_OK(stream.writev(0, &vec, 1, &actual));
     EXPECT_EQ(10u, actual);
   }
@@ -403,7 +405,7 @@ TEST(StreamTestCase, WriteExtendsVMOSize) {
 
   uint64_t vmo_size = 839u;
   ASSERT_OK(vmo.get_size(&vmo_size));
-  EXPECT_EQ(PAGE_SIZE * 2, vmo_size);
+  EXPECT_EQ(zx_system_get_page_size() * 2, vmo_size);
 
   vec.capacity = UINT64_MAX;
   actual = 5423u;
@@ -411,12 +413,12 @@ TEST(StreamTestCase, WriteExtendsVMOSize) {
   EXPECT_EQ(5423u, actual);
 
   ASSERT_OK(vmo.get_size(&vmo_size));
-  EXPECT_EQ(PAGE_SIZE * 2, vmo_size);
+  EXPECT_EQ(zx_system_get_page_size() * 2, vmo_size);
 }
 
 TEST(StreamTestCase, ReadVAt) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
   size_t content_size = 26u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
@@ -453,7 +455,7 @@ TEST(StreamTestCase, ReadVAt) {
 
 TEST(StreamTestCase, WriteVAt) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
   size_t content_size = 26u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
@@ -482,7 +484,7 @@ TEST(StreamTestCase, WriteVAt) {
   ASSERT_EQ(ZX_ERR_NO_SPACE, stream.writev_at(0, 4100u, &vec, 1, &actual));
   EXPECT_EQ(9823u, actual);
 
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo));
   ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
 
   vec.capacity = 10u;
@@ -493,7 +495,7 @@ TEST(StreamTestCase, WriteVAt) {
 
   uint64_t vmo_size = 839u;
   ASSERT_OK(vmo.get_size(&vmo_size));
-  EXPECT_EQ(PAGE_SIZE * 2, vmo_size);
+  EXPECT_EQ(zx_system_get_page_size() * 2, vmo_size);
 
   vec.capacity = UINT64_MAX;
   actual = 5423u;
@@ -501,12 +503,12 @@ TEST(StreamTestCase, WriteVAt) {
   EXPECT_EQ(5423u, actual);
 
   ASSERT_OK(vmo.get_size(&vmo_size));
-  EXPECT_EQ(PAGE_SIZE * 2, vmo_size);
+  EXPECT_EQ(zx_system_get_page_size() * 2, vmo_size);
 }
 
 TEST(StreamTestCase, ReadVectorAlias) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
   size_t content_size = 26u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
@@ -525,7 +527,7 @@ TEST(StreamTestCase, ReadVectorAlias) {
 
 TEST(StreamTestCase, Append) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
   size_t content_size = 26u;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
@@ -557,16 +559,17 @@ TEST(StreamTestCase, Append) {
   EXPECT_EQ(33u, info.content_size);
 
   vec.capacity = 26u;
-  for (size_t size = info.content_size; size + vec.capacity < PAGE_SIZE; size += vec.capacity) {
+  for (size_t size = info.content_size; size + vec.capacity < zx_system_get_page_size();
+       size += vec.capacity) {
     ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
     EXPECT_EQ(vec.capacity, actual);
   }
 
   ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_GT(PAGE_SIZE, info.content_size);
+  EXPECT_GT(zx_system_get_page_size(), info.content_size);
 
   ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
-  EXPECT_EQ(PAGE_SIZE - info.content_size, actual);
+  EXPECT_EQ(zx_system_get_page_size() - info.content_size, actual);
 
   ASSERT_EQ(ZX_ERR_NO_SPACE, stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
 
@@ -576,18 +579,18 @@ TEST(StreamTestCase, Append) {
 
 TEST(StreamTestCase, ExtendFillsWithZeros) {
   const size_t kPageCount = 6;
-  const size_t kVmoSize = PAGE_SIZE * kPageCount;
+  const size_t kVmoSize = zx_system_get_page_size() * kPageCount;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
 
   zx::stream stream;
   ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
 
-  char scratch[PAGE_SIZE];
+  char scratch[zx_system_get_page_size()];
   memset(scratch, 'x', sizeof(scratch));
 
   for (size_t i = 0; i < kPageCount; ++i) {
-    ASSERT_OK(vmo.write(scratch, PAGE_SIZE * i, sizeof(scratch)));
+    ASSERT_OK(vmo.write(scratch, zx_system_get_page_size() * i, sizeof(scratch)));
   }
 
   char buffer[17] = "0123456789ABCDEF";
@@ -597,42 +600,42 @@ TEST(StreamTestCase, ExtendFillsWithZeros) {
   };
 
   size_t actual = 0u;
-  ASSERT_OK(stream.writev_at(0, PAGE_SIZE * 2 - 2, &vec, 1, &actual));
+  ASSERT_OK(stream.writev_at(0, zx_system_get_page_size() * 2 - 2, &vec, 1, &actual));
   ASSERT_EQ(4, actual);
 
   memset(scratch, 'a', sizeof(scratch));
   ASSERT_OK(vmo.read(scratch, 0, sizeof(scratch)));
 
-  for (size_t i = 0; i < PAGE_SIZE; ++i) {
+  for (size_t i = 0; i < zx_system_get_page_size(); ++i) {
     ASSERT_EQ(0, scratch[i], "The %zu byte should be zero.", i);
   }
 
   memset(scratch, 'a', sizeof(scratch));
-  ASSERT_OK(vmo.read(scratch, PAGE_SIZE, sizeof(scratch)));
+  ASSERT_OK(vmo.read(scratch, zx_system_get_page_size(), sizeof(scratch)));
 
-  for (size_t i = 0; i < PAGE_SIZE - 2; ++i) {
+  for (size_t i = 0; i < zx_system_get_page_size() - 2; ++i) {
     ASSERT_EQ(0, scratch[i], "The %zu byte of the second page should be zero.", i);
   }
 
-  ASSERT_EQ('0', scratch[PAGE_SIZE - 2]);
-  ASSERT_EQ('1', scratch[PAGE_SIZE - 1]);
+  ASSERT_EQ('0', scratch[zx_system_get_page_size() - 2]);
+  ASSERT_EQ('1', scratch[zx_system_get_page_size() - 1]);
 
   memset(scratch, 'a', sizeof(scratch));
-  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 2, sizeof(scratch)));
+  ASSERT_OK(vmo.read(scratch, zx_system_get_page_size() * 2, sizeof(scratch)));
 
   ASSERT_EQ('2', scratch[0]);
   ASSERT_EQ('3', scratch[1]);
   ASSERT_EQ('x', scratch[2]);
   ASSERT_EQ('x', scratch[3]);
 
-  ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, PAGE_SIZE * 5 - 2, nullptr));
+  ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, zx_system_get_page_size() * 5 - 2, nullptr));
 
   actual = 0;
   ASSERT_OK(stream.writev(0, &vec, 1, &actual));
   ASSERT_EQ(4, actual);
 
   memset(scratch, 'a', sizeof(scratch));
-  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 2, sizeof(scratch)));
+  ASSERT_OK(vmo.read(scratch, zx_system_get_page_size() * 2, sizeof(scratch)));
 
   ASSERT_EQ('2', scratch[0]);
   ASSERT_EQ('3', scratch[1]);
@@ -640,24 +643,24 @@ TEST(StreamTestCase, ExtendFillsWithZeros) {
   ASSERT_EQ(0, scratch[3]);
 
   memset(scratch, 'a', sizeof(scratch));
-  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 3, sizeof(scratch)));
+  ASSERT_OK(vmo.read(scratch, zx_system_get_page_size() * 3, sizeof(scratch)));
 
-  for (size_t i = 0; i < PAGE_SIZE; ++i) {
+  for (size_t i = 0; i < zx_system_get_page_size(); ++i) {
     ASSERT_EQ(0, scratch[i], "The %zu byte of the third page should be zero.", i);
   }
 
   memset(scratch, 'a', sizeof(scratch));
-  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 4, sizeof(scratch)));
+  ASSERT_OK(vmo.read(scratch, zx_system_get_page_size() * 4, sizeof(scratch)));
 
-  for (size_t i = 0; i < PAGE_SIZE - 2; ++i) {
+  for (size_t i = 0; i < zx_system_get_page_size() - 2; ++i) {
     ASSERT_EQ(0, scratch[i], "The %zu byte of the fourth page should be zero.", i);
   }
 
-  ASSERT_EQ('0', scratch[PAGE_SIZE - 2]);
-  ASSERT_EQ('1', scratch[PAGE_SIZE - 1]);
+  ASSERT_EQ('0', scratch[zx_system_get_page_size() - 2]);
+  ASSERT_EQ('1', scratch[zx_system_get_page_size() - 1]);
 
   memset(scratch, 'a', sizeof(scratch));
-  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 5, sizeof(scratch)));
+  ASSERT_OK(vmo.read(scratch, zx_system_get_page_size() * 5, sizeof(scratch)));
 
   ASSERT_EQ('2', scratch[0]);
   ASSERT_EQ('3', scratch[1]);

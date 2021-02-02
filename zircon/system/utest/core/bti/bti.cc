@@ -92,7 +92,7 @@ void bti_pin_test_helper(bool contiguous_vmo) {
   ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
 
   static constexpr uint64_t kPageCount = 256;
-  static constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+  const uint64_t kVmoSize = zx_system_get_page_size() * kPageCount;
   zx::vmo vmo;
   if (contiguous_vmo) {
     ASSERT_EQ(zx::vmo::create_contiguous(bti, kVmoSize, 0, &vmo), ZX_OK);
@@ -108,7 +108,7 @@ void bti_pin_test_helper(bool contiguous_vmo) {
 
   if (contiguous_vmo) {
     for (unsigned i = 1; i < kPageCount; i++) {
-      ASSERT_EQ(paddrs[i], paddrs[0] + i * ZX_PAGE_SIZE);
+      ASSERT_EQ(paddrs[i], paddrs[0] + i * zx_system_get_page_size());
     }
   }
 }
@@ -130,7 +130,7 @@ TEST(Bti, PinContigFlag) {
   ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
 
   static constexpr uint64_t kPageCount = 256;
-  static constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+  const uint64_t kVmoSize = zx_system_get_page_size() * kPageCount;
   zx::vmo vmo;
   ASSERT_EQ(zx::vmo::create_contiguous(bti, kVmoSize, 0, &vmo), ZX_OK);
 
@@ -156,10 +156,10 @@ TEST(Bti, Resize) {
   ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
 
   zx::vmo vmo;
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo), ZX_OK);
 
   zx_paddr_t paddrs;
-  ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, vmo, 0, ZX_PAGE_SIZE, &paddrs, 1, &pmt), ZX_OK);
+  ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, vmo, 0, zx_system_get_page_size(), &paddrs, 1, &pmt), ZX_OK);
 
   EXPECT_EQ(vmo.set_size(0), ZX_ERR_BAD_STATE);
 
@@ -180,11 +180,13 @@ TEST(Bti, Clone) {
   ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
 
   zx::vmo vmo, clone;
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &clone), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &clone),
+            ZX_OK);
 
   zx_paddr_t paddrs;
-  ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, clone, 0, ZX_PAGE_SIZE, &paddrs, 1, &pmt), ZX_OK);
+  ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, clone, 0, zx_system_get_page_size(), &paddrs, 1, &pmt),
+            ZX_OK);
 
   clone.reset();
 
@@ -215,10 +217,10 @@ TEST(Bti, GetInfoTest) {
   EXPECT_EQ(bti_info.quarantine_count, 0);
 
   zx::vmo vmo;
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo), ZX_OK);
 
   zx_paddr_t paddrs;
-  ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, vmo, 0, ZX_PAGE_SIZE, &paddrs, 1, &pmt), ZX_OK);
+  ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, vmo, 0, zx_system_get_page_size(), &paddrs, 1, &pmt), ZX_OK);
 
   // Now our bti should have one pmo, and no quarantines:
   EXPECT_EQ(bti.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr), ZX_OK);
@@ -254,7 +256,7 @@ TEST(Bti, NoDelayedUnpin) {
 
   // Create the VMO we will pin+unpin
   static constexpr uint64_t kPageCount = 4;
-  static constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+  const uint64_t kVmoSize = zx_system_get_page_size() * kPageCount;
   zx::vmo vmo;
   ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
@@ -266,7 +268,7 @@ TEST(Bti, NoDelayedUnpin) {
     // Create a vmo and clone it a few times with a semi random hierarchy. Vmo shall have a lot of
     // pages so that we can do long running writes to it.
     static constexpr uint64_t kPageCount = 4096;
-    static constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+    const uint64_t kVmoSize = zx_system_get_page_size() * kPageCount;
     zx::vmo vmo;
     zx::vmo::create(kVmoSize, 0, &vmo);
 
@@ -281,7 +283,7 @@ TEST(Bti, NoDelayedUnpin) {
     }
     // To ensure our info querying is slow, spin up another thread to do long running operations on
     // our vmo chain. When tested this made the get_info call take around 500ms.
-    std::thread thread = std::thread([&running, &vmo] {
+    std::thread thread = std::thread([&running, &vmo, kVmoSize] {
       std::vector<uint8_t> buffer(kVmoSize);
       while (running) {
         vmo.write(buffer.data(), 0, kVmoSize);
@@ -332,7 +334,7 @@ TEST(Bti, DecommitRace) {
 
   // Create the VMO we will pin/decommit.
   constexpr uint64_t kPageCount = 64;
-  constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+  const uint64_t kVmoSize = zx_system_get_page_size() * kPageCount;
   zx::vmo vmo;
   ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
 
@@ -341,7 +343,7 @@ TEST(Bti, DecommitRace) {
 
   // Flag that indicates the helper thread is up and running in case it takes a bit.
   std::atomic<bool> done_one_iteration = false;
-  std::thread thread = std::thread([&running, &done_one_iteration, &vmo] {
+  std::thread thread = std::thread([&running, &done_one_iteration, &vmo, kVmoSize] {
     while (running) {
       vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, kVmoSize, nullptr, 0);
       done_one_iteration = true;
@@ -383,7 +385,7 @@ TEST(Bti, QuarantineDisallowsPin) {
   // Create and pin a VMO, then allow the pinned VMO to leak while still pinned.
   // Its pages will be added to the quarantine list for the BTI.
   constexpr uint64_t kPageCount = 4;
-  constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+  constexpr uint64_t kVmoSize = zx_system_get_page_size() * kPageCount;
   zx_paddr_t paddrs[kPageCount];
   {
     zx::vmo vmo;
