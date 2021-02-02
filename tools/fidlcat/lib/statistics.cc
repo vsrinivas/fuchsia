@@ -105,6 +105,9 @@ void SyscallDisplayDispatcher::DisplaySummary(std::ostream& os) {
           printer << separator;
           const OutputEvent* creation_event = session->creation_event();
           if (creation_event != nullptr) {
+            if (printer.display_stack_frame()) {
+              printer.DisplayStackFrame(creation_event->invoked_event()->stack_frame());
+            }
             // Displays the creation event for the session.
             printer << "created by ";
             if (creation_event->syscall()->kind() == SyscallKind::kRegularSyscall) {

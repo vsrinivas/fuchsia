@@ -367,6 +367,9 @@ Finally fidlcat displays how the handle was closed:
 If fidlcat doesn't display that a handle is closed, that probably means that the program forgot to
 close it.
 
+In addition to `--with=summary` you can use `--stack=2`. In that case, the stack frame is displayed
+for each channel creation.
+
 ## Continuous monitoring
 
 By default, fidlcat ends when all the monitored processes are ended.
