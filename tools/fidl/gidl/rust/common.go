@@ -280,15 +280,22 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 		fieldValueStr := visit(field.Value, fieldDecl)
 		tableFields = append(tableFields, fmt.Sprintf("%s: Some(%s)", fieldName, fieldValueStr))
 	}
-	if len(unknownTuples) > 0 {
-		// When https://github.com/rust-lang/rust/issues/25725 is fixed,
-		// using into_iter() on the vec! can be changed to use [T;N]::into_iter instead.
-		tableFields = append(tableFields,
-			fmt.Sprintf("unknown_data: Some(vec![%s].into_iter().collect())",
-				strings.Join(unknownTuples, "\n")))
-	} else {
-		tableFields = append(tableFields, "unknown_data: None")
+	unknownData := func() string {
+		if len(unknownTuples) == 0 {
+			return "None"
+		}
+		// TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
+		var b strings.Builder
+		b.WriteString("Some(std::iter::empty()")
+		for _, tuple := range unknownTuples {
+			if _, err := fmt.Fprintf(&b, ".chain(std::iter::once(%s))", tuple); err != nil {
+				panic(err)
+			}
+		}
+		b.WriteString(".collect())")
+		return b.String()
 	}
+	tableFields = append(tableFields, fmt.Sprintf("unknown_data: %s", unknownData()))
 	tableName := declName(decl)
 	tableFields = append(tableFields, fmt.Sprintf("..%s::EMPTY", tableName))
 	valueStr := fmt.Sprintf("%s { %s }", tableName, strings.Join(tableFields, ", "))

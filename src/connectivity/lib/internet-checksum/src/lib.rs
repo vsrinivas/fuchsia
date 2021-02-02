@@ -639,8 +639,7 @@ mod tests {
             seed = 1;
         }
 
-        // TODO(tamird): use into_iter after
-        // https://github.com/rust-lang/rust/issues/25725.
+        // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
         let bytes: Vec<u8> = [seed as u32, (seed >> 32) as u32, seed as u32, (seed >> 32) as u32]
             .iter()
             .copied()

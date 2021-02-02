@@ -1585,8 +1585,7 @@ pub mod tests {
                 DhcpOption::RenewalTimeValue(50),
                 DhcpOption::RebindingTimeValue(75),
             ]
-            // TODO(tamird): use into_iter after
-            // https://github.com/rust-lang/rust/issues/25725
+            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
             .iter()
             .cloned(),
         );
@@ -2774,7 +2773,7 @@ pub mod tests {
         let () = server.release_expired_leases()?;
 
         let client_ips =
-            // TODO(atait): user into_iter after https://github.com/rust-lang/rust/issues/25725
+            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
             [client_1_ip, client_2_ip, client_3_ip].iter().cloned().collect::<HashSet<_>>();
         matches::assert_matches!(
             &server.cache.iter().collect::<Vec<_>>()[..],
@@ -2837,7 +2836,7 @@ pub mod tests {
         assert!(server.cache.is_empty(), "{:?}", server.cache);
         assert_eq!(
             server.pool.available_addrs,
-            // TODO(atait): user into_iter after https://github.com/rust-lang/rust/issues/25725
+            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
             [client_1_ip, client_2_ip, client_3_ip].iter().cloned().collect()
         );
         assert!(server.pool.allocated_addrs.is_empty(), "{:?}", server.pool.allocated_addrs);
@@ -2896,7 +2895,7 @@ pub mod tests {
         let () = server.release_expired_leases()?;
 
         let client_ips =
-            // TODO(atait): user into_iter after https://github.com/rust-lang/rust/issues/25725
+            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
             [client_1_ip, client_3_ip].iter().cloned().collect::<HashSet<_>>();
         matches::assert_matches!(
             &server.cache.iter().collect::<Vec<_>>()[..],
@@ -2908,7 +2907,7 @@ pub mod tests {
         );
         assert_eq!(
             server.pool.available_addrs,
-            // TODO(atait): user into_iter after https://github.com/rust-lang/rust/issues/25725
+            // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
             [client_2_ip].iter().cloned().collect()
         );
         assert_eq!(server.pool.allocated_addrs, client_ips);
@@ -3513,8 +3512,7 @@ pub mod tests {
                 lease_length_seconds: 42,
             },
         )]
-        // TODO(atait): use into_iter after
-        // https://github.com/rust-lang/rust/issues/25725.
+        // TODO(https://github.com/rust-lang/rust/issues/25725): use into_iter.
         .iter()
         .cloned()
         .collect();
