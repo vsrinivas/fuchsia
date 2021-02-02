@@ -286,8 +286,16 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // to be sure that all transactions leave the file system in a good state.
   void FsckAtEndOfTransaction();
 
-  // Migrate blobs to a later format.
+  // Sequentually migrates blobfs to the latest oldest_revision.
+  // Performs zero or more passes which each migrate blobfs from oldest_revision N -> N+1 by
+  // performing some reparative action. See MigrateToRevN.
   zx_status_t Migrate();
+  // Migrates all blobs away from unsupported compression formats.
+  // NOP if oldest_revision >= kBlobfsRevisionNoOldCompressionFormats.
+  zx_status_t MigrateToRev3();
+  // Repairs the Inode of the null blob (if present) to not have a zero-length extent.
+  // NOP if oldest_revision >= kBlobfsRevisionHostToolHandlesNullBlobCorrectly.
+  zx_status_t MigrateToRev4();
 
   // Walks all the extents of a given inode and updates |extents_per_blob| and |used_fragments|
   // metrics.

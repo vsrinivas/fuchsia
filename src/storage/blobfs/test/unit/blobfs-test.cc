@@ -96,9 +96,6 @@ class BlobfsTestAtRevision : public testing::Test {
 };
 
 using BlobfsTest = BlobfsTestAtRevision<blobfs::kBlobfsCurrentRevision>;
-static_assert(blobfs::kBlobfsCurrentRevision > 0u);
-using BlobfsTestAtPastRevision = BlobfsTestAtRevision<blobfs::kBlobfsCurrentRevision - 1>;
-using BlobfsTestAtFutureRevision = BlobfsTestAtRevision<blobfs::kBlobfsCurrentRevision + 1>;
 
 TEST_F(BlobfsTest, GetDevice) { ASSERT_EQ(device_, fs_->GetDevice()); }
 
@@ -138,37 +135,6 @@ TEST_F(BlobfsTest, CleanFlag) {
   ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
   Superblock* info = reinterpret_cast<Superblock*>(block);
   EXPECT_EQ(kBlobFlagClean, (info->flags & kBlobFlagClean));
-}
-
-// Tests that the driver does *not* update the oldest_revision field when mounting a filesystem that
-// has a lesser oldest_revision.
-// For now, this test must be disabled because Blobfs will upgrade to the latest revision.
-TEST_F(BlobfsTestAtPastRevision, DISABLED_OldestRevisionNotUpdated) {
-  // Destroy the blobfs instance to claim the block device.
-  auto device = Blobfs::Destroy(std::move(fs_));
-
-  // Read the superblock, verify the oldest revision is set to the past revision, rather than the
-  // current driver revision.
-  uint8_t block[kBlobfsBlockSize] = {};
-  static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
-  Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(blobfs::kBlobfsCurrentRevision - 1, info->oldest_revision);
-}
-
-// Tests that the driver updates the oldest_revision field when mounting a filesystem that has a
-// greater oldest_revision.
-TEST_F(BlobfsTestAtFutureRevision, OldestRevisionUpdated) {
-  // Destroy the blobfs instance to claim the block device.
-  auto device = Blobfs::Destroy(std::move(fs_));
-
-  // Read the superblock, verify the oldest revision is set to the current revision, rather than the
-  // future revision which blobfs was formatted on.
-  uint8_t block[kBlobfsBlockSize] = {};
-  static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
-  Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(blobfs::kBlobfsCurrentRevision, info->oldest_revision);
 }
 
 // Tests reading a well known location.
@@ -260,29 +226,6 @@ TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
   EXPECT_EQ(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), options,
                            zx::resource(), &fs_),
             ZX_ERR_INVALID_ARGS);
-}
-
-class MockFvmDevice : public block_client::FakeFVMBlockDevice {
- public:
-  using FakeFVMBlockDevice::FakeFVMBlockDevice;
-
-  static std::unique_ptr<MockFvmDevice> CreateAndFormat(const FilesystemOptions& options,
-                                                        uint64_t num_blocks) {
-    auto device = std::make_unique<MockFvmDevice>(num_blocks, kBlockSize, /*slice_size=*/32768,
-                                                  /*slice_capacity=*/500);
-    EXPECT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
-    return device;
-  }
-};
-
-using BlobfsTestWithOldRevisionAndFvmDevice =
-    BlobfsTestAtRevision<blobfs::kBlobfsRevisionBackupSuperblock - 1, kNumBlocks, MockFvmDevice>;
-
-TEST_F(BlobfsTestWithOldRevisionAndFvmDevice, OldInstanceTriggersWriteToBackupSuperblock) {
-  ASSERT_TRUE(fs_->Info().flags & kBlobFlagFVM);
-  ASSERT_EQ(fs_->Info().oldest_revision, kBlobfsCurrentRevision);
-  auto device = Blobfs::Destroy(std::move(fs_));
-  ASSERT_EQ(Fsck(std::move(device), MountOptions{.writability = Writability::ReadOnlyDisk}), ZX_OK);
 }
 
 using BlobfsTestWithLargeDevice =

@@ -57,6 +57,7 @@
 #include "src/storage/blobfs/iterator/block-iterator.h"
 #include "src/storage/blobfs/pager/transfer-buffer.h"
 #include "src/storage/blobfs/pager/user-pager-info.h"
+#include "src/storage/blobfs/transaction.h"
 #include "src/storage/fvm/client.h"
 
 namespace blobfs {
@@ -323,7 +324,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     // Write a backup superblock if there's an old version of blobfs.
     bool write_backup = false;
     if (fs->info_.oldest_revision < kBlobfsRevisionBackupSuperblock) {
-      FX_LOGS(INFO) << "Upgrading to latest revision";
+      FX_LOGS(INFO) << "Upgrading to revision " << kBlobfsRevisionBackupSuperblock;
       if (fs->Info().flags & kBlobFlagFVM) {
         FX_LOGS(INFO) << "Writing backup superblock";
         write_backup = true;
@@ -1046,11 +1047,19 @@ void Blobfs::FsckAtEndOfTransaction() {
 }
 
 zx_status_t Blobfs::Migrate() {
+  if (zx_status_t status = MigrateToRev3(); status != ZX_OK) {
+    return status;
+  }
+  return MigrateToRev4();
+}
+
+zx_status_t Blobfs::MigrateToRev3() {
   if (writability_ != Writability::Writable ||
       write_compression_settings_.compression_algorithm != CompressionAlgorithm::CHUNKED ||
-      info_.oldest_revision >= kBlobfsRevisionNoOldCompressionFormats) {
+      info_.oldest_revision != kBlobfsRevisionNoOldCompressionFormats - 1) {
     return ZX_OK;
   }
+  FX_LOGS(INFO) << "Migrating to revision " << kBlobfsRevisionNoOldCompressionFormats;
   constexpr size_t kBufferSize = 128 * 1024;
   auto buffer = std::make_unique<uint8_t[]>(kBufferSize);
   int migrated = 0;
@@ -1108,6 +1117,33 @@ zx_status_t Blobfs::Migrate() {
   FX_LOGS(INFO) << "Migrated " << migrated << " blob(s)";
   BlobTransaction transaction;
   info_.oldest_revision = kBlobfsRevisionNoOldCompressionFormats;
+  WriteInfo(transaction);
+  transaction.Commit(*journal_);
+  return ZX_OK;
+}
+
+zx_status_t Blobfs::MigrateToRev4() {
+  if (writability_ != Writability::Writable ||
+      info_.oldest_revision != kBlobfsRevisionHostToolHandlesNullBlobCorrectly - 1) {
+    return ZX_OK;
+  }
+  FX_LOGS(INFO) << "Migrating to revision " << kBlobfsRevisionHostToolHandlesNullBlobCorrectly;
+  BlobTransaction transaction;
+  for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {
+    auto inode = GetNode(node_index);
+    ZX_ASSERT_MSG(inode.is_ok(), "Failed to get node %u: %s", node_index, inode.status_string());
+    if (!inode->header.IsAllocated() || inode->header.IsExtentContainer()) {
+      continue;
+    }
+    if (inode->block_count > 0 || inode->extent_count == 0) {
+      // The inode isn't the null blob, or it already has a correct extent_count (0)
+      continue;
+    }
+    FX_LOGS(INFO) << "Repairing zero-length extent at index " << node_index;
+    inode->extent_count = 0;
+    WriteNode(node_index, transaction);
+  }
+  info_.oldest_revision = kBlobfsRevisionHostToolHandlesNullBlobCorrectly;
   WriteInfo(transaction);
   transaction.Commit(*journal_);
   return ZX_OK;
