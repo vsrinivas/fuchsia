@@ -22,7 +22,7 @@ void main() {
     await ermine.setUp();
   });
 
-  tearDown(() async {
+  tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup
     await ermine.tearDown();
     await sl4f?.stopServer();
@@ -35,5 +35,24 @@ void main() {
     // memory will always be present in quicksettings
     final memoryTitle = await ermine.driver.getText(find.text('MEMORY'));
     expect(memoryTitle, 'MEMORY');
+  });
+
+  test('verify can change timezone setting in quicksettings', () async {
+    await ermine.gotoOverview();
+
+    // tap default timezone (UTC) to launch timezone list
+    final defaultTimezone = find.text('UTC');
+    await ermine.driver.waitFor(find.text('UTC'));
+    await ermine.driver.tap(defaultTimezone);
+
+    // select America/Los_Angeles timezone from timezone list
+    final newTimezone = find.text('America/Los_Angeles');
+    await ermine.driver.waitFor(newTimezone);
+    await ermine.driver.tap(newTimezone);
+
+    // verify selected timezone is present in quicksettings
+    final selectedTimezone =
+        await ermine.driver.getText(find.text('AMERICA/LOS_ANGELES'));
+    expect(selectedTimezone, 'AMERICA/LOS_ANGELES');
   });
 }
