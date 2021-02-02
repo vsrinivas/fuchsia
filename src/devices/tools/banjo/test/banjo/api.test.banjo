@@ -18,17 +18,12 @@ protocol Api {
     uint64(handle handle, uint64 data) -> (zx.status status);
     float32(handle handle, float32 data) -> (zx.status status);
     float64(handle handle, float64 data) -> (zx.status status);
-    clock(handle handle, zx.clock data) -> (zx.status status);
     duration(handle handle, zx.duration data) -> (zx.status status);
     koid(handle handle, zx.koid data) -> (zx.status status);
     paddr(handle handle, zx.paddr data) -> (zx.status status);
-    rights(handle handle, zx.rights data) -> (zx.status status);
     signals(handle handle, zx.signals data) -> (zx.status status);
     time(handle handle, zx.time data) -> (zx.status status);
     vaddr(handle handle, zx.vaddr data) -> (zx.status status);
-    vm_option(handle handle, zx.vm_option data) -> (zx.status status);
-    struct(handle handle, array<zx_channel_call_args_t>:1 args) ->
-        (zx.status status);
     buffer(handle handle, array<voidptr>:size data, uint32 size) ->
         (zx.status status);
 
@@ -43,24 +38,19 @@ protocol Api {
     output_uint64(handle handle) -> (zx.status status, uint64 result);
     output_float32(handle handle) -> (zx.status status, float32 result);
     output_float64(handle handle) -> (zx.status status, float64 result);
-    output_clock(handle handle) -> (zx.status status, zx.clock result);
     output_duration(handle handle) -> (zx.status status, zx.duration result);
     output_koid(handle handle) -> (zx.status status, zx.koid result);
     output_paddr(handle handle) -> (zx.status status, zx.paddr result);
-    output_rights(handle handle) -> (zx.status status, zx.rights result);
     output_signals(handle handle) -> (zx.status status, zx.signals result);
     output_time(handle handle) -> (zx.status status, zx.time result);
     output_vaddr(handle handle) -> (zx.status status, zx.vaddr result);
-    output_vm_option(handle handle) -> (zx.status status, zx.vm_option result);
-    output_struct(handle handle) ->
-        (zx.status status, array<zx_channel_call_args>:1 result);
     output_buffer(handle handle, array<voidptr>:size data, uint32 size) ->
         (zx.status status, uint32 actual);
 
     return_void(handle handle) -> ();
     return_status(handle handle) -> (zx.status status);
     return_ticks(handle handle) -> (zx.ticks result);
-    return_time(handle handle) -> (zx.time resukt);
+    return_time(handle handle) -> (zx.time result);
     return_uint32(handle handle) -> (uint32 result);
     return_uint64(handle handle) -> (uint64 result);
 };

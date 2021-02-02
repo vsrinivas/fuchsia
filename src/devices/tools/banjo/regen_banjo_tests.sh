@@ -3,6 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+set -e
+
 if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
   echo "FUCHSIA_BUILD_DIR environment variable not a directory; are you running under fx exec?" 1>&2
   exit 1
@@ -22,6 +24,10 @@ do
   extension="${filename##*.*.}"
   filename="${filename%.*.*}"
 
+  if [ "$filename" = "bad_type" ]; then
+    continue
+  fi
+
   if [ "$filename" = "library_part_two" ]; then
     continue
   fi
@@ -37,7 +43,8 @@ do
   with_rust=true
 
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
-    || [ "$filename" = "protocol-base" ] ; then
+    || [ "$filename" = "protocol-base" ] || [ "$filename" = "api" ] \
+    || [ "$filename" = "pass-callback" ]; then
     dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
   fi
 

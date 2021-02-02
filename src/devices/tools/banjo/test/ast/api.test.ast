@@ -1,0 +1,2007 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.api",
+    namespaces: {
+        "banjo.examples.api": [
+            Protocol {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.api",
+                    ),
+                    name: "Api",
+                },
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "bool",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Bool,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "int8",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Int8,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "int16",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Int16,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "int32",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Int32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "int64",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Int64,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "uint8",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                UInt8,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "uint16",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                UInt16,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "uint32",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                UInt32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "uint64",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                UInt64,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "float32",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Float32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "float64",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Float64,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "duration",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "duration",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "koid",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "koid",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "paddr",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "paddr",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "signals",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "signals",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "time",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "time",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "vaddr",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "vaddr",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "buffer",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Array {
+                                    ty: Voidptr,
+                                    size: Constant(
+                                        "size",
+                                    ),
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "size",
+                                UInt32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_bool",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Bool,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_int8",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Int8,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_int16",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Int16,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_int32",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Int32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_int64",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Int64,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_uint8",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                UInt8,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_uint16",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                UInt16,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_uint32",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                UInt32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_uint64",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                UInt64,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_float32",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Float32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_float64",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Float64,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_duration",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "duration",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_koid",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "koid",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_paddr",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "paddr",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_signals",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "signals",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_time",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "time",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_vaddr",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "vaddr",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "output_buffer",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "data",
+                                Array {
+                                    ty: Voidptr,
+                                    size: Constant(
+                                        "size",
+                                    ),
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "size",
+                                UInt32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                            (
+                                "actual",
+                                UInt32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "return_void",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "return_status",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "status",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "return_ticks",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "ticks",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "return_time",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "result",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx",
+                                        ),
+                                        name: "time",
+                                    },
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "return_uint32",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "result",
+                                UInt32,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "return_uint64",
+                        in_params: [
+                            (
+                                "handle",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false,
+                                },
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                        out_params: [
+                            (
+                                "result",
+                                UInt64,
+                                Attrs(
+                                    [],
+                                ),
+                            ),
+                        ],
+                    },
+                ],
+            },
+        ],
+        "zx": [
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "status",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "time",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "duration",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "ticks",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "int64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "koid",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "vaddr",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "paddr",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "paddr32",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "gpaddr",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "off",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint64",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "procarg",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+            Alias(
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "signals",
+                },
+                Ident {
+                    namespace: Some(
+                        "zx",
+                    ),
+                    name: "uint32",
+                },
+            ),
+        ],
+    },
+}

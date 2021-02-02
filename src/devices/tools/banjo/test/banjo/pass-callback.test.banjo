@@ -3,7 +3,20 @@
 // found in the LICENSE file.
 
 library banjo.examples.pass.callback;
+
 using zx;
+
+struct Point {
+    int64 x;
+    int64 y;
+};
+
+enum Direction: uint8 {
+    UP = 1;
+    DOWN = 2;
+    LEFT = 3;
+    RIGHT = 4;
+};
 
 enum Action : uint32 {
     START = 0x1;
