@@ -57,7 +57,7 @@ class SincSamplerImpl : public SincSampler {
   virtual void EagerlyPrepare() override { filter_.EagerlyPrepare(); }
 
  private:
-  template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
+  template <ScalerType ScaleType, bool DoAccumulate>
   inline bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
                   uint32_t frac_src_frames, int32_t* frac_src_offset);
 
@@ -110,7 +110,7 @@ SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::PopulateFramesToCha
 // If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
 // buffers are cleared before usage; we optimize accordingly.
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
-template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
+template <ScalerType ScaleType, bool DoAccumulate>
 inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src_void,
     uint32_t frac_src_frames, int32_t* frac_src_offset) {
@@ -196,7 +196,7 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
           dest_frame[dest_chan] = DM::Mix(dest_frame[dest_chan], sample, amplitude_scale);
         }
 
-        frac_src_off = position_.AdvanceFrame<HasModulo>();
+        frac_src_off = position_.AdvanceFrame();
 
         frac_cache_offset = frac_src_off - src_offset_to_cache;
         interp_frac = frac_cache_offset & Mixer::FRAC_MASK;
@@ -212,7 +212,7 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       next_cache_idx_to_fill = kDataCacheLength - num_frames_to_shift;
     }
   } else {
-    auto num_src_frames_skipped = position_.AdvanceToEnd<HasModulo>();
+    auto num_src_frames_skipped = position_.AdvanceToEnd();
     working_data_.ShiftBy(num_src_frames_skipped);
   }
 
@@ -225,31 +225,21 @@ bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) {
   auto info = &bookkeeping();
-  bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 
   // For now, we continue to use this proliferation of template specializations, largely to keep the
   // designs congruent between the Point, Linear and Sinc samplers. Previously when we removed most
   // of these specializations from Point/Linear, we regained only about 75K of blob space, while
   // mixer microbenchmarks running times ballooned to ~3x of their previous durations.
   if (info->gain.IsUnity()) {
-    return accumulate
-               ? (hasModulo
-                      ? Mix<ScalerType::EQ_UNITY, true, true>(dest, dest_frames, dest_offset, src,
-                                                              frac_src_frames, frac_src_offset)
-                      : Mix<ScalerType::EQ_UNITY, true, false>(dest, dest_frames, dest_offset, src,
-                                                               frac_src_frames, frac_src_offset))
-               : (hasModulo
-                      ? Mix<ScalerType::EQ_UNITY, false, true>(dest, dest_frames, dest_offset, src,
-                                                               frac_src_frames, frac_src_offset)
-                      : Mix<ScalerType::EQ_UNITY, false, false>(dest, dest_frames, dest_offset, src,
-                                                                frac_src_frames, frac_src_offset));
+    return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest, dest_frames, dest_offset, src,
+                                                        frac_src_frames, frac_src_offset)
+                      : Mix<ScalerType::EQ_UNITY, false>(dest, dest_frames, dest_offset, src,
+                                                         frac_src_frames, frac_src_offset);
   }
 
   if (info->gain.IsSilent()) {
-    return (hasModulo ? Mix<ScalerType::MUTED, true, true>(dest, dest_frames, dest_offset, src,
-                                                           frac_src_frames, frac_src_offset)
-                      : Mix<ScalerType::MUTED, true, false>(dest, dest_frames, dest_offset, src,
-                                                            frac_src_frames, frac_src_offset));
+    return Mix<ScalerType::MUTED, true>(dest, dest_frames, dest_offset, src, frac_src_frames,
+                                        frac_src_offset);
   }
 
   if (info->gain.IsRamping()) {
@@ -258,30 +248,16 @@ bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       dest_frames = max_frames;
     }
 
-    return accumulate
-               ? (hasModulo
-                      ? Mix<ScalerType::RAMPING, true, true>(dest, dest_frames, dest_offset, src,
-                                                             frac_src_frames, frac_src_offset)
-                      : Mix<ScalerType::RAMPING, true, false>(dest, dest_frames, dest_offset, src,
-                                                              frac_src_frames, frac_src_offset))
-               : (hasModulo
-                      ? Mix<ScalerType::RAMPING, false, true>(dest, dest_frames, dest_offset, src,
-                                                              frac_src_frames, frac_src_offset)
-                      : Mix<ScalerType::RAMPING, false, false>(dest, dest_frames, dest_offset, src,
-                                                               frac_src_frames, frac_src_offset));
+    return accumulate ? Mix<ScalerType::RAMPING, true>(dest, dest_frames, dest_offset, src,
+                                                       frac_src_frames, frac_src_offset)
+                      : Mix<ScalerType::RAMPING, false>(dest, dest_frames, dest_offset, src,
+                                                        frac_src_frames, frac_src_offset);
   }
 
-  return accumulate
-             ? (hasModulo
-                    ? Mix<ScalerType::NE_UNITY, true, true>(dest, dest_frames, dest_offset, src,
-                                                            frac_src_frames, frac_src_offset)
-                    : Mix<ScalerType::NE_UNITY, true, false>(dest, dest_frames, dest_offset, src,
-                                                             frac_src_frames, frac_src_offset))
-             : (hasModulo
-                    ? Mix<ScalerType::NE_UNITY, false, true>(dest, dest_frames, dest_offset, src,
-                                                             frac_src_frames, frac_src_offset)
-                    : Mix<ScalerType::NE_UNITY, false, false>(dest, dest_frames, dest_offset, src,
-                                                              frac_src_frames, frac_src_offset));
+  return accumulate ? Mix<ScalerType::NE_UNITY, true>(dest, dest_frames, dest_offset, src,
+                                                      frac_src_frames, frac_src_offset)
+                    : Mix<ScalerType::NE_UNITY, false>(dest, dest_frames, dest_offset, src,
+                                                       frac_src_frames, frac_src_offset);
 }
 
 // Templates used to expand  the different combinations of possible SincSampler configurations.
