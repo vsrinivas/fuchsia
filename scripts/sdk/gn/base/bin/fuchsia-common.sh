@@ -207,26 +207,6 @@ function get-device-ip-by-name {
   fi
 }
 
-function get-host-ip {
-  # $1 is the hostname of the Fuchsia device. If $1 is empty, this function
-  # returns the IP address of an arbitrarily selected Fuchsia device.
-  local DEVICE_NAME
-  if [[ "${#}" -eq 1 &&  "${1}" != "" ]]; then
-    DEVICE_NAME="${1}"
-  else
-    DEVICE_NAME="$(get-device-name)"
-  fi
-  # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
-  #   forcing IPv6 allows for easier manipulation of the result.
-  # cut: Remove the IPv6 scope, if present. For link-local addresses, the scope
-  #   effectively describes which interface a device is connected on. Since
-  #   this information is device-specific (i.e. the Fuchsia device refers to
-  #   the development host with a different scope than vice versa), we can
-  #   strip this from the IPv6 result. This is reliable as long as the Fuchsia
-  #   device only needs link-local networking on one interface.
-  "$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -local -ipv4=false "${DEVICE_NAME}" | head -1 | cut -d '%' -f1
-}
-
 function get-sdk-version {
   # Get the Fuchsia SDK id
   # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.

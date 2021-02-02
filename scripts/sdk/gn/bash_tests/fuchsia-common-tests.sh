@@ -187,44 +187,6 @@ TEST_get-device-ip() {
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
-TEST_get-host-ip-any() {
-    BT_ASSERT_FUNCTION_EXISTS get-host-ip
-    cat > "${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
-    if [[ "${1}" == list ]]; then
-      echo "fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked"
-    else
-      echo "fe80::4600:fff:fefe:b555%enx010101010101"
-    fi
-EOF
-
-    HOST_IP="$(get-host-ip)"
-    # shellcheck disable=SC1090
-    source  "${MOCKED_DEVICE_FINDER}.mock_state.1"
-    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" list -device-limit 1 -full )
-    BT_EXPECT_EQ "${expected_cmd_line[*]}" "${BT_MOCK_ARGS[*]}"
-
-    # shellcheck disable=SC1090
-    source  "${MOCKED_DEVICE_FINDER}.mock_state.2"
-    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" resolve -local "-ipv4=false" atom-device-name-mocked )
-    BT_EXPECT_EQ "${expected_cmd_line[*]}" "${BT_MOCK_ARGS[*]}"
-
-    BT_EXPECT_EQ  "${HOST_IP}" "fe80::4600:fff:fefe:b555"
-}
-
-TEST_get-host-ip() {
-     BT_ASSERT_FUNCTION_EXISTS get-host-ip
-    cat > "${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
-      echo "fe80::4600:fff:fefe:b555%enx010101010101"
-EOF
-
-    HOST_IP="$(get-host-ip "atom-device-name-mocked")"
-    # shellcheck disable=SC1090
-    source  "${MOCKED_DEVICE_FINDER}.mock_state"
-    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" resolve -local "-ipv4=false" "atom-device-name-mocked" )
-    BT_EXPECT_EQ "${expected_cmd_line[*]}" "${BT_MOCK_ARGS[*]}"
-    BT_EXPECT_EQ  "${HOST_IP}" "fe80::4600:fff:fefe:b555"
-}
-
 TEST_get-sdk-version() {
   BT_ASSERT_FUNCTION_EXISTS get-sdk-version
   SDK_VERSION="$(get-sdk-version)"
