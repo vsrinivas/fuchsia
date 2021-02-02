@@ -269,7 +269,7 @@ impl ImageFiles {
             amber_files: fuchsia_build_dir.join("amber-files"),
             build_args: fuchsia_build_dir.join("buildargs.gn"),
             fvm: fuchsia_build_dir.join("storage-full.blk"),
-            kernel: fuchsia_build_dir.join("femu-kernel.kernel"),
+            kernel: fuchsia_build_dir.join("qemu-kernel.kernel"),
             zbi: fuchsia_build_dir.join("zircon-a.zbi"),
         })
     }
