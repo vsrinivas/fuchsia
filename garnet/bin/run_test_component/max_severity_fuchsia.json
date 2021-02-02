@@ -102,10 +102,6 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/controller-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/cobalt-manual-tests#meta/cobalt_testapp.cmx"
         },
         {

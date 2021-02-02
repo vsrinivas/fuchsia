@@ -521,11 +521,6 @@ group("tracing") {
   ]
 }
 
-group("usb_video") {
-  testonly = true
-  public_deps = [ "//src/camera/drivers/usb_video" ]
-}
-
 group("vulkan") {
   public_deps = [
     "//src/devices/sysmem/bin/sysmem_connector",

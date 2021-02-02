@@ -29,7 +29,6 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.boot",
-    "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.hardware.pty",
     "//sdk/fidl/fuchsia.kernel",
