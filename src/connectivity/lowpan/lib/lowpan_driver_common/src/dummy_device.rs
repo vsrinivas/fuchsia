@@ -417,7 +417,19 @@ impl Driver for DummyDevice {
     }
 
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
-        return Ok(vec![]);
+        return Ok(vec![NeighborInfo {
+            mac_address: Some(vec![0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF]),
+            short_address: Some(8),
+            age: Some(10042934),
+            is_child: Some(true),
+            link_frame_count: Some(256),
+            mgmt_frame_count: Some(128),
+            last_rssi_in: Some(-108),
+            avg_rssi_in: Some(-12),
+            lqi_in: Some(16),
+            thread_mode: Some(5),
+            ..NeighborInfo::EMPTY
+        }]);
     }
 
     async fn get_counters(&self) -> ZxResult<Counters> {
