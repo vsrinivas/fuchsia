@@ -5,9 +5,9 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_
 
-#include <lib/stdcompat/internal/utility.h>
-
 #include <utility>
+
+#include "internal/utility.h"
 
 namespace cpp17 {
 // Use alias for cpp17 and above.

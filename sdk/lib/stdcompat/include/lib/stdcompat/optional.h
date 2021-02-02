@@ -58,6 +58,10 @@ class bad_optional_access : public std::exception {
   // String describing the reason for the bad access. Must point to a string
   // with static storage duration.
   const char* reason_;
+
+  template <typename T,
+            typename std::enable_if<std::is_base_of<std::exception, T>::value, bool>::type>
+  friend constexpr void cpp17::internal::throw_or_abort(const char*);
 };
 
 // A reasonably complete implementation of std::optional compatible with C++14.

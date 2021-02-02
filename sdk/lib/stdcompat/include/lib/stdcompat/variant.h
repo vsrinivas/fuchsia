@@ -146,6 +146,10 @@ class bad_variant_access : public std::exception {
   template <typename... Ts>
   friend class variant;
 
+  template <typename T,
+            typename std::enable_if<std::is_base_of<std::exception, T>::value, bool>::type>
+  friend constexpr void cpp17::internal::throw_or_abort(const char*);
+
   bad_variant_access(const char* reason) noexcept : reason_{reason} {}
 
   // String describing the reason for the bad access. Must point to a string

@@ -14,13 +14,19 @@ namespace internal {
 
 template <typename Tag>
 struct instantiate_templated_tag {
-  static inline constexpr const Tag storage;
+  static constexpr const Tag storage{};
 };
+
+template <typename Tag>
+constexpr const Tag instantiate_templated_tag<Tag>::storage;
 
 template <typename T, typename ValueType, ValueType Value>
 struct inline_storage {
-  static inline constexpr const ValueType storage{Value};
+  static constexpr const ValueType storage{Value};
 };
+
+template <typename T, typename ValueType, ValueType Value>
+constexpr const ValueType inline_storage<T, ValueType, Value>::storage;
 
 // Utility to return the first type in a parameter pack.
 template <typename... Ts>
