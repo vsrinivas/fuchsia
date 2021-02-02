@@ -194,7 +194,7 @@ async fn test_policy_get_default() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_add_policy() {
     let expected_policy_target = AudioStreamType::Media;
-    let policy_transform = Transform::Disable;
+    let policy_transform = Transform::Max(1.0);
 
     let env = create_test_environment().await;
 
@@ -236,7 +236,7 @@ async fn test_policy_remove_policy() {
     let env = create_test_environment().await;
 
     // Add a policy property and save the returned policy ID.
-    let added_policy_id = add_policy(&env, expected_policy_target, Transform::Disable).await;
+    let added_policy_id = add_policy(&env, expected_policy_target, Transform::Max(1.0)).await;
 
     // Remove the same policy using the returned ID.
     remove_policy(&env, added_policy_id).await;

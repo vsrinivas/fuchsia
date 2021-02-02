@@ -8,7 +8,7 @@ use std::convert::TryFrom;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use fidl_fuchsia_media::AudioRenderUsage;
-use fidl_fuchsia_settings_policy::{Disable, Mute, PolicyParameters, Volume};
+use fidl_fuchsia_settings_policy::{PolicyParameters, Volume};
 
 use bitflags::bitflags;
 
@@ -212,8 +212,6 @@ bitflags! {
     pub struct TransformFlags: u64 {
         const TRANSFORM_MAX = 1 << 0;
         const TRANSFORM_MIN = 1 << 1;
-        const TRANSFORM_MUTE = 1 << 2;
-        const TRANSFORM_DISABLE = 1 << 3;
     }
 }
 
@@ -225,12 +223,6 @@ impl From<TransformFlags> for Vec<fidl_fuchsia_settings_policy::Transform> {
         }
         if src.contains(TransformFlags::TRANSFORM_MIN) {
             transforms.push(fidl_fuchsia_settings_policy::Transform::Min);
-        }
-        if src.contains(TransformFlags::TRANSFORM_MUTE) {
-            transforms.push(fidl_fuchsia_settings_policy::Transform::Mute);
-        }
-        if src.contains(TransformFlags::TRANSFORM_DISABLE) {
-            transforms.push(fidl_fuchsia_settings_policy::Transform::Disable);
         }
         return transforms;
     }
@@ -260,16 +252,14 @@ pub enum Transform {
     Max(f32),
     // Sets a floor for the minimum volume an audio stream can be set to.
     Min(f32),
-    // Locks the audio stream mute status to the given value.
-    Mute(bool),
-    // Rejects all sets to the given audio stream.
-    Disable,
 }
 
 impl TryFrom<PolicyParameters> for Transform {
     type Error = &'static str;
 
     fn try_from(src: PolicyParameters) -> Result<Self, Self::Error> {
+        // Support future expansion of FIDL.
+        #[allow(unreachable_patterns)]
         Ok(match src {
             PolicyParameters::Max(Volume { volume, .. }) => {
                 Transform::Max(volume.ok_or_else(|| "missing max volume")?)
@@ -277,10 +267,7 @@ impl TryFrom<PolicyParameters> for Transform {
             PolicyParameters::Min(Volume { volume, .. }) => {
                 Transform::Min(volume.ok_or_else(|| "missing min volume")?)
             }
-            PolicyParameters::Mute(Mute { mute, .. }) => {
-                Transform::Mute(mute.ok_or_else(|| "missing mute state")?)
-            }
-            PolicyParameters::Disable(_) => Transform::Disable,
+            _ => return Err("unknown policy parameter"),
         })
     }
 }
@@ -294,10 +281,6 @@ impl From<Transform> for PolicyParameters {
             Transform::Min(vol) => {
                 PolicyParameters::Min(Volume { volume: Some(vol), ..Volume::EMPTY })
             }
-            Transform::Mute(is_muted) => {
-                PolicyParameters::Mute(Mute { mute: Some(is_muted), ..Mute::EMPTY })
-            }
-            Transform::Disable => PolicyParameters::Disable(Disable::EMPTY),
         }
     }
 }
@@ -328,7 +311,7 @@ mod tests {
         PolicyId, Property, PropertyTarget, StateBuilder, Transform, TransformFlags,
     };
     use crate::audio::types::AudioStreamType;
-    use fidl_fuchsia_settings_policy::{Disable, Mute, PolicyParameters, Volume};
+    use fidl_fuchsia_settings_policy::{PolicyParameters, Volume};
     use matches::assert_matches;
     use std::collections::{HashMap, HashSet};
     use std::convert::TryFrom;
@@ -340,11 +323,9 @@ mod tests {
     fn parameter_to_transform_missing_arguments() {
         let max_params = PolicyParameters::Max(Volume { volume: None, ..Volume::EMPTY });
         let min_params = PolicyParameters::Min(Volume { volume: None, ..Volume::EMPTY });
-        let mute_params = PolicyParameters::Mute(Mute { mute: None, ..Mute::EMPTY });
 
         assert_matches!(Transform::try_from(max_params), Err(_));
         assert_matches!(Transform::try_from(min_params), Err(_));
-        assert_matches!(Transform::try_from(mute_params), Err(_));
     }
 
     /// Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` succeeds
@@ -353,18 +334,13 @@ mod tests {
     fn parameter_to_transform() {
         let max_volume = 0.5;
         let min_volume = 0.5;
-        let mute = true;
         let max_params =
             PolicyParameters::Max(Volume { volume: Some(max_volume), ..Volume::EMPTY });
         let min_params =
             PolicyParameters::Min(Volume { volume: Some(min_volume), ..Volume::EMPTY });
-        let mute_params = PolicyParameters::Mute(Mute { mute: Some(mute), ..Mute::EMPTY });
-        let disable_params = PolicyParameters::Disable(Disable::EMPTY);
 
         assert_eq!(Transform::try_from(max_params), Ok(Transform::Max(max_volume)));
         assert_eq!(Transform::try_from(min_params), Ok(Transform::Min(min_volume)));
-        assert_eq!(Transform::try_from(mute_params), Ok(Transform::Mute(mute)));
-        assert_eq!(Transform::try_from(disable_params), Ok(Transform::Disable));
     }
 
     // Verifies that the audio policy state builder functions correctly for adding targets and

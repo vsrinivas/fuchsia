@@ -232,12 +232,6 @@ pub struct VolumePolicyOptions {
 
     #[structopt(long)]
     pub max: Option<f32>,
-
-    #[structopt(long)]
-    pub mute: Option<bool>,
-
-    #[structopt(short, long)]
-    pub disable: Option<bool>,
 }
 
 #[derive(StructOpt, Debug, Clone, Copy)]

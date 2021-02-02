@@ -241,7 +241,6 @@ impl AudioPolicyHandler {
                         audio_policy::Transform::Max(max) => max_volume = max_volume.min(max),
                         // Only the highest min volume applies
                         audio_policy::Transform::Min(min) => min_volume = min_volume.max(min),
-                        _ => {}
                     }
                 }
             }

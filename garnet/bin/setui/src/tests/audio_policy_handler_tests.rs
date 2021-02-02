@@ -335,7 +335,7 @@ async fn test_handler_restore_persisted_state() {
 /// Tests adding and reading policies.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_handler_add_policy() {
-    let expected_transform = Transform::Mute(false);
+    let expected_transform = Transform::Max(1.0);
     let modified_property = AudioStreamType::Media;
 
     let mut env = create_handler_test_environment().await;
@@ -405,7 +405,7 @@ async fn test_handler_remove_policy() {
         .handler
         .handle_policy_request(Request::Audio(audio::Request::AddPolicy(
             AudioStreamType::Media,
-            Transform::Mute(false),
+            Transform::Max(1.0),
         )))
         .await
         .expect("get failed");

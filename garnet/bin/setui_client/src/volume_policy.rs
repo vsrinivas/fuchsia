@@ -5,9 +5,7 @@
 use crate::utils::{self, Either, WatchOrSetResult};
 use crate::VolumePolicyCommands;
 use anyhow::format_err;
-use fidl_fuchsia_settings_policy::{
-    Disable, Mute, PolicyParameters, Target, Volume, VolumePolicyControllerProxy,
-};
+use fidl_fuchsia_settings_policy::{PolicyParameters, Target, Volume, VolumePolicyControllerProxy};
 
 pub async fn command(
     proxy: VolumePolicyControllerProxy,
@@ -32,26 +30,6 @@ pub async fn command(
                     &proxy,
                     add_options.target,
                     PolicyParameters::Max(Volume { volume: Some(max_volume), ..Volume::EMPTY }),
-                )
-                .await,
-            );
-        }
-        if let Some(mute) = add_options.mute {
-            add_results.push(
-                add_policy_request(
-                    &proxy,
-                    add_options.target,
-                    PolicyParameters::Mute(Mute { mute: Some(mute), ..Mute::EMPTY }),
-                )
-                .await,
-            );
-        }
-        if let Some(true) = add_options.disable {
-            add_results.push(
-                add_policy_request(
-                    &proxy,
-                    add_options.target,
-                    PolicyParameters::Disable(Disable { ..Disable::EMPTY }),
                 )
                 .await,
             );

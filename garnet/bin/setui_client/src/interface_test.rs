@@ -8,8 +8,9 @@ use {
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_settings_policy::{
-        Disable, PolicyParameters, Property, Target, Transform, VolumePolicyControllerMarker,
-        VolumePolicyControllerRequest, VolumePolicyControllerRequestStream,
+        PolicyParameters, Property, Target, Transform, Volume as PolicyVolume,
+        VolumePolicyControllerMarker, VolumePolicyControllerRequest,
+        VolumePolicyControllerRequestStream,
     },
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -1320,13 +1321,12 @@ async fn validate_volume_policy_get() -> Result<(), Error> {
 // Verifies that adding a new policy works and prints out the resulting policy ID.
 async fn validate_volume_policy_add() -> Result<(), Error> {
     let expected_target = AudioRenderUsage::Background;
+    let expected_volume: f32 = 1.0;
     let expected_policy_id = 42;
     let add_options = VolumePolicyCommands::AddPolicy(VolumePolicyOptions {
         target: expected_target,
         min: None,
-        max: None,
-        mute: None,
-        disable: Some(true),
+        max: Some(expected_volume),
     });
 
     // Create a fake volume policy service that responds to AddPolicy and verifies that the inputs
@@ -1336,7 +1336,13 @@ async fn validate_volume_policy_add() -> Result<(), Error> {
         Services::VolumePolicy,
         VolumePolicyControllerRequest::AddPolicy { target, parameters, responder } => {
             assert_eq!(target, Target::Stream(expected_target));
-            assert_eq!(parameters, PolicyParameters::Disable(Disable {..Disable::EMPTY}));
+            assert_eq!(
+                parameters,
+                PolicyParameters::Max(PolicyVolume {
+                    volume: Some(expected_volume),
+                    ..PolicyVolume::EMPTY
+                })
+            );
             responder.send(&mut Ok(expected_policy_id))?;
         }
     );
