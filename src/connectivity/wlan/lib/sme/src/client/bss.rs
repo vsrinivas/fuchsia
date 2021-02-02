@@ -149,6 +149,10 @@ mod tests {
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         assert!(cfg.is_bss_compatible(&fake_bss!(Wep)));
 
+        // WPA1 support is configurable to be on or off:
+        let cfg = ClientConfig::from_config(Config::default().with_wpa1(), false);
+        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa1)));
+
         // WPA3 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default(), true);
         assert!(cfg.is_bss_compatible(&fake_bss!(Wpa3)));
