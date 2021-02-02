@@ -14,7 +14,6 @@ group("drivers") {
     "sensors",
     "test_utils",
     "usb_video",
-    "usb_video:tests",
   ]
 }
 
@@ -23,6 +22,7 @@ group("tests") {
   deps = [
     ":bind_tests",
     "test_utils:tests",
+    "usb_video:tests",
   ]
 }
 
@@ -42,12 +42,12 @@ group("bind_tests") {
 group("all") {
   testonly = true
   deps = [
+    ":tests",
     "bus",
     "controller/sherlock",
     "hw_accel",
     "sensors",
     "usb_video",
-    "usb_video:tests",
   ]
 }
 

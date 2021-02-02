@@ -5,8 +5,20 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
-import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":bind_test",
+    ":uvc_format_unittest",
+  ]
+}
+
+group("bind_test") {
+  testonly = true
+  deps = [ ":usb_video_bind_test" ]
+}
 
 bind_rules("usb_video_bind") {
   rules = "usb_video.bind"
@@ -18,9 +30,7 @@ bind_rules("usb_video_bind") {
   ]
 }
 
-driver_module("usb_video_driver") {
-  output_name = "usb_video"
-
+source_set("lib") {
   sources = [
     "camera_control_impl.cc",
     "camera_control_impl.h",
@@ -33,28 +43,38 @@ driver_module("usb_video_driver") {
     "video_util.c",
     "video_util.h",
   ]
-
   deps = [
     ":usb_video_bind",
-    "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/fidl/fuchsia.camera",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
+    "//src/lib/listnode",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/fidl/fuchsia.camera",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//src/lib/listnode",
-    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
+  ]
+}
+
+driver_module("usb_video_driver") {
+  output_name = "usb_video"
+  deps = [
+    ":lib",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -68,48 +88,16 @@ driver_package("usb_video") {
   ]
 }
 
-test("usb_video_test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "usb_video_test"
-  sources = [
-    "uvc_format.cc",
-    "uvc_format_test.cc",
-  ]
+executable("uvc_format_unittest_bin") {
+  testonly = true
+  sources = [ "uvc_format_unittest.cc" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.usb",
-    "//sdk/fidl/fuchsia.camera",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
+    ":lib",
     "//src/devices/testing/fake_ddk",
-    "//src/devices/usb/lib/usb",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/fzl",
   ]
 }
 
-unittest_package("usb_video_test_package") {
-  package_name = "usb-video-test"
-  deps = [ ":usb_video_test" ]
-
-  tests = [
-    {
-      name = "usb_video_test"
-      environments = basic_envs
-    },
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":usb_video_test_package" ]
-}
-
-group("bind_test") {
-  testonly = true
-  deps = [ ":usb_video_bind_test" ]
+fuchsia_unittest_package("uvc_format_unittest") {
+  deps = [ ":uvc_format_unittest_bin" ]
 }
