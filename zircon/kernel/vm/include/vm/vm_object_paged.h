@@ -35,6 +35,7 @@ class VmObjectPaged final : public VmObject {
   static constexpr uint32_t kResizable = (1u << 0);
   static constexpr uint32_t kContiguous = (1u << 1);
   static constexpr uint32_t kSlice = (1u << 3);
+  static constexpr uint32_t kDiscardable = (1u << 4);
 
   static zx_status_t Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                             fbl::RefPtr<VmObjectPaged>* vmo);
@@ -68,6 +69,7 @@ class VmObjectPaged final : public VmObject {
   bool is_paged() const override { return true; }
   bool is_contiguous() const override { return (options_ & kContiguous); }
   bool is_resizable() const override { return (options_ & kResizable); }
+  bool is_discardable() const override { return (options_ & kDiscardable); }
   bool is_pager_backed() const override {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->is_pager_backed_locked();

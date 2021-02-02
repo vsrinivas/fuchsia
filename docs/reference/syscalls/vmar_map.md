@@ -112,7 +112,7 @@ non-zero when neither **ZX_VM_SPECIFIC** nor
 
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
-**ZX_ERR_NOT_SUPPORTED** If the vmo is resizable or backed by a pager but
+**ZX_ERR_NOT_SUPPORTED** If the vmo is resizable, discardable, or backed by a pager but
 **ZX_VM_ALLOW_FAULTS** is not set.
 
 **ZX_ERR_BUFFER_TOO_SMALL** The VMO is not resizable and the mapping extends past the end

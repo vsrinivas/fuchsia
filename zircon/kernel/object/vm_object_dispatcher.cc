@@ -32,6 +32,10 @@ zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint3
     res |= VmObjectPaged::kResizable;
     flags &= ~ZX_VMO_RESIZABLE;
   }
+  if (flags & ZX_VMO_DISCARDABLE) {
+    res |= VmObjectPaged::kDiscardable;
+    flags &= ~ZX_VMO_DISCARDABLE;
+  }
 
   if (flags) {
     return ZX_ERR_INVALID_ARGS;
@@ -142,6 +146,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   entry.share_count = vmo->share_count();
   entry.flags = (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
                 (vmo->is_resizable() ? ZX_INFO_VMO_RESIZABLE : 0) |
+                (vmo->is_discardable() ? ZX_INFO_VMO_DISCARDABLE : 0) |
                 (vmo->is_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0) |
                 (vmo->is_contiguous() ? ZX_INFO_VMO_CONTIGUOUS : 0);
   entry.committed_bytes = vmo->AttributedPages() * PAGE_SIZE;
@@ -287,6 +292,11 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
   canary_.Assert();
 
   LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n", options, offset, size);
+
+  // Clones are not supported for discardable VMOs.
+  if (vmo_->is_discardable()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   if (options & ZX_VMO_CHILD_SLICE) {
     // No other flags are valid for slices.

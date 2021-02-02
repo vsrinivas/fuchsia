@@ -366,6 +366,10 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
 
 zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options,
                                           uint64_t size, fbl::RefPtr<VmObjectPaged>* obj) {
+  if (options & kDiscardable) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // make sure size is page aligned
   zx_status_t status = RoundSize(size, &size);
   if (status != ZX_OK) {

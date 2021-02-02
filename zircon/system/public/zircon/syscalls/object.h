@@ -424,8 +424,11 @@ typedef struct zx_info_maps {
 // the ZX_INFO_VMO_TYPE_PAGED flag set.
 #define ZX_INFO_VMO_PAGER_BACKED            (1u<<5)
 
-// The VMO is contiguous
+// The VMO is contiguous.
 #define ZX_INFO_VMO_CONTIGUOUS              (1u<<6)
+
+// The VMO is discardable.
+#define ZX_INFO_VMO_DISCARDABLE             (1u<<7)
 
 // Describes a VMO. For mapping information, see |zx_info_maps_t|.
 typedef struct zx_info_vmo {

@@ -8,6 +8,7 @@
 #include <lib/fzl/memory-probe.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
+#include <lib/zx/pager.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -1673,6 +1674,68 @@ TEST(VmoTestCase, V1Info) {
   EXPECT_EQ(v1info.flags, info.flags);
   EXPECT_EQ(v1info.handle_rights, info.handle_rights);
   EXPECT_EQ(v1info.cache_policy, info.cache_policy);
+}
+
+TEST(VmoTestCase, Discardable) {
+  // Create a discardable VMO.
+  zx::vmo vmo;
+  constexpr size_t kSize = 3 * ZX_PAGE_SIZE;
+  ASSERT_OK(zx::vmo::create(kSize, ZX_VMO_DISCARDABLE, &vmo));
+
+  // Verify that the discardable bit is set.
+  zx_info_vmo_t info;
+  EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_NE(0, info.flags & ZX_INFO_VMO_DISCARDABLE);
+
+  // TODO(rashaeqbal): Reading/writing will require locking once locking and discard are
+  // implemented.
+  // Make sure we read zeros.
+  uint8_t buf[kSize];
+  EXPECT_OK(vmo.read(buf, 0, sizeof(buf)));
+  uint8_t comp[kSize] = {0};
+  EXPECT_BYTES_EQ(buf, comp, sizeof(buf));
+
+  // Write something to verify later.
+  memset(buf, 0xbb, sizeof(buf));
+  EXPECT_OK(vmo.write(buf, 0, sizeof(buf)));
+
+  // Mapping without ZX_VM_ALLOW_FAULTS should fail.
+  uintptr_t ptr;
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo.get(), 0,
+                        kSize, &ptr), );
+
+  // Mapping with ZX_VM_ALLOW_FAULTS should succeed.
+  EXPECT_OK(zx_vmar_map(zx_vmar_root_self(),
+                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS, 0, vmo.get(), 0,
+                        kSize, &ptr));
+  EXPECT_NE(0u, ptr);
+
+  // Verify the contents written last. Overwrite it via the mapped address.
+  EXPECT_BYTES_EQ(buf, (uint8_t *)ptr, sizeof(buf));
+  memset((uint8_t *)ptr, 0xcc, sizeof(buf));
+
+  // Verify contents again.
+  memset(comp, 0xcc, sizeof(comp));
+  EXPECT_OK(vmo.read(buf, 0, sizeof(buf)));
+  EXPECT_BYTES_EQ(buf, comp, sizeof(buf));
+
+  EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, kSize));
+
+  // Cannot create clones of any type for discardable VMOs.
+  zx::vmo child;
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, vmo.create_child(ZX_VMO_CHILD_SLICE, 0, kSize, &child));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, kSize, &child));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+            vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, kSize, &child));
+
+  // Cannot create a discardable pager backed VMO.
+  zx::pager pager;
+  EXPECT_OK(zx::pager::create(0, &pager));
+  zx::port port;
+  EXPECT_OK(zx::port::create(0, &port));
+  zx::vmo pager_vmo;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, pager.create_vmo(ZX_VMO_DISCARDABLE, port, 0, kSize, &pager_vmo));
 }
 
 }  // namespace

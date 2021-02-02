@@ -190,7 +190,11 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
   if (vmar_flags & VMAR_FLAG_ALLOW_FAULTS) {
     vmar_flags &= ~VMAR_FLAG_ALLOW_FAULTS;
   } else {
-    // TODO(stevensd): Add checks once all clients start using the flag.
+    if (vmo->is_discardable()) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    // TODO(stevensd): Add checks once all clients (resizable and pager-backed VMOs) start using the
+    // VMAR_FLAG_ALLOW_FAULTS flag.
   }
 
   fbl::RefPtr<VmMapping> result(nullptr);

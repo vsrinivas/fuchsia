@@ -170,6 +170,8 @@ class VmObject : public VmHierarchyBase,
   virtual bool is_contiguous() const { return false; }
   // Returns true if the object size can be changed.
   virtual bool is_resizable() const { return false; }
+  // Returns true if the object's pages are discardable by the kernel.
+  virtual bool is_discardable() const { return false; }
   // Returns true if the VMO was created via CreatePagerVmo().
   virtual bool is_pager_backed() const { return false; }
 

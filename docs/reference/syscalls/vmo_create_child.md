@@ -116,7 +116,7 @@ of failure, a negative error value is returned.
 
 ## ERRORS
 
-**ERR_BAD_TYPE**  Input handle is not a VMO.
+**ZX_ERR_BAD_TYPE**  Input handle is not a VMO.
 
 **ZX_ERR_ACCESS_DENIED**  Input handle does not have sufficient rights.
 
@@ -129,8 +129,10 @@ or the offset is not page aligned.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
 
-**ERR_BAD_STATE**  A COW child could not be created because the vmo has some
+**ZX_ERR_BAD_STATE**  A COW child could not be created because the vmo has some
 pinned pages.
+
+**ZX_ERR_NOT_SUPPORTED**  Input handle is a discardable VMO.
 
 ## SEE ALSO
 

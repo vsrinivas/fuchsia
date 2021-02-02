@@ -46,8 +46,15 @@ The following rights will be set on the handle by default:
 **ZX_RIGHT_SET_PROPERTY** - May set its properties using
 [`zx_object_set_property()`].
 
-The *options* field can be 0 or **ZX_VMO_RESIZABLE** to create a VMO
-that can change size. Children of a non-resizable VMO can be resized.
+The *options* field can be 0 or a combination of:
+
+**ZX_VMO_RESIZABLE** to create a VMO that can change size. Children of a
+non-resizable VMO can be resized.
+
+**ZX_VMO_DISCARDABLE** to create a VMO that the kernel can discard pages from
+under memory pressure. Use [`zx_vmo_op_range()`] with **ZX_VMO_OP_LOCK** to
+lock discardable VMOs when in use, and unlock them when done with
+**ZX_VMO_OP_UNLOCK** making them eligible for reclamation by the kernel.
 
 The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
 inactive whenever a child of the VMO is created and becomes active again when
