@@ -72,7 +72,7 @@ async fn input_handlers(
     add_mouse_hack(&scene_manager, &pointer_hack_server, &mut handlers).await;
     // Shortcut needs to go before IME.
     add_shortcut_handler(&mut handlers).await;
-    add_ime(&scene_manager, &mut handlers).await;
+    add_ime(&mut handlers).await;
     add_touch_handler(&scene_manager, &mut handlers).await;
     add_mouse_handler(scene_manager, &mut handlers).await;
 
@@ -87,10 +87,8 @@ async fn add_shortcut_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {
     }
 }
 
-async fn add_ime(scene_manager: &FlatSceneManager, handlers: &mut Vec<Box<dyn InputHandler>>) {
-    if let Ok(ime_handler) =
-        ImeHandler::new(scene_manager.session.clone(), scene_manager.compositor_id).await
-    {
+async fn add_ime(handlers: &mut Vec<Box<dyn InputHandler>>) {
+    if let Ok(ime_handler) = ImeHandler::new_transitional().await {
         handlers.push(Box::new(ime_handler));
     }
 }
