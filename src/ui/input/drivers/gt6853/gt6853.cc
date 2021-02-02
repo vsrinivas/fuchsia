@@ -5,7 +5,6 @@
 #include "gt6853.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
 #include <zircon/threads.h>
@@ -77,26 +76,20 @@ void Gt6853InputReport::ToFidlInputReport(fuchsia_input_report::InputReport::Bui
 }
 
 zx::status<Gt6853Device*> Gt6853Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Failed to get composite protocol");
-    return zx::error(ZX_ERR_NO_RESOURCES);
-  }
-
   zx_device_t* i2c = {};
-  if (!composite.GetFragment("i2c", &i2c)) {
+  if (!device_get_fragment(parent, "i2c", &i2c)) {
     zxlogf(ERROR, "Failed to get I2C fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
   zx_device_t* interrupt_gpio = {};
-  if (!composite.GetFragment("gpio-int", &interrupt_gpio)) {
+  if (!device_get_fragment(parent, "gpio-int", &interrupt_gpio)) {
     zxlogf(ERROR, "Failed to get interrupt GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
   zx_device_t* reset_gpio = {};
-  if (!composite.GetFragment("gpio-reset", &reset_gpio)) {
+  if (!device_get_fragment(parent, "gpio-reset", &reset_gpio)) {
     zxlogf(ERROR, "Failed to get reset GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }

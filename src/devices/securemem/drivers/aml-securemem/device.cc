@@ -4,7 +4,6 @@
 
 #include "device.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async/default.h>
@@ -41,28 +40,20 @@ zx_status_t AmlogicSecureMemDevice::Bind() {
   ddk_loop_closure_queue_.SetDispatcher(async_get_default_dispatcher(), ddk_dispatcher_thread_);
 
   zx_status_t status = ZX_OK;
-
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    LOG(ERROR, "Unable to get composite protocol");
-    return status;
-  }
-
-  status = ddk::PDevProtocolClient::CreateFromComposite(
-      composite, "fuchsia.hardware.platform.device.PDev", &pdev_proto_client_);
+  status = ddk::PDevProtocolClient::CreateFromDevice(
+      parent(), "fuchsia.hardware.platform.device.PDev", &pdev_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "Unable to get pdev protocol - status: %d", status);
     return status;
   }
 
-  status =
-      ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_proto_client_);
+  status = ddk::SysmemProtocolClient::CreateFromDevice(parent(), "sysmem", &sysmem_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "Unable to get sysmem protocol - status: %d", status);
     return status;
   }
 
-  status = ddk::TeeProtocolClient::CreateFromComposite(composite, "tee", &tee_proto_client_);
+  status = ddk::TeeProtocolClient::CreateFromDevice(parent(), "tee", &tee_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "ddk::TeeProtocolClient::CreateFromDevice() failed - status: %d", status);
     return status;

@@ -22,7 +22,6 @@ source_set("common") {
     ":vim-display-bind",
     "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
     "//sdk/banjo/fuchsia.hardware.audiotypes",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",

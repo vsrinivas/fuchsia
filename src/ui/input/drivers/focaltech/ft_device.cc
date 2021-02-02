@@ -4,7 +4,6 @@
 
 #include "ft_device.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/focaltech/focaltech.h>
 #include <lib/zx/profile.h>
@@ -80,25 +79,19 @@ int FtDevice::Thread() {
 }
 
 zx_status_t FtDevice::Init() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  i2c_ = ddk::I2cChannel(composite, "i2c");
+  i2c_ = ddk::I2cChannel(parent(), "i2c");
   if (!i2c_.is_valid()) {
     zxlogf(ERROR, "failed to acquire i2c");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  int_gpio_ = ddk::GpioProtocolClient(composite, "gpio-int");
+  int_gpio_ = ddk::GpioProtocolClient(parent(), "gpio-int");
   if (!int_gpio_.is_valid()) {
     zxlogf(ERROR, "failed to acquire int gpio");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  reset_gpio_ = ddk::GpioProtocolClient(composite, "gpio-reset");
+  reset_gpio_ = ddk::GpioProtocolClient(parent(), "gpio-reset");
   if (!reset_gpio_.is_valid()) {
     zxlogf(ERROR, "focaltouch: failed to acquire gpio");
     return ZX_ERR_NO_RESOURCES;

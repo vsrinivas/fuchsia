@@ -70,41 +70,6 @@ class VmoMapping {
   void* ptr_ = nullptr;
 };
 
-class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
- public:
-  explicit FakeComposite(zx_device_t* parent)
-      : proto_({&composite_protocol_ops_, this}), parent_(parent) {}
-
-  const composite_protocol_t* proto() const { return &proto_; }
-
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
-
-  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
-                             size_t* comp_actual) {
-    size_t comp_cur;
-
-    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
-      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
-      comp_list[comp_cur].device = parent_;
-    }
-
-    if (comp_actual != nullptr) {
-      *comp_actual = comp_cur;
-    }
-  }
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out) {
-    *out = parent_;
-    return true;
-  }
-
- private:
-  static constexpr size_t kNumFragments = 3;
-
-  composite_protocol_t proto_;
-  zx_device_t* parent_;
-};
-
 class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> {
  public:
   struct HeapInfo {
@@ -369,16 +334,18 @@ class FakeSync : public ddk::GoldfishSyncProtocol<FakeSync, ddk::base_protocol> 
 class ControlDeviceTest : public testing::Test {
  public:
   void SetUp() override {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[4], 4);
-    protocols[0] = {ZX_PROTOCOL_COMPOSITE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
-    protocols[1] = {ZX_PROTOCOL_GOLDFISH_PIPE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(pipe_.proto())};
-    protocols[2] = {ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(address_space_.proto())};
-    protocols[3] = {ZX_PROTOCOL_GOLDFISH_SYNC,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(sync_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
+    fragments[0].name = "goldfish-pipe";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_GOLDFISH_PIPE, *reinterpret_cast<const fake_ddk::Protocol*>(pipe_.proto())});
+    fragments[1].name = "goldfish-address-space";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE,
+        *reinterpret_cast<const fake_ddk::Protocol*>(address_space_.proto())});
+    fragments[2].name = "goldfish-sync";
+    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_GOLDFISH_SYNC, *reinterpret_cast<const fake_ddk::Protocol*>(sync_.proto())});
+    ddk_.SetFragments(std::move(fragments));
 
     dut_ = std::make_unique<Control>(fake_ddk::kFakeParent);
 
@@ -400,7 +367,6 @@ class ControlDeviceTest : public testing::Test {
  protected:
   std::unique_ptr<Control> dut_;
 
-  FakeComposite composite_{fake_ddk::kFakeParent};
   FakePipe pipe_;
   FakeAddressSpace address_space_;
   FakeSync sync_;

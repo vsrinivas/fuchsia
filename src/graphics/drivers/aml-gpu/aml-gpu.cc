@@ -201,13 +201,7 @@ zx_status_t AmlGpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t AmlGpu::Bind() {
-  ddk::CompositeProtocolClient composite(parent_);
-  if (!composite.is_valid()) {
-    GPU_ERROR("could not get composite protocol\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent_);
   if (!pdev_.is_valid()) {
     GPU_ERROR("could not get platform device protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -249,7 +243,7 @@ zx_status_t AmlGpu::Bind() {
       return ZX_ERR_INVALID_ARGS;
   }
 
-  ddk::RegistersProtocolClient reset_register(composite, "register-reset");
+  ddk::RegistersProtocolClient reset_register(parent_, "register-reset");
   if (!reset_register.is_valid()) {
     GPU_ERROR("could not get reset_register fragment");
     return ZX_ERR_NO_RESOURCES;

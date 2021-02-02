@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 #include "dai-test.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
@@ -31,13 +30,7 @@ DaiTest::DaiTest(zx_device_t* parent, bool is_input)
 }
 
 zx_status_t DaiTest::InitPDev() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  proto_client_ = ddk::DaiProtocolClient(composite, is_input_ ? "dai-in" : "dai-out");
+  proto_client_ = ddk::DaiProtocolClient(parent(), is_input ? "dai-in" : "dai-out");
   if (!proto_client_.is_valid()) {
     zxlogf(ERROR, "%s could not get DAI fragment", __FILE__);
     return ZX_ERR_NO_RESOURCES;

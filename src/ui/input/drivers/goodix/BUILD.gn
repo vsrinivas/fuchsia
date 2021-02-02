@@ -27,7 +27,6 @@ driver_module("goodix") {
   deps = [
     ":gt92xx_bind",
     "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.i2c",
@@ -63,7 +62,6 @@ test("gt92xx-test") {
   ]
   deps = [
     ":gt92xx_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.hidbus",

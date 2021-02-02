@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 #include "mt8167s-display.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zircon-internal/align.h>
@@ -614,17 +613,10 @@ void Mt8167sDisplay::DdkUnbind(ddk::UnbindTxn txn) {
 void Mt8167sDisplay::DdkRelease() { delete this; }
 
 zx_status_t Mt8167sDisplay::Bind() {
-  ddk::CompositeProtocolClient composite;
-  zx_status_t status = ddk::CompositeProtocolClient::CreateFromDevice(parent_, &composite);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get composite protocol\n");
-    return status;
-  }
-
   display_panel_t display_info;
   size_t actual;
-  status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
-                               sizeof(display_info), &actual);
+  zx_status_t status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
+                                           sizeof(display_info), &actual);
   if (status != ZX_OK || actual != sizeof(display_panel_t)) {
     DISP_ERROR("Could not get display panel metadata %d\n", status);
     return status;
@@ -636,13 +628,13 @@ zx_status_t Mt8167sDisplay::Bind() {
   width_ = display_info.width;
   height_ = display_info.height;
 
-  status = ddk::PDev::CreateFromComposite(composite, &pdev_);
+  status = ddk::PDev::FromFragment(parent_, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get pdev protocol\n");
     return status;
   }
 
-  status = ddk::DsiImplProtocolClient::CreateFromComposite(composite, "dsi", &dsiimpl_);
+  status = ddk::DsiImplProtocolClient::CreateFromDevice(parent_, "dsi", &dsiimpl_);
   if (status != ZX_OK) {
     DISP_ERROR("DSI Protocol Not implemented\n");
     return status;
@@ -655,19 +647,19 @@ zx_status_t Mt8167sDisplay::Bind() {
     return status;
   }
 
-  status = ddk::GpioProtocolClient::CreateFromComposite(composite, "gpio-lcd", &gpio_);
+  status = ddk::GpioProtocolClient::CreateFromDevice(parent_, "gpio-lcd", &gpio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display GPIO protocol\n");
     return status;
   }
 
-  status = ddk::PowerProtocolClient::CreateFromComposite(composite, "power", &power_);
+  status = ddk::PowerProtocolClient::CreateFromDevice(parent_, "power", &power_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display Power protocol\n");
     return status;
   }
 
-  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_);
+  status = ddk::SysmemProtocolClient::CreateFromDevice(parent_, "sysmem", &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;

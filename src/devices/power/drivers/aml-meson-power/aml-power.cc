@@ -4,7 +4,6 @@
 
 #include "aml-power.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
@@ -365,14 +364,7 @@ void AmlPower::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
   zx_status_t st;
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get composite protocol\n", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: failed to get pdev protocol", __func__);
     return ZX_ERR_INTERNAL;
@@ -399,7 +391,7 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
     return st;
   }
 
-  ddk::PwmProtocolClient first_cluster_pwm(composite, "pwm-ao-d");
+  ddk::PwmProtocolClient first_cluster_pwm(parent, "pwm-ao-d");
   st = InitPwmProtocolClient(first_cluster_pwm);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to initialize Big Cluster PWM Client, st = %d", __func__, st);
@@ -409,7 +401,7 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
   std::optional<ddk::PwmProtocolClient> second_cluster_pwm = std::nullopt;
   std::optional<ddk::VregProtocolClient> second_cluster_vreg = std::nullopt;
   if (device_info.pid == PDEV_PID_LUIS) {
-    ddk::VregProtocolClient client(composite, "vreg-pp1000-cpu-a");
+    ddk::VregProtocolClient client(parent, "vreg-pp1000-cpu-a");
     if (!client.is_valid()) {
       zxlogf(ERROR, "%s: failed to get vreg fragment\n", __func__);
       return ZX_ERR_INTERNAL;
@@ -417,7 +409,7 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
 
     second_cluster_vreg = client;
   } else if (device_info.pid == PDEV_PID_SHERLOCK) {
-    ddk::PwmProtocolClient client(composite, "pwm-a");
+    ddk::PwmProtocolClient client(parent, "pwm-a");
     st = InitPwmProtocolClient(client);
     if (st != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to initialize Little Cluster PWM Client, st = %d", __func__, st);

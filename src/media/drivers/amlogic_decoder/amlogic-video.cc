@@ -4,7 +4,6 @@
 
 #include "amlogic-video.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
@@ -724,38 +723,32 @@ void AmlogicVideo::SetMetrics(CodecMetrics* metrics) {
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    DECODE_ERROR("Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent_);
   if (!pdev_.is_valid()) {
     DECODE_ERROR("Failed to get pdev protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  sysmem_ = ddk::SysmemProtocolClient(composite, "sysmem");
+  sysmem_ = ddk::SysmemProtocolClient(parent_, "sysmem");
   if (!sysmem_.is_valid()) {
     DECODE_ERROR("Could not get SYSMEM protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  canvas_ = ddk::AmlogicCanvasProtocolClient(composite, "canvas");
+  canvas_ = ddk::AmlogicCanvasProtocolClient(parent_, "canvas");
   if (!canvas_.is_valid()) {
     DECODE_ERROR("Could not get video CANVAS protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
   clocks_[static_cast<int>(ClockType::kGclkVdec)] =
-      ddk::ClockProtocolClient(composite, "clock-dos-vdec");
+      ddk::ClockProtocolClient(parent_, "clock-dos-vdec");
   if (!clocks_[static_cast<int>(ClockType::kGclkVdec)].is_valid()) {
     DECODE_ERROR("Could not get CLOCK protocol\n");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  clocks_[static_cast<int>(ClockType::kClkDos)] = ddk::ClockProtocolClient(composite, "clock-dos");
+  clocks_[static_cast<int>(ClockType::kClkDos)] = ddk::ClockProtocolClient(parent_, "clock-dos");
   if (!clocks_[static_cast<int>(ClockType::kClkDos)].is_valid()) {
     DECODE_ERROR("Could not get CLOCK protocol\n");
     return ZX_ERR_NO_RESOURCES;
@@ -764,7 +757,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   // If tee is available as a fragment, we require that we can get ZX_PROTOCOL_TEE.  It'd be nice
   // if there were a less fragile way to detect this.  Passing in driver metadata for this doesn't
   // seem worthwhile so far.  There's no tee on vim2.
-  tee_ = ddk::TeeProtocolClient(composite, "tee");
+  tee_ = ddk::TeeProtocolClient(parent_, "tee");
   is_tee_available_ = tee_.is_valid();
 
   if (is_tee_available_) {

@@ -31,13 +31,7 @@ constexpr int kInvalidIndex = -1;
 zx_status_t AmlVoltageRegulator::Create(
     zx_device_t* parent, const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
     const aml_thermal_info_t* thermal_info) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "aml-voltage: failed to get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-voltage: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
@@ -50,7 +44,7 @@ zx_status_t AmlVoltageRegulator::Create(
     return status;
   }
 
-  big_cluster_pwm_ = ddk::PwmProtocolClient(composite, "pwm-a");
+  big_cluster_pwm_ = ddk::PwmProtocolClient(parent, "pwm-a");
   if (!big_cluster_pwm_.is_valid()) {
     zxlogf(ERROR, "%s: failed to get big cluster PWM fragment", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -62,7 +56,7 @@ zx_status_t AmlVoltageRegulator::Create(
 
   big_little_ = thermal_config.big_little;
   if (big_little_) {
-    little_cluster_pwm_ = ddk::PwmProtocolClient(composite, "pwm-ao-d");
+    little_cluster_pwm_ = ddk::PwmProtocolClient(parent, "pwm-ao-d");
     if (!little_cluster_pwm_.is_valid()) {
       zxlogf(ERROR, "%s: failed to get little cluster PWM fragment", __func__);
       return ZX_ERR_NOT_SUPPORTED;

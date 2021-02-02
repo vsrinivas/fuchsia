@@ -21,7 +21,6 @@ test("display-core-unittests") {
   include_dirs = [ ".." ]
   deps = [
     ":base",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
@@ -42,7 +41,6 @@ static_library("base") {
     "fidl_client.h",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",

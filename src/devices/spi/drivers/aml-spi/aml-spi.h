@@ -67,8 +67,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio, fbl::Array<ChipInfo> chips)
       : DeviceType(device), mmio_(std::move(mmio)), chips_(std::move(chips)) {}
 
-  static fbl::Array<ChipInfo> InitChips(amlspi_cs_map_t* map,
-                                        ddk::CompositeProtocolClient& composite);
+  static fbl::Array<ChipInfo> InitChips(amlspi_cs_map_t* map, zx_device_t* device);
   void DumpState();
 
   // Checks size against the registered VMO size and returns a Span with offset applied. Returns a

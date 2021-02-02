@@ -4,7 +4,6 @@
 
 #include "gt92xx.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -125,26 +124,19 @@ int Gt92xxDevice::Thread() {
 
 zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
   zxlogf(INFO, "gt92xx: driver started...");
-
-  ddk::CompositeProtocolClient composite(device);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(device, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "failed to acquire i2c");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient int_gpio(composite, "gpio-int");
+  ddk::GpioProtocolClient int_gpio(device, "gpio-int");
   if (!int_gpio.is_valid()) {
     zxlogf(ERROR, "failed to acquire interrupt gpio");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient reset_gpio(composite, "gpio-reset");
+  ddk::GpioProtocolClient reset_gpio(device, "gpio-reset");
   if (!reset_gpio.is_valid()) {
     zxlogf(ERROR, "failed to acquire reset gpio");
     return ZX_ERR_NO_RESOURCES;

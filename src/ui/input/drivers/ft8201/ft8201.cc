@@ -5,7 +5,6 @@
 #include "ft8201.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
 #include <zircon/threads.h>
@@ -116,25 +115,19 @@ void Ft8201InputReport::ToFidlInputReport(fuchsia_input_report::InputReport::Bui
 }
 
 zx::status<Ft8201Device*> Ft8201Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Ft8201: Failed to get composite protocol");
-    return zx::error(ZX_ERR_NO_RESOURCES);
-  }
-
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get I2C fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  ddk::GpioProtocolClient interrupt_gpio(composite, "gpio-int");
+  ddk::GpioProtocolClient interrupt_gpio(parent, "gpio-int");
   if (!interrupt_gpio.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get interrupt GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  ddk::GpioProtocolClient reset_gpio(composite, "gpio-reset");
+  ddk::GpioProtocolClient reset_gpio(parent, "gpio-reset");
   if (!reset_gpio.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get reset GPIO fragment");
     return zx::error(ZX_ERR_NO_RESOURCES);
@@ -165,13 +158,7 @@ zx_status_t Ft8201Device::Create(void* ctx, zx_device_t* parent) {
 }
 
 bool Ft8201Device::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Ft8201: Failed to get composite protocol");
-    return false;
-  }
-
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Ft8201: Failed to get I2C fragment");
     return false;

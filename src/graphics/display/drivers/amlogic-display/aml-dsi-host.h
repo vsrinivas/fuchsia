@@ -5,7 +5,6 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_HOST_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_HOST_H_
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
@@ -28,10 +27,10 @@ namespace amlogic_display {
 
 class AmlDsiHost {
  public:
-  AmlDsiHost(ddk::CompositeProtocolClient& composite, uint32_t bitrate, uint32_t panel_type)
-      : pdev_(composite),
-        dsiimpl_(composite, "dsi"),
-        lcd_gpio_(composite, "gpio"),
+  AmlDsiHost(zx_device_t* parent, uint32_t bitrate, uint32_t panel_type)
+      : pdev_(ddk::PDev::FromFragment(parent)),
+        dsiimpl_(parent, "dsi"),
+        lcd_gpio_(parent, "gpio"),
         bitrate_(bitrate),
         panel_type_(panel_type) {}
 

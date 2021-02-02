@@ -4,7 +4,6 @@
 
 #include "audio-stream-out.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/clock.h>
 
 #include <optional>
@@ -36,13 +35,7 @@ Mt8167AudioStreamOut::Mt8167AudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false), pdev_(parent) {}
 
 zx_status_t Mt8167AudioStreamOut::InitPdev() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -56,7 +49,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     return status;
   }
 
-  status = codec_.SetProtocol(ddk::CodecProtocolClient(composite, "codec"));
+  status = codec_.SetProtocol(ddk::CodecProtocolClient(parent(), "codec"));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
     return ZX_ERR_NO_RESOURCES;

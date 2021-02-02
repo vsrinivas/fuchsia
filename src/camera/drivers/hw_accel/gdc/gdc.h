@@ -10,7 +10,6 @@
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #include <threads.h>
 #endif
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/gdc/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>

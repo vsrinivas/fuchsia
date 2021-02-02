@@ -324,8 +324,7 @@ typedef struct composite_device_desc {
 // Once all of the fragment devices are found, the composite
 // device will be published with protocol_id ZX_PROTOCOL_COMPOSITE and the
 // given properties.  A driver may then bind to the created device, and
-// access its parents via the protocol operations returned by
-// get_protocol(ZX_PROTOCOL_COMPOSITE).
+// access its parents via device_get_fragment.
 //
 // |name| must be no longer than ZX_DEVICE_NAME_MAX, and is used primarily as a
 // diagnostic.

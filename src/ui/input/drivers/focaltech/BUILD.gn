@@ -29,7 +29,6 @@ driver_module("focaltech") {
   sources = [ "ft_device.cc" ]
   deps = [
     ":focaltech_touch_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.i2c",

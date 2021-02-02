@@ -10,8 +10,6 @@ zx_library("device-protocol-i2c-channel") {
   sdk_headers = [ "lib/device-protocol/i2c-channel.h" ]
   sources = []
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.composite",
-
     # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <fuchsia/hardware/i2c/cpp/banjo.h>
     "//sdk/banjo/fuchsia.hardware.i2c",
 

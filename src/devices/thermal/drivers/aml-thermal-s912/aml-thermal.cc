@@ -4,7 +4,6 @@
 
 #include "aml-thermal.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <string.h>
 #include <zircon/syscalls/port.h>
 
@@ -49,15 +48,8 @@ fuchsia_hardware_thermal_OperatingPoint ScpiToThermalOpps(const scpi_opp_t& opps
 
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   zxlogf(INFO, "aml_thermal: driver begin...");
-
-  ddk::CompositeProtocolClient composite(device);
-  if (!composite.is_valid()) {
-    THERMAL_ERROR("could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   zx_device_t* scpi_dev = nullptr;
-  bool found = composite.GetFragment("scpi", &scpi_dev);
+  bool found = device_get_fragment(device, "scpi", &scpi_dev);
   if (!found) {
     THERMAL_ERROR("could not get scpi fragment");
     return ZX_ERR_NO_RESOURCES;
@@ -68,13 +60,13 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient fan0_gpio(composite, "gpio-fan0");
+  ddk::GpioProtocolClient fan0_gpio(device, "gpio-fan0");
   if (!fan0_gpio.is_valid()) {
     THERMAL_ERROR("could not get fan0 gpio protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient fan1_gpio(composite, "gpio-fan1");
+  ddk::GpioProtocolClient fan1_gpio(device, "gpio-fan1");
   if (!fan1_gpio.is_valid()) {
     THERMAL_ERROR("could not get fan0 gpio protocol");
     return ZX_ERR_NO_RESOURCES;

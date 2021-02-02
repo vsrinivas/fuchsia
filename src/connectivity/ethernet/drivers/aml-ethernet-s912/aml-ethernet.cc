@@ -4,7 +4,6 @@
 
 #include "aml-ethernet.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <stdio.h>
@@ -43,28 +42,22 @@ zx_status_t AmlEthernet::EthBoardResetPhy() {
 }
 
 zx_status_t AmlEthernet::InitPdev() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "Could not get PDEV protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  i2c_ = ddk::I2cChannel(composite, "i2c");
+  i2c_ = ddk::I2cChannel(parent(), "i2c");
   if (!i2c_.is_valid()) {
     zxlogf(ERROR, "Could not get I2C protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
   // Reset is optional.
-  gpios_[PHY_RESET] = ddk::GpioProtocolClient(composite, "gpio-reset");
+  gpios_[PHY_RESET] = ddk::GpioProtocolClient(parent(), "gpio-reset");
 
-  gpios_[PHY_INTR] = ddk::GpioProtocolClient(composite, "gpio-int");
+  gpios_[PHY_INTR] = ddk::GpioProtocolClient(parent(), "gpio-int");
   if (!gpios_[PHY_INTR].is_valid()) {
     zxlogf(ERROR, "Could not get GPIO protocol");
     return ZX_ERR_NO_RESOURCES;

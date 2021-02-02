@@ -19,6 +19,8 @@ class MmioBuffer;
 
 class PDev : public PDevProtocolClient {
  public:
+  static constexpr char kFragmentName[] = "fuchsia.hardware.platform.device.PDev";
+
   PDev() {}
 
   // TODO(andresoportus): pass protocol by value/const& so there is no question on lifecycle.
@@ -29,10 +31,23 @@ class PDev : public PDevProtocolClient {
   PDev(ddk::CompositeProtocolClient& composite)
       : PDevProtocolClient(composite, "fuchsia.hardware.platform.device.PDev") {}
 
+  PDev(zx_device_t* parent, const char* fragment_name)
+      : PDevProtocolClient(parent, fragment_name) {}
+
   ~PDev() = default;
 
   static zx_status_t CreateFromComposite(ddk::CompositeProtocolClient& composite, PDev* out) {
     *out = PDev(composite);
+    if (!out->is_valid()) {
+      return ZX_ERR_NO_RESOURCES;
+    }
+    return ZX_OK;
+  }
+
+  static PDev FromFragment(zx_device_t* parent) { return PDev(parent, kFragmentName); }
+
+  static zx_status_t FromFragment(zx_device_t* parent, PDev* out) {
+    *out = PDev(parent, kFragmentName);
     if (!out->is_valid()) {
       return ZX_ERR_NO_RESOURCES;
     }

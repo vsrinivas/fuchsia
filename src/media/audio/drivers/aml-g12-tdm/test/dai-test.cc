@@ -4,7 +4,6 @@
 
 #include "../dai.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>

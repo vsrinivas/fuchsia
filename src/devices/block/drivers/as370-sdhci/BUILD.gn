@@ -26,7 +26,6 @@ driver_module("as370-sdhci") {
   deps = [
     ":as370-sdhci-bind",
     "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",

@@ -19,9 +19,7 @@
 
 namespace spi {
 
-class FakeDdkSpi : public fake_ddk::Bind,
-                   public ddk::CompositeProtocol<FakeDdkSpi>,
-                   public ddk::PDevProtocol<FakeDdkSpi> {
+class FakeDdkSpi : public fake_ddk::Bind, public ddk::PDevProtocol<FakeDdkSpi> {
  public:
   struct ChildDevice {
     AmlSpi* device;
@@ -31,12 +29,21 @@ class FakeDdkSpi : public fake_ddk::Bind,
   static FakeDdkSpi* instance() { return static_cast<FakeDdkSpi*>(instance_); }
 
   FakeDdkSpi() {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[3], 3);
-    ASSERT_TRUE(protocols);
-    protocols[0] = {ZX_PROTOCOL_COMPOSITE, {&composite_protocol_ops_, this}};
-    protocols[1] = {ZX_PROTOCOL_PDEV, {&pdev_protocol_ops_, this}};
-    protocols[2] = {ZX_PROTOCOL_GPIO, {gpio_.GetProto()->ops, &gpio_}};
-    SetProtocols(std::move(protocols));
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[4], 4);
+    ASSERT_TRUE(fragments);
+    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
+    fragments[0].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, {&pdev_protocol_ops_, this}});
+    fragments[1].name = "gpio-cs-2";
+    fragments[1].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {gpio_.GetProto()->ops, &gpio_}});
+    fragments[2].name = "gpio-cs-3";
+    fragments[2].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {gpio_.GetProto()->ops, &gpio_}});
+    fragments[3].name = "gpio-cs-5";
+    fragments[3].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {gpio_.GetProto()->ops, &gpio_}});
+    SetFragments(std::move(fragments));
 
     SetMetadata(kGpioMap, sizeof(kGpioMap));
 
@@ -115,33 +122,6 @@ class FakeDdkSpi : public fake_ddk::Bind,
 
     bad_device_ = true;
     return ZX_ERR_NOT_FOUND;
-  }
-
-  // ZX_PROTOCOL_COMPOSITE
-
-  uint32_t CompositeGetFragmentCount() {
-    uint32_t gpio_count = 0;
-    for (const amlspi_cs_map_t& gpio_map : kGpioMap) {
-      gpio_count += gpio_map.cs_count;
-    }
-    return gpio_count + 1;  // Add one for the platform device.
-  }
-
-  void CompositeGetFragments(composite_device_fragment_t* out_fragment_list, size_t fragment_count,
-                             size_t* out_fragment_actual) {
-    *out_fragment_actual = 0;
-  }
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out_fragment) {
-    if (strcmp(name, "fuchsia.hardware.platform.device.PDev") != 0 &&
-        strcmp(name, "gpio-cs-2") != 0 && strcmp(name, "gpio-cs-3") != 0 &&
-        strcmp(name, "gpio-cs-5") != 0) {
-      return false;
-    }
-
-    // Won't actually be the parent device, but this makes fake_ddk vend the right protocols.
-    *out_fragment = fake_ddk::kFakeParent;
-    return true;
   }
 
   // ZX_PROTOCOL_PDEV

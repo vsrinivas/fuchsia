@@ -4,7 +4,6 @@
 
 #include "aml-spi.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/spiimpl/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
@@ -245,8 +244,7 @@ zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id,
   return SpiImplExchange(chip_select, tx_buffer.data(), size, rx_buffer.data(), size, nullptr);
 }
 
-fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map,
-                                               ddk::CompositeProtocolClient& composite) {
+fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map, zx_device_t* device) {
   fbl::Array<ChipInfo> chips(new ChipInfo[map->cs_count], map->cs_count);
   if (!chips) {
     return chips;
@@ -256,7 +254,7 @@ fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map,
     uint32_t index = map->cs[i];
     char fragment_name[32] = {};
     snprintf(fragment_name, 32, "gpio-cs-%d", index);
-    chips[i].gpio = ddk::GpioProtocolClient(composite, fragment_name);
+    chips[i].gpio = ddk::GpioProtocolClient(device, fragment_name);
     if (!chips[i].gpio.is_valid()) {
       zxlogf(ERROR, "%s: failed to acquire gpio for SS%d", __func__, i);
       return fbl::Array<ChipInfo>();
@@ -267,13 +265,7 @@ fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_cs_map_t* map,
 }
 
 zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
-  ddk::CompositeProtocolClient composite(device);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: could not get composite protocol", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(device);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -310,7 +302,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
       return status;
     }
 
-    fbl::Array<ChipInfo> chips = InitChips(&gpio_map[i], composite);
+    fbl::Array<ChipInfo> chips = InitChips(&gpio_map[i], device);
     if (!chips) {
       return ZX_ERR_NO_RESOURCES;
     }

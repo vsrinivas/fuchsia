@@ -4,8 +4,6 @@
 
 #include "sy-buck.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
-
 #include <memory>
 
 #include <ddk/debug.h>
@@ -108,14 +106,7 @@ zx_status_t SyBuck::Create(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "%s: Error while getting i2c channel address. st = %d", __func__, st);
     return st;
   }
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol.", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  ddk::I2cProtocolClient i2c(composite, "i2c");
+  ddk::I2cProtocolClient i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s: SyBuck failed to get i2c channel", __func__);
     return ZX_ERR_INTERNAL;

@@ -42,12 +42,6 @@ namespace thermal {
 zx_status_t AmlCpuFrequency::Create(
     zx_device_t* parent, const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
     const aml_thermal_info_t& thermal_info) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "aml-cpufreq: failed to get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   big_little_ = thermal_config.big_little;
   big_cluster_current_rate_ = thermal_info.initial_cluster_frequencies
                                   [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
@@ -55,7 +49,7 @@ zx_status_t AmlCpuFrequency::Create(
       thermal_info.initial_cluster_frequencies
           [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN];
 
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
@@ -88,7 +82,7 @@ zx_status_t AmlCpuFrequency::Create(
 
   for (const auto& fragment : fragments) {
     ddk::ClockProtocolClient clock;
-    status = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment, &clock);
+    status = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol");
       return status;

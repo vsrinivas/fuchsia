@@ -49,45 +49,6 @@ enum class RegisterIndex : size_t {
 constexpr auto kRegisterBanks = 3;
 constexpr auto kRegisterCount = 2048;
 
-class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
- public:
-  explicit FakeComposite(zx_device_t* parent)
-      : proto_({&composite_protocol_ops_, this}), parent_(parent) {}
-
-  const composite_protocol_t* proto() const { return &proto_; }
-
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
-
-  // In typical usage of fake_ddk, kFakeParent is the only device that exists, and all faked
-  // protocols are bound to it. Hence, the list of fragments is a repeated list of the parent
-  // device.
-  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
-                             size_t* comp_actual) {
-    size_t comp_cur;
-
-    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
-      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
-      comp_list[comp_cur].device = parent_;
-    }
-
-    if (comp_actual != nullptr) {
-      *comp_actual = comp_cur;
-    }
-  }
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out) {
-    *out = parent_;
-    return true;
-  }
-
- private:
-  // AmlUsbPhy expects three fragments -- pdev, reset1_registers, and reset1_level device.
-  static constexpr size_t kNumFragments = 3;
-
-  composite_protocol_t proto_;
-  zx_device_t* parent_;
-};
-
 class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
  public:
   FakePDev() : pdev_({&pdev_protocol_ops_, this}) {
@@ -171,18 +132,7 @@ class Ddk : public fake_ddk::Bind {
     *actual = sizeof(magic_numbers);
     return ZX_OK;
   }
-  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
-                                void* protocol) override {
-    auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
-    for (const auto& proto : protocols_) {
-      if (proto_id == proto.id) {
-        out->ops = proto.proto.ops;
-        out->ctx = proto.proto.ctx;
-        return ZX_OK;
-      }
-    }
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
     auto dev = std::make_shared<zx_device>();
@@ -298,20 +248,22 @@ class Ddk : public fake_ddk::Bind {
 // Fixture that supports tests of AmlUsbPhy::Create.
 class AmlUsbPhyTest : public zxtest::Test {
  public:
-  AmlUsbPhyTest() : root_device_(std::make_shared<zx_device_t>()), composite_(parent()) {
-    static constexpr size_t kNumBindProtocols = 3;
+  AmlUsbPhyTest() : root_device_(std::make_shared<zx_device_t>()) {
+    static constexpr size_t kNumBindFragments = 2;
 
     loop_.StartThread();
     registers_device_ = std::make_unique<mock_registers::MockRegistersDevice>(loop_.dispatcher());
 
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
-                                                  kNumBindProtocols);
-    protocols[0] = {ZX_PROTOCOL_COMPOSITE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
-    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    protocols[2] = {ZX_PROTOCOL_REGISTERS,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(registers_device_->proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
+                                                  kNumBindFragments);
+    fragments[0].name = "fuchsia.hardware.platform.device.PDev";;
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+    fragments[1].name = "register-reset";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_REGISTERS,
+        *reinterpret_cast<const fake_ddk::Protocol*>(registers_device_->proto())});
+    ddk_.SetFragments(std::move(fragments));
 
     registers()->ExpectWrite<uint32_t>(RESET1_LEVEL_OFFSET, aml_registers::USB_RESET1_LEVEL_MASK,
                                        aml_registers::USB_RESET1_LEVEL_MASK);
@@ -344,7 +296,6 @@ class AmlUsbPhyTest : public zxtest::Test {
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
   std::shared_ptr<zx_device> root_device_;
   Ddk ddk_;
-  FakeComposite composite_;
   FakePDev pdev_;
   std::unique_ptr<mock_registers::MockRegistersDevice> registers_device_;
 };

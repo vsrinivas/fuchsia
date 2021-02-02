@@ -10,7 +10,6 @@ import("//src/sys/build/components.gni")
 group("common") {
   public_deps = [
     ":bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",

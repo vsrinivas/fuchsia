@@ -34,7 +34,6 @@ source_set("source") {
   public_deps = [
     ":gdc_bind",
     "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gdc",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",

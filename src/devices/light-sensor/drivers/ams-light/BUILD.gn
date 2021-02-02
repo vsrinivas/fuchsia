@@ -28,7 +28,6 @@ driver_module("ams-light") {
   sources = [ "tcs3400.cc" ]
   deps = [
     ":tcs3400_light_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.i2c",
@@ -62,7 +61,6 @@ test("ams-light-test-bin") {
   ]
   deps = [
     ":tcs3400_light_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.i2c",

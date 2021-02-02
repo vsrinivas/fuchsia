@@ -4,7 +4,6 @@
 
 #include "aml-thermal.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
@@ -84,13 +83,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx,
 }
 
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
-  ddk::CompositeProtocolClient composite(device);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get composite protocol", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(device);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-thermal: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;

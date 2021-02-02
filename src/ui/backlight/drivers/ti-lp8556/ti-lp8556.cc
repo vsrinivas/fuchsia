@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 #include "ti-lp8556.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/device-protocol/pdev.h>
 #include <math.h>
@@ -442,14 +441,8 @@ Lp8556Device::PanelType Lp8556Device::GetPanelType() {
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    LOG_ERROR("Could not get composite protocol\n");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
   // Get platform device protocol
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     LOG_ERROR("Could not get PDEV protocol\n");
     return ZX_ERR_NO_RESOURCES;
@@ -464,7 +457,7 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
   }
 
   // Obtain I2C protocol needed to control backlight
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     LOG_ERROR("Could not obtain I2C protocol\n");
     return ZX_ERR_NO_RESOURCES;

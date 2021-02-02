@@ -4,7 +4,6 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <zircon/syscalls.h>
 
@@ -88,27 +87,21 @@ Control::~Control() {
 }
 
 zx_status_t Control::Init() {
-  ddk::CompositeProtocolClient composite;
-  zx_status_t status = ddk::CompositeProtocolClient::CreateFromDevice(parent(), &composite);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get composite protocol", kTag);
-    return status;
-  }
-
-  status = ddk::GoldfishPipeProtocolClient::CreateFromComposite(composite, "goldfish-pipe", &pipe_);
+  zx_status_t status =
+      ddk::GoldfishPipeProtocolClient::CreateFromDevice(parent(), "goldfish-pipe", &pipe_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: goldfish pipe fragment is invalid", kTag);
     return status;
   }
 
-  status = ddk::GoldfishAddressSpaceProtocolClient::CreateFromComposite(
-      composite, "goldfish-address-space", &address_space_);
+  status = ddk::GoldfishAddressSpaceProtocolClient::CreateFromDevice(
+      parent(), "goldfish-address-space", &address_space_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: goldfish address space fragment is invalid", kTag);
     return status;
   }
 
-  status = ddk::GoldfishSyncProtocolClient::CreateFromComposite(composite, "goldfish-sync", &sync_);
+  status = ddk::GoldfishSyncProtocolClient::CreateFromDevice(parent(), "goldfish-sync", &sync_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: goldfish sync fragment is invalid", kTag);
     return status;

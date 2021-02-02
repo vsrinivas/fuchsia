@@ -15,7 +15,6 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <inttypes.h>
@@ -787,33 +786,27 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
   struct brcmf_sdio_dev* sdiodev = NULL;
 
   BRCMF_DBG(SDIO, "Enter");
-
-  ddk::CompositeProtocolClient composite(drvr->device->parent());
-  if (!composite.is_valid()) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
   // One for SDIO, one or two GPIOs.
   sdio_protocol_t sdio_proto_fn1;
   sdio_protocol_t sdio_proto_fn2;
   gpio_protocol_t gpio_protos[GPIO_COUNT];
   bool has_debug_gpio = false;
 
-  ddk::SdioProtocolClient sdio_fn1(composite, "sdio-function-1");
+  ddk::SdioProtocolClient sdio_fn1(drvr->device->parent(), "sdio-function-1");
   if (!sdio_fn1.is_valid()) {
     BRCMF_ERR("sdio function 1 fragment not found");
     return ZX_ERR_NO_RESOURCES;
   }
   sdio_fn1.GetProto(&sdio_proto_fn1);
 
-  ddk::SdioProtocolClient sdio_fn2(composite, "sdio-function-2");
+  ddk::SdioProtocolClient sdio_fn2(drvr->device->parent(), "sdio-function-2");
   if (!sdio_fn2.is_valid()) {
     BRCMF_ERR("sdio function 2 fragment not found");
     return ZX_ERR_NO_RESOURCES;
   }
   sdio_fn2.GetProto(&sdio_proto_fn2);
 
-  ddk::GpioProtocolClient gpio(composite, "gpio-oob");
+  ddk::GpioProtocolClient gpio(drvr->device->parent(), "gpio-oob");
   if (!gpio.is_valid()) {
     BRCMF_ERR("ZX_PROTOCOL_GPIO not found");
     return ZX_ERR_NO_RESOURCES;
@@ -821,7 +814,7 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
   gpio.GetProto(&gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX]);
 
   // Debug GPIO is optional
-  gpio = ddk::GpioProtocolClient(composite, "gpio-debug");
+  gpio = ddk::GpioProtocolClient(drvr->device->parent(), "gpio-debug");
   if (gpio.is_valid()) {
     has_debug_gpio = true;
     gpio.GetProto(&gpio_protos[DEBUG_GPIO_INDEX]);

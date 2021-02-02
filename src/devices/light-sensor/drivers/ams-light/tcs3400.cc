@@ -4,7 +4,6 @@
 
 #include "tcs3400.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
@@ -346,18 +345,12 @@ zx_status_t Tcs3400Device::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 // static
 zx_status_t Tcs3400Device::Create(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::I2cChannel channel(composite, "i2c");
+  ddk::I2cChannel channel(parent, "i2c");
   if (!channel.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient gpio(composite, "gpio");
+  ddk::GpioProtocolClient gpio(parent, "gpio");
   if (!gpio.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }

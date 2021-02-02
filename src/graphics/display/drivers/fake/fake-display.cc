@@ -4,7 +4,6 @@
 
 #include "fake-display.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
@@ -489,19 +488,13 @@ void FakeDisplay::SendVsync() {
 }
 
 zx_status_t FakeDisplay::Bind(bool start_vsync) {
-  ddk::CompositeProtocolClient composite;
-  zx_status_t status = ddk::CompositeProtocolClient::CreateFromDevice(parent(), &composite);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get composite protocol\n");
-    return status;
-  }
-  status = ddk::PDev::CreateFromComposite(composite, &pdev_);
+  zx_status_t status = ddk::PDev::FromFragment(parent(), &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
 
-  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_);
+  status = ddk::SysmemProtocolClient::CreateFromDevice(parent(), "sysmem", &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;

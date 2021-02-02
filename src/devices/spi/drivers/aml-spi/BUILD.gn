@@ -21,7 +21,6 @@ bind_rules("aml_spi_bind") {
 group("common") {
   public_deps = [
     ":aml_spi_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.spiimpl",
     "//src/devices/bus/lib/device-protocol-pdev",

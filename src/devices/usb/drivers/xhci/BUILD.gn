@@ -23,7 +23,6 @@ driver_module("xhci-x86") {
     "xhci.cc",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.usb",

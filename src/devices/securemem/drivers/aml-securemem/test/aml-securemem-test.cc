@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/composite/c/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
@@ -51,19 +49,6 @@ class Binder : public fake_ddk::Bind {
       }
     }
     return ZX_OK;
-  }
-
-  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
-                                void* protocol) override {
-    auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
-    for (const auto& proto : protocols_) {
-      if (proto_id == proto.id) {
-        out->ops = proto.proto.ops;
-        out->ctx = proto.proto.ctx;
-        return ZX_OK;
-      }
-    }
-    return ZX_ERR_NOT_SUPPORTED;
   }
 };
 
@@ -156,56 +141,24 @@ class FakeTee : public ddk::TeeProtocol<FakeTee> {
   tee_protocol_t proto_;
 };
 
-class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
- public:
-  explicit FakeComposite(zx_device_t* parent)
-      : proto_({&composite_protocol_ops_, this}), parent_(parent) {}
-
-  const composite_protocol_t* proto() const { return &proto_; }
-
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
-
-  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
-                             size_t* comp_actual) {
-    size_t comp_cur;
-
-    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
-      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
-      comp_list[comp_cur].device = parent_;
-    }
-
-    if (comp_actual != nullptr) {
-      *comp_actual = comp_cur;
-    }
-  }
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out) {
-    *out = parent_;
-    return true;
-  }
-
- private:
-  static constexpr size_t kNumFragments = 2;
-
-  composite_protocol_t proto_;
-  zx_device_t* parent_;
-};
-
 class AmlogicSecureMemTest : public zxtest::Test {
  protected:
-  AmlogicSecureMemTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread), composite_(parent()) {
-    static constexpr size_t kNumBindProtocols = 4;
+  AmlogicSecureMemTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
+    static constexpr size_t kNumBindFragments = 3;
 
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
-                                                  kNumBindProtocols);
-    protocols[0] = {ZX_PROTOCOL_COMPOSITE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
-    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    protocols[2] = {ZX_PROTOCOL_SYSMEM,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())};
-    protocols[3] = {ZX_PROTOCOL_TEE, *reinterpret_cast<const fake_ddk::Protocol*>(tee_.proto())};
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
+                                                  kNumBindFragments);
+    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+    fragments[1].name = "sysmem";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_SYSMEM, *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())});
+    fragments[2].name = "tee";
+    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_TEE, *reinterpret_cast<const fake_ddk::Protocol*>(tee_.proto())});
 
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetFragments(std::move(fragments));
 
     ASSERT_OK(amlogic_secure_mem::AmlogicSecureMemDevice::Create(nullptr, parent()));
   }
@@ -228,7 +181,6 @@ class AmlogicSecureMemTest : public zxtest::Test {
   // Default dispatcher for the test thread.  Not used to actually dispatch in these tests so far.
   async::Loop loop_;
   Binder ddk_;
-  FakeComposite composite_;
   FakePDev pdev_;
   FakeSysmem sysmem_;
   FakeTee tee_;

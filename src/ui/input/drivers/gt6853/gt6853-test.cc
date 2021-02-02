@@ -5,7 +5,6 @@
 #include "gt6853.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/composite/c/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-i2c/fake-i2c.h>
@@ -286,25 +285,24 @@ class Gt6853Test : public zxtest::Test {
   }
 
   zx_status_t Init() {
-    composite_protocol_ops_t composite_protocol = {
-        .get_fragment = GetFragment,
-    };
-
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[3], 3);
-    protocols[0] = {
-        .id = ZX_PROTOCOL_COMPOSITE,
-        .proto = {.ops = &composite_protocol, .ctx = this},
-    };
-    protocols[1] = {
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
+    fragments[0].name = "i2c";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
         .id = ZX_PROTOCOL_I2C,
         .proto = {.ops = fake_i2c_.GetProto()->ops, .ctx = fake_i2c_.GetProto()->ctx},
-    };
-    protocols[2] = {
+    });
+    fragments[1].name = "gpio-int";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
         .id = ZX_PROTOCOL_GPIO,
         .proto = {.ops = mock_gpio_.GetProto()->ops, .ctx = mock_gpio_.GetProto()->ctx},
-    };
+    });
+    fragments[2].name = "gpio-reset";
+    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        .id = ZX_PROTOCOL_GPIO,
+        .proto = {.ops = mock_gpio_.GetProto()->ops, .ctx = mock_gpio_.GetProto()->ctx},
+    });
 
-    ddk_.SetProtocols(std::move(protocols));
+    ddk_.SetFragments(std::move(fragments));
 
     ddk_.SetMetadata(&use_9365_config_, sizeof(use_9365_config_));
 

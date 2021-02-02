@@ -5,7 +5,6 @@
 #include "ot_radio_bootloader.h"
 
 #include <ctype.h>
-#include <fuchsia/hardware/composite/c/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver-unit-test/utils.h>

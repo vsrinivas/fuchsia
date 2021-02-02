@@ -5,7 +5,6 @@
 #include "qcom-pil.h"
 
 #include <elf.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 
@@ -174,13 +173,7 @@ int PilDevice::PilThread() {
 }
 
 zx_status_t PilDevice::Bind() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s could not get composite protocol", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -197,9 +190,9 @@ zx_status_t PilDevice::Bind() {
     return status;
   }
 
-  clks_[kCryptoAhbClk] = ddk::ClockProtocolClient(composite, "clock-crypto-ahb");
-  clks_[kCryptoAxiClk] = ddk::ClockProtocolClient(composite, "clock-crypto-axi");
-  clks_[kCryptoClk] = ddk::ClockProtocolClient(composite, "clock-crypto");
+  clks_[kCryptoAhbClk] = ddk::ClockProtocolClient(parent(), "clock-crypto-ahb");
+  clks_[kCryptoAxiClk] = ddk::ClockProtocolClient(parent(), "clock-crypto-axi");
+  clks_[kCryptoClk] = ddk::ClockProtocolClient(parent(), "clock-crypto");
   for (unsigned i = 0; i < kClockCount; i++) {
     if (!clks_[i].is_valid()) {
       zxlogf(ERROR, "%s GetClk failed %d", __func__, status);

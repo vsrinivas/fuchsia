@@ -31,7 +31,6 @@ source_set("lib") {
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.ge2d",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",

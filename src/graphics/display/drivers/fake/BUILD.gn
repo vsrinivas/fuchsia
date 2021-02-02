@@ -42,7 +42,6 @@ source_set("fake-lib") {
     "fake-display.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.display.capture",
     "//sdk/banjo/fuchsia.hardware.display.clamprgb",
     "//sdk/banjo/fuchsia.hardware.display.controller",

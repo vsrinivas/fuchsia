@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_VOLTAGE_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_VOLTAGE_H_
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/errors.h>

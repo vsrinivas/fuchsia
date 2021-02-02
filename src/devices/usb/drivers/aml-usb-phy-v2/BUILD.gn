@@ -54,7 +54,6 @@ test("aml-usb-phy-test-bin") {
   output_name = "aml-usb-phy-test"
   deps = [
     ":aml_usb_phy_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.registers",
     "//sdk/banjo/fuchsia.hardware.usb",

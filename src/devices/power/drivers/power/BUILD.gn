@@ -34,7 +34,6 @@ driver_module("power") {
   sources = [ "power.cc" ]
   deps = [
     ":power-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.power",
     "//sdk/banjo/fuchsia.hardware.powerimpl",
     "//src/devices/lib/driver",
@@ -54,7 +53,6 @@ test("power-test-bin") {
   ]
   deps = [
     ":power-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.power",
     "//sdk/banjo/fuchsia.hardware.powerimpl",
     "//src/devices/testing/fake_ddk",

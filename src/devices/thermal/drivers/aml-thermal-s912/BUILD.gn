@@ -23,7 +23,6 @@ driver_module("aml-thermal-s912") {
   sources = [ "aml-thermal.cc" ]
   deps = [
     ":aml-thermal-s912-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.scpi",
     "//sdk/banjo/fuchsia.hardware.thermal",
@@ -52,7 +51,6 @@ test("aml-thermal-s912-test-bin") {
   ]
   deps = [
     ":aml-thermal-s912-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.scpi",

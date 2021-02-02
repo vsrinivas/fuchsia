@@ -6,7 +6,6 @@
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -325,15 +324,9 @@ zx_status_t Mt8167sGpu::PowerDown() {
 }
 
 zx_status_t Mt8167sGpu::Bind() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    GPU_ERROR("ZX_PROTOCOL_COMPOSITE not available\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  clks_[0] = ddk::ClockProtocolClient(composite, "clock-1");
-  clks_[1] = ddk::ClockProtocolClient(composite, "clock-2");
-  clks_[2] = ddk::ClockProtocolClient(composite, "clock-3");
+  clks_[0] = ddk::ClockProtocolClient(parent(), "clock-1");
+  clks_[1] = ddk::ClockProtocolClient(parent(), "clock-2");
+  clks_[2] = ddk::ClockProtocolClient(parent(), "clock-3");
   for (unsigned i = 0; i < kClockCount; i++) {
     if (!clks_[i].is_valid()) {
       zxlogf(ERROR, "%s could not get clock", __func__);
@@ -341,7 +334,7 @@ zx_status_t Mt8167sGpu::Bind() {
     }
   }
 
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent());
   auto status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
   if (status != ZX_OK) {
     GPU_ERROR("pdev_map_mmio_buffer failed\n");

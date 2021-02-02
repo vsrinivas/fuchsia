@@ -4,7 +4,6 @@
 
 #include "max98373.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 
@@ -133,19 +132,13 @@ zx_status_t Max98373::Shutdown() {
 }
 
 zx_status_t Max98373::Create(zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s Could not get i2c protocol", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient gpio(composite, "gpio-enable");
+  ddk::GpioProtocolClient gpio(parent, "gpio-enable");
   if (!gpio.is_valid()) {
     zxlogf(ERROR, "%s Could not get gpio protocol", __FILE__);
     return ZX_ERR_NO_RESOURCES;

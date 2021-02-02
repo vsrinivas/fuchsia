@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 #include "audio-stream-in.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/zx/clock.h>
 #include <limits.h>
 
@@ -66,24 +65,18 @@ zx_status_t Mt8167AudioStreamIn::Init() {
 }
 
 zx_status_t Mt8167AudioStreamIn::InitPdev() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  codec_reset_ = ddk::GpioProtocolClient(composite, "gpio");
+  codec_reset_ = ddk::GpioProtocolClient(parent(), "gpio");
   if (!codec_reset_.is_valid()) {
     zxlogf(ERROR, "%s failed to allocate gpio", __FUNCTION__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent(), "i2c");
   codec_ = Tlv320adc::Create(i2c, 0);  // ADC for TDM in.
   if (!codec_) {
     zxlogf(ERROR, "%s could not get Tlv320adc", __func__);

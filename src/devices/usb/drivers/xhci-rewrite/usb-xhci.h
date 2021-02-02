@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_USB_XHCI_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_USB_XHCI_H_
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/usb/bus/cpp/banjo.h>
@@ -62,7 +61,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
       : UsbXhciType(parent),
         pci_(parent),
         pdev_(parent),
-        composite_(parent),
         buffer_factory_(std::move(buffer_factory)),
         ddk_interaction_loop_(&kAsyncLoopConfigNeverAttachToThread),
         ddk_interaction_executor_(ddk_interaction_loop_.dispatcher()) {}
@@ -355,10 +353,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // PDev (if ARM)
   ddk::PDev pdev_;
-
-  // Composite device protocol client used for communicating with the USB PHY
-  // on certain ARM boards which support USB OTG.
-  ddk::CompositeProtocolClient composite_;
 
   // MMIO buffer for communicating with the physical hardware
   // Must be optional to allow for asynchronous initialization,

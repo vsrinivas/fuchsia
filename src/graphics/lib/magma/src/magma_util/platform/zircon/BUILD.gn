@@ -130,7 +130,6 @@ source_set("device") {
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:device_header",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",

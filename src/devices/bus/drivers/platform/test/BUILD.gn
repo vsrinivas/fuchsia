@@ -361,7 +361,6 @@ driver_module("test-composite") {
   deps = [
     ":test-composite-bind",
     "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
     "//sdk/banjo/fuchsia.hardware.goldfish.pipe",
     "//sdk/banjo/fuchsia.hardware.goldfish.sync",

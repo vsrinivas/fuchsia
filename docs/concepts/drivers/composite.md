@@ -1,4 +1,3 @@
-
 # Composite Devices
 
 This document is part of the [Zircon Driver Development
@@ -205,11 +204,11 @@ This allows you to access all of the individual fragments that make up the
 composite device.
 
 The first thing to retrieve a device for each fragment.
-This is done via **composite_get_fragment()**:
+This is done with **device_get_fragment()**:
 
 ```c
-bool composite_get_fragment (
-     composite_protocol_t* composite,
+bool device_get_fragment (
+     zx_device_t* parent,
      const char* fragment_name,
      zx_device_t** fragment);
 ```
@@ -218,25 +217,16 @@ The arguments are as follows:
 
 Argument          | Meaning
 ------------------|---------------------------------------------------
-`composite`       | The protocol handle
+`parent`          | Pointer to `zx_device_t` representing parent
 `fragment_name`   | The name of the fragment you wish to fetch
 `fragment`        | Pointer to `zx_device_t` representing the fragment
 
-The program starts by calling **device_get_protocol()** to get the protocol for the
-composite driver:
+The program starts by declaring an array of `zx_device_t*` pointers to hold the
+devices, and call **device_get_fragment()**:
 
-```c
-composite_protocol_t composite;
-
-auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
 ```
-
-Assuming there aren't any errors (`status` is equal to `ZX_OK`), the next step is to
-declare an array of `zx_device_t*` pointers to hold the devices, and call
-**composite_get_fragment()**:
-
 zx_device_t* fragment;
-bool found = composite_get_fragments(&composite, "fragment-name", &fragment);
+bool found = device_get_fragment(&composite, "fragment-name", &fragment);
 if (!found) {
     zxlogf(ERROR, "could not get fragment-name");
     return ZX_ERR_INTERNAL;
@@ -295,7 +285,6 @@ the other half in
 [fragment-proxy.cc]: /src/devices/internal/drivers/fragment/fragment-proxy.cc
 [fragment.cc]: /src/devices/internal/drivers/fragment/fragment.cc
 [fragment]: /src/devices/internal/drivers/fragment/
-[composite.banjo]: /zircon/system/banjo/fuchsia.hardware.composite/composite.banjo
 [driver.h]: /src/lib/ddk/include/ddk/driver.h
 [isolate]: driver-development.md#isolate-devices
 

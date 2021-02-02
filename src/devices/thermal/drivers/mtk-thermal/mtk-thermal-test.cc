@@ -44,14 +44,13 @@ namespace thermal {
 
 class MtkThermalTest : public MtkThermal {
  public:
-  MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::CompositeProtocolClient& composite,
-                 const ddk::PDevProtocolClient& pdev,
+  MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::PDevProtocolClient& pdev,
                  const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_info, zx::port port,
                  TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse, TempCalibration2 cal2_fuse,
                  zx::port main_port, zx::port thread_port)
       : MtkThermal(nullptr, ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio),
-                   ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio), composite, pdev,
-                   thermal_info, std::move(port), zx::interrupt(), cal0_fuse, cal1_fuse, cal2_fuse),
+                   ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio), pdev, thermal_info,
+                   std::move(port), zx::interrupt(), cal0_fuse, cal1_fuse, cal2_fuse),
         mock_thermal_regs_(thermal_reg_array_, sizeof(uint32_t), MT8167_THERMAL_SIZE),
         mock_pll_regs_(pll_reg_array_, sizeof(uint32_t), MT8167_AP_MIXED_SYS_SIZE),
         mock_pmic_wrap_regs_(pmic_wrap_reg_array_, sizeof(uint32_t), MT8167_PMIC_WRAP_SIZE),
@@ -90,10 +89,9 @@ class MtkThermalTest : public MtkThermal {
     }
 
     fbl::AllocChecker ac;
-    test->reset(new (&ac) MtkThermalTest(dummy_mmio, ddk::CompositeProtocolClient(),
-                                         ddk::PDevProtocolClient(), thermal_info, std::move(port),
-                                         cal0_fuse, cal1_fuse, cal2_fuse, std::move(main_port),
-                                         std::move(thread_port)));
+    test->reset(new (&ac) MtkThermalTest(dummy_mmio, ddk::PDevProtocolClient(), thermal_info,
+                                         std::move(port), cal0_fuse, cal1_fuse, cal2_fuse,
+                                         std::move(main_port), std::move(thread_port)));
     return ac.check();
   }
 

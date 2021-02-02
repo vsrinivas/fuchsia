@@ -4,7 +4,6 @@
 
 #include "tas58xx.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/simple-codec/simple-codec-helper.h>
@@ -173,13 +172,7 @@ zx::status<DriverIds> Tas58xx::Initialize() {
 }
 
 zx_status_t Tas58xx::Create(zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s Could not get i2c protocol", __FILE__);
     return ZX_ERR_NO_RESOURCES;

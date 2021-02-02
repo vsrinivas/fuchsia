@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -1325,30 +1324,16 @@ metadata::AmlConfig GetDefaultMetadata() {
 
 struct AmlG12TdmTest : public zxtest::Test {
   void SetUp() override {
-    static composite_protocol_ops_t composite_protocol = {
-        .get_fragment_count = GetFragmentCount,
-        .get_fragments = GetFragments,
-        .get_fragment = GetFragment,
-    };
-    static constexpr size_t kNumBindProtocols = 2;
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
-                                                  kNumBindProtocols);
-    protocols[0] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    protocols[1] = {ZX_PROTOCOL_COMPOSITE, {.ops = &composite_protocol, .ctx = this}};
-    tester_.SetProtocols(std::move(protocols));
+    static constexpr size_t kNumBindFragments = 2;
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
+                                                  kNumBindFragments);
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+    fragments[1].protocols.emplace_back(
+        fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {nullptr, nullptr}});
+    tester_.SetFragments(std::move(fragments));
   }
 
-  static bool GetFragment(void*, const char* name, zx_device_t** out) {
-    *out = fake_ddk::kFakeParent;
-    return true;
-  }
-  static uint32_t GetFragmentCount(void*) { return 2; }
-  static void GetFragments(void*, composite_device_fragment_t* out_fragment_list,
-                           size_t fragment_count, size_t* out_fragment_actual) {
-    out_fragment_list[0].device = fake_ddk::kFakeParent;  // FRAGMENT_PDEV
-    out_fragment_list[1].device = fake_ddk::kFakeParent;  // FRAGMENT_ENABLE_GPIO
-    *out_fragment_actual = 2;
-  }
   void TestRingBufferSize(uint8_t number_of_channels, uint32_t frames_req,
                           uint32_t frames_expected) {
     auto metadata = GetDefaultMetadata();

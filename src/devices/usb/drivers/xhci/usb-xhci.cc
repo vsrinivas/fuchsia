@@ -416,8 +416,8 @@ zx_status_t UsbXhci::Init() {
     return InitPci();
   } else if (pdev_.is_valid()) {
     return InitPdev();
-  } else if (composite_.is_valid()) {
-    pdev_ = ddk::PDev(composite_);
+  } else if (DdkGetFragmentCount() > 0) {
+    pdev_ = ddk::PDev::FromFragment(parent());
     if (!pdev_.is_valid()) {
       zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol");
       return ZX_ERR_NOT_SUPPORTED;

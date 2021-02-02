@@ -4,7 +4,6 @@
 
 #include "../optee-controller.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
@@ -66,41 +65,6 @@ zx_status_t zx_smc_call(zx_handle_t handle, const zx_smc_parameters_t* parameter
 
 namespace optee {
 namespace {
-
-class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
- public:
-  explicit FakeComposite(zx_device_t* parent)
-      : proto_({&composite_protocol_ops_, this}), parent_(parent) {}
-
-  const composite_protocol_t* proto() const { return &proto_; }
-
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
-
-  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
-                             size_t* comp_actual) {
-    size_t comp_cur;
-
-    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
-      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
-      comp_list[comp_cur].device = parent_;
-    }
-
-    if (comp_actual != nullptr) {
-      *comp_actual = comp_cur;
-    }
-  }
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out) {
-    *out = parent_;
-    return true;
-  }
-
- private:
-  static constexpr size_t kNumFragments = 2;
-
-  composite_protocol_t proto_;
-  zx_device_t* parent_;
-};
 
 class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
  public:
@@ -192,14 +156,17 @@ class FakeRpmb : public ddk::RpmbProtocol<FakeRpmb> {
 class FakeDdkOptee : public zxtest::Test {
  public:
   void SetUp() override {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[4], 4);
-    protocols[0] = {ZX_PROTOCOL_COMPOSITE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
-    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    protocols[2] = {ZX_PROTOCOL_SYSMEM,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())};
-    protocols[3] = {ZX_PROTOCOL_RPMB, *reinterpret_cast<const fake_ddk::Protocol*>(rpmb_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
+    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+    fragments[1].name = "sysmem";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_SYSMEM, *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())});
+    fragments[2].name = "rpmb";
+    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_RPMB, *reinterpret_cast<const fake_ddk::Protocol*>(rpmb_.proto())});
+    ddk_.SetFragments(std::move(fragments));
   }
 
   void TearDown() override {
@@ -210,7 +177,6 @@ class FakeDdkOptee : public zxtest::Test {
  protected:
   OpteeController optee_{fake_ddk::kFakeParent};
 
-  FakeComposite composite_{fake_ddk::kFakeParent};
   FakePDev pdev_;
   FakeSysmem sysmem_;
   FakeRpmb rpmb_;

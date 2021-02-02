@@ -20,7 +20,6 @@ bind_rules("goldfish_control_composite-bind") {
 
 common_deps = [
   ":goldfish_control_composite-bind",
-  "//sdk/banjo/fuchsia.hardware.composite",
   "//sdk/banjo/fuchsia.hardware.goldfish.addressspace",
   "//sdk/banjo/fuchsia.hardware.goldfish.control",
   "//sdk/banjo/fuchsia.hardware.goldfish.pipe",

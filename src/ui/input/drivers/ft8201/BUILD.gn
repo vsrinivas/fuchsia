@@ -69,7 +69,6 @@ bind_rules("ft8201-bind") {
 source_set("common") {
   public_deps = [
     ":ft8201-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/banjo/fuchsia.hardware.i2c",

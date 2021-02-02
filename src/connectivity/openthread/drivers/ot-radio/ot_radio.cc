@@ -5,7 +5,6 @@
 #include "ot_radio.h"
 
 #include <ctype.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver-unit-test/utils.h>
@@ -174,18 +173,13 @@ bool OtRadioDevice::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t cha
 }
 
 zx_status_t OtRadioDevice::Init() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-  spi_ = ddk::SpiProtocolClient(composite, "spi");
+  spi_ = ddk::SpiProtocolClient(parent(), "spi");
   if (!spi_.is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire spi", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  gpio_[OT_RADIO_INT_PIN] = ddk::GpioProtocolClient(composite, "gpio-int");
+  gpio_[OT_RADIO_INT_PIN] = ddk::GpioProtocolClient(parent(), "gpio-int");
   if (!gpio_[OT_RADIO_INT_PIN].is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire interrupt gpio", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -205,7 +199,7 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
-  gpio_[OT_RADIO_RESET_PIN] = ddk::GpioProtocolClient(composite, "gpio-reset");
+  gpio_[OT_RADIO_RESET_PIN] = ddk::GpioProtocolClient(parent(), "gpio-reset");
   if (!gpio_[OT_RADIO_RESET_PIN].is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire reset gpio", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -218,7 +212,7 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
-  gpio_[OT_RADIO_BOOTLOADER_PIN] = ddk::GpioProtocolClient(composite, "gpio-bootloader");
+  gpio_[OT_RADIO_BOOTLOADER_PIN] = ddk::GpioProtocolClient(parent(), "gpio-bootloader");
   if (!gpio_[OT_RADIO_BOOTLOADER_PIN].is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire radio bootloader pin", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -233,7 +227,8 @@ zx_status_t OtRadioDevice::Init() {
   }
 
   zx_device_t* pdev_fragment = nullptr;
-  bool found = composite.GetFragment("fuchsia.hardware.platform.device.PDev", &pdev_fragment);
+  bool found =
+      device_get_fragment(parent(), "fuchsia.hardware.platform.device.PDev", &pdev_fragment);
   if (!found) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire pdev fragment", __func__);
     return ZX_ERR_NO_RESOURCES;

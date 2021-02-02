@@ -4,7 +4,6 @@
 
 #include "aml-light.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <string.h>
 
 #include <cmath>
@@ -184,14 +183,7 @@ zx_status_t AmlLight::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t AmlLight::Init() {
   zx_status_t status = ZX_OK;
-
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Could not get composite protocol", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto fragment_count = composite.GetFragmentCount();
+  auto fragment_count = DdkGetFragmentCount();
   if (fragment_count <= 0) {
     return ZX_ERR_INTERNAL;
   }
@@ -237,7 +229,7 @@ zx_status_t AmlLight::Init() {
   }
 
   composite_device_fragment_t fragments[fragment_count];
-  composite.GetFragments(fragments, fragment_count, &actual);
+  DdkGetFragments(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }

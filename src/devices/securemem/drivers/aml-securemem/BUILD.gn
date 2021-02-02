@@ -42,7 +42,6 @@ driver_module("aml-securemem") {
 
   deps = [
     ":aml-securemem-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/banjo/fuchsia.hardware.tee",
@@ -80,7 +79,6 @@ test("aml-securemem-test-bin") {
   include_dirs = [ "." ]
   deps = [
     ":aml-securemem-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.sysmem",
     "//sdk/banjo/fuchsia.hardware.tee",

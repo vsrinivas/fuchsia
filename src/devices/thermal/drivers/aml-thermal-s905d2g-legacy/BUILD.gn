@@ -33,7 +33,6 @@ driver_module("aml-thermal-s905d2g-legacy") {
   deps = [
     ":aml-thermal-s905d2g-legacy-bind",
     "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -74,7 +73,6 @@ test("aml-thermal-s905d2g-legacy-test-bin") {
   deps = [
     ":aml-thermal-s905d2g-legacy-bind",
     "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",

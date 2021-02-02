@@ -92,31 +92,25 @@ zx_status_t ControllerDevice::StartThread() {
 
 // static
 zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<ControllerDevice>* out) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: could not get composite protocoln", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::GdcProtocolClient gdc(composite, "gdc");
+  ddk::GdcProtocolClient gdc(parent, "gdc");
   if (!gdc.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GDC not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::Ge2dProtocolClient ge2d(composite, "ge2d");
+  ddk::Ge2dProtocolClient ge2d(parent, "ge2d");
   if (!ge2d.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GE2D not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::IspProtocolClient isp(composite, "isp");
+  ddk::IspProtocolClient isp(parent, "isp");
   if (!isp.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_ISP not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::SysmemProtocolClient sysmem(composite, "sysmem");
+  ddk::SysmemProtocolClient sysmem(parent, "sysmem");
   if (!sysmem.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_SYSMEM not available", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -129,7 +123,7 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return status;
   }
 
-  auto controller = std::make_unique<ControllerDevice>(parent, composite, std::move(event));
+  auto controller = std::make_unique<ControllerDevice>(parent, std::move(event));
 
   status = controller->StartThread();
   if (status != ZX_OK) {

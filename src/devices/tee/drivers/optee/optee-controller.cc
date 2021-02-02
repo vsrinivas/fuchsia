@@ -4,7 +4,6 @@
 
 #include "optee-controller.h"
 
-#include <fuchsia/hardware/composite/c/banjo.h>
 #include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
 #include <string.h>
@@ -260,27 +259,20 @@ zx_status_t OpteeController::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t OpteeController::Bind() {
   zx_status_t status = ZX_ERR_INTERNAL;
-
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    LOG(ERROR, "unable to get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     LOG(ERROR, "unable to get pdev protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  sysmem_ = ddk::SysmemProtocolClient(composite, "sysmem");
+  sysmem_ = ddk::SysmemProtocolClient(parent(), "sysmem");
   if (!sysmem_.is_valid()) {
     LOG(ERROR, "unable to get sysmem protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
   // Optional protocol
-  rpmb_protocol_client_ = ddk::RpmbProtocolClient(composite, "rpmb");
+  rpmb_protocol_client_ = ddk::RpmbProtocolClient(parent(), "rpmb");
 
   static constexpr uint32_t kTrustedOsSmcIndex = 0;
   status = pdev_.GetSmc(kTrustedOsSmcIndex, &secure_monitor_);

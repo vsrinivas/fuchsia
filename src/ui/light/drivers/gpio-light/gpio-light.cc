@@ -5,7 +5,6 @@
 #include "gpio-light.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -130,13 +129,7 @@ zx_status_t GpioLight::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t GpioLight::Init() {
-  ddk::CompositeProtocolClient composite(parent_);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "GpioLight: Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto fragment_count = composite.GetFragmentCount();
+  auto fragment_count = DdkGetFragmentCount();
   if (fragment_count <= 0) {
     return ZX_ERR_INTERNAL;
   }
@@ -168,7 +161,7 @@ zx_status_t GpioLight::Init() {
 
   composite_device_fragment_t fragments[fragment_count];
   size_t actual;
-  composite.GetFragments(fragments, fragment_count, &actual);
+  DdkGetFragments(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }

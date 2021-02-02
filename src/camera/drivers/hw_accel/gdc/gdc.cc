@@ -475,13 +475,7 @@ void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
 
 // static
 zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr<GdcDevice>* out) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    FX_LOGST(ERROR, kTag) << "could not get composite protocol";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     FX_LOGST(ERROR, kTag) << "ZX_PROTOCOL_PDEV not available";
     return ZX_ERR_NO_RESOURCES;

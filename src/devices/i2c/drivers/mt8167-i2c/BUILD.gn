@@ -26,7 +26,6 @@ driver_module("mt8167-i2c") {
   sources = [ "mt8167-i2c.cc" ]
   deps = [
     ":mt8167_i2c_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.i2cimpl",
@@ -55,7 +54,6 @@ test("mt8167-i2c-test-bin") {
   ]
   deps = [
     ":mt8167_i2c_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.i2c",

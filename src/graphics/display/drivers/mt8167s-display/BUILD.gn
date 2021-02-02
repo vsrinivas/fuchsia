@@ -44,7 +44,6 @@ source_set("common") {
   sources = []
   public_deps = [
     ":mt8167s-display-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.display.controller",
     "//sdk/banjo/fuchsia.hardware.dsiimpl",
     "//sdk/banjo/fuchsia.hardware.gpio",

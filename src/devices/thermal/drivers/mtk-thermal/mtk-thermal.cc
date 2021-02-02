@@ -59,14 +59,7 @@ namespace thermal {
 
 zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
   zx_status_t status;
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_COMPOSITE not available", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -130,12 +123,12 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
-      parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
-      std::move(*infracfg_mmio), composite, pdev, thermal_info, std::move(port), std::move(irq),
-      TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),
-      TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
-      TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
+  std::unique_ptr<MtkThermal> device(
+      new (&ac) MtkThermal(parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
+                           std::move(*infracfg_mmio), pdev, thermal_info, std::move(port),
+                           std::move(irq), TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),
+                           TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
+                           TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: MtkThermal alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
@@ -156,11 +149,11 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 }
 
 zx_status_t MtkThermal::Init() {
-  auto fragment_count = composite_.GetFragmentCount();
+  auto fragment_count = DdkGetFragmentCount();
 
   composite_device_fragment_t fragments[fragment_count];
   size_t actual;
-  composite_.GetFragments(fragments, fragment_count, &actual);
+  DdkGetFragments(fragments, fragment_count, &actual);
   if (fragment_count != actual) {
     return ZX_ERR_INTERNAL;
   }

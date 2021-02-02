@@ -2065,11 +2065,11 @@ zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  if (dev->composite_.is_valid()) {
+  if (device_get_fragment_count(parent) > 0) {
     // We need at least a PDEV, but the PHY is optional
     // for devices not implementing OTG.
-    dev->phy_ = ddk::UsbPhyProtocolClient(dev->composite_, "xhci-phy");
-    dev->pdev_ = ddk::PDev(dev->composite_);
+    dev->phy_ = ddk::UsbPhyProtocolClient(parent, "xhci-phy");
+    dev->pdev_ = ddk::PDev::FromFragment(parent);
     if (!dev->pdev_.is_valid()) {
       zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol");
       return ZX_ERR_NOT_SUPPORTED;

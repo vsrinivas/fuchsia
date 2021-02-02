@@ -4,7 +4,6 @@
 
 #include "aml-cpu.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
@@ -64,13 +63,6 @@ namespace amlogic_cpu {
 
 zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   zx_status_t status;
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get composite protocol", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
   // Initialize an array with the maximum possible number of PStates since we
   // determine the actual number of PStates at runtime by querying the thermal
   // driver.
@@ -83,8 +75,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   // The Thermal Driver is our parent and it exports an interface with one
   // method (Connect) which allows us to connect to its FIDL interface.
   ddk::ThermalProtocolClient thermal_protocol_client;
-  status = ddk::ThermalProtocolClient::CreateFromComposite(composite, "thermal",
-                                                           &thermal_protocol_client);
+  status =
+      ddk::ThermalProtocolClient::CreateFromDevice(parent, "thermal", &thermal_protocol_client);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to get thermal protocol client, st = %d", status);
     return status;
@@ -122,7 +114,10 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   // Look up the CPU version.
   uint32_t cpu_version_packed = 0;
   {
-    ddk::PDev pdev_client(composite);
+    ddk::PDev pdev_client = ddk::PDev::FromFragment(parent);
+    if (!pdev_client.is_valid()) {
+      return ZX_ERR_INTERNAL;
+    }
 
     // Map AOBUS registers
     std::optional<ddk::MmioBuffer> mmio_buffer;
@@ -300,4 +295,3 @@ static constexpr zx_driver_ops_t aml_cpu_driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER(aml_cpu, aml_cpu_driver_ops, "zircon", "0.1");
-

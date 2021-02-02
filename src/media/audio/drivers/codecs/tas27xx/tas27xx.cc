@@ -4,7 +4,6 @@
 
 #include "tas27xx.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 
 #include <algorithm>
@@ -366,19 +365,13 @@ zx_status_t Tas27xx::ReadReg(uint8_t reg, uint8_t* value) {
 }
 
 zx_status_t tas27xx_bind(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "tas27xx: Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "tas27xx: Could not get i2c protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient gpio(composite, "gpio");
+  ddk::GpioProtocolClient gpio(parent, "gpio");
   if (!gpio.is_valid()) {
     zxlogf(ERROR, "tas27xx: Could not get gpio protocol");
     return ZX_ERR_NOT_SUPPORTED;

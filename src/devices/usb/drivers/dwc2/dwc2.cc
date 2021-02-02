@@ -4,7 +4,6 @@
 
 #include "dwc2.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
@@ -836,20 +835,14 @@ zx_status_t Dwc2::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t Dwc2::Init() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Dwc2::Create could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "Dwc2::Create: could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // USB PHY protocol is optional.
-  usb_phy_ = ddk::UsbPhyProtocolClient(composite, "dwc2-phy");
+  usb_phy_ = ddk::UsbPhyProtocolClient(parent(), "dwc2-phy");
   if (!usb_phy_->is_valid()) {
     usb_phy_.reset();
   }

@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hci/cpp/banjo.h>
@@ -26,8 +25,7 @@ using UsbXhciType = ddk::Device<UsbXhci, ddk::Initializable, ddk::Suspendable, d
 // This is the main class for the USB XHCI host controller driver.
 class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
  public:
-  explicit UsbXhci(zx_device_t* parent)
-      : UsbXhciType(parent), pci_(parent), pdev_(parent), composite_(parent) {}
+  explicit UsbXhci(zx_device_t* parent) : UsbXhciType(parent), pci_(parent), pdev_(parent) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -81,7 +79,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   ddk::PciProtocolClient pci_;
   ddk::PDev pdev_;
-  ddk::CompositeProtocolClient composite_;
 };
 
 }  // namespace usb_xhci

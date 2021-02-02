@@ -27,7 +27,6 @@ driver_module("aml-light") {
   sources = [ "aml-light.cc" ]
   deps = [
     ":aml_light_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.pwm",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
@@ -51,7 +50,6 @@ test("aml-light-test") {
   ]
   deps = [
     ":aml_light_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.pwm",

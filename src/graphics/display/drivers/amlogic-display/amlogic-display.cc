@@ -4,7 +4,6 @@
 #include "amlogic-display.h"
 
 #include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
@@ -129,9 +128,8 @@ zx_status_t AmlogicDisplay::RestartDisplay() {
   }
 
   // Program and Enable DSI Host Interface
-  ddk::CompositeProtocolClient composite(parent_);
   dsi_host_ = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(
-      &ac, composite, clock_->GetBitrate(), panel_type_);
+      &ac, parent_, clock_->GetBitrate(), panel_type_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -817,8 +815,6 @@ int AmlogicDisplay::VSyncThread() {
 
 // TODO(payamm): make sure unbind/release are called if we return error
 zx_status_t AmlogicDisplay::Bind() {
-  ddk::CompositeProtocolClient composite(parent_);
-
   display_panel_t display_info;
   size_t actual;
   zx_status_t status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
@@ -837,13 +833,13 @@ zx_status_t AmlogicDisplay::Bind() {
   width_ = display_info.width;
   height_ = display_info.height;
 
-  status = ddk::PDev::CreateFromComposite(composite, &pdev_);
+  status = ddk::PDev::FromFragment(parent_, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
 
-  status = ddk::DsiImplProtocolClient::CreateFromComposite(composite, "dsi", &dsiimpl_);
+  status = ddk::DsiImplProtocolClient::CreateFromDevice(parent_, "dsi", &dsiimpl_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get DSI_IMPL protocol\n");
     return status;
@@ -856,13 +852,13 @@ zx_status_t AmlogicDisplay::Bind() {
     return status;
   }
 
-  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_);
+  status = ddk::SysmemProtocolClient::CreateFromDevice(parent_, "sysmem", &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;
   }
 
-  status = ddk::AmlogicCanvasProtocolClient::CreateFromComposite(composite, "canvas", &canvas_);
+  status = ddk::AmlogicCanvasProtocolClient::CreateFromDevice(parent_, "canvas", &canvas_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not obtain CANVAS protocol\n");
     return status;

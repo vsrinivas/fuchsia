@@ -4,7 +4,6 @@
 
 #include "gpio-test.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,12 +99,7 @@ zx_status_t GpioTest::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t GpioTest::Init() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  gpio_count_ = composite.GetFragmentCount();
+  gpio_count_ = DdkGetFragmentCount();
 
   fbl::AllocChecker ac;
   gpios_ = fbl::Array(new (&ac) ddk::GpioProtocolClient[gpio_count_], gpio_count_);
@@ -115,7 +109,7 @@ zx_status_t GpioTest::Init() {
 
   composite_device_fragment_t fragments[gpio_count_];
   size_t actual;
-  composite.GetFragments(fragments, gpio_count_, &actual);
+  DdkGetFragments(fragments, gpio_count_, &actual);
   if (actual != gpio_count_) {
     return ZX_ERR_INTERNAL;
   }

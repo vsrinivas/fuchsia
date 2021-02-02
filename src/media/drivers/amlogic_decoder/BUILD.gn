@@ -143,7 +143,6 @@ if (target_cpu == "arm64") {
     public_deps = [
       "h264:h264_parser",
       "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
-      "//sdk/banjo/fuchsia.hardware.composite",
       "//sdk/banjo/fuchsia.hardware.platform.device",
       "//sdk/banjo/fuchsia.hardware.sysmem",
       "//sdk/banjo/fuchsia.hardware.tee",

@@ -4,7 +4,6 @@
 
 #include "vs680-thermal.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
 
@@ -40,13 +39,7 @@ constexpr OperatingPoint kOperatingPoints = {
 namespace thermal {
 
 zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get platform device protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -65,13 +58,13 @@ zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  ddk::ClockProtocolClient cpu_clock(composite, "clock");
+  ddk::ClockProtocolClient cpu_clock(parent, "clock");
   if (!cpu_clock.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get clock protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PowerProtocolClient cpu_power(composite, "thermal");
+  ddk::PowerProtocolClient cpu_power(parent, "thermal");
   if (!cpu_power.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get power protocol", __func__);
     return ZX_ERR_NO_RESOURCES;

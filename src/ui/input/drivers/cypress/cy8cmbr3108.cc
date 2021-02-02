@@ -4,7 +4,6 @@
 
 #include "cy8cmbr3108.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <unistd.h>
 
 #include <ddk/debug.h>
@@ -237,20 +236,14 @@ void Cy8cmbr3108::DdkUnbind(ddk::UnbindTxn txn) {
 void Cy8cmbr3108::DdkRelease() { delete this; }
 
 zx_status_t Cy8cmbr3108::InitializeProtocols() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
   // Get I2C and GPIO protocol.
-  i2c_ = ddk::I2cProtocolClient(composite, "i2c");
+  i2c_ = ddk::I2cProtocolClient(parent(), "i2c");
   if (!i2c_.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  touch_gpio_ = ddk::GpioProtocolClient(composite, "gpio");
+  touch_gpio_ = ddk::GpioProtocolClient(parent(), "gpio");
   if (!touch_gpio_.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GPIO not found", __func__);
     return ZX_ERR_NO_RESOURCES;

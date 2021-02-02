@@ -89,18 +89,12 @@ zx_status_t AmlNnaDevice::Init() {
 zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  ddk::PDev pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "Could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
-  ddk::RegistersProtocolClient reset(composite, "register-reset");
+  ddk::RegistersProtocolClient reset(parent, "register-reset");
   if (!reset.is_valid()) {
     zxlogf(ERROR, "Could not get reset_register fragment");
     return ZX_ERR_NO_RESOURCES;

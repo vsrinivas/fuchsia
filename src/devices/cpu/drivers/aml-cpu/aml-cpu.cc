@@ -4,7 +4,6 @@
 
 #include "aml-cpu.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
@@ -108,27 +107,20 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
            op_point_size, actual);
     return ZX_ERR_INTERNAL;
   }
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get composite protocol", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
   // Make sure we have the right number of fragments.
-  const size_t fragment_count = composite.GetFragmentCount();
-  zxlogf(DEBUG, "%s: GetFragmentCount = %lu", __func__, fragment_count);
+  const uint32_t fragment_count = device_get_fragment_count(parent);
+  zxlogf(DEBUG, "%s: GetFragmentCount = %u", __func__, fragment_count);
   if ((num_perf_domains * kFragmentsPerPfDomain) + 1 != fragment_count) {
     zxlogf(ERROR,
            "%s: Expected %lu fragments for each %lu performance domains for a total of %lu "
-           "fragments but got %lu instead",
+           "fragments but got %u instead",
            __func__, kFragmentsPerPfDomain, perf_domain_size,
            perf_domain_size * kFragmentsPerPfDomain, fragment_count);
     return ZX_ERR_INTERNAL;
   }
 
   // Map AOBUS registers
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "Failed to get platform device fragment");
     return ZX_ERR_NO_RESOURCES;
@@ -147,8 +139,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     fbl::StringBuffer<32> fragment_name;
     fragment_name.AppendPrintf("clock-pll-div16-%02d", perf_domain.id);
     ddk::ClockProtocolClient pll_div16_client;
-    if ((st = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
-                                                            &pll_div16_client)) != ZX_OK) {
+    if ((st = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
+                                                         &pll_div16_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create pll_div_16 clock client, st = %d", __func__, st);
       return st;
     }
@@ -156,8 +148,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     fragment_name.Resize(0);
     fragment_name.AppendPrintf("clock-cpu-div16-%02d", perf_domain.id);
     ddk::ClockProtocolClient cpu_div16_client;
-    if ((st = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
-                                                            &cpu_div16_client)) != ZX_OK) {
+    if ((st = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
+                                                         &cpu_div16_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create cpu_div_16 clock client, st = %d", __func__, st);
       return st;
     }
@@ -165,8 +157,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     fragment_name.Resize(0);
     fragment_name.AppendPrintf("clock-cpu-scaler-%02d", perf_domain.id);
     ddk::ClockProtocolClient cpu_scaler_client;
-    if ((st = ddk::ClockProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
-                                                            &cpu_scaler_client)) != ZX_OK) {
+    if ((st = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
+                                                         &cpu_scaler_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create cpu_scaler clock client, st = %d", __func__, st);
       return st;
     }
@@ -174,8 +166,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     fragment_name.Resize(0);
     fragment_name.AppendPrintf("power-%02d", perf_domain.id);
     ddk::PowerProtocolClient power_client;
-    if ((st = ddk::PowerProtocolClient::CreateFromComposite(composite, fragment_name.c_str(),
-                                                            &power_client)) != ZX_OK) {
+    if ((st = ddk::PowerProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
+                                                         &power_client)) != ZX_OK) {
       zxlogf(ERROR, "%s: Failed to create power client, st = %d", __func__, st);
       return st;
     }

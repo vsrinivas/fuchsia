@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
@@ -740,15 +739,8 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     display_release(display);
   });
 
-  ddk::CompositeProtocolClient composite;
-  status = ddk::CompositeProtocolClient::CreateFromDevice(parent, &composite);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get composite protocol\n");
-    return status;
-  }
-
   ddk::PDev pdev;
-  status = ddk::PDev::CreateFromComposite(composite, &pdev);
+  status = ddk::PDev::FromFragment(parent, &pdev);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
@@ -797,7 +789,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
   }
 
   ddk::GpioProtocolClient gpio;
-  status = ddk::GpioProtocolClient::CreateFromComposite(composite, "gpio", &gpio);
+  status = ddk::GpioProtocolClient::CreateFromDevice(parent, "gpio", &gpio);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display GPIO protocol\n");
     return status;
@@ -805,7 +797,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
   gpio.GetProto(&display->gpio);
 
   ddk::AmlogicCanvasProtocolClient canvas;
-  status = ddk::AmlogicCanvasProtocolClient::CreateFromComposite(composite, "canvas", &canvas);
+  status = ddk::AmlogicCanvasProtocolClient::CreateFromDevice(parent, "canvas", &canvas);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display CANVAS protocol\n");
     return status;
@@ -813,7 +805,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
   canvas.GetProto(&display->canvas);
 
   ddk::SysmemProtocolClient sysmem;
-  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem);
+  status = ddk::SysmemProtocolClient::CreateFromDevice(parent, "sysmem", &sysmem);
   if (!sysmem.is_valid()) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;

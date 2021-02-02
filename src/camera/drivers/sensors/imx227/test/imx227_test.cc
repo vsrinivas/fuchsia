@@ -45,28 +45,10 @@ std::vector<uint8_t> SplitBytes(uint16_t bytes) {
   return std::vector<uint8_t>{static_cast<uint8_t>(bytes >> 8), static_cast<uint8_t>(bytes & 0xff)};
 }
 
-class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
- public:
-  explicit FakeComposite() : proto_({&composite_protocol_ops_, this}) {}
-
-  const composite_protocol_t* proto() const { return &proto_; }
-
-  uint32_t CompositeGetFragmentCount() { return 0; }
-
-  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
-                             size_t* comp_actual) {}
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out) { return false; }
-
- private:
-  composite_protocol_t proto_;
-};
-
 class FakeImx227Device : public Imx227Device {
  public:
-  FakeImx227Device(ddk::CompositeProtocolClient composite)
-      : Imx227Device(fake_ddk::FakeParent(), composite),
-        proto_({&camera_sensor2_protocol_ops_, this}) {
+  FakeImx227Device()
+      : Imx227Device(fake_ddk::FakeParent()), proto_({&camera_sensor2_protocol_ops_, this}) {
     SetProtocols();
     ExpectInitPdev();
     ASSERT_OK(InitPdev());
@@ -183,7 +165,7 @@ class FakeImx227Device : public Imx227Device {
 
 class Imx227DeviceTest : public zxtest::Test {
  public:
-  Imx227DeviceTest() : dut_(ddk::CompositeProtocolClient(fake_composite_.proto())) {
+  Imx227DeviceTest() : dut_() {
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
     protocols[0] = {ZX_PROTOCOL_CAMERA_SENSOR2,
                     *reinterpret_cast<const fake_ddk::Protocol*>(dut_.proto())};
@@ -203,7 +185,6 @@ class Imx227DeviceTest : public zxtest::Test {
   FakeImx227Device& dut() { return dut_; }
 
  private:
-  FakeComposite fake_composite_;
   fake_ddk::Bind ddk_;
   FakeImx227Device dut_;
 };

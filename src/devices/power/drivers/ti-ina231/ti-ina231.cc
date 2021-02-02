@@ -5,7 +5,6 @@
 #include "ti-ina231.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -46,15 +45,7 @@ enum class Ina231Device::Register : uint8_t {
 };
 
 zx_status_t Ina231Device::Create(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "Failed to get composite protocol");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  zx_device_t* i2c_device = {};
-  composite.GetFragment("i2c", &i2c_device);
-  ddk::I2cChannel i2c(i2c_device);
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "Failed to get I2C protocol");
     return ZX_ERR_NO_RESOURCES;

@@ -4,7 +4,6 @@
 
 #include "dwmac.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/ethernet/mac/c/banjo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/operation/ethernet.h>
@@ -154,19 +153,13 @@ zx_status_t DWMacDevice::InitPdev() {
 }
 
 zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
-  ddk::CompositeProtocolClient composite(device);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s could not get ZX_PROTOCOL_COMPOSITE", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(device);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s could not get ZX_PROTOCOL_PDEV", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::EthBoardProtocolClient eth_board(composite, "eth-board");
+  ddk::EthBoardProtocolClient eth_board(device, "eth-board");
   if (!eth_board.is_valid()) {
     zxlogf(ERROR, "%s could not get ZX_PROTOCOL_ETH_BOARD", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -182,8 +175,8 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   // Reset the phy.
   mac_device->eth_board_.ResetPhy();
 
-  zx_device_t* pdev_fragment;
-  composite.GetFragment("fuchsia.hardware.platform.device.PDev", &pdev_fragment);
+  zx_device_t* pdev_fragment = nullptr;
+  device_get_fragment(device, "fuchsia.hardware.platform.device.PDev", &pdev_fragment);
 
   // Get and cache the mac address.
   mac_device->GetMAC(pdev_fragment);

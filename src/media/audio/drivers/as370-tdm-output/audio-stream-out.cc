@@ -4,7 +4,6 @@
 
 #include "audio-stream-out.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/clock.h>
 
@@ -39,18 +38,12 @@ As370AudioStreamOut::As370AudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false), pdev_(parent) {}
 
 zx_status_t As370AudioStreamOut::InitPdev() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
-  clks_[kAvpll0Clk] = ddk::ClockProtocolClient(composite, "clock");
+  clks_[kAvpll0Clk] = ddk::ClockProtocolClient(parent(), "clock");
   if (!clks_[kAvpll0Clk].is_valid()) {
     zxlogf(ERROR, "%s GetClk failed", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -59,7 +52,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   clks_[kAvpll0Clk].SetRate(kWantedFrameRate * 64 * 8 * 8);
   clks_[kAvpll0Clk].Enable();
 
-  ddk::SharedDmaProtocolClient dma(composite, "dma");
+  ddk::SharedDmaProtocolClient dma(parent(), "dma");
   if (!dma.is_valid()) {
     zxlogf(ERROR, "%s could not get DMA", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -95,7 +88,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
     return status;
   }
 
-  status = codec_.SetProtocol(ddk::CodecProtocolClient(composite, "codec"));
+  status = codec_.SetProtocol(ddk::CodecProtocolClient(parent(), "codec"));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
     return ZX_ERR_NO_RESOURCES;

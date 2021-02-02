@@ -340,20 +340,13 @@ void AmlUsbPhy::RemoveDwc2Device(SetModeCompletion completion) {
 
 zx_status_t AmlUsbPhy::Init() {
   zx_status_t status = ZX_OK;
-
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "AmlUsbPhy: Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = ddk::PDev(composite);
+  pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "AmlUsbPhy::Init: could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::RegistersProtocolClient reset_register(composite, "register-reset");
+  ddk::RegistersProtocolClient reset_register(parent(), "register-reset");
   if (!reset_register.is_valid()) {
     zxlogf(ERROR, "%s: could not get reset_register fragment", __func__);
     return ZX_ERR_NO_RESOURCES;

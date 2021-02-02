@@ -4,7 +4,6 @@
 
 #include "aml-pwm-init.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <unistd.h>
 
 #include <ddk/metadata/init-step.h>
@@ -16,16 +15,9 @@ namespace pwm_init {
 
 zx_status_t PwmInitDevice::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "PwmInitDevice::Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PwmProtocolClient pwm(composite, "pwm");
-  ddk::GpioProtocolClient wifi_gpio(composite, "gpio-wifi");
-  ddk::GpioProtocolClient bt_gpio(composite, "gpio-bt");
+  ddk::PwmProtocolClient pwm(parent, "pwm");
+  ddk::GpioProtocolClient wifi_gpio(parent, "gpio-wifi");
+  ddk::GpioProtocolClient bt_gpio(parent, "gpio-bt");
   if (!pwm.is_valid() || !wifi_gpio.is_valid() || !bt_gpio.is_valid()) {
     zxlogf(ERROR, "%s: could not get fragments", __func__);
     return ZX_ERR_NO_RESOURCES;

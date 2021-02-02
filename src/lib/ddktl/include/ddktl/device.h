@@ -528,15 +528,15 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_publish_metadata(zxdev(), path, type, data, length);
   }
 
-  uint32_t DdkGetFragmentCount() { return device_get_fragment_count(zxdev()); }
+  uint32_t DdkGetFragmentCount() { return device_get_fragment_count(parent()); }
 
   void DdkGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
                        size_t* comp_actual) {
-    device_get_fragments(zxdev(), comp_list, comp_count, comp_actual);
+    device_get_fragments(parent(), comp_list, comp_count, comp_actual);
   }
 
   bool DdkGetFragment(const char* name, zx_device_t** out) {
-    return device_get_fragment(zxdev(), name, out);
+    return device_get_fragment(parent(), name, out);
   }
 
   const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }

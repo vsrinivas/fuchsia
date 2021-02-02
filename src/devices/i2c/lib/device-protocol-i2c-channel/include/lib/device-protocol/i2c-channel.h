@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_H_
 #define SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_CHANNEL_H_
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/sync/completion.h>
@@ -26,8 +25,8 @@ class I2cChannel : public I2cProtocolClient {
 
   I2cChannel(zx_device_t* parent) : I2cProtocolClient(parent) {}
 
-  I2cChannel(ddk::CompositeProtocolClient& composite, const char* fragment_name)
-      : I2cProtocolClient(composite, fragment_name) {}
+  I2cChannel(zx_device_t* parent, const char* fragment_name)
+      : I2cProtocolClient(parent, fragment_name) {}
 
   ~I2cChannel() = default;
 

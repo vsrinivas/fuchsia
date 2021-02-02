@@ -28,7 +28,6 @@ driver_module("aml-g12-tdm") {
 
   deps = [
     ":aml-g12-tdm-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -74,7 +73,6 @@ driver_module("aml-g12-tdm-dai") {
   deps = [
     ":aml-g12-tdm-dai-bind",
     "//sdk/banjo/fuchsia.hardware.audio",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//src/devices/bus/lib/device-protocol-pdev",

@@ -4,7 +4,6 @@
 
 #include "aml-cpu.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/llcpp/fidl.h>
@@ -48,47 +47,8 @@ class Bind : public fake_ddk::Bind {
   std::vector<std::unique_ptr<AmlCpu>> devices_;
 };
 
-class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
- public:
-  explicit FakeComposite(zx_device_t* parent)
-      : proto_({&composite_protocol_ops_, this}), parent_(parent) {}
-
-  const composite_protocol_t* proto() const { return &proto_; }
-
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
-
-  // In typical usage of fake_ddk, kFakeParent is the only device that exists, and all faked
-  // protocols are bound to it. Hence, the list of fragments is a repeated list of the parent
-  // device.
-  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
-                             size_t* comp_actual) {
-    size_t comp_cur;
-
-    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
-      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
-      comp_list[comp_cur].device = parent_;
-    }
-
-    if (comp_actual != nullptr) {
-      *comp_actual = comp_cur;
-    }
-  }
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out) {
-    *out = parent_;
-    return true;
-  }
-
- private:
-  // AmlCpu expects two fragments -- pdev and the thermal device.
-  static constexpr size_t kNumFragments = 2;
-
-  composite_protocol_t proto_;
-  zx_device_t* parent_;
-};
-
 // Fake platform device that exposes CPU version via MMIO.
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
+class FakePDev : public ddk::PDevProtocol<FakePDev> {
  public:
   FakePDev() : proto_({&pdev_protocol_ops_, this}) {
     regs_ = std::make_unique<ddk_fake::FakeMmioReg[]>(kRegCount);
@@ -180,13 +140,9 @@ const fuchsia_thermal::ThermalDeviceInfo kDefaultDeviceInfo = []() {
   return result;
 }();
 
-class FakeAmlThermal;
-using TestDeviceType = ddk::Device<FakeAmlThermal, ddk::Messageable>;
-
-class FakeAmlThermal : TestDeviceType, fuchsia_thermal::Device::Interface {
+class FakeAmlThermal : fuchsia_thermal::Device::Interface {
  public:
-  FakeAmlThermal()
-      : TestDeviceType(nullptr), active_operating_point_(0), device_info_(kDefaultDeviceInfo) {}
+  FakeAmlThermal() : active_operating_point_(0), device_info_(kDefaultDeviceInfo) {}
   ~FakeAmlThermal() {}
 
   // Manage the Fake FIDL Message Loop
@@ -339,24 +295,25 @@ class FakeThermalDevice : public ddk::ThermalProtocol<FakeThermalDevice, ddk::ba
 // Fixture that supports tests of AmlCpu::Create.
 class AmlCpuBindingTest : public zxtest::Test {
  public:
-  AmlCpuBindingTest() : composite_(fake_ddk::kFakeParent) {
-    static constexpr size_t kNumBindProtocols = 3;
+  AmlCpuBindingTest() {
+    static constexpr size_t kNumBindFragments = 2;
 
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
-                                                  kNumBindProtocols);
-    protocols[0] = {ZX_PROTOCOL_COMPOSITE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
-    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    protocols[2] = {ZX_PROTOCOL_THERMAL,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(thermal_device_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
+                                                  kNumBindFragments);
+    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+    fragments[1].name = "thermal";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        ZX_PROTOCOL_THERMAL,
+        *reinterpret_cast<const fake_ddk::Protocol*>(thermal_device_.proto())});
+    ddk_.SetFragments(std::move(fragments));
   }
 
   zx_device_t* parent() { return fake_ddk::FakeParent(); }
 
  protected:
   Bind ddk_;
-  FakeComposite composite_;
   FakePDev pdev_;
   FakeThermalDevice thermal_device_;
 };

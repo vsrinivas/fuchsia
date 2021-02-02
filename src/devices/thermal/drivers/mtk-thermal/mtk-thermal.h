@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_H_
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/device-protocol/platform-device.h>
@@ -48,7 +47,7 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
   // Visible for testing.
   MtkThermal(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer pll_mmio,
              ddk::MmioBuffer pmic_mmio, ddk::MmioBuffer infracfg_mmio,
-             const ddk::CompositeProtocolClient& composite, const ddk::PDevProtocolClient& pdev,
+             const ddk::PDevProtocolClient& pdev,
              const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_info, zx::port port,
              zx::interrupt irq, TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse,
              TempCalibration2 cal2_fuse)
@@ -57,7 +56,6 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
         pll_mmio_(std::move(pll_mmio)),
         pmic_mmio_(std::move(pmic_mmio)),
         infracfg_mmio_(std::move(infracfg_mmio)),
-        composite_(composite),
         pdev_(pdev),
         thermal_info_(thermal_info),
         port_(std::move(port)),
@@ -124,7 +122,6 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
 
   int Thread();
 
-  ddk::CompositeProtocolClient composite_;
   ddk::PDevProtocolClient pdev_;
   const fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info_;
   uint16_t current_op_idx_ = 0;

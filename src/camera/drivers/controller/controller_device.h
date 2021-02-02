@@ -12,7 +12,6 @@
 #endif
 
 #include <fuchsia/hardware/camera/llcpp/fidl.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/gdc/cpp/banjo.h>
 #include <fuchsia/hardware/ge2d/cpp/banjo.h>
 #include <fuchsia/hardware/isp/cpp/banjo.h>
@@ -42,15 +41,14 @@ class ControllerDevice : public ControllerDeviceType,
                          public llcpp::fuchsia::hardware::camera::Device::Interface {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
-  explicit ControllerDevice(zx_device_t* parent, ddk::CompositeProtocolClient& composite,
-                            zx::event event)
+  explicit ControllerDevice(zx_device_t* parent, zx::event event)
       : ControllerDeviceType(parent),
-        isp_(composite, "isp"),
-        gdc_(composite, "gdc"),
-        ge2d_(composite, "ge2d"),
+        isp_(parent, "isp"),
+        gdc_(parent, "gdc"),
+        ge2d_(parent, "ge2d"),
         shutdown_event_(std::move(event)),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        sysmem_(composite, "sysmem") {}
+        sysmem_(parent, "sysmem") {}
 
   ~ControllerDevice() { ShutDown(); }
 

@@ -4,7 +4,6 @@
 
 #include "aml-tsensor.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
@@ -349,13 +348,7 @@ zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) {
 
 zx_status_t AmlTSensor::Create(zx_device_t* parent,
                                fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "aml-tsensor: failed to get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-voltage: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;

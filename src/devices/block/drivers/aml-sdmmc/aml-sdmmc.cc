@@ -4,7 +4,6 @@
 
 #include "aml-sdmmc.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
@@ -1330,14 +1329,7 @@ zx_status_t AmlSdmmc::Bind() {
 
 zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status = ZX_OK;
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    AML_SDMMC_ERROR("Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     AML_SDMMC_ERROR("Could not get pdev: %d", status);
     return ZX_ERR_NO_RESOURCES;
@@ -1386,10 +1378,10 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   // Optional protocol.
-  ddk::GpioProtocolClient reset_gpio(composite, "gpio-wifi-power-on");
+  ddk::GpioProtocolClient reset_gpio(parent, "gpio-wifi-power-on");
   if (!reset_gpio.is_valid()) {
     // Alternative name.
-    reset_gpio = ddk::GpioProtocolClient(composite, "gpio");
+    reset_gpio = ddk::GpioProtocolClient(parent, "gpio");
   }
 
   auto dev =

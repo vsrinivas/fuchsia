@@ -4,8 +4,6 @@
 
 #include "sgm37603a.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
-
 #include <algorithm>
 #include <memory>
 
@@ -26,19 +24,13 @@ constexpr int64_t kEnableSleepTimeMs = 20;
 namespace backlight {
 
 zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::I2cChannel i2c(composite, "i2c");
+  ddk::I2cChannel i2c(parent, "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::GpioProtocolClient reset_gpio(composite, "gpio");
+  ddk::GpioProtocolClient reset_gpio(parent, "gpio");
   if (!reset_gpio.is_valid()) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO", __FILE__);
     return ZX_ERR_NO_RESOURCES;

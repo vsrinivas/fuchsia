@@ -26,7 +26,6 @@ driver_module("dai-test") {
   deps = [
     ":dai-test-bind",
     "//sdk/banjo/fuchsia.hardware.audio",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",

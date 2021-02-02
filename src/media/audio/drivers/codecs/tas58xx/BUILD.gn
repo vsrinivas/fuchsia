@@ -26,7 +26,6 @@ driver_module("tas58xx") {
   sources = [ "tas58xx.cc" ]
   deps = [
     ":ti_tas58xx-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -51,7 +50,6 @@ test("tas58xx-test") {
   ]
   deps = [
     ":ti_tas58xx-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",

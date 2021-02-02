@@ -4,7 +4,6 @@
 
 #include "aml-uart.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/vmo.h>
@@ -34,14 +33,7 @@ constexpr auto kMinBaudRate = 2;
 
 zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "AmlUart::Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "AmlUart::Create: Could not get pdev");
     return ZX_ERR_NO_RESOURCES;

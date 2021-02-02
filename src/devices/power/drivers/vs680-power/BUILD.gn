@@ -26,7 +26,6 @@ driver_module("vs680-power") {
   sources = [ "vs680-power.cc" ]
   deps = [
     ":vs680-power-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.powerimpl",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/as370",
@@ -48,7 +47,6 @@ test("vs680-power-test-bin") {
   ]
   deps = [
     ":vs680-power-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.powerimpl",
     "//sdk/lib/fdio",
     "//src/devices/i2c/lib/device-protocol-i2c",

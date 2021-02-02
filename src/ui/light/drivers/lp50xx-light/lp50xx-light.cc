@@ -5,7 +5,6 @@
 #include "lp50xx-light.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -354,19 +353,13 @@ void Lp50xxLight::DdkRelease() { delete this; }
 
 zx_status_t Lp50xxLight::InitHelper() {
   // Get Pdev and I2C protocol.
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::I2cProtocolClient i2c(composite, "i2c");
+  ddk::I2cProtocolClient i2c(parent(), "i2c");
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "ZX_PROTOCOL_I2C not found");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent());
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: Get PBusProtocolClient failed", __func__);
     return ZX_ERR_NO_RESOURCES;

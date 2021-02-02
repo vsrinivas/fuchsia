@@ -4,7 +4,6 @@
 
 #include "as370-power.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
@@ -268,13 +267,7 @@ zx_status_t As370Power::InitializePowerDomains(const ddk::I2cProtocolClient& i2c
 
 zx_status_t As370Power::InitializeProtocols(ddk::I2cProtocolClient* i2c) {
   // Get I2C protocol.
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  *i2c = ddk::I2cProtocolClient(composite, "i2c");
+  *i2c = ddk::I2cProtocolClient(parent(), "i2c");
   if (!i2c->is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found", __func__);
     return ZX_ERR_NO_RESOURCES;

@@ -28,7 +28,6 @@ driver_module("aml-meson-power") {
   ]
   deps = [
     ":aml-meson-power-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.powerimpl",
     "//sdk/banjo/fuchsia.hardware.pwm",
@@ -57,7 +56,6 @@ test("aml-meson-power-test-bin") {
   deps = [
     ":aml-meson-power-bind",
     "//sdk/banjo/fuchsia.hardware.clock",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",

@@ -58,7 +58,6 @@ test("aml-uart-test-bin") {
   deps = [
     ":aml_uart_bind",
     "//sdk/banjo/fuchsia.hardware.acpi",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.serial",

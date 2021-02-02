@@ -37,7 +37,6 @@ source_set("common") {
   public_deps = [
     ":hid-buttons-bind",
     "//sdk/banjo/fuchsia.hardware.buttons",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.hidbus",
     "//sdk/fidl/fuchsia.buttons:fuchsia.buttons_llcpp",

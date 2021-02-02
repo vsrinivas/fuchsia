@@ -5,8 +5,6 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_DEVICE_TREE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_DEVICE_TREE_H_
 
-#include <fuchsia/hardware/composite/c/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
@@ -55,14 +53,6 @@ class Binder : public fake_ddk::Bind {
   // |fake_ddk::Bind|
   void DeviceAsyncRemove(zx_device_t* device) override;
 
-  // |fake_ddk::Bind|
-  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
-                                void* protocol) override;
-
-  void SetDisplay(fake_display::FakeDisplay* display) { display_ = display; }
-
-  zx_device_t* display();
-
   bool Ok();
 
   // |fake_ddk::Bind|
@@ -88,7 +78,6 @@ class Binder : public fake_ddk::Bind {
   zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0xcccc);
   int total_children_ = 0;
   int children_ = 0;
-  fake_display::FakeDisplay* display_;
   const sysmem_metadata_t sysmem_metadata_ = {
       .vid = PDEV_VID_QEMU,
       .pid = PDEV_PID_QEMU,
@@ -156,42 +145,6 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
   pdev_protocol_t proto_;
 };
 
-// Helper class for internal use by FakeDisplayDeviceTree, below.
-class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
- public:
-  explicit FakeComposite(zx_device_t* parent)
-      : proto_({&composite_protocol_ops_, this}), parent_(parent) {}
-
-  const composite_protocol_t* proto() const { return &proto_; }
-
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
-
-  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
-                             size_t* comp_actual) {
-    size_t comp_cur;
-
-    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
-      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
-      comp_list[comp_cur].device = parent_;
-    }
-
-    if (comp_actual != nullptr) {
-      *comp_actual = comp_cur;
-    }
-  }
-
-  bool CompositeGetFragment(const char* name, zx_device_t** out) {
-    *out = parent_;
-    return true;
-  }
-
- private:
-  static constexpr size_t kNumFragments = 2;
-
-  composite_protocol_t proto_;
-  zx_device_t* parent_;
-};
-
 // Clients of FakeDisplayDeviceTree pass a SysmemDeviceWrapper into the constructor to provide a
 // sysmem implementation to the display driver, with the goal of supporting the following use cases:
 //   - display driver unit tests want to use a self-contained/hermetic sysmem implementation, to
@@ -257,7 +210,6 @@ class FakeDisplayDeviceTree {
 
  private:
   Binder ddk_;
-  FakeComposite composite_;
   FakePBus pbus_;
   FakePDev pdev_;
 

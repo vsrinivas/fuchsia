@@ -4,8 +4,6 @@
 
 #include "vs680-power.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
-
 #include <memory>
 
 #include <ddk/debug.h>
@@ -63,13 +61,7 @@ class SysCntrlReg1 : public hwreg::I2cRegisterBase<SysCntrlReg1, uint8_t, sizeof
 namespace power {
 
 zx_status_t Vs680Power::Create(void* ctx, zx_device_t* parent) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::I2cProtocolClient pmic_i2c(composite, "i2c-pmic");
+  ddk::I2cProtocolClient pmic_i2c(parent, "i2c-pmic");
   if (!pmic_i2c.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get I2C fragment", __FILE__);
     return ZX_ERR_NO_RESOURCES;

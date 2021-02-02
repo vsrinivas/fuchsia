@@ -7,7 +7,6 @@
 
 #include <fuchsia/hardware/camera/sensor/cpp/banjo.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/mipicsi/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -66,14 +65,14 @@ using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
 class Imx227Device : public DeviceType,
                      public ddk::CameraSensor2Protocol<Imx227Device, ddk::base_protocol> {
  public:
-  Imx227Device(zx_device_t* device, ddk::CompositeProtocolClient composite)
+  Imx227Device(zx_device_t* device)
       : DeviceType(device),
-        i2c_(composite, "i2c"),
-        gpio_vana_enable_(composite, "gpio-vana"),
-        gpio_vdig_enable_(composite, "gpio-vdig"),
-        gpio_cam_rst_(composite, "gpio-reset"),
-        clk24_(composite, "clock-sensor"),
-        mipi_(composite, "mipicsi") {}
+        i2c_(device, "i2c"),
+        gpio_vana_enable_(device, "gpio-vana"),
+        gpio_vdig_enable_(device, "gpio-vdig"),
+        gpio_cam_rst_(device, "gpio-reset"),
+        clk24_(device, "clock-sensor"),
+        mipi_(device, "mipicsi") {}
 
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Imx227Device>* device_out);
   static zx_status_t CreateAndBind(void* ctx, zx_device_t* parent);

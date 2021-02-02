@@ -4,7 +4,6 @@
 
 #include "power.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/power/c/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
@@ -315,21 +314,14 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
   auto index = power_domains[0].index;
   char name[20];
   snprintf(name, sizeof(name), "power-%u", index);
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s could not get composite protocoln", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PowerImplProtocolClient power_impl(composite, "power-impl");
+  ddk::PowerImplProtocolClient power_impl(parent, "power-impl");
   if (!power_impl.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_POWER_IMPL not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   // This is optional.
-  ddk::PowerProtocolClient parent_power(composite, "power-parent");
+  ddk::PowerProtocolClient parent_power(parent, "power-parent");
 
   uint32_t min_voltage = 0, max_voltage = 0;
   bool fixed = false;

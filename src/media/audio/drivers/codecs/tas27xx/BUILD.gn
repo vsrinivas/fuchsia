@@ -26,7 +26,6 @@ driver_module("tas27xx") {
   sources = [ "tas27xx.cc" ]
   deps = [
     ":ti_tas27xx-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -51,7 +50,6 @@ test("tas27xx-test-bin") {
   deps = [
     ":tas27xx",
     ":ti_tas27xx-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.i2c",

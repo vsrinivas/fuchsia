@@ -32,7 +32,6 @@ driver_module("syn-dma") {
   sources = [ "syn-dhub.cc" ]
   deps = [
     ":syn_dhub_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.shareddma",
@@ -71,7 +70,6 @@ test("syn-dhub-test-bin") {
   ]
   deps = [
     ":syn_dhub_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.shareddma",

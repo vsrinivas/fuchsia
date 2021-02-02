@@ -21,7 +21,6 @@ driver_module("xhci") {
     "xhci-transfer-ring.cc",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.pci",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.usb",
@@ -62,7 +61,6 @@ source_set("test-libs") {
   testonly = true
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.acpi",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.serialimpl.async",

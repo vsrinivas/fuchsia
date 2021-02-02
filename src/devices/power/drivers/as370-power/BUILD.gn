@@ -31,7 +31,6 @@ driver_module("as370-power") {
   sources = [ "as370-power.cc" ]
   deps = [
     ":as370_power-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.powerimpl",
@@ -58,7 +57,6 @@ test("as370-power-test-bin") {
   ]
   deps = [
     ":as370_power-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.powerimpl",

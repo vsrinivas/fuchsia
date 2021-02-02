@@ -4,7 +4,6 @@
 
 #include "mtk-sdmmc.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <unistd.h>
@@ -79,14 +78,7 @@ namespace sdmmc {
 
 zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
-
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -138,8 +130,8 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   // Both of these fragments are optional.
-  ddk::GpioProtocolClient reset_gpio(composite, "gpio-reset");
-  ddk::GpioProtocolClient power_en_gpio(composite, "gpio-power-enable");
+  ddk::GpioProtocolClient reset_gpio(parent, "gpio-reset");
+  ddk::GpioProtocolClient power_en_gpio(parent, "gpio-power-enable");
 
   fbl::AllocChecker ac;
   std::unique_ptr<MtkSdmmc> device(new (&ac)

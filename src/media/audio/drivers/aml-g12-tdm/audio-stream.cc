@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 #include "audio-stream.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/zx/clock.h>
 #include <math.h>
@@ -58,12 +57,6 @@ void AmlG12TdmStream::InitDaiFormats() {
 }
 
 zx_status_t AmlG12TdmStream::InitPDev() {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
   size_t actual = 0;
   zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                            sizeof(metadata::AmlConfig), &actual);
@@ -94,7 +87,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     codecs_.push_back(SimpleCodecClient());
     char fragment_name[32] = {};
     snprintf(fragment_name, 32, "codec-%02lu", i + 1);
-    status = codecs_[i].SetProtocol(ddk::CodecProtocolClient(composite, fragment_name));
+    status = codecs_[i].SetProtocol(ddk::CodecProtocolClient(parent(), fragment_name));
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s could set protocol - %s - %d", __func__, fragment_name, status);
       return status;
@@ -504,16 +497,10 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
-
-  ddk::CompositeProtocolClient composite(device);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
   if (metadata.is_input) {
     auto stream = audio::SimpleAudioStream::Create<audio::aml_g12::AmlG12TdmStream>(
-        device, true, ddk::PDev(composite), ddk::GpioProtocolClient(composite, "gpio-enable"));
+        device, true, ddk::PDev::FromFragment(device),
+        ddk::GpioProtocolClient(device, "gpio-enable"));
     if (stream == nullptr) {
       zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
       return ZX_ERR_NO_MEMORY;
@@ -521,7 +508,8 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
   } else {
     auto stream = audio::SimpleAudioStream::Create<audio::aml_g12::AmlG12TdmStream>(
-        device, false, ddk::PDev(composite), ddk::GpioProtocolClient(composite, "gpio-enable"));
+        device, false, ddk::PDev::FromFragment(device),
+        ddk::GpioProtocolClient(device, "gpio-enable"));
     if (stream == nullptr) {
       zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
       return ZX_ERR_NO_MEMORY;

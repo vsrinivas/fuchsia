@@ -4,7 +4,6 @@
 
 #include "audio-stream-in.h"
 
-#include <fuchsia/hardware/composite/c/banjo.h>
 #include <lib/zx/clock.h>
 #include <math.h>
 

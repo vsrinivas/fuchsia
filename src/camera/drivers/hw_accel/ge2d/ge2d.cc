@@ -927,13 +927,7 @@ zx_status_t Ge2dDevice::WaitForInterrupt(zx_port_packet_t* packet) {
 
 // static
 zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* out) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    FX_LOGST(ERROR, kTag) << "could not get composite protocol";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     FX_LOGST(ERROR, kTag) << "ZX_PROTOCOL_PDEV not available";
     return ZX_ERR_NO_RESOURCES;
@@ -973,7 +967,7 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
     return status;
   }
 
-  ddk::AmlogicCanvasProtocolClient canvas(composite, "canvas");
+  ddk::AmlogicCanvasProtocolClient canvas(parent, "canvas");
   if (!canvas.is_valid()) {
     FX_LOGST(ERROR, kTag) << "Could not get Amlogic Canvas protocol";
     return ZX_ERR_NO_RESOURCES;

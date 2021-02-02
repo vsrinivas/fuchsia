@@ -5,7 +5,6 @@
 #include "as370-sdhci.h"
 
 #include <fuchsia/hardware/clock/cpp/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
@@ -76,19 +75,18 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   ddk::PDev pdev;
   zx_status_t status;
 
-  ddk::CompositeProtocolClient composite(parent);
-  if (composite.is_valid()) {
-    pdev = ddk::PDev(composite);
+  if (device_get_fragment_count(parent) > 0) {
+    pdev = ddk::PDev::FromFragment(parent);
 
     // TODO(bradenkell): The GPIO expander code will likely be specific to the EVK board. Remove it
     //                   when we get new hardware.
-    ddk::I2cChannel expander2(composite, "i2c-expander-2");
+    ddk::I2cChannel expander2(parent, "i2c-expander-2");
     if (!expander2.is_valid()) {
       zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
       return ZX_ERR_NO_RESOURCES;
     }
 
-    ddk::I2cChannel expander3(composite, "i2c-expander-3");
+    ddk::I2cChannel expander3(parent, "i2c-expander-3");
     if (!expander3.is_valid()) {
       zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
       return ZX_ERR_NO_RESOURCES;
@@ -101,7 +99,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
 
     // The SDIO core clock defaults to 100 MHz on VS680, even though the SDHCI capabilities register
     // says it is 200 MHz. Correct it so that the bus clock can be set properly.
-    ddk::ClockProtocolClient clock(composite, "clock-sd-0");
+    ddk::ClockProtocolClient clock(parent, "clock-sd-0");
     if (clock.is_valid() && (status = clock.SetRate(kVs680CoreClockFreqHz)) != ZX_OK) {
       zxlogf(WARNING, "%s: Failed to set core clock frequency: %d", __FILE__, status);
     }

@@ -5,7 +5,6 @@
 #include "src/devices/tee/drivers/optee/optee-client.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/tee/llcpp/fidl.h>

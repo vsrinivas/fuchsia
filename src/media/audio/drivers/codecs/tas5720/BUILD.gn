@@ -24,7 +24,6 @@ driver_module("tas5720") {
   sources = [ "tas5720.cc" ]
   deps = [
     ":ti_tas5720-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
     "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -49,7 +48,6 @@ test("tas5720-test-bin") {
   deps = [
     ":tas5720",
     ":ti_tas5720-bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
     "//sdk/banjo/fuchsia.hardware.i2c",

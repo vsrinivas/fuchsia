@@ -4,7 +4,6 @@
 
 #include "mt8167-i2c.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
@@ -189,12 +188,6 @@ int Mt8167I2c::TestThread() {
 }
 
 zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* out) {
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Could not get composite protocol", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   constexpr size_t kGpioCount = 6;
   fbl::AllocChecker ac;
   fbl::Array<ddk::GpioProtocolClient> gpios(new (&ac) ddk::GpioProtocolClient[kGpioCount],
@@ -204,12 +197,12 @@ zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* out) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  gpios[0] = ddk::GpioProtocolClient(composite, "gpio-sda-0");
-  gpios[1] = ddk::GpioProtocolClient(composite, "gpio-scl-0");
-  gpios[2] = ddk::GpioProtocolClient(composite, "gpio-sda-1");
-  gpios[3] = ddk::GpioProtocolClient(composite, "gpio-scl-1");
-  gpios[4] = ddk::GpioProtocolClient(composite, "gpio-sda-2");
-  gpios[5] = ddk::GpioProtocolClient(composite, "gpio-scl-2");
+  gpios[0] = ddk::GpioProtocolClient(parent(), "gpio-sda-0");
+  gpios[1] = ddk::GpioProtocolClient(parent(), "gpio-scl-0");
+  gpios[2] = ddk::GpioProtocolClient(parent(), "gpio-sda-1");
+  gpios[3] = ddk::GpioProtocolClient(parent(), "gpio-scl-1");
+  gpios[4] = ddk::GpioProtocolClient(parent(), "gpio-sda-2");
+  gpios[5] = ddk::GpioProtocolClient(parent(), "gpio-scl-2");
   for (uint32_t i = 0; i < kGpioCount; i++) {
     if (!gpios[i].is_valid()) {
       zxlogf(ERROR, "%s failed to get gpio fragment", __FUNCTION__);
@@ -261,14 +254,7 @@ zx_status_t Mt8167I2c::Bind() {
   if (status != ZX_OK) {
     return status;
   }
-
-  ddk::CompositeProtocolClient composite(parent());
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Could not get composite protocol", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ddk::PDev pdev(composite);
+  auto pdev = ddk::PDev::FromFragment(parent());
   pdev_device_info_t info;
   status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {

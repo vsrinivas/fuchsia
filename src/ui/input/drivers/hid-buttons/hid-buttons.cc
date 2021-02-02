@@ -5,7 +5,6 @@
 #include "hid-buttons.h"
 
 #include <fuchsia/hardware/buttons/c/banjo.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
@@ -519,19 +518,13 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
   }
 
   // Get the GPIOs.
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "HidButtonsDevice: Could not get composite protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto fragment_count = composite.GetFragmentCount();
+  auto fragment_count = device_get_fragment_count(parent);
   if (fragment_count != n_gpios) {
     zxlogf(ERROR, "%s Could not get fragment count", __func__);
     return ZX_ERR_INTERNAL;
   }
   composite_device_fragment_t fragments[fragment_count];
-  composite.GetFragments(fragments, fragment_count, &actual);
+  device_get_fragments(parent, fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     zxlogf(ERROR, "%s Fragment count did not match", __func__);
     return ZX_ERR_INTERNAL;

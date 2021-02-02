@@ -4,7 +4,6 @@
 
 #include "zircon_platform_device.h"
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zx/bti.h>
@@ -120,12 +119,11 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle) {
   pdev_protocol_t pdev;
   zx_status_t status = device_get_protocol(zx_device, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    // if ZX_PROTOCOL_PDEV is not available, try using composite protocol.
-    composite_protocol_t composite;
-    if (device_get_protocol(zx_device, ZX_PROTOCOL_COMPOSITE, &composite) == ZX_OK) {
+    // if ZX_PROTOCOL_PDEV is not available, try using find via fragment.
+    if (device_get_fragment_count(zx_device) > 0) {
       zx_device_t* pdev_device;
       bool found =
-          composite_get_fragment(&composite, "fuchsia.hardware.platform.device.PDev", &pdev_device);
+          device_get_fragment(zx_device, "fuchsia.hardware.platform.device.PDev", &pdev_device);
       if (found) {
         status = device_get_protocol(pdev_device, ZX_PROTOCOL_PDEV, &pdev);
       }

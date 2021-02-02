@@ -421,13 +421,7 @@ zx_status_t Imx227Device::SetGroupedParameterHold(bool enable) {
 }
 
 zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Device>* device_out) {
-  ddk::CompositeProtocolClient composite(parent);
-  if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s could not get composite protocoln", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto sensor_device = std::make_unique<Imx227Device>(parent, composite);
+  auto sensor_device = std::make_unique<Imx227Device>(parent);
 
   zx_status_t status = sensor_device->InitPdev();
   if (status != ZX_OK) {

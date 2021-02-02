@@ -31,7 +31,6 @@ driver_module("gpio-test") {
   sources = [ "gpio-test.cc" ]
   deps = [
     ":gpio_test_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.gpioimpl",
     "//src/devices/lib/driver",
