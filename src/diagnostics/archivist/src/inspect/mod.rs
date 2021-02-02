@@ -637,7 +637,7 @@ mod tests {
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let identity = ComponentIdentity::from_identifier_and_url(
@@ -662,7 +662,7 @@ mod tests {
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = identity.unique_key.clone();
+        let key = identity.unique_key.to_vec();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
     }
 
@@ -761,7 +761,7 @@ mod tests {
                                 .unwrap();
                             let unique_cid = ComponentIdentifier::Legacy {
                                 instance_id: "1234".into(),
-                                realm_path: vec![].into(),
+                                realm_path: RealmPath::empty(),
                                 component_name: format!("component_{}.cmx", dir).into(),
                             };
                             (unique_cid, proxy)
@@ -853,7 +853,7 @@ mod tests {
         // selector, so any path would match.
         let component_id = ComponentIdentifier::Legacy {
             instance_id: "1234".into(),
-            realm_path: vec![].into(),
+            realm_path: RealmPath::empty(),
             component_name: "test_component.cmx".into(),
         };
 

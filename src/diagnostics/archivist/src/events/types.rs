@@ -35,7 +35,13 @@ pub static CHANNEL_CAPACITY: usize = 1024;
 
 /// A realm path is a vector of realm names.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct RealmPath(pub Vec<String>);
+pub struct RealmPath(Vec<String>);
+
+impl RealmPath {
+    pub fn empty() -> Self {
+        Self(vec![])
+    }
+}
 
 impl Deref for RealmPath {
     type Target = Vec<String>;
@@ -57,9 +63,47 @@ impl From<Vec<String>> for RealmPath {
     }
 }
 
+impl From<Vec<&str>> for RealmPath {
+    fn from(v: Vec<&str>) -> Self {
+        RealmPath(v.into_iter().map(|s| s.to_string()).collect())
+    }
+}
+
 impl Into<String> for RealmPath {
     fn into(self) -> String {
         self.0.join("/").to_string()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Moniker(Vec<String>);
+
+impl Deref for Moniker {
+    type Target = Vec<String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Into<Moniker> for Vec<&str> {
+    fn into(self) -> Moniker {
+        Moniker(self.into_iter().map(|s| s.to_string()).collect())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UniqueKey(Vec<String>);
+
+impl Deref for UniqueKey {
+    type Target = Vec<String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Into<UniqueKey> for Vec<&str> {
+    fn into(self) -> UniqueKey {
+        UniqueKey(self.into_iter().map(|s| s.to_string()).collect())
     }
 }
 
@@ -82,29 +126,29 @@ pub enum ComponentIdentifier {
 impl ComponentIdentifier {
     /// Returns the relative moniker to be used for selectors.
     /// For legacy components (v1), this is the relative moniker with respect to the root realm.
-    pub fn relative_moniker_for_selectors(&self) -> Vec<String> {
+    pub fn relative_moniker_for_selectors(&self) -> Moniker {
         match self {
             Self::Legacy { realm_path, component_name, .. } => {
                 let mut moniker = realm_path.clone();
                 moniker.push(component_name.clone());
-                moniker.0
+                Moniker(moniker.0)
             }
             Self::Moniker(segments) => {
                 if segments.is_empty() {
-                    vec![]
+                    Moniker(vec![])
                 } else {
-                    segments.iter().map(|s| s.to_string()).collect()
+                    Moniker(segments.iter().map(|s| s.to_string()).collect())
                 }
             }
         }
     }
 
-    pub fn unique_key(&self) -> Vec<String> {
+    pub fn unique_key(&self) -> UniqueKey {
         match self {
             Self::Legacy { instance_id, .. } => {
-                let mut key = self.relative_moniker_for_selectors();
+                let mut key = self.relative_moniker_for_selectors().0;
                 key.push(instance_id.clone());
-                key
+                UniqueKey(key)
             }
             Self::Moniker(segments) => {
                 let mut key = vec![];
@@ -112,7 +156,7 @@ impl ComponentIdentifier {
                     key.push(segment.to_string());
                     key.push(segment.instance_id.clone());
                 }
-                key
+                UniqueKey(key)
             }
         }
     }
@@ -507,16 +551,16 @@ mod tests {
     #[test]
     fn convert_v2_moniker_for_diagnostics() {
         let identifier = ComponentIdentifier::parse_from_moniker("./a:0").unwrap();
-        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a"]);
-        assert_eq!(identifier.unique_key(), vec!["a", "0"]);
+        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a"].into());
+        assert_eq!(identifier.unique_key(), vec!["a", "0"].into());
 
         let identifier = ComponentIdentifier::parse_from_moniker("./a:0/b:1").unwrap();
-        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "b"]);
-        assert_eq!(identifier.unique_key(), vec!["a", "0", "b", "1"]);
+        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "b"].into());
+        assert_eq!(identifier.unique_key(), vec!["a", "0", "b", "1"].into());
 
         let identifier = ComponentIdentifier::parse_from_moniker("./a:0/coll:comp:1/b:0").unwrap();
-        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "coll:comp", "b"]);
-        assert_eq!(identifier.unique_key(), vec!["a", "0", "coll:comp", "1", "b", "0"]);
+        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "coll:comp", "b"].into());
+        assert_eq!(identifier.unique_key(), vec!["a", "0", "coll:comp", "1", "b", "0"].into());
 
         let identifier = ComponentIdentifier::parse_from_moniker(".").unwrap();
         assert!(identifier.relative_moniker_for_selectors().is_empty());

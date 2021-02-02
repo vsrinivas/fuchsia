@@ -5,7 +5,7 @@ use {
     crate::{
         events::{
             error::EventError,
-            types::{ComponentIdentifier, ValidatedSourceIdentity},
+            types::{ComponentIdentifier, Moniker, RealmPath, UniqueKey, ValidatedSourceIdentity},
         },
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
@@ -35,7 +35,7 @@ pub enum ReadSnapshot {
 pub struct ComponentIdentity {
     /// Relative moniker of the component that this artifacts container
     /// is representing.
-    pub relative_moniker: Vec<String>,
+    pub relative_moniker: Moniker,
 
     /// A "rendered" moniker has had `/` inserted between segments and has had instance IDs
     /// appended after colons, this is the form of moniker most familiar to downstream users.
@@ -48,7 +48,7 @@ pub struct ComponentIdentity {
     /// the same relative moniker. Because of this, we must, in some cases,
     /// differentiate these components using instance ids. The unique key
     /// is conceptually a relative moniker which preserves instance ids.
-    pub unique_key: Vec<String>,
+    pub unique_key: UniqueKey,
 }
 
 impl ComponentIdentity {
@@ -70,7 +70,7 @@ impl ComponentIdentity {
             &ComponentIdentifier::Legacy {
                 component_name: "UNKNOWN".into(),
                 instance_id: "0".to_string(),
-                realm_path: vec![].into(),
+                realm_path: RealmPath::empty(),
             },
             "fuchsia-pkg://UNKNOWN",
         )

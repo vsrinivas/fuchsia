@@ -5,7 +5,7 @@ use {
     crate::{
         constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL},
         container::{ComponentDiagnostics, ComponentIdentity},
-        events::types::ComponentIdentifier,
+        events::types::{ComponentIdentifier, UniqueKey},
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{
@@ -203,7 +203,7 @@ impl DataRepoState {
         }))
     }
 
-    pub fn remove(&mut self, key: &[String]) {
+    pub fn remove(&mut self, key: &UniqueKey) {
         self.data_directories.remove(key.to_vec());
     }
 
@@ -218,9 +218,9 @@ impl DataRepoState {
             component_start_time: component_start_time,
         };
 
-        let key = identity.unique_key.clone();
+        let key = identity.unique_key.to_vec();
 
-        let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
+        let diag_repo_entry_opt = self.data_directories.get_mut(key.to_vec());
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
                 let diag_repo_entry_values: &mut [ComponentDiagnostics] =
@@ -281,7 +281,7 @@ impl DataRepoState {
         &mut self,
         identity: ComponentIdentity,
     ) -> Arc<LogsArtifactsContainer> {
-        let trie_key = identity.unique_key.clone();
+        let trie_key = identity.unique_key.to_vec();
 
         // we use a macro instead of a closure to avoid lifetime issues
         macro_rules! insert_component {
@@ -345,7 +345,7 @@ impl DataRepoState {
         inspect_container: InspectArtifactsContainer,
         identity: ComponentIdentity,
     ) -> Result<(), Error> {
-        let key = identity.unique_key.clone();
+        let key = identity.unique_key.to_vec();
 
         let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
 
@@ -524,7 +524,7 @@ mod tests {
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy {
@@ -548,7 +548,7 @@ mod tests {
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = identity.unique_key.clone();
+        let key = identity.unique_key.to_vec();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
     }
 
@@ -556,7 +556,7 @@ mod tests {
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy {
@@ -578,8 +578,8 @@ mod tests {
             .expect("add to repo");
 
         let key = &identity.unique_key;
-        assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
-        let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
+        assert_eq!(data_repo.data_directories.get(key.to_vec()).unwrap().get_values().len(), 1);
+        let entry = &data_repo.data_directories.get(key.to_vec()).unwrap().get_values()[0];
         assert!(entry.inspect.is_some());
         assert_eq!(entry.identity.url, TEST_URL);
     }
@@ -588,7 +588,7 @@ mod tests {
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy {
@@ -611,7 +611,7 @@ mod tests {
         assert!(duplicate_new_component_insertion.is_ok());
 
         let key = &identity.unique_key;
-        let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
+        let repo_values = data_repo.data_directories.get(key.to_vec()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
@@ -625,7 +625,7 @@ mod tests {
     async fn running_components_provide_start_time() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy {
@@ -644,7 +644,7 @@ mod tests {
         assert!(component_insertion.is_ok());
 
         let key = &identity.unique_key;
-        let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
+        let repo_values = data_repo.data_directories.get(key.to_vec()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
@@ -659,7 +659,7 @@ mod tests {
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy {
@@ -683,8 +683,8 @@ mod tests {
         // We shouldn't have overwritten the entry. There should still be an inspect
         // artifacts container.
         let key = &identity.unique_key;
-        assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
-        let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
+        assert_eq!(data_repo.data_directories.get(key.to_vec()).unwrap().get_values().len(), 1);
+        let entry = &data_repo.data_directories.get(key.to_vec()).unwrap().get_values()[0];
         assert_eq!(entry.identity.url, TEST_URL);
         assert!(entry.inspect.is_some());
         assert!(entry.lifecycle.is_some());
@@ -694,7 +694,7 @@ mod tests {
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy {
@@ -709,10 +709,10 @@ mod tests {
             .expect("insertion will succeed.");
 
         let key = &identity.unique_key;
-        assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
+        assert_eq!(data_repo.data_directories.get(key.to_vec()).unwrap().get_values().len(), 1);
 
         let mutable_values =
-            data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
+            data_repo.data_directories.get_mut(key.to_vec()).unwrap().get_values_mut();
 
         mutable_values
             .push(ComponentDiagnostics::empty(Arc::new(identity.clone()), &Default::default()));
@@ -726,7 +726,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_filters_inspect_by_selectors() {
         let data_repo = DataRepo::default();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let realm_path: RealmPath = vec!["a", "b"].into();
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy {

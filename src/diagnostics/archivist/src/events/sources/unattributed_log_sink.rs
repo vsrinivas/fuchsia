@@ -72,9 +72,9 @@ mod tests {
         let event = stream.next().await.expect("received event");
         let _expected_identity = ComponentIdentity {
             url: "fuchsia-pkg://UNKNOWN".to_string(),
-            relative_moniker: vec!["UNKNOWN".to_string()],
+            relative_moniker: vec!["UNKNOWN"].into(),
             rendered_moniker: "UNKNOWN:0".to_string(),
-            unique_key: vec!["UNKNOWN".to_string(), "0".to_string()],
+            unique_key: vec!["UNKNOWN", "0"].into(),
         };
         assert_matches!(
             event,

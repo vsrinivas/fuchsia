@@ -73,7 +73,7 @@ mod tests {
             accessor::BatchIterator,
             container::ComponentIdentity,
             diagnostics::{self, ConnectionStats},
-            events::types::ComponentIdentifier,
+            events::types::{ComponentIdentifier, RealmPath},
             inspect::collector::InspectDataCollector,
             repository::DataRepo,
         },
@@ -158,7 +158,7 @@ mod tests {
         // selector, so any path would match.
         let component_id = ComponentIdentifier::Legacy {
             instance_id: "1234".into(),
-            realm_path: vec![].into(),
+            realm_path: RealmPath::empty(),
             component_name: "test_component.cmx".into(),
         };
         let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);

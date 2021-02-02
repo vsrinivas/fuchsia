@@ -162,7 +162,7 @@ mod tests {
                     &ComponentIdentifier::Legacy {
                         component_name: self.component_name,
                         instance_id: self.instance_id,
-                        realm_path: RealmPath(self.realm_path),
+                        realm_path: self.realm_path.into(),
                     },
                     &*MOCK_URL,
                 ),

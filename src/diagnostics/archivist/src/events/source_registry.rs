@@ -242,7 +242,7 @@ mod tests {
         static ref LEGACY_ID: ComponentIdentifier = ComponentIdentifier::Legacy {
             component_name: "foo.cmx".to_string(),
             instance_id: "12345".to_string(),
-            realm_path: RealmPath(vec!["a".to_string(), "b".to_string()]),
+            realm_path: vec!["a", "b"].into(),
         };
         static ref LEGACY_IDENTITY: ComponentIdentity =
             ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL);
