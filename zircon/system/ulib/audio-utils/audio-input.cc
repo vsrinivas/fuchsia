@@ -126,7 +126,7 @@ zx_status_t AudioInput::RecordToCompletion(AudioSink& sink, Duration duration) {
     } else {
       consumed = std::min(safe_read, bytes_expected);
     }
-    uint32_t increment = consumed - produced;
+    uint32_t increment = fbl::round_down(consumed - produced, frame_sz_);
 
     // We want to process about 2 FIFOs worth of samples in each loop.
     next_wake_time = zx::time(mono_to_safe_read_bytes.ApplyInverse(safe_read + 2 * fifo_depth_));
