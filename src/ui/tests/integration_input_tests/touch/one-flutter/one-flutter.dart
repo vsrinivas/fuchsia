@@ -54,9 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
     WidgetsBinding.instance.window.onPointerDataPacket =
         (ui.PointerDataPacket packet) {
       // Record the time when the pointer event was received.
-      const int _zxClockMonotonic = 0;
-      // This uses zx_clock_get() under the hood.
-      int nowNanos = System.clockGet(_zxClockMonotonic);
+      int nowNanos = System.clockGetMonotonic();
 
       for (ui.PointerData data in packet.data) {
         print('Flutter received a pointer: ${data.toStringFull()}');
