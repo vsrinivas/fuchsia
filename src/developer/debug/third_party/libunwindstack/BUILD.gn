@@ -8,14 +8,17 @@ config("config") {
     "fuchsia",
     "include",
   ]
+
+  if (is_mac) {
+    # This has to be public so that includes from unwindstack/ElfInterface.h can
+    # find the elf.h that is copied from //zircon below. Not to be confused with
+    # unwindstack/Elf.h, or ELF.h that's picked up from clang. o_O
+    include_dirs += [ target_gen_dir ]
+  }
 }
 
 config("config_private") {
   defines = [ "FUCHSIA" ]
-
-  if (is_mac) {
-    include_dirs = [ target_gen_dir ]
-  }
 }
 
 static_library("libunwindstack") {
