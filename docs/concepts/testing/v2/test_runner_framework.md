@@ -214,3 +214,4 @@ Components in the test realm may play various roles in the test, as follows:
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
+[unit-tests]: /docs/development/components/build.md#unit_tests_with_generated_manifests
