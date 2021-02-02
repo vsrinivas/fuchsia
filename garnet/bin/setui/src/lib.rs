@@ -81,6 +81,7 @@ mod display;
 mod do_not_disturb;
 mod factory_reset;
 mod fidl_processor;
+mod hanging_get_handler;
 mod input;
 mod inspect;
 mod internal;

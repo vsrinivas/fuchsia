@@ -266,7 +266,7 @@ macro_rules! shutdown_responder_with_error {
 macro_rules! fidl_hanging_get_responder {
     ($marker_type:ty $(, $setting_type:ty, $responder_type:ty)+$(,)*) => {
 
-        $(impl $crate::switchboard::hanging_get_handler::Sender<$setting_type> for $responder_type {
+        $(impl $crate::hanging_get_handler::Sender<$setting_type> for $responder_type {
             fn send_response(self, data: $setting_type) {
                 use $crate::switchboard::base::FidlResponseErrorLogger;
 
@@ -289,7 +289,7 @@ macro_rules! fidl_hanging_get_responder {
 #[macro_export]
 macro_rules! fidl_result_sender_for_responder {
     ($marker_type:ty $(, $result_type:ty, $responder_type:ty)+$(,)*) => {
-        $(impl $crate::switchboard::hanging_get_handler::Sender<$result_type> for $responder_type {
+        $(impl $crate::hanging_get_handler::Sender<$result_type> for $responder_type {
             fn send_response(self, mut result: $result_type) {
                 use $crate::switchboard::base::FidlResponseErrorLogger;
 

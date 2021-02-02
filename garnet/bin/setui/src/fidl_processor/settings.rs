@@ -11,10 +11,10 @@ use futures::lock::Mutex;
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
 use crate::handler::base::{Error, Request as SettingRequest, Response};
+use crate::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::internal::switchboard::{self, Action, Address, Payload};
 use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::{self, Audience};
-use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
 use std::hash::Hash;
 

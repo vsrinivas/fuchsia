@@ -14,12 +14,12 @@ use crate::fidl_processor::policy::{
 use crate::fidl_processor::settings::{
     RequestCallback as SettingsRequestCallback, SettingProcessingUnit,
 };
+use crate::hanging_get_handler::Sender;
 use crate::internal::policy;
 use crate::internal::switchboard;
 use crate::message::base::default::Role as DefaultRole;
 use crate::message::base::{Address, Payload, Role};
 use crate::message::messenger::MessengerClient;
-use crate::switchboard::hanging_get_handler::Sender;
 use crate::ExitSender;
 use std::hash::Hash;
 

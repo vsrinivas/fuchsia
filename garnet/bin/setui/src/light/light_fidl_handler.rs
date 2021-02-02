@@ -15,10 +15,10 @@ use crate::base::{SettingInfo, SettingType};
 use crate::fidl_process_full;
 use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::{Error, Request};
+use crate::hanging_get_handler::Sender;
 use crate::light::light_controller::ARG_NAME;
 use crate::shutdown_responder_with_error;
 use crate::switchboard::base::FidlResponseErrorLogger;
-use crate::switchboard::hanging_get_handler::Sender;
 
 impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
     fn send_response(self, data: Vec<LightGroup>) {
