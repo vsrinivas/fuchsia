@@ -141,6 +141,7 @@ impl Peer {
         let get_all = self.descriptor.lock().map_or(false, a2dp_version_check);
         let inner = self.inner.clone();
         let cobalt_sender = self.cobalt_sender.clone();
+        let peer_id = self.id;
         async move {
             if let Some(caps) = inner.lock().remote_endpoints() {
                 return Ok(caps);
@@ -164,7 +165,12 @@ impl Peer {
                         remote_streams.push(avdtp::StreamEndpoint::from_info(&info, capabilities));
                     }
                     Err(e) => {
-                        info!("Stream {} capabilities failed: {:?}, skipping", info.id(), e);
+                        info!(
+                            "{}: Stream {} capabilities failed: {:?}, skipping",
+                            peer_id,
+                            info.id(),
+                            e
+                        );
                     }
                 };
             }
@@ -293,22 +299,19 @@ impl Peer {
         fuchsia_async::Task::local(async move {
             while let Some(r) = request_stream.next().await {
                 match r {
-                    Err(e) => info!("Request Error on {}: {:?}", id, e),
+                    Err(e) => info!("{}: Request stream error: {:?}", id, e),
                     Ok(request) => match peer.upgrade() {
-                        None => {
-                            info!("Peer disappeared processing requests, ending");
-                            return;
-                        }
+                        None => return,
                         Some(p) => {
                             let mut lock = p.lock();
                             if let Err(e) = lock.handle_request(request).await {
-                                warn!("{} Error handling request: {:?}", id, e);
+                                warn!("{}: Error handling request: {:?}", id, e);
                             }
                         }
                     },
                 }
             }
-            info!("Peer {} disconnected", id);
+            info!("{}: Peer disconnected", id);
             disconnect_wakers.upgrade().map(|wakers| {
                 for waker in wakers.lock().take().unwrap_or_else(Vec::new) {
                     waker.wake();
@@ -468,7 +471,7 @@ impl PeerInner {
 
     /// Start the stream that is opening, completing the opened procedure.
     async fn start_opened(weak: Weak<Mutex<Self>>) -> avdtp::Result<()> {
-        let (avdtp, stream_pairs) = {
+        let (avdtp, peer_id, stream_pairs) = {
             let peer = Self::upgrade(weak.clone())?;
             let peer = peer.lock();
             let stream_pairs: Vec<(StreamEndpointId, StreamEndpointId)> = peer
@@ -479,7 +482,7 @@ impl PeerInner {
                     endpoint.remote_id().cloned().map(|id| (endpoint.local_id().clone(), id))
                 })
                 .collect();
-            (peer.peer.clone(), stream_pairs)
+            (peer.peer.clone(), peer.peer_id, stream_pairs)
         };
         for (local_id, remote_id) in stream_pairs {
             let to_start = &[remote_id.clone()];
@@ -487,7 +490,10 @@ impl PeerInner {
             let peer = Self::upgrade(weak.clone())?;
             let start_result = peer.lock().start_local_stream(&local_id);
             if let Err(e) = start_result {
-                warn!("Failed local start of {}: {:?}, suspend remote {}", local_id, e, remote_id);
+                warn!(
+                    "{}: Failed media start of {}: {:?}, suspend remote {}",
+                    peer_id, local_id, e, remote_id
+                );
                 avdtp.suspend(to_start).await?;
             }
         }
@@ -529,7 +535,7 @@ impl PeerInner {
             None => Ok(None),
             Some(Some(permit)) => Ok(Some(permit)),
             Some(None) => {
-                info!("Couldn't get permit for starting stream, failing..");
+                info!("{}: No permit for starting stream, suspending..", self.peer_id);
                 Err(avdtp::Error::InvalidState)
             }
         }
@@ -552,9 +558,10 @@ impl PeerInner {
         &mut self,
         local_id: &StreamEndpointId,
     ) -> avdtp::Result<StreamEndpointId> {
+        let peer_id = self.peer_id;
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         let remote_id = stream.endpoint().remote_id().cloned().ok_or(avdtp::Error::InvalidState)?;
-        info!("Suspending stream local {} <-> {} remote", local_id, remote_id);
+        info!("{}: Suspend stream local {} <-> {} remote", peer_id, local_id, remote_id);
         stream.suspend().map_err(|c| avdtp::Error::RequestInvalid(c))?;
         let _ = self.started.remove(local_id);
         Ok(remote_id)
@@ -571,7 +578,7 @@ impl PeerInner {
         if done {
             self.opening = None;
         }
-        info!("Transport channel connected to seid {}", stream_id);
+        info!("{}: Transport connected for stream {}", self.peer_id, stream_id);
         Ok(done)
     }
 
@@ -698,7 +705,7 @@ impl PeerInner {
                 // Delay is in 1/10 ms
                 let delay_ns = delay as u64 * 100000;
                 info!(
-                    "Peer {} reports stream {} delay of {} ns, acknowledging..",
+                    "{}: stream {} delay of {} ns, acknowledging..",
                     self.peer_id, stream_id, delay_ns
                 );
                 responder.send()
