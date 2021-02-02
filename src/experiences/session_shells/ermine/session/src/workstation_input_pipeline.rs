@@ -88,7 +88,7 @@ async fn add_shortcut_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {
 }
 
 async fn add_ime(handlers: &mut Vec<Box<dyn InputHandler>>) {
-    if let Ok(ime_handler) = ImeHandler::new_transitional().await {
+    if let Ok(ime_handler) = ImeHandler::new().await {
         handlers.push(Box::new(ime_handler));
     }
 }
