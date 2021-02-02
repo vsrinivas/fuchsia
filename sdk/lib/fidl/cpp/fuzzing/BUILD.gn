@@ -9,6 +9,7 @@ import("//src/sys/build/components.gni")
 source_set("fuzzing") {
   testonly = true
   sources = [
+    "decoder_encoder.h",
     "fuzzer.h",
     "server_provider.h",
     "traits.h",
