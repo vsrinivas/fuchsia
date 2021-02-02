@@ -193,21 +193,35 @@ fn emit_client_hello_for_retry(sess: &mut ClientSessionImpl,
                                mut handshake: HandshakeDetails,
                                mut hello: ClientHelloDetails,
                                retryreq: Option<&HelloRetryRequest>) -> NextState {
-    // Do we have a SessionID or ticket cached for this host?
-    handshake.resuming_session = find_session(sess, handshake.dns_name.as_ref());
-    let (session_id, ticket, resume_version) = if handshake.resuming_session.is_some() {
-        let resuming = handshake.resuming_session.as_mut().unwrap();
-        if resuming.version == ProtocolVersion::TLSv1_2 {
-            random_sessionid_for_ticket(resuming);
-        }
-        debug!("Resuming session");
-        (resuming.session_id, resuming.ticket.0.clone(), resuming.version)
-    } else {
-        debug!("Not resuming any session");
+    // Only check for a cached session ID when we are not servicing a HelloRetryRequest. If we are,
+    // nothing about the resumed session should be changing from the initial ClientHello.
+    if retryreq.is_none() {
+        handshake.resuming_session = find_session(sess, handshake.dns_name.as_ref());
+        handshake.session_id = match handshake.resuming_session.as_mut() {
+            Some(sess) => {
+                debug!("Resuming session");
+                if sess.version == ProtocolVersion::TLSv1_2 {
+                    random_sessionid_for_ticket(sess);
+                }
+                sess.session_id
+            }
+            None => {
+                debug!("Not resuming any session");
+                SessionID::empty()
+            }
+        };
+
+        // Independent of resumption, always send a session_id for TLS 1.3 over TCP. See RFC8446
+        // Appendix D.4.
         if handshake.session_id.is_empty() {
             handshake.session_id = random_sessionid();
         }
-        (handshake.session_id, Vec::new(), ProtocolVersion::Unknown(0))
+    }
+
+    let session_id = handshake.session_id;
+    let (ticket, resume_version) = match handshake.resuming_session.as_mut() {
+        Some(sess) => (sess.ticket.0.clone(), sess.version),
+        None => (Vec::new(), ProtocolVersion::Unknown(0)),
     };
 
     let support_tls12 = sess.config.supports_version(ProtocolVersion::TLSv1_2);
