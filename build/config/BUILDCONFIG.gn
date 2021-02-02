@@ -563,34 +563,33 @@ foreach(_target_type,
         }
       }
 
+      # If the action has inputs/outputs that are not explicitly stated then
+      # it will fail verification against the trace.
+      # Actions that are known non-hermetic should set `hermetic_deps = false`.
+      #
+      # TODO(rudymathu): At some point, we may want to restrict usage of
+      # non-hermetic actions, which we can do by depending on a target with
+      # explicit visibility.
+      hermetic_deps = true
       if (defined(invoker.hermetic_deps)) {
         hermetic_deps = invoker.hermetic_deps
       }
+
+      # If the action didn't write or touch all of its declared outputs, it
+      # should be marked with `all_outputs_fresh = false`.
+      all_outputs_fresh = true
       if (defined(invoker.all_outputs_fresh)) {
         all_outputs_fresh = invoker.all_outputs_fresh
       }
 
       if (!should_trace || (!hermetic_deps && !all_outputs_fresh)) {
+        not_needed([
+                     "hermetic_deps",
+                     "all_outputs_fresh",
+                   ])
         script = _invoker_script
         args = _invoker_args
       } else {
-        # If the action has inputs/outputs that are not explicitly stated then
-        # it will fail verification against the trace.
-        # Actions that are known non-hermetic should set `hermetic_deps = false`.
-        #
-        # TODO(rudymathu): At some point, we may want to restrict usage of
-        # non-hermetic actions, which we can do by depending on a target with
-        # explicit visibility.
-        if (!defined(hermetic_deps)) {
-          hermetic_deps = true
-        }
-
-        # If the action didn't write or touch all of its declared outputs, it
-        # should be marked with `all_outputs_fresh = false`.
-        if (!defined(all_outputs_fresh)) {
-          all_outputs_fresh = true
-        }
-
         script = python_exe_src
 
         inputs += [
