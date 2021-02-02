@@ -140,6 +140,7 @@ sdk://pkg/media_cpp_no_converters
 sdk://pkg/memfs
 sdk://pkg/modular_cpp
 sdk://pkg/scenic_cpp
+sdk://pkg/stdcompat
 sdk://pkg/svc
 sdk://pkg/sync
 sdk://pkg/sys_cpp

@@ -140,6 +140,7 @@ sdk://pkg/media_cpp_no_converters
 sdk://pkg/memfs
 sdk://pkg/modular_cpp
 sdk://pkg/scenic_cpp
+sdk://pkg/stdcompat
 sdk://pkg/svc
 sdk://pkg/sync
 sdk://pkg/sys_cpp
@@ -155,8 +156,8 @@ sdk://pkg/vfs_cpp
 sdk://pkg/vulkan
 sdk://pkg/vulkan_layers
 sdk://pkg/zx
-sdk://tools/arm64/bootserver
 sdk://tools/arm64/blobfs-compression
+sdk://tools/arm64/bootserver
 sdk://tools/arm64/cmc
 sdk://tools/arm64/device-finder
 sdk://tools/arm64/far
@@ -190,9 +191,9 @@ sdk://tools/minfs
 sdk://tools/pm
 sdk://tools/symbol-index
 sdk://tools/symbolize
+sdk://tools/x64/blobfs-compression
 sdk://tools/x64/bootserver
 sdk://tools/x64/cmc
-sdk://tools/x64/blobfs-compression
 sdk://tools/x64/device-finder
 sdk://tools/x64/far
 sdk://tools/x64/fconfig

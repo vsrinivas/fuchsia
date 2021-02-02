@@ -294,6 +294,7 @@ sdk_molecule("core_lib") {
     "//sdk/lib/inspect/service/cpp:cpp_sdk",
     "//sdk/lib/media/cpp:cpp_sdk",
     "//sdk/lib/modular/cpp:cpp_sdk",
+    "//sdk/lib/stdcompat:stdcompat_sdk",
     "//sdk/lib/svc:svc_sdk",
     "//sdk/lib/sys/cpp:cpp_sdk",
     "//sdk/lib/sys/cpp/testing:unit_sdk",
