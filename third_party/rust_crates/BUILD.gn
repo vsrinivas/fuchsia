@@ -7154,7 +7154,7 @@ rust_library("rustc-serialize-v0_3_24") {
 
 rust_library("rustls-v0_17_0") {
   crate_name = "rustls"
-  crate_root = "//third_party/rust_crates/vendor/rustls/src/lib.rs"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/rustls/src/lib.rs"
   output_name = "rustls-e5718d4d3f3f0783"
   configs -= [
     "//build/config:rust_edition_2018",
