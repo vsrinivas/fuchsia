@@ -149,7 +149,7 @@ impl<'a> BoundScanner<'a> {
         if channel_list.is_empty() {
             send_scan_end_and_return!(req.txn_id, ScanError::EmptyChannelList, self);
         }
-        if channel_list.len() > banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS {
+        if channel_list.len() > banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize {
             send_scan_end_and_return!(req.txn_id, ScanError::ChannelListTooLarge, self);
         }
         if req.max_channel_time < req.min_channel_time {
@@ -170,7 +170,7 @@ impl<'a> BoundScanner<'a> {
             } else {
                 banjo_wlan_mac::WlanHwScanType::PASSIVE
             };
-            let mut channels = [0; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
+            let mut channels = [0; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize];
             channels[..channel_list.len()].copy_from_slice(channel_list);
             let mut ssid = [0; banjo_wlan_info::WLAN_MAX_SSID_LEN as usize];
             ssid[..req.ssid.len()].copy_from_slice(&req.ssid[..]);
@@ -342,7 +342,7 @@ fn get_band_info(
     channel: banjo_wlan_info::WlanChannel,
 ) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
     const _2GHZ_BAND_HIGHEST_CHANNEL: u8 = 14;
-    iface_info.bands[..iface_info.bands_count]
+    iface_info.bands[..iface_info.bands_count as usize]
         .iter()
         .filter(|b| match channel.primary {
             x if x > _2GHZ_BAND_HIGHEST_CHANNEL => b.band == banjo_hw_wlaninfo::WlanInfoBand::_5GHZ,
@@ -690,7 +690,7 @@ mod tests {
             assert_eq!(config.scan_type, banjo_wlan_mac::WlanHwScanType::PASSIVE);
             assert_eq!(config.num_channels, 1);
 
-            let mut channels = [0u8; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
+            let mut channels = [0u8; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize];
             channels[..1].copy_from_slice(&[6]);
             assert_eq!(&config.channels[..], &channels[..]);
 

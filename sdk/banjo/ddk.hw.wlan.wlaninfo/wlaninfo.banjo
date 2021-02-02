@@ -112,7 +112,7 @@ enum WlanInfoBand {
 };
 
 /// The maximum number of supported channels in a WlanInfoChannelList.
-const usize WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS = 64;
+const uint32 WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS = 64;
 
 /// A list of channels in a band. Channels are numbered as in IEEE Std 802.11-2016,
 /// 17.3.8.4.2, where each channel is defined as:
@@ -135,7 +135,7 @@ struct WlanInfoChannelList {
 
 /// The maximum number of rates in WlanInfoBandInfo.
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable
-const usize WLAN_INFO_BAND_INFO_MAX_RATES = 12;
+const uint32 WLAN_INFO_BAND_INFO_MAX_RATES = 12;
 
 /// Information about a particular WLAN band. Capabilities are grouped by band, by
 /// de facto industry standard.
@@ -161,4 +161,4 @@ struct WlanInfoBandInfo {
 
 /// The maximum number of bands supported in a WlanInfo struct. For now this is 2
 /// to keep the struct a small, fixed size.
-const usize WLAN_INFO_MAX_BANDS = 2;
+const uint32 WLAN_INFO_MAX_BANDS = 2;

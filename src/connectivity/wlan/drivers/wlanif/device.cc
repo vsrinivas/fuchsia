@@ -271,7 +271,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     channel_list = std::move(req.channel_list.value());
   }
   if (channel_list.size() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    warnf("wlanif: truncating channel list from %lu to %d\n", channel_list.size(),
+    warnf("wlanif: truncating channel list from %lu to %du\n", channel_list.size(),
           WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
     impl_req.num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
   } else {

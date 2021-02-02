@@ -27,7 +27,7 @@ struct WlanmacInfo {
 
     /// Supported bands.
     array<ddk.hw.wlan.wlaninfo.WlanInfoBandInfo>:WLAN_INFO_MAX_BANDS bands;
-    usize bands_count;
+    uint32 bands_count;
 };
 
 enum WlanRxInfoFlags : uint32 {
@@ -111,7 +111,7 @@ struct WlanTxInfo {
 };
 
 const uint16 WLAN_TX_VECTOR_IDX_INVALID = 0;
-const usize WLAN_TX_STATUS_MAX_ENTRY = 8;
+const uint32 WLAN_TX_STATUS_MAX_ENTRY = 8;
 
 struct WlanTxStatusEntry {
     uint16 tx_vector_idx;
@@ -218,7 +218,7 @@ struct WlanBcnConfig {
 
     /// TIM offset (in bytes) to the start of |bcn_tmpl|. This points to the first byte of TIM IE,
     /// which is the tag ID.
-    usize tim_ele_offset;
+    uint64 tim_ele_offset;
 
     /// in TU
     uint16 beacon_interval;

@@ -657,7 +657,7 @@ std::string Describe(const wlanmac_info& wi) {
   BUFFER("phys:0x%04x", wi.supported_phys);
   BUFFER("feat:0x%08x", wi.driver_features);
   BUFFER("cap:0x%08x", wi.caps);
-  BUFFER("#bands:%zu", wi.bands_count);
+  BUFFER("#bands:%du", wi.bands_count);
   for (uint8_t i = 0; i < wi.bands_count; i++) {
     BUFFER("[band %u]%s", i, Describe(wi.bands[i]).c_str());
   }

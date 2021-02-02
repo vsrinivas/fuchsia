@@ -448,15 +448,15 @@ mod test_utils {
 
     pub fn fake_wlanmac_info() -> WlanmacInfo {
         let bands_count = 2;
-        let mut bands = [default_band_info(); WLAN_INFO_MAX_BANDS];
+        let mut bands = [default_band_info(); WLAN_INFO_MAX_BANDS as usize];
         bands[0] = WlanInfoBandInfo {
             band: WlanInfoBand::_2GHZ,
-            rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES),
+            rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
             supported_channels: WlanInfoChannelList {
                 base_freq: 2407,
                 channels: arr!(
                     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS
+                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize
                 ),
             },
             ht_supported: true,
@@ -469,12 +469,12 @@ mod test_utils {
         };
         bands[1] = WlanInfoBandInfo {
             band: WlanInfoBand::_5GHZ,
-            rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES),
+            rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
             supported_channels: WlanInfoChannelList {
                 base_freq: 5000,
                 channels: arr!(
                     [36, 40, 44, 48, 149, 153, 157, 161],
-                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS
+                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize
                 ),
             },
             ht_supported: true,
@@ -534,10 +534,10 @@ mod test_utils {
                 vht_capability_info: 0,
                 supported_vht_mcs_and_nss_set: 0,
             },
-            rates: [0; WLAN_INFO_BAND_INFO_MAX_RATES],
+            rates: [0; WLAN_INFO_BAND_INFO_MAX_RATES as usize],
             supported_channels: WlanInfoChannelList {
                 base_freq: 0,
-                channels: [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS],
+                channels: [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize],
             },
         }
     }
@@ -665,14 +665,14 @@ mod tests {
         let result = dev.start_hw_scan(&WlanHwScanConfig {
             scan_type: WlanHwScanType::PASSIVE,
             num_channels: 3,
-            channels: arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS),
+            channels: arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize),
             ssid: WlanSsid { len: 3, ssid: arr!([65; 3], WLAN_MAX_SSID_LEN as usize) },
         });
         assert!(result.is_ok());
         assert_variant!(fake_device.hw_scan_req, Some(config) => {
             assert_eq!(config.scan_type, WlanHwScanType::PASSIVE);
             assert_eq!(config.num_channels, 3);
-            assert_eq!(&config.channels[..], &arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS)[..]);
+            assert_eq!(&config.channels[..], &arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize)[..]);
             assert_eq!(config.ssid, WlanSsid { len: 3, ssid: arr!([65; 3], WLAN_MAX_SSID_LEN as usize) });
         }, "expected HW scan config");
     }

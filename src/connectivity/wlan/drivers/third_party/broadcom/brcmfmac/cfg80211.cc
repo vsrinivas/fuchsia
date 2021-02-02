@@ -955,7 +955,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
 
   // Validate channel count
   if (request->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    BRCMF_ERR("Number of channels in escan request (%zu) exceeds maximum (%d)",
+    BRCMF_ERR("Number of channels in escan request (%zu) exceeds maximum (%du)",
               request->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -3727,7 +3727,7 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     BRCMF_INFO("   band_id: %s", band_id_str);
 
     if (band->num_rates > WLAN_INFO_BAND_INFO_MAX_RATES) {
-      BRCMF_INFO("Number of rates reported (%zu) exceeds limit (%d), truncating", band->num_rates,
+      BRCMF_INFO("Number of rates reported (%zu) exceeds limit (%du), truncating", band->num_rates,
                  WLAN_INFO_BAND_INFO_MAX_RATES);
       band->num_rates = WLAN_INFO_BAND_INFO_MAX_RATES;
     }
@@ -3741,7 +3741,7 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     BRCMF_INFO("     base_frequency: %d", band->base_frequency);
 
     if (band->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-      BRCMF_INFO("Number of channels reported (%zu) exceeds limit (%d), truncating",
+      BRCMF_INFO("Number of channels reported (%zu) exceeds limit (%du), truncating",
                  band->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
       band->num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
     }
