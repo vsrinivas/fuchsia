@@ -6,8 +6,8 @@ use {
     crate::input_device, crate::input_handler::InputHandler, anyhow::Error,
     async_trait::async_trait, fidl_fuchsia_input as fidl_input,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
-    fuchsia_component::client::connect_to_service, fuchsia_scenic as scenic,
-    fuchsia_syslog::fx_log_err, std::convert::TryInto,
+    fuchsia_component::client::connect_to_service, fuchsia_syslog::fx_log_err,
+    std::convert::TryInto,
 };
 
 /// [`ImeHandler`] is responsible for dispatching key events to the IME service, thus making sure
@@ -71,12 +71,7 @@ impl ImeHandler {
     /// Creates a new [`ImeHandler`] and connects to the IME service.
     ///
     /// # Parameters
-    /// `scenic_session`: The Scenic session to send keyboard events to.
-    /// `scenic_compositor_id`: The id of the compositor used for the scene's layer stack.
-    pub async fn new(
-        _scenic_session: scenic::SessionPtr,
-        _scenic_compositor_id: u32,
-    ) -> Result<Self, Error> {
+    pub async fn new() -> Result<Self, Error> {
         let ime = connect_to_service::<fidl_ui_input::ImeServiceMarker>()?;
 
         Self::new_handler(ime).await
