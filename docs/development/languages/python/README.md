@@ -13,11 +13,3 @@ See [Python versions](python_style.md#python-versions) in the style guide.
 ## Testing
 
 See [Python testing](testing.md).
-
-## Documentation
-
-TODO(dschuyler) establish documentation guidelines.
-
-## Editor Support
-
-TODO(dschuyler) Provide tips on IDE/editor support for Python in Fuchsia.
