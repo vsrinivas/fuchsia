@@ -85,7 +85,7 @@ where
     /// Takes a key fragment sequence in vector form and removes the node identified
     /// by that key fragment sequence if it exists. Removes all values that exist on the
     /// node.
-    pub fn remove(&mut self, key: Vec<K>)
+    pub fn remove(&mut self, key: &Vec<K>)
     where
         K: Hash + Eq + Debug,
     {
@@ -98,7 +98,7 @@ where
 
     /// Retrieves a node identified by the key fragment vector `key` if it
     /// exists in the prefix trie, else None.
-    pub fn get(&mut self, key: Vec<K>) -> Option<&TrieNode<K, V>>
+    pub fn get(&mut self, key: &Vec<K>) -> Option<&TrieNode<K, V>>
     where
         K: Hash + Eq + Debug,
     {
@@ -108,7 +108,7 @@ where
 
     /// Retrieves a mutable node identified by the key fragment vector `key` if it
     /// exists in the prefix trie, else None.
-    pub fn get_mut(&mut self, key: Vec<K>) -> Option<&mut TrieNode<K, V>>
+    pub fn get_mut(&mut self, key: &Vec<K>) -> Option<&mut TrieNode<K, V>>
     where
         K: Hash + Eq + Debug,
     {
@@ -451,12 +451,14 @@ mod tests {
         curr_node = curr_node.get_children().get(&'1').unwrap();
         assert_eq!(curr_node.get_values().len(), 1);
 
-        let test_node = test_trie.get("test".to_string().chars().collect());
+        let key = "test".to_string().chars().collect();
+        let test_node = test_trie.get(&key);
         assert!(test_node.is_some());
         assert_eq!(test_node.unwrap().get_values().len(), 1);
         assert_eq!(test_node.unwrap().get_values()[0 as usize], "a".to_string());
 
-        let test1_node = test_trie.get("test1".to_string().chars().collect());
+        let key = "test1".to_string().chars().collect();
+        let test1_node = test_trie.get(&key);
         assert!(test1_node.is_some());
         assert_eq!(test1_node.unwrap().get_values().len(), 1);
         assert_eq!(test1_node.unwrap().get_values()[0 as usize], "b".to_string());
@@ -471,25 +473,29 @@ mod tests {
         test_trie.insert("text".to_string().chars().collect(), "c".to_string());
         test_trie.insert("text12".to_string().chars().collect(), "d".to_string());
 
-        test_trie.remove("test".to_string().chars().collect());
-        test_trie.remove("".to_string().chars().collect());
-        test_trie.remove("text12".to_string().chars().collect());
+        test_trie.remove(&("test".to_string().chars().collect()));
+        test_trie.remove(&vec![]);
+        test_trie.remove(&("text12".to_string().chars().collect()));
 
-        let test_node = test_trie.get("test".to_string().chars().collect());
+        let key = "test".to_string().chars().collect();
+        let test_node = test_trie.get(&key);
         assert!(test_node.is_some());
         assert!(test_node.unwrap().get_values().is_empty());
 
-        let test1_node = test_trie.get("test1".to_string().chars().collect());
+        let key = "test1".to_string().chars().collect();
+        let test1_node = test_trie.get(&key);
         assert!(test1_node.is_some());
         assert_eq!(test1_node.unwrap().get_values().len(), 1);
         assert_eq!(test1_node.unwrap().get_values()[0], "b".to_string());
 
-        let text_node = test_trie.get("text".to_string().chars().collect());
+        let key = "text".to_string().chars().collect();
+        let text_node = test_trie.get(&key);
         assert!(text_node.is_some());
         assert_eq!(text_node.unwrap().get_values().len(), 1);
         assert_eq!(text_node.unwrap().get_values()[0], "c".to_string());
 
-        let text1_node = test_trie.get("text1".to_string().chars().collect());
+        let key = "text1".to_string().chars().collect();
+        let text1_node = test_trie.get(&key);
         assert!(text1_node.is_none());
     }
 
@@ -537,7 +543,7 @@ mod tests {
         assert_eq!(num_iterations, 1);
 
         let mut one_entry_trie: TestTrie = TestTrie::new();
-        one_entry_trie.insert("t".to_string().chars().collect(), "a".to_string());
+        one_entry_trie.insert(vec!['t'], "a".to_string());
         let mut results_vec = vec![(vec!['t'], Some("a".to_string())), (vec![], None)];
         num_iterations = 0;
         for (key, val) in one_entry_trie.iter() {

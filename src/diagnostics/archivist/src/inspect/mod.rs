@@ -662,8 +662,10 @@ mod tests {
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = identity.unique_key.to_vec();
-        assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
+        assert_eq!(
+            inspect_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            1
+        );
     }
 
     #[fasync::run_singlethreaded(test)]

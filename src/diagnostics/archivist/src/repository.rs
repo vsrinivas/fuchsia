@@ -31,8 +31,7 @@ use {
     io_util,
     parking_lot::RwLock,
     selectors,
-    std::collections::HashMap,
-    std::sync::Arc,
+    std::{collections::HashMap, sync::Arc},
     tracing::{debug, error, warn},
 };
 
@@ -204,7 +203,7 @@ impl DataRepoState {
     }
 
     pub fn remove(&mut self, key: &UniqueKey) {
-        self.data_directories.remove(key.to_vec());
+        self.data_directories.remove(key);
     }
 
     pub fn add_new_component(
@@ -218,9 +217,7 @@ impl DataRepoState {
             component_start_time: component_start_time,
         };
 
-        let key = identity.unique_key.to_vec();
-
-        let diag_repo_entry_opt = self.data_directories.get_mut(key.to_vec());
+        let diag_repo_entry_opt = self.data_directories.get_mut(&identity.unique_key);
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
                 let diag_repo_entry_values: &mut [ComponentDiagnostics] =
@@ -233,7 +230,7 @@ impl DataRepoState {
                         // one. If this is the case, just instantiate as though it's our first
                         // time encountering this moniker segment.
                         self.data_directories.insert(
-                            key,
+                            identity.unique_key.to_vec(),
                             ComponentDiagnostics::new_with_lifecycle(
                                 Arc::new(identity),
                                 lifecycle_artifact_container,
@@ -256,7 +253,7 @@ impl DataRepoState {
                                 "Encountered a diagnostics data repository node with more",
                                 "than one artifact container, moniker: {:?}."
                             ),
-                            key
+                            identity.unique_key,
                         ));
                     }
                 }
@@ -264,7 +261,7 @@ impl DataRepoState {
             // This case is expected to be the most common case. We've seen a creation
             // lifecycle event and it promotes the instantiation of a new data repository entry.
             None => self.data_directories.insert(
-                key,
+                identity.unique_key.to_vec(),
                 ComponentDiagnostics::new_with_lifecycle(
                     Arc::new(identity),
                     lifecycle_artifact_container,
@@ -295,7 +292,7 @@ impl DataRepoState {
             }};
         }
 
-        match self.data_directories.get_mut(trie_key.clone()) {
+        match self.data_directories.get_mut(&trie_key) {
             Some(component) => match &mut component.get_values_mut()[..] {
                 [] => insert_component!(),
                 [existing] => {
@@ -345,9 +342,7 @@ impl DataRepoState {
         inspect_container: InspectArtifactsContainer,
         identity: ComponentIdentity,
     ) -> Result<(), Error> {
-        let key = identity.unique_key.to_vec();
-
-        let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
+        let diag_repo_entry_opt = self.data_directories.get_mut(&identity.unique_key);
 
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
@@ -361,7 +356,7 @@ impl DataRepoState {
                         // one. If this is the case, just instantiate as though it's our first
                         // time encountering this moniker segment.
                         self.data_directories.insert(
-                            key,
+                            identity.unique_key.to_vec(),
                             ComponentDiagnostics::new_with_inspect(
                                 Arc::new(identity),
                                 inspect_container,
@@ -389,7 +384,7 @@ impl DataRepoState {
                                 "Encountered a diagnostics data repository node with more",
                                 "than one artifact container, moniker: {:?}."
                             ),
-                            key
+                            identity.unique_key
                         ));
                     }
                 }
@@ -397,7 +392,7 @@ impl DataRepoState {
             // This case is expected to be uncommon; we've encountered a diagnostics_ready
             // event before a start or existing event!
             None => self.data_directories.insert(
-                key,
+                identity.unique_key.to_vec(),
                 ComponentDiagnostics::new_with_inspect(
                     Arc::new(identity),
                     inspect_container,
@@ -548,8 +543,10 @@ mod tests {
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = identity.unique_key.to_vec();
-        assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
+        assert_eq!(
+            inspect_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            1
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -577,9 +574,11 @@ mod tests {
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
             .expect("add to repo");
 
-        let key = &identity.unique_key;
-        assert_eq!(data_repo.data_directories.get(key.to_vec()).unwrap().get_values().len(), 1);
-        let entry = &data_repo.data_directories.get(key.to_vec()).unwrap().get_values()[0];
+        assert_eq!(
+            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            1
+        );
+        let entry = &data_repo.data_directories.get(&identity.unique_key).unwrap().get_values()[0];
         assert!(entry.inspect.is_some());
         assert_eq!(entry.identity.url, TEST_URL);
     }
@@ -610,8 +609,8 @@ mod tests {
 
         assert!(duplicate_new_component_insertion.is_ok());
 
-        let key = &identity.unique_key;
-        let repo_values = data_repo.data_directories.get(key.to_vec()).unwrap().get_values();
+        let repo_values =
+            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
@@ -643,8 +642,8 @@ mod tests {
 
         assert!(component_insertion.is_ok());
 
-        let key = &identity.unique_key;
-        let repo_values = data_repo.data_directories.get(key.to_vec()).unwrap().get_values();
+        let repo_values =
+            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
@@ -682,9 +681,11 @@ mod tests {
 
         // We shouldn't have overwritten the entry. There should still be an inspect
         // artifacts container.
-        let key = &identity.unique_key;
-        assert_eq!(data_repo.data_directories.get(key.to_vec()).unwrap().get_values().len(), 1);
-        let entry = &data_repo.data_directories.get(key.to_vec()).unwrap().get_values()[0];
+        assert_eq!(
+            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            1
+        );
+        let entry = &data_repo.data_directories.get(&identity.unique_key).unwrap().get_values()[0];
         assert_eq!(entry.identity.url, TEST_URL);
         assert!(entry.inspect.is_some());
         assert!(entry.lifecycle.is_some());
@@ -708,11 +709,13 @@ mod tests {
             .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
-        let key = &identity.unique_key;
-        assert_eq!(data_repo.data_directories.get(key.to_vec()).unwrap().get_values().len(), 1);
+        assert_eq!(
+            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            1
+        );
 
         let mutable_values =
-            data_repo.data_directories.get_mut(key.to_vec()).unwrap().get_values_mut();
+            data_repo.data_directories.get_mut(&identity.unique_key).unwrap().get_values_mut();
 
         mutable_values
             .push(ComponentDiagnostics::empty(Arc::new(identity.clone()), &Default::default()));
