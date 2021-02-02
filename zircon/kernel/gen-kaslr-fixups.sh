@@ -157,7 +157,10 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
     }
     if (bad == "") {
         relocs[++nrelocs] = r_offset;
-        reloc_secname[r_offset] = secname;
+	# Ancient versions of mawk (1.3.3) cannot handle too many references to the same string.
+	# Instead of reusing secname, we create a new string: "secname @ offset"
+	# This is only used for error reporting.
+	reloc_secname[r_offset] = sprintf("%s @ %#x", secname, r_offset);
     } else {
         print "cannot handle", bad, "at", $1, "in", secname > "/dev/stderr";
         status = 1;
