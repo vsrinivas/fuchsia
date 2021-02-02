@@ -18,7 +18,7 @@ struct I2cImplOp {
 [BanjoLayout = "ddk-protocol"]
 protocol I2cImpl {
     GetBusCount() -> (uint32 count);
-    GetMaxTransferSize(uint32 bus_id) -> (zx.status s, usize size);
+    GetMaxTransferSize(uint32 bus_id) -> (zx.status s, uint64 size);
     /// Sets the bitrate for the i2c bus in KHz units.
     SetBitrate(uint32 bus_id, uint32 bitrate) -> (zx.status s);
     /// |Transact| assumes that all ops buf are not null.

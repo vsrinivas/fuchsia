@@ -361,7 +361,7 @@ protocol DisplayControllerImpl {
 
     /// Imports a VMO backed image into the driver. The driver should set image->handle. The
     /// driver does not own the vmo handle passed to this function.
-    ImportVmoImage([InOut] Image image, handle<vmo> vmo, usize offset) -> (zx.status s);
+    ImportVmoImage([InOut] Image image, handle<vmo> vmo, uint64 offset) -> (zx.status s);
 
     /// Imports an image from a buffer collection into the driver. The driver should set
     /// image->handle.

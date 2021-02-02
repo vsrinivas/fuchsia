@@ -41,7 +41,7 @@ protocol UsbFunction {
 
     /// Returns the size needed for a |usb_request_t|, including private storage needed by the
     /// HCI driver.
-    GetRequestSize() -> (usize size);
+    GetRequestSize() -> (uint64 size);
 
     /// Cancels all transactions currently queued on the specified endpoint.
     CancelAll(uint8 ep_address) -> (zx.status s);
@@ -51,7 +51,7 @@ protocol UsbFunction {
 [BanjoLayout = "ddk-interface"]
 protocol UsbFunctionInterface {
     /// Returns the size of the descriptor list for the function.
-    GetDescriptorsSize() -> (usize size);
+    GetDescriptorsSize() -> (uint64 size);
 
     /// Returns the descriptor list for the function.
     /// TODO(voydanoff) - descriptors will likely vary (different max packet sizes, etc)

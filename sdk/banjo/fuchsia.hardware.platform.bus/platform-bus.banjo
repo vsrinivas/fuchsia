@@ -14,7 +14,7 @@ struct PbusMmio {
     zx.paddr base;
     /// Length of MMIO region in bytes.
     /// Does not need to be page aligned.
-    usize length;
+    uint64 length;
 };
 
 struct PbusIrq {

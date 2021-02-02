@@ -36,7 +36,7 @@ struct PdevMmio {
     /// Offset from beginning of VMO where the mmio region begins.
     zx.off offset;
     /// Size of mmio region.
-    usize size;
+    uint64 size;
     handle<vmo> vmo;
 };
 

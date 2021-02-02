@@ -44,7 +44,7 @@ struct UsbRequest {
 
     /// VMO handle for payload.
     handle<vmo> vmo_handle;
-    usize size;
+    uint64 size;
     /// Offset of the start of data from first page address of the vmo.
     zx.off offset;
     /// Mapped address of the first page of the vmo.
@@ -62,7 +62,7 @@ struct UsbRequest {
     /// usb_request_release() frees the request if this is true.
     bool release_frees;
 
-    usize alloc_size;
+    uint64 alloc_size;
 
     /// Set by the requester if the callback should be skipped on successful completion.
     /// This is useful for isochronous requests, where the requester does not care about

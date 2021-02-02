@@ -26,7 +26,7 @@ protocol UsbDci {
     EpClearStall(uint8 ep_address) -> (zx.status s);
     /// Returns the size needed for a |usb_request_t|, including private storage needed by the
     /// HCI driver.
-    GetRequestSize() -> (usize size);
+    GetRequestSize() -> (uint64 size);
     /// Cancels all transactions currently queued on the specified endpoint.
     CancelAll(uint8 ep_address) -> (zx.status s);
 };

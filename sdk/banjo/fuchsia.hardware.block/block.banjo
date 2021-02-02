@@ -38,13 +38,13 @@ struct BlockInfo {
 
 struct BlockStats {
   /// Total number of block ops processed
-  usize total_ops;
+  uint64 total_ops;
   /// Total number of blocks processed
-  usize total_blocks;
-  usize total_reads;
-  usize total_blocks_read;
-  usize total_writes;
-  usize total_blocks_written;
+  uint64 total_blocks;
+  uint64 total_reads;
+  uint64 total_blocks_read;
+  uint64 total_writes;
+  uint64 total_blocks_written;
 };
 
 alias Vmoid = uint16;
@@ -241,7 +241,7 @@ protocol BlockImpl {
     /// the required size of block_txn_t.  The block_txn_t's submitted
     /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
     /// available at the end of the structure for the use of the driver.
-    Query() -> (BlockInfo info, usize block_op_size);
+    Query() -> (BlockInfo info, uint64 block_op_size);
 
     /// Submits an IO request for processing. Ownership of |op| is transferred to
     /// callee until |completion_cb| is invoked|. Success or failure will
@@ -257,7 +257,7 @@ protocol Block {
     /// the required size of block_txn_t.  The block_txn_t's submitted
     /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
     /// available at the end of the structure for the use of the driver.
-    Query() -> (BlockInfo info, usize block_op_size);
+    Query() -> (BlockInfo info, uint64 block_op_size);
 
     /// Submits an IO request for processing. Ownership of |op| is transferred to
     /// callee until |completion_cb| is invoked|. Success or failure will

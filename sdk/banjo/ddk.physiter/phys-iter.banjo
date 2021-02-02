@@ -6,7 +6,7 @@ library ddk.physiter;
 
 struct PhysIterSgEntry {
     /// length starting at the scatter gather entry offset, must be non zero
-    usize length;
+    uint64 length;
     /// offset relative to the buffer's vmo_offset
-    usize offset;
+    uint64 offset;
 };

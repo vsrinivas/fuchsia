@@ -18,7 +18,7 @@ protocol UsbHci {
     /// Registers callbacks to the USB bus driver with the HCI driver.
     SetBusInterface(fuchsia.hardware.usb.bus.UsbBusInterface bus_intf) -> ();
     /// Returns the maximum number of USB devices that might be connected to the controller.
-    GetMaxDeviceCount() -> (usize count);
+    GetMaxDeviceCount() -> (uint64 count);
     /// Enables or disables an endpoint using parameters derived from |ep_desc|.
     EnableEndpoint(uint32 device_id, zircon.hw.usb.UsbEndpointDescriptor ep_desc,
                    zircon.hw.usb.UsbSsEpCompDescriptor ss_com_desc, bool enable) -> (zx.status s);
@@ -38,10 +38,10 @@ protocol UsbHci {
     /// Resets the specified device.
     ResetDevice(uint32 hub_address, uint32 device_id) -> (zx.status s);
     /// Returns the maximum size of a packet that can be queued on the specified endpoint.
-    GetMaxTransferSize(uint32 device_id, uint8 ep_address) -> (usize size);
+    GetMaxTransferSize(uint32 device_id, uint8 ep_address) -> (uint64 size);
     /// Cancels all transactions currently queued on the specified endpoint.
     CancelAll(uint32 device_id, uint8 ep_address) -> (zx.status s);
     /// Returns the size needed for a |usb_request_t|, including private storage needed by the
     /// HCI driver.
-    GetRequestSize() -> (usize size);
+    GetRequestSize() -> (uint64 size);
 };

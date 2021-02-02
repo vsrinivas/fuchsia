@@ -109,7 +109,7 @@ protocol BtGattSvc {
 
     /// Reads the long value of the characteristic with the given ID.
     [Async]
-    ReadLongCharacteristic(BtGattId id, uint16 offset, usize max_bytes)
+    ReadLongCharacteristic(BtGattId id, uint16 offset, uint64 max_bytes)
                      -> (BtGattStatus status, BtGattId id, [Buffer] vector<uint8> value);
 
     /// Writes a characteristic with the given ID. Automatically handles long writes

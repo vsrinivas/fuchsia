@@ -38,11 +38,11 @@ struct WlanifScanReq {
     WlanifSsid ssid;
     WlanScanType scan_type;
     uint32 probe_delay;
-    usize num_channels;
+    uint64 num_channels;
     array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channel_list;
     uint32 min_channel_time;
     uint32 max_channel_time;
-    usize num_ssids;
+    uint64 num_ssids;
     array<WlanifSsid>:WLAN_SCAN_MAX_SSIDS ssid_list;
 };
 
@@ -77,7 +77,7 @@ struct WlanifJoinReq {
     WlanifBssDescription selected_bss;
     uint32 join_failure_timeout;
     uint32 nav_sync_delay;
-    usize num_op_rates;
+    uint64 num_op_rates;
     array<uint8>:WLAN_MAX_OP_RATES op_rates;
 };
 
@@ -178,9 +178,9 @@ struct WlanifDeauthReq {
 
 struct WlanifAssocReq {
     array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
-    usize rsne_len;
+    uint64 rsne_len;
     array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
-    usize vendor_ie_len;
+    uint64 vendor_ie_len;
     array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
 };
 
@@ -188,9 +188,9 @@ struct WlanifAssocInd {
     array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     uint16 listen_interval;
     WlanifSsid ssid;
-    usize rsne_len;
+    uint64 rsne_len;
     array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
-    usize vendor_ie_len;
+    uint64 vendor_ie_len;
     array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
 };
 
@@ -210,9 +210,9 @@ struct WlanifStartReq {
     uint32 beacon_period;
     uint32 dtim_period;
     uint8 channel;
-    usize rsne_len;
+    uint64 rsne_len;
     array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
-    usize vendor_ie_len;
+    uint64 vendor_ie_len;
     array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
 };
 
@@ -233,7 +233,7 @@ struct SetKeyDescriptor {
 const uint32 WLAN_MAX_KEYLIST_SIZE = 4;
 
 struct WlanifSetKeysReq {
-    usize num_keys;
+    uint64 num_keys;
     array<SetKeyDescriptor>:WLAN_MAX_KEYLIST_SIZE keylist;
 };
 
@@ -244,7 +244,7 @@ struct DeleteKeyDescriptor {
 };
 
 struct WlanifDelKeysReq {
-    usize num_keys;
+    uint64 num_keys;
     array<DeleteKeyDescriptor>:WLAN_MAX_KEYLIST_SIZE keylist;
 };
 
@@ -446,10 +446,10 @@ struct WlanifSaeHandshakeInd {
 struct WlanifBandCapabilities {
     /// Values from enum Band (WLAN_BAND_*)
     uint8 band_id;
-    usize num_rates;
+    uint64 num_rates;
     array<uint16>:WLAN_INFO_BAND_INFO_MAX_RATES rates;
     uint16 base_frequency;
-    usize num_channels;
+    uint64 num_channels;
     array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
     bool ht_supported;
     ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_caps;
@@ -470,7 +470,7 @@ struct WlanifQueryInfo {
     ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
     /// WLANIF_FEATURE_*
     uint32 features;
-    usize num_bands;
+    uint64 num_bands;
     array<WlanifBandCapabilities>:WLAN_INFO_MAX_BANDS bands;
     /// WLAN_DRIVER_FEATURE_*
     uint32 driver_features;

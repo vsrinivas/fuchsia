@@ -28,6 +28,6 @@ protocol SerialImpl {
     Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
     Enable(bool enable) -> (zx.status s);
     Read() -> (zx.status s, vector<voidptr> buf);
-    Write(vector<voidptr> buf) -> (zx.status s, usize actual);
+    Write(vector<voidptr> buf) -> (zx.status s, uint64 actual);
     SetNotifyCallback(SerialNotify cb) -> (zx.status s);
 };

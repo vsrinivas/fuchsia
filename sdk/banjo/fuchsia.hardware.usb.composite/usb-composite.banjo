@@ -10,7 +10,7 @@ using zx;
 [BanjoLayout = "ddk-protocol"]
 protocol UsbComposite {
     /// Returns the length of the additional descriptor list.
-    GetAdditionalDescriptorLength() -> (usize length);
+    GetAdditionalDescriptorLength() -> (uint64 length);
     /// Returns the USB descriptors following the interface's existing descriptors.
     GetAdditionalDescriptorList() -> (zx.status s, vector<uint8> desc);
     /// Marks the interface as claimed and appends the interface descriptor to the
