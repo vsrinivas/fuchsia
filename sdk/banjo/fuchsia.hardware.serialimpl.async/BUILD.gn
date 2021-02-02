@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.serialimpl.async") {
   sources = [ "serial-impl-async.banjo" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.serial" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.serial",
+    "//sdk/banjo/zx",
+  ]
 }

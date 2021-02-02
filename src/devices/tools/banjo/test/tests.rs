@@ -7,6 +7,7 @@
 mod ast_tests;
 mod codegen_tests;
 mod negative_tests;
+mod zx;
 
 /// Makes a banjo backend test.
 /// Arguments:

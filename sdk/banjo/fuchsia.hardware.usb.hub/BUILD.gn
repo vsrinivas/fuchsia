@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.hub") {
   sources = [ "usb-hub.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

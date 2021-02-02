@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.hidbus") {
   sources = [ "hidbus.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

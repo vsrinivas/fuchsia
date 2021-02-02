@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.intelhda.codec") {
   sources = [ "intel-hda-codec.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

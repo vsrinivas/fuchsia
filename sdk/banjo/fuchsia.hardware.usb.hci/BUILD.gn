@@ -13,5 +13,6 @@ banjo("fuchsia.hardware.usb.hci") {
     "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor",
     "//sdk/banjo/fuchsia.hardware.usb.request",
     "//sdk/banjo/zircon.hw.usb",
+    "//sdk/banjo/zx",
   ]
 }

@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.goldfish.control") {
   sources = [ "goldfish-control.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

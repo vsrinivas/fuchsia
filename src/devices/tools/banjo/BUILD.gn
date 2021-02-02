@@ -58,7 +58,6 @@ rustc_binary("banjo_bin") {
     "src/backends/templates/c/struct.h",
     "src/backends/templates/cpp/example.h",
     "src/backends/templates/cpp/internal.h",
-    "zx.banjo",
     "src/backends/templates/c/protocol_ops.h",
     "src/backends/templates/cpp/proto_transform.h",
     "src/backends/templates/cpp/protocol.h",
@@ -172,6 +171,7 @@ if (host_toolchain == current_toolchain) {
       "test/rust/types.rs",
       "test/rust/view.rs",
       "test/tests.rs",
+      "test/zx.rs",
     ]
 
     inputs = [
@@ -308,7 +308,6 @@ if (host_toolchain == current_toolchain) {
       "test/c/protocol-array.h",
       "test/cpp/callback-internal.h",
       "test/banjo/types.test.banjo",
-      "zx.banjo",
       "test/banjo/bad_type.test.banjo",
       "test/c/protocol-base.h",
       "test/c/example-2.h",
@@ -317,6 +316,7 @@ if (host_toolchain == current_toolchain) {
       "test/cpp/simple.h",
       "test/c/attributes.h",
       "test/c/example-8.h",
+      "//sdk/banjo/zx/zx.banjo",
     ]
   }
 }

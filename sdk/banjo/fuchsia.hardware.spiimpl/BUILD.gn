@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.spiimpl") {
   sources = [ "spi-impl.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

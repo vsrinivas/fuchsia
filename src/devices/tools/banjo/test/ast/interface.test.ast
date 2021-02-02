@@ -358,13 +358,13 @@ BanjoAst {
                     namespace: Some(
                         "zx",
                     ),
-                    name: "clock",
+                    name: "ticks",
                 },
                 Ident {
                     namespace: Some(
                         "zx",
                     ),
-                    name: "uint32",
+                    name: "int64",
                 },
             ),
             Alias(
@@ -456,7 +456,7 @@ BanjoAst {
                     namespace: Some(
                         "zx",
                     ),
-                    name: "rights",
+                    name: "procarg",
                 },
                 Ident {
                     namespace: Some(
@@ -471,20 +471,6 @@ BanjoAst {
                         "zx",
                     ),
                     name: "signals",
-                },
-                Ident {
-                    namespace: Some(
-                        "zx",
-                    ),
-                    name: "uint32",
-                },
-            ),
-            Alias(
-                Ident {
-                    namespace: Some(
-                        "zx",
-                    ),
-                    name: "vm_option",
                 },
                 Ident {
                     namespace: Some(

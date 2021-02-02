@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.gpioimpl") {
   sources = [ "gpio-impl.banjo" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.gpio" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.gpio",
+    "//sdk/banjo/zx",
+  ]
 }

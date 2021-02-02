@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.bt.gattsvc") {
   sources = [ "bt-gatt-svc.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

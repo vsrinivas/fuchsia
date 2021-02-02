@@ -12,5 +12,6 @@ banjo("fuchsia.hardware.composite") {
   deps = [
     "//sdk/banjo/ddk.device",
     "//sdk/banjo/ddk.driver",
+    "//sdk/banjo/zx",
   ]
 }

@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.intelgpucore") {
   sources = [ "intel-gpu-core.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

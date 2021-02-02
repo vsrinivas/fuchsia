@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.mipicsi") {
   sources = [ "mipicsi.banjo" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.camera" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.camera",
+    "//sdk/banjo/zx",
+  ]
 }

@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// The aliases in this file should be kept in sync with the ones in:
+//   //zircon/vdso/zx_common.fidl
+
+library zx;
+
+alias status = int32;
+alias time = int64;
+alias duration = int64;
+alias ticks = int64;
+alias koid = uint64;
+alias vaddr = uint64;
+alias paddr = uint64;
+alias paddr32 = uint32;
+alias gpaddr = uint64;
+alias off = uint64;
+alias procarg = uint32;
+alias signals = uint32;

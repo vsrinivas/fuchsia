@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.composite") {
   sources = [ "usb-composite.banjo" ]
-  deps = [ "//sdk/banjo/zircon.hw.usb" ]
+  deps = [
+    "//sdk/banjo/zircon.hw.usb",
+    "//sdk/banjo/zx",
+  ]
 }

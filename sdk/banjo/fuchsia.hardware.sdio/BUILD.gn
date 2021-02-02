@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.sdio") {
   sources = [ "sdio.banjo" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.sdmmc" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.sdmmc",
+    "//sdk/banjo/zx",
+  ]
 }

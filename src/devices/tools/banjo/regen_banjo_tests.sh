@@ -26,12 +26,11 @@ do
     continue
   fi
   if [ "$filename" = "library_part_one" ]; then
-    $BANJO_BIN --backend ast --omit-zx --output "$AST_FILES/library_parts.test.ast" --files $f "$BANJO_FILES/library_part_two.test.banjo"
+    $BANJO_BIN --backend ast --output "$AST_FILES/library_parts.test.ast" --files $f "$BANJO_FILES/library_part_two.test.banjo"
     continue
   fi
 
   dependencies=""
-  zx="--omit-zx"
   with_c=true
   with_cpp=true
   with_cpp_mock=false
@@ -39,7 +38,7 @@ do
 
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
     || [ "$filename" = "protocol-base" ] ; then
-    zx=""
+    dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
   fi
 
   if [ "$filename" = "view" ]; then
@@ -83,17 +82,17 @@ do
 
   echo "Regenerating $filename"
   if [ $with_c = true ]; then
-    $BANJO_BIN --backend C $zx --output "$C_FILES/$filename.h" $dependencies --files $f
+    $BANJO_BIN --backend C --output "$C_FILES/$filename.h" $dependencies --files $f
   fi
   if [ $with_cpp = true ]; then
-    $BANJO_BIN --backend cpp $zx --output "$CPP_FILES/$filename.h" $dependencies --files $f
-    $BANJO_BIN --backend cpp_i $zx --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
+    $BANJO_BIN --backend cpp --output "$CPP_FILES/$filename.h" $dependencies --files $f
+    $BANJO_BIN --backend cpp_i --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
   fi
   if [ $with_cpp_mock = true ]; then
-    $BANJO_BIN --backend cpp_mock $zx --output "$CPP_FILES/mock-$filename.h" $dependencies --files $f
+    $BANJO_BIN --backend cpp_mock --output "$CPP_FILES/mock-$filename.h" $dependencies --files $f
   fi
   if [ $with_rust = true ]; then
-    $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
+    $BANJO_BIN --backend rust --output "$RUST_FILES/$filename.rs" $dependencies --files $f
   fi
-  $BANJO_BIN --backend ast $zx --output "$AST_FILES/$filename.test.ast" $dependencies --files $f
+  $BANJO_BIN --backend ast --output "$AST_FILES/$filename.test.ast" $dependencies --files $f
 done

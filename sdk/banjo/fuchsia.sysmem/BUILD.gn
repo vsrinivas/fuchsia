@@ -13,4 +13,5 @@ banjo("fuchsia.sysmem") {
     "metadata.banjo",
     "usages.banjo",
   ]
+  deps = [ "//sdk/banjo/zx" ]
 }

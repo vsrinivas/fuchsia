@@ -9,5 +9,6 @@ banjo("fuchsia.hardware.wlanphyimpl") {
   deps = [
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/fuchsia.hardware.ethernet.mac",
+    "//sdk/banjo/zx",
   ]
 }

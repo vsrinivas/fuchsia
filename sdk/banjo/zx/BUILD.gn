@@ -4,7 +4,8 @@
 
 import("//build/banjo/banjo.gni")
 
-banjo("fuchsia.hardware.goldfish.sync") {
-  sources = [ "goldfish-sync.banjo" ]
-  deps = [ "//sdk/banjo/zx" ]
+banjo("zx") {
+  sources = [ "zx.banjo" ]
+
+  needs_composite = false
 }

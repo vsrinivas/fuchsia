@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.dsiimpl") {
   sources = [ "dsiimpl.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

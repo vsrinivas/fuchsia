@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.mailbox") {
   sources = [ "mailbox.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

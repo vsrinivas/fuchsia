@@ -75,10 +75,6 @@ struct Opt {
     /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/zircon/ddk/banjo-tutorial.md#reference
     #[structopt(short = "f", long = "files", parse(from_os_str))]
     input: Vec<PathBuf>,
-
-    /// Don't include default zx types
-    #[structopt(long = "omit-zx")]
-    no_zx: bool,
 }
 
 fn main() -> Result<(), Error> {
@@ -120,10 +116,6 @@ fn main() -> Result<(), Error> {
         })
         .collect();
 
-    if !opt.no_zx {
-        let zx_file = include_str!("../zx.banjo");
-        pair_vec.push(BanjoParser::parse(Rule::file, zx_file)?);
-    }
     for file in files.iter() {
         pair_vec.push(BanjoParser::parse(Rule::file, file.as_str())?);
     }

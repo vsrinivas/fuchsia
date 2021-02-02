@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.hiddevice") {
   sources = [ "hiddevice.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.camera.sensor") {
   sources = [ "camera-sensor.banjo" ]
-  public_deps = [ "//sdk/banjo/fuchsia.hardware.camera" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.camera",
+    "//sdk/banjo/zx",
+  ]
 }

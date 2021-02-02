@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.pciroot") {
   sources = [ "pciroot.banjo" ]
-  deps = [ "//sdk/banjo/zircon.hw.pci" ]
+  deps = [
+    "//sdk/banjo/zircon.hw.pci",
+    "//sdk/banjo/zx",
+  ]
 }

@@ -7,4 +7,5 @@ import("//build/banjo/banjo.gni")
 banjo("fuchsia.hardware.display.clamprgb") {
   sdk_category = "excluded"
   sources = [ "display-clamprgb.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

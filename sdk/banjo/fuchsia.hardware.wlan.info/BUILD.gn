@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.wlan.info") {
   sources = [ "info.banjo" ]
-  deps = [ "//sdk/banjo/ddk.hw.wlan.ieee80211" ]
+  deps = [
+    "//sdk/banjo/ddk.hw.wlan.ieee80211",
+    "//sdk/banjo/zx",
+  ]
 }

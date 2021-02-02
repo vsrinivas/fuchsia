@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.ethernet.mac") {
   sources = [ "ethernet-mac.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

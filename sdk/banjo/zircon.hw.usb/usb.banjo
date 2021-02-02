@@ -4,8 +4,6 @@
 
 library zircon.hw.usb;
 
-using zx;
-
 enum UsbSpeed : uint32 {
 
 };

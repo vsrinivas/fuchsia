@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.power") {
   sources = [ "power.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

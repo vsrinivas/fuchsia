@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.dotmatrixdisplay") {
   sources = [ "dotmatrixdisplay.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

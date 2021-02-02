@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.sysmem") {
   sources = [ "sysmem.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

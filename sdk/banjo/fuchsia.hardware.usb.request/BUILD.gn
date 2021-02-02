@@ -9,5 +9,6 @@ banjo("fuchsia.hardware.usb.request") {
   deps = [
     "//sdk/banjo/ddk.physiter",
     "//sdk/banjo/zircon.hw.usb",
+    "//sdk/banjo/zx",
   ]
 }

@@ -11,5 +11,6 @@ banjo("fuchsia.hardware.wlan.mac") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/banjo/zx",
   ]
 }

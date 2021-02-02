@@ -6,5 +6,8 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.rawnand") {
   sources = [ "rawnand.banjo" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.nandinfo" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.nandinfo",
+    "//sdk/banjo/zx",
+  ]
 }

@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.network.device") {
   sources = [ "network-device.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.modeswitch") {
   sources = [ "usb-mode-switch.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }

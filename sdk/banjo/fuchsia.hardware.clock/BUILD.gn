@@ -6,4 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.clock") {
   sources = [ "clock.banjo" ]
+  deps = [ "//sdk/banjo/zx" ]
 }
