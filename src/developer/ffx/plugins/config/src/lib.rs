@@ -117,11 +117,7 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
 }
 
 async fn exec_set(set_cmd: &SetCommand) -> Result<()> {
-    set(
-        (&set_cmd.name, &set_cmd.level, &set_cmd.build_dir),
-        Value::String(format!("{}", set_cmd.value)),
-    )
-    .await
+    set((&set_cmd.name, &set_cmd.level, &set_cmd.build_dir), set_cmd.value.clone()).await
 }
 
 async fn exec_remove(remove_cmd: &RemoveCommand) -> Result<()> {

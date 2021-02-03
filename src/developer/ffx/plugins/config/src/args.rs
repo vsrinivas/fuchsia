@@ -38,9 +38,9 @@ pub struct SetCommand {
     /// name of the property to set
     pub name: String,
 
-    #[argh(positional)]
+    #[argh(positional, from_str_fn(parse_set_value))]
     /// value to associate with name
-    pub value: String,
+    pub value: serde_json::Value,
 
     #[argh(option, default = "ConfigLevel::User", short = 'l')]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
@@ -195,6 +195,10 @@ pub struct EnvGetCommand {
     #[argh(positional)]
     /// config level. Possible values are "user", "build", "global".
     pub level: Option<ConfigLevel>,
+}
+
+fn parse_set_value(value: &str) -> Result<serde_json::Value, String> {
+    serde_json::from_str(value).or_else(|_| Ok(serde_json::Value::String(value.to_string())))
 }
 
 fn parse_mapping_mode(value: &str) -> Result<MappingMode, String> {
@@ -356,7 +360,7 @@ mod tests {
             args: &[&str],
             expected_level: ConfigLevel,
             expected_key: &str,
-            expected_value: &str,
+            expected_value: &serde_json::Value,
             expected_build_dir: Option<String>,
         ) {
             assert_eq!(
@@ -365,7 +369,7 @@ mod tests {
                     sub: SubCommand::Set(SetCommand {
                         level: expected_level,
                         name: expected_key.to_string(),
-                        value: expected_value.to_string(),
+                        value: expected_value.clone(),
                         build_dir: expected_build_dir,
                     })
                 })
@@ -374,6 +378,7 @@ mod tests {
 
         let key = "test-key";
         let value = "test-value";
+        let value_json = serde_json::Value::String(value.to_string());
         let build_dir = "/test/";
         let levels = [
             ("build", ConfigLevel::Build),
@@ -382,12 +387,68 @@ mod tests {
         ];
 
         for level_opt in levels.iter() {
-            check(&["set", key, value, "--level", level_opt.0], level_opt.1, key, value, None);
+            check(
+                &["set", key, value, "--level", level_opt.0],
+                level_opt.1,
+                key,
+                &value_json,
+                None,
+            );
             check(
                 &["set", key, value, "--level", level_opt.0, "--build-dir", build_dir],
                 level_opt.1,
                 key,
-                value,
+                &value_json,
+                Some(build_dir.to_string()),
+            );
+        }
+    }
+
+    #[test]
+    fn test_set_json() {
+        fn check(
+            args: &[&str],
+            expected_level: ConfigLevel,
+            expected_key: &str,
+            expected_value: &serde_json::Value,
+            expected_build_dir: Option<String>,
+        ) {
+            assert_eq!(
+                ConfigCommand::from_args(CMD_NAME, args),
+                Ok(ConfigCommand {
+                    sub: SubCommand::Set(SetCommand {
+                        level: expected_level,
+                        name: expected_key.to_string(),
+                        value: expected_value.clone(),
+                        build_dir: expected_build_dir,
+                    })
+                })
+            )
+        }
+
+        let key = "test-key";
+        let value = "{\"test\": \"test-value\"}";
+        let value_json = serde_json::json!({"test": "test-value"});
+        let build_dir = "/test/";
+        let levels = [
+            ("build", ConfigLevel::Build),
+            ("user", ConfigLevel::User),
+            ("global", ConfigLevel::Global),
+        ];
+
+        for level_opt in levels.iter() {
+            check(
+                &["set", key, value, "--level", level_opt.0],
+                level_opt.1,
+                key,
+                &value_json,
+                None,
+            );
+            check(
+                &["set", key, value, "--level", level_opt.0, "--build-dir", build_dir],
+                level_opt.1,
+                key,
+                &value_json,
                 Some(build_dir.to_string()),
             );
         }
