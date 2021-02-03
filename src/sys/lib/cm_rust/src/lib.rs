@@ -5,6 +5,7 @@
 use {
     cm_fidl_validator, cm_types, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_sys2 as fsys,
+    from_enum::FromEnum,
     lazy_static::lazy_static,
     std::collections::HashMap,
     std::convert::{From, TryFrom, TryInto},
@@ -110,7 +111,7 @@ macro_rules! fidl_into_struct {
 macro_rules! fidl_into_enum {
     ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path, $from_unknown:path,
      { $( $variant:ident($type:ty), )+ } ) => {
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
         pub enum $into_ident {
             $(
                 $variant($type),
@@ -457,94 +458,13 @@ impl ComponentDecl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
 pub enum ExposeDecl {
     Service(ExposeServiceDecl),
     Protocol(ExposeProtocolDecl),
     Directory(ExposeDirectoryDecl),
     Runner(ExposeRunnerDecl),
     Resolver(ExposeResolverDecl),
-}
-
-/// Provides a way to extract a reference to the contents of an enum variant,
-/// provided that each variant in the enum is a unique newtype.
-pub trait FromEnum<E> {
-    fn from_enum(e: &E) -> Option<&Self>;
-}
-
-impl FromEnum<ExposeDecl> for ExposeServiceDecl {
-    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
-        match decl {
-            ExposeDecl::Service(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<ExposeDecl> for ExposeProtocolDecl {
-    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
-        match decl {
-            ExposeDecl::Protocol(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<ExposeDecl> for ExposeDirectoryDecl {
-    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
-        match decl {
-            ExposeDecl::Directory(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<ExposeDecl> for ExposeRunnerDecl {
-    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
-        match decl {
-            ExposeDecl::Runner(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<ExposeDecl> for ExposeResolverDecl {
-    fn from_enum(decl: &ExposeDecl) -> Option<&Self> {
-        match decl {
-            ExposeDecl::Resolver(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl From<ExposeServiceDecl> for ExposeDecl {
-    fn from(decl: ExposeServiceDecl) -> Self {
-        ExposeDecl::Service(decl)
-    }
-}
-
-impl From<ExposeProtocolDecl> for ExposeDecl {
-    fn from(decl: ExposeProtocolDecl) -> Self {
-        ExposeDecl::Protocol(decl)
-    }
-}
-
-impl From<ExposeDirectoryDecl> for ExposeDecl {
-    fn from(decl: ExposeDirectoryDecl) -> Self {
-        ExposeDecl::Directory(decl)
-    }
-}
-
-impl From<ExposeRunnerDecl> for ExposeDecl {
-    fn from(decl: ExposeRunnerDecl) -> Self {
-        ExposeDecl::Runner(decl)
-    }
-}
-
-impl From<ExposeResolverDecl> for ExposeDecl {
-    fn from(decl: ExposeResolverDecl) -> Self {
-        ExposeDecl::Resolver(decl)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -554,7 +474,7 @@ pub struct ExposeServiceDecl {
     pub target_name: CapabilityName,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
 pub enum OfferDecl {
     Service(OfferServiceDecl),
     Protocol(OfferProtocolDecl),
@@ -600,111 +520,6 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferSource {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
             }
         })
-    }
-}
-
-impl FromEnum<OfferDecl> for OfferServiceDecl {
-    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
-        match decl {
-            OfferDecl::Service(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<OfferDecl> for OfferProtocolDecl {
-    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
-        match decl {
-            OfferDecl::Protocol(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<OfferDecl> for OfferDirectoryDecl {
-    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
-        match decl {
-            OfferDecl::Directory(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<OfferDecl> for OfferStorageDecl {
-    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
-        match decl {
-            OfferDecl::Storage(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<OfferDecl> for OfferRunnerDecl {
-    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
-        match decl {
-            OfferDecl::Runner(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<OfferDecl> for OfferResolverDecl {
-    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
-        match decl {
-            OfferDecl::Resolver(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<OfferDecl> for OfferEventDecl {
-    fn from_enum(decl: &OfferDecl) -> Option<&Self> {
-        match decl {
-            OfferDecl::Event(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl From<OfferServiceDecl> for OfferDecl {
-    fn from(decl: OfferServiceDecl) -> Self {
-        OfferDecl::Service(decl)
-    }
-}
-
-impl From<OfferProtocolDecl> for OfferDecl {
-    fn from(decl: OfferProtocolDecl) -> Self {
-        OfferDecl::Protocol(decl)
-    }
-}
-
-impl From<OfferDirectoryDecl> for OfferDecl {
-    fn from(decl: OfferDirectoryDecl) -> Self {
-        OfferDecl::Directory(decl)
-    }
-}
-
-impl From<OfferStorageDecl> for OfferDecl {
-    fn from(decl: OfferStorageDecl) -> Self {
-        OfferDecl::Storage(decl)
-    }
-}
-
-impl From<OfferRunnerDecl> for OfferDecl {
-    fn from(decl: OfferRunnerDecl) -> Self {
-        OfferDecl::Runner(decl)
-    }
-}
-
-impl From<OfferResolverDecl> for OfferDecl {
-    fn from(decl: OfferResolverDecl) -> Self {
-        OfferDecl::Resolver(decl)
-    }
-}
-
-impl From<OfferEventDecl> for OfferDecl {
-    fn from(decl: OfferEventDecl) -> Self {
-        OfferDecl::Event(decl)
     }
 }
 
@@ -1084,60 +899,6 @@ impl fmt::Display for CapabilityPath {
     }
 }
 
-impl FromEnum<CapabilityDecl> for ServiceDecl {
-    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
-        match decl {
-            CapabilityDecl::Service(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<CapabilityDecl> for ProtocolDecl {
-    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
-        match decl {
-            CapabilityDecl::Protocol(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<CapabilityDecl> for DirectoryDecl {
-    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
-        match decl {
-            CapabilityDecl::Directory(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<CapabilityDecl> for StorageDecl {
-    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
-        match decl {
-            CapabilityDecl::Storage(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<CapabilityDecl> for RunnerDecl {
-    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
-        match decl {
-            CapabilityDecl::Runner(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
-impl FromEnum<CapabilityDecl> for ResolverDecl {
-    fn from_enum(decl: &CapabilityDecl) -> Option<&Self> {
-        match decl {
-            CapabilityDecl::Resolver(inner) => Some(inner),
-            _ => None,
-        }
-    }
-}
-
 impl UseDecl {
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
@@ -1160,30 +921,6 @@ impl UseDecl {
             | UseDecl::Directory(_)
             | UseDecl::EventStream(_) => None,
         }
-    }
-}
-
-impl From<UseProtocolDecl> for UseDecl {
-    fn from(decl: UseProtocolDecl) -> Self {
-        UseDecl::Protocol(decl)
-    }
-}
-
-impl From<UseDirectoryDecl> for UseDecl {
-    fn from(decl: UseDirectoryDecl) -> Self {
-        UseDecl::Directory(decl)
-    }
-}
-
-impl From<UseEventDecl> for UseDecl {
-    fn from(decl: UseEventDecl) -> Self {
-        UseDecl::Event(decl)
-    }
-}
-
-impl From<UseStorageDecl> for UseDecl {
-    fn from(decl: UseStorageDecl) -> Self {
-        UseDecl::Storage(decl)
     }
 }
 

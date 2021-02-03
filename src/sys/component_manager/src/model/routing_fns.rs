@@ -101,7 +101,7 @@ pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> 
                 )
                 .await;
                 if let Err(e) = res {
-                    let cap = ComponentCapability::UsedExpose(expose);
+                    let cap = ComponentCapability::Expose(expose);
                     let execution = component.lock_execution().await;
                     let logger = match &execution.runtime {
                         Some(Runtime { namespace: Some(ns), .. }) => Some(ns.get_logger()),

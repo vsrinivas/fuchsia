@@ -13,9 +13,10 @@ use {
     },
     cm_rust::{
         CapabilityDecl, CapabilityDeclCommon, CapabilityName, ExposeDecl, ExposeDeclCommon,
-        ExposeSource, ExposeTarget, FromEnum, OfferDecl, OfferDeclCommon, OfferSource, OfferTarget,
+        ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource, OfferTarget,
         RegistrationDeclCommon, RegistrationSource, SourceName, UseDecl, UseDeclCommon, UseSource,
     },
+    from_enum::FromEnum,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
     std::{marker::PhantomData, sync::Arc},
 };

@@ -871,42 +871,6 @@ pub async fn route_event(
     Ok(source)
 }
 
-//
-//
-// CONVERSION TRAIT IMPLS (Can be automated with a Derive proc-macro)
-//
-//
-
-impl From<ProtocolDecl> for ComponentCapability {
-    fn from(decl: ProtocolDecl) -> Self {
-        ComponentCapability::Protocol(decl)
-    }
-}
-
-impl From<DirectoryDecl> for ComponentCapability {
-    fn from(decl: DirectoryDecl) -> Self {
-        ComponentCapability::Directory(decl)
-    }
-}
-
-impl From<StorageDecl> for ComponentCapability {
-    fn from(decl: StorageDecl) -> Self {
-        ComponentCapability::Storage(decl)
-    }
-}
-
-impl From<RunnerDecl> for ComponentCapability {
-    fn from(decl: RunnerDecl) -> Self {
-        ComponentCapability::Runner(decl)
-    }
-}
-
-impl From<ResolverDecl> for ComponentCapability {
-    fn from(decl: ResolverDecl) -> Self {
-        ComponentCapability::Resolver(decl)
-    }
-}
-
 // Error trait impls
 
 impl ErrorNotFoundFromParent for UseProtocolDecl {

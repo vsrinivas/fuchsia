@@ -6,6 +6,7 @@ use {
     crate::model::{component::WeakComponentInstance, error::ModelError},
     async_trait::async_trait,
     cm_rust::*,
+    from_enum::FromEnum,
     fuchsia_zircon as zx,
     moniker::AbsoluteMoniker,
     std::{fmt, path::PathBuf},
@@ -178,14 +179,12 @@ pub trait CapabilityProvider: Send + Sync {
 }
 
 /// A capability being routed from a component.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(FromEnum, Clone, Debug, PartialEq, Eq)]
 pub enum ComponentCapability {
     Use(UseDecl),
     /// Models a capability used from the environment.
     Environment(EnvironmentCapability),
     Expose(ExposeDecl),
-    /// Models a capability hosted from the exposed dir which is used at runtime.
-    UsedExpose(ExposeDecl),
     Offer(OfferDecl),
     Protocol(ProtocolDecl),
     Directory(DirectoryDecl),
@@ -201,7 +200,7 @@ impl ComponentCapability {
             ComponentCapability::Use(use_) => {
                 matches!(use_, UseDecl::Protocol(_) | UseDecl::Directory(_) | UseDecl::Service(_))
             }
-            ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
+            ComponentCapability::Expose(expose) => {
                 matches!(
                     expose,
                     ExposeDecl::Protocol(_) | ExposeDecl::Directory(_) | ExposeDecl::Service(_)
@@ -233,15 +232,13 @@ impl ComponentCapability {
                 EnvironmentCapability::Resolver { .. } => CapabilityTypeName::Resolver,
                 EnvironmentCapability::Debug { .. } => CapabilityTypeName::Protocol,
             },
-            ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
-                match expose {
-                    ExposeDecl::Protocol(_) => CapabilityTypeName::Protocol,
-                    ExposeDecl::Directory(_) => CapabilityTypeName::Directory,
-                    ExposeDecl::Service(_) => CapabilityTypeName::Service,
-                    ExposeDecl::Runner(_) => CapabilityTypeName::Runner,
-                    ExposeDecl::Resolver(_) => CapabilityTypeName::Resolver,
-                }
-            }
+            ComponentCapability::Expose(expose) => match expose {
+                ExposeDecl::Protocol(_) => CapabilityTypeName::Protocol,
+                ExposeDecl::Directory(_) => CapabilityTypeName::Directory,
+                ExposeDecl::Service(_) => CapabilityTypeName::Service,
+                ExposeDecl::Runner(_) => CapabilityTypeName::Runner,
+                ExposeDecl::Resolver(_) => CapabilityTypeName::Resolver,
+            },
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Protocol(_) => CapabilityTypeName::Protocol,
                 OfferDecl::Directory(_) => CapabilityTypeName::Directory,
@@ -299,21 +296,6 @@ impl ComponentCapability {
                 ExposeDecl::Resolver(ExposeResolverDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
-            ComponentCapability::UsedExpose(expose) => {
-                // A UsedExpose needs to be matched to the ExposeDecl the UsedExpose wraps at the
-                // same component. This is accomplished by returning the ExposeDecl's target path.
-                // Effectively, it's as if the UsedExposed were a UseDecl with both the source and
-                // target name equal to `target_name`.
-                match expose {
-                    ExposeDecl::Protocol(ExposeProtocolDecl { target_name, .. }) => {
-                        Some(target_name)
-                    }
-                    ExposeDecl::Directory(ExposeDirectoryDecl { target_name, .. }) => {
-                        Some(target_name)
-                    }
-                    _ => None,
-                }
-            }
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Protocol(OfferProtocolDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Directory(OfferDirectoryDecl { source_name, .. }) => Some(source_name),
