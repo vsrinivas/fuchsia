@@ -31,13 +31,13 @@ impl InputHandler for ImeHandler {
                 event_time,
             } => {
                 let pressed_key_events: Vec<fidl_ui_input3::KeyEvent> = keyboard_device_event
-                    .get_keys3(fidl_ui_input3::KeyEventType::Pressed)
+                    .get_keys(fidl_ui_input3::KeyEventType::Pressed)
                     .into_iter()
                     .map(|key| {
                         create_key_event(
                             &key,
                             fidl_ui_input3::KeyEventType::Pressed,
-                            keyboard_device_event.modifiers3,
+                            keyboard_device_event.modifiers,
                             event_time,
                         )
                     })
@@ -45,13 +45,13 @@ impl InputHandler for ImeHandler {
                 self.dispatch_keys(pressed_key_events).await;
 
                 let released_key_events: Vec<fidl_ui_input3::KeyEvent> = keyboard_device_event
-                    .get_keys3(fidl_ui_input3::KeyEventType::Released)
+                    .get_keys(fidl_ui_input3::KeyEventType::Released)
                     .into_iter()
                     .map(|key| {
                         create_key_event(
                             &key,
                             fidl_ui_input3::KeyEventType::Released,
-                            keyboard_device_event.modifiers3,
+                            keyboard_device_event.modifiers,
                             event_time,
                         )
                     })
@@ -126,8 +126,7 @@ fn create_key_event(
 mod tests {
     use {
         super::*, crate::keyboard, crate::testing_utilities, fidl_fuchsia_input as fidl_input,
-        fidl_fuchsia_ui_input2 as fidl_ui_input2, fidl_fuchsia_ui_input3 as fidl_ui_input3,
-        fuchsia_async as fasync, futures::StreamExt,
+        fidl_fuchsia_ui_input3 as fidl_ui_input3, fuchsia_async as fasync, futures::StreamExt,
     };
 
     fn handle_events(mut ime_handler: ImeHandler, events: Vec<input_device::InputEvent>) {
@@ -176,16 +175,12 @@ mod tests {
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys2: vec![fidl_ui_input2::Key::A],
-                keys3: vec![fidl_input::Key::A],
+                keys: vec![fidl_input::Key::A],
             });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events = vec![testing_utilities::create_keyboard_event(
-            vec![fidl_ui_input2::Key::A],
             vec![fidl_input::Key::A],
             vec![],
-            vec![],
-            None,
             None,
             event_time_u64,
             &device_descriptor,
@@ -214,16 +209,12 @@ mod tests {
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys2: vec![fidl_ui_input2::Key::A],
-                keys3: vec![fidl_input::Key::A],
+                keys: vec![fidl_input::Key::A],
             });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events = vec![testing_utilities::create_keyboard_event(
             vec![],
-            vec![],
-            vec![fidl_ui_input2::Key::A],
             vec![fidl_input::Key::A],
-            None,
             None,
             event_time_u64,
             &device_descriptor,
@@ -252,27 +243,20 @@ mod tests {
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys2: vec![fidl_ui_input2::Key::A, fidl_ui_input2::Key::B],
-                keys3: vec![fidl_input::Key::A, fidl_input::Key::B],
+                keys: vec![fidl_input::Key::A, fidl_input::Key::B],
             });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
-                vec![fidl_ui_input2::Key::A],
                 vec![fidl_input::Key::A],
                 vec![],
-                vec![],
-                None,
                 None,
                 event_time_u64,
                 &device_descriptor,
             ),
             testing_utilities::create_keyboard_event(
-                vec![fidl_ui_input2::Key::B],
                 vec![fidl_input::Key::B],
-                vec![fidl_ui_input2::Key::A],
                 vec![fidl_input::Key::A],
-                None,
                 None,
                 event_time_u64,
                 &device_descriptor,
@@ -318,37 +302,27 @@ mod tests {
 
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys2: vec![fidl_ui_input2::Key::A, fidl_ui_input2::Key::CapsLock],
-                keys3: vec![fidl_input::Key::A, fidl_input::Key::CapsLock],
+                keys: vec![fidl_input::Key::A, fidl_input::Key::CapsLock],
             });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
-                vec![fidl_ui_input2::Key::CapsLock],
                 vec![fidl_input::Key::CapsLock],
                 vec![],
-                vec![],
-                Some(fidl_ui_input2::Modifiers::CapsLock),
                 Some(fidl_ui_input3::Modifiers::CapsLock),
                 event_time_u64,
                 &device_descriptor,
             ),
             testing_utilities::create_keyboard_event(
-                vec![fidl_ui_input2::Key::A],
                 vec![fidl_input::Key::A],
                 vec![],
-                vec![],
-                Some(fidl_ui_input2::Modifiers::CapsLock),
                 Some(fidl_ui_input3::Modifiers::CapsLock),
                 event_time_u64,
                 &device_descriptor,
             ),
             testing_utilities::create_keyboard_event(
                 vec![],
-                vec![],
-                vec![fidl_ui_input2::Key::CapsLock],
                 vec![fidl_input::Key::CapsLock],
-                None,
                 None,
                 event_time_u64,
                 &device_descriptor,
