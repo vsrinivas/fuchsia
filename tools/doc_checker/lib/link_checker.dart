@@ -160,11 +160,12 @@ class LinkChecker {
           final int index = uri.pathSegments.indexOf('docs');
           String subPath = uri.path;
           if (index >= 0) {
-            subPath = uri.pathSegments[uri.pathSegments.length - 1];
+            subPath = uri.pathSegments.sublist(index).join('/');
           }
-          if (!_filesAllowedUsingURI.contains(subPath)) {
-            errors.add(Error(
-                ErrorType.convertHttpToPath, doc.docLabel, uri.toString()));
+          if (!_filesAllowedUsingURI
+              .contains(uri.pathSegments[uri.pathSegments.length - 1])) {
+            errors.add(Error(ErrorType.convertHttpToPath, doc.docLabel,
+                '${uri.toString()} -> /$subPath'));
             return true;
           }
         } else if (!validProjects.contains(project)) {
@@ -180,8 +181,8 @@ class LinkChecker {
           !_publishedLinksAllowed.contains(project)) {
         if (!_filesAllowedToLinkToPublishedDocs
             .contains(path.basename(doc.docLabel))) {
-          errors.add(
-              Error(ErrorType.convertHttpToPath, doc.docLabel, uri.toString()));
+          errors.add(Error(ErrorType.convertHttpToPath, doc.docLabel,
+              '${uri.toString()} -> ${uri.path}'));
           return true;
         }
       } else {
