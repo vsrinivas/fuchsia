@@ -32,7 +32,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 
 #include "banjo-internal.h"
 
@@ -370,19 +369,6 @@ public:
         }
     }
 
-    SynchronousHandleProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        synchronous_handle_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     SynchronousHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
@@ -418,20 +404,6 @@ public:
                                         SynchronousHandleProtocolClient* result) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
-    }
-
-    // Create a SynchronousHandleProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           SynchronousHandleProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
         if (!found) {
           return ZX_ERR_NOT_FOUND;
         }
@@ -574,19 +546,6 @@ public:
         }
     }
 
-    AnotherSynchronousHandleProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        another_synchronous_handle_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ANOTHER_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     AnotherSynchronousHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
@@ -622,20 +581,6 @@ public:
                                         AnotherSynchronousHandleProtocolClient* result) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
-    }
-
-    // Create a AnotherSynchronousHandleProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           AnotherSynchronousHandleProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
         if (!found) {
           return ZX_ERR_NOT_FOUND;
         }
@@ -774,19 +719,6 @@ public:
         }
     }
 
-    AsyncHandleProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        async_handle_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ASYNC_HANDLE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     AsyncHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
@@ -822,20 +754,6 @@ public:
                                         AsyncHandleProtocolClient* result) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
-    }
-
-    // Create a AsyncHandleProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           AsyncHandleProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
         if (!found) {
           return ZX_ERR_NOT_FOUND;
         }

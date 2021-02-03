@@ -26,7 +26,6 @@ driver_module("aml-uart") {
   sources = [ "aml-uart.cc" ]
   deps = [
     ":aml_uart_bind",
-    "//sdk/banjo/fuchsia.hardware.composite",
     "//sdk/banjo/fuchsia.hardware.platform.bus",
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.hardware.serial",

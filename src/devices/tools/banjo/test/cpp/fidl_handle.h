@@ -14,7 +14,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 
 #include "banjo-internal.h"
 

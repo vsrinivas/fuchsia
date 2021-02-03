@@ -8,7 +8,6 @@
 #pragma once
 
 {includes}
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 
 #include "banjo-internal.h"
 

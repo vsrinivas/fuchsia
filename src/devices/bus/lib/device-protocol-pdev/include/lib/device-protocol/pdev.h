@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BUS_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
 #define SRC_DEVICES_BUS_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
 
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -28,21 +27,10 @@ class PDev : public PDevProtocolClient {
 
   PDev(zx_device_t* parent) : PDevProtocolClient(parent) {}
 
-  PDev(ddk::CompositeProtocolClient& composite)
-      : PDevProtocolClient(composite, "fuchsia.hardware.platform.device.PDev") {}
-
   PDev(zx_device_t* parent, const char* fragment_name)
       : PDevProtocolClient(parent, fragment_name) {}
 
   ~PDev() = default;
-
-  static zx_status_t CreateFromComposite(ddk::CompositeProtocolClient& composite, PDev* out) {
-    *out = PDev(composite);
-    if (!out->is_valid()) {
-      return ZX_ERR_NO_RESOURCES;
-    }
-    return ZX_OK;
-  }
 
   static PDev FromFragment(zx_device_t* parent) { return PDev(parent, kFragmentName); }
 

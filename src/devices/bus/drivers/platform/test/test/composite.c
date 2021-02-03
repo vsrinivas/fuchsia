@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/clock/c/banjo.h>
-#include <fuchsia/hardware/composite/c/banjo.h>
 #include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/c/banjo.h>

@@ -4,8 +4,6 @@
 
 #include "src/devices/bin/driver_host/composite_device.h"
 
-#include <fuchsia/hardware/composite/c/banjo.h>
-
 #include <algorithm>
 
 #include <fbl/auto_lock.h>
@@ -98,20 +96,6 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
     ops.release = [](void* ctx) { static_cast<CompositeDeviceInstance*>(ctx)->Release(); };
     return ops;
   }();
-  static composite_protocol_ops_t composite_ops = []() {
-    composite_protocol_ops_t ops = {};
-    ops.get_fragment_count = [](void* ctx) {
-      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentCount();
-    };
-    ops.get_fragments = [](void* ctx, composite_device_fragment_t* comp_list, size_t comp_count,
-                           size_t* comp_actual) {
-      static_cast<CompositeDeviceInstance*>(ctx)->GetFragments(comp_list, comp_count, comp_actual);
-    };
-    ops.get_fragment = [](void* ctx, const char* name, zx_device_t** out) -> bool {
-      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragment(name, out);
-    };
-    return ops;
-  }();
 
   auto composite = fbl::MakeRefCounted<CompositeDevice>(dev);
 
@@ -127,7 +111,6 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
 
   dev->set_composite(composite, false);
   dev->set_protocol_id(ZX_PROTOCOL_COMPOSITE);
-  dev->protocol_ops = &composite_ops;
   dev->set_ops(&composite_device_ops);
   dev->ctx = new_device.release();
   // Flag that when this is cleaned up, we should run its release hook.

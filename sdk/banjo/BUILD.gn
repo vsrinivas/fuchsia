@@ -40,7 +40,6 @@ group("banjo") {
     "fuchsia.hardware.camerahwaccel",
     "fuchsia.hardware.clock",
     "fuchsia.hardware.clockimpl",
-    "fuchsia.hardware.composite",
     "fuchsia.hardware.display.capture",
     "fuchsia.hardware.display.clamprgb",
     "fuchsia.hardware.display.controller",

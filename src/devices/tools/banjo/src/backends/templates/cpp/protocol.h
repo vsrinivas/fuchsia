@@ -32,19 +32,6 @@ public:
         }}
     }}
 
-    {protocol_name}ProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {{
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        {protocol_name_snake}_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_{protocol_name_uppercase}, &proto) == ZX_OK) {{
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        }} else {{
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }}
-    }}
-
     {protocol_name}ProtocolClient(zx_device_t* parent, const char* fragment_name) {{
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
@@ -80,20 +67,6 @@ public:
                                         {protocol_name}ProtocolClient* result) {{
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {{
-          return ZX_ERR_NOT_FOUND;
-        }}
-        return CreateFromDevice(fragment, result);
-    }}
-
-    // Create a {protocol_name}ProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           {protocol_name}ProtocolClient* result) {{
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
         if (!found) {{
           return ZX_ERR_NOT_FOUND;
         }}
