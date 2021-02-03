@@ -140,6 +140,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     virtual WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size,
                                                size_t& encoded_len) = 0;
 
+    // Get the primary WiFi MAC address. Supplied buffer must be 6 bytes long.
+    virtual WEAVE_ERROR GetPrimaryWiFiMACAddress(uint8_t* mac_address) = 0;
+
     // Retrieves test private key for signing test cert in |signing_key|,
     // returns ZX_OK on success.
     virtual zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) = 0;
@@ -194,6 +197,7 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
   WEAVE_ERROR _GetDeviceId(uint64_t& device_id);
   WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetManufacturerDeviceCertificate(uint8_t* buf, size_t buf_size, size_t& out_len);
+  WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* mac_address);
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
   WEAVE_ERROR _GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len);

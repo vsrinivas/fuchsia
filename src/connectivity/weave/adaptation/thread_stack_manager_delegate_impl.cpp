@@ -37,6 +37,12 @@ using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
 
 constexpr uint16_t kMinThreadChannel = 11;
 constexpr uint16_t kMaxThreadChannel = 26;
+
+// The required size of a buffer supplied to GetPrimary802154MACAddress.
+constexpr size_t k802154MacAddressBufSize =
+    sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::Primary802154MACAddress);
+// Fake MAC address returned by GetPrimary802154MACAddress
+constexpr uint8_t kFakeMacAddress[k802154MacAddressBufSize] = { 0xFF };
 }  // namespace
 
 // Note: Since the functions within this class are intended to function
@@ -405,6 +411,22 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadTopologyMinimal() {
 
 WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadTopologyFull() {
   return WEAVE_ERROR_NOT_IMPLEMENTED;  // TODO(fxbug.dev/55888)
+}
+
+WEAVE_ERROR ThreadStackManagerDelegateImpl::GetPrimary802154MACAddress(uint8_t* mac_address) {
+  if (!IsThreadSupported()) {
+    return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
+  }
+
+  // This is setting the MAC address to FF:0:0:0:0:0:0:0; this is for a few reasons:
+  //   1. The actual value of the MAC address in the descriptor is not currently used.
+  //   2. The MAC address (either the factory or the current address) is PII, so it should not be
+  //      transmitted unless necessary.
+  //   3. Some value should still be transmitted as some tools or other devices use the presence of
+  //      an 802.15.4 MAC address to determine if Thread is supported.
+  // The best way to meet these requirements is to provide a faked-out MAC address instead.
+  std::memcpy(mac_address, kFakeMacAddress, k802154MacAddressBufSize);
+  return WEAVE_NO_ERROR;
 }
 
 zx_status_t ThreadStackManagerDelegateImpl::GetDeviceState(DeviceState* device_state) {

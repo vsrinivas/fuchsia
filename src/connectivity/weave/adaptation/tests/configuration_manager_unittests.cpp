@@ -55,6 +55,13 @@ constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLe
 const std::string kPkgDataPath = "/pkg/data/";
 const std::string kDataPath = "/data/";
 
+// The required size of a buffer supplied to GetPrimaryWiFiMACAddress.
+constexpr size_t kWiFiMacAddressBufSize =
+    sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::PrimaryWiFiMACAddress);
+// The required size of a buffer supplied to GetPrimary802154MACAddress.
+constexpr size_t k802154MacAddressBufSize =
+    sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::Primary802154MACAddress);
+
 }  // namespace
 
 // This fake class hosts device protocol in the backgroud thread
@@ -210,18 +217,23 @@ class CfgMgrProvisionStatusDelegate : public ConfigurationManagerTestDelegateImp
   bool is_member_of_fabric_;
 };
 
-// Thread stack delegate used to test IsFullyProvisioned
-class ThreadStackMgrProvisionStatusDelegate : public ThreadStackManagerDelegateImpl {
+// ThreadStackManager delegate with overrides for testing
+class ThreadStackManagerTestDelegateImpl : public ThreadStackManagerDelegateImpl {
  public:
-  bool IsThreadProvisioned() {
-    return is_thread_provisioned_;
-  }
-
-  ThreadStackMgrProvisionStatusDelegate& SetThreadProvisioned(bool value) {
+  ThreadStackManagerTestDelegateImpl& SetThreadProvisioned(bool value) {
     is_thread_provisioned_ = value;
     return *this;
   }
+
  private:
+  bool IsThreadProvisioned() override {
+    return is_thread_provisioned_;
+  }
+
+  bool IsThreadSupported() const override {
+    return true;
+  }
+
   bool is_thread_provisioned_;
 };
 
@@ -240,7 +252,9 @@ class ConfigurationManagerTest : public WeaveTestFixture {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
-    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+    auto thread_stack_delegate = std::make_unique<ThreadStackManagerTestDelegateImpl>();
+    thread_mgr_ = thread_stack_delegate.get();
+    ThreadStackMgrImpl().SetDelegate(std::move(thread_stack_delegate));
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
     EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
   }
@@ -277,6 +291,7 @@ class ConfigurationManagerTest : public WeaveTestFixture {
   FakeHwinfo fake_hwinfo_;
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
   FakeWeaveFactoryStoreProvider fake_weave_factory_store_provider_;
+  ThreadStackManagerTestDelegateImpl* thread_mgr_;
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
@@ -327,12 +342,17 @@ TEST_F(ConfigurationManagerTest, GetSerialNumber) {
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
+  constexpr uint8_t expected_wifi_mac[kWiFiMacAddressBufSize] = { 0xFF };
+  constexpr uint8_t expected_802154_mac[k802154MacAddressBufSize] = { 0xFF };
+
   ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
   EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
 
   EXPECT_STREQ(device_desc.SerialNumber, kExpectedSerialNumber);
   EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
   EXPECT_EQ(device_desc.VendorId, kExpectedVendorId);
+  EXPECT_EQ(std::memcmp(expected_wifi_mac, device_desc.PrimaryWiFiMACAddress, kWiFiMacAddressBufSize), 0);
+  EXPECT_EQ(std::memcmp(expected_802154_mac, device_desc.Primary802154MACAddress, k802154MacAddressBufSize), 0);
 }
 
 TEST_F(ConfigurationManagerTest, GetPairingCode) {
@@ -483,52 +503,48 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
   ConfigurationMgrImpl().SetDelegate(std::unique_ptr<ConfigurationManagerImpl::Delegate>(cfg_mgr));
   ASSERT_EQ(cfg_mgr->Init(), WEAVE_NO_ERROR);
 
-  auto thread_mgr = new ThreadStackMgrProvisionStatusDelegate();
-  ThreadStackMgrImpl().SetDelegate(nullptr);
-  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerImpl::Delegate>(thread_mgr));
-
   // All false
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr->SetThreadProvisioned(false);
+  thread_mgr_->SetThreadProvisioned(false);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   // Two false
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr->SetThreadProvisioned(false);
+  thread_mgr_->SetThreadProvisioned(false);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr->SetThreadProvisioned(false);
+  thread_mgr_->SetThreadProvisioned(false);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr->SetThreadProvisioned(true);
+  thread_mgr_->SetThreadProvisioned(true);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   // One false
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr->SetThreadProvisioned(true);
+  thread_mgr_->SetThreadProvisioned(true);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr->SetThreadProvisioned(true);
+  thread_mgr_->SetThreadProvisioned(true);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr->SetThreadProvisioned(false);
+  thread_mgr_->SetThreadProvisioned(false);
 
   // TODO(fxbug.dev/58252) Change to EXPECT_FALSE once ThreadStackManager is ready
   EXPECT_TRUE(ConfigurationMgr().IsFullyProvisioned());
@@ -536,7 +552,7 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
   // No false
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr->SetThreadProvisioned(true);
+  thread_mgr_->SetThreadProvisioned(true);
 
   EXPECT_TRUE(ConfigurationMgr().IsFullyProvisioned());
 }
@@ -608,6 +624,14 @@ TEST_F(ConfigurationManagerTest, GetAppletsPathList) {
   for (size_t i=0; i < expected_applet_paths.size(); i++) {
     EXPECT_EQ(expected_applet_paths[i], applet_paths[i]);
   }
+}
+
+TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
+  constexpr uint8_t expected[kWiFiMacAddressBufSize] = { 0xFF };
+  uint8_t mac_addr[kWiFiMacAddressBufSize];
+
+  EXPECT_EQ(ConfigurationMgr().GetPrimaryWiFiMACAddress(mac_addr), WEAVE_NO_ERROR);
+  EXPECT_EQ(0, std::memcmp(expected, mac_addr, kWiFiMacAddressBufSize));
 }
 
 }  // namespace testing

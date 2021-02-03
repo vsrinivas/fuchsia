@@ -45,6 +45,10 @@ using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 
 const char kFakeInterfaceName[] = "fake0";
 
+// The required size of a buffer supplied to GetPrimary802154MACAddress.
+constexpr size_t k802154MacAddressBufSize =
+    sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::Primary802154MACAddress);
+
 // Helper to format bytes in log messages.
 std::string FormatBytes(const std::vector<uint8_t>& bytes) {
   std::stringstream ss;
@@ -517,6 +521,9 @@ TEST_F(ThreadStackManagerTest, ThreadSupportDisabled) {
   EXPECT_EQ(ThreadStackMgrImpl()._SetThreadEnabled(false), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
   EXPECT_EQ(ThreadStackMgrImpl()._SetThreadEnabled(true), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
 
+  uint8_t buf[k802154MacAddressBufSize] = {};
+  EXPECT_EQ(ThreadStackMgr().GetPrimary802154MACAddress(buf), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+
   // Set up provisioning info, confirm Get/SetThreadProvision unsupported.
   constexpr uint32_t kFakePANId = 12345;
   constexpr uint8_t kFakeChannel = 12;
@@ -539,6 +546,14 @@ TEST_F(ThreadStackManagerTest, ThreadSupportDisabled) {
   net_info.FieldPresent.ThreadNetworkKey = true;
   EXPECT_EQ(ThreadStackMgrImpl()._SetThreadProvision(net_info), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE);
+}
+
+TEST_F(ThreadStackManagerTest, GetPrimary802154MacAddress) {
+  constexpr uint8_t expected[k802154MacAddressBufSize] = { 0xFF };
+  uint8_t mac_addr[k802154MacAddressBufSize];
+
+  EXPECT_EQ(ThreadStackMgr().GetPrimary802154MACAddress(mac_addr), WEAVE_NO_ERROR);
+  EXPECT_EQ(0, std::memcmp(expected, mac_addr, k802154MacAddressBufSize));
 }
 
 }  // namespace testing

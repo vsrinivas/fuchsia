@@ -71,6 +71,8 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
     // Determine if Thread is supported. If `false` all calls other than
     // InitThreadStack should return unsuccessfully with no side effects.
     virtual bool IsThreadSupported() const = 0;
+    // Get the primary 802154 MAC address. Supplied buffer must be 8 bytes long.
+    virtual WEAVE_ERROR GetPrimary802154MACAddress(uint8_t* mac_address) = 0;
   };
 
   // Sets the delegate containing the platform-specific implementation. It is
@@ -97,9 +99,7 @@ class NL_DLL_EXPORT ThreadStackManagerImpl final : public ThreadStackManager {
 
   bool _HaveRouteToAddress(const IPAddress& destAddr);
 
-  WEAVE_ERROR _GetPrimary802154MACAddress(uint8_t* buf) {
-    return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
-  }
+  WEAVE_ERROR _GetPrimary802154MACAddress(uint8_t* mac_address);
 
   void _OnPlatformEvent(const WeaveDeviceEvent* event);
 

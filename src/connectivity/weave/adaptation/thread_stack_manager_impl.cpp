@@ -33,6 +33,10 @@ WEAVE_ERROR ThreadStackManagerImpl::_InitThreadStack() {
   return delegate_->InitThreadStack();
 }
 
+WEAVE_ERROR ThreadStackManagerImpl::_GetPrimary802154MACAddress(uint8_t* mac_address) {
+  return delegate_->GetPrimary802154MACAddress(mac_address);
+}
+
 bool ThreadStackManagerImpl::_HaveRouteToAddress(const IPAddress& destAddr) {
   return delegate_->HaveRouteToAddress(destAddr);
 }

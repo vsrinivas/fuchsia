@@ -62,6 +62,12 @@ constexpr int kWeaveCertificateMaxLength = UINT16_MAX;
 // Storage path for data files.
 const std::string kDataPath = "/data/";
 
+// The required size of a buffer supplied to GetPrimaryWiFiMACAddress.
+constexpr size_t kWiFiMacAddressBufSize =
+    sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::PrimaryWiFiMACAddress);
+// Fake MAC address returned by GetPrimaryWiFiMACAddress
+constexpr uint8_t kFakeMacAddress[kWiFiMacAddressBufSize] = { 0xFF };
+
 }  // unnamed namespace
 
 ConfigurationManagerDelegateImpl::ConfigurationManagerDelegateImpl()
@@ -450,6 +456,17 @@ zx_status_t ConfigurationManagerDelegateImpl::GetDeviceIdFromFactory(const char*
 
 zx_status_t ConfigurationManagerDelegateImpl::GetAppletPathList(std::vector<std::string>& out) {
   return device_info_->ReadConfigValueArray(kDeviceInfoConfigKey_AppletPaths, out);
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetPrimaryWiFiMACAddress(uint8_t* mac_address) {
+  // This is setting the MAC address to FF:0:0:0:0:0; this is for a few reasons:
+  //   1. The actual value of the MAC address in the descriptor is not currently used.
+  //   2. The MAC address is PII, so it should not be transmitted unless necessary.
+  //   3. Some value should still be transmitted as some tools or other devices use the presence of
+  //      an WiFi MAC address to determine if WiFi is supported.
+  // The best way to meet these requirements is to provide a faked-out MAC address instead.
+  std::memcpy(mac_address, kFakeMacAddress, kWiFiMacAddressBufSize);
+  return WEAVE_NO_ERROR;
 }
 
 }  // namespace DeviceLayer
