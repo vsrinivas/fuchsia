@@ -70,6 +70,7 @@ struct brcmf_bus_ops {
   zx_status_t (*txctl)(brcmf_bus* bus, unsigned char* msg, uint len);
   zx_status_t (*rxctl)(brcmf_bus* bus, unsigned char* msg, uint len, int* rxlen_out);
   struct pktq* (*gettxq)(brcmf_bus* bus);
+  zx_status_t (*recovery)(brcmf_bus* bus);
 };
 
 namespace wlan {
@@ -164,6 +165,10 @@ static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus
 static inline zx_status_t brcmf_bus_get_wifi_metadata(struct brcmf_bus* bus, void* config,
                                                       size_t exp_size, size_t* actual) {
   return bus->ops->get_wifi_metadata(bus, config, exp_size, actual);
+}
+
+static inline zx_status_t brcmf_bus_recovery(struct brcmf_bus* bus) {
+  return bus->ops->recovery(bus);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

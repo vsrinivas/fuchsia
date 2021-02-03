@@ -409,7 +409,7 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
                                          size_t firmware_size, const void* nvram,
                                          size_t nvram_size);
 void brcmf_sdio_remove(struct brcmf_sdio* bus);
-zx_status_t brcmf_sdio_reset(struct brcmf_sdio* bus);
+void brcmf_sdio_reset(struct brcmf_sdio* bus);
 void brcmf_sdio_isr(struct brcmf_sdio* bus);
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active);
@@ -574,7 +574,6 @@ struct brcmf_sdio {
 
   WorkQueue* brcmf_wq;
   WorkItem datawork;
-  WorkItem recovery_work;
   std::atomic<bool> dpc_triggered;
   bool dpc_running;
 

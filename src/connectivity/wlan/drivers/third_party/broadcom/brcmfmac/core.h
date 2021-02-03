@@ -39,6 +39,7 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 #include "netbuf.h"
+#include "recovery/recovery_trigger.h"
 #include "workqueue.h"
 
 #define TOE_TX_CSUM_OL 0x00000001
@@ -165,6 +166,10 @@ struct brcmf_pub {
 
   /* The last country code the driver set to firmware, used for recovery. */
   uint8_t last_country_code[WLANPHY_ALPHA2_LEN];
+  /* Controller of recovery trigger point*/
+  std::unique_ptr<wlan::brcmfmac::RecoveryTrigger> recovery_trigger;
+  /* The start point of driver recovery process*/
+  WorkItem recovery_work;
   /* The semaphore to mark whether firmware is reloading, when it is occupied, some operations will
    * be skipped or blocked if it's not supposed to be done during firmware reloading.*/
   std::mutex fw_reloading;
@@ -315,10 +320,10 @@ void brcmf_restart_client_if(brcmf_pub* drvr);
 /* Configure the "global" bus state used by upper layers */
 void brcmf_bus_change_state(brcmf_bus* bus, enum brcmf_bus_state state);
 
+zx_status_t brcmf_schedule_recovery_worker(brcmf_pub* drvr);
 // The boolean drvr_restarting means whether this function is called during the driver
 // initialization or the driver crash recovery.
 zx_status_t brcmf_bus_started(brcmf_pub* drvr, bool drvr_restarting);
-zx_status_t brcmf_bus_restarted(brcmf_pub* drvr);
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
                                  bcme_status_t* fwerr_ptr);
 void brcmf_bus_add_txhdrlen(brcmf_pub* drvr, uint len);

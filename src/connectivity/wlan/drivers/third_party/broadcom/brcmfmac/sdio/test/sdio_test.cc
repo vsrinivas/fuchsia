@@ -199,7 +199,9 @@ TEST(Sdio, VendorControl) {
 }
 
 TEST(Sdio, Transfer) {
+  FakeSdioDevice device;
   brcmf_sdio_dev sdio_dev = {};
+  sdio_dev.drvr = device.drvr();
 
   MockSdio sdio1;
   MockSdio sdio2;
@@ -223,7 +225,9 @@ TEST(Sdio, Transfer) {
 }
 
 TEST(Sdio, DmaTransfer) {
+  FakeSdioDevice device;
   brcmf_sdio_dev sdio_dev = {};
+  sdio_dev.drvr = device.drvr();
 
   // In order to write data to the VMO we need an actual valid address, use some
   // test data.
@@ -300,7 +304,9 @@ TEST(Sdio, IoAbort) {
 }
 
 TEST(Sdio, RamRw) {
+  FakeSdioDevice device;
   brcmf_sdio_dev sdio_dev = {};
+  sdio_dev.drvr = device.drvr();
   sdio_func func1 = {};
   pthread_mutex_init(&func1.lock, nullptr);
 
@@ -329,7 +335,9 @@ TEST(Sdio, RamRw) {
 // This test case verifies that whether an error will returned when transfer size is
 // not divisible by 4.
 TEST(Sdio, AlignSize) {
+  FakeSdioDevice device;
   brcmf_sdio_dev sdio_dev = {};
+  sdio_dev.drvr = device.drvr();
   sdio_func func1 = {};
   pthread_mutex_init(&func1.lock, nullptr);
 

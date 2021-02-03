@@ -2585,19 +2585,6 @@ zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msg
   return bus->ctrl_frame_err;
 }
 
-static zx_status_t brcmf_sdio_schedule_recovery_worker(struct brcmf_sdio* bus) {
-  brcmf_pub* drvr = bus->sdiodev->drvr;
-  bool expected = false;
-
-  if (!drvr->drvr_resetting.compare_exchange_strong(expected, true)) {
-    BRCMF_DBG(INFO, "The recovery process has already started\n");
-    return ZX_ERR_UNAVAILABLE;
-  }
-
-  WorkQueue::ScheduleDefault(&bus->recovery_work);
-  return ZX_OK;
-}
-
 static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
   zx_status_t error;
   struct sdpcm_shared sh;
@@ -2616,7 +2603,12 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
 
   if (sh.flags & SDPCM_SHARED_TRAP) {
     BRCMF_ERR("firmware trap in dongle");
-    brcmf_sdio_schedule_recovery_worker(bus);
+    error = bus->sdiodev->drvr->recovery_trigger->firmware_crash_.Inc();
+    if (error != ZX_OK) {
+      BRCMF_ERR("Increase recovery trigger condition failed -- error: %s",
+                zx_status_get_string(error));
+      return error;
+    }
   }
 
   return ZX_OK;
@@ -3143,10 +3135,8 @@ zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAF
   return ZX_OK;
 }
 
-void brcmf_sdio_fw_recovery_worker(WorkItem* work) TA_NO_THREAD_SAFETY_ANALYSIS {
-  struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, recovery_work);
-
-  struct brcmf_sdio_dev* sdiod = bus->sdiodev;
+zx_status_t brcmf_sdio_recovery(struct brcmf_bus* bus) TA_NO_THREAD_SAFETY_ANALYSIS {
+  struct brcmf_sdio_dev* sdiod = bus->bus_priv.sdio;
   struct brcmf_pub* drvr = sdiod->drvr;
   zx_status_t error = ZX_OK;
 
@@ -3154,23 +3144,22 @@ void brcmf_sdio_fw_recovery_worker(WorkItem* work) TA_NO_THREAD_SAFETY_ANALYSIS 
   // the middle of it.
   drvr->fw_reloading.lock();
 
-  brcmf_sdio_reset(bus);
+  // Sdio clean-ups
+  brcmf_sdio_reset(sdiod->bus);
 
   if ((error = brcmf_sdio_load_files(drvr, true)) != ZX_OK) {
     BRCMF_ERR("Failed to reload images - error: %s", zx_status_get_string(error));
-    goto fail;
+    brcmf_proto_bcdc_detach(drvr);
+    return error;
   }
 
   if ((error = brcmf_bus_started(sdiod->drvr, true)) != ZX_OK) {
     BRCMF_ERR("Initialization after bus started failed.\n");
-    goto fail;
+    brcmf_proto_bcdc_detach(drvr);
+    return error;
   }
 
-fail:
-  // Notice that here we set drvr_resetting but not fw_reloading to false, drvr_resetting is set to
-  // true before the worker is added into the workqueue, and fw_loading is set to false in
-  // brcmf_sdio_load_files(), which marks that the firmware loading is finished.
-  drvr->drvr_resetting.store(false);
+  return ZX_OK;
 }
 
 int brcmf_sdio_oob_irqhandler(void* cookie) {
@@ -3638,6 +3627,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .txctl = brcmf_sdio_bus_txctl,
     .rxctl = brcmf_sdio_bus_rxctl,
     .gettxq = brcmf_sdio_bus_gettxq,
+    .recovery = brcmf_sdio_recovery,
 };
 
 zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
@@ -3817,7 +3807,6 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     goto fail;
   }
   bus->datawork = WorkItem(brcmf_sdio_dataworker);
-  bus->recovery_work = WorkItem(brcmf_sdio_fw_recovery_worker);
   bus->brcmf_wq = wq;
 
   /* attempt to attach to the dongle */
@@ -3971,9 +3960,8 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
 }
 
 /*Reset things When recovering from firmware crash*/
-zx_status_t brcmf_sdio_reset(struct brcmf_sdio* bus) {
+void brcmf_sdio_reset(struct brcmf_sdio* bus) {
   BRCMF_DBG(TRACE, "Enter");
-  zx_status_t err = ZX_OK;
 
   // Stop watch dog timer temporarily.
   brcmf_sdio_wd_timer(bus, false);
@@ -3991,16 +3979,8 @@ zx_status_t brcmf_sdio_reset(struct brcmf_sdio* bus) {
   // Flush tx queue.
   brcmu_pktq_flush(&bus->txq, true, NULL, NULL);
 
-  // Do clean up in upper layers
-  if ((err = brcmf_reset(bus->sdiodev->drvr)) != ZX_OK) {
-    BRCMF_ERR("Reset higher layer failed -- error: %s", zx_status_get_string(err));
-    return err;
-  }
-
   // Restart watchdog timer
   brcmf_sdio_wd_timer(bus, true);
-
-  return ZX_OK;
 }
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {

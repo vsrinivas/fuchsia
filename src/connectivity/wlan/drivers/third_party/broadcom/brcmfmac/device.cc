@@ -46,6 +46,12 @@ Device::Device(zx_device_t* parent)
   for (auto& entry : brcmf_pub_->if2bss) {
     entry = BRCMF_BSSIDX_INVALID;
   }
+
+  // Initialize the recovery trigger for driver, shared by all buses' devices.
+  auto recovery_start_callback = std::make_shared<std::function<zx_status_t()>>();
+  *recovery_start_callback = std::bind(&brcmf_schedule_recovery_worker, brcmf_pub_.get());
+  brcmf_pub_->recovery_trigger =
+      std::make_unique<wlan::brcmfmac::RecoveryTrigger>(recovery_start_callback);
 }
 
 Device::~Device() = default;

@@ -3069,6 +3069,11 @@ void brcmf_if_stop(net_device* ndev) {
 }
 
 void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping scan request.");
+    return;
+  }
   zx_status_t result;
 
   BRCMF_IFDBG(WLANIF, ndev, "Scan request from SME. txn_id: %" PRIu64 ", type: %s", req->txn_id,
@@ -5781,8 +5786,13 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
 
 zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_pub* drvr = cfg->pub;
-  struct brcmf_cfg80211_vif* vif = drvr->iflist[0]->vif;
+  struct brcmf_cfg80211_vif* client_vif = drvr->iflist[0]->vif;
+  struct net_device* softap = cfg_to_softap_ndev(cfg);
   zx_status_t err = ZX_OK;
+
+  // Stop all interfaces.
+  if (softap != nullptr)
+    brcmf_if_stop(softap);
 
   // Stop all the timers(for all interfaces).
   cfg->disconnect_timer->Stop();
@@ -5797,9 +5807,9 @@ zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
 
   // Clear connect and disconnect states for primary iface.
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &vif->sme_state);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &client_vif->sme_state);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &client_vif->sme_state);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &client_vif->sme_state);
 
   return ZX_OK;
 }

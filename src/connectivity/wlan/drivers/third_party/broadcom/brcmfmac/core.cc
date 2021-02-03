@@ -584,12 +584,43 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
   brcmf_del_if(ifp->drvr, ifp->bsscfgidx, rtnl_locked);
 }
 
+void brcmf_recovery_worker(WorkItem* work) {
+  struct brcmf_pub* drvr = containerof(work, struct brcmf_pub, recovery_work);
+  struct brcmf_bus* bus = drvr->bus_if;
+  zx_status_t error = ZX_OK;
+
+  // Do clean up in cfg80211 layer.
+  if ((error = brcmf_reset(drvr)) != ZX_OK) {
+    BRCMF_ERR("Reset cfg80211 layer failed -- error: %s", zx_status_get_string(error));
+    brcmf_detach(drvr);
+    goto fail;
+  }
+
+  if ((error = brcmf_bus_recovery(bus)) != ZX_OK) {
+    BRCMF_ERR("Bus recovery failed -- error: %s", zx_status_get_string(error));
+    brcmf_detach(drvr);
+    goto fail;
+  }
+
+fail:
+  // Clean the counters for all the trigger conditions at the end of the recovery process to ensure
+  // all the counters are 0 after driver is recovered and start working.
+  drvr->recovery_trigger->ClearStatistics();
+  // Notice that here we set drvr_resetting but not fw_reloading to false, drvr_resetting is set to
+  // true before the worker is added into the workqueue, and fw_loading is set to false in
+  // brcmf_sdio_load_files(), which marks that the firmware loading is finished.
+  drvr->drvr_resetting.store(false);
+}
+
 zx_status_t brcmf_attach(brcmf_pub* drvr) {
   BRCMF_DBG(TRACE, "Enter");
 
   if (!drvr->bus_if || !drvr->settings) {
     return ZX_ERR_BAD_STATE;
   }
+
+  // Initialize RecoveryTrigger.
+  drvr->recovery_work = WorkItem(brcmf_recovery_worker);
 
   /* attach firmware event handler */
   brcmf_fweh_attach(drvr);
@@ -814,4 +845,23 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
     }
   }
 #endif
+}
+
+zx_status_t brcmf_schedule_recovery_worker(struct brcmf_pub* drvr) {
+  bool expected = false;
+
+  if (!drvr->drvr_resetting.compare_exchange_strong(expected, true)) {
+    BRCMF_ERR("process already started.");
+    BRCMF_DBG(INFO, "The recovery process has already started\n");
+    return ZX_ERR_UNAVAILABLE;
+  }
+  BRCMF_INFO("The crash recovery process has been triggered.");
+
+  if (brcmf_bus_get_bus_type(drvr->bus_if) == BRCMF_BUS_TYPE_SIM) {
+    (*drvr->recovery_work.handler)(&drvr->recovery_work);
+  } else {
+    WorkQueue::ScheduleDefault(&drvr->recovery_work);
+  }
+
+  return ZX_OK;
 }

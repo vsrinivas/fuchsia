@@ -314,8 +314,20 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
   }
 
   if (result != ZX_OK) {
+    if (result == ZX_ERR_TIMED_OUT) {
+      zx_status_t err = sdiodev->drvr->recovery_trigger->sdio_timeout_.Inc();
+      if (err != ZX_OK) {
+        BRCMF_ERR("Increase recovery trigger condition failed -- error: %s",
+                  zx_status_get_string(err));
+      }
+    }
     BRCMF_DBG(TEMP, "SDIO transaction failed: %s", zx_status_get_string(result));
-  } else if (use_dma && !write) {
+    return result;
+  }
+  // Clear the TriggerCondition counter if SDIO transmission succeeded.
+  sdiodev->drvr->recovery_trigger->sdio_timeout_.Clear();
+
+  if (use_dma && !write) {
     // This is a read operation, read the data from the VMO to the buffer
     result = sdiodev->dma_buffer.read(data, 0, size);
     if (result != ZX_OK) {
@@ -323,6 +335,7 @@ zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, u
       return result;
     }
   }
+
   return result;
 }
 

@@ -191,6 +191,7 @@ source_set("core") {
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/recovery",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",
     "//src/lib/ddktl",
