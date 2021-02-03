@@ -14,7 +14,7 @@ use fidl_fuchsia_time_external::{Properties, Status};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc::Sender, lock::Mutex, Future, SinkExt};
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 use log::{error, info, warn};
 use push_source::{Update, UpdateAlgorithm};
 use rand::Rng;
@@ -144,7 +144,7 @@ where
         sink: &mut Sender<Update>,
     ) -> Result<(), Error> {
         let mut attempt_iter = 0u32..;
-        let mut last_error = None;
+        let mut last_error_type = None;
         loop {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
             match self.sampler.produce_sample(num_polls, measure_offset).await {
@@ -160,11 +160,13 @@ where
                     return Ok(());
                 }
                 Err(http_error) => {
-                    self.diagnostics.record(Event::Failure(http_error));
-                    if Some(http_error) != last_error {
-                        last_error = Some(http_error);
-                        let status = match http_error {
-                            HttpsDateError::InvalidHostname | HttpsDateError::SchemeNotHttps => {
+                    let error_type = http_error.error_type();
+                    self.diagnostics.record(Event::Failure(error_type));
+                    if Some(error_type) != last_error_type {
+                        last_error_type = Some(error_type);
+                        let status = match error_type {
+                            HttpsDateErrorType::InvalidHostname
+                            | HttpsDateErrorType::SchemeNotHttps => {
                                 // TODO(fxbug.dev/59771) - decide how to surface irrecoverable
                                 // errors to clients
                                 error!(
@@ -174,7 +176,7 @@ where
                                 );
                                 Status::UnknownUnhealthy
                             }
-                            HttpsDateError::NetworkError => {
+                            HttpsDateErrorType::NetworkError => {
                                 warn!("Failed to poll time: {:?}", http_error);
                                 Status::Network
                             }
@@ -207,6 +209,7 @@ mod test {
     use anyhow::format_err;
     use fidl_fuchsia_time_external::TimeSample;
     use futures::{channel::mpsc::channel, future::ready, stream::StreamExt, task::Poll as FPoll};
+    use httpdate_hyper::HttpsDateError;
     use lazy_static::lazy_static;
     use matches::assert_matches;
     use std::sync::Arc;
@@ -358,9 +361,9 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_retry_until_successful() {
         let injected_responses = vec![
-            Err(HttpsDateError::NetworkError),
-            Err(HttpsDateError::NetworkError),
-            Err(HttpsDateError::NoCertificatesPresented),
+            Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
+            Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
+            Err(HttpsDateError::new(HttpsDateErrorType::NoCertificatesPresented)),
             Ok(TEST_SAMPLE_1.clone()),
         ];
         let (sampler, response_complete_fut) = FakeSampler::with_responses(injected_responses);
@@ -398,9 +401,9 @@ mod test {
         let expected_events = vec![
             Event::NetworkCheckSuccessful,
             Event::Phase(Phase::Initial),
-            Event::Failure(HttpsDateError::NetworkError),
-            Event::Failure(HttpsDateError::NetworkError),
-            Event::Failure(HttpsDateError::NoCertificatesPresented),
+            Event::Failure(HttpsDateErrorType::NetworkError),
+            Event::Failure(HttpsDateErrorType::NetworkError),
+            Event::Failure(HttpsDateErrorType::NoCertificatesPresented),
             Event::Success(&TEST_SAMPLE_1),
         ];
         // depending on how futures get polled, there may or may not be an event to update the

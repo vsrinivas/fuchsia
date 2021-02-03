@@ -4,7 +4,7 @@
 
 use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::{Diagnostics, Event};
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 use parking_lot::Mutex;
 
 /// A fake `Diagnostics` implementation useful for verifying unittests.
@@ -18,7 +18,7 @@ pub struct FakeDiagnostics {
 enum OwnedEvent {
     NetworkCheckSuccessful,
     Success(HttpsSample),
-    Failure(HttpsDateError),
+    Failure(HttpsDateErrorType),
     Phase(Phase),
 }
 
@@ -99,7 +99,7 @@ mod test {
         };
         static ref TEST_SUCCESS_2: Event<'static> = Event::Success(&*TEST_SAMPLE_2);
     }
-    const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateError::NetworkError);
+    const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateErrorType::NetworkError);
     const TEST_PHASE: Event<'static> = Event::Phase(Phase::Converge);
 
     #[test]

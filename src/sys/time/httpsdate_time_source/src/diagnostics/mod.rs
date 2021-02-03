@@ -15,7 +15,7 @@ pub use self::fake::FakeDiagnostics;
 pub use self::inspect::InspectDiagnostics;
 
 use crate::datatypes::{HttpsSample, Phase};
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 
 /// A standard interface for recording sample production attempts for diagnostic purposes.
 pub trait Diagnostics: Send + Sync {
@@ -31,7 +31,7 @@ pub enum Event<'a> {
     /// A successful attempt to produce a sample.
     Success(&'a HttpsSample),
     /// A failed attempt to produce a sample.
-    Failure(HttpsDateError),
+    Failure(HttpsDateErrorType),
     /// A change in the phase.
     Phase(Phase),
 }

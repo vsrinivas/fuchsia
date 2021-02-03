@@ -34,7 +34,7 @@ mod test {
     use crate::datatypes::{HttpsSample, Phase};
     use crate::diagnostics::FakeDiagnostics;
     use fuchsia_zircon as zx;
-    use httpdate_hyper::HttpsDateError;
+    use httpdate_hyper::HttpsDateErrorType;
     use lazy_static::lazy_static;
     use std::sync::Arc;
 
@@ -48,7 +48,7 @@ mod test {
         };
         static ref TEST_SUCCESS: Event<'static> = Event::Success(&*TEST_SAMPLE);
     }
-    const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateError::NetworkError);
+    const TEST_FAILURE: Event<'static> = Event::Failure(HttpsDateErrorType::NetworkError);
     const TEST_PHASE: Event<'static> = Event::Phase(Phase::Converge);
 
     #[test]
