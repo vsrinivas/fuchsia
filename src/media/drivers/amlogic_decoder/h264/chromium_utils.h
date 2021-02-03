@@ -31,7 +31,8 @@
 #define DLOG FX_DLOGS
 #endif
 
-#if 1
+#define FORCE_ALL_LOGS 0
+#if !FORCE_ALL_LOGS
 #define DVLOG FX_DVLOGS
 #define DVLOG_IF(verbose_level, condition)               \
   FX_LAZY_STREAM(FX_VLOG_STREAM(verbose_level, nullptr), \

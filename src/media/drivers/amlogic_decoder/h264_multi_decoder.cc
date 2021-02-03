@@ -1210,9 +1210,12 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // separate_colour_plane_flag true, so chroma_array_type should be 0.
     ZX_DEBUG_ASSERT(sps->chroma_array_type == 0);
 
-    ZX_DEBUG_ASSERT(sizeof(current_sps_) == sizeof(*sps.get()));
-    if (memcmp(&current_sps_, sps.get(), sizeof(current_sps_))) {
-      memcpy(&current_sps_, sps.get(), sizeof(current_sps_));
+    if (!current_sps_ || memcmp(&current_sps_.value(), sps.get(), sizeof(current_sps_.value()))) {
+      if (!current_sps_) {
+        current_sps_.emplace();
+      }
+      ZX_DEBUG_ASSERT(sizeof(current_sps_.value()) == sizeof(*sps.get()));
+      memcpy(&current_sps_.value(), sps.get(), sizeof(current_sps_.value()));
       sps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264SPS>>(std::move(sps));
     } else {
       sps_nalu = nullptr;
@@ -1306,9 +1309,12 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // scaling_list4x4 not available from FW.
     // scaling_list8x8 not available from FW.
     // second_chroma_qp_index_offset not avaialble from FW.
-    ZX_DEBUG_ASSERT(sizeof(current_pps_) == sizeof(*pps.get()));
-    if (memcmp(&current_pps_, pps.get(), sizeof(current_pps_))) {
-      memcpy(&current_pps_, pps.get(), sizeof(current_pps_));
+    if (!current_pps_ || memcmp(&current_pps_.value(), pps.get(), sizeof(current_pps_.value()))) {
+      if (!current_pps_) {
+        current_pps_.emplace();
+      }
+      ZX_DEBUG_ASSERT(sizeof(current_pps_.value()) == sizeof(*pps.get()));
+      memcpy(&current_pps_.value(), pps.get(), sizeof(current_pps_.value()));
       pps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264PPS>>(std::move(pps));
     } else {
       pps_nalu = nullptr;

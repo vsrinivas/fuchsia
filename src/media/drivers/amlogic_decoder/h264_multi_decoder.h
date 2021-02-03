@@ -403,8 +403,8 @@ class H264MultiDecoder : public VideoDecoder {
 
   HardwareRenderParams params_;
 
-  media::H264SPS current_sps_;
-  media::H264PPS current_pps_;
+  std::optional<media::H264SPS> current_sps_;
+  std::optional<media::H264PPS> current_pps_;
 
   // This tracks which slice headers we've seen since starting from a saved state.  If we restore
   // from the same saved state later, this prevents us from telling H264Decoder about the same slice
