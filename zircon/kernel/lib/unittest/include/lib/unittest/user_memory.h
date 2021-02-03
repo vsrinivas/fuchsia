@@ -64,7 +64,9 @@ class UserMemory {
   }
 
   // Ensures the mapping is committed and mapped such that usages will cause no faults.
-  zx_status_t CommitAndMap(size_t size) { return mapping_->MapRange(0, size, true); }
+  zx_status_t CommitAndMap(size_t size, uint64_t offset = 0) {
+    return mapping_->MapRange(offset, size, true);
+  }
 
   // Read or write to the underlying VMO directly, bypassing the mapping.
   zx_status_t VmoRead(void* ptr, uint64_t offset, uint64_t len) {

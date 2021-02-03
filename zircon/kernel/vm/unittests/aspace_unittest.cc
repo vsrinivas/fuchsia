@@ -287,6 +287,71 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   END_TEST;
 }
 
+// Test that page tables that do not get accessed can be successfully unmapped and freed.
+static bool vmaspace_free_unaccessed_page_tables_test() {
+  BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  constexpr size_t kNumPages = 512 * 3;
+  constexpr size_t kMiddlePage = kNumPages / 2;
+  constexpr size_t kMiddleOffset = kMiddlePage * PAGE_SIZE;
+  ASSERT_OK(VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE * kNumPages, &vmo));
+
+  auto mem = testing::UserMemory::Create(vmo);
+  EXPECT_OK(mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+
+  // Touch the mapping to ensure its accessed.
+  mem->put<char>(42, kMiddleOffset);
+
+  // Attempting to map should fail, as it's already mapped.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+
+  mem->put<char>(42, kMiddleOffset);
+  // Harvest the accessed information, this should not actually unmap it, even if we ask it to.
+  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
+      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+      ArchVmAspace::NonTerminalAction::FreeUnaccessed));
+  if constexpr (!ArchVmAspace::HasNonTerminalAccessedFlag()) {
+    EXPECT_OK(mem->aspace()->arch_aspace().HarvestAccessed(
+        mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+        [](paddr_t, vaddr_t, uint) { return true; }));
+  }
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+
+  mem->put<char>(42, kMiddleOffset);
+  // Harvest the accessed information, then attempt to do it again so that it gets unmapped.
+  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
+      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+      ArchVmAspace::NonTerminalAction::FreeUnaccessed));
+  if constexpr (!ArchVmAspace::HasNonTerminalAccessedFlag()) {
+    EXPECT_OK(mem->aspace()->arch_aspace().HarvestAccessed(
+        mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+        [](paddr_t, vaddr_t, uint) { return true; }));
+  }
+  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
+      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+      ArchVmAspace::NonTerminalAction::FreeUnaccessed));
+  EXPECT_OK(mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+
+  // If we are not requesting a free, then we should be able to harvest repeatedly.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
+      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+      ArchVmAspace::NonTerminalAction::Retain));
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
+      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+      ArchVmAspace::NonTerminalAction::Retain));
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
+  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
+      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
+      ArchVmAspace::NonTerminalAction::Retain));
+
+  END_TEST;
+}
+
 // Tests that VmMappings that are marked mergeable behave correctly.
 static bool vmaspace_merge_mapping_test() {
   BEGIN_TEST;
@@ -1164,6 +1229,7 @@ VM_UNITTEST(vmaspace_create_smoke_test)
 VM_UNITTEST(vmaspace_alloc_smoke_test)
 VM_UNITTEST(vmaspace_accessed_test)
 VM_UNITTEST(vmaspace_usercopy_accessed_fault_test)
+VM_UNITTEST(vmaspace_free_unaccessed_page_tables_test)
 VM_UNITTEST(vmaspace_merge_mapping_test)
 VM_UNITTEST(vm_mapping_attribution_commit_decommit_test)
 VM_UNITTEST(vm_mapping_attribution_protect_test)
