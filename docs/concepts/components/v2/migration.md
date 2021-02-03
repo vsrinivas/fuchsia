@@ -82,14 +82,8 @@ Users may continue developing and maintaining v1 components while v2 migrations
 take place at their own pace.
 
 Build configurations that use the [Session Framework][session-framework] also
-include the component `component_manager_sfw`. This is a second instance of
-`component_manager`, nested underneath `appmgr` and its v1 realm while
-managing its own hierarchy of v2 components. This enables interoperability
-between Session components (which are all v2 components) and legacy v1
-components.
-Once all v1 components have been migrated to v2, the `session_manager` will
-become a direct descendent of the root `component_manager`, and
-`component_manager_sfw` can be removed.
+include the `session_manager` component. All v1-backed capabilities the session
+needs are routed to the `session_manager ` from `appmgr`.
 
 ## Current areas of focus
 

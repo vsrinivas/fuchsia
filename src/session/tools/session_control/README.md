@@ -30,9 +30,3 @@ $ fx test session_control_tests
 ## Source layout
 
 The entrypoint and implementation are located in `src/main.rs`. Unit tests are co-located with the code.
-
-## Note on implementation
-
-`session_control` connects to control services published by `session_manager` at runtime. One such service is `fuchsia.session.Launcher`.
-
-Due to the (current) inability to expose services directly from a v2 component such as `session_manager` via `/hub`, `session_manager` exposes these services to its parent special-purpose implementation of component manager (`component_manager_sfw`), with `sysmgr` providing service discovery as defined in [`session_manager.config`](/src/session/bin/session_manager/meta/session_manager.config).

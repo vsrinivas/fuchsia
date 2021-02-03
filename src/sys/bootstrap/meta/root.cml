@@ -18,7 +18,10 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.appmgr.Startup" ],
+            protocol: [
+                "fuchsia.appmgr.Startup",
+                "fuchsia.sessionmanager.Startup",
+            ],
             from: "#core",
             to: [ "#startup" ],
         },

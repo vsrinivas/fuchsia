@@ -11,7 +11,7 @@ use {
         LaunchConfiguration, LauncherMarker, LauncherProxy, RestarterMarker, RestarterProxy,
     },
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_service_at,
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -52,12 +52,15 @@ pub struct AddCommand {
     pub element_url: String,
 }
 
+const HUB_PATH: &str = "/hub-v2/children/core/children/session-manager/exec/expose";
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let Args { command } = argh::from_env();
+
     match command {
         Command::Launch(LaunchCommand { session_url }) => {
-            let launcher = connect_to_service::<LauncherMarker>()?;
+            let launcher = connect_to_service_at::<LauncherMarker>(HUB_PATH)?;
             match launch_session(&session_url, launcher).await {
                 Ok(_) => {
                     println!("Launched session: {:?}", session_url);
@@ -70,7 +73,7 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Restart(RestartCommand {}) => {
-            let restarter = connect_to_service::<RestarterMarker>()?;
+            let restarter = connect_to_service_at::<RestarterMarker>(HUB_PATH)?;
             match restart_session(restarter).await {
                 Ok(_) => {
                     println!("Restarted the session.");
@@ -83,7 +86,7 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Add(AddCommand { element_url }) => {
-            let element_manager = connect_to_service::<ElementManagerMarker>()?;
+            let element_manager = connect_to_service_at::<ElementManagerMarker>(HUB_PATH)?;
             match add_element(&element_url, element_manager).await {
                 Ok(_) => {
                     println!("Added element: {:?}", element_url);

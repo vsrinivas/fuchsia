@@ -7,6 +7,11 @@
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
         },
         {
+            name: "session-manager",
+            url: "fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm",
+            environment: "#session-manager-env",
+        },
+        {
             name: "system-update-committer",
             url: "fuchsia-pkg://fuchsia.com/system-update-committer#meta/system-update-committer.cm",
             startup: "eager",
@@ -72,7 +77,12 @@
             subdir: "persistent",
             backing_dir: "minfs",
         },
-        { protocol: "fuchsia.appmgr.Startup" },
+        {
+            protocol: [
+                "fuchsia.appmgr.Startup",
+                "fuchsia.sessionmanager.Startup",
+            ],
+        },
     ],
     offer: [
         {
@@ -231,6 +241,7 @@
             from: "parent",
             to: [
                 "#activity",
+                "#appmgr",
                 "#debug_serial",
                 "#detect",
                 "#font_provider",
@@ -238,6 +249,7 @@
                 "#pkg-cache",
                 "#remote-control",
                 "#sampler",
+                "#session-manager",
                 "#system-update-committer",
                 "#temperature-logger",
                 "#test_manager",
@@ -453,6 +465,36 @@
                 "#remote-control",
             ],
         },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#session-manager" ],
+            subdir: "session_manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: [ "#session-manager" ],
+            subdir: "class/input-report",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys2.Realm",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input2.Keyboard",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.lifecycle.LifecycleController",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#appmgr",
+            to: [ "#session-manager" ],
+        },
     ],
     expose: [
         // Non-zircon services for svchost
@@ -487,6 +529,10 @@
             from: "#appmgr",
         },
         {
+            protocol: [ "fuchsia.sessionmanager.Startup" ],
+            from: "#session-manager",
+        },
+        {
             protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
             from: "#detect",
         },
@@ -508,6 +554,17 @@
     environments: [
         {
             name: "test-manager-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "universe-resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "#universe-resolver",
+                },
+            ],
+        },
+        {
+            name: "session-manager-env",
             extends: "realm",
             resolvers: [
                 {

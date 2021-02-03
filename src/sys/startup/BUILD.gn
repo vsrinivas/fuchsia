@@ -12,6 +12,7 @@ executable("startup") {
 
   deps = [
     "//sdk/lib/fdio",
+    "//src/session/fidl/fuchsia.sessionmanager:fuchsia.sessionmanager_llcpp",
     "//src/sys/appmgr/fidl/fuchsia.appmgr:fuchsia.appmgr_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",

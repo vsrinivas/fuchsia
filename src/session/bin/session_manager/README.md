@@ -18,12 +18,6 @@ In general, running manually is useful during development, while running on boot
 
 ### Running manually
 
-Manually run `session_manager` from the command line on your workstation:
-
-```
-$ fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm
-```
-
 Use the [`session_control`](/src/session/tools/session_control/README.md) tool to run a specific session. For example:
 
 ```

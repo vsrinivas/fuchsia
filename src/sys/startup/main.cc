@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/appmgr/llcpp/fidl.h>
+#include <fuchsia/sessionmanager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -21,13 +22,17 @@
  * startup is not a child of the `core` component because that component is
  * itself stored in pkgfs, which may not be included in the build.
  *
+ * NOTE: this component also starts `session_manager` for the same reasons
+ * stated above.
+ *
  * startup works by using a capability routed to it from `appmgr`. startup
  * connects to this capability, tries to send a request, and exits. Success or
  * failure of the request is irrelevant, startup is just making the component
  * manager resolve and start `appmgr`, if it is present.
  */
 
-int main() {
+namespace {
+void start_appmgr() {
   async::Loop loop((async::Loop(&kAsyncLoopConfigAttachToCurrentThread)));
   zx::channel remote;
   zx::channel local;
@@ -40,11 +45,36 @@ int main() {
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
     // This failed, presumably appmgr is not available.
-    return 0;
+    return;
   }
 
   llcpp::fuchsia::appmgr::Startup::SyncClient client(std::move(local));
   client.LaunchAppmgr();
+}
+
+void start_session_manager() {
+  zx::channel remote;
+  zx::channel local;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    exit(-1);
+  }
+  auto path = fbl::String("/svc/fuchsia.sessionmanager.Startup");
+
+  status = fdio_service_connect(path.data(), remote.release());
+  if (status != ZX_OK) {
+    // This failed, presumably session_manager is not available.
+    return;
+  }
+
+  llcpp::fuchsia::sessionmanager::Startup::SyncClient client(std::move(local));
+  client.LaunchSessionManager();
+}
+}  // namespace
+
+int main() {
+  start_appmgr();
+  start_session_manager();
   // We ignore the result here. A failure probably indicates we're running on a
   // config that doesn't include appmgr.
   //

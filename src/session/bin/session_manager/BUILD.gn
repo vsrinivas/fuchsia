@@ -46,6 +46,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/session/fidl/fuchsia.sessionmanager:fuchsia.sessionmanager-rustc",
     "//src/session/lib/realm_management",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
@@ -104,10 +105,4 @@ fuchsia_unittest_package("session_manager_tests") {
       max_severity = "ERROR"
     }
   }
-}
-
-config_data("session_manager.config") {
-  for_pkg = "sysmgr"
-  sources = [ "//src/session/bin/session_manager/meta/session_manager.config" ]
-  outputs = [ "session_manager.config" ]
 }

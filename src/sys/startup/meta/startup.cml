@@ -6,7 +6,10 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [ "fuchsia.appmgr.Startup" ],
+            protocol: [
+                "fuchsia.appmgr.Startup",
+                "fuchsia.sessionmanager.Startup",
+            ],
         },
     ],
 }
