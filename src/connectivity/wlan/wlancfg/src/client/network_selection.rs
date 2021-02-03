@@ -265,7 +265,7 @@ async fn load_saved_networks(
             if recent_failure_count > 0 { " with some failures" } else { "" }
         );
         // We allow networks saved as WPA to be also used as WPA2 or WPA2 to be used for WPA3
-        if let Some(security_type) = upgrade_security(&saved_network.security_type) {
+        for security_type in upgrade_security(&saved_network.security_type) {
             networks.insert(
                 types::NetworkIdentifier { ssid: saved_network.ssid.clone(), type_: security_type },
                 InternalSavedNetworkData {
@@ -274,7 +274,7 @@ async fn load_saved_networks(
                     recent_failure_count: recent_failure_count,
                 },
             );
-        };
+        }
         networks.insert(
             types::NetworkIdentifier {
                 ssid: saved_network.ssid,
@@ -290,11 +290,16 @@ async fn load_saved_networks(
     networks
 }
 
-fn upgrade_security(security: &config_management::SecurityType) -> Option<types::SecurityType> {
+/// Return the security types of scan results that could match the provided security type of a
+/// saved network config. For example, a network config saved as WPA could be used to connect to
+/// a network seen as WPA2 or WPA3 in addition to WPA.
+fn upgrade_security(security: &config_management::SecurityType) -> Vec<types::SecurityType> {
     match security {
-        config_management::SecurityType::Wpa => Some(types::SecurityType::Wpa2),
-        config_management::SecurityType::Wpa2 => Some(types::SecurityType::Wpa3),
-        _ => None,
+        config_management::SecurityType::Wpa => {
+            vec![types::SecurityType::Wpa2, types::SecurityType::Wpa3]
+        }
+        config_management::SecurityType::Wpa2 => vec![types::SecurityType::Wpa3],
+        _ => Vec::new(),
     }
 }
 
@@ -720,14 +725,19 @@ mod tests {
                 recent_failure_count: 1,
             },
         );
-        // Networks saved as WPA can be used to auto connect to WPA2 networks
+        // Networks saved as WPA can be used to auto connect to WPA2 and WPA3 networks
+        let internal_data = InternalSavedNetworkData {
+            credential: credential_2,
+            has_ever_connected: false,
+            recent_failure_count: 1,
+        };
         expected_hashmap.insert(
-            types::NetworkIdentifier { ssid: ssid_2, type_: types::SecurityType::Wpa2 },
-            InternalSavedNetworkData {
-                credential: credential_2,
-                has_ever_connected: false,
-                recent_failure_count: 1,
-            },
+            types::NetworkIdentifier { ssid: ssid_2.clone(), type_: types::SecurityType::Wpa2 },
+            internal_data.clone(),
+        );
+        expected_hashmap.insert(
+            types::NetworkIdentifier { ssid: ssid_2, type_: types::SecurityType::Wpa3 },
+            internal_data,
         );
         let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
         assert_eq!(networks, expected_hashmap);
@@ -1717,12 +1727,13 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn find_best_connection_candidate_wpa_wpa2() {
+    #[test]
+    fn find_best_connection_candidate_wpa_wpa2() {
         // Check that if we see a WPA2 network and have WPA and WPA3 credentials saved for it, we
         // could choose the WPA credential but not the WPA3 credential. In other words we can
         // upgrade saved networks to higher security but not downgrade.
-        let test_values = test_setup().await;
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 
         // Save networks with WPA and WPA3 security, same SSIDs, and different passwords.
@@ -1730,42 +1741,37 @@ mod tests {
         let wpa_network_id =
             types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa };
         let credential = Credential::Password("foo_password".as_bytes().to_vec());
-        test_values
-            .saved_network_manager
-            .store(wpa_network_id.clone().into(), credential.clone())
-            .await
-            .expect("Failed to save network");
+        exec.run_singlethreaded(
+            test_values
+                .saved_network_manager
+                .store(wpa_network_id.clone().into(), credential.clone()),
+        )
+        .expect("Failed to save network");
         let wpa3_network_id =
             types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa3 };
         let wpa3_credential = Credential::Password("wpa3_only_password".as_bytes().to_vec());
-        test_values
-            .saved_network_manager
-            .store(wpa3_network_id.clone().into(), wpa3_credential.clone())
-            .await
-            .expect("Failed to save network");
+        exec.run_singlethreaded(
+            test_values
+                .saved_network_manager
+                .store(wpa3_network_id.clone().into(), wpa3_credential.clone()),
+        )
+        .expect("Failed to save network");
 
         // Record passive connects so that the test will not active scan.
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                wpa_network_id.clone().into(),
-                &credential,
-                fidl_sme::ConnectResultCode::Success,
-                Some(fidl_common::ScanType::Passive),
-            )
-            .await;
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                wpa3_network_id.clone().into(),
-                &wpa3_credential,
-                fidl_sme::ConnectResultCode::Success,
-                Some(fidl_common::ScanType::Passive),
-            )
-            .await;
+        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
+            wpa_network_id.clone().into(),
+            &credential,
+            fidl_sme::ConnectResultCode::Success,
+            Some(fidl_common::ScanType::Passive),
+        ));
+        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
+            wpa3_network_id.clone().into(),
+            &wpa3_credential,
+            fidl_sme::ConnectResultCode::Success,
+            Some(fidl_common::ScanType::Passive),
+        ));
 
-        // Feed scans with WPA2 and WPA3 results to network selector, as we should get if a
-        // WPA2/WPA3 network was seen.
+        // Feed scans with a WPA2 network that the WPA config could be matched with.
         let id = types::NetworkIdentifier { ssid: ssid, type_: types::SecurityType::Wpa2 };
         let mixed_scan_results = vec![types::ScanResult {
             id: id.clone(),
@@ -1777,29 +1783,112 @@ mod tests {
             compatibility: types::Compatibility::Supported,
         }];
         let mut updater = network_selector.generate_scan_result_updater();
-        updater.update_scan_results(&mixed_scan_results).await;
+        exec.run_singlethreaded(updater.update_scan_results(&mixed_scan_results));
 
-        // Check that we choose the config saved as WPA2
-        assert_eq!(
-            network_selector
-                .find_best_connection_candidate(test_values.iface_manager.clone(), &vec![])
-                .await,
-            Some(types::ConnectionCandidate {
-                network: id.clone(),
-                credential,
-                bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
-                observed_in_passive_scan: Some(
-                    mixed_scan_results[0].entries[0].observed_in_passive_scan
-                ),
-                multiple_bss_candidates: Some(false),
-            })
+        // Check that we choose the config saved as WPA
+        let ignore_list = Vec::new();
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut network_selection_fut),
+            Poll::Ready(Some(connection_candidate)) => {
+                let expected_candidate = types::ConnectionCandidate {
+                    network: id.clone(),
+                    credential,
+                    bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
+                    observed_in_passive_scan: Some(
+                        mixed_scan_results[0].entries[0].observed_in_passive_scan
+                    ),
+                    multiple_bss_candidates: Some(false),
+                };
+                assert_eq!(connection_candidate, expected_candidate);
+            }
         );
-        assert_eq!(
-            network_selector
-                .find_best_connection_candidate(test_values.iface_manager, &vec![id])
-                .await,
-            None
+
+        // If the best network ID is ignored, there is no best connection candidate.
+        let ignore_list = vec![id];
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
+    }
+
+    #[test]
+    fn find_best_connection_candidate_wpa_wpa3() {
+        // Check that if we have credentials for a WPA network saved, we would upgrade to use them
+        // to connect to a WPA3 network seen in scans.
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+        let network_selector = test_values.network_selector;
+
+        // Save a network with WPA as the security type.
+        let ssid = "foo".as_bytes().to_vec();
+        let wpa_network_id =
+            types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa };
+        let credential = Credential::Password("foo_password".as_bytes().to_vec());
+        exec.run_singlethreaded(
+            test_values
+                .saved_network_manager
+                .store(wpa_network_id.clone().into(), credential.clone()),
+        )
+        .expect("Failed to save network");
+
+        // Record passive connects so that the test will not active scan.
+        exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
+            wpa_network_id.clone().into(),
+            &credential,
+            fidl_sme::ConnectResultCode::Success,
+            Some(fidl_common::ScanType::Passive),
+        ));
+
+        // Feed scans with a WPA3 network that the WPA config could upgrade to match.
+        let id = types::NetworkIdentifier { ssid: ssid, type_: types::SecurityType::Wpa3 };
+        let mixed_scan_results = vec![types::ScanResult {
+            id: id.clone(),
+            entries: vec![types::Bss {
+                compatible: true,
+                observed_in_passive_scan: false, // mark this as active, to avoid an additional scan
+                ..generate_random_bss()
+            }],
+            compatibility: types::Compatibility::Supported,
+        }];
+        let mut updater = network_selector.generate_scan_result_updater();
+        exec.run_singlethreaded(updater.update_scan_results(&mixed_scan_results));
+
+        // Set the scan cache's "updated_at" field to the future so that a scan won't be triggered.
+        {
+            let mut cache_guard =
+                exec.run_singlethreaded(network_selector.scan_result_cache.lock());
+            cache_guard.updated_at = zx::Time::get_monotonic() + zx::Duration::from_seconds(100);
+        }
+
+        // Check that we match the config saved as WPA and select the WPA3 network to connect to.
+        let ignore_list = Vec::new();
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut network_selection_fut),
+            Poll::Ready(Some(connection_candidate)) => {
+                let expected_candidate = types::ConnectionCandidate {
+                    network: id.clone(),
+                    credential,
+                    bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
+                    observed_in_passive_scan: Some(
+                        mixed_scan_results[0].entries[0].observed_in_passive_scan
+                    ),
+                    multiple_bss_candidates: Some(false),
+                };
+                assert_eq!(connection_candidate, expected_candidate);
+            }
         );
+        // If we ignore the best network ID, network selection will select nothing.
+        let ignore_list = vec![id];
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager, &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
     }
 
     #[test]
