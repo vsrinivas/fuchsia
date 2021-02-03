@@ -258,10 +258,10 @@ source_set("gfx") {
     # TODO(fxbug.dev/24590) Remove timings dependency when display_swapchain is pulled out.
     "//sdk/fidl/fuchsia.sysmem",
     "//src/ui/scenic/lib/scheduling:timings",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
-    "//zircon/third_party/rapidjson",
   ]
 }
 
