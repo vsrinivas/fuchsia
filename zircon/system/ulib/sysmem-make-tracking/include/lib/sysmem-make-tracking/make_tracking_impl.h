@@ -41,10 +41,10 @@ struct MakeTrackingImpl<
                             !fidl::IsTable<T>::value &&
                             // For cleaner error messages, this isn't for builders, which can't be
                             // default constructed anyway, so don't try for Builders.  Use
-                            // allocator->make_table_builder<Table>() instead.
+                            // allocator.make_table_builder<Table>() instead.
                             !fidl::IsTableBuilder<T>::value &&
-                            // Use allocator->make_vec_ptr<T>(...) instead, or
-                            // allocator->make_vec<>() then sysmem::MakeTracking(vector_view).
+                            // Use allocator.make_vec_ptr<T>(...) instead, or
+                            // allocator.make_vec<>() then sysmem::MakeTracking(vector_view).
                             !fidl::IsVectorView<T>::value>::type,
     T> {
  private:
@@ -52,8 +52,8 @@ struct MakeTrackingImpl<
   using MutableT = typename std::remove_const<TNoRef>::type;
 
  public:
-  static fidl::tracking_ptr<MutableT> MakeTrackingImplFunc(fidl::Allocator* allocator) {
-    return allocator->make<MutableT>();
+  static fidl::tracking_ptr<MutableT> MakeTrackingImplFunc(fidl::Allocator& allocator) {
+    return allocator.make<MutableT>();
   }
 };
 
@@ -61,7 +61,7 @@ struct MakeTrackingImpl<
 //
 // This handles MakeTracking<Table>() separately (vs above).  MakeTracking<Table>() creates an empty
 // Table that has a Frame, which is useful for incremental building of a table field of a builder.
-// In contrast, default construction of a Table and allocator->make<Table>() each create an empty
+// In contrast, default construction of a Table and allocator.make<Table>() each create an empty
 // table that does not have a Frame (so far).
 template <typename Table>
 struct MakeTrackingImpl<typename std::enable_if<fidl::IsTable<
@@ -72,9 +72,9 @@ struct MakeTrackingImpl<typename std::enable_if<fidl::IsTable<
   using MutableTable = typename std::remove_const<TableNoRef>::type;
 
  public:
-  static fidl::tracking_ptr<MutableTable> MakeTrackingImplFunc(fidl::Allocator* allocator) {
+  static fidl::tracking_ptr<MutableTable> MakeTrackingImplFunc(fidl::Allocator& allocator) {
     // This results in a tracking_ptr<> to a Table with a Frame set, where Table.IsEmpty().
-    return allocator->make<MutableTable>(allocator->make_table_builder<MutableTable>().build());
+    return allocator.make<MutableTable>(allocator.make_table_builder<MutableTable>().build());
   }
 };
 
@@ -89,8 +89,8 @@ struct MakeTrackingImpl<
   using TNoC = typename std::remove_const<T>::type;
 
  public:
-  static fidl::tracking_ptr<TNoC> MakeTrackingImplFunc(fidl::Allocator* allocator, TNoC arg) {
-    return allocator->make<TNoC>(std::move(arg));
+  static fidl::tracking_ptr<TNoC> MakeTrackingImplFunc(fidl::Allocator& allocator, TNoC arg) {
+    return allocator.make<TNoC>(std::move(arg));
   }
 };
 
@@ -112,9 +112,9 @@ struct MakeTrackingImpl<
   using TNoC = typename std::remove_const<T>::type;
 
  public:
-  static fidl::tracking_ptr<TNoC> MakeTrackingImplFunc(fidl::Allocator* allocator,
+  static fidl::tracking_ptr<TNoC> MakeTrackingImplFunc(fidl::Allocator& allocator,
                                                        const TNoC& arg) {
-    return allocator->make<TNoC>(arg);
+    return allocator.make<TNoC>(arg);
   }
 };
 
@@ -135,9 +135,9 @@ struct MakeTrackingImpl<typename std::enable_if<fidl::IsTable<
   using MutableTable = typename std::remove_const<TableNoRef>::type;
 
  public:
-  static fidl::tracking_ptr<MutableTable> MakeTrackingImplFunc(fidl::Allocator* allocator,
+  static fidl::tracking_ptr<MutableTable> MakeTrackingImplFunc(fidl::Allocator& allocator,
                                                                TableNoRef table) {
-    return allocator->make<MutableTable>(std::forward<TableNoRef>(table));
+    return allocator.make<MutableTable>(std::forward<TableNoRef>(table));
   }
 };
 
@@ -159,7 +159,7 @@ struct MakeTrackingImpl<
   static_assert(!std::is_pointer<Table>::value);
 
  public:
-  static fidl::tracking_ptr<Table> MakeTrackingImplFunc(fidl::Allocator* allocator,
+  static fidl::tracking_ptr<Table> MakeTrackingImplFunc(fidl::Allocator& allocator,
                                                         typename Table::Builder builder) {
     return MakeTrackingImpl<void, Table, Table>::MakeTrackingImplFunc(allocator, builder.build());
   }
@@ -180,8 +180,8 @@ struct MakeTrackingImpl<typename std::enable_if<IsMakeableNonArray<
                             typename std::remove_reference<T>::type>::value>::type,
                         fidl::VectorView<T>, fidl::VectorView<T>> {
   static fidl::tracking_ptr<fidl::VectorView<T>> MakeTrackingImplFunc(
-      fidl::Allocator* allocator, fidl::VectorView<T>&& vector_view) {
-    return allocator->make<fidl::VectorView<T>>(std::move(vector_view));
+      fidl::Allocator& allocator, fidl::VectorView<T>&& vector_view) {
+    return allocator.make<fidl::VectorView<T>>(std::move(vector_view));
   }
 };
 

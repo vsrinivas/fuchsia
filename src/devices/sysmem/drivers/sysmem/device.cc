@@ -484,7 +484,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
             // heap restart.
             device_->allocators_[heap_] = std::make_unique<ExternalMemoryAllocator>(
                 device_, std::move(*heap_client_), std::move(wait_for_close_),
-                sysmem::V2CloneHeapProperties(&device_->fidl_allocator_, event->properties));
+                sysmem::V2CloneHeapProperties(device_->fidl_allocator_, event->properties));
           }
 
           void Unbound(fidl::UnbindInfo info) override {
@@ -570,7 +570,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           // Should be impossible for this to fail for now.
           ZX_ASSERT(status == ZX_OK);
           LOG(DEBUG,
-              "allocator->GetPhysicalMemoryInfo() heap_type: %08lx base: %016" PRIx64
+              "allocator.GetPhysicalMemoryInfo() heap_type: %08lx base: %016" PRIx64
               " size: %016" PRIx64,
               static_cast<uint64_t>(heap_type), base, size);
 

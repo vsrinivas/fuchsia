@@ -43,7 +43,7 @@ namespace sysmem {
 //
 // If making a Table::Builder, see fidl::Allocator::make_table_builder<Table>().
 template <typename T = void, typename... Args>
-auto MakeTracking(fidl::Allocator* allocator, Args&&... args) {
+auto MakeTracking(fidl::Allocator& allocator, Args&&... args) {
   return internal::MakeTrackingImpl<void, T, Args...>::MakeTrackingImplFunc(
       allocator, std::forward<Args>(args)...);
 }

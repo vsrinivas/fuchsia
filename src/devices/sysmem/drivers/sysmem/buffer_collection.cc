@@ -210,7 +210,7 @@ zx_status_t BufferCollection::SetConstraints(
   ZX_DEBUG_ASSERT(has_constraints == !!local_constraints);
   {  // scope result
     auto result = sysmem::V2CopyFromV1BufferCollectionConstraints(
-        &allocator_, local_constraints ? &local_constraints.value() : nullptr,
+        allocator_, local_constraints ? &local_constraints.value() : nullptr,
         constraints_aux_buffers_ ? &constraints_aux_buffers_.value() : nullptr);
     if (!result.is_ok()) {
       parent_->LogClientError(FROM_HERE, &debug_info_,
@@ -231,7 +231,7 @@ zx_status_t BufferCollection::SetConstraints(
     if (local_constraints) {
       source_buffer_usage = &local_constraints.value().usage;
     }
-    auto result = sysmem::V2CopyFromV1BufferUsage(&allocator_, *source_buffer_usage);
+    auto result = sysmem::V2CopyFromV1BufferUsage(allocator_, *source_buffer_usage);
     if (!result.is_ok()) {
       parent_->LogClientError(FROM_HERE, &debug_info_, "V2CopyFromV1BufferUsage failed");
       // Not expected given current impl of sysmem-version.
@@ -421,7 +421,7 @@ fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo>
 BufferCollection::CloneResultForSendingV2(
     const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
   auto clone_result = sysmem::V2CloneBufferCollectionInfo(
-      &allocator_, buffer_collection_info, GetClientVmoRights(), GetClientAuxVmoRights());
+      allocator_, buffer_collection_info, GetClientVmoRights(), GetClientAuxVmoRights());
   if (!clone_result.is_ok()) {
     FailAsync(clone_result.error(),
               "CloneResultForSendingV1() V2CloneBufferCollectionInfo() failed - status: %d",
