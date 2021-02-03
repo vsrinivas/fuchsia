@@ -18,6 +18,16 @@
 namespace devmgr {
 namespace {
 
+// Setting for the maximum bytes to allow a partition to grow to.
+struct PartitionLimit {
+  // When unset, this limit will apply only to non-ramdisk devices. See
+  // Config::kApplyLimitsToRamdisk.
+  bool apply_to_ramdisk = false;
+
+  // Partition max size in bytes, 0 means "no limit".
+  uint64_t max_bytes = 0;
+};
+
 // Splits the path into a directory and the last component.
 std::pair<std::string_view, std::string_view> SplitPath(std::string_view path) {
   size_t separator = path.rfind('/');
@@ -115,19 +125,23 @@ class PartitionMapMatcher : public ContentMatcher {
   const bool ramdisk_required_;
 };
 
+// Extracts the path that the FVM driver responds to FIDL requests at given the PartitionMapMatcher
+// for the path.
+std::string GetFvmPathForPartitionMap(const PartitionMapMatcher& matcher) {
+  return matcher.path() + "/fvm";
+}
+
 // Matches a partition with a given name and expected type GUID.
 class SimpleMatcher : public BlockDeviceManager::Matcher {
  public:
-  // The max_nonram_size is the maximum partition size when launched on a "real" (non-ramdisk) block
-  // device. Pass 0 for this value to disable max partition size limits.
   SimpleMatcher(PartitionMapMatcher& map, std::string partition_name,
                 const fuchsia_hardware_block_partition_GUID& type_guid, disk_format_t format,
-                uint64_t max_nonram_size = 0)
+                PartitionLimit limit)
       : map_(map),
         partition_name_(partition_name),
         type_guid_(type_guid),
         format_(format),
-        max_nonram_size_(max_nonram_size) {}
+        limit_(limit) {}
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
     if (map_.IsChild(device) && device.partition_name() == partition_name_ &&
@@ -139,10 +153,13 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
-    if (max_nonram_size_ && !IsRamdisk(device)) {
-      // Set the max size for this partition in FVM. Ignore failures since the max size is
-      // mostly a guard rail against bad behavior and we can still function.
-      [[maybe_unused]] auto status = device.SetPartitionMaxSize(map_.path(), max_nonram_size_);
+    if (limit_.max_bytes) {
+      if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
+        // Set the max size for this partition in FVM. Ignore failures since the max size is
+        // mostly a guard rail against bad behavior and we can still function.
+        [[maybe_unused]] auto status =
+            device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+      }
     }
     return device.Add();
   }
@@ -152,7 +169,7 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
   const std::string partition_name_;
   const fuchsia_hardware_block_partition_GUID type_guid_;
   const disk_format_t format_;
-  const uint64_t max_nonram_size_;  // 0 means no limit.
+  const PartitionLimit limit_;
 };
 
 // Matches a data partition, which is a Minfs partition backed by zxcrypt.
@@ -177,12 +194,12 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
 
   MinfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
                const fuchsia_hardware_block_partition_GUID& type_guid, Variant variant,
-               uint64_t max_nonram_size = 0)
+               PartitionLimit limit)
       : map_(map),
         partition_names_(std::move(partition_names)),
         type_guid_(type_guid),
         variant_(variant),
-        max_nonram_size_(max_nonram_size) {}
+        limit_(limit) {}
 
   static Variant GetVariantFromConfig(const Config& config) {
     Variant variant;
@@ -219,11 +236,14 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
-    if (max_nonram_size_ && !IsRamdisk(device)) {
-      // Set the max size for this partition in FVM. This is not persisted so we need to set it
-      // every time on mount. Ignore failures since the max size is mostly a guard rail against bad
-      // behavior and we can still function.
-      [[maybe_unused]] auto status = device.SetPartitionMaxSize(map_.path(), max_nonram_size_);
+    if (limit_.max_bytes) {
+      if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
+        // Set the max size for this partition in FVM. This is not persisted so we need to set it
+        // every time on mount. Ignore failures since the max size is mostly a guard rail against
+        // bad behavior and we can still function.
+        [[maybe_unused]] auto status =
+            device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+      }
     }
 
     // If the volume doesn't appear to be zxcrypt, assume that it's because it was never formatted
@@ -267,7 +287,7 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   const PartitionNames partition_names_;
   const fuchsia_hardware_block_partition_GUID type_guid_;
   const Variant variant_;
-  const uint64_t max_nonram_size_;
+  const PartitionLimit limit_;
 
   std::string expected_inner_path_;
   // If we reformat the zxcrypt device, this flag is set so that we know we should reformat the
@@ -347,8 +367,13 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
   bool gpt_required = config_.is_set(Config::kGpt) || config_.is_set(Config::kGptAll);
   bool fvm_required = config_.is_set(Config::kFvm);
 
-  uint64_t blobfs_nonram_max_bytes = config_.ReadUint64OptionValue(Config::kBlobfsMaxBytes, 0);
-  uint64_t minfs_nonram_max_bytes = config_.ReadUint64OptionValue(Config::kMinfsMaxBytes, 0);
+  // Maximum partition limits. The limits only apply to physical devices (not ramdisks) unless
+  // apply_limits_to_ramdisk is set.
+  PartitionLimit blobfs_limit{
+      .apply_to_ramdisk = config_.is_set(Config::kApplyLimitsToRamdisk),
+      .max_bytes = config_.ReadUint64OptionValue(Config::kBlobfsMaxBytes, 0)};
+  PartitionLimit minfs_limit{.apply_to_ramdisk = config_.is_set(Config::kApplyLimitsToRamdisk),
+                             .max_bytes = config_.ReadUint64OptionValue(Config::kMinfsMaxBytes, 0)};
 
   if (!config_.is_set(Config::kNetboot)) {
     // GPT partitions:
@@ -357,7 +382,7 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
           GPT_DURABLE_TYPE_GUID;
       matchers_.push_back(std::make_unique<MinfsMatcher>(
           *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, durable_type_guid,
-          MinfsMatcher::GetVariantFromConfig(config_)));
+          MinfsMatcher::GetVariantFromConfig(config_), PartitionLimit()));
       gpt_required = true;
     }
     if (config_.is_set(Config::kFactory)) {
@@ -368,14 +393,14 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
     // FVM partitions:
     if (config_.is_set(Config::kBlobfs)) {
       static constexpr fuchsia_hardware_block_partition_GUID blobfs_type_guid = GUID_BLOB_VALUE;
-      matchers_.push_back(std::make_unique<SimpleMatcher>(
-          *fvm, "blobfs", blobfs_type_guid, DISK_FORMAT_BLOBFS, blobfs_nonram_max_bytes));
+      matchers_.push_back(std::make_unique<SimpleMatcher>(*fvm, "blobfs", blobfs_type_guid,
+                                                          DISK_FORMAT_BLOBFS, blobfs_limit));
       fvm_required = true;
     }
     if (config_.is_set(Config::kMinfs)) {
-      matchers_.push_back(std::make_unique<MinfsMatcher>(
-          *fvm, GetMinfsPartitionNames(), minfs_type_guid,
-          MinfsMatcher::GetVariantFromConfig(config_), minfs_nonram_max_bytes));
+      matchers_.push_back(
+          std::make_unique<MinfsMatcher>(*fvm, GetMinfsPartitionNames(), minfs_type_guid,
+                                         MinfsMatcher::GetVariantFromConfig(config_), minfs_limit));
       fvm_required = true;
     }
   }
@@ -393,7 +418,7 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
         matchers_.push_back(std::make_unique<MinfsMatcher>(
             *non_ramdisk_fvm, GetMinfsPartitionNames(), minfs_type_guid,
             MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly},
-            minfs_nonram_max_bytes));
+            minfs_limit));
       }
     }
     matchers_.push_back(std::move(fvm));

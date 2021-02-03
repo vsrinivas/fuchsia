@@ -28,6 +28,7 @@ static_library("fvm") {
   ]
 
   deps = [
+    "//src/lib/uuid",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -80,6 +81,7 @@ test("fvm_unit") {
   ]
 
   deps = [
+    "//src/lib/uuid",
     "//src/storage/fvm",
     "//zircon/public/lib/zxtest",
   ]

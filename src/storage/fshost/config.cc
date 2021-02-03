@@ -10,6 +10,83 @@
 
 namespace devmgr {
 
+// Normally the partition limits (minfs-max-bytes and blofs-max-bytes) apply only to non-ramdisk
+// devices. This is to prevent device hardware configuration from leaking into ramdisk uses.
+// When present, this flag makes them apply to all partitions of the corresponding type (this use
+// used for tests).
+const char Config::kApplyLimitsToRamdisk[] = "apply-limits-to-ramdisk";
+
+// When set, allows zxcrypt to attach and unseal minfs partitions not in a ram-disk (but don't
+// mount).
+const char Config::kAttachZxcryptToNonRamdisk[] = "zxcrypt-non-ramdisk";
+
+// Enables blobfs partitions.
+const char Config::kBlobfs[] = "blobfs";
+
+// Maximum number of bytes a blobfs partition can grow to. This applies only to non-ramdisk
+// partitions unless "apply-limits-to-ramdisk" is set.
+const char Config::kBlobfsMaxBytes[] = "blobfs-max-bytes";
+
+// Enables bootpart partitions.
+const char Config::kBootpart[] = "bootpart";
+
+// Enables checking filesystems before mounting (if supported).
+const char Config::kCheckFilesystems[] = "check-filesystems";
+
+// Expands to default options. This will overwrite any previously-set options that have default
+// values, so the order this appears in the file matters. Normally this would be the first line.
+const char Config::kDefault[] = "default";
+
+// Enables the durable partition (small partition of settings that survives factory resets).
+const char Config::kDurable[] = "durable";
+
+// Enables the factory partition (small partition of settings set in the factory and never written
+// to otherwise).
+const char Config::kFactory[] = "factory";
+
+// Automatically formats minfs if it is found to be corrupted.
+const char Config::kFormatMinfsOnCorruption[] = "format-minfs-on-corruption";
+
+// Enables a single FVM device.
+const char Config::kFvm[] = "fvm";
+
+// FVM is in a ram-disk, thus minfs doesn't require zxcrypt.
+const char Config::kFvmRamdisk[] = "fvm-ramdisk";
+
+// Enables a single GPT device.
+const char Config::kGpt[] = "gpt";
+
+// Enables all GPT devices.
+const char Config::kGptAll[] = "gpt-all";
+
+// Enables MBR devices.
+const char Config::kMbr[] = "mbr";
+
+// Enables minfs partition.
+const char Config::kMinfs[] = "minfs";
+
+// Maximum number of bytes a minfs partition can grow to. This applies only to non-ramdisk
+// partitions unless "apply-limits-to-ramdisk" is set.
+const char Config::kMinfsMaxBytes[] = "minfs-max-bytes";
+
+// Disables everything except fvm, gpt and bootpart.
+const char Config::kNetboot[] = "netboot";
+
+// Disables zxcrypt for minfs partitions.
+const char Config::kNoZxcrypt[] = "no-zxcrypt";
+
+// Perform decompression in a sandboxed component.
+const char Config::kSandboxDecompression[] = "sandbox-decompression";
+
+// Use the default loader rather than a custom one.
+const char Config::kUseDefaultLoader[] = "use-default-loader";
+
+// Use syslog rather than debug-log.
+const char Config::kUseSyslog[] = "use-syslog";
+
+// Wait for data before launching pkgfs.
+const char Config::kWaitForData[] = "wait-for-data";
+
 Config::Options Config::ReadOptions(std::istream& stream) {
   Options options;
   for (std::string line; std::getline(stream, line);) {

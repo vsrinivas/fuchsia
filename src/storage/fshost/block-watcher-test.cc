@@ -22,7 +22,7 @@
 #include "mock-block-device.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
-#include "src/storage/fshost/fshost_integration_test_fixture.h"
+#include "src/storage/fshost/fshost_integration_test.h"
 
 namespace devmgr {
 namespace {

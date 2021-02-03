@@ -6,10 +6,12 @@
 
 #include <zircon/errors.h>
 
+#include <sstream>
 #include <string_view>
 
 #include <zxtest/zxtest.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/fvm/fvm.h"
 
 namespace fvm {
@@ -271,6 +273,44 @@ TEST(VPartitionEntry, StringFromArray) {
   str = VPartitionEntry::StringFromArray(buf);
   ASSERT_EQ(kLen, str.size());
   EXPECT_EQ("bbbbbbbb", str);
+}
+
+TEST(VPartitionEntry, ToString) {
+  std::stringstream out;
+
+  out << VPartitionEntry();
+  EXPECT_EQ(
+      "\"\" slices:0 flags:0 (act=1) type:00000000-0000-0000-0000-000000000000 "
+      "guid:00000000-0000-0000-0000-000000000000",
+      out.str());
+
+  uuid::Uuid type{0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0x06, 0x07,
+                  0x08, 0x09, 0x0a, 0X0b, 0X0c, 0X0d, 0X0e, 0X0f};
+  uuid::Uuid guid{0x11, 0x12, 0x13, 0x14, 0x14, 0x15, 0x16, 0x17,
+                  0x18, 0x19, 0x1a, 0X1b, 0X1c, 0X1d, 0X1e, 0X1f};
+
+  VPartitionEntry allocated(type.bytes(), guid.bytes(), 3, "my partition");
+  allocated.SetActive(true);
+
+  out.str(std::string());
+  out << allocated;
+  EXPECT_EQ(
+      "\"my partition\" slices:3 flags:0 (act=1) type:04030201-0504-0706-0809-0a0b0c0d0e0f "
+      "guid:14131211-1514-1716-1819-1a1b1c1d1e1f",
+      out.str());
+}
+
+TEST(SliceEntry, ToString) {
+  std::stringstream out;
+
+  out << SliceEntry();
+  EXPECT_EQ("SliceEntry(<free>)", out.str());
+
+  out.str(std::string());
+  SliceEntry used;
+  used.Set(12, 19);
+  out << used;
+  EXPECT_EQ("SliceEntry(vpartition=12, vslice=19)", out.str());
 }
 
 }  // namespace fvm

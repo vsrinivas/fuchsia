@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/zx/vmo.h>
-#include <sys/statfs.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
 
@@ -12,7 +11,7 @@
 
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
-#include "src/storage/fshost/fshost_integration_test_fixture.h"
+#include "src/storage/fshost/fshost_integration_test.h"
 
 namespace devmgr {
 namespace {
@@ -56,27 +55,8 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   auto ramdisk_or = isolated_devmgr::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
-  std::cout << "Waiting for data partition to be mounted" << std::endl;
-
-  // There is nothing we can watch so all we can do is loop until it appears.
-  for (;;) {
-    fidl::SynchronousInterfacePtr<fuchsia::io::Node> minfs_root;
-    zx_status_t status = exposed_dir()->Open(fuchsia::io::OPEN_RIGHT_READABLE, 0,
-                                             std::string("minfs"), minfs_root.NewRequest());
-    ASSERT_EQ(status, ZX_OK);
-
-    fbl::unique_fd fd;
-    ASSERT_EQ(
-        fdio_fd_create(minfs_root.Unbind().TakeChannel().release(), fd.reset_and_get_address()),
-        ZX_OK);
-
-    struct statfs buf;
-    ASSERT_EQ(fstatfs(fd.get(), &buf), 0);
-    if (buf.f_type == VFS_TYPE_MINFS)
-      break;
-
-    sleep(1);
-  }
+  // Minfs should be automatically mounted.
+  ASSERT_TRUE(WaitForMount("minfs", VFS_TYPE_MINFS));
 }
 
 }  // namespace

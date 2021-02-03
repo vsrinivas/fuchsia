@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <iosfwd>
 #include <limits>
 #include <string>
 #include <type_traits>
@@ -386,6 +387,9 @@ struct VPartitionEntry {
   uint8_t unsafe_name[fvm::kMaxVPartitionNameLength] = {0};
 };
 
+// Outputs a single-line description of the partition entry.
+std::ostream& operator<<(std::ostream& out, const VPartitionEntry& entry);
+
 static_assert(sizeof(VPartitionEntry) == 64, "Unchecked VPartitionEntry size change.");
 static_assert(std::is_standard_layout_v<VPartitionEntry>,
               "VPartitionEntry must be standard layout compilant and trivial.");
@@ -426,6 +430,9 @@ struct SliceEntry {
   // Packed entry, the format must remain obscure to the user.
   uint64_t data = 0u;
 };
+
+// Outputs a single-line description of the partition entry.
+std::ostream& operator<<(std::ostream& out, const SliceEntry& entry);
 
 static_assert(sizeof(SliceEntry) == 8, "Unchecked SliceEntry size change.");
 static_assert(std::is_standard_layout_v<SliceEntry>, "VSliceEntry must be standard layout.");

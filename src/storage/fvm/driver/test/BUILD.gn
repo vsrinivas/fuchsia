@@ -30,6 +30,13 @@ test("fvm-driver-integration") {
 isolated_devmgr_unittest_package("fvm-driver-integration-test") {
   executable_path = "test/fvm-driver-integration-test"
 
+  test_specs = {
+    log_settings = {
+      # Some of the API tests deliberately test the error cases that log.
+      max_severity = "ERROR"
+    }
+  }
+
   deps = [
     ":fvm-driver-integration",
     "//src/devices/block/drivers/core",

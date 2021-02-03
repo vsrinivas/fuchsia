@@ -12,10 +12,13 @@
 
 #include <zircon/assert.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/fvm/format.h"
 
 namespace fvm {
 namespace {
+
+static_assert(kGuidSize == uuid::kUuidSize, "Guid size doesn't match");
 
 // Used to check whether a given VPartitionEntry is flagged as an inactive partition.
 // This flags are a mirror of those exposed in the fidl interface. Since this code is used in host
@@ -285,6 +288,16 @@ void VPartitionEntry::SetActive(bool is_active) {
   }
 }
 
+std::ostream& operator<<(std::ostream& out, const VPartitionEntry& entry) {
+  // This is deliberately compact so it can be logged to the system log which has a max per-line
+  // length.
+  out << "\"" << entry.name() << "\" slices:" << entry.slices;
+  out << " flags:" << entry.flags << " (act=" << entry.IsActive() << ")";
+  out << " type:" << uuid::Uuid(entry.type).ToString();
+  out << " guid:" << uuid::Uuid(entry.guid).ToString();
+  return out;
+}
+
 SliceEntry::SliceEntry(uint64_t vpartition, uint64_t vslice) { Set(vpartition, vslice); }
 
 void SliceEntry::Set(uint64_t vpartition, uint64_t vslice) {
@@ -310,6 +323,13 @@ uint64_t SliceEntry::VPartition() const {
   uint64_t vpartition = (data & kVPartitionEntryMask);
   ZX_ASSERT_MSG(vpartition < kMaxVPartitions, "Slice assigned to Partition out of range.");
   return vpartition;
+}
+
+std::ostream& operator<<(std::ostream& out, const SliceEntry& entry) {
+  if (entry.IsFree())
+    return out << "SliceEntry(<free>)";
+  return out << "SliceEntry(vpartition=" << entry.VPartition() << ", vslice=" << entry.VSlice()
+             << ")";
 }
 
 }  // namespace fvm

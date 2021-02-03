@@ -187,6 +187,9 @@ class VPartitionManager : public ManagerDeviceType {
 
   zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command) const;
 
+  // Writes the current partition information out to the system log.
+  void LogPartitionsLocked() const TA_REQ(lock_);
+
   thrd_t initialization_thread_;
   std::atomic_bool initialization_thread_started_ = false;
   block_info_t info_;  // Cached info from parent device
