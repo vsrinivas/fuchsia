@@ -5,16 +5,20 @@
 import("//build/bind/bind.gni")
 import("//src/camera/debug.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":camera_controller_bind_test",
+    "sherlock:tests",
+    "test:tests",
+  ]
+}
+
 bind_rules("camera_controller_bind") {
   rules = "camera_controller.bind"
   output = "bind.h"
   tests = "bind_tests.json"
   deps = [ "//src/devices/bind/fuchsia.composite" ]
-}
-
-group("bind_test") {
-  testonly = true
-  deps = [ ":camera_controller_bind_test" ]
 }
 
 source_set("source") {

@@ -4,6 +4,12 @@
 
 import("//build/cipd.gni")
 import("//src/camera/drivers/controller/camera_controller_driver.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":sherlock_configs_unittest" ]
+}
 
 group("sherlock") {
   public_deps = [ ":sherlock-camera-controller" ]
@@ -54,5 +60,29 @@ camera_controller_driver("sherlock-camera-controller") {
       "watermark-480p.rgba",
       "watermark-720p.rgba",
     ]
+  }
+}
+
+executable("sherlock_configs_unittest_bin") {
+  testonly = true
+  sources = [ "configs_unittest.cc" ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/camera/drivers/controller/sherlock:config",
+    "//src/camera/drivers/controller/test:constants",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  # Increase the default stack size from 256 KB because creating the configs can take up a very
+  # large amount of stack and would otherwise cause crashes on ASAN builds.
+  ldflags = [ "-Wl,-z,stack-size=0x100000" ]
+}
+
+fuchsia_unittest_package("sherlock_configs_unittest") {
+  manifest = "meta/sherlock_configs_unittest.cmx"
+  deps = [ ":sherlock_configs_unittest_bin" ]
+  test_specs = {
+    # This is not necessary
+    environments = [ sherlock_env ]
   }
 }

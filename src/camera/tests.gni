@@ -4,23 +4,7 @@
 import("//build/testing/environments.gni")
 
 camera_tests = {
-  deps = [
-    "//src/camera/drivers/controller/sherlock/test",
-    "//src/camera/drivers/controller/test",
-  ]
+  deps = []
 
-  tests = [
-    {
-      name = "controller-test"
-      manifest = "//src/camera/drivers/controller/test/meta/controller-test.cmx"
-      environments = [ sherlock_env ]
-    },
-    {
-      name = "sherlock_configs_test"
-      manifest = "//src/camera/drivers/controller/sherlock/test/meta/sherlock_configs_test.cmx"
-      environments = [ sherlock_env ]
-    },
-
-    # Put additional camera tests here
-  ]
+  tests = []
 }

@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/controller-test"
+        "binary": "bin/controller_unittest_bin"
     },
     "sandbox": {
         "dev": [
