@@ -12,7 +12,7 @@ rustc_library("test-harness") {
   edition = "2018"
 
   deps = [
-    "//src/connectivity/bluetooth/lib/test-harness-macro",
+    "//src/connectivity/bluetooth/testing/test-harness-macro",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",

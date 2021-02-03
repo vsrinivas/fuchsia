@@ -14,7 +14,7 @@ rustc_test("tests_bin") {
   source_root = "src/lib.rs"
 
   deps = [
-    "//src/connectivity/bluetooth/lib/test-harness",
+    "//src/connectivity/bluetooth/testing/test-harness",
     "//third_party/rust_crates:anyhow",
   ]
 

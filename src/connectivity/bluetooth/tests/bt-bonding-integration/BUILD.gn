@@ -10,9 +10,9 @@ rustc_test("bt_bonding_integration_tests") {
   source_root = "src/lib.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
-    "//src/connectivity/bluetooth/lib/bt-test-harness",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/lib/test-harness",
+    "//src/connectivity/bluetooth/testing/bt-test-harness",
+    "//src/connectivity/bluetooth/testing/test-harness",
     "//third_party/rust_crates:anyhow",
   ]
 

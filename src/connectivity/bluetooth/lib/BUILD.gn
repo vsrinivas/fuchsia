@@ -15,7 +15,6 @@ group("lib") {
     "bt-profile-test-server",
     "bt-rfcomm",
     "bt-rfcomm:tests",
-    "bt-test-harness",
     "cpp-type",
     "cpp-type:tests",
     "fidl",
@@ -28,6 +27,5 @@ group("lib") {
     "fuchsia-bluetooth:tests",
     "packet-encoding",
     "packet-encoding:tests",
-    "test-harness",
   ]
 }

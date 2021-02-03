@@ -2,7 +2,7 @@
 
 Implementations of the `TestHarness` trait for common Bluetooth FIDL interfaces. These are useful for writing integration tests against the interfaces.
 
-See the [test-harness crate](/src/connectivity/bluetooth/lib/test-harness) for a description of the `TestHarness` trait.
+See the [test-harness crate](/src/connectivity/bluetooth/testing/test-harness) for a description of the `TestHarness` trait.
 
 » The typical structure of a harness file contains the following parts:
 For each harness, we typically include the following:
