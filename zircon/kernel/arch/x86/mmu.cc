@@ -721,11 +721,12 @@ zx_status_t X86ArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
   return pt_->HarvestAccessed(vaddr, count, accessed_callback);
 }
 
-zx_status_t X86ArchVmAspace::FreeUnaccessed(vaddr_t vaddr, size_t count) {
+zx_status_t X86ArchVmAspace::HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
+                                                        NonTerminalAction action) {
   if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return pt_->FreeUnaccessed(vaddr, count);
+  return pt_->HarvestNonTerminalAccessed(vaddr, count, action);
 }
 
 void x86_mmu_percpu_init(void) {

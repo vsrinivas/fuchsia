@@ -47,7 +47,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
                               const HarvestCallback& accessed_callback) override;
 
-  zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count) override;
+  zx_status_t HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
+                                         NonTerminalAction action) override;
 
   paddr_t arch_table_phys() const override { return tt_phys_; }
   uint16_t arch_asid() const { return asid_; }

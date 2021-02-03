@@ -221,7 +221,7 @@ X86PageTableBase::ConsistencyManager::~ConsistencyManager() {
   // support deferring invoking pmm_free() until after we've left the page
   // table lock.
   vm_page_t* p;
-  list_for_every_entry(&to_free_, p, vm_page_t, queue_node) {
+  list_for_every_entry (&to_free_, p, vm_page_t, queue_node) {
     DEBUG_ASSERT(p->state() == VM_PAGE_STATE_MMU);
   }
   if (!list_is_empty(&to_free_)) {
@@ -891,7 +891,8 @@ zx_status_t X86PageTableBase::UpdateMappingL0(volatile pt_entry_t* table, uint m
     pt_entry_t pt_val = *e;
     // Skip unmapped pages (we may encounter these due to demand paging)
     if (IS_PAGE_PRESENT(pt_val)) {
-      UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, paddr_from_pte(PageTableLevel::PT_L, pt_val), term_flags,
+      UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e,
+                  paddr_from_pte(PageTableLevel::PT_L, pt_val), term_flags,
                   /*was_terminal=*/true);
     }
 
@@ -990,7 +991,8 @@ zx_status_t X86PageTableBase::HarvestMappingL0(volatile pt_entry_t* table,
       const uint mmu_flags = pt_flags_to_mmu_flags(pt_val, PageTableLevel::PT_L);
       const PtFlags term_flags = terminal_flags(PageTableLevel::PT_L, mmu_flags);
       if (accessed_callback(paddr, new_cursor->vaddr(), mmu_flags)) {
-        UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, paddr_from_pte(PageTableLevel::PT_L, pt_val), term_flags,
+        UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e,
+                    paddr_from_pte(PageTableLevel::PT_L, pt_val), term_flags,
                     /*was_terminal=*/true, /*exact_flags=*/true);
       }
     }
@@ -1002,9 +1004,11 @@ zx_status_t X86PageTableBase::HarvestMappingL0(volatile pt_entry_t* table,
   return ZX_OK;
 }
 
-bool X86PageTableBase::FreeUnaccessedPageTable(volatile pt_entry_t* table, PageTableLevel level,
-                                               const MappingCursor& start_cursor,
-                                               MappingCursor* new_cursor, ConsistencyManager* cm) {
+bool X86PageTableBase::HarvestNonTerminalPageTable(volatile pt_entry_t* table,
+                                                   NonTerminalAction action, PageTableLevel level,
+                                                   const MappingCursor& start_cursor,
+                                                   MappingCursor* new_cursor,
+                                                   ConsistencyManager* cm) {
   DEBUG_ASSERT(table);
   LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", static_cast<int>(level), start_cursor.vaddr(),
           start_cursor.size());
@@ -1062,13 +1066,17 @@ bool X86PageTableBase::FreeUnaccessedPageTable(volatile pt_entry_t* table, PageT
       }
 
       // Entry is accessed, we need to recurse and check for accessed bits at the next level.
-      lower_unmapped =
-          FreeUnaccessedPageTable(next_table, lower_level(level), *new_cursor, &cursor, cm);
-    } else {
+      lower_unmapped = HarvestNonTerminalPageTable(next_table, action, lower_level(level),
+                                                   *new_cursor, &cursor, cm);
+    } else if (action == NonTerminalAction::FreeUnaccessed) {
       lower_unmapped = RemoveMapping(next_table, lower_level(level), *new_cursor, &cursor, cm);
       // If we unmapped the entire next level then we can ignore lower_unmapped and just directly
       // assume that the whole page table is empty and that we can unmap it.
       unmap_page_table = page_aligned(level, new_cursor->vaddr()) && new_cursor->size() >= ps;
+    } else {
+      new_cursor->SkipEntry(level);
+      DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
+      continue;
     }
 
     // If there is uncertainty around whether the next page table is empty or not then we have to
@@ -1315,7 +1323,8 @@ zx_status_t X86PageTableBase::HarvestAccessed(vaddr_t vaddr, size_t count,
   return ZX_OK;
 }
 
-zx_status_t X86PageTableBase::FreeUnaccessed(vaddr_t vaddr, size_t count) {
+zx_status_t X86PageTableBase::HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
+                                                         NonTerminalAction action) {
   canary_.Assert();
 
   LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx\n", this, vaddr, count);
@@ -1332,7 +1341,7 @@ zx_status_t X86PageTableBase::FreeUnaccessed(vaddr_t vaddr, size_t count) {
   ConsistencyManager cm(this);
   {
     Guard<Mutex> a{&lock_};
-    FreeUnaccessedPageTable(virt_, top_level(), start, &result, &cm);
+    HarvestNonTerminalPageTable(virt_, action, top_level(), start, &result, &cm);
     cm.Finish();
   }
   DEBUG_ASSERT(result.size() == 0);

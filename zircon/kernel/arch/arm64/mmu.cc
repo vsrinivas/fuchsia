@@ -1366,13 +1366,20 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
   return ZX_OK;
 }
 
-zx_status_t ArmArchVmAspace::FreeUnaccessed(vaddr_t vaddr, size_t count) {
+zx_status_t ArmArchVmAspace::HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
+                                                        NonTerminalAction action) {
   canary_.Assert();
   LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
   DEBUG_ASSERT(tt_virt_);
 
   DEBUG_ASSERT(IsValidVaddr(vaddr));
+
+  // As ARM does not have non-terminal accessed flags, if not freeing then there's nothing to be
+  // done.
+  if (action == NonTerminalAction::Retain) {
+    return ZX_OK;
+  }
 
   if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_INVALID_ARGS;

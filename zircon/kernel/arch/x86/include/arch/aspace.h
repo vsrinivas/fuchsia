@@ -107,7 +107,8 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
                               const HarvestCallback& accessed_callback) override;
 
-  zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count) override;
+  zx_status_t HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
+                                         NonTerminalAction action) override;
 
   paddr_t arch_table_phys() const override { return pt_->phys(); }
   paddr_t pt_phys() const { return pt_->phys(); }
