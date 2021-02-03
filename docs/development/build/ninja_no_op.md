@@ -75,7 +75,19 @@ demonstration. Hard links (`ln` without `-s`), have the problem where multiple
 references point to the same filesystem object, and hence, have the same
 timestamp.
 
-_Avoid symlinks and hard-links as action inputs and outputs._
+Even a simple link action can cause issues. Consider a simple action with the
+input `src`, the output `$target_out_dir/dst`, and the invoked action being `ln
+src $target_out_dir/dst`. At face value this action converges correctly. But the
+behavior of `action()` may be overridden elsewhere in the build system, such as
+to wrap actions with other actions. As a result your inner action may not
+converge to no-op when `src` has an older timestamp than the wrapper action's
+script, which will then in turn be considered older than `dst` (its output,
+which carries the timestamp of the input). [copy()] doesn't suffer from the same
+problem because it's never wrapped.
+
+_Avoid symlinks and hard-links in action inputs and outputs._
+
+_For making copies, prefer the built-in [copy()] target._
 
 ### Timestamp granularity
 
@@ -227,3 +239,4 @@ command, and see if they fall in one of the categories of
 [common issues](#common-root-causes).
 
 [ninja#1186]: https://github.com/ninja-build/ninja/issues/1186
+[copy()]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_copy
