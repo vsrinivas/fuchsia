@@ -6,49 +6,16 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Driver development kit"
-  path: /docs/concepts/drivers/overview.md
 - title: "Getting started"
   path: /docs/concepts/drivers/getting_started.md
-- title: "Device model"
-  path: /docs/concepts/drivers/device-model.md
-- title: "Composite devices"
-  path: /docs/concepts/drivers/composite.md
-- title: "Device firmware"
-  path: /docs/concepts/drivers/firmware.md
-- title: "Device protocol"
-  path: /docs/concepts/drivers/device-ops.md
-- title: "Platform bus"
-  path: /docs/concepts/drivers/platform-bus.md
-- title: "Driver binding"
-  path: /docs/concepts/drivers/driver-binding.md
+- title: "Fuchsia Driver Framework"
+  path: /docs/concepts/drivers/fdf.md
+- title: "Device and driver model"
+  section:
+  - include: /docs/concepts/drivers/device_driver_model/_toc.yaml
 - title: "Driver development"
-  path: /docs/concepts/drivers/driver-development.md
   section:
-  - title: "Hardware interfacing"
-    path: /docs/concepts/drivers/hardware.md
-  - title: "Simple drivers"
-    path: /docs/concepts/drivers/simple.md
-  - title: "Ethernet devices"
-    path: /docs/concepts/drivers/ethernet.md
-  - title: "RAMdisk device"
-    path: /docs/concepts/drivers/ramdisk.md
-  - title: "Adding tracing to device drivers"
-    path: /docs/concepts/drivers/tracing.md
-  - title: "Using the C++ DDK template library"
-    path: /docs/concepts/drivers/using-ddktl.md
-  - title: "Driver utilities"
-    path: /docs/concepts/drivers/driver-utils.md
-- title: "Driver interfaces"
+  - include: /docs/concepts/drivers/driver_development/_toc.yaml
+- title: "Driver architectures"
   section:
-  - include: /docs/concepts/drivers/driver_interfaces/_toc.yaml
-- title: "The Driver Development Kit tutorial"
-  path: /docs/concepts/drivers/ddk-tutorial.md
-- title: "Advanced topics and tips"
-  path: /docs/concepts/drivers/advanced.md
-- title: "Driver stack performance"
-  path: /docs/concepts/drivers/driver_stack_performance.md
-- title: "Fuchsia input drivers"
-  path: /docs/concepts/drivers/input.md
-- title: "Reference"
-  path: /docs/concepts/drivers/reference.md
+  - include: /docs/concepts/drivers/driver_architectures/_toc.yaml

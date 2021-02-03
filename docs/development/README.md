@@ -65,7 +65,7 @@ This section covers Fuchsia development hardware targets.
 
 This section covers developing drivers on Fuchsia.
 
- - [Getting descriptors and endpoints from USB][usb-descriptors-endpoints]
+ - [Getting started][drivers-start]
 
 ## Testing
 
@@ -112,4 +112,4 @@ This section covers Fuchsia-wide conventions and best practices.
 [intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
 [fidl-api]: /docs/concepts/api/fidl.md
-[usb-descriptors-endpoints]: /docs/development/drivers/usb/getting_descriptors_and_endpoints.md
+[drivers-start]: /docs/development/drivers/developer_guide/driver-development.md

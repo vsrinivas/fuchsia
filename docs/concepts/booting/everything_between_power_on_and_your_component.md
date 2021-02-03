@@ -221,7 +221,7 @@ components on the system can be run.
 [component-manager]: /docs/concepts/components/v2/introduction.md#component-manager
 [component]: /docs/glossary.md#component
 [critical-processes]: /docs/reference/syscalls/job_set_critical.md
-[devfs]: /docs/concepts/drivers/device-model.md
+[devfs]: /docs/concepts/drivers/device_driver_model/device-model.md
 [driver-host]: /docs/glossary.md#devhost
 [driver-manager-exposes]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/driver_manager.cml#91
 [driver-manager]: /docs/glossary.md#devmgr

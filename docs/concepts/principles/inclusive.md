@@ -27,7 +27,7 @@ from system services to end-user applications.
 
 ### Fuchsia is designed to support a wide range of hardware
 
-**[Fuchsia’s Driver Development Kit](/docs/concepts/drivers/overview.md)
+**[Fuchsia Driver Framework](/docs/concepts/drivers/fdf.md)
 allows for a diverse hardware ecosystem**
 
 Fuchsia aims to have a binary-stable interface for drivers.

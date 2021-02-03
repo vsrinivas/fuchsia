@@ -32,7 +32,7 @@ toc:
 - title: "Modify the kernel"
   section:
   - include: /docs/development/kernel/_toc.yaml
-- title: "Write a driver"
+- title: "Drivers"
   section:
   - include: /docs/development/drivers/_toc.yaml
 - title: "Develop components"

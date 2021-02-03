@@ -290,25 +290,25 @@ A private directory within which a [component instance](#component-instance) may
 store data local to the device, canonically mapped to /data in the component
 instance’s [namespace](#namespace).
 
-### **DevHost** {#devhost}
+### **Driver Host** {#driverhost}
 
-A Device Host (`DevHost`) is a process containing one or more device drivers.
-They are created by the Device Manager, as needed, to provide isolation between
+A Driver Host is a process containing one or more device drivers.
+They are created by the Driver Manager, as needed, to provide isolation between
 drivers for stability and security.
 
-### **Device Manager** {#devmgr}
+### **Driver Manager** {#drivermanager}
 
-The Device Manager (formerly devmgr or devcoordinator) is responsible for
+The Driver Manager (formerly devmgr or devcoordinator) is responsible for
 enumerating, loading, and managing the life cycle of device drivers.
 
-### **DDK** {#ddk}
+### **FDF** {#fdf}
 
-The Driver Development Kit is the documentation, APIs, and ABIs necessary to
+The Fuchsia Driver Framework is the documentation, APIs, and ABIs necessary to
 build Zircon Device Drivers. Device drivers are implemented as ELF shared
-libraries loaded by Zircon's Device Manager.
+libraries loaded by Zircon's Driver Manager.
 
--   [DDK Overview](/docs/concepts/drivers/overview.md)
--   [DDK includes](/src/lib/ddk/include/ddk/)
+-   [FDF Overview](/docs/concepts/drivers/fdf.md)
+-   [FDF includes](/src/lib/ddk/include/ddk/)
 
 ### **Directory capability** {#directory-capability}
 
@@ -325,10 +325,10 @@ Directory capability is a [components v2](#components-v2) concept.
 
 ### **Driver** {#driver}
 
-A driver is a dynamic shared library which [Device Manager](#devmgr) can load
-into a [DevHost](#devhost) and that enables, and controls one or more devices.
+A driver is a dynamic shared library which [Driver Manager](#drivermanager) can load
+into a [Driver Host](#driverhost) and that enables, and controls one or more devices.
 
--   [Reference](/docs/concepts/drivers/driver-development.md)
+-   [Reference](/docs/development/drivers/developer_guide/driver-development.md)
 -   [Driver Sources](/src/devices)
 
 ### **Element** {#element}
@@ -873,7 +873,7 @@ The Virtual Dynamic Shared Object (vDSO) is a Virtual Shared Library -- it is
 provided by the [Zircon](#zircon) kernel and does not appear in the filesystem
 or a package. It provides the Zircon System Call API/ABI to userspace processes
 in the form of an ELF library that's "always there." In the Fuchsia IDK and
-[Zircon DDK](#ddk) it exists as `libzircon.so` for the purpose of having
+[Fuchsia Driver Framework](#fdf) it exists as `libzircon.so` for the purpose of having
 something to pass to the linker representing the vDSO.
 
 ### **Virtual Memory Address Range** {#virtual-memory-address-range}
