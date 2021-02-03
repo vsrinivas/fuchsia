@@ -16,7 +16,6 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
-    futures::TryStreamExt,
     log::{debug, error},
     pin_utils::pin_mut,
     std::{future::Future, marker::Unpin},
@@ -473,7 +472,7 @@ where
 
 async fn connect_to_network(ssid: &[u8], passphrase: Option<&str>) {
     // Connect to the client policy service and get a client controller.
-    let (client_controller, mut server_stream) = wlancfg_helper::init_client_controller().await;
+    let (client_controller, mut update_listener) = wlancfg_helper::init_client_controller().await;
 
     // Store the config that was just passed in.
     let network_config = match passphrase {
@@ -493,22 +492,10 @@ async fn connect_to_network(ssid: &[u8], passphrase: Option<&str>) {
     client_controller.connect(&mut network_id).await.expect("connecting");
 
     // Wait until the policy layer indicates that the client has successfully connected.
-    while let Some(update_request) = server_stream.try_next().await.expect("getting state update") {
-        let (update, responder) =
-            update_request.into_on_client_state_update().expect("converting to state update");
-        let _ = responder.send();
-
-        let networks = update.networks.expect("getting client networks");
-
-        for net_state in networks {
-            let id = net_state.id.expect("empty network ID");
-            let state = net_state.state.expect("empty network state");
-
-            if id.ssid == ssid && state == wlan_policy::ConnectionState::Connected {
-                return;
-            }
-        }
-    }
+    wait_until_client_state(&mut update_listener, |update| {
+        has_ssid_and_state(update, ssid, wlan_policy::ConnectionState::Connected)
+    })
+    .await;
 }
 
 pub async fn connect(

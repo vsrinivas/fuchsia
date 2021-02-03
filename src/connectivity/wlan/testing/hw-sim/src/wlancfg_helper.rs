@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,6 +8,7 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_policy::SecurityType,
+    fuchsia_async::futures::TryStreamExt,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
     futures::StreamExt,
@@ -146,6 +147,40 @@ pub async fn init_client_controller(
     assert_next_client_listener_update(&mut listener_stream, vec![]).await;
 
     (controller_client_end, listener_stream)
+}
+
+// Wait until the policy layer returns an update for which `continue_fn` returns true.
+// This function will panic if the `update_listener` stream ends.
+pub async fn wait_until_client_state<F: Fn(fidl_policy::ClientStateSummary) -> bool>(
+    update_listener: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    continue_fn: F,
+) {
+    while let Some(update_request) = update_listener.try_next().await.expect("getting state update")
+    {
+        let (update, responder) =
+            update_request.into_on_client_state_update().expect("converting to state update");
+        let _ = responder.send();
+        if continue_fn(update) {
+            return;
+        };
+    }
+    panic!("The stream unexpectedly terminated");
+}
+
+pub fn has_ssid_and_state(
+    update: fidl_policy::ClientStateSummary,
+    ssid_to_match: &[u8],
+    state_to_match: fidl_policy::ConnectionState,
+) -> bool {
+    for net_state in update.networks.expect("getting client networks") {
+        let id = net_state.id.expect("empty network ID");
+        let state = net_state.state.expect("empty network state");
+
+        if id.ssid == ssid_to_match && state == state_to_match {
+            return true;
+        }
+    }
+    return false;
 }
 
 /// Get the next client update. Will panic if no updates are available.
