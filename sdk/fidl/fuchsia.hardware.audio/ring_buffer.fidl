@@ -52,6 +52,7 @@ table RingBufferProperties {
 struct RingBufferPositionInfo {
     /// The driver's best estimate of the time at which the playback/capture pointer reached the
     /// position indicated by `position`.
+    /// external_delay impact should not be incorporated into 'timestamp'.
     zx.time timestamp;
 
     /// The playback/capture pointer position (in bytes) in the ring buffer at time
@@ -101,6 +102,7 @@ protocol RingBuffer {
 
     /// Start the ring buffer. The `start_time` value (in the CLOCK_MONOTONIC timeline) indicates
     /// when position began moving, starting at the beginning of the ring buffer.
+    /// external_delay impact should not be incorporated into 'start_time'.
     Start() -> (zx.time start_time);
 
     /// Stop the ring buffer. Once this call's response is received, no further position

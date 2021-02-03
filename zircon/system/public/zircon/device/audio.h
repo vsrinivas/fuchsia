@@ -102,7 +102,7 @@ static_assert(sizeof(audio_stream_format_range_t) == 16,
 //
 typedef uint32_t audio_set_gain_flags_t;
 #define AUDIO_SGF_MUTE_VALID \
-  ((audio_set_gain_flags_t)0x1)  // Whether or not the mute flag is valid.
+  ((audio_set_gain_flags_t)0x1)                            // Whether or not the mute flag is valid.
 #define AUDIO_SGF_AGC_VALID ((audio_set_gain_flags_t)0x2)  // Whether or not the agc flag is valid.
 #define AUDIO_SGF_GAIN_VALID \
   ((audio_set_gain_flags_t)0x4)  // Whether or not the gain float is valid.
@@ -437,7 +437,7 @@ typedef struct audio_rb_cmd_start_req {
 typedef struct audio_rb_cmd_start_resp {
   audio_cmd_hdr_t hdr;
   zx_status_t result;
-  uint64_t start_time;
+  uint64_t start_time;  // external_delay impact should not be incorporated into this value.
 } audio_rb_cmd_start_resp_t;
 
 // AUDIO_RB_CMD_STOP
@@ -455,6 +455,7 @@ typedef struct audio_rb_position_notify {
   audio_cmd_hdr_t hdr;
 
   // The time, per system monotonic clock, of the below byte position.
+  // external_delay impact should not be incorporated into this value.
   zx_time_t monotonic_time;
 
   // The current position (in bytes) of the driver/hardware's read (output) or
