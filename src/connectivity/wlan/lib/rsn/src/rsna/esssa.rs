@@ -426,7 +426,7 @@ impl EssSa {
 
         // IEEE Std 802.11-2016, 12.7.2, d)
         // Update key replay counter if MIC was set and is valid. Only applicable for Supplicant.
-        // TODO(hahnr): We should verify the MIC here and only increase the counter if the MIC
+        // TODO(fxbug.dev/68916): We should verify the MIC here and only increase the counter if the MIC
         // is valid.
         if raw_frame.key_frame_fields.key_info().key_mic() {
             if let Role::Supplicant = self.role {
@@ -553,7 +553,7 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send first message of handshake.
-        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
@@ -562,7 +562,7 @@ mod tests {
 
         // Replay first message which should restart the entire handshake.
         // Verify the second message of the handshake was received.
-        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(3);
         });
         assert!(result.is_ok());
@@ -575,20 +575,46 @@ mod tests {
     }
 
     #[test]
+    fn test_first_message_does_not_change_replay_counter() {
+        let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
+
+        // Send first message of handshake.
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(0);
+        });
+        assert!(result.is_ok());
+        expect_eapol_resp(&updates[..]);
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
+
+        // Raise the replay counter of message 1.
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(1);
+        });
+        assert!(result.is_ok());
+        expect_eapol_resp(&updates[..]);
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
+
+        // Lower the replay counter of message 1.
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(0);
+        });
+        assert!(result.is_ok());
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
+        expect_eapol_resp(&updates[..]);
+    }
+
+    #[test]
     fn test_zero_key_replay_counter_msg1() {
         let mut supplicant = test_util::get_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
-        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(0);
         });
         assert!(result.is_ok());
-        let msg2 = expect_eapol_resp(&updates[..]);
-        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
-        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
-
-        let (result, _) = send_msg3(&mut supplicant, &ptk, |_| {});
-        assert!(result.is_ok());
+        expect_eapol_resp(&updates[..]);
     }
 
     #[test]
@@ -596,18 +622,50 @@ mod tests {
         let mut supplicant = test_util::get_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
-        let (result, _) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
+        expect_eapol_resp(&updates[..]);
     }
 
     #[test]
     fn test_zero_key_replay_counter_lower_msg3_counter() {
         let mut supplicant = test_util::get_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
 
-        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(1);
+        });
+        assert!(result.is_ok());
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
+
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
+
+        // Intuitively, this should not succeed because the replay
+        // counter in message 3 is lower than in message 1. It is a
+        // quirk of IEEE 802.11-2016 12.7.2 that the replay counter in
+        // message 1 is in fact meaningless because replay counters
+        // are only updated when there is a MIC to verify. There is no
+        // MIC to verify in message 1, and so the replay counter
+        // doesn't matter.
+        let (result, updates) = send_fourway_msg3(&mut supplicant, &ptk, |msg3| {
+            msg3.key_frame_fields.key_replay_counter.set_from_native(0);
+        });
+        assert!(result.is_ok());
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
+        test_util::expect_reported_ptk(&updates[..]);
+    }
+
+    #[test]
+    fn test_key_replay_counter_updated_after_msg3() {
+        let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
@@ -615,10 +673,20 @@ mod tests {
         let snonce = msg2.keyframe().key_frame_fields.key_nonce;
         let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
-        let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
-            msg3.key_frame_fields.key_replay_counter.set_from_native(0);
+        let (result, updates) = send_fourway_msg3(&mut supplicant, &ptk, |msg3| {
+            msg3.key_frame_fields.key_replay_counter.set_from_native(5);
         });
         assert!(result.is_ok());
+        assert_eq!(5, supplicant.esssa.key_replay_counter);
+        test_util::expect_reported_ptk(&updates[..]);
+
+        // First message should be dropped if replay counter too low.
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(0);
+        });
+        assert!(result.is_ok());
+        assert_eq!(5, supplicant.esssa.key_replay_counter);
+        assert!(updates.is_empty());
     }
 
     #[test]
@@ -626,7 +694,7 @@ mod tests {
         let mut supplicant = test_util::get_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
-        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(0);
         });
         assert!(result.is_ok());
@@ -634,18 +702,20 @@ mod tests {
         let snonce = msg2.keyframe().key_frame_fields.key_nonce;
         let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
-        let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
+        let (result, updates) = send_fourway_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
+        test_util::expect_reported_ptk(&updates[..]);
     }
 
     #[test]
     fn test_zero_key_replay_counter_replayed_msg3() {
         let mut supplicant = test_util::get_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
+        assert_eq!(0, supplicant.esssa.key_replay_counter);
 
-        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(0);
         });
         assert!(result.is_ok());
@@ -653,27 +723,30 @@ mod tests {
         let snonce = msg2.keyframe().key_frame_fields.key_nonce;
         let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
-        let (result, sink) = send_msg3(&mut supplicant, &ptk, |msg3| {
+        let (result, sink) = send_fourway_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(2);
         });
         assert!(result.is_ok());
-        assert!(!sink.is_empty());
+        assert_eq!(2, supplicant.esssa.key_replay_counter);
+        test_util::expect_reported_ptk(&sink[..]);
 
         // The just sent third message increased the key replay counter.
         // All successive EAPOL frames are required to have a larger key replay counter.
 
         // Send an invalid message.
-        let (result, sink) = send_msg3(&mut supplicant, &ptk, |msg3| {
+        let (result, sink) = send_fourway_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(2);
         });
         assert!(result.is_ok());
+        assert_eq!(2, supplicant.esssa.key_replay_counter);
         assert!(sink.is_empty());
 
         // Send a valid message.
-        let (result, sink) = send_msg3(&mut supplicant, &ptk, |msg3| {
+        let (result, sink) = send_fourway_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(3);
         });
         assert!(result.is_ok());
+        assert_eq!(3, supplicant.esssa.key_replay_counter);
         assert!(!sink.is_empty());
     }
 
@@ -687,7 +760,7 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send 1st message of 4-Way Handshake for the first time and derive PTK.
-        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (_, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
@@ -699,7 +772,7 @@ mod tests {
 
         // Send 1st message of 4-Way Handshake a second time and derive PTK.
         // Use a different ANonce than initially used.
-        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (_, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(2);
             msg1.key_frame_fields.key_nonce = [99; 32];
         });
@@ -713,7 +786,7 @@ mod tests {
         // Send 3rd message of 4-Way Handshake.
         // The Supplicant now finished the 4-Way Handshake and should report its PTK.
         // Use the same ANonce which was used in the replayed 1st message.
-        let (_, updates) = send_msg3(&mut supplicant, &second_ptk, |msg3| {
+        let (_, updates) = send_fourway_msg3(&mut supplicant, &second_ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(3);
             msg3.key_frame_fields.key_nonce = [99; 32];
         });
@@ -735,7 +808,7 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send 1st message of 4-Way Handshake for the first time and derive PTK.
-        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (_, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
@@ -746,7 +819,7 @@ mod tests {
         let first_nonce = msg2_frame.key_frame_fields.key_nonce;
 
         // Send 1st message of 4-Way Handshake a second time and derive PTK.
-        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+        let (_, updates) = send_fourway_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(2);
         });
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
@@ -758,7 +831,7 @@ mod tests {
 
         // Send 3rd message of 4-Way Handshake.
         // The Supplicant now finished the 4-Way Handshake and should report its PTK.
-        let (_, updates) = send_msg3(&mut supplicant, &second_ptk, |msg3| {
+        let (_, updates) = send_fourway_msg3(&mut supplicant, &second_ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(3);
         });
 
@@ -776,7 +849,7 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send first message
-        let (result, updates) = send_msg1(&mut supplicant, |_| {});
+        let (result, updates) = send_fourway_msg1(&mut supplicant, |_| {});
         assert!(result.is_ok());
 
         // Verify 2nd message.
@@ -804,7 +877,7 @@ mod tests {
         // Send 3rd message.
         let snonce = msg2.key_frame_fields.key_nonce;
         let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
-        let (result, updates) = send_msg3(&mut supplicant, &ptk, |_| {});
+        let (result, updates) = send_fourway_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
 
         // Verify 4th message was received and is correct.
@@ -885,11 +958,11 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         // Complete 4-Way Handshake.
-        let updates = send_msg1(&mut supplicant, |_| {}).1;
+        let updates = send_fourway_msg1(&mut supplicant, |_| {}).1;
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
         let snonce = msg2.keyframe().key_frame_fields.key_nonce;
         let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
-        let _ = send_msg3(&mut supplicant, &ptk, |_| {});
+        let _ = send_fourway_msg3(&mut supplicant, &ptk, |_| {});
 
         // Cause re-keying of GTK via Group-Key Handshake.
         // Rekey same GTK which has been already installed via the 4-Way Handshake.
@@ -932,11 +1005,11 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         // Complete 4-Way Handshake.
-        let updates = send_msg1(&mut supplicant, |_| {}).1;
+        let updates = send_fourway_msg1(&mut supplicant, |_| {}).1;
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
         let snonce = msg2.keyframe().key_frame_fields.key_nonce;
         let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
-        let _ = send_msg3(&mut supplicant, &ptk, |_| {});
+        let _ = send_fourway_msg3(&mut supplicant, &ptk, |_| {});
 
         // Cause re-keying of GTK via Group-Key Handshake.
         // Rekey same GTK which has been already installed via the 4-Way Handshake.
@@ -965,7 +1038,10 @@ mod tests {
     // Nonce reuse
     // (in)-compatible protocol and RSNE versions
 
-    fn send_msg1<F>(supplicant: &mut Supplicant, msg_modifier: F) -> (Result<(), Error>, UpdateSink)
+    fn send_fourway_msg1<F>(
+        supplicant: &mut Supplicant,
+        msg_modifier: F,
+    ) -> (Result<(), Error>, UpdateSink)
     where
         F: Fn(&mut eapol::KeyFrameTx),
     {
@@ -975,7 +1051,7 @@ mod tests {
         (result, update_sink)
     }
 
-    fn send_msg3<F>(
+    fn send_fourway_msg3<F>(
         supplicant: &mut Supplicant,
         ptk: &Ptk,
         msg_modifier: F,
