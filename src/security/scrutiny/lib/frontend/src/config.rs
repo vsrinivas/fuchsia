@@ -32,6 +32,26 @@ impl Config {
     pub fn minimal() -> Config {
         Config { launch: LaunchConfig::minimal(), runtime: RuntimeConfig::minimal() }
     }
+
+    /// Configures Scrutiny to run a single command in a minimal runtime
+    /// environment. This is a helper utility configuration to simplify
+    /// common configurations.
+    pub fn run_command(command: String) -> Config {
+        Config {
+            launch: LaunchConfig { command: Some(command), script_path: None },
+            runtime: RuntimeConfig::minimal(),
+        }
+    }
+
+    /// Configures Scrutiny to run with a single script in a minimal runtime
+    /// environment. This is a helper utility configuration to simplify
+    /// common configurations.
+    pub fn run_script(script_path: String) -> Config {
+        Config {
+            launch: LaunchConfig { command: None, script_path: Some(script_path) },
+            runtime: RuntimeConfig::minimal(),
+        }
+    }
 }
 
 /// Launch configuration describes events that run after the framework has
