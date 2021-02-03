@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// fidl_api_summarize tests package.
-package main
+package summarize
 
 import (
 	"strings"
@@ -31,7 +30,7 @@ resource_definition handle : uint32 {
 	l2Library = `library l2; struct T{};`
 )
 
-func TestSummarize(t *testing.T) {
+func TestWrite(t *testing.T) {
 	tests := []struct {
 		name     string
 		fidl     string
@@ -538,7 +537,7 @@ library l
 			}
 			r := c.Single(test.fidl)
 			var sb strings.Builder
-			if err := Summarize(r, &sb); err != nil {
+			if err := Write(r, &sb); err != nil {
 				t.Fatalf("while summarizing file: %v", err)
 			}
 			actual := strings.Split(sb.String(), "\n")

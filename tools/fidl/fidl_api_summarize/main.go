@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize"
 )
 
 var (
@@ -65,7 +66,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Could not parse FIDL IR from: %v: %v", *in, err)
 		os.Exit(1)
 	}
-	if err := Summarize(root, w); err != nil {
+	if err := summarize.Write(root, w); err != nil {
 		fmt.Fprintf(os.Stderr, "While summarizing %v into %v: %v", *in, *out, err)
 		os.Exit(1)
 	}

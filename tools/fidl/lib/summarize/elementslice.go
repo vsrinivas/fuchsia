@@ -7,7 +7,7 @@ Contains the code to sort elements by name according to somewhat specific rules.
 See elementSlice below for details.
 */
 
-package main
+package summarize
 
 import (
 	"sort"

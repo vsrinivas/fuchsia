@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+// summarize is a library used to produce a FIDL API summary from the FIDL
+// intermediate representation (IR) abstract syntax tree.  Please refer to the
+// README.md file in this repository for usage hints.
+package summarize
 
 import (
 	"fmt"
@@ -16,6 +19,7 @@ import (
 // Element describes a single platform surface element.  Use Summarize to
 // convert a FIDL AST into Elements.
 type Element interface {
+	// Stringer produces a string representation of this Element.
 	fmt.Stringer
 	// Member returns true if the Element is a member of something.
 	Member() bool
@@ -95,8 +99,18 @@ func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 	}
 }
 
-/// Summarize produces an API summary for the FIDL AST from the root.
-func Summarize(root fidlgen.Root, out io.Writer) error {
+// Write produces an API summary for the FIDL AST from the root into the supplied
+// writer.
+func Write(root fidlgen.Root, out io.Writer) error {
+	for _, e := range Elements(root) {
+		fmt.Fprintf(out, "%v\n", e)
+	}
+	return nil
+}
+
+// Elements returns the API elements found in the supplied AST root in a
+// canonical ordering.
+func Elements(root fidlgen.Root) []Element {
 	var s summarizer
 	s.addConsts(root.Consts)
 	s.addBits(root.Bits)
@@ -106,10 +120,7 @@ func Summarize(root fidlgen.Root, out io.Writer) error {
 	s.addUnions(root.Unions)
 	s.addProtocols(root.Protocols)
 	s.addElement(library{r: root})
-	for _, e := range s.Elements() {
-		fmt.Fprintf(out, "%v\n", e)
-	}
-	return nil
+	return s.Elements()
 }
 
 func elementCountToString(ec *int) string {

@@ -1,0 +1,25 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("lib") {
+  testonly = true
+
+  deps = [
+    "fidlgen",
+    "fidlgen_cpp",
+    "fidlgen_testing",
+    "summarize",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "fidlgen:tests",
+    "fidlgen_cpp:tests",
+    "fidlgen_testing:tests",
+    "summarize:tests",
+  ]
+}
