@@ -109,7 +109,10 @@ impl Supplicant {
 
     /// Resets all established Security Associations and invalidates all derived keys in this ESSSA.
     /// The Supplicant must be reset or destroyed when the underlying 802.11 association terminates.
+    /// The replay counter is also reset.
     pub fn reset(&mut self) {
+        // The replay counter must be reset so subsequent associations are not ignored.
+        self.esssa.reset_replay_counter();
         self.esssa.reset_security_associations();
     }
 
@@ -215,8 +218,9 @@ impl Authenticator {
 
     /// Resets all established Security Associations and invalidates all derived keys in this ESSSA.
     /// The Authenticator must be reset or destroyed when the underlying 802.11 association
-    /// terminates.
+    /// terminates. The replay counter is also reset.
     pub fn reset(&mut self) {
+        self.esssa.reset_replay_counter();
         self.esssa.reset_security_associations();
     }
 

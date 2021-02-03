@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -122,6 +122,15 @@ fuchsia_component("open-ap-connect") {
   ]
 }
 
+fuchsia_component("reconnect-to-wpa2-network") {
+  testonly = true
+  manifest = "meta/reconnect_to_wpa2_network.cmx"
+  deps = [
+    "reconnect_to_wpa2_network",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
 fuchsia_component("set-country") {
   testonly = true
   manifest = "meta/set_country.cmx"
@@ -191,6 +200,7 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":multi-ifaces",
     ":multiple-clients-ap",
     ":open-ap-connect",
+    ":reconnect-to-wpa2-network",
     ":run-without-regulatory-manager",
     ":set-country",
     ":sim-client-vs-sim-ap",
