@@ -8,7 +8,8 @@ use {
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, MediaStream},
     fidl::endpoints::create_request_stream,
-    fidl_fuchsia_media_sessions2 as sessions2, fuchsia_async as fasync,
+    fidl_fuchsia_media as media, fidl_fuchsia_media_sessions2 as sessions2,
+    fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
     fuchsia_cobalt::CobaltSender,
     fuchsia_trace as trace,
@@ -30,6 +31,7 @@ use crate::player;
 pub struct SinkTaskBuilder {
     cobalt_sender: CobaltSender,
     publisher: sessions2::PublisherProxy,
+    audio_consumer_factory: media::SessionAudioConsumerFactoryProxy,
     domain: String,
 }
 
@@ -37,9 +39,10 @@ impl SinkTaskBuilder {
     pub fn new(
         cobalt_sender: CobaltSender,
         publisher: sessions2::PublisherProxy,
+        audio_consumer_factory: media::SessionAudioConsumerFactoryProxy,
         domain: String,
     ) -> Self {
-        Self { cobalt_sender, publisher, domain }
+        Self { cobalt_sender, publisher, audio_consumer_factory, domain }
     }
 }
 
@@ -50,7 +53,7 @@ impl MediaTaskBuilder for SinkTaskBuilder {
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
     ) -> BoxFuture<'static, Result<Box<dyn MediaTaskRunner>, MediaTaskError>> {
-        let s = self.clone();
+        let builder = self.clone();
         let peer_id = peer_id.clone();
         let codec_config = codec_config.clone();
         Box::pin(async move {
@@ -58,12 +61,12 @@ impl MediaTaskBuilder for SinkTaskBuilder {
                 .map_err(|e| MediaTaskError::Other(format!("FIDL error: {:?}", e)))?;
 
             let registration = sessions2::PlayerRegistration {
-                domain: Some(s.domain),
+                domain: Some(builder.domain.clone()),
                 ..sessions2::PlayerRegistration::EMPTY
             };
 
             let (session_id, avrcp_task) =
-                match s.publisher.publish(player_client, registration).await {
+                match builder.publisher.publish(player_client, registration).await {
                     Ok(session_id) => {
                         info!("Session ID: {}", session_id);
                         // We ignore AVRCP relay errors, they are logged.
@@ -77,7 +80,7 @@ impl MediaTaskBuilder for SinkTaskBuilder {
 
             Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(ConfiguredSinkTask::new(
                 codec_config,
-                s.cobalt_sender,
+                builder,
                 data_stream_inspect,
                 session_id,
                 avrcp_task,
@@ -89,8 +92,8 @@ impl MediaTaskBuilder for SinkTaskBuilder {
 struct ConfiguredSinkTask {
     /// Configuration providing the format of encoded audio requested.
     codec_config: MediaCodecConfig,
-    /// Used to send statistics about the length of playback to cobalt.
-    cobalt_sender: CobaltSender,
+    /// A clone of the Builder at the time this was configured.
+    builder: SinkTaskBuilder,
     /// Data Stream inspect object for tracking total bytes / current transfer speed.
     stream_inspect: Arc<Mutex<DataStreamInspect>>,
     /// Session ID for Media
@@ -102,14 +105,14 @@ struct ConfiguredSinkTask {
 impl ConfiguredSinkTask {
     fn new(
         codec_config: MediaCodecConfig,
-        cobalt_sender: CobaltSender,
+        builder: SinkTaskBuilder,
         stream_inspect: DataStreamInspect,
         session_id: u64,
         session_task: Option<fasync::Task<()>>,
     ) -> Self {
         Self {
             codec_config,
-            cobalt_sender,
+            builder,
             stream_inspect: Arc::new(Mutex::new(stream_inspect)),
             session_id,
             _session_task: session_task,
@@ -120,16 +123,20 @@ impl ConfiguredSinkTask {
 impl MediaTaskRunner for ConfiguredSinkTask {
     fn start(&mut self, stream: MediaStream) -> Result<Box<dyn MediaTask>, MediaTaskError> {
         let codec_config = self.codec_config.clone();
+        let audio_factory = self.builder.audio_consumer_factory.clone();
         let session_id = self.session_id;
         let media_player_fut = media_stream_task(
             stream,
-            Box::new(move || player::Player::new(session_id, codec_config.clone())),
+            Box::new(move || {
+                player::Player::new(session_id, codec_config.clone(), audio_factory.clone())
+            }),
             self.stream_inspect.clone(),
         );
 
         let _ = self.stream_inspect.try_lock().map(|mut l| l.start());
         let codec_type = self.codec_config.codec_type().clone();
-        let task = RunningSinkTask::start(media_player_fut, self.cobalt_sender.clone(), codec_type);
+        let cobalt_sender = self.builder.cobalt_sender.clone();
+        let task = RunningSinkTask::start(media_player_fut, cobalt_sender, codec_type);
         Ok(Box::new(task))
     }
 
@@ -329,7 +336,11 @@ mod tests {
         let (send, _recv) = fake_cobalt_sender();
         let (proxy, mut session_requests) =
             fidl::endpoints::create_proxy_and_stream::<PublisherMarker>().unwrap();
-        let builder = SinkTaskBuilder::new(send, proxy, "Tests".to_string());
+        let (audio_consumer_factory_proxy, _requests) =
+            create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
+                .expect("proxy pair creation");
+        let builder =
+            SinkTaskBuilder::new(send, proxy, audio_consumer_factory_proxy, "Tests".to_string());
 
         let sbc_config = MediaCodecConfig::min_sbc();
         let configured_fut =
@@ -348,7 +359,7 @@ mod tests {
         drop(session_requests);
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
-        exec.run_singlethreaded(&mut configured_fut).expect("ok response from configure");
+        let _runner = exec.run_singlethreaded(&mut configured_fut).expect("configure finishes");
     }
 
     fn setup_media_stream_test(
@@ -533,7 +544,7 @@ mod tests {
         let media_stream_fut = media_stream_task(
             pending_stream,
             Box::new(move || {
-                player::Player::from_proxy(
+                player::Player::new(
                     session_id,
                     sbc_config.clone(),
                     audio_consumer_factory_proxy.clone(),
