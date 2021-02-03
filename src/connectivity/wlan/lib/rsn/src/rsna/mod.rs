@@ -494,7 +494,7 @@ pub enum AuthStatus {
     InternalError,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SecAssocUpdate {
     TxEapolKeyFrame(eapol::KeyFrameBuf),
     Key(Key),

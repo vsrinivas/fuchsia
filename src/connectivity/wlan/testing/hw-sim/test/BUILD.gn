@@ -86,6 +86,15 @@ fuchsia_component("ethernet-tx-rx") {
   ]
 }
 
+fuchsia_component("handle-tx-event-hooks") {
+  testonly = true
+  manifest = "meta/handle-tx-event-hooks.cmx"
+  deps = [
+    "handle_tx_event_hooks",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
 fuchsia_component("multi-ifaces") {
   testonly = true
   manifest = "meta/multi_ifaces.cmx"
@@ -178,6 +187,7 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":connect-with-failed-association",
     ":connect-with-wrong-credential-type",
     ":ethernet-tx-rx",
+    ":handle-tx-event-hooks",
     ":multi-ifaces",
     ":multiple-clients-ap",
     ":open-ap-connect",
