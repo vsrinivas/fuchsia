@@ -18,7 +18,7 @@ use {
     std::{
         collections::{BTreeMap, BTreeSet, HashSet},
         fs::{self, File},
-        io::{self, Write},
+        io::{self, Read, Write},
         path::{Path, PathBuf},
     },
     tempfile::TempDir,
@@ -50,6 +50,11 @@ impl PackageEntry {
 pub struct BlobFile {
     pub merkle: fuchsia_merkle::Hash,
     pub file: File,
+}
+
+pub struct BlobContents {
+    pub merkle: fuchsia_merkle::Hash,
+    pub contents: Vec<u8>,
 }
 
 impl Package {
@@ -153,6 +158,22 @@ impl Package {
         blobs
             .into_iter()
             .map(|blob| BlobFile { merkle: blob.merkle, file: File::open(blob.path).unwrap() })
+    }
+
+    /// Returns a tuple of the contents of the meta far and the contents of all content blobs in the package.
+    pub fn contents(&self) -> (BlobContents, Vec<BlobContents>) {
+        (
+            BlobContents {
+                merkle: self.meta_far_merkle,
+                contents: self.meta_far().unwrap().bytes().collect::<Result<Vec<u8>, _>>().unwrap(),
+            },
+            self.content_blob_files()
+                .map(|blob_file| BlobContents {
+                    merkle: blob_file.merkle,
+                    contents: blob_file.file.bytes().collect::<Result<Vec<u8>, _>>().unwrap(),
+                })
+                .collect(),
+        )
     }
 
     /// Puts all the blobs for the package in blobfs.

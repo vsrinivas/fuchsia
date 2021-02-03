@@ -53,18 +53,7 @@ async fn assert_count_events(
 
 #[fasync::run_singlethreaded(test)]
 async fn pkg_cache_open_failure() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    let system_image_package = SystemImageBuilder::new();
-    let system_image_package = system_image_package.build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().build().await;
 
     assert_eq!(
         env.open_package("0000000000000000000000000000000000000000000000000000000000000000")

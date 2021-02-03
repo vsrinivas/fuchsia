@@ -62,9 +62,13 @@ async fn main_inner() -> Result<(), Error> {
     let pkgfs_system =
         pkgfs::system::Client::open_from_namespace().context("error opening /pkgfs/system")?;
     let pkgfs_versions =
-        pkgfs::versions::Client::open_from_namespace().context("error opening pkgfs/versions")?;
+        pkgfs::versions::Client::open_from_namespace().context("error opening /pkgfs/versions")?;
     let pkgfs_ctl =
-        pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
+        pkgfs::control::Client::open_from_namespace().context("error opening /pkgfs/ctl")?;
+    let pkgfs_install =
+        pkgfs::install::Client::open_from_namespace().context("error opening /pkgfs/install")?;
+    let pkgfs_needs =
+        pkgfs::needs::Client::open_from_namespace().context("error opening /pkgfs/needs")?;
 
     let (static_packages, _pkgfs_inspect, blob_location) = {
         let static_packages_fut = get_static_packages(&pkgfs_system);
@@ -110,6 +114,8 @@ async fn main_inner() -> Result<(), Error> {
                     cache_service::serve(
                         pkgfs_versions.clone(),
                         pkgfs_ctl.clone(),
+                        pkgfs_install.clone(),
+                        pkgfs_needs.clone(),
                         Arc::clone(&static_packages),
                         stream,
                         cobalt_sender.clone(),

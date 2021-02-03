@@ -51,6 +51,7 @@ rustc_test("driver") {
   sources = [
     "src/base_pkg_index.rs",
     "src/cobalt.rs",
+    "src/get.rs",
     "src/inspect.rs",
     "src/lib.rs",
     "src/space.rs",

@@ -33,6 +33,8 @@ const FIDL_VEC_RESPONSE_OVERHEAD_BYTES: usize = 32;
 pub async fn serve(
     pkgfs_versions: pkgfs::versions::Client,
     pkgfs_ctl: pkgfs::control::Client,
+    pkgfs_install: pkgfs::install::Client,
+    pkgfs_needs: pkgfs::needs::Client,
     static_packages: Arc<StaticPackages>,
     stream: PackageCacheRequestStream,
     cobalt_sender: CobaltSender,
@@ -55,6 +57,8 @@ pub async fn serve(
                     );
                     let response = get(
                         &pkgfs_versions,
+                        &pkgfs_install,
+                        &pkgfs_needs,
                         meta_far_blob,
                         selectors,
                         needed_blobs,
@@ -97,28 +101,82 @@ pub async fn serve(
         .await
 }
 
-/// Fetch a package, and optionally mount it.
-///
-/// TODO: implement this method. This stub can't simply proxy to amber for now, since it doesn't
-/// know the name of the package, and amber needs it to lookup the package in its TUF repo.
+/// Fetch a package, and optionally open it.
 async fn get<'a>(
     pkgfs_versions: &'a pkgfs::versions::Client,
+    pkgfs_install: &'a pkgfs::install::Client,
+    pkgfs_needs: &'a pkgfs::needs::Client,
     meta_far_blob: BlobInfo,
     selectors: Vec<String>,
-    _needed_blobs: ServerEnd<NeededBlobsMarker>,
+    needed_blobs: ServerEnd<NeededBlobsMarker>,
     dir_request: Option<ServerEnd<DirectoryMarker>>,
-    cobalt_sender: CobaltSender,
+    mut cobalt_sender: CobaltSender,
 ) -> Result<(), Status> {
-    fx_log_info!("fetching {:?} with the selectors {:?}", meta_far_blob, selectors);
+    if !selectors.is_empty() {
+        fx_log_warn!("Get() does not support selectors yet");
+    }
+    let needed_blobs = needed_blobs.into_stream().map_err(|_| Status::INTERNAL)?;
+
+    let pkg = if let Ok(pkg) = pkgfs_versions.open_package(&meta_far_blob.blob_id.into()).await {
+        // If the package can already be opened, it is already cached.
+        needed_blobs.control_handle().shutdown_with_epitaph(Status::OK);
+
+        pkg
+    } else {
+        // Otherwise, go through the process to cache it.
+        fx_log_info!("fetching {}", meta_far_blob.blob_id);
+
+        let () = serve_needed_blobs(needed_blobs, meta_far_blob, pkgfs_install, pkgfs_needs)
+            .await
+            .map_err(|e| {
+                fx_log_err!("error while caching package {}: {:#}", meta_far_blob.blob_id, e);
+
+                cobalt_sender.log_event_count(
+                    metrics::PKG_CACHE_OPEN_METRIC_ID,
+                    metrics::PkgCacheOpenMetricDimensionResult::Io,
+                    0,
+                    1,
+                );
+
+                Status::UNAVAILABLE
+            })?;
+
+        pkgfs_versions.open_package(&meta_far_blob.blob_id.into()).await.map_err(|err| {
+            fx_log_err!(
+                "error opening package after fetching it {}: {:#}",
+                meta_far_blob.blob_id,
+                anyhow!(err)
+            );
+            cobalt_sender.log_event_count(
+                metrics::PKG_CACHE_OPEN_METRIC_ID,
+                metrics::PkgCacheOpenMetricDimensionResult::Io,
+                0,
+                1,
+            );
+            Status::INTERNAL
+        })?
+    };
 
     if let Some(dir_request) = dir_request {
-        open(pkgfs_versions, meta_far_blob.blob_id, selectors.clone(), dir_request, cobalt_sender)
-            .await?;
-
-        Ok(())
-    } else {
-        Err(Status::NOT_SUPPORTED)
+        pkg.reopen(dir_request).map_err(|err| {
+            fx_log_err!("error reopening {}: {:#}", meta_far_blob.blob_id, anyhow!(err));
+            cobalt_sender.log_event_count(
+                metrics::PKG_CACHE_OPEN_METRIC_ID,
+                metrics::PkgCacheOpenMetricDimensionResult::Io,
+                0,
+                1,
+            );
+            Status::INTERNAL
+        })?;
     }
+
+    cobalt_sender.log_event_count(
+        metrics::PKG_CACHE_OPEN_METRIC_ID,
+        metrics::PkgCacheOpenMetricDimensionResult::Success,
+        0,
+        1,
+    );
+    Ok(())
 }
 
 /// Open a package directory.
@@ -131,7 +189,7 @@ async fn open<'a>(
 ) -> Result<(), Status> {
     // FIXME: need to implement selectors.
     if !selectors.is_empty() {
-        fx_log_warn!("resolve does not support selectors yet");
+        fx_log_warn!("Open() does not support selectors yet");
     }
 
     let pkg =
@@ -1339,7 +1397,7 @@ mod serve_needed_blobs_tests {
         pkgfs_needs.expect_done().await;
     }
 
-    async fn write_meta_blob(
+    pub(super) async fn write_meta_blob(
         proxy: &NeededBlobsProxy,
         pkgfs_install: &mut pkgfs::install::Mock,
         meta_blob_info: BlobInfo,
@@ -1576,7 +1634,7 @@ mod serve_needed_blobs_tests {
         pkgfs_needs.expect_done().await;
     }
 
-    async fn enumerate_missing_blobs(
+    pub(super) async fn enumerate_missing_blobs(
         proxy: &NeededBlobsProxy,
         pkgfs_needs: &mut pkgfs::needs::Mock,
         meta_blob_id: BlobId,
@@ -1963,6 +2021,175 @@ mod serve_needed_blobs_tests {
         );
         pkgfs_install.expect_done().await;
         pkgfs_needs.expect_done().await;
+    }
+}
+
+#[cfg(test)]
+mod get_handler_tests {
+    use super::serve_needed_blobs_tests::*;
+    use super::*;
+    use fidl_fuchsia_pkg::NeededBlobsProxy;
+    use fuchsia_cobalt::{CobaltConnector, ConnectionType};
+    use matches::assert_matches;
+
+    fn spawn_get_with_mocks(
+        meta_blob_info: BlobInfo,
+        dir_request: Option<ServerEnd<DirectoryMarker>>,
+    ) -> (
+        Task<Result<(), Status>>,
+        NeededBlobsProxy,
+        pkgfs::versions::Mock,
+        pkgfs::install::Mock,
+        pkgfs::needs::Mock,
+    ) {
+        let (proxy, stream) = fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+
+        let (pkgfs_versions, pkgfs_versions_mock) = pkgfs::versions::Client::new_mock();
+        let (pkgfs_install, pkgfs_install_mock) = pkgfs::install::Client::new_mock();
+        let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
+
+        let (cobalt_sender, _) =
+            CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
+
+        (
+            Task::spawn(async move {
+                get(
+                    &pkgfs_versions,
+                    &pkgfs_install,
+                    &pkgfs_needs,
+                    meta_blob_info,
+                    vec![],
+                    stream,
+                    dir_request,
+                    cobalt_sender,
+                )
+                .await
+            }),
+            proxy,
+            pkgfs_versions_mock,
+            pkgfs_install_mock,
+            pkgfs_needs_mock,
+        )
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn everything_closed() {
+        let (_, stream) = fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+
+        let (pkgfs_versions, _) = pkgfs::versions::Client::new_test();
+        let (pkgfs_install, _) = pkgfs::install::Client::new_test();
+        let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
+
+        let (cobalt_sender, _) =
+            CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
+
+        assert_matches!(
+            get(
+                &pkgfs_versions,
+                &pkgfs_install,
+                &pkgfs_needs,
+                meta_blob_info,
+                vec![],
+                stream,
+                None,
+                cobalt_sender
+            )
+            .await,
+            Err(Status::UNAVAILABLE)
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn trivially_opens_present_package() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+
+        let (pkgdir, pkgdir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+
+        let (task, proxy, mut pkgfs_versions, pkgfs_install, pkgfs_needs) =
+            spawn_get_with_mocks(meta_blob_info, Some(pkgdir_server_end));
+
+        pkgfs_versions
+            .expect_open_package([0; 32].into())
+            .await
+            .succeed_open()
+            .await
+            .expect_clone()
+            .await
+            .verify_are_same_channel(pkgdir);
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+        assert_eq!(task.await, Ok(()));
+        assert_matches!(
+            proxy.take_event_stream().next().await.unwrap(),
+            Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn trivially_opens_present_package_even_if_needed_blobs_is_closed() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+
+        let (pkgdir, pkgdir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+
+        let (task, proxy, mut pkgfs_versions, pkgfs_install, pkgfs_needs) =
+            spawn_get_with_mocks(meta_blob_info, Some(pkgdir_server_end));
+
+        drop(proxy);
+
+        pkgfs_versions
+            .expect_open_package([0; 32].into())
+            .await
+            .succeed_open()
+            .await
+            .expect_clone()
+            .await
+            .verify_are_same_channel(pkgdir);
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+        assert_eq!(task.await, Ok(()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn opens_missing_package_after_writing_blobs() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+
+        let (pkgdir, pkgdir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+
+        let (task, proxy, mut pkgfs_versions, mut pkgfs_install, mut pkgfs_needs) =
+            spawn_get_with_mocks(meta_blob_info, Some(pkgdir_server_end));
+
+        pkgfs_versions.expect_open_package([0; 32].into()).await.fail_open_with_not_found().await;
+
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+        enumerate_missing_blobs(
+            &proxy,
+            &mut pkgfs_needs,
+            meta_blob_info.blob_id,
+            vec![].into_iter(),
+        )
+        .await;
+        assert_matches!(
+            proxy.take_event_stream().next().await.unwrap(),
+            Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
+        );
+
+        pkgfs_versions
+            .expect_open_package([0; 32].into())
+            .await
+            .succeed_open()
+            .await
+            .expect_clone()
+            .await
+            .verify_are_same_channel(pkgdir);
+
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+        assert_eq!(task.await, Ok(()));
     }
 }
 

@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
+
 use {
     anyhow::{anyhow, Error},
+    blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
@@ -16,9 +18,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client::ScopedInstance, server::ServiceFs},
     fuchsia_inspect::reader::DiagnosticsHierarchy,
-    fuchsia_pkg_testing::get_inspect_hierarchy,
+    fuchsia_pkg_testing::{get_inspect_hierarchy, SystemImageBuilder},
     fuchsia_zircon as zx,
-    futures::prelude::*,
+    futures::{future::BoxFuture, prelude::*},
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
@@ -27,6 +29,7 @@ use {
 
 mod base_pkg_index;
 mod cobalt;
+mod get;
 mod inspect;
 mod space;
 mod sync;
@@ -45,47 +48,61 @@ impl PkgFs for PkgfsRamdisk {
     }
 }
 
-struct TestEnvBuilder<PkgFsFn, P>
+struct TestEnvBuilder<PkgFsFn, PkgFsFut>
 where
-    PkgFsFn: FnOnce() -> P,
-    P: PkgFs,
+    PkgFsFn: FnOnce() -> PkgFsFut,
+    PkgFsFut: Future,
+    PkgFsFut::Output: PkgFs,
 {
     paver_service_builder: Option<MockPaverServiceBuilder>,
     pkgfs: PkgFsFn,
 }
 
-impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk> {
+async fn make_default_pkgfs_ramdisk() -> PkgfsRamdisk {
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let system_image_package = SystemImageBuilder::new().build().await;
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap()
+}
+
+impl TestEnvBuilder<fn() -> BoxFuture<'static, PkgfsRamdisk>, BoxFuture<'static, PkgfsRamdisk>> {
     fn new() -> Self {
-        Self {
-            pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
-            paver_service_builder: None,
-        }
+        Self { pkgfs: || make_default_pkgfs_ramdisk().boxed(), paver_service_builder: None }
     }
 }
 
-impl<PkgFsFn, P> TestEnvBuilder<PkgFsFn, P>
+impl<PkgFsFn, PkgFsFut> TestEnvBuilder<PkgFsFn, PkgFsFut>
 where
-    PkgFsFn: FnOnce() -> P,
-    P: PkgFs,
+    PkgFsFn: FnOnce() -> PkgFsFut,
+    PkgFsFut: Future,
+    PkgFsFut::Output: PkgFs,
 {
     fn paver_service_builder(self, paver_service_builder: MockPaverServiceBuilder) -> Self {
         Self { paver_service_builder: Some(paver_service_builder), ..self }
     }
 
-    fn pkgfs<Pother>(self, pkgfs: Pother) -> TestEnvBuilder<impl FnOnce() -> Pother, Pother>
+    fn pkgfs<Pother>(
+        self,
+        pkgfs: Pother,
+    ) -> TestEnvBuilder<impl FnOnce() -> future::Ready<Pother>, future::Ready<Pother>>
     where
         Pother: PkgFs + 'static,
     {
-        TestEnvBuilder::<_, Pother> {
-            pkgfs: || pkgfs,
+        TestEnvBuilder {
+            pkgfs: || future::ready(pkgfs),
             paver_service_builder: self.paver_service_builder,
         }
     }
 
-    async fn build(self) -> TestEnv<P> {
+    async fn build(self) -> TestEnv<PkgFsFut::Output> {
         let mut fs = ServiceFs::new();
 
-        let pkgfs = (self.pkgfs)();
+        let pkgfs = (self.pkgfs)().await;
         fs.add_remote("pkgfs", pkgfs.root_dir_handle().unwrap().into_proxy().unwrap());
 
         let logger_factory = Arc::new(MockLoggerFactory::new());
@@ -260,8 +277,14 @@ impl MockLoggerFactory {
 }
 
 impl TestEnv<PkgfsRamdisk> {
-    fn builder() -> TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk> {
+    fn builder(
+    ) -> TestEnvBuilder<fn() -> BoxFuture<'static, PkgfsRamdisk>, BoxFuture<'static, PkgfsRamdisk>>
+    {
         TestEnvBuilder::new()
+    }
+
+    fn blobfs(&self) -> &BlobfsRamdisk {
+        self.pkgfs.blobfs()
     }
 }
 

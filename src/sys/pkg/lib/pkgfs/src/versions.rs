@@ -6,9 +6,17 @@
 
 use {
     crate::package,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
+    fidl::{
+        endpoints::{Proxy, RequestStream},
+        AsHandleRef,
+    },
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
+        NodeInfo,
+    },
     fuchsia_hash::Hash,
     fuchsia_zircon::Status,
+    futures::prelude::*,
 };
 
 /// An open handle to /pkgfs/versions
@@ -51,6 +59,19 @@ impl Client {
         (Self { proxy }, stream)
     }
 
+    /// Creates a new client backed by the returned mock. This constructor should not be used
+    /// outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_mock() -> (Self, Mock) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
+        (Self { proxy }, Mock { stream })
+    }
+
     /// Open the package given by `meta_far_merkle`. Verifies the OnOpen event before returning.
     pub async fn open_package(
         &self,
@@ -69,6 +90,115 @@ impl Client {
                 })?;
 
         Ok(package::Directory::new(dir))
+    }
+}
+
+/// A testing server implementation of /pkgfs/versions.
+///
+/// Mock does not handle requests until instructed to do so.
+pub struct Mock {
+    stream: DirectoryRequestStream,
+}
+
+impl Mock {
+    /// Consume the next directory request, verifying it is intended to open the package identified
+    /// by `merkle`.  Returns a `MockPackage` representing the open package directory.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
+    pub async fn expect_open_package(&mut self, merkle: Hash) -> MockPackage {
+        match self.stream.next().await {
+            Some(Ok(DirectoryRequest::Open {
+                flags: _,
+                mode: _,
+                path,
+                object,
+                control_handle: _,
+            })) => {
+                assert_eq!(path, merkle.to_string());
+
+                let stream = object.into_stream().unwrap().cast_stream();
+                MockPackage { stream }
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    /// Asserts that the request stream closes without any further requests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn expect_done(mut self) {
+        match self.stream.next().await {
+            None => {}
+            Some(request) => panic!("unexpected request: {:?}", request),
+        }
+    }
+}
+
+/// A testing server implementation of an open /pkgfs/versions/<merkle> directory.
+///
+/// MockBlob does not send the OnOpen event or handle requests until instructed to do so.
+pub struct MockPackage {
+    stream: DirectoryRequestStream,
+}
+
+impl MockPackage {
+    fn send_on_open(&mut self, status: Status) {
+        let mut info = NodeInfo::Directory(DirectoryObject);
+        let () =
+            self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
+    }
+
+    /// Fail the open request with an error indicating the package does not exist.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn fail_open_with_not_found(mut self) {
+        self.send_on_open(Status::NOT_FOUND);
+    }
+
+    /// Succeeds the open request.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn succeed_open(mut self) -> Self {
+        self.send_on_open(Status::OK);
+        self
+    }
+
+    /// Consume the next directory request, verifying it is a request to duplicate this package
+    /// onto another handle.  Returns a `MockPackage` representing the duplicated package
+    /// directory.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error or assertion violation (unexpected requests or a mismatched clone call)
+    pub async fn expect_clone(&mut self) -> MockPackage {
+        match self.stream.next().await {
+            Some(Ok(DirectoryRequest::Clone { flags: _, object, control_handle: _ })) => {
+                let stream = object.into_stream().unwrap().cast_stream();
+                MockPackage { stream }
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    /// Verify this directory's channel is the server end for the given proxy dir, consuming both
+    /// objects.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error or if the objects are not using the same channel.
+    pub fn verify_are_same_channel(self, proxy: DirectoryProxy) {
+        let expected_server_end_koid = proxy.as_channel().basic_info().unwrap().related_koid;
+        let actual_server_end_koid = self.stream.into_inner().0.channel().get_koid().unwrap();
+
+        assert_eq!(expected_server_end_koid, actual_server_end_koid);
     }
 }
 
