@@ -257,21 +257,35 @@ void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
       if (const auto pending = Size();
           reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
         const auto uploaded = UploadAll();
-        FX_LOGS(INFO) << fxl::StringPrintf(
-            "Successfully uploaded %zu of %zu pending crash reports on network reachable ",
-            uploaded, pending);
+        if (uploaded > 0) {
+          FX_LOGS(INFO) << fxl::StringPrintf(
+              "Successfully uploaded %zu of %zu pending crash reports on network reachable ",
+              uploaded, pending);
+        } else {
+          FX_LOGS(INFO) << fxl::StringPrintf(
+              "Failed to upload any of the %zu pending crash reports on network reachable ",
+              pending);
+        }
       }
     }
   });
 }
 
 void Queue::UploadAllEveryFifteenMinutes() {
+  // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
   if (const auto pending = Size(); reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
     const auto uploaded = UploadAll();
-    FX_LOGS(INFO) << fxl::StringPrintf(
-        "Successfully uploaded %zu of %zu pending crash reports as part of the "
-        "15-minute periodic uploaded",
-        uploaded, pending);
+    if (uploaded > 0) {
+      FX_LOGS(INFO) << fxl::StringPrintf(
+          "Successfully uploaded %zu of %zu pending crash reports as part of the "
+          "15-minute periodic upload",
+          uploaded, pending);
+    } else {
+      FX_LOGS(INFO) << fxl::StringPrintf(
+          "Failed to upload any of the %zu pending crash reports as part of the "
+          "15-minute periodic upload",
+          pending);
+    }
   }
   if (const auto status =
           upload_all_every_fifteen_minutes_task_.PostDelayed(dispatcher_, zx::min(15));
