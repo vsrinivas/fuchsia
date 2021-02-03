@@ -658,6 +658,7 @@ func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) er
 			panic(err)
 			return err
 		}
+		fmt.Print(line)
 		if strings.Contains(line, msg) {
 			return nil
 		}
