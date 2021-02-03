@@ -37,14 +37,14 @@ use {
 
 pub async fn serve_event_source_sync(
     event_source: EventSource,
-    stream: fsys::BlockingEventSourceRequestStream,
+    stream: fsys::EventSourceRequestStream,
 ) {
     let result = stream
         .try_for_each_concurrent(None, move |request| {
             let mut event_source = event_source.clone();
             async move {
                 match request {
-                    fsys::BlockingEventSourceRequest::Subscribe { events, stream, responder } => {
+                    fsys::EventSourceRequest::Subscribe { events, stream, responder } => {
                         // Subscribe to events.
                         let requests = events
                             .into_iter()
@@ -77,20 +77,12 @@ pub async fn serve_event_source_sync(
                             }
                         };
                     }
-                    fsys::BlockingEventSourceRequest::TakeStaticEventStream {
-                        path,
-                        responder,
-                        ..
-                    } => {
+                    fsys::EventSourceRequest::TakeStaticEventStream { path, responder, .. } => {
                         let mut result = event_source
                             .take_static_event_stream(path)
                             .await
                             .ok_or(fcomponent::Error::ResourceUnavailable);
                         responder.send(&mut result)?;
-                    }
-                    fsys::BlockingEventSourceRequest::StartComponentTree { responder } => {
-                        event_source.start_component_tree().await;
-                        responder.send()?;
                     }
                 }
                 Ok(())
@@ -98,7 +90,7 @@ pub async fn serve_event_source_sync(
         })
         .await;
     if let Err(e) = result {
-        error!("Error serving BlockingEventSource: {}", e);
+        error!("Error serving EventSource: {}", e);
     }
 }
 

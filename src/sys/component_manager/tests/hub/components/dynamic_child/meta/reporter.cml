@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
+    ],
     program: {
         binary: "bin/dynamic_child_reporter",
     },
@@ -11,7 +14,7 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.sys2.BlockingEventSource" },
+        { protocol: "fuchsia.sys2.EventSource" },
         {
             protocol: [
                 "fuchsia.sys2.Realm",
@@ -29,7 +32,6 @@
             event: [
                 "destroyed",
                 "marked_for_destruction",
-                "resolved",
                 "stopped",
             ],
             from: "framework",

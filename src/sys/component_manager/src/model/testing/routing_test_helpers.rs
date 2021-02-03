@@ -837,7 +837,7 @@ pub mod capability_util {
     use {
         super::*, crate::model::component_id_index::ComponentInstanceId, anyhow::format_err,
         cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
-        fidl_fuchsia_sys2::BlockingEventSourceMarker, std::path::PathBuf,
+        fidl_fuchsia_sys2::EventSourceMarker, std::path::PathBuf,
     };
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
@@ -1008,7 +1008,7 @@ pub mod capability_util {
     }
 
     /// Verifies that it's possible to subscribe to the given `events` by connecting to an
-    /// `BlockingEventSource` on the given `namespace`. Used to test eventcapability routing.
+    /// `EventSource` on the given `namespace`. Used to test eventcapability routing.
     /// Testing of usage of the stream lives in the integration tests in:
     /// //src/sys/component_manager/tests/events/integration_test.rs
     pub async fn subscribe_to_event_stream(
@@ -1016,7 +1016,7 @@ pub mod capability_util {
         expected_res: ExpectedResult,
         events: Vec<EventSubscription>,
     ) {
-        let path: CapabilityPath = "/svc/fuchsia.sys2.BlockingEventSource".parse().unwrap();
+        let path: CapabilityPath = "/svc/fuchsia.sys2.EventSource".parse().unwrap();
         let res = subscribe_to_events(namespace, &path, events).await;
         match (res, expected_res) {
             (Err(e), ExpectedResult::Ok) => {
@@ -1035,8 +1035,7 @@ pub mod capability_util {
         events: Vec<EventSubscription>,
     ) -> Result<fsys::EventStreamRequestStream, anyhow::Error> {
         let event_source_proxy =
-            connect_to_svc_in_namespace::<BlockingEventSourceMarker>(namespace, event_source_path)
-                .await;
+            connect_to_svc_in_namespace::<EventSourceMarker>(namespace, event_source_path).await;
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
         event_source_proxy
@@ -1053,7 +1052,10 @@ pub mod capability_util {
             )
             .await?
             .map_err(|error| format_err!("Unable to subscribe to event stream: {:?}", error))?;
-        event_source_proxy.start_component_tree().await?;
+        event_source_proxy
+            .take_static_event_stream("/svc/StartComponentTree")
+            .await?
+            .map_err(|error| format_err!("Unable to take static event stream: {:?}", error))?;
         Ok(stream)
     }
 

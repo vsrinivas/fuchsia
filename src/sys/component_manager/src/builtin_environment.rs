@@ -35,7 +35,6 @@ use {
             error::ModelError,
             event_logger::EventLogger,
             events::{
-                event::EventMode,
                 registry::{EventRegistry, ExecutionMode},
                 running_provider::RunningProvider,
                 source_factory::EventSourceFactory,
@@ -356,7 +355,6 @@ impl BuiltinEnvironment {
         } else {
             None
         };
-
         // Set up ProcessLauncher if available.
         let process_launcher = if runtime_config.use_builtin_process_launcher {
             let process_launcher = Arc::new(ProcessLauncher::new());
@@ -675,7 +673,7 @@ impl BuiltinEnvironment {
         })
     }
 
-    /// Setup a ServiceFs that contains the Hub and (optionally) the `BlockingEventSource` service.
+    /// Setup a ServiceFs that contains the Hub and (optionally) the `EventSource` service.
     async fn create_service_fs<'a>(&self) -> Result<ServiceFs<ServiceObj<'a, ()>>, ModelError> {
         // Create the ServiceFs
         let mut service_fs = ServiceFs::new();
@@ -690,7 +688,7 @@ impl BuiltinEnvironment {
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
         if self.execution_mode.is_debug() {
-            let event_source = self.event_source_factory.create_for_debug(EventMode::Sync).await?;
+            let event_source = self.event_source_factory.create_for_debug().await?;
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
                 event_source.serve(stream);

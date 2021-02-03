@@ -1776,7 +1776,7 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug(EventMode::Sync)
+            .create_for_debug()
             .await
             .expect("create event source");
         let mut event_stream = event_source
@@ -1808,7 +1808,7 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug(EventMode::Sync)
+            .create_for_debug()
             .await
             .expect("create event source");
         let mut event_stream = event_source
@@ -1873,7 +1873,7 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug(EventMode::Async)
+            .create_for_debug()
             .await
             .expect("failed creating event source");
         let mut stop_event_stream = event_source

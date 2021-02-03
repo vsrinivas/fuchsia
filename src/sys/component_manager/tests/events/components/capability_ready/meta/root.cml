@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
+    ],
     program: {
         binary: "bin/capability_ready_root",
     },
@@ -12,7 +15,7 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.sys2.BlockingEventSource" },
+        { protocol: "fuchsia.sys2.EventSource" },
         {
             protocol: [ "fidl.examples.routing.echo.Echo" ],
             from: "framework",
@@ -28,14 +31,7 @@
                     "not_published",
                 ],
             },
-            modes: ["sync"],
-        },
-        {
-            // We need the resolved event for start_component_tree.
-            // See fxbug.dev/52929.
-            event: "resolved",
-            from: "framework",
-            modes: ["sync"],
+            modes: [ "sync" ],
         },
     ],
 }

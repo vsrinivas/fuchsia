@@ -5,14 +5,10 @@
 Event capabilities allow components receive or offer events under the scope of a
 particular realm.
 
-Components that wish to listen for events should also have at least one of these
-protocols routed to them:
+Components that wish to listen for events should have routed to them:
 
--   [`fuchsia.sys2.EventSource`][event-source]: allows the component to listen
-    for events asynchronously. Component manager won't wait for the component to
-    handle the event.
--   [`fuchsia.sys2.BlockingEventSource`][blocking-event-source]: allows the
-    component to listen for events synchronously. Component manager will wait
+-   [`fuchsia.sys2.EventSource`][event-source]: allows the
+    component to listen for events. Component manager will wait
     for the component to handle the event. This is used for
     [hermetic tests][hermetic-tests].
 
@@ -34,6 +30,37 @@ use this event using a single filter `x: /b`.
 For example, the `capability_ready` event defines a filter for the `path`. The
 `path` is one or more paths exposed to framework that the component is
 interested in offering or listening to.
+
+## Static Event Streams (#event-streams)
+
+Event subscriptions can be set up statically in CML files via static event streams.
+Static event streams are similar to dynamically created event streams but are set
+up during the resolution of a component's manifest. The following is an example of the
+syntax of a static event stream.
+
+```json5
+{
+    event: "resolved",
+    modes: [ "sync" ],
+    from: "framework",
+},
+{
+    event_stream: [
+        {
+            event: "resolved",
+            mode: "sync",
+        }
+    ],
+    path: "/svc/StartComponentTree",
+},
+```
+
+In the syntax above, the component synchronously listens for `resolved` events of child
+components. This blocks children from starting, giving components an opportunity to set
+up dynamic event streams prior to starting child components so that no events are missed.
+
+`/svc/StartComponentTree` is the conventional path to use for blocking child components and used
+by client libraries via a `start_component_tree` API.
 
 ## Offering events {#offering-events}
 
@@ -129,7 +156,7 @@ component used the event from `framework`, which means that it will only see
 `stopped` and `destroyed` events for components in its own realm.
 
 [hermetic-tests]: ../opaque_test.md
-[blocking-event-source]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#BlockingEventSource
+[event-source]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#EventSource
 [event-source]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#EventSource
 [event-type]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#EventType
 [routing-terminology]: ../component_manifests.md#routing-terminology

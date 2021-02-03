@@ -15,6 +15,9 @@ pub enum EventsError {
     #[error("Registry not found")]
     RegistryNotFound,
 
+    #[error("StreamProvider not found")]
+    StreamProviderNotFound,
+
     #[error("Event {:?} appears more than once in a subscription request", event_name)]
     DuplicateEvent { event_name: CapabilityName },
 

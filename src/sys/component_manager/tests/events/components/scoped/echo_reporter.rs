@@ -36,7 +36,7 @@ async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<()
     let _ = echo.echo_string(Some("Start trigger")).await?;
 
     // Subscribe to relevant events.
-    let mut event_source = EventSource::new_sync()?;
+    let mut event_source = EventSource::new()?;
     let event_log =
         EventLog::record_events(&mut event_source, vec![Started::NAME, CapabilityRouted::NAME])
             .await?;

@@ -15,7 +15,7 @@ use {
 #[fasync::run_singlethreaded]
 async fn main() {
     // Track all the starting components.
-    let event_source = EventSource::new_sync().unwrap();
+    let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec!["started_nested"], EventMode::Sync)])
         .await

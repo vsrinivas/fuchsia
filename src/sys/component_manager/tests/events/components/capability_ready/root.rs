@@ -51,7 +51,7 @@ async fn main() {
     const NUM_CAPABILITIES: usize = 4;
 
     let fs = ServiceFs::new_local();
-    let event_source = EventSource::new_sync().unwrap();
+    let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![CapabilityReady::NAME], EventMode::Sync)])
         .await

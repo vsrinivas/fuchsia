@@ -40,7 +40,7 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.sys2.BlockingEventSource",
+            protocol: "fuchsia.sys2.EventSource",
             from: "parent",
             to: [ "#reporter" ],
         },

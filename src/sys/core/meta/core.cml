@@ -253,10 +253,7 @@
             to: [ "#system-update-committer" ],
         },
         {
-            protocol: [
-                "fuchsia.sys2.BlockingEventSource",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
             to: [ "#test_manager" ],
         },

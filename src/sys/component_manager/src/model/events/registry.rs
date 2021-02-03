@@ -106,6 +106,7 @@ pub struct SubscriptionOptions {
     pub execution_mode: ExecutionMode,
 }
 
+#[derive(Debug)]
 pub struct EventSubscription {
     pub event_name: CapabilityName,
     /// Determines whether component manager waits for a response from the
@@ -134,7 +135,7 @@ impl Default for SubscriptionOptions {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum SubscriptionType {
     /// Indicates that a client above the root is subscribing to events (e.g. a test).
     /// Event routing will be bypassed and all events can be subscribed.

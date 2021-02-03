@@ -180,11 +180,6 @@ async fn get_topology(
         .add_component("test_wrapper/archivist", ComponentSource::url(*ARCHIVIST_FOR_EMBEDDING_URL))
         .await?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.sys2.BlockingEventSource"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
             capability: Capability::Protocol("fuchsia.process.Launcher"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],

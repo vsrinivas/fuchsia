@@ -67,17 +67,17 @@ By the end of this statement:
 - No component has been started.
 - Component manager’s outgoing directory is serving:
   - The hub of the root component at `$out/hub`.
-  - The `BlockingEventSource` FIDL service at
-    `$out/svc/fuchsia.sys2.BlockingEventSource`.
+  - The `EventSource` FIDL service at
+    `$out/svc/fuchsia.sys2.EventSource`.
 - The state of the hub reflects the following:
   - Static children of the root component should be visible.
   - Grandchildren of the root component should not be visible (because they
   haven't been resolved yet).
   - There should be no `exec` directories for any component.
 
-Use the `BlockingEventSource` FIDL service to subscribe to events and unblock
+Use the `EventSource` FIDL service to subscribe to events and unblock
 the component manager. The following example shows you how to use the
-`BlockingEventSource` service:
+`EventSource` service:
 
 ```rust
 let event_source = test.connect_to_event_source().await?;
@@ -169,13 +169,13 @@ goes out of scope, `resume()` is called implicitly.
 
 ### Scoping of events
 
-The `BlockingEventSource` FIDL protocol can be requested by any component instance within the
+The `EventSource` FIDL protocol can be requested by any component instance within the
 component topology and is served by the component manager.
 
 Events are capailities themselves so they have to be routed as well. Refer
 to [event capabilities][event-capabilities] for more details on this.
 
-A component instance can request a scoped `BlockingEventSource` in its manifest
+A component instance can request a scoped `EventSource` in its manifest
 file as follows:
 
 ```json5
@@ -186,7 +186,7 @@ file as follows:
     use: [
         {
             protocol: [
-                "fuchsia.sys2.BlockingEventSource",
+                "fuchsia.sys2.EventSource",
             ],
             from: "framework"
         },
@@ -203,10 +203,10 @@ Asynchronous events do not block component manager and the events do not have `r
 methods on them.
 
 Another component can pass along its scope of system events by passing along the
-`BlockingEventSource` capability through the conventional routing operations `offer`,
+`EventSource` capability through the conventional routing operations `offer`,
 `expose` and `use`.
 
-If a component requests a `BlockingEventSource` then its children cannot start until it explicitly
+If a component requests a `EventSource` then its children cannot start until it explicitly
 calls `start_component_tree()`.
 
 ### Additional functionality
@@ -471,10 +471,10 @@ When component manager is in debug mode, it does the following:
 
    - The hub of the root component at `$out/hub`.
 
-   - The `BlockingEventSource` FIDL service at
-   `$out/svc/fuchsia.sys2.BlockingEventSource`.
+   - The `EventSource` FIDL service at
+   `$out/svc/fuchsia.sys2.EventSource`.
 
-1. Waits to be unblocked by the `BlockingEventSource` FIDL service.
+1. Waits to be unblocked by the `EventSource` FIDL service.
 
 1. Starts up the root component (including any eager children).
 

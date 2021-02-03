@@ -19,7 +19,6 @@ use {
                 stream::EventStream,
                 stream_provider::EventStreamProvider,
             },
-            hooks::EventType,
             model::Model,
         },
     },
@@ -27,6 +26,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
+    moniker::ExtendedMoniker,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -46,9 +46,10 @@ pub struct EventSource {
     /// server end of the static event streams.
     stream_provider: Weak<EventStreamProvider>,
 
-    /// Used for `BlockingEventSource.StartComponentTree`.
-    // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
-    resolve_instance_event_stream: Arc<Mutex<Option<EventStream>>>,
+    /// Used for OpaqueTest:
+    /// The implicit static EventStream is dropped when the EventSource goes out of scope.
+    /// TODO(fxbug.dev/48245): this shouldn't be done for any EventSource once OpaqueTest goes away.
+    resolve_instance_event_stream: Arc<Mutex<Option<fasync::Task<()>>>>,
 
     /// The options used to subscribe to events.
     options: SubscriptionOptions,
@@ -60,43 +61,40 @@ impl EventSource {
     pub async fn new(
         model: Weak<Model>,
         options: SubscriptionOptions,
-        mode: EventMode,
         registry: Weak<EventRegistry>,
         stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
         // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
-        let resolve_instance_event_stream = Arc::new(Mutex::new(match mode {
-            EventMode::Async => None,
-            EventMode::Sync => {
-                let registry = registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
-                Some(
-                    registry
-                        .subscribe(
-                            &options,
-                            vec![EventSubscription::new(
-                                EventType::Resolved.into(),
-                                EventMode::Sync,
-                            )],
-                        )
-                        .await?,
-                )
-            }
-        }));
-
-        Ok(Self { registry, stream_provider, model, options, resolve_instance_event_stream })
+        let resolve_instance_event_stream =
+            Arc::new(Mutex::new(match (&options.subscription_type, &options.execution_mode) {
+                (SubscriptionType::AboveRoot, ExecutionMode::Debug) => {
+                    let stream_provider =
+                        stream_provider.upgrade().ok_or(EventsError::StreamProviderNotFound)?;
+                    Some(
+                        stream_provider
+                            .create_static_event_stream(
+                                &ExtendedMoniker::ComponentManager,
+                                "/svc/StartComponentTree".to_string(),
+                                vec![EventSubscription::new("resolved".into(), EventMode::Sync)],
+                            )
+                            .await?,
+                    )
+                }
+                (_, _) => None,
+            }));
+        Ok(Self { registry, stream_provider, model, resolve_instance_event_stream, options })
     }
 
     pub async fn new_for_debug(
         model: Weak<Model>,
         registry: Weak<EventRegistry>,
-        mode: EventMode,
+        stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
         Self::new(
             model,
             SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Debug),
-            mode,
             registry,
-            Weak::new(),
+            stream_provider,
         )
         .await
     }
@@ -104,8 +102,7 @@ impl EventSource {
     /// Drops the `Resolved` event stream, thereby permitting components within the
     /// realm to be started.
     pub async fn start_component_tree(&mut self) {
-        let mut resolve_instance_event_stream = self.resolve_instance_event_stream.lock().await;
-        *resolve_instance_event_stream = None;
+        let _ = self.take_static_event_stream("/svc/StartComponentTree".to_string()).await;
     }
 
     /// Subscribes to events provided in the `events` vector.
@@ -126,16 +123,20 @@ impl EventSource {
         &self,
         target_path: String,
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
-        if let SubscriptionType::Component(target_moniker) = &self.options.subscription_type {
-            if let Some(stream_provider) = self.stream_provider.upgrade() {
-                return stream_provider.take_static_event_stream(target_moniker, target_path).await;
+        let moniker = match &self.options.subscription_type {
+            SubscriptionType::AboveRoot => ExtendedMoniker::ComponentManager,
+            SubscriptionType::Component(abs_moniker) => {
+                ExtendedMoniker::ComponentInstance(abs_moniker.clone())
             }
+        };
+        if let Some(stream_provider) = self.stream_provider.upgrade() {
+            return stream_provider.take_static_event_stream(&moniker, target_path).await;
         }
         return None;
     }
 
     /// Serves a `EventSource` FIDL protocol.
-    pub fn serve(self, stream: fsys::BlockingEventSourceRequestStream) {
+    pub fn serve(self, stream: fsys::EventSourceRequestStream) {
         fasync::Task::spawn(async move {
             serve_event_source_sync(self, stream).await;
         })
@@ -153,7 +154,7 @@ impl CapabilityProvider for EventSource {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
-        let stream = ServerEnd::<fsys::BlockingEventSourceMarker>::new(server_end)
+        let stream = ServerEnd::<fsys::EventSourceMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
         self.serve(stream);

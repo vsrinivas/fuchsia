@@ -98,7 +98,7 @@ async fn main() {
     let tx1 = tx.clone();
     let tx2 = tx.clone();
     let tx3 = tx.clone();
-    let event_source = EventSource::new_async().unwrap();
+    let event_source = EventSource::new().unwrap();
 
     let event_stream =
         event_source.take_static_event_stream("/svc/fuchsia.sys2.EventStream").await.unwrap();

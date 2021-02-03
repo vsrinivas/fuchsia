@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
+    ],
     program: {
         binary: "bin/scoped_echo_reporter",
     },
@@ -16,7 +19,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
+            protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",
@@ -25,7 +28,6 @@
         {
             event: [
                 "capability_routed",
-                "resolved",
                 "started",
             ],
             from: "framework",

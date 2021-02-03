@@ -37,6 +37,7 @@ rustc_library("test_utils_lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:rand",
@@ -63,4 +64,10 @@ rustc_library("test_utils_lib") {
 fuchsia_unittest_package("test-utils-unittests") {
   manifest = "meta/test-utils-unittests.cmx"
   deps = [ ":test_utils_lib_test" ]
+}
+
+# Require dependent components to include start_component_tree capabilities in their
+# component manifests.
+expect_includes("client_includes") {
+  includes = [ "start_component_tree.shard.cml" ]
 }

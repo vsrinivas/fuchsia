@@ -15,7 +15,7 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() {
-    let event_source = EventSource::new_sync().unwrap();
+    let event_source = EventSource::new().unwrap();
 
     // Subscribe to relevant events
     let mut event_stream = event_source

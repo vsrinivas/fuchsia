@@ -443,7 +443,7 @@ mod tests {
             } else {
                 let mut event_source = builtin_environment
                     .event_source_factory
-                    .create_for_debug(EventMode::Sync)
+                    .create_for_debug()
                     .await
                     .expect("created event source");
                 let event_stream = event_source

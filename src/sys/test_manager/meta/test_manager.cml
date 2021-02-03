@@ -65,7 +65,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.BlockingEventSource",
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",

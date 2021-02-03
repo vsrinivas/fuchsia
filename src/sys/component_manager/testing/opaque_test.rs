@@ -304,8 +304,8 @@ async fn launch_component_manager(
 async fn connect_to_event_source(component_manager_path: &PathBuf) -> Result<EventSource, Error> {
     let path_to_svc = component_manager_path.join("out/svc");
     let path_to_svc = path_to_svc.to_str().expect("found invalid chars");
-    let proxy = connect_to_service_at::<fsys::BlockingEventSourceMarker>(path_to_svc)
-        .context("could not connect to BlockingEventSource service")?;
+    let proxy = connect_to_service_at::<fsys::EventSourceMarker>(path_to_svc)
+        .context("could not connect to EventSource service")?;
     Ok(EventSource::from_proxy(proxy))
 }
 

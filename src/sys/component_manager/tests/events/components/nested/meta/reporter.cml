@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
+    ],
     program: {
         binary: "bin/nested_reporter",
     },
@@ -30,21 +33,9 @@
             from: "framework",
         },
         {
-            event: [
-                "resolved",
-                "started",
-            ],
+            event: [ "started" ],
             from: "framework",
             modes: [ "sync" ],
-        },
-        {
-            event_stream: [
-                {
-                    event: "resolved",
-                    mode: "sync",
-                },
-            ],
-            path: "/svc/StartComponentTree",
         },
     ],
 }

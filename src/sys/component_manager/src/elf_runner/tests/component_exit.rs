@@ -22,7 +22,7 @@ use {
 async fn test_exit_detection() {
     fxlog::init().unwrap();
 
-    let event_source = EventSource::new_sync().unwrap();
+    let event_source = EventSource::new().unwrap();
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Sync)])
         .await
@@ -55,7 +55,7 @@ async fn test_exit_after_rendezvous() {
 
     // Get the event source, install our service injector, and then start the
     // component tree.
-    let event_source = EventSource::new_sync().unwrap();
+    let event_source = EventSource::new().unwrap();
     let rendezvous_service = Arc::new(RendezvousService { call_count: Mutex::new(0) });
     rendezvous_service.inject(&event_source, EventMatcher::ok()).await;
     let event_stream = event_source

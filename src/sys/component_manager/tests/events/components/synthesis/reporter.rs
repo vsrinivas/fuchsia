@@ -39,7 +39,7 @@ async fn main() -> Result<(), Error> {
     destroy_waiter.await;
 
     // Subscribe to events.
-    let event_source = EventSource::new_async()?;
+    let event_source = EventSource::new()?;
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
             vec![Started::NAME, Running::NAME, MarkedForDestruction::NAME, CapabilityReady::NAME],

@@ -1,6 +1,7 @@
 {
     include: [
         "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
@@ -18,15 +19,12 @@
             from: "framework",
         },
         {
-            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
+            protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
-            event: [
-                "resolved",
-                "stopped",
-            ],
+            event: [ "stopped" ],
             from: "framework",
-            modes: ["sync"],
+            modes: [ "sync" ],
         },
     ],
     offer: [

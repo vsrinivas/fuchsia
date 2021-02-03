@@ -2206,7 +2206,7 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug(EventMode::Sync)
+            .create_for_debug()
             .await
             .expect("create event source");
         let event_stream = event_source
@@ -2218,7 +2218,10 @@ pub mod tests {
             )
             .await
             .expect("subscribe to event stream");
-        event_source.start_component_tree().await;
+        {
+            let _ =
+                event_source.take_static_event_stream("/svc/StartComponentTree".to_string()).await;
+        }
         let model = test.model.clone();
         fasync::Task::spawn(async move { model.start().await }).detach();
         (test, event_stream)

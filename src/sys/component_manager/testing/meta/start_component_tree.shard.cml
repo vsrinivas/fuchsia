@@ -1,0 +1,18 @@
+{
+    use: [
+        {
+            event: [ "resolved" ],
+            from: "framework",
+            modes: [ "sync" ],
+        },
+        {
+            event_stream: [
+                {
+                    event: "resolved",
+                    mode: "sync",
+                },
+            ],
+            path: "/svc/StartComponentTree",
+        },
+    ],
+}

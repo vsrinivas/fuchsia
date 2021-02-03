@@ -33,9 +33,9 @@ pub struct RuntimeConfig {
     pub security_policy: SecurityPolicy,
 
     /// If true, component manager will be in debug mode. In this mode, component manager
-    /// provides the `BlockingEventSource` protocol and exposes this protocol. Component
+    /// provides the `EventSource` protocol and exposes this protocol. Component
     /// manager will not start until it is resumed by a call to
-    /// `BlockingEventSource.StartComponentTree`.
+    /// `EventSource.StartComponentTree`.
     ///
     /// This is done so that an external component (say an integration test) can subscribe
     /// to events before the root component has started.

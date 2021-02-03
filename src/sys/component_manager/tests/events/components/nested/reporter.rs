@@ -17,7 +17,7 @@ async fn main() {
     syslog::init_with_tags(&["nested_reporter"]).unwrap();
 
     // Track all the starting child components.
-    let event_source = EventSource::new_async().unwrap();
+    let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Sync)])
         .await

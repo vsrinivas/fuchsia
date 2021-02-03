@@ -22,7 +22,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,
     log::warn,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -45,7 +45,7 @@ pub struct EventStreamProvider {
 
     /// A mapping from a component instance's AbsoluteMoniker, to the set of
     /// event streams and their corresponding paths in the component instance's out directory.
-    streams: Arc<Mutex<HashMap<AbsoluteMoniker, Vec<EventStreamAttachment>>>>,
+    streams: Arc<Mutex<HashMap<ExtendedMoniker, Vec<EventStreamAttachment>>>>,
 
     /// The mode in which component manager is running.
     execution_mode: ExecutionMode,
@@ -59,7 +59,7 @@ impl EventStreamProvider {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "EventStreamProvider",
-            vec![EventType::Destroyed, EventType::Resolved, EventType::Started],
+            vec![EventType::Destroyed, EventType::Resolved],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -69,7 +69,7 @@ impl EventStreamProvider {
     /// does not exist or the channel has already been taken.
     pub async fn take_static_event_stream(
         &self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &ExtendedMoniker,
         target_path: String,
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
         let mut streams = self.streams.lock().await;
@@ -85,29 +85,32 @@ impl EventStreamProvider {
         return None;
     }
 
-    async fn create_static_event_stream(
+    /// Creates a static EventStream listening for the specified `events` for a given |target_moniker|
+    /// component and with the provided `target_path`.
+    pub async fn create_static_event_stream(
         self: &Arc<Self>,
-        registry: &Arc<EventRegistry>,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &ExtendedMoniker,
         target_path: String,
         events: Vec<EventSubscription>,
-    ) -> Result<(), ModelError> {
-        let options = SubscriptionOptions::new(
-            SubscriptionType::Component(target_moniker.clone()),
-            self.execution_mode.clone(),
-        );
+    ) -> Result<fasync::Task<()>, ModelError> {
+        let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
+        let subscription_type = match target_moniker {
+            ExtendedMoniker::ComponentManager => SubscriptionType::AboveRoot,
+            ExtendedMoniker::ComponentInstance(abs_moniker) => {
+                SubscriptionType::Component(abs_moniker.clone())
+            }
+        };
+        let options = SubscriptionOptions::new(subscription_type, self.execution_mode.clone());
         let event_stream = registry.subscribe(&options, events).await?;
         let mut streams = self.streams.lock().await;
         let event_streams = streams.entry(target_moniker.clone()).or_insert(vec![]);
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
         event_streams.push(EventStreamAttachment { target_path, server_end });
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             if let Err(e) = serve_event_stream(event_stream, client_end).await {
                 warn!("{}", e);
             }
-        })
-        .detach();
-        Ok(())
+        }))
     }
 
     async fn on_component_destroyed(
@@ -115,7 +118,7 @@ impl EventStreamProvider {
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut streams = self.streams.lock().await;
-        streams.remove(&target_moniker);
+        streams.remove(&ExtendedMoniker::ComponentInstance(target_moniker.clone()));
         Ok(())
     }
 
@@ -124,13 +127,11 @@ impl EventStreamProvider {
         target_moniker: &AbsoluteMoniker,
         decl: &ComponentDecl,
     ) -> Result<(), ModelError> {
-        let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         for use_decl in &decl.uses {
             match use_decl {
                 UseDecl::EventStream(UseEventStreamDecl { target_path, events }) => {
                     self.create_static_event_stream(
-                        &registry,
-                        target_moniker,
+                        &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
                         target_path.to_string(),
                         events
                             .iter()
@@ -143,7 +144,8 @@ impl EventStreamProvider {
                             })
                             .collect(),
                     )
-                    .await?;
+                    .await?
+                    .detach();
                 }
                 _ => {}
             }

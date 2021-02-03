@@ -7,12 +7,19 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd, ServiceMarker},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::{connect_channel_to_service, connect_to_service},
+    fuchsia_component::client::connect_channel_to_service,
     fuchsia_zircon as zx,
     futures::StreamExt,
+    lazy_static::lazy_static,
     std::convert::TryFrom,
     thiserror::Error,
 };
+
+lazy_static! {
+    /// The path of the static event stream that, by convention, synchronously listens for
+    /// Resolved events.
+    pub static ref START_COMPONENT_TREE_STREAM: String = "/svc/StartComponentTree".into();
+}
 
 /// Returns the string name for the given `event_type`
 pub fn event_name(event_type: &fsys::EventType) -> String {
@@ -31,11 +38,11 @@ pub fn event_name(event_type: &fsys::EventType) -> String {
     .to_string()
 }
 
-/// A wrapper over the BlockingEventSource FIDL proxy.
+/// A wrapper over the EventSource FIDL proxy.
 /// Provides all of the FIDL methods with a cleaner, simpler interface.
 /// Refer to events.fidl for a detailed description of this protocol.
 pub struct EventSource {
-    proxy: fsys::BlockingEventSourceProxy,
+    proxy: fsys::EventSourceProxy,
 }
 
 pub enum EventMode {
@@ -60,24 +67,17 @@ impl From<Vec<String>> for EventSubscription {
 }
 
 impl EventSource {
-    /// Connects to the BlockingEventSource service at its default location
-    /// The default location is presumably "/svc/fuchsia.sys2.BlockingEventSource"
-    pub fn new_sync() -> Result<Self, Error> {
-        let proxy = connect_to_service::<fsys::BlockingEventSourceMarker>()
-            .context("could not connect to BlockingEventSource service")?;
-        Ok(EventSource::from_proxy(proxy))
-    }
-
-    pub fn new_async() -> Result<Self, Error> {
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fsys::BlockingEventSourceMarker>()?;
+    /// Connects to the EventSource service at its default location
+    /// The default location is presumably "/svc/fuchsia.sys2.EventSource"
+    pub fn new() -> Result<Self, Error> {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fsys::EventSourceMarker>()?;
         connect_channel_to_service::<fsys::EventSourceMarker>(server_end.into_channel())
             .context("could not connect to EventSource service")?;
         Ok(EventSource::from_proxy(proxy))
     }
 
-    /// Wraps a provided BlockingEventSource proxy
-    pub fn from_proxy(proxy: fsys::BlockingEventSourceProxy) -> Self {
+    /// Wraps a provided EventSource proxy
+    pub fn from_proxy(proxy: fsys::EventSourceProxy) -> Self {
         Self { proxy }
     }
 
@@ -119,7 +119,7 @@ impl EventSource {
     }
 
     pub async fn start_component_tree(self) {
-        self.proxy.start_component_tree().await.unwrap();
+        self.drop_event_stream(&START_COMPONENT_TREE_STREAM).await
     }
 
     pub async fn take_static_event_stream(&self, target_path: &str) -> Result<EventStream, Error> {

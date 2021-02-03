@@ -8,7 +8,6 @@ use {
         model::{
             error::ModelError,
             events::{
-                event::EventMode,
                 registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
                 source::EventSource,
                 stream_provider::EventStreamProvider,
@@ -18,20 +17,14 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityName, ComponentDecl},
-    futures::lock::Mutex,
+    cm_rust::CapabilityName,
     lazy_static::lazy_static,
     moniker::AbsoluteMoniker,
-    std::{
-        collections::HashMap,
-        sync::{Arc, Weak},
-    },
+    std::sync::{Arc, Weak},
 };
 
 lazy_static! {
     pub static ref EVENT_SOURCE_SERVICE_NAME: CapabilityName = "fuchsia.sys2.EventSource".into();
-    pub static ref EVENT_SOURCE_SYNC_SERVICE_NAME: CapabilityName =
-        "fuchsia.sys2.BlockingEventSource".into();
 }
 
 /// Allows to create `EventSource`s and tracks all the created ones.
@@ -47,9 +40,6 @@ pub struct EventSourceFactory {
     // The static event stream provider.
     event_stream_provider: Weak<EventStreamProvider>,
 
-    /// Tracks the event source used by each component identified with the given `moniker`.
-    event_source_registry: Mutex<HashMap<AbsoluteMoniker, EventSource>>,
-
     execution_mode: ExecutionMode,
 }
 
@@ -60,13 +50,7 @@ impl EventSourceFactory {
         event_stream_provider: Weak<EventStreamProvider>,
         execution_mode: ExecutionMode,
     ) -> Self {
-        Self {
-            model,
-            event_registry,
-            event_stream_provider,
-            event_source_registry: Mutex::new(HashMap::new()),
-            execution_mode,
-        }
+        Self { model, event_registry, event_stream_provider, execution_mode }
     }
 
     /// Creates the subscription to the required events.
@@ -77,30 +61,30 @@ impl EventSourceFactory {
             // This hook provides the EventSource capability to components in the tree
             HooksRegistration::new(
                 "EventSourceFactory",
-                vec![EventType::CapabilityRouted, EventType::Destroyed, EventType::Resolved],
+                vec![EventType::CapabilityRouted],
                 Arc::downgrade(self) as Weak<dyn Hook>,
             ),
         ]
     }
 
     /// Creates a debug event source.
-    pub async fn create_for_debug(&self, mode: EventMode) -> Result<EventSource, ModelError> {
-        EventSource::new_for_debug(self.model.clone(), self.event_registry.clone(), mode).await
+    pub async fn create_for_debug(&self) -> Result<EventSource, ModelError> {
+        EventSource::new_for_debug(
+            self.model.clone(),
+            self.event_registry.clone(),
+            self.event_stream_provider.clone(),
+        )
+        .await
     }
 
     /// Creates a `EventSource` for the given `target_moniker`.
-    pub async fn create(
-        &self,
-        target_moniker: AbsoluteMoniker,
-        mode: EventMode,
-    ) -> Result<EventSource, ModelError> {
+    pub async fn create(&self, target_moniker: AbsoluteMoniker) -> Result<EventSource, ModelError> {
         EventSource::new(
             self.model.clone(),
             SubscriptionOptions::new(
                 SubscriptionType::Component(target_moniker),
                 self.execution_mode.clone(),
             ),
-            mode,
             self.event_registry.clone(),
             self.event_stream_provider.clone(),
         )
@@ -115,59 +99,12 @@ impl EventSourceFactory {
         target_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        if capability_decl.matches_protocol(&EVENT_SOURCE_SERVICE_NAME)
-            || capability_decl.matches_protocol(&EVENT_SOURCE_SYNC_SERVICE_NAME)
-        {
-            let event_source_registry = self.event_source_registry.lock().await;
-            if let Some(event_source) = event_source_registry.get(&target_moniker) {
-                Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
-            } else {
-                // Evidently the component was destroyed.
-                Err(ModelError::instance_not_found(target_moniker.clone()))
-            }
+        if capability_decl.matches_protocol(&EVENT_SOURCE_SERVICE_NAME) {
+            let event_source = self.create(target_moniker.clone()).await?;
+            Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
         } else {
             Ok(capability)
         }
-    }
-
-    async fn on_destroyed_async(self: &Arc<Self>, target_moniker: &AbsoluteMoniker) {
-        let mut event_source_registry = self.event_source_registry.lock().await;
-        event_source_registry.remove(&target_moniker);
-    }
-
-    async fn on_resolved_async(
-        self: &Arc<Self>,
-        target_moniker: &AbsoluteMoniker,
-        decl: &ComponentDecl,
-    ) -> Result<(), ModelError> {
-        // TODO(miguelfrde): we have a problem here. The protocol is now routed and not always used
-        // from framework. This now needs to be done on CapabilityRouted as the protocol name that
-        // we have in the component decl might not match the source name after all the routing and
-        // potential renames.
-        let mode = if decl.uses_protocol(&EVENT_SOURCE_SERVICE_NAME) {
-            EventMode::Async
-        } else if decl.uses_protocol(&EVENT_SOURCE_SYNC_SERVICE_NAME) {
-            EventMode::Sync
-        } else {
-            return Ok(());
-        };
-        let key = target_moniker.clone();
-        let mut event_source_registry = self.event_source_registry.lock().await;
-        // It is currently assumed that a component instance's declaration
-        // is resolved only once. Someday, this may no longer be true if individual
-        // components can be updated.
-        assert!(!event_source_registry.contains_key(&key));
-        // An EventSource is created on resolution in order to ensure that discovery
-        // and resolution of children is not missed.
-        let event_source = self.create(key.clone(), mode).await?;
-        event_source_registry.insert(key, event_source);
-        Ok(())
-    }
-
-    #[cfg(test)]
-    async fn has_event_source(&self, abs_moniker: &AbsoluteMoniker) -> bool {
-        let event_source_registry = self.event_source_registry.lock().await;
-        event_source_registry.contains_key(abs_moniker)
     }
 }
 
@@ -188,180 +125,8 @@ impl Hook for EventSourceFactory {
                     )
                     .await?;
             }
-            Ok(EventPayload::Destroyed) => {
-                self.on_destroyed_async(&event.target_moniker).await;
-            }
-            Ok(EventPayload::Resolved { decl, .. }) => {
-                self.on_resolved_async(&event.target_moniker, decl).await?;
-            }
             _ => {}
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::*,
-        crate::config::RuntimeConfig,
-        crate::model::{
-            component::WeakComponentInstance,
-            environment::{DebugRegistry, Environment, RunnerRegistry},
-            hooks::Hooks,
-            model::ModelParams,
-            resolver::ResolverRegistry,
-            testing::{mocks::MockResolver, test_helpers::ComponentDeclBuilder},
-        },
-        cm_rust::{UseDecl, UseEventDecl, UseProtocolDecl, UseSource},
-        matches::assert_matches,
-    };
-
-    async fn dispatch_resolved_event(
-        hooks: &Hooks,
-        target_moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let decl = ComponentDeclBuilder::new()
-            .use_(UseDecl::Protocol(UseProtocolDecl {
-                source: UseSource::Framework,
-                source_name: EVENT_SOURCE_SYNC_SERVICE_NAME.clone(),
-                target_path: format!("/svc/{}", *EVENT_SOURCE_SYNC_SERVICE_NAME).parse().unwrap(),
-            }))
-            .use_(UseDecl::Event(UseEventDecl {
-                source: UseSource::Framework,
-                source_name: "resolved".into(),
-                target_name: "resolved".into(),
-                filter: None,
-                mode: cm_rust::EventMode::Sync,
-            }))
-            .build();
-        let event = Event::new_for_test(
-            target_moniker.clone(),
-            "fuchsia-pkg://test",
-            Ok(EventPayload::Resolved {
-                component: WeakComponentInstance::default(),
-                resolved_url: "fuchsia-pkg://test".to_string(),
-                decl: decl.clone(),
-            }),
-        );
-        hooks.dispatch(&event).await
-    }
-
-    async fn dispatch_destroyed_event(
-        hooks: &Hooks,
-        target_moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let event = Event::new_for_test(
-            target_moniker.clone(),
-            "fuchsia-pkg://test",
-            Ok(EventPayload::Destroyed),
-        );
-        hooks.dispatch(&event).await
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn drop_event_source_when_component_destroyed() {
-        let model = {
-            let mut resolver = MockResolver::new();
-            resolver.add_component(
-                "root",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Event(UseEventDecl {
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        mode: cm_rust::EventMode::Sync,
-                    }))
-                    .build(),
-            );
-            let resolver_registry = {
-                let mut registry = ResolverRegistry::new();
-                registry.register("test".to_string(), Box::new(resolver));
-                registry
-            };
-            Arc::new(
-                Model::new(ModelParams {
-                    runtime_config: Arc::new(RuntimeConfig::default()),
-                    root_component_url: "test:///root".to_string(),
-                    root_environment: Environment::new_root(
-                        RunnerRegistry::default(),
-                        resolver_registry,
-                        DebugRegistry::default(),
-                    ),
-                    namespace_capabilities: vec![],
-                })
-                .await
-                .unwrap(),
-            )
-        };
-        let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));
-        let event_source_factory = Arc::new(EventSourceFactory::new(
-            Arc::downgrade(&model),
-            Arc::downgrade(&event_registry),
-            Weak::new(),
-            ExecutionMode::Production,
-        ));
-
-        let hooks = Hooks::new(None);
-        hooks.install(event_source_factory.hooks()).await;
-
-        let root = AbsoluteMoniker::root();
-
-        // Verify that there is no EventSource for the root until we dispatch the Resolved event.
-        assert!(!event_source_factory.has_event_source(&root).await);
-        dispatch_resolved_event(&hooks, &root).await.unwrap();
-        assert!(event_source_factory.has_event_source(&root).await);
-        // Verify that destroying the component destroys the EventSource.
-        dispatch_destroyed_event(&hooks, &root).await.unwrap();
-        assert!(!event_source_factory.has_event_source(&root).await);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn passes_on_capability_routed_from_framework_not_on_root() {
-        let model = {
-            let resolver = ResolverRegistry::new();
-            Arc::new(
-                Model::new(ModelParams {
-                    runtime_config: Arc::new(RuntimeConfig::default()),
-                    root_component_url: "test:///root".to_string(),
-                    root_environment: Environment::new_root(
-                        RunnerRegistry::default(),
-                        resolver,
-                        DebugRegistry::default(),
-                    ),
-                    namespace_capabilities: vec![],
-                })
-                .await
-                .unwrap(),
-            )
-        };
-        let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));
-        let event_source_factory = Arc::new(EventSourceFactory::new(
-            Arc::downgrade(&model),
-            Arc::downgrade(&event_registry),
-            Weak::new(),
-            ExecutionMode::Production,
-        ));
-
-        let target: AbsoluteMoniker = vec!["a:0"].into();
-        let scope: AbsoluteMoniker = vec!["b:0"].into();
-        let capability_provider = Arc::new(Mutex::new(None));
-        let result = event_source_factory
-            .on(&Event::new_for_test(
-                target.clone(),
-                "fuchsia-pkg://test",
-                Ok(EventPayload::CapabilityRouted {
-                    capability_provider: capability_provider.clone(),
-                    source: CapabilitySource::Framework {
-                        capability: InternalCapability::Protocol(EVENT_SOURCE_SERVICE_NAME.clone()),
-                        scope_moniker: scope.clone(),
-                    },
-                }),
-            ))
-            .await;
-
-        assert!(capability_provider.lock().await.is_none());
-        assert_matches!(result, Ok(()));
     }
 }

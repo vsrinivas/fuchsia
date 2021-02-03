@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
+    ],
     program: {
         binary: "bin/realm_offered_reporter",
     },
@@ -13,18 +16,13 @@
         {
             protocol: [
                 "fidl.test.components.Trigger",
-                "fuchsia.sys2.BlockingEventSource",
+                "fuchsia.sys2.EventSource",
             ],
         },
         {
             event: "started_nested",
             from: "parent",
-            modes: ["sync"],
-        },
-        {
-            event: "resolved",
-            from: "framework",
-            modes: ["sync"],
+            modes: [ "sync" ],
         },
         { runner: "elf" },
     ],

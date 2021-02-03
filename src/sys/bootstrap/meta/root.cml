@@ -63,7 +63,6 @@
         },
         {
             protocol: [
-                "fuchsia.sys2.BlockingEventSource",
                 "fuchsia.sys2.EventSource",
                 "fuchsia.time.Maintenance",
             ],

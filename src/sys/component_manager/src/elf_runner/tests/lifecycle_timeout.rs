@@ -21,7 +21,7 @@ use {
 async fn test_stop_timeouts() {
     fxlog::init().unwrap();
 
-    let event_source = EventSource::new_sync().unwrap();
+    let event_source = EventSource::new().unwrap();
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(
             vec![Stopped::NAME, Destroyed::NAME],

@@ -17,7 +17,7 @@
     // Route Echo service from server to client.
     offer: [
         {
-            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
+            protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
             to: [ "#echo_reporter" ],
         },

@@ -216,7 +216,7 @@ mod tests {
         let events = vec![EventSubscription::new(EventType::Started.into(), EventMode::Sync)];
         let mut event_source = builtin_environment
             .event_source_factory
-            .create_for_debug(EventMode::Sync)
+            .create_for_debug()
             .await
             .expect("create event source");
 
@@ -551,7 +551,7 @@ mod tests {
         ];
         let mut event_source = builtin_environment
             .event_source_factory
-            .create_for_debug(EventMode::Sync)
+            .create_for_debug()
             .await
             .expect("create event source");
         let mut event_stream = event_source

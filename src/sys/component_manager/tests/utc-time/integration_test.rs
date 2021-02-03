@@ -65,7 +65,7 @@ async fn builtin_time_service_and_clock_routed() -> Result<(), Error> {
     let event_source = test
         .connect_to_event_source()
         .await
-        .expect("failed to connect to the BlockingEventSource protocol");
+        .expect("failed to connect to the EventSource protocol");
 
     // Inject TestOutcomeCapabilities which the components launched by component manager request
     // and use to report back the test outcome.

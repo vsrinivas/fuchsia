@@ -314,6 +314,20 @@ async fn capability_requested_event_at_parent() {
                     filter: Some(hashmap!{"name".to_string() => DictionaryValue::Str("foo_svc".to_string())}),
                     mode: cm_rust::EventMode::Async,
                 }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                    mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
+                }))
                 .add_lazy_child("b")
                 .build(),
         ),
@@ -2744,8 +2758,8 @@ async fn use_event_from_framework() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2757,8 +2771,8 @@ async fn use_event_from_framework() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
@@ -2780,6 +2794,13 @@ async fn use_event_from_framework() {
                     target_name: "resolved".into(),
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
                 }))
                 .build(),
         ),
@@ -2811,8 +2832,8 @@ async fn can_offer_capability_requested_event() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2832,8 +2853,8 @@ async fn can_offer_capability_requested_event() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -2848,6 +2869,13 @@ async fn can_offer_capability_requested_event() {
                     target_name: "resolved".into(),
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
                 }))
                 .build(),
         ),
@@ -2888,8 +2916,8 @@ async fn use_event_from_parent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2901,8 +2929,8 @@ async fn use_event_from_parent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -2917,6 +2945,13 @@ async fn use_event_from_parent() {
                     target_name: "resolved".into(),
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
                 }))
                 .build(),
         ),
@@ -2961,8 +2996,8 @@ async fn use_event_from_grandparent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2990,8 +3025,8 @@ async fn use_event_from_grandparent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3011,8 +3046,8 @@ async fn use_event_from_grandparent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -3041,6 +3076,13 @@ async fn use_event_from_grandparent() {
                     target_name: "resolved".into(),
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
                 }))
                 .build(),
         ),
@@ -3098,8 +3140,8 @@ async fn event_filter_routing() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3111,8 +3153,8 @@ async fn event_filter_routing() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -3130,17 +3172,24 @@ async fn event_filter_routing() {
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
                 }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
+                }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("d".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3177,8 +3226,8 @@ async fn event_filter_routing() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -3198,6 +3247,13 @@ async fn event_filter_routing() {
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
                 }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
+                }))
                 .build(),
         ),
         (
@@ -3205,8 +3261,8 @@ async fn event_filter_routing() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Parent,
@@ -3223,6 +3279,13 @@ async fn event_filter_routing() {
                     target_name: "resolved".into(),
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
                 }))
                 .build(),
         ),
@@ -3282,8 +3345,8 @@ async fn event_mode_routing_failure() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3303,8 +3366,8 @@ async fn event_mode_routing_failure() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3323,8 +3386,8 @@ async fn event_mode_routing_failure() {
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
@@ -3375,8 +3438,8 @@ async fn event_mode_routing_success() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3396,8 +3459,8 @@ async fn event_mode_routing_success() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -3416,8 +3479,8 @@ async fn event_mode_routing_success() {
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
@@ -3425,6 +3488,13 @@ async fn event_mode_routing_success() {
                     target_name: "resolved".into(),
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
                 }))
                 .build(),
         ),
@@ -4097,8 +4167,8 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -4110,8 +4180,8 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
@@ -4133,6 +4203,13 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
                     target_name: "resolved".into(),
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
+                }))
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    target_path: CapabilityPath::try_from("/svc/StartComponentTree").unwrap(),
+                    events: vec![cm_rust::EventSubscription {
+                        event_name: "resolved".into(),
+                        mode: cm_rust::EventMode::Sync,
+                    }],
                 }))
                 .build(),
         ),

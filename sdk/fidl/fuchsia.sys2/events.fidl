@@ -344,7 +344,7 @@ table EventSubscription {
 };
 
 /// Subscribe to events in component manager.
-[Discoverable, FragileBase]
+[Discoverable]
 protocol EventSource {
     /// Subscribes to the events of the provided EventTypes.
     ///
@@ -366,16 +366,6 @@ protocol EventSource {
     /// or has already been taken.
     TakeStaticEventStream(string:fuchsia.io.MAX_PATH path)
         -> (request<EventStream> server_end) error fuchsia.component.Error;
-};
-
-/// Subscribe to events in component manager.
-[Discoverable]
-protocol BlockingEventSource {
-    compose EventSource;
-
-    /// Resume the execution of components within the realm using a scoped
-    /// BlockingEventSource.  This method is idempotent.
-    StartComponentTree() -> ();
 };
 
 /// Listener for events on the component hierarchy. The server won't wait for the client
