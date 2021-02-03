@@ -186,6 +186,7 @@ impl SetUiFacade {
             ..fsettings::AudioSettings::EMPTY
         };
 
+        fx_log_info!("Setting audio settings {:?}", settings);
         match audio_proxy.set(settings).await? {
             Ok(_) => Ok(to_value(SetUiResult::Success)?),
             Err(e) => Err(format_err!("SetVolume failed with err {:?}", e)),

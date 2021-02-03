@@ -5,6 +5,7 @@
 use {
     crate::utils::{watch_to_stream, Either, WatchOrSetResult},
     fidl_fuchsia_settings::{AudioInput, AudioProxy, AudioSettings, AudioStreamSettings, Volume},
+    fuchsia_syslog::fx_log_info,
 };
 
 pub async fn command(
@@ -46,6 +47,7 @@ pub async fn command(
         Either::Watch(watch_to_stream(proxy, |p| p.watch()))
     } else {
         let mut output = String::new();
+        fx_log_info!("Setting audio_settings {:?}", audio_settings);
         let mutate_result = proxy.set(audio_settings).await?;
         match mutate_result {
             Ok(_) => {
