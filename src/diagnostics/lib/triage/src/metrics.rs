@@ -609,7 +609,13 @@ impl<'a> MetricState<'a> {
             return missing("Count requires one argument, a vector");
         }
         match self.evaluate(namespace, &operands[0]) {
-            MetricValue::Vector(items) => MetricValue::Int(items.len() as i64),
+            MetricValue::Vector(items) => {
+                match items.iter().find(|item| matches!(item, MetricValue::Missing(_))) {
+                    // TODO(57073): When we get structured Missing, combine all Missing values, not just the first.
+                    Some(missing) => missing.clone(),
+                    None => MetricValue::Int(items.len() as i64),
+                }
+            }
             bad => MetricValue::Missing(format!("Count only works on vectors, not {}", bad)),
         }
     }
