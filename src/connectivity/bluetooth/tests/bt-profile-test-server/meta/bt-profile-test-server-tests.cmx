@@ -15,6 +15,9 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
+        "args": [
+            "--test-threads=1"
+        ],
         "binary": "bin/bt_profile_test_server_bin_test"
     },
     "sandbox": {

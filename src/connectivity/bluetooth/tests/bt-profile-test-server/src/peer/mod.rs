@@ -631,26 +631,30 @@ mod tests {
         let _component_stream3 = do_launch_profile(&mut mock_peer, launch_info3).await;
     }
 
-    #[test]
-    fn launch_profile_with_invalid_args_terminates_immediately() {
-        let mut exec = fasync::Executor::new().unwrap();
-
+    #[fasync::run_singlethreaded(test)]
+    async fn launch_profile_with_invalid_args_terminates_immediately() {
         let id1 = PeerId(659);
         let (mut mock_peer, _observer_stream, _test_env) =
             create_mock_peer(id1).expect("Mock peer creation should succeed");
 
-        // The invalid `arguments` here are specific to A2DP Source - the `-invalid` flag is not
-        // supported by A2DP source.
-        let info = LaunchInfo {
-            url: fuchsia_single_component_package_url!("bt-a2dp-source").to_string(),
-            arguments: vec!["-invalid invalid_arg_123".to_string()],
-        };
+        // First, we ensure that the A2DP component is well-defined and launches correctly.
+        let a2dp_info = a2dp_component_launch_information();
+        let (_handle1, _component_stream1) = do_launch_profile(&mut mock_peer, a2dp_info).await;
 
-        let (_, mut component_stream) =
-            mock_peer.launch_profile(info).expect("profile should launch");
-        match exec.run_singlethreaded(&mut component_stream.next()) {
+        // Then, we attempt to launch A2DP with invalid arguments.
+        // The invalid `arguments` here are specific to A2DP - the `--invalid` flag is not
+        // supported by A2DP.
+        let invalid_args_info = LaunchInfo {
+            url: fuchsia_single_component_package_url!("bt-a2dp").to_string(),
+            arguments: vec!["--invalid invalid_arg_123".to_string()],
+        };
+        let (_handle2, mut component_stream2) =
+            mock_peer.launch_profile(invalid_args_info).expect("launch should be ok");
+
+        // We then expect the component to terminate immediately due to invalid arguments.
+        match component_stream2.next().await {
             Some(Ok(ComponentStatus::Terminated)) => {}
-            x => panic!("Expected directory terminated but got: {:?}", x),
+            x => panic!("Expected component terminated but got: {:?}", x),
         }
     }
 
