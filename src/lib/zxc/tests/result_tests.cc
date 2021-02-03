@@ -77,6 +77,7 @@ static_assert(fitx::result<int>{fitx::error(0)}.is_error() == true);
 static_assert(fitx::result<int, int>{fitx::ok(10)}.is_ok() == true);
 static_assert(fitx::result<int, int>{fitx::ok(10)}.is_error() == false);
 static_assert(fitx::result<int, int>{fitx::ok(10)}.value() == 10);
+static_assert(*fitx::result<int, int>{fitx::ok(10)} == 10);
 static_assert(fitx::result<int, int>{fitx::ok(10)}.value_or(20) == 10);
 static_assert(fitx::result<int, int>{fitx::error(10)}.is_ok() == false);
 static_assert(fitx::result<int, int>{fitx::error(10)}.is_error() == true);
@@ -151,6 +152,7 @@ static_assert(zx::status<int>{zx::ok(10)}.is_ok() == true);
 static_assert(zx::status<int>{zx::ok(10)}.is_error() == false);
 static_assert(zx::status<int>{zx::ok(10)}.status_value() == ZX_OK);
 static_assert(zx::status<int>{zx::ok(10)}.value() == 10);
+static_assert(*zx::status<int>{zx::ok(10)} == 10);
 
 static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_ok() == false);
 static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true);
@@ -507,6 +509,22 @@ TEST(LibZxCommon, Abort) {
     std::move(result).value();
   }));
   ASSERT_DEATH(([] {
+    fitx::result<nothing, int> result{fitx::error(nothing{})};
+    *result;
+  }));
+  ASSERT_DEATH(([] {
+    const fitx::result<nothing, int> result{fitx::error(nothing{})};
+    *result;
+  }));
+  ASSERT_DEATH(([] {
+    fitx::result<nothing, int> result{fitx::error(nothing{})};
+    *std::move(result);
+  }));
+  ASSERT_DEATH(([] {
+    const fitx::result<nothing, int> result{fitx::error(nothing{})};
+    *std::move(result);
+  }));
+  ASSERT_DEATH(([] {
     fitx::result<nothing, test_members> result{fitx::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
@@ -672,6 +690,7 @@ TEST(LibZxCommon, Accessors) {
 
     static_assert(std::is_same_v<decltype(b), counter_b>);
     static_assert(std::is_same_v<decltype(result.value()), counter_b&>);
+    static_assert(std::is_same_v<decltype(*result), counter_b&>);
 
     EXPECT_EQ(0, counter_a::constructor_count());
     EXPECT_EQ(0, counter_a::alive_count());
@@ -696,6 +715,7 @@ TEST(LibZxCommon, Accessors) {
 
     static_assert(std::is_same_v<decltype(b), counter_b>);
     static_assert(std::is_same_v<decltype(result.value()), const counter_b&>);
+    static_assert(std::is_same_v<decltype(*result), const counter_b&>);
 
     EXPECT_EQ(0, counter_a::constructor_count());
     EXPECT_EQ(0, counter_a::alive_count());
@@ -720,6 +740,7 @@ TEST(LibZxCommon, Accessors) {
 
     static_assert(std::is_same_v<decltype(b), counter_b>);
     static_assert(std::is_same_v<decltype(result.value()), const counter_b&>);
+    static_assert(std::is_same_v<decltype(*result), const counter_b&>);
 
     EXPECT_EQ(0, counter_a::constructor_count());
     EXPECT_EQ(0, counter_a::alive_count());
@@ -744,6 +765,7 @@ TEST(LibZxCommon, Accessors) {
 
     static_assert(std::is_same_v<decltype(b), counter_b>);
     static_assert(std::is_same_v<decltype(std::move(result).value()), counter_b&&>);
+    static_assert(std::is_same_v<decltype(*std::move(result)), counter_b&&>);
 
     EXPECT_EQ(0, counter_a::constructor_count());
     EXPECT_EQ(0, counter_a::alive_count());
@@ -768,6 +790,7 @@ TEST(LibZxCommon, Accessors) {
 
     static_assert(std::is_same_v<decltype(b), counter_b>);
     static_assert(std::is_same_v<decltype(std::move(result).value()), const counter_b&&>);
+    static_assert(std::is_same_v<decltype(*std::move(result)), const counter_b&&>);
 
     EXPECT_EQ(0, counter_a::constructor_count());
     EXPECT_EQ(0, counter_a::alive_count());
@@ -1017,6 +1040,20 @@ TEST(ResultTests, ResultRvalueOverloads) {
   {
     fitx::result<move_only, int> moved_error = fitx::error<move_only>();
     move_only value = std::move(moved_error).error_value();
+    (void)value;
+  }
+}
+
+// Test that operator*() functions on single-value result types.
+TEST(ResultTests, OperatorStar) {
+  {
+    fitx::result<int, move_only> result = fitx::success<move_only>();
+    move_only value = std::move(*result);
+    (void)value;
+  }
+  {
+    fitx::result<int, move_only> result = fitx::success<move_only>();
+    move_only value = *std::move(result);
     (void)value;
   }
 }

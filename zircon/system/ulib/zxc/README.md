@@ -196,6 +196,11 @@ void Example() {
 }
 ```
 
+##### fitx::result::operator*() Accessor Methods
+
+`*my_result` is a syntax sugar for `my_result.value()`, when `my_result` is a
+`fitx::result`.
+
 ##### fitx::result::take_value() Accessor Method
 
 The value of a successful result may be propagated to another result using the

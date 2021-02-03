@@ -255,7 +255,7 @@ class LIB_FITX_NODISCARD result<E, T> : private ::fitx::internal::modulate_copy_
     }
     __builtin_abort();
   }
-  constexpr const E& error_value() const & {
+  constexpr const E& error_value() const& {
     if (is_error()) {
       return storage_.error_or_value.error;
     }
@@ -343,7 +343,7 @@ class LIB_FITX_NODISCARD result<E, T> : private ::fitx::internal::modulate_copy_
     return static_cast<T>(std::forward<U>(default_value));
   }
 
-  // Accessors for the members of the underyling value. These operators forward
+  // Accessors for the members of the underlying value. These operators forward
   // to T::operator->() when defined, otherwise they provide direct access to T*.
   //
   // May only be called when the result contains a value.
@@ -359,6 +359,14 @@ class LIB_FITX_NODISCARD result<E, T> : private ::fitx::internal::modulate_copy_
     }
     __builtin_abort();
   }
+
+  // Accessors for the underlying value. This is a syntax sugar for value().
+  //
+  // May only be called when the result contains a value.
+  constexpr T& operator*() & { return value(); }
+  constexpr const T& operator*() const& { return value(); }
+  constexpr T&& operator*() && { return std::move(value()); }
+  constexpr const T&& operator*() const&& { return std::move(value()); }
 
   // Augments the error value of the result with the given error value. The
   // operator E::operator+=(F) must be defined. Additionally, E may not be a
@@ -440,7 +448,7 @@ class LIB_FITX_NODISCARD result<E> : private ::fitx::internal::modulate_copy_and
     }
     __builtin_abort();
   }
-  constexpr const E& error_value() const & {
+  constexpr const E& error_value() const& {
     if (is_error()) {
       return storage_.error_or_value.error;
     }
