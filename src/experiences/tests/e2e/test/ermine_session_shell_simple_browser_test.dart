@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:math';
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -24,9 +25,18 @@ void main() {
 
     ermine = ErmineDriver(sl4f);
     await ermine.setUp();
+
+    // Starts hosting a local http website.
+    await ermine.launch(testserverUrl);
+    final runningComponents = await ermine.component.list();
+    expect(runningComponents.where((c) => c.contains(testserverUrl)).length, 1);
   });
 
   tearDownAll(() async {
+    await ermine.driver.requestData('closeAll');
+    await ermine.driver.waitForAbsent(find.text('ermine_testserver.cmx'));
+    await ermine.driver.waitForAbsent(find.text('simple_browser'));
+
     await ermine.tearDown();
 
     await sl4f?.stopServer();
@@ -37,24 +47,13 @@ void main() {
   test(
       'Simple browser\'s page and history navigation features '
       'should work correctly.', () async {
-    // Hosts a local http website.
-    await ermine.launch(testserverUrl);
-
     // Launches a browser.
     final browser = await ermine.launchAndWaitForSimpleBrowser();
-
-    // Adds a new tab.
-    final addTab = find.byValueKey('new_tab');
-    await browser.waitFor(addTab);
-
-    await browser.tap(addTab);
 
     final newTabFinder = find.text('NEW TAB');
     final indexTabFinder = find.text('Localhost');
     final nextTabFinder = find.text('Next Page');
     final popupTabFinder = find.text('Popup Page');
-
-    await browser.waitFor(newTabFinder, timeout: _timeout);
 
     // Access to the website.
     await browser.requestData('http://127.0.0.1:8080/index.html');
@@ -121,13 +120,41 @@ void main() {
     expect(await browser.getText(indexTabFinder), isNotNull);
     expect(await browser.getText(popupTabFinder), isNotNull);
 
-    // Close the view.
     await ermine.driver.requestData('close');
-    // Verify the view is closed.
     await ermine.driver.waitForAbsent(find.text('simple_browser'));
+  });
+
+  test('Simple browser should be able to play videos on web pages.', () async {
+    // Launches a browser.
+    final browser = await ermine.launchAndWaitForSimpleBrowser();
+
+    // Access to video.html where the following video is played:
+    // experiences/bin/ermine_testserver/public/simple_browser_test/sample_video.mp4
+    // It shows the violet-colored background for the first 3 seconds then shows
+    // the fuchsia-colored background for another 3 seconds.
+    await browser.requestData('http://127.0.0.1:8080/video.html');
+
+    final videoTabFinder = find.text('Video Test');
+    await browser.waitFor(videoTabFinder, timeout: _timeout);
+
+    expect(await browser.getText(videoTabFinder), isNotNull);
+
+    // Takes the screenshot of the part of the video.
+    // Only the color is changed in this area as the video is played.
+    final viewRect = Rectangle(100, 100, 100, 100);
+
+    // Waits for a while for the video to be loaded before taking a screenshot.
+    await Future.delayed(Duration(seconds: 2));
+    final earlyScreenshot = await ermine.screenshot(viewRect);
+
+    // Takes another screenshot after 3 seconds.
+    await Future.delayed(Duration(seconds: 3));
+    final lateScreenshot = await ermine.screenshot(viewRect);
+
+    final diff = ermine.screenshotsDiff(earlyScreenshot, lateScreenshot);
+    expect(diff, 1, reason: 'The screenshots are more similar than expected.');
 
     await ermine.driver.requestData('close');
-    // Verify the view is closed.
-    await ermine.driver.waitForAbsent(find.text('ermine_testserver.cmx'));
+    await ermine.driver.waitForAbsent(find.text('simple_browser'));
   });
 }

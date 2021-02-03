@@ -95,11 +95,25 @@ class ErmineDriver {
   }
 
   /// Launches a simple browser and returns a [FlutterDriver] connected to it.
-  Future<FlutterDriver> launchAndWaitForSimpleBrowser() async {
-    await launch(
-        'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx');
+  ///
+  /// Expands the browser to the full-screen size by default after launching.
+  /// Set [fullscreen] to false if you do not want it.
+  /// After launching a browser, expands it to the full-screen size by default.
+  /// Also, it opens another new tab as soon as the browser is launched,
+  /// unless you set [openNewTab] to false.
+  Future<FlutterDriver> launchAndWaitForSimpleBrowser({
+    bool openNewTab = true,
+    bool fullscreen = true,
+  }) async {
+    const simpleBrowserUrl =
+        'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 
-    // Initilize the browser's flutter driver connector.
+    await launch(simpleBrowserUrl);
+    final runningComponents = await component.list();
+    expect(
+        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 1);
+
+    // Initializes the browser's flutter driver connector.
     final browserConnector = FlutterDriverConnector(sl4f);
     _browserConnectors.add(browserConnector);
     await browserConnector.initialize();
@@ -112,7 +126,7 @@ class ErmineDriver {
       fail('couldn\'t find simple browser.');
     }
 
-    // Connect to the browser.
+    // Connects to the browser.
     // TODO(fxb/66577): Get the driver of the last isolate once it's supported by
     // [FlutterDriverConnector] in flutter_driver_sl4f.dart
     final browserDriver =
@@ -123,6 +137,22 @@ class ErmineDriver {
     }
 
     await browserDriver.waitUntilNoTransientCallbacks();
+
+    // Expands the simple browser to be a full-sized screen, if required.
+    if (fullscreen) {
+      await _driver.requestData('fullscreen');
+    }
+
+    // Opens another tab other than the tab opened on browser's launch,
+    // if required.
+    if (openNewTab) {
+      final addTab = find.byValueKey('new_tab');
+      await browserDriver.waitFor(addTab);
+
+      await browserDriver.tap(addTab);
+      await browserDriver.waitFor(find.text('NEW TAB'),
+          timeout: Duration(seconds: 10));
+    }
 
     return browserDriver;
   }
@@ -194,7 +224,7 @@ class ErmineDriver {
   }
 
   /// Returns a histogram, i.e. occurences of colors, in an image.
-  /// [Color] is encoded as  0xAABBGGRR.
+  /// [Color] is encoded as 0xAABBGGRR.
   Map<int, int> histogram(Image image) {
     final colors = <int, int>{};
     for (int j = 0; j < image.height; j++) {
@@ -204,5 +234,21 @@ class ErmineDriver {
       }
     }
     return colors;
+  }
+
+  /// Returns the difference rate between two same-sized images.
+  /// The range is from 0 to 1, and the closer to 0 the rate is, the more
+  /// identical the two images.
+  double screenshotsDiff(Image a, Image b) {
+    assert(a.data.length == b.data.length);
+
+    var diff = 0;
+    for (var i = 0; i < a.data.length; i++) {
+      if (a.data[i] != b.data[i]) {
+        diff++;
+      }
+    }
+    final diffRate = (diff / a.data.length);
+    return diffRate;
   }
 }
