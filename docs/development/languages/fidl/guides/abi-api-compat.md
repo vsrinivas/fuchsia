@@ -460,22 +460,33 @@ they often accompany other incompatible changes:
 * `[Doc]`
 * `[MaxBytes]`
 * `[MaxHandles]`
-* `[Unknown]
+* `[Unknown]`
 
 ### Constraints {#constraints}
 
-ABI: Relaxing or tightening constraints is binary-compatible. However, when
-evolving constraints, care must be taken to transition readers or writers to
-avoid runtime validation issues.
+**ABI**
 
-When relaxing a constraint (e.g. changing a vector's maximum allowable size to
-grow from `vector<T>:128` to `vector<T>:256`), all readers must transition ahead
-of writers to avoid values being rejected at runtime.
+Relaxing or tightening constraints is binary-compatible. However, when evolving
+constraints, care must be taken to transition readers or writers to avoid
+runtime validation issues.
 
-Conversely, when tightening a constraint, all writers must transition ahead of
-readers to avoid emitting values which would then be rejected at runtime.
+When relaxing a constraint, all readers must transition ahead of writers to
+avoid values being rejected at runtime. Conversely, when tightening a
+constraint, all writers must transition ahead of readers to avoid emitting
+values which would then be rejected at runtime.
 
-API: Relaxing or tightening constraints is source-compatible.
+For instance:
+
+* Growing a vector's maximum allowable size from `vector<T>:128` to
+  `vector<T>:256` relaxes a constraints, i.e. move values will be allowed. As a
+  result, readers must be transitioned ahead of writers.
+* Restricting an optional handle `handle?` to be required `handle` tightens a
+  constraint, optional handles which were accepted before will no longer be. As
+  a result, writers must be transitioned ahead of readers.
+
+**API**
+
+Relaxing or tightening constraints is source-compatible.
 
 ### Evolving switch on enums, or union tag {#switch-evolvability}
 
