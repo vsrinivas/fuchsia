@@ -1,12 +1,13 @@
-use {
-    anyhow::Error,
-    remote_block_device::Cache,
-    crate::object_store::{self, Filesystem, filesystem::SyncOptions},
-    std::sync::{Arc, Mutex},
-};
+use {crate::object_store, remote_block_device::Cache, std::sync::Mutex};
 
-struct Device {
-    cache: Mutex<Cache>
+pub struct Device {
+    cache: Mutex<Cache>,
+}
+
+impl Device {
+    pub fn new(cache: Cache) -> Self {
+        Device { cache: Mutex::new(cache) }
+    }
 }
 
 const BLOCK_SIZE: u64 = 8192;

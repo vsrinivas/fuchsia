@@ -1,12 +1,13 @@
 use {
+    crate::{device::Device, object_store::Filesystem},
     anyhow::Error,
-    crate::{
-        device::Device,
-        object_store::{self, Filesystem, filesystem::SyncOptions},
-    },
+    remote_block_device::Cache,
+    std::sync::Arc,
 };
 
 pub fn mount(cache: Cache) -> Result<(), Error> {
-    let device = Device{cache: Mutex::new(cache)};
+    let device = Arc::new(Device::new(cache));
     let _filesystem = Filesystem::open(device)?;
+    // TODO
+    Ok(())
 }

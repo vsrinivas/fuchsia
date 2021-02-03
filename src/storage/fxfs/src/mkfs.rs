@@ -1,15 +1,15 @@
 use {
-    anyhow::Error,
-    remote_block_device::Cache,
     crate::{
         device::Device,
-        object_store::{self, Filesystem, filesystem::SyncOptions},
+        object_store::{filesystem::SyncOptions, Filesystem},
     },
-    std::sync::{Arc, Mutex},
+    anyhow::Error,
+    remote_block_device::Cache,
+    std::sync::Arc,
 };
 
 pub fn mkfs(cache: Cache) -> Result<(), Error> {
-    let mut fs = Filesystem::new_empty(Arc::new(Device{cache: Mutex::new(cache)}))?;
+    let mut fs = Filesystem::new_empty(Arc::new(Device::new(cache)))?;
     fs.sync(SyncOptions::default())?;
     Ok(())
 }
