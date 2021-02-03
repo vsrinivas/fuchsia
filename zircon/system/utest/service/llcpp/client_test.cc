@@ -6,7 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 
 #include <fidl/service/test/llcpp/fidl.h>
 #include <fs/pseudo_dir.h>
@@ -174,4 +176,53 @@ TEST_F(ClientTest, FilePathTooLong) {
       llcpp::sys::OpenNamedServiceAt(std::move(svc_), illegal_path, "default", std::move(remote))
           .status_value(),
       ZX_ERR_INVALID_ARGS);
+}
+
+//
+// Tests for connecting to singleton FIDL services (`/svc/MyProtocolName` style).
+//
+
+struct MockProtocol {
+  static constexpr char Name[] = "mock";
+};
+
+// Test compile time path concatenation.
+TEST(SingletonService, DefaultPath) {
+  static_assert(::service::internal::string_length(MockProtocol::Name) == 4);
+
+  constexpr auto path = ::service::internal::DefaultPath<MockProtocol>();
+  ASSERT_STR_EQ(path, "/svc/mock", "protocol path should be /svc/mock");
+}
+
+// Using a local filesystem, test that |service::ConnectAt| successfully sends
+// an open request using the path |MockProtocol::Name|, when connecting to the
+// |MockProtocol| service.
+TEST(SingletonService, ConnectAt) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fs::SynchronousVfs vfs(loop.dispatcher());
+
+  // Set up the service directory with one fake protocol.
+  sync_completion_t connected;
+  auto protocol = fbl::MakeRefCounted<fs::Service>([&connected](zx::channel request) {
+    sync_completion_signal(&connected);
+    // Implicitly drop |request|.
+    return ZX_OK;
+  });
+  auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  root_dir->AddEntry(MockProtocol::Name, std::move(protocol));
+
+  auto directory = fidl::CreateEndpoints<llcpp::fuchsia::io::Directory>();
+  ASSERT_OK(directory.status_value());
+  ASSERT_OK(vfs.ServeDirectory(root_dir, std::move(directory->server)));
+  loop.StartThread("SingletonService/ConnectAt");
+
+  // Test connecting to that protocol.
+  auto client_end = service::ConnectAt<MockProtocol>(directory->client);
+  ASSERT_OK(client_end.status_value());
+
+  ASSERT_OK(sync_completion_wait(&connected, zx::duration::infinite().get()));
+  // Test that the request is dropped by the server.
+  ASSERT_OK(client_end->channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
+
+  loop.Shutdown();
 }

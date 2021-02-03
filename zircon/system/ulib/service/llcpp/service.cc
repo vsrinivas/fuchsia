@@ -3,11 +3,49 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fit/result.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/device/vfs.h>
+
+namespace service {
+
+::zx::status<::fidl::ClientEnd<::llcpp::fuchsia::io::Directory>> OpenServiceRoot(const char* path) {
+  return ::service::Connect<::llcpp::fuchsia::io::Directory>(path);
+}
+
+namespace internal {
+
+::zx::status<zx::channel> ConnectRaw(const char* path) {
+  ::zx::channel client_end, server_end;
+  if (zx_status_t status = ::zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
+    return ::zx::error(status);
+  }
+  if (zx_status_t status = fdio_service_connect(path, server_end.release()); status != ZX_OK) {
+    return ::zx::error(status);
+  }
+  return ::zx::ok(std::move(client_end));
+}
+
+::zx::status<zx::channel> ConnectAtRaw(
+    ::fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_dir, const char* protocol_name) {
+  ::zx::channel client_end, server_end;
+  if (zx_status_t status = ::zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
+    return ::zx::error(status);
+  }
+  if (zx_status_t status =
+          fdio_service_connect_at(svc_dir.channel(), protocol_name, server_end.release());
+      status != ZX_OK) {
+    return ::zx::error(status);
+  }
+  return ::zx::ok(std::move(client_end));
+}
+
+}  // namespace internal
+
+}  // namespace service
 
 namespace llcpp::sys {
 
@@ -58,16 +96,17 @@ namespace internal {
 
 }  // namespace internal
 
-::zx::status<> OpenNamedServiceAt(::zx::unowned_channel dir, cpp17::string_view service,
-                                  cpp17::string_view instance, ::zx::channel remote) {
+::zx::status<> OpenNamedServiceAt(::fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> dir,
+                                  cpp17::string_view service, cpp17::string_view instance,
+                                  ::zx::channel remote) {
   ::fidl::Array<char, kMaxPath> path_buffer;
   ::zx::status<::fidl::StringView> path_result = ValidateAndJoinPath(
       &path_buffer, ::fidl::unowned_str(service), ::fidl::unowned_str(instance));
   if (!path_result.is_ok()) {
     return path_result.take_error();
   }
-  return internal::DirectoryOpenFunc(std::move(dir), std::move(path_result.value()),
-                                     std::move(remote));
+  return internal::DirectoryOpenFunc(::zx::unowned_channel(dir.channel()),
+                                     std::move(path_result.value()), std::move(remote));
 }
 
 }  // namespace llcpp::sys

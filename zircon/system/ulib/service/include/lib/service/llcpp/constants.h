@@ -10,6 +10,13 @@ namespace llcpp::sys {
 // The name of the default FIDL Service instance.
 constexpr const char kDefaultInstance[] = "default";
 
+// The path referencing the incoming services directory.
+constexpr const char kServiceDirectory[] = "/svc";
+
+// The path prefix referencing the incoming services directory,
+// with a trailing slash.
+constexpr const char kServiceDirectoryTrailingSlash[] = "/svc/";
+
 }  // namespace llcpp::sys
 
 #endif  // LIB_SERVICE_LLCPP_CONSTANTS_H_

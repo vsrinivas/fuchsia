@@ -30,6 +30,7 @@ test("service-llcpp-test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/sync",
   ]
 }
 
