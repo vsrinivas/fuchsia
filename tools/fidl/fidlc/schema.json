@@ -411,6 +411,10 @@
                 "field_shape_v1"
             ],
             "properties": {
+                "maybe_attributes": {
+                  "description": "Optional list of attributes of the method or event parameter",
+                  "$ref": "#/definitions/attributes-list"
+                },
                 "type": {
                     "description": "Type of the parameter or return",
                     "$ref": "#/definitions/type"
