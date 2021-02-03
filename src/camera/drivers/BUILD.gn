@@ -21,6 +21,7 @@ group("tests") {
   testonly = true
   deps = [
     ":bind_tests",
+    "hw_accel:tests",
     "test_utils:tests",
     "usb_video:tests",
   ]
@@ -31,7 +32,6 @@ group("bind_tests") {
   deps = [
     "bus:bind_test",
     "controller:bind_test",
-    "hw_accel:bind_test",
     "sensors:bind_test",
     "usb_video:bind_test",
   ]

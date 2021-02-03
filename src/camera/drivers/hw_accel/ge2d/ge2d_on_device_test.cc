@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/hw_accel/ge2d/test/ge2d_on_device_test.h"
-
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -22,7 +20,6 @@
 #include "src/camera/drivers/test_utils/fake_buffer_collection.h"
 
 namespace ge2d {
-
 namespace {
 
 constexpr uint32_t kImageFormatTableSize = 3;
@@ -1229,5 +1226,4 @@ TEST_F(Ge2dDeviceTest, InPlaceWatermarkOutputSize) {
 }
 
 }  // namespace
-
 }  // namespace ge2d

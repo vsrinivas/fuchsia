@@ -2,18 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/hw_accel/task/task.h"
-
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio/mmio.h>
 #include <lib/syslog/global.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <zircon/pixelformat.h>
 
-#include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -26,6 +20,7 @@
 
 #include "src/camera/drivers/hw_accel/gdc/gdc.h"
 #include "src/camera/drivers/hw_accel/gdc/gdc_regs.h"
+#include "src/camera/drivers/hw_accel/task/task.h"
 #include "src/camera/drivers/test_utils/fake_buffer_collection.h"
 
 namespace gdc {
@@ -44,7 +39,7 @@ ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
   return registers[T::Get().addr()];
 }
 
-// Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
+// Integration test for the driver defined in //src/camera/drivers/hw_accel/gdc
 class TaskTest : public zxtest::Test {
  public:
   void ProcessFrameCallback(uint32_t input_buffer_index, uint32_t output_buffer_index,

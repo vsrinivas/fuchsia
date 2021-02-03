@@ -6,6 +6,15 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 import("//src/camera/debug.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":gdc_bind_test",
+    ":gdc_task_unittest",
+  ]
+}
 
 bind_rules("gdc_bind") {
   rules = "gdc.bind"
@@ -17,12 +26,7 @@ bind_rules("gdc_bind") {
   ]
 }
 
-group("bind_test") {
-  testonly = true
-  deps = [ ":gdc_bind_test" ]
-}
-
-source_set("source") {
+source_set("lib") {
   defines = [ camera_debug_define ]
   visibility = [ "../*" ]
 
@@ -68,7 +72,7 @@ source_set("source") {
 driver_module("driver") {
   output_name = "gdc"
   deps = [
-    ":source",
+    ":lib",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
@@ -82,4 +86,30 @@ driver_package("gdc") {
       name = "gdc.so"
     },
   ]
+}
+
+executable("gdc_task_unittest_bin") {
+  testonly = true
+  sources = [ "gdc_task_unittest.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/camera/drivers/test_utils",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/mock-mmio-reg",
+    "//src/devices/testing/no_ddk",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("gdc_task_unittest") {
+  deps = [ ":gdc_task_unittest_bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

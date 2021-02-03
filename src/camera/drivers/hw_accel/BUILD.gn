@@ -9,10 +9,10 @@ group("hw_accel") {
   ]
 }
 
-group("bind_test") {
+group("tests") {
   testonly = true
   deps = [
-    "gdc:bind_test",
-    "ge2d:bind_test",
+    "gdc:tests",
+    "ge2d:tests",
   ]
 }
