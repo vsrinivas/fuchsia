@@ -180,7 +180,8 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 
 	repoDir := filepath.Join(packagesDir, "repository")
 	if err := b.archive.download(ctx, b.id, true, repoDir, blobsList); err != nil {
-		logger.Errorf(ctx, "failed to download blobs to %s: %w", repoDir, err)
+		logger.Errorf(ctx, "failed to download blobs to %s: %v", repoDir, err)
+		return nil, fmt.Errorf("failed to download blobs to %s: %w", repoDir, err)
 	}
 
 	return b.packages, nil
