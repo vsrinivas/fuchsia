@@ -69,16 +69,7 @@ impl InputHandler for ImeHandler {
 #[allow(dead_code)]
 impl ImeHandler {
     /// Creates a new [`ImeHandler`] and connects to the IME service.
-    ///
-    /// # Parameters
     pub async fn new() -> Result<Self, Error> {
-        let ime = connect_to_service::<fidl_ui_input::ImeServiceMarker>()?;
-
-        Self::new_handler(ime).await
-    }
-
-    /// Creates a new [`ImeHandler`] and connects to the IME service.
-    pub async fn new_transitional() -> Result<Self, Error> {
         let ime = connect_to_service::<fidl_ui_input::ImeServiceMarker>()?;
 
         Self::new_handler(ime).await
