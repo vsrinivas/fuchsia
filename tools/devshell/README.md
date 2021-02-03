@@ -110,6 +110,12 @@ FUCHSIA_DIR          - The path to the root of the Fuchsia source tree
 FUCHSIA_BUILD_DIR    - The path to the current Fuchsia build directory
 HOST_OUT_DIR         - The path to the Fuchsia host-tools build directory
                          (usually $FUCHSIA_BUILD_DIR/host_$HOST_ARCH)
+FX_CACHE_DIR         - A git-ignored directory that fx commands can use to
+                         cache artifacts between runs (specifically,
+                         $FUCHSIA_DIR/.fx). File names in this directory
+                         should contain the name of the fx command that
+                         created them if they are specific to a single
+                         command, to avoid name collisions.
 FUCHSIA_OUT_DIR      - (deprecated) "$FUCHSIA_DIR/out"
 ```
 

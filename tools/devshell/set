@@ -163,11 +163,18 @@ function main {
   set -- "${FX_ARGV[@]}"
 
   if is_feature_enabled "fint_set"; then
-    go="${PREBUILT_GO_DIR}/bin/go"
-
+    # Go commands must be run from first-level subdirectories because that's
+    # where the go.mod files are.
     cd "${FUCHSIA_DIR}/tools"
-    "$go" run ./build/fx-set/cmd "$@"
-    return 0
+
+    # Cache the compiled executable for later invocations.
+    local exe_path="${FX_CACHE_DIR}/fx-set"
+
+    # `go build` does an incremental build, only rebuilding what's necessary
+    # based on source content hashes.
+    "${PREBUILT_GO_DIR}/bin/go" build -o "$exe_path" ./build/fx-set/cmd
+
+    exec "$exe_path" "$@"
   fi
 
   if [[ $# -lt 1 ]]; then

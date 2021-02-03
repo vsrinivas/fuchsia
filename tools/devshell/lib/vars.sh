@@ -22,6 +22,13 @@ source "${devshell_lib_dir}/fx-cmd-locator.sh"
 source "${devshell_lib_dir}/fx-optional-features.sh"
 unset devshell_lib_dir
 
+# Subcommands can use this directory to cache artifacts and state that should
+# persist between runs. //scripts/fx ensures that it exists.
+#
+# fx commands that make use of this directory should include the command name
+# in the names of any cached artifacts to make naming collisions less likely.
+export FX_CACHE_DIR="${FUCHSIA_DIR}/.fx"
+
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY:-0}" -eq 1 ]]; then
   set -x
 fi
