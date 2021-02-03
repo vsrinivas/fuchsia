@@ -14,6 +14,7 @@ entire realm, unless some sub-realm overrides it (see
 Environments let you configure the following behavior of a realm:
 
 -   [Setting the runners available to components](#runners)
+-   [Setting the resolvers available to components](#resolvers)
 
 ### Runners {#runners}
 
@@ -21,6 +22,14 @@ By registering a runner in an [environment declaration][doc-environments], you
 make it available to any component instance which has that environment assigned
 to it. Components specify which runner they use with a [`use`][doc-use]
 declaration naming the runner.
+
+### Resolvers {#resolvers}
+
+Resolvers registered to an [environment declaration][doc-environments] participate
+in component URL resolution for any child components which have that environment
+assigned to them through [propagation](#propagation).
+
+See the [resolver capability](capabilities/resolvers.md) for more information.
 
 ## Declaring {#declaring}
 
