@@ -99,7 +99,14 @@ mod tests {
         mac_addr: [u8; 6],
         role: fidl_fuchsia_wlan_device::MacRole,
     ) -> QueryIfaceResponse {
-        QueryIfaceResponse { role, id: 0, phy_id: 0, phy_assigned_id: 0, mac_addr }
+        QueryIfaceResponse {
+            role,
+            id: 0,
+            phy_id: 0,
+            phy_assigned_id: 0,
+            mac_addr,
+            driver_features: Vec::new(),
+        }
     }
 
     pub fn respond_to_query_iface_list_request(

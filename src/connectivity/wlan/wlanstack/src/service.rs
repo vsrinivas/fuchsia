@@ -263,7 +263,15 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
     let phy_id = iface.phy_ownership.phy_id;
     let phy_assigned_id = iface.phy_ownership.phy_assigned_id;
     let mac_addr = iface.device_info.mac_addr;
-    Ok(fidl_svc::QueryIfaceResponse { role, id, mac_addr, phy_id, phy_assigned_id })
+    let driver_features = iface.device_info.driver_features.clone();
+    Ok(fidl_svc::QueryIfaceResponse {
+        role,
+        id,
+        mac_addr,
+        phy_id,
+        phy_assigned_id,
+        driver_features,
+    })
 }
 
 async fn get_country(
@@ -579,6 +587,7 @@ mod tests {
         assert_eq!(response.role, fidl_dev::MacRole::Client);
         assert_eq!(response.mac_addr, expected.mac_addr);
         assert_eq!(response.id, 10);
+        assert_eq!(response.driver_features, expected.driver_features);
     }
 
     #[test]
@@ -1318,7 +1327,10 @@ mod tests {
             role: fidl_mlme::MacRole::Client,
             bands: vec![],
             mac_addr: [0xAC; 6],
-            driver_features: vec![],
+            driver_features: vec![
+                fidl_fuchsia_wlan_common::DriverFeature::ScanOffload,
+                fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth,
+            ],
             qos_capable: false,
         }
     }

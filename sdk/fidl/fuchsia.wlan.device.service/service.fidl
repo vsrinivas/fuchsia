@@ -4,6 +4,7 @@
 
 library fuchsia.wlan.device.service;
 
+using fuchsia.wlan.common;
 using fuchsia.wlan.device;
 using fuchsia.wlan.minstrel;
 using fuchsia.wlan.sme;
@@ -41,6 +42,8 @@ struct QueryIfaceResponse {
     uint16 phy_assigned_id;
     /// The iface's MAC.
     array<uint8>:6 mac_addr;
+    /// The driver features supported on this iface.
+    vector<fuchsia.wlan.common.DriverFeature>:32 driver_features;
 };
 
 struct ListIfacesResponse {

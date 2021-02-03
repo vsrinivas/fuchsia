@@ -2566,7 +2566,8 @@ mod tests {
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
-                        mac_addr: [0; 6]
+                        mac_addr: [0; 6],
+                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -2646,7 +2647,8 @@ mod tests {
                         id: TEST_AP_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
-                        mac_addr: [0; 6]
+                        mac_addr: [0; 6],
+                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -2751,7 +2753,8 @@ mod tests {
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
-                        mac_addr: [0; 6]
+                        mac_addr: [0; 6],
+                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -2795,7 +2798,8 @@ mod tests {
                         id: TEST_AP_IFACE_ID,
                         phy_id: 0,
                         phy_assigned_id: 0,
-                        mac_addr: [0; 6]
+                        mac_addr: [0; 6],
+                        driver_features: Vec::new(),
                     };
                     responder
                         .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
@@ -3270,7 +3274,8 @@ mod tests {
                     id: TEST_CLIENT_IFACE_ID,
                     phy_id: 0,
                     phy_assigned_id: 0,
-                    mac_addr: [0; 6]
+                    mac_addr: [0; 6],
+                    driver_features: Vec::new(),
                 };
                 responder
                     .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
