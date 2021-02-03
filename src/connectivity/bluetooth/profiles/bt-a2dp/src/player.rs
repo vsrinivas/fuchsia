@@ -312,18 +312,10 @@ pub struct Player {
 }
 
 impl Player {
-    /// Attempt to make a new player that decodes and plays frames encoded in the
-    /// `codec`
-    pub fn new(session_id: u64, codec_config: MediaCodecConfig) -> Result<Player, Error> {
-        let audio_consumer_factory =
-            fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
-                .context("Failed to connect to audio consumer factory")?;
-        Self::from_proxy(session_id, codec_config, audio_consumer_factory)
-    }
-
-    /// Build a AudioConsumer given a SessionAudioConsumerFactoryProxy.
-    /// Used in tests.
-    pub(crate) fn from_proxy(
+    /// Build Player given a SessionAudioConsumerFactoryProxy to use to create an audio consumer
+    /// with the given `session_id`
+    /// The `codec_config` specifies the expected codec of payload data frames.
+    pub fn new(
         session_id: u64,
         codec_config: MediaCodecConfig,
         audio_consumer_factory: SessionAudioConsumerFactoryProxy,
@@ -409,7 +401,7 @@ impl Player {
         let audio_consumer_factory =
             fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
                 .context("Failed to connect to audio consumer factory")?;
-        let mut player = Self::from_proxy(0, config.clone(), audio_consumer_factory)?;
+        let mut player = Self::new(0, config.clone(), audio_consumer_factory)?;
 
         // wait for initial event
         match player.next_event().await {
@@ -659,9 +651,8 @@ pub(crate) mod tests {
             create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
                 .expect("proxy pair creation");
 
-        let mut player =
-            Player::from_proxy(TEST_SESSION_ID, codec_config, audio_consumer_factory_proxy)
-                .expect("player to build");
+        let mut player = Player::new(TEST_SESSION_ID, codec_config, audio_consumer_factory_proxy)
+            .expect("player to build");
 
         let (sink_request_stream, mut audio_consumer_request_stream, sink_vmos) =
             expect_player_setup(

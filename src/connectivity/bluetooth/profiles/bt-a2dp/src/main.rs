@@ -17,7 +17,9 @@ use {
     bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
     fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
     fidl_fuchsia_bluetooth_bredr as bredr,
-    fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
+    fidl_fuchsia_media::{
+        AudioChannelId, AudioPcmMode, PcmFormat, SessionAudioConsumerFactoryMarker,
+    },
     fidl_fuchsia_media_sessions2 as sessions2,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
@@ -264,18 +266,25 @@ impl StreamsBuilder {
     }
 
     fn streams(&self) -> Result<stream::Streams, Error> {
-        let publisher =
-            fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
-                .context("Failed to connect to MediaSession interface")?;
-
         let domain = self.domain.clone();
 
         let mut streams = stream::Streams::new();
 
         // Sink streams
         if self.sink_enabled {
-            let sink_task_builder =
-                sink_task::SinkTaskBuilder::new(self.cobalt_sender.clone(), publisher, domain);
+            let publisher =
+                fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
+                    .context("Failed to connect to MediaSession interface")?;
+            let audio_consumer_factory = fuchsia_component::client::connect_to_service::<
+                SessionAudioConsumerFactoryMarker,
+            >()
+            .context("Failed to connect to AudioConsumerFactory")?;
+            let sink_task_builder = sink_task::SinkTaskBuilder::new(
+                self.cobalt_sender.clone(),
+                publisher,
+                audio_consumer_factory,
+                domain,
+            );
             let sbc_sink_endpoint = Self::build_sbc_sink_endpoint()?;
             streams.insert(stream::Stream::build(sbc_sink_endpoint, sink_task_builder.clone()));
             if self.aac_available {
@@ -690,8 +699,9 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "test_encoding"))]
     #[test]
-    /// build_local_streams should fail because it can't start the SBC encoder, because
+    /// build_local_streams should fail because it can't start the SBC decoder, because
     /// MediaPlayer isn't available in the test environment.
     fn test_sbc_unavailable_error() {
         let mut exec = fasync::Executor::new().expect("executor should build");
