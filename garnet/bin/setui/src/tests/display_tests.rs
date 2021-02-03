@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
     crate::agent::restore_agent,
     crate::base::SettingType,
@@ -17,8 +16,9 @@ use {
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::{
-        DisplayMarker, DisplayProxy, DisplaySettings, IntlMarker, LowLightMode as FidlLowLightMode,
-        Theme as FidlTheme, ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
+        DisplayMarker, DisplayProxy, DisplaySettings, Error as FidlError, IntlMarker,
+        LowLightMode as FidlLowLightMode, Theme as FidlTheme, ThemeMode as FidlThemeMode,
+        ThemeType as FidlThemeType,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
@@ -594,4 +594,133 @@ async fn test_channel_failure_watch() {
         create_display_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = display_proxy.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
+}
+
+// Validate that we can set multiple fields at once.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_set_multiple_fields_success() {
+    let display_proxy = setup_display_env().await;
+    let settings = DisplaySettings {
+        auto_brightness: Some(false),
+        brightness_value: Some(0.5),
+        low_light_mode: Some(FidlLowLightMode::Enable),
+        screen_enabled: Some(true),
+        theme: Some(FidlTheme {
+            theme_type: Some(FidlThemeType::Dark),
+            theme_mode: None,
+            ..FidlTheme::EMPTY
+        }),
+        ..DisplaySettings::EMPTY
+    };
+    display_proxy.set(settings.clone()).await.expect("set completed").expect("set successful");
+
+    let settings_result = display_proxy.watch().await.expect("watch completed");
+    assert_eq!(settings_result, settings);
+}
+
+macro_rules! async_property_test {
+    ($test_func:ident => [$($test_name:ident($($args:expr),+$(,)?)),+$(,)?]) => {
+        $(paste::paste!{
+            #[allow(non_snake_case)]
+            #[fuchsia_async::run_until_stalled(test)]
+            async fn [<$test_func ___ $test_name>]() {
+                $test_func($($args,)+).await;
+            }
+        })+
+    }
+}
+
+// Validate that we cannot set auto_brightness to true or screen_enabled to false
+// when a brightness value is manually set. All other combinations should be ok.
+async_property_test!(test_set_multiple_fields_brightness => [
+    error_case_1(Some(0.5), Some(true), Some(true), false),
+    error_case_2(Some(0.5), Some(true), Some(false), false),
+    error_case_3(Some(0.5), Some(false), Some(false), false),
+    success_case_1(Some(0.5), Some(false), Some(true), true),
+    success_case_2(Some(0.5), None, Some(true), true),
+    success_case_3(Some(0.5), Some(false), None, true),
+    success_case_4(Some(0.5), None, None, true),
+]);
+async fn test_set_multiple_fields_brightness(
+    brightness_value: Option<f32>,
+    auto_brightness: Option<bool>,
+    screen_enabled: Option<bool>,
+    expect_success: bool,
+) {
+    let display_proxy = setup_display_env().await;
+
+    let settings = DisplaySettings {
+        auto_brightness,
+        brightness_value,
+        screen_enabled,
+        ..DisplaySettings::EMPTY
+    };
+    let result = display_proxy.set(settings).await.expect("set completed");
+    if expect_success {
+        assert!(result.is_ok());
+        let settings = display_proxy.watch().await.expect("watch completed");
+        assert_eq!(
+            settings,
+            DisplaySettings {
+                auto_brightness: Some(false),
+                brightness_value,
+                screen_enabled: Some(true),
+                // Default values untouched.
+                low_light_mode: Some(FidlLowLightMode::Disable),
+                theme: Some(FidlTheme {
+                    theme_type: Some(FidlThemeType::Light),
+                    theme_mode: Some(FidlThemeMode::Auto),
+                    ..FidlTheme::EMPTY
+                }),
+                ..DisplaySettings::EMPTY
+            }
+        );
+    } else {
+        assert_eq!(result, Err(FidlError::Failed));
+    }
+}
+
+// Validate that we cannot set screen_enabled and auto_brightness to the same
+// value. Another other combination is ok.
+async_property_test!(test_set_multiple_fields_auto_brightness => [
+    error_case_1(Some(true), Some(true), false),
+    error_case_2(Some(false), Some(false), false),
+    success_case_1(Some(true), Some(false), true),
+    success_case_2(Some(false), Some(true), true),
+]);
+async fn test_set_multiple_fields_auto_brightness(
+    screen_enabled: Option<bool>,
+    auto_brightness: Option<bool>,
+    expect_success: bool,
+) {
+    let display_proxy = setup_display_env().await;
+
+    let settings = DisplaySettings { screen_enabled, auto_brightness, ..DisplaySettings::EMPTY };
+    let result = display_proxy.set(settings).await.expect("set completed");
+    if expect_success {
+        assert!(result.is_ok());
+        let settings = display_proxy.watch().await.expect("watch completed");
+        assert_eq!(
+            settings,
+            DisplaySettings {
+                auto_brightness,
+                screen_enabled,
+                brightness_value: auto_brightness.and_then(|auto| if auto {
+                    None
+                } else {
+                    Some(0.5)
+                }),
+                // Default values untouched.
+                low_light_mode: Some(FidlLowLightMode::Disable),
+                theme: Some(FidlTheme {
+                    theme_type: Some(FidlThemeType::Light),
+                    theme_mode: Some(FidlThemeMode::Auto),
+                    ..FidlTheme::EMPTY
+                }),
+                ..DisplaySettings::EMPTY
+            }
+        );
+    } else {
+        assert_eq!(result, Err(FidlError::Failed));
+    }
 }

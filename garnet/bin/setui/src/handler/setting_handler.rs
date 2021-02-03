@@ -104,6 +104,17 @@ pub enum ControllerError {
     ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>),
     #[error("Invalid input argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
     InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
+    #[error(
+        "Incompatible argument values passed: {setting_type:?} argument:{main_arg:?} cannot be \
+         combined with arguments:[{other_args:?}] with respective values:[{values:?}]. {reason:?}"
+    )]
+    IncompatibleArguments {
+        setting_type: SettingType,
+        main_arg: Cow<'static, str>,
+        other_args: Cow<'static, str>,
+        values: Cow<'static, str>,
+        reason: Cow<'static, str>,
+    },
     #[error("Unhandled type: {0:?}")]
     UnhandledType(SettingType),
     #[error("Unexpected error: {0:?}")]

@@ -238,6 +238,7 @@ impl InspectAgent {
 mod tests {
     use super::*;
     use crate::agent::base::Descriptor;
+    use crate::display::types::SetDisplayInfo;
     use crate::internal::agent;
     use crate::internal::event;
     use crate::internal::switchboard;
@@ -336,13 +337,15 @@ mod tests {
         InspectAgent::create_with_node(context, inspect_node).await;
 
         // Send a few requests to make sure they get written to inspect properly.
+        let turn_off_auto_brightness = Request::SetDisplayInfo(SetDisplayInfo {
+            auto_brightness: Some(false),
+            ..SetDisplayInfo::default()
+        });
         request_processor
-            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(false))
+            .send_and_receive(SettingType::Display, turn_off_auto_brightness.clone())
             .await;
 
-        request_processor
-            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(false))
-            .await;
+        request_processor.send_and_receive(SettingType::Display, turn_off_auto_brightness).await;
 
         request_processor
             .send_and_receive(
@@ -359,13 +362,25 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             switchboard: {
                 "Display": {
-                    "SetAutoBrightness": {
+                    "SetDisplayInfo": {
                         "00000000000000000000": {
-                            request: "SetAutoBrightness(false)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(false), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                         "00000000000000000001": {
-                            request: "SetAutoBrightness(false)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(false), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                     },
@@ -405,11 +420,15 @@ mod tests {
         let _agent = InspectAgent::create_with_node(context, inspect_node).await;
 
         // Send a few requests to make sure they get written to inspect properly.
+        let turn_off_auto_brightness = Request::SetDisplayInfo(SetDisplayInfo {
+            auto_brightness: Some(false),
+            ..SetDisplayInfo::default()
+        });
         send_request_and_wait_switchboard(
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
-            Request::SetAutoBrightness(false),
+            turn_off_auto_brightness.clone(),
         )
         .await;
 
@@ -417,7 +436,7 @@ mod tests {
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
-            Request::SetAutoBrightness(false),
+            turn_off_auto_brightness,
         )
         .await;
 
@@ -437,13 +456,25 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             switchboard: {
                 "Display": {
-                    "SetAutoBrightness": {
+                    "SetDisplayInfo": {
                         "00000000000000000000": {
-                            request: "SetAutoBrightness(false)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(false), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                         "00000000000000000001": {
-                            request: "SetAutoBrightness(false)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(false), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                     },
@@ -478,13 +509,25 @@ mod tests {
 
         // Interlace different request types to make sure the counter is correct.
         request_processor
-            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(false))
+            .send_and_receive(
+                SettingType::Display,
+                Request::SetDisplayInfo(SetDisplayInfo {
+                    auto_brightness: Some(false),
+                    ..SetDisplayInfo::default()
+                }),
+            )
             .await;
 
         request_processor.send_and_receive(SettingType::Display, Request::Get).await;
 
         request_processor
-            .send_and_receive(SettingType::Display, Request::SetAutoBrightness(true))
+            .send_and_receive(
+                SettingType::Display,
+                Request::SetDisplayInfo(SetDisplayInfo {
+                    auto_brightness: Some(true),
+                    ..SetDisplayInfo::default()
+                }),
+            )
             .await;
 
         request_processor.send_and_receive(SettingType::Display, Request::Get).await;
@@ -492,13 +535,25 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             switchboard: {
                 "Display": {
-                    "SetAutoBrightness": {
+                    "SetDisplayInfo": {
                         "00000000000000000000": {
-                            request: "SetAutoBrightness(false)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(false), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                         "00000000000000000002": {
-                            request: "SetAutoBrightness(true)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(true), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                     },
@@ -540,7 +595,10 @@ mod tests {
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
-            Request::SetAutoBrightness(false),
+            Request::SetDisplayInfo(SetDisplayInfo {
+                auto_brightness: Some(false),
+                ..SetDisplayInfo::default()
+            }),
         )
         .await;
 
@@ -556,7 +614,10 @@ mod tests {
             &messenger,
             &mut switchboard_receptor,
             SettingType::Display,
-            Request::SetAutoBrightness(true),
+            Request::SetDisplayInfo(SetDisplayInfo {
+                auto_brightness: Some(true),
+                ..SetDisplayInfo::default()
+            }),
         )
         .await;
 
@@ -571,13 +632,25 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             switchboard: {
                 "Display": {
-                    "SetAutoBrightness": {
+                    "SetDisplayInfo": {
                         "00000000000000000000": {
-                            request: "SetAutoBrightness(false)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(false), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                         "00000000000000000002": {
-                            request: "SetAutoBrightness(true)",
+                            request: "SetDisplayInfo(SetDisplayInfo { \
+                                manual_brightness_value: None, \
+                                auto_brightness: Some(true), \
+                                screen_enabled: None, \
+                                low_light_mode: None, \
+                                theme: None \
+                            })",
                             timestamp: "0",
                         },
                     },
@@ -633,7 +706,10 @@ mod tests {
                 &messenger,
                 &mut switchboard_receptor,
                 SettingType::Display,
-                Request::SetAutoBrightness(false),
+                Request::SetDisplayInfo(SetDisplayInfo {
+                    auto_brightness: Some(false),
+                    ..SetDisplayInfo::default()
+                }),
             )
             .await;
         }
@@ -642,7 +718,7 @@ mod tests {
         // when hitting the limit.
         fn display_subtree_assertion() -> TreeAssertion {
             let mut tree_assertion = TreeAssertion::new("Display", true);
-            let mut request_assertion = TreeAssertion::new("SetAutoBrightness", true);
+            let mut request_assertion = TreeAssertion::new("SetDisplayInfo", true);
 
             for i in 1..INSPECT_REQUESTS_COUNT + 1 {
                 request_assertion

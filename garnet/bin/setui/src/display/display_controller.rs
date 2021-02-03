@@ -18,6 +18,7 @@ use crate::handler::setting_handler::persist::{
 };
 use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use crate::service_context::ExternalServiceProxy;
+use crate::switchboard::base::Merge;
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
     ControlMarker as BrightnessControlMarker, ControlProxy as BrightnessControlProxy,
@@ -207,76 +208,107 @@ where
                         .await,
                 )
             }
-            Request::SetBrightness(brightness_value) => {
-                let mut display_info = self.client.read().await;
-                display_info.auto_brightness = false;
-                display_info.manual_brightness_value = brightness_value;
-                display_info.screen_enabled = true;
-                Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
-            }
-            Request::SetAutoBrightness(auto_brightness_enabled) => {
-                let mut display_info = self.client.read().await;
-                display_info.auto_brightness = auto_brightness_enabled;
-                Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
-            }
-            Request::SetLowLightMode(low_light_mode) => {
-                let mut display_info = self.client.read().await;
-                display_info.low_light_mode = low_light_mode;
-                Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
-            }
-            Request::SetScreenEnabled(enabled) => {
-                let mut display_info = self.client.read().await;
-                display_info.screen_enabled = enabled;
-
-                // Set auto brightness to the opposite of the screen off state. If the screen is
-                // turned off, auto brightness must be on so that the screen off component can
-                // detect the changes. If the screen is turned on, the default behavior is to turn
-                // it to full manual brightness.
-                display_info.auto_brightness = !enabled;
-                Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
-            }
-            Request::SetTheme(incoming_theme) => {
-                let mut display_info = self.client.read().await;
-                let mut theme_builder = ThemeBuilder::new();
-
-                let existing_theme_type = display_info.theme.map_or(None, |theme| theme.theme_type);
-
-                let new_theme_type = incoming_theme.theme_type.or(existing_theme_type);
-
-                // Temporarily, if no theme type has ever been set, and the
-                // theme mode is Auto, we also set the theme type to Auto
-                // to support clients that haven't migrated.
-                // TODO(fxb/64775): Remove this assignment.
-                let mode_adjusted_new_theme_type = match new_theme_type {
-                    None | Some(ThemeType::Unknown)
-                        if incoming_theme.theme_mode.contains(ThemeMode::AUTO) =>
+            Request::SetDisplayInfo(mut set_display_info) => {
+                let display_info = self.client.read().await;
+                if let Some(manual_brightness_value) = set_display_info.manual_brightness_value {
+                    if let (auto_brightness @ Some(true), screen_enabled)
+                    | (auto_brightness, screen_enabled @ Some(false)) =
+                        (set_display_info.auto_brightness, set_display_info.screen_enabled)
                     {
-                        Some(ThemeType::Auto)
+                        // Invalid argument combination
+                        return Some(Err(ControllerError::IncompatibleArguments {
+                            setting_type: SettingType::Display,
+                            main_arg: "manual_brightness_value".into(),
+                            other_args: "auto_brightness, screen_enabled".into(),
+                            values: format!(
+                                "{}, {:?}, {:?}",
+                                manual_brightness_value, auto_brightness, screen_enabled
+                            )
+                            .into(),
+                            reason:
+                                "When manual brightness is set, auto brightness must be off or \
+                             unset and screen must be enabled or unset"
+                                    .into(),
+                        }));
                     }
-                    _ => new_theme_type,
-                };
+                    set_display_info.auto_brightness = Some(false);
+                    set_display_info.screen_enabled = Some(true);
+                } else if let Some(screen_enabled) = set_display_info.screen_enabled {
+                    // Set auto brightness to the opposite of the screen off state. If the screen is
+                    // turned off, auto brightness must be on so that the screen off component can
+                    // detect the changes. If the screen is turned on, the default behavior is to
+                    // turn it to full manual brightness.
+                    if let Some(auto_brightness) = set_display_info.auto_brightness {
+                        if screen_enabled == auto_brightness {
+                            // Invalid argument combination
+                            return Some(Err(ControllerError::IncompatibleArguments {
+                                setting_type: SettingType::Display,
+                                main_arg: "screen_enabled".into(),
+                                other_args: "auto_brightness".into(),
+                                values: format!("{}, {}", screen_enabled, auto_brightness).into(),
+                                reason: "values cannot be equal".into(),
+                            }));
+                        }
+                    } else {
+                        set_display_info.auto_brightness = Some(!screen_enabled);
+                    }
+                }
 
-                theme_builder.set_theme_type(mode_adjusted_new_theme_type);
+                if let Some(theme) = set_display_info.theme {
+                    set_display_info.theme = self.build_theme(theme, &display_info);
+                }
 
-                theme_builder.set_theme_mode(
-                    incoming_theme.theme_mode
-                    // Temporarily, if the theme type is auto we also set the
-                    // theme mode to auto until all clients are sending setUI
-                    // theme mode Auto.
-                    // TODO(fxb/64775): Remove this or clause.
-                    | match incoming_theme.theme_type {
-                        Some(ThemeType::Auto) => ThemeMode::AUTO,
-                        _ => ThemeMode::empty(),
-                    },
-                );
-
-                display_info.theme = theme_builder.build();
-
-                Some(write(&self.client, display_info, false).await.into_handler_result())
+                Some(
+                    self.brightness_manager
+                        .update_brightness(display_info.merge(set_display_info), &self.client)
+                        .await,
+                )
             }
             Request::Get => Some(Ok(Some(SettingInfo::Brightness(self.client.read().await)))),
             _ => None,
         }
+    }
+}
+
+impl<T> DisplayController<T>
+where
+    T: BrightnessManager,
+{
+    fn build_theme(&self, incoming_theme: Theme, display_info: &DisplayInfo) -> Option<Theme> {
+        let mut theme_builder = ThemeBuilder::new();
+
+        let existing_theme_type = display_info.theme.map_or(None, |theme| theme.theme_type);
+
+        let new_theme_type = incoming_theme.theme_type.or(existing_theme_type);
+
+        // Temporarily, if no theme type has ever been set, and the
+        // theme mode is Auto, we also set the theme type to Auto
+        // to support clients that haven't migrated.
+        // TODO(fxb/64775): Remove this assignment.
+        let mode_adjusted_new_theme_type = match new_theme_type {
+            None | Some(ThemeType::Unknown)
+                if incoming_theme.theme_mode.contains(ThemeMode::AUTO) =>
+            {
+                Some(ThemeType::Auto)
+            }
+            _ => new_theme_type,
+        };
+
+        theme_builder.set_theme_type(mode_adjusted_new_theme_type);
+
+        theme_builder.set_theme_mode(
+            incoming_theme.theme_mode
+            // Temporarily, if the theme type is auto we also set the
+            // theme mode to auto until all clients are sending setUI
+            // theme mode Auto.
+            // TODO(fxb/64775): Remove this or clause.
+            | match incoming_theme.theme_type {
+                Some(ThemeType::Auto) => ThemeMode::AUTO,
+                _ => ThemeMode::empty(),
+            },
+        );
+
+        theme_builder.build()
     }
 }
 

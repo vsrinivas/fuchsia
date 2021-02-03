@@ -13,10 +13,11 @@ use crate::handler::setting_handler::{ControllerError, SettingHandlerResult};
 /// Return type from a controller after handling a state change.
 pub type ControllerStateResult = Result<(), ControllerError>;
 
-/// A trait for structs where all fields are options. Recursively performs
-/// [Option::or](std::option::Option::or) on each field in the struct and substructs.
-pub trait Merge {
-    fn merge(&self, other: Self) -> Self;
+/// The `Merge` trait allows merging two structs.
+pub trait Merge<Other = Self> {
+    /// Returns a copy of the original struct where the values of all fields set in `other`
+    /// replace the matching fields in the copy of `self`.
+    fn merge(&self, other: Other) -> Self;
 }
 
 /// Returns all known setting types. New additions to SettingType should also

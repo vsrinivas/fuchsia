@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::base::{SettingInfo, SettingType},
-    crate::display::types::{LowLightMode, Theme, ThemeMode, ThemeType},
+    crate::display::types::{LowLightMode, SetDisplayInfo, Theme, ThemeMode, ThemeType},
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
@@ -57,6 +57,16 @@ impl From<ThemeMode> for FidlThemeMode {
     }
 }
 
+impl From<FidlLowLightMode> for LowLightMode {
+    fn from(fidl_low_light_mode: FidlLowLightMode) -> Self {
+        match fidl_low_light_mode {
+            FidlLowLightMode::Disable => LowLightMode::Disable,
+            FidlLowLightMode::DisableImmediately => LowLightMode::DisableImmediately,
+            FidlLowLightMode::Enable => LowLightMode::Enable,
+        }
+    }
+}
+
 impl From<FidlThemeType> for ThemeType {
     fn from(fidl_theme_type: FidlThemeType) -> Self {
         match fidl_theme_type {
@@ -68,17 +78,26 @@ impl From<FidlThemeType> for ThemeType {
     }
 }
 
+impl From<FidlTheme> for Theme {
+    fn from(fidl_theme: FidlTheme) -> Self {
+        Self {
+            theme_type: fidl_theme.theme_type.map(Into::into),
+            theme_mode: fidl_theme.theme_mode.map(Into::into).unwrap_or_else(|| ThemeMode::empty()),
+        }
+    }
+}
+
 impl From<SettingInfo> for DisplaySettings {
     fn from(response: SettingInfo) -> Self {
         if let SettingInfo::Brightness(info) = response {
             let mut display_settings = fidl_fuchsia_settings::DisplaySettings::EMPTY;
 
             display_settings.auto_brightness = Some(info.auto_brightness);
-            display_settings.low_light_mode = match info.low_light_mode {
-                LowLightMode::Enable => Some(FidlLowLightMode::Enable),
-                LowLightMode::Disable => Some(FidlLowLightMode::Disable),
-                LowLightMode::DisableImmediately => Some(FidlLowLightMode::DisableImmediately),
-            };
+            display_settings.low_light_mode = Some(match info.low_light_mode {
+                LowLightMode::Enable => FidlLowLightMode::Enable,
+                LowLightMode::Disable => FidlLowLightMode::Disable,
+                LowLightMode::DisableImmediately => FidlLowLightMode::DisableImmediately,
+            });
 
             if !info.auto_brightness {
                 display_settings.brightness_value = Some(info.manual_brightness_value);
@@ -114,32 +133,24 @@ impl From<SettingInfo> for DisplaySettings {
 }
 
 fn to_request(settings: DisplaySettings) -> Option<Request> {
-    let mut request = None;
-    if let Some(brightness_value) = settings.brightness_value {
-        request = Some(Request::SetBrightness(brightness_value));
-    } else if let Some(screen_enabled) = settings.screen_enabled {
-        request = Some(Request::SetScreenEnabled(screen_enabled));
-    } else if let Some(enable_auto_brightness) = settings.auto_brightness {
-        request = Some(Request::SetAutoBrightness(enable_auto_brightness));
-    } else if let Some(low_light_mode) = settings.low_light_mode {
-        request = match low_light_mode {
-            FidlLowLightMode::Enable => Some(Request::SetLowLightMode(LowLightMode::Enable)),
-            FidlLowLightMode::Disable => Some(Request::SetLowLightMode(LowLightMode::Disable)),
-            FidlLowLightMode::DisableImmediately => {
-                Some(Request::SetLowLightMode(LowLightMode::DisableImmediately))
-            }
-        };
-    } else if let Some(fidl_theme) = settings.theme {
-        request = Some(Request::SetTheme(Theme {
-            theme_type: fidl_theme.theme_type.map(ThemeType::from),
-            theme_mode: match fidl_theme.theme_mode {
-                Some(fidl_theme_mode) => ThemeMode::from(fidl_theme_mode),
-                None => ThemeMode::empty(),
-            },
-        }))
+    let set_display_info = SetDisplayInfo {
+        manual_brightness_value: settings.brightness_value,
+        auto_brightness: settings.auto_brightness,
+        screen_enabled: settings.screen_enabled,
+        low_light_mode: settings.low_light_mode.map(Into::into),
+        theme: settings.theme.map(Into::into),
+    };
+    match set_display_info {
+        // No values being set is invalid
+        SetDisplayInfo {
+            manual_brightness_value: None,
+            auto_brightness: None,
+            screen_enabled: None,
+            low_light_mode: None,
+            theme: None,
+        } => None,
+        _ => Some(Request::SetDisplayInfo(set_display_info)),
     }
-
-    request
 }
 
 fidl_process!(
@@ -176,7 +187,7 @@ async fn process_request(
                         SettingType::Display,
                         request,
                         Ok(()),
-                        Err(Error::Unsupported),
+                        Err(Error::Failed),
                         DisplayMarker
                     );
                 })

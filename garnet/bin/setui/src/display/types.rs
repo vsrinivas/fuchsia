@@ -6,6 +6,7 @@ use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 
 use crate::base::SettingInfo;
+use crate::switchboard::base::Merge;
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -32,6 +33,29 @@ impl DisplayInfo {
             screen_enabled,
             low_light_mode,
             theme,
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Copy, Clone)]
+pub struct SetDisplayInfo {
+    pub manual_brightness_value: Option<f32>,
+    pub auto_brightness: Option<bool>,
+    pub screen_enabled: Option<bool>,
+    pub low_light_mode: Option<LowLightMode>,
+    pub theme: Option<Theme>,
+}
+
+impl Merge<SetDisplayInfo> for DisplayInfo {
+    fn merge(&self, other: SetDisplayInfo) -> Self {
+        Self {
+            manual_brightness_value: other
+                .manual_brightness_value
+                .unwrap_or(self.manual_brightness_value),
+            auto_brightness: other.auto_brightness.unwrap_or(self.auto_brightness),
+            screen_enabled: other.screen_enabled.unwrap_or(self.screen_enabled),
+            low_light_mode: other.low_light_mode.unwrap_or(self.low_light_mode),
+            theme: other.theme.or(self.theme),
         }
     }
 }

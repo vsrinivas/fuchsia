@@ -5,7 +5,7 @@
 use crate::accessibility::types::AccessibilityInfo;
 use crate::audio::types::AudioStream;
 use crate::base::{SettingInfo, SettingType};
-use crate::display::types::{LowLightMode, Theme};
+use crate::display::types::SetDisplayInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::ControllerError;
@@ -67,11 +67,7 @@ pub enum Request {
     SetMicMute(bool),
 
     // Display requests.
-    SetAutoBrightness(bool),
-    SetBrightness(f32),
-    SetLowLightMode(LowLightMode),
-    SetScreenEnabled(bool),
-    SetTheme(Theme),
+    SetDisplayInfo(SetDisplayInfo),
 
     // Do not disturb requests.
     SetDnD(DoNotDisturbInfo),
@@ -140,10 +136,8 @@ impl Request {
             Request::ScheduleClearAccounts => "ScheduleClearAccounts",
             Request::SetVolume(_) => "SetVolume",
             Request::SetMicMute(_) => "SetMicMute",
-            Request::SetBrightness(_) => "SetBrightness",
-            Request::SetAutoBrightness(_) => "SetAutoBrightness",
+            Request::SetDisplayInfo(_) => "SetDisplayInfo",
             Request::SetLocalResetAllowed(_) => "SetLocalResetAllowed",
-            Request::SetLowLightMode(_) => "SetLowLightMode",
             Request::SetDnD(_) => "SetDnD",
             Request::SetInputStates(_) => "SetInputStates",
             Request::SetIntlInfo(_) => "SetIntlInfo",
@@ -154,8 +148,6 @@ impl Request {
             Request::Restore => "Restore",
             Request::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
             Request::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
-            Request::SetScreenEnabled(_) => "SetScreenEnabled",
-            Request::SetTheme(_) => "SetTheme",
         }
     }
 }
@@ -176,6 +168,18 @@ pub enum Error {
 
     #[error("Invalid argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
     InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
+
+    #[error(
+        "Incompatible argument values passed: {setting_type:?} argument:{main_arg:?} cannot be \
+         combined with arguments:[{other_args:?}] with respective values:[{values:?}]. {reason:?}"
+    )]
+    IncompatibleArguments {
+        setting_type: SettingType,
+        main_arg: Cow<'static, str>,
+        other_args: Cow<'static, str>,
+        values: Cow<'static, str>,
+        reason: Cow<'static, str>,
+    },
 
     #[error("External failure for setting type:{0:?} dependency: {1:?} request:{2:?}")]
     ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>),
@@ -219,6 +223,15 @@ impl From<ControllerError> for Error {
             }
             ControllerError::InvalidArgument(setting_type, argument, value) => {
                 Error::InvalidArgument(setting_type, argument, value)
+            }
+            ControllerError::IncompatibleArguments {
+                setting_type,
+                main_arg,
+                other_args,
+                values,
+                reason,
+            } => {
+                Error::IncompatibleArguments { setting_type, main_arg, other_args, values, reason }
             }
             ControllerError::UnhandledType(setting_type) => Error::UnhandledType(setting_type),
             ControllerError::UnexpectedError(error) => Error::UnexpectedError(error),
