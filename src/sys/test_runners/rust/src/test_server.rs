@@ -15,6 +15,7 @@ use {
     lazy_static::lazy_static,
     log::{debug, error},
     regex::Regex,
+    runner::log::{buffer_and_drain_logger, LoggerStream},
     std::{
         collections::HashSet,
         str::from_utf8,
@@ -28,7 +29,7 @@ use {
         },
         errors::*,
         launch,
-        logs::{buffer_and_drain_logger, LogStreamReader, LogWriter, LoggerStream},
+        logs::{LogStreamReader, SocketLogWriter},
     },
 };
 
@@ -99,7 +100,7 @@ impl SuiteServer for TestServer {
                     .on_test_case_started(invocation, log_client, listener)
                     .map_err(RunTestError::SendStart)?;
 
-                let mut test_logger = LogWriter::new(test_logger);
+                let mut test_logger = SocketLogWriter::new(test_logger);
 
                 match self
                     .run_test(&test, &run_options, test_component.clone(), &mut test_logger)
@@ -289,7 +290,7 @@ impl TestServer {
         &self,
         _test: &str,
         _test_component: &Component,
-        _test_logger: &mut LogWriter,
+        _test_logger: &mut SocketLogWriter,
     ) -> Result<ftest::Result_, RunTestError> {
         // this will go away soon, so no use of supporting it when we can't
         // even test this code.
@@ -307,7 +308,7 @@ impl TestServer {
         test: &str,
         run_options: &ftest::RunOptions,
         test_component: Arc<Component>,
-        test_logger: &mut LogWriter,
+        test_logger: &mut SocketLogWriter,
     ) -> Result<ftest::Result_, RunTestError> {
         // Exit codes used by Rust's libtest runner.
         const TR_OK: i64 = 50;
@@ -350,7 +351,7 @@ impl TestServer {
         let (process, _job, stdlogger) =
             launch_component_process::<RunTestError>(&test_component, args, test_invoke).await?;
 
-        buffer_and_drain_logger(stdlogger, test_logger).await?;
+        buffer_and_drain_logger(stdlogger, Box::new(test_logger)).await?;
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
             .await

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod component;
+pub mod log;
 
 use {
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, std::path::Path,

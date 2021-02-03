@@ -6,15 +6,11 @@
 
 use {
     crate::errors::FdioError,
+    async_trait::async_trait,
     fdio::fdio_sys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{
-        io::{self, AsyncRead},
-        prelude::*,
-        ready,
-        task::{Context, Poll},
-    },
-    std::{cell::RefCell, pin::Pin},
+    futures::prelude::*,
+    runner::log::{LogError, LogWriter, LoggerStream},
     thiserror::Error,
     zx::HandleBased,
 };
@@ -30,46 +26,6 @@ pub enum LoggerError {
 
     #[error("invalid socket: {:?}", _0)]
     InvalidSocket(zx::Status),
-}
-
-/// Logger stream to read logs from a socket
-#[must_use = "futures/streams"]
-pub struct LoggerStream {
-    socket: fasync::Socket,
-}
-
-impl Unpin for LoggerStream {}
-thread_local! {
-    pub static BUFFER:
-        RefCell<[u8; 4096]> = RefCell::new([0; 4096]);
-}
-
-impl LoggerStream {
-    /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: zx::Socket) -> Result<LoggerStream, LoggerError> {
-        let l = LoggerStream {
-            socket: fasync::Socket::from_socket(socket).map_err(LoggerError::InvalidSocket)?,
-        };
-        Ok(l)
-    }
-}
-
-fn process_log_bytes(bytes: &[u8]) -> Vec<u8> {
-    bytes.to_vec()
-}
-
-impl Stream for LoggerStream {
-    type Item = io::Result<Vec<u8>>;
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        BUFFER.with(|b| {
-            let mut b = b.borrow_mut();
-            let len = ready!(Pin::new(&mut self.socket).poll_read(cx, &mut *b)?);
-            if len == 0 {
-                return Poll::Ready(None);
-            }
-            Poll::Ready(Some(process_log_bytes(&b[0..len])).map(Ok))
-        })
-    }
 }
 
 /// Creates socket handle for stdout and stderr and hooks them to same socket.
@@ -103,49 +59,11 @@ pub fn create_log_stream() -> Result<(LoggerStream, zx::Handle, zx::Handle), Log
         }
 
         Ok((
-            LoggerStream::new(client)?,
+            LoggerStream::new(client).map_err(LoggerError::InvalidSocket)?,
             zx::Handle::from_raw(stdout_file_handle),
             zx::Handle::from_raw(stderr_file_handle),
         ))
     }
-}
-
-/// Buffer `stdlogger` by newline and write to `log_writer`.
-pub async fn buffer_and_drain_logger(
-    mut stdlogger: LoggerStream,
-    log_writer: &mut LogWriter,
-) -> Result<(), LogError> {
-    let mut buf: Vec<u8> = vec![];
-    let newline = b'\n';
-    while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
-        if bytes.is_empty() {
-            continue;
-        }
-
-        // buffer by newline, find last newline and send message till then,
-        // store rest in buffer.
-        buf.extend(bytes);
-        if let Some(i) = buf.iter().rposition(|&x| x == newline) {
-            log_writer.write(buf.drain(0..=i).as_slice()).await?;
-        }
-    }
-
-    if buf.len() > 0 {
-        //  Flush remainder of buffer in case the last message isn't terminated with a newline.
-        log_writer.write(&buf).await?;
-    }
-
-    Ok(())
-}
-
-/// Error while reading/writing log using socket
-#[derive(Debug, Error)]
-pub enum LogError {
-    #[error("can't get logs: {:?}", _0)]
-    Read(std::io::Error),
-
-    #[error("can't write logs: {:?}", _0)]
-    Write(std::io::Error),
 }
 
 /// Collects logs in background and gives a way to collect those logs.
@@ -167,11 +85,11 @@ impl LogStreamReader {
 }
 
 /// Utility struct to write to socket asynchrously.
-pub struct LogWriter {
+pub struct SocketLogWriter {
     logger: fasync::Socket,
 }
 
-impl LogWriter {
+impl SocketLogWriter {
     pub fn new(logger: fasync::Socket) -> Self {
         Self { logger }
     }
@@ -179,8 +97,11 @@ impl LogWriter {
     pub async fn write_str(&mut self, s: &str) -> Result<usize, LogError> {
         self.write(s.as_bytes()).await
     }
+}
 
-    pub async fn write(&mut self, bytes: &[u8]) -> Result<usize, LogError> {
+#[async_trait]
+impl LogWriter for SocketLogWriter {
+    async fn write(&mut self, bytes: &[u8]) -> Result<usize, LogError> {
         self.logger.write(bytes).await.map_err(LogError::Write)
     }
 }
@@ -192,7 +113,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn log_writer_reader_work() {
         let (sock1, sock2) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let mut log_writer = LogWriter::new(fasync::Socket::from_socket(sock1).unwrap());
+        let mut log_writer = SocketLogWriter::new(fasync::Socket::from_socket(sock1).unwrap());
 
         let reader = LoggerStream::new(sock2).unwrap();
         let reader = LogStreamReader::new(reader);

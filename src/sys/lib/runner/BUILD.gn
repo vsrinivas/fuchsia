@@ -18,6 +18,7 @@ rustc_library("runner") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
@@ -31,12 +32,14 @@ rustc_library("runner") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
     "src/component.rs",
     "src/lib.rs",
+    "src/log.rs",
   ]
 }
 

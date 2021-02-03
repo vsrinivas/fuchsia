@@ -21,6 +21,7 @@ use {
     lazy_static::lazy_static,
     log::{debug, error},
     regex::bytes::Regex,
+    runner::log::{LogError, LogWriter, LoggerStream},
     std::{
         collections::HashSet,
         str::from_utf8,
@@ -34,7 +35,7 @@ use {
         },
         errors::*,
         launch,
-        logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
+        logs::{LogStreamReader, SocketLogWriter},
     },
     zx::HandleBased,
 };
@@ -219,7 +220,7 @@ impl TestServer {
 
         let test_logger =
             fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
-        let mut test_logger = LogWriter::new(test_logger);
+        let mut test_logger = SocketLogWriter::new(test_logger);
 
         if let Err(e) = TestServer::validate_args(&user_passed_args) {
             test_logger.write_str(&format!("{}", e)).await?;

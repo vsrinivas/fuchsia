@@ -22,6 +22,7 @@ use {
     },
     lazy_static::lazy_static,
     log::{debug, error, info},
+    runner::log::{LogError, LogWriter, LoggerStream},
     serde::{Deserialize, Serialize},
     std::{
         path::Path,
@@ -36,7 +37,7 @@ use {
         },
         errors::*,
         launch,
-        logs::{LogError, LogStreamReader, LogWriter, LoggerStream},
+        logs::{LogStreamReader, SocketLogWriter},
     },
 };
 
@@ -372,7 +373,7 @@ impl TestServer {
             .map_err(RunTestError::SendStart)?;
         let test_logger =
             fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
-        let mut test_logger = LogWriter::new(test_logger);
+        let mut test_logger = SocketLogWriter::new(test_logger);
 
         args.extend(component.args.clone());
         if let Some(user_args) = &run_options.arguments {

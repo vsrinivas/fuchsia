@@ -14,13 +14,14 @@ use {
         TryStreamExt,
     },
     log::{debug, error},
+    runner::log::{buffer_and_drain_logger, LoggerStream},
     std::sync::{Arc, Weak},
     test_runners_lib::{
         cases::TestCaseInfo,
         elf::{Component, EnumeratedTestCases, FidlError, KernelError, SuiteServer},
         errors::*,
         launch,
-        logs::{buffer_and_drain_logger, LogWriter, LoggerStream},
+        logs::SocketLogWriter,
     },
 };
 
@@ -123,7 +124,7 @@ impl TestServer {
             .map_err(RunTestError::SendStart)?;
         let test_logger =
             fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
-        let mut test_logger = LogWriter::new(test_logger);
+        let mut test_logger = SocketLogWriter::new(test_logger);
 
         let mut args = component.args.clone();
         if let Some(user_args) = &run_options.arguments {
@@ -135,7 +136,7 @@ impl TestServer {
             launch_component_process::<RunTestError>(&component, args).await?;
 
         // Drain stdout
-        buffer_and_drain_logger(stdlogger, &mut test_logger).await?;
+        buffer_and_drain_logger(stdlogger, Box::new(&mut test_logger)).await?;
 
         // Wait for test to return
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
