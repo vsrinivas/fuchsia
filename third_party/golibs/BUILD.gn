@@ -141,6 +141,8 @@ golib("github.com/pkg/sftp") {
     ":golang.org/x/crypto",
   ]
 }
+golib("github.com/spf13/pflag") {
+}
 golib("github.com/syndtr/goleveldb") {
   deps = [ ":github.com/golang/snappy" ]
 }
