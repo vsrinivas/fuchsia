@@ -933,7 +933,7 @@ func getDeviceConfiguationData(sdk SDKProperties, key string) (map[string]interf
 		output []byte
 	)
 
-	args := []string{"config", "get", key}
+	args := []string{"config", "get", key, "-o", "h"}
 
 	if output, err = runFFX(sdk, args); err != nil {
 		return data, fmt.Errorf("Error reading %v: %v %v", key, err, string(output))
