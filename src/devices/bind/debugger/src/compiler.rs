@@ -49,6 +49,10 @@ pub enum BindProgramEncodeError {
     IntegerOutOfRange,
     MismatchValueTypes(Symbol, Symbol),
     MissingStringInSymbolTable(String),
+    DuplicateLabel(u32),
+    MissingLabel(u32),
+    InvalidGotoLocation(u32),
+    JumpOffsetOutOfRange(u32),
 }
 
 impl fmt::Display for BindProgramEncodeError {

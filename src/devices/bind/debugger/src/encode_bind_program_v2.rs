@@ -7,6 +7,7 @@ use crate::compiler::{
 };
 use crate::instruction::{Condition, Instruction};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 /// Functions for encoding the new bytecode format. When the
 /// old bytecode format is deleted, the "v2" should be removed from the names.
@@ -45,10 +46,25 @@ enum RawValueType {
     EnumValue,
 }
 
+// Info on a jump instruction's offset. |index| represents the jump offset's
+// location in the bytecode vector. |inst_offset| represents number of bytes
+// |index| is from the end of the jump instruction. The jump offset is
+// calculated by subtracting |index| and |inst_offset| from label location.
+struct JumpInstructionOffsetInfo {
+    index: usize,
+    inst_offset: usize,
+}
+
+struct LabelInfo {
+    pub index: Option<usize>,
+    pub jump_instructions: Vec<JumpInstructionOffsetInfo>,
+}
+
 struct Encoder<'a> {
     inst_iter: std::vec::IntoIter<SymbolicInstructionInfo<'a>>,
     symbol_table: SymbolTable,
     pub encoded_symbols: HashMap<String, u32>,
+    label_map: HashMap<u32, LabelInfo>,
 }
 
 impl<'a> Encoder<'a> {
@@ -56,7 +72,15 @@ impl<'a> Encoder<'a> {
         Encoder {
             inst_iter: bind_program.instructions.into_iter(),
             symbol_table: bind_program.symbol_table,
+
+            // Contains the key-value pairs in the symbol table.
+            // Populated when the symbol tabel is encoded.
             encoded_symbols: HashMap::<String, u32>::new(),
+
+            // Map of the label ID and the information. Used to
+            // store the label location in the bytecode and to
+            // calculate the jump offsets.
+            label_map: HashMap::<u32, LabelInfo>::new(),
         }
     }
 
@@ -120,14 +144,41 @@ impl<'a> Encoder<'a> {
 
         while let Some(symbolic_inst) = self.inst_iter.next() {
             let instruction = symbolic_inst.to_instruction().instruction;
-
-            // TODO(fxb/67440): Handle and encode goto statements.
             match instruction {
                 Instruction::Abort(condition) => {
-                    self.append_abort_instruction(&mut bytecode, condition)?
+                    self.append_abort_instruction(&mut bytecode, condition)?;
                 }
-                _ => {}
+                Instruction::Goto(condition, label) => {
+                    self.append_jmp_statement(&mut bytecode, condition, label)?;
+                }
+                Instruction::Label(label_id) => {
+                    self.append_and_update_label(&mut bytecode, label_id)?;
+                }
+
+                // TODO(fxb/67440): Bindc should not append an unconditional match for
+                // the new bytecode. Once that's removed, this should return an error if
+                // a Match instruction is encountered.
+                Instruction::Match(_) => {}
             };
+        }
+
+        // Update the jump instruction offsets.
+        for (label_id, data) in self.label_map.iter() {
+            // If the label index is not available, then the label is missing in the bind program.
+            if data.index.is_none() {
+                return Err(BindProgramEncodeError::MissingLabel(*label_id));
+            }
+
+            let label_index = data.index.unwrap();
+            for usage in data.jump_instructions.iter() {
+                let offset = u32::try_from(label_index - usage.index - usage.inst_offset)
+                    .map_err(|_| BindProgramEncodeError::JumpOffsetOutOfRange(*label_id))?;
+
+                let offset_bytes = offset.to_le_bytes();
+                for i in 0..4 {
+                    bytecode[usage.index + i] = offset_bytes[i];
+                }
+            }
         }
 
         Ok(bytecode)
@@ -155,6 +206,74 @@ impl<'a> Encoder<'a> {
                 self.append_value_comparison(bytecode, lhs, rhs)
             }
         }
+    }
+
+    fn append_jmp_statement(
+        &mut self,
+        bytecode: &mut Vec<u8>,
+        condition: Condition,
+        label_id: u32,
+    ) -> Result<(), BindProgramEncodeError> {
+        let offset_index = bytecode.len() + 1;
+        let placeholder_offset = (0 as u32).to_le_bytes();
+        match condition {
+            Condition::Always => {
+                bytecode.push(RawOp::UnconditionalJump as u8);
+                bytecode.extend_from_slice(&placeholder_offset);
+            }
+            Condition::Equal(lhs, rhs) => {
+                bytecode.push(RawOp::JumpIfEqual as u8);
+                bytecode.extend_from_slice(&placeholder_offset);
+                self.append_value_comparison(bytecode, lhs, rhs)?;
+            }
+            Condition::NotEqual(lhs, rhs) => {
+                bytecode.push(RawOp::JumpIfNotEqual as u8);
+                bytecode.extend_from_slice(&placeholder_offset);
+                self.append_value_comparison(bytecode, lhs, rhs)?;
+            }
+        };
+
+        // If the label's index is already set, then the label appears before
+        // the jump statement. We can make this assumption because we're
+        // encoding the bind program in one direction.
+        if let Some(data) = self.label_map.get(&label_id) {
+            if data.index.is_some() {
+                return Err(BindProgramEncodeError::InvalidGotoLocation(label_id));
+            }
+        }
+
+        // Add the label to the map if it doesn't already exists. Push the jump instruction
+        // offset to the map.
+        self.label_map
+            .entry(label_id)
+            .or_insert(LabelInfo { index: None, jump_instructions: vec![] })
+            .jump_instructions
+            .push(JumpInstructionOffsetInfo {
+                index: offset_index,
+                inst_offset: bytecode.len() - offset_index,
+            });
+
+        Ok(())
+    }
+
+    fn append_and_update_label(
+        &mut self,
+        bytecode: &mut Vec<u8>,
+        label_id: u32,
+    ) -> Result<(), BindProgramEncodeError> {
+        if let Some(data) = self.label_map.get(&label_id) {
+            if data.index.is_some() {
+                return Err(BindProgramEncodeError::DuplicateLabel(label_id));
+            }
+        }
+
+        self.label_map
+            .entry(label_id)
+            .and_modify(|data| data.index = Some(bytecode.len()))
+            .or_insert(LabelInfo { index: Some(bytecode.len()), jump_instructions: vec![] });
+
+        bytecode.push(RawOp::JumpLandPad as u8);
+        Ok(())
     }
 
     fn append_value_comparison(
@@ -218,10 +337,14 @@ mod test {
     // Constants representing the number of bytes in an operand and value.
     const OP_BYTES: u32 = 1;
     const VALUE_BYTES: u32 = 5;
+    const OFFSET_BYTES: u32 = 4;
 
     // Constants representing the number of bytes in each instruction.
     const UNCOND_ABORT_BYTES: u32 = OP_BYTES;
     const COND_ABORT_BYTES: u32 = OP_BYTES + VALUE_BYTES + VALUE_BYTES;
+    const UNCOND_JMP_BYTES: u32 = OP_BYTES + OFFSET_BYTES;
+    const COND_JMP_BYTES: u32 = OP_BYTES + OFFSET_BYTES + VALUE_BYTES + VALUE_BYTES;
+    const JMP_PAD_BYTES: u32 = OP_BYTES;
 
     struct BytecodeChecker {
         iter: std::vec::IntoIter<u8>,
@@ -293,6 +416,41 @@ mod test {
             self.verify_next_u8(0x02);
             self.verify_value(value_type.clone(), lhs);
             self.verify_value(value_type, rhs);
+        }
+
+        pub fn verify_unconditional_jmp(&mut self, offset: u32) {
+            self.verify_next_u8(0x10);
+            self.verify_next_u32(offset);
+        }
+
+        pub fn verify_jmp_if_equal(
+            &mut self,
+            offset: u32,
+            value_type: RawValueType,
+            lhs: u32,
+            rhs: u32,
+        ) {
+            self.verify_next_u8(0x11);
+            self.verify_next_u32(offset);
+            self.verify_value(value_type.clone(), lhs);
+            self.verify_value(value_type, rhs);
+        }
+
+        pub fn verify_jmp_if_not_equal(
+            &mut self,
+            offset: u32,
+            value_type: RawValueType,
+            lhs: u32,
+            rhs: u32,
+        ) {
+            self.verify_next_u8(0x12);
+            self.verify_next_u32(offset);
+            self.verify_value(value_type.clone(), lhs);
+            self.verify_value(value_type, rhs);
+        }
+
+        pub fn verify_jmp_pad(&mut self) {
+            self.verify_next_u8(0x20);
         }
 
         // Verify that the iterator reached the end of the bytecode.
@@ -501,6 +659,424 @@ mod test {
 
         assert_eq!(
             Err(BindProgramEncodeError::MissingStringInSymbolTable("wallcreeper".to_string())),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_unconditional_jump_statement() {
+        let instructions = vec![
+            SymbolicInstruction::UnconditionalJump { label: 1 },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+
+        checker.verify_instructions_header(UNCOND_JMP_BYTES + UNCOND_ABORT_BYTES + JMP_PAD_BYTES);
+        checker.verify_unconditional_jmp(UNCOND_ABORT_BYTES);
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_jump_if_equal_statement() {
+        let instructions = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::NumberValue(15),
+                rhs: Symbol::NumberValue(12),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::NumberValue(10),
+                rhs: Symbol::NumberValue(10),
+            },
+            SymbolicInstruction::Label(1),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+
+        // Verify the instructions.
+        checker.verify_instructions_header(
+            COND_JMP_BYTES + UNCOND_ABORT_BYTES + COND_ABORT_BYTES + JMP_PAD_BYTES,
+        );
+        checker.verify_jmp_if_equal(
+            UNCOND_ABORT_BYTES + COND_ABORT_BYTES,
+            RawValueType::NumberValue,
+            15,
+            12,
+        );
+        checker.verify_unconditional_abort();
+        checker.verify_abort_equal(RawValueType::NumberValue, 10, 10);
+        checker.verify_jmp_pad();
+
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_jump_if_not_equal_statement() {
+        let instructions = vec![
+            SymbolicInstruction::JumpIfNotEqual {
+                lhs: Symbol::BoolValue(false),
+                rhs: Symbol::BoolValue(true),
+                label: 2,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::NumberValue(5),
+                rhs: Symbol::NumberValue(7),
+            },
+            SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::BoolValue(false),
+                rhs: Symbol::BoolValue(true),
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(2),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+
+        let expected_bytes =
+            COND_JMP_BYTES + (UNCOND_ABORT_BYTES * 2) + (COND_ABORT_BYTES * 2) + JMP_PAD_BYTES;
+        checker.verify_instructions_header(expected_bytes);
+
+        // Verify Jump If Not Equal.
+        let expected_offset = (UNCOND_ABORT_BYTES * 2) + (COND_ABORT_BYTES * 2);
+        checker.verify_jmp_if_not_equal(expected_offset, RawValueType::BoolValue, 0, 1);
+
+        // Verify abort statements.
+        checker.verify_unconditional_abort();
+        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
+        checker.verify_abort_not_equal(RawValueType::BoolValue, 0, 1);
+        checker.verify_unconditional_abort();
+
+        checker.verify_jmp_pad();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_instructions_with_strings() {
+        let instructions = vec![
+            SymbolicInstruction::JumpIfNotEqual {
+                lhs: Symbol::StringValue("shining sunbeam".to_string()),
+                rhs: Symbol::StringValue("bearded mountaineer".to_string()),
+                label: 1,
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::StringValue("puffleg".to_string()),
+                rhs: Symbol::StringValue("bearded mountaineer".to_string()),
+            },
+            SymbolicInstruction::Label(1),
+        ];
+
+        let mut symbol_table: SymbolTable = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("aglaeactis"),
+            Symbol::StringValue("shining sunbeam".to_string()),
+        );
+        symbol_table.insert(
+            make_identifier!("oreonympha"),
+            Symbol::StringValue("bearded mountaineer".to_string()),
+        );
+        symbol_table
+            .insert(make_identifier!("eriocnemis"), Symbol::StringValue("puffleg".to_string()));
+
+        let symbol_table_values: Vec<String> = symbol_table
+            .values()
+            .filter_map(|symbol| match symbol {
+                Symbol::StringValue(str) => Some(str.clone()),
+                _ => None,
+            })
+            .collect();
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: symbol_table,
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+
+        checker.verify_sym_table_header(56);
+        let mut unique_id = 1;
+        let mut sym_map: HashMap<String, u32> = HashMap::<String, u32>::new();
+        symbol_table_values.iter().for_each(|value| {
+            checker.verify_next_u32(unique_id);
+            checker.verify_string(value.clone());
+            sym_map.insert(value.clone(), unique_id);
+            unique_id += 1;
+        });
+
+        checker.verify_instructions_header(COND_JMP_BYTES + COND_ABORT_BYTES + JMP_PAD_BYTES);
+        checker.verify_jmp_if_not_equal(
+            COND_ABORT_BYTES,
+            RawValueType::StringValue,
+            *sym_map.get(&"shining sunbeam".to_string()).unwrap(),
+            *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
+        );
+        checker.verify_abort_equal(
+            RawValueType::StringValue,
+            *sym_map.get(&"puffleg".to_string()).unwrap(),
+            *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
+        );
+        checker.verify_jmp_pad();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_nested_jump_statement() {
+        let instructions = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::NumberValue(10),
+                rhs: Symbol::NumberValue(11),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::UnconditionalJump { label: 2 },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::NumberValue(5),
+                rhs: Symbol::NumberValue(7),
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(2),
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+
+        // Verify the instructions.
+        let nested_jmp_block_bytes =
+            UNCOND_JMP_BYTES + COND_ABORT_BYTES + UNCOND_ABORT_BYTES + JMP_PAD_BYTES;
+        let instructions_bytes = COND_JMP_BYTES
+            + UNCOND_ABORT_BYTES
+            + nested_jmp_block_bytes
+            + UNCOND_ABORT_BYTES
+            + JMP_PAD_BYTES;
+        checker.verify_instructions_header(instructions_bytes);
+
+        // Verify Jump If Equal.
+        let jmp_offset = UNCOND_ABORT_BYTES + nested_jmp_block_bytes + UNCOND_ABORT_BYTES;
+        checker.verify_jmp_if_equal(jmp_offset, RawValueType::NumberValue, 10, 11);
+        checker.verify_unconditional_abort();
+
+        // Verify the nested jump block.
+        checker.verify_unconditional_jmp(COND_ABORT_BYTES + UNCOND_ABORT_BYTES);
+        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_overlapping_jump_statements() {
+        let instructions = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::NumberValue(10),
+                rhs: Symbol::NumberValue(11),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::UnconditionalJump { label: 2 },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::NumberValue(5),
+                rhs: Symbol::NumberValue(7),
+            },
+            SymbolicInstruction::Label(1),
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(2),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+
+        let instructions_bytes = COND_JMP_BYTES
+            + UNCOND_ABORT_BYTES
+            + UNCOND_JMP_BYTES
+            + COND_ABORT_BYTES
+            + JMP_PAD_BYTES
+            + UNCOND_ABORT_BYTES
+            + JMP_PAD_BYTES;
+        checker.verify_instructions_header(instructions_bytes);
+
+        let jmp_offset = UNCOND_ABORT_BYTES + UNCOND_JMP_BYTES + COND_ABORT_BYTES;
+        checker.verify_jmp_if_equal(jmp_offset, RawValueType::NumberValue, 10, 11);
+        checker.verify_unconditional_abort();
+
+        let jmp_offset = COND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES;
+        checker.verify_unconditional_jmp(jmp_offset);
+        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
+
+        checker.verify_jmp_pad();
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_same_label_statements() {
+        let instructions = vec![
+            SymbolicInstruction::UnconditionalJump { label: 1 },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::NumberValue(5),
+                rhs: Symbol::NumberValue(7),
+            },
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::NumberValue(10),
+                rhs: Symbol::NumberValue(11),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+
+        let instructions_bytes = UNCOND_JMP_BYTES
+            + COND_ABORT_BYTES
+            + COND_JMP_BYTES
+            + UNCOND_ABORT_BYTES
+            + JMP_PAD_BYTES;
+        checker.verify_instructions_header(instructions_bytes);
+
+        checker.verify_unconditional_jmp(COND_ABORT_BYTES + COND_JMP_BYTES + UNCOND_ABORT_BYTES);
+        checker.verify_abort_equal(RawValueType::NumberValue, 5, 7);
+        checker.verify_jmp_if_equal(UNCOND_ABORT_BYTES, RawValueType::NumberValue, 10, 11);
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_duplicate_label() {
+        let instructions = vec![
+            SymbolicInstruction::UnconditionalJump { label: 1 },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::NumberValue(5),
+                rhs: Symbol::NumberValue(7),
+            },
+            SymbolicInstruction::Label(1),
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::DuplicateLabel(1)),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_unused_label() {
+        let instructions = vec![
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+            SymbolicInstruction::UnconditionalAbort,
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(0);
+
+        checker.verify_instructions_header(UNCOND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES);
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+        checker.verify_unconditional_abort();
+    }
+
+    #[test]
+    fn test_label_appears_before_jmp() {
+        let instructions = vec![
+            SymbolicInstruction::Label(1),
+            SymbolicInstruction::UnconditionalJump { label: 1 },
+            SymbolicInstruction::UnconditionalAbort,
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::InvalidGotoLocation(1)),
+            encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_missing_label() {
+        let instructions = vec![
+            SymbolicInstruction::UnconditionalJump { label: 2 },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let bind_program = BindProgram {
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::MissingLabel(2)),
             encode_to_bytecode_v2(bind_program)
         );
     }

@@ -370,7 +370,7 @@ impl From<BindProgramEncodeError> for UserError {
             ),
             BindProgramEncodeError::UnsupportedSymbol => UserError::new(
                 "E602",
-                &format!("Symbol is not supported in the old bytecode format."),
+                "Symbol is not supported in the old bytecode format.",
                 None,
                 true,
             ),
@@ -386,6 +386,33 @@ impl From<BindProgramEncodeError> for UserError {
             BindProgramEncodeError::MissingStringInSymbolTable(str) => UserError::new(
                 "E605",
                 &format!("Missing string {} in symbol table", str),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::DuplicateLabel(label_id) => UserError::new(
+                "E606",
+                &format!("Duplicate label {} in instructions", label_id),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::MissingLabel(label_id) => UserError::new(
+                "E607",
+                &format!("Missing label {} in instructions", label_id),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::InvalidGotoLocation(label_id) => UserError::new(
+                "E608",
+                &format!(
+                    "Bind program cannot move backwards. Label {} appears before Goto statement",
+                    label_id
+                ),
+                None,
+                true,
+            ),
+            BindProgramEncodeError::JumpOffsetOutOfRange(label_id) => UserError::new(
+                "E609",
+                &format!("The jump offset for label {} exceeds 32 bits", label_id),
                 None,
                 true,
             ),
