@@ -25,6 +25,7 @@
 #include <ddk/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
@@ -395,7 +396,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
  * Returns 0 or error code.
  */
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              void* data, uint32_t size);
+                              void* data, size_t size);
 // TODO(cphoenix): Expand "uint" to "unsigned int" everywhere.
 
 /* Issue an abort to the specified function */
@@ -405,9 +406,10 @@ void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_s
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev);
 zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
-                                         uint32_t firmware_size, const void* nvram,
+                                         size_t firmware_size, const void* nvram,
                                          size_t nvram_size);
 void brcmf_sdio_remove(struct brcmf_sdio* bus);
+zx_status_t brcmf_sdio_reset(struct brcmf_sdio* bus);
 void brcmf_sdio_isr(struct brcmf_sdio* bus);
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active);
@@ -572,6 +574,7 @@ struct brcmf_sdio {
 
   WorkQueue* brcmf_wq;
   WorkItem datawork;
+  WorkItem recovery_work;
   std::atomic<bool> dpc_triggered;
   bool dpc_running;
 
@@ -589,5 +592,9 @@ void brcmf_sdio_if_ctrl_frame_stat_set(struct brcmf_sdio* bus, std::function<voi
 void brcmf_sdio_if_ctrl_frame_stat_clear(struct brcmf_sdio* bus, std::function<void()> fn);
 void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus);
 zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen);
+
+// Load firmware, nvram and CLM binary files. The parameter "reload" means whether this function is
+// called for the firmware reloading process when it crashes.
+zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_

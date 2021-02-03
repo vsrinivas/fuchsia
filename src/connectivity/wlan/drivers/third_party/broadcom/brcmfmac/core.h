@@ -162,6 +162,15 @@ struct brcmf_pub {
   struct brcmf_mp_device* settings;
 
   uint8_t clmver[BRCMF_DCMD_SMLEN];
+
+  /* The last country code the driver set to firmware, used for recovery. */
+  uint8_t last_country_code[WLANPHY_ALPHA2_LEN];
+  /* The semaphore to mark whether firmware is reloading, when it is occupied, some operations will
+   * be skipped or blocked if it's not supposed to be done during firmware reloading.*/
+  std::mutex fw_reloading;
+  /* The semaphore to mark whether the drvr have already started the firmware crash recovery
+   * process, this prevents the recovery worker being scheduled into workqueue more than once.*/
+  std::atomic<bool> drvr_resetting;
 };
 
 /* forward declarations */
@@ -298,11 +307,18 @@ zx_status_t brcmf_attach(brcmf_pub* drvr);
 void brcmf_detach(brcmf_pub* drvr);
 /* Indication from bus module that dongle should be reset */
 void brcmf_dev_reset(brcmf_pub* drvr);
+/* Reset brcmf during crash recovery*/
+zx_status_t brcmf_reset(brcmf_pub* drvr);
+
+void brcmf_restart_client_if(brcmf_pub* drvr);
 
 /* Configure the "global" bus state used by upper layers */
 void brcmf_bus_change_state(brcmf_bus* bus, enum brcmf_bus_state state);
 
-zx_status_t brcmf_bus_started(brcmf_pub* drvr);
+// The boolean drvr_restarting means whether this function is called during the driver
+// initialization or the driver crash recovery.
+zx_status_t brcmf_bus_started(brcmf_pub* drvr, bool drvr_restarting);
+zx_status_t brcmf_bus_restarted(brcmf_pub* drvr);
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
                                  bcme_status_t* fwerr_ptr);
 void brcmf_bus_add_txhdrlen(brcmf_pub* drvr, uint len);

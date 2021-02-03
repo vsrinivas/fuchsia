@@ -20,9 +20,7 @@ namespace brcmfmac {
 
 PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) {}
 
-PcieDevice::~PcieDevice() {
-  brcmf_detach(drvr());
-}
+PcieDevice::~PcieDevice() { brcmf_detach(drvr()); }
 
 // static
 zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
@@ -72,7 +70,7 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  if ((status = brcmf_bus_started(device->drvr())) != ZX_OK) {
+  if ((status = brcmf_bus_started(device->drvr(), false)) != ZX_OK) {
     BRCMF_ERR("Failed to start bus: %s", zx_status_get_string(status));
     return status;
   }

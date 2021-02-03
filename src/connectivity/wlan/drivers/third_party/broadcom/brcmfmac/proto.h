@@ -35,6 +35,7 @@ struct brcmf_proto {
                           bcme_status_t* fwerr);
   zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx,
                                std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
+  zx_status_t (*reset)(struct brcmf_pub* drvr);
   void* pd;
 
   // Deprecated entry points.
@@ -99,6 +100,13 @@ static inline void brcmf_proto_delete_peer(struct brcmf_pub* drvr, int ifidx,
 static inline void brcmf_proto_add_tdls_peer(struct brcmf_pub* drvr, int ifidx,
                                              uint8_t peer[ETH_ALEN]) {
   drvr->proto->add_tdls_peer(drvr, ifidx, peer);
+}
+
+static inline zx_status_t brcmf_proto_reset(struct brcmf_pub* drvr) {
+  if (!drvr->proto->reset) {
+    return ZX_OK;
+  }
+  return drvr->proto->reset(drvr);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PROTO_H_

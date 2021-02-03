@@ -18,6 +18,7 @@
 
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/align.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -2081,7 +2082,6 @@ static void brcmf_sdio_bus_stop(brcmf_bus* bus_if) {
   int thread_result;
 
   BRCMF_DBG(TRACE, "Enter");
-
   if (bus->watchdog_tsk) {
     bus->watchdog_should_stop.store(true);
     sync_completion_signal(&bus->watchdog_wait);
@@ -2093,7 +2093,6 @@ static void brcmf_sdio_bus_stop(brcmf_bus* bus_if) {
 
   if (sdiodev->state != BRCMF_SDIOD_NOMEDIUM) {
     sdio_claim_host(sdiodev->func1);
-
     /* Enable clock for device interrupts */
     brcmf_sdio_bus_sleep(bus, false, false);
 
@@ -2586,7 +2585,19 @@ zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msg
   return bus->ctrl_frame_err;
 }
 
-#if !defined(NDEBUG)
+static zx_status_t brcmf_sdio_schedule_recovery_worker(struct brcmf_sdio* bus) {
+  brcmf_pub* drvr = bus->sdiodev->drvr;
+  bool expected = false;
+
+  if (!drvr->drvr_resetting.compare_exchange_strong(expected, true)) {
+    BRCMF_DBG(INFO, "The recovery process has already started\n");
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  WorkQueue::ScheduleDefault(&bus->recovery_work);
+  return ZX_OK;
+}
+
 static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
   zx_status_t error;
   struct sdpcm_shared sh;
@@ -2605,35 +2616,11 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
 
   if (sh.flags & SDPCM_SHARED_TRAP) {
     BRCMF_ERR("firmware trap in dongle");
+    brcmf_sdio_schedule_recovery_worker(bus);
   }
 
   return ZX_OK;
 }
-
-#else  /* !defined(NDEBUG) */
-static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
-  zx_status_t error;
-  struct sdpcm_shared sh;
-
-  error = brcmf_sdio_readshared(bus, &sh);
-
-  if (error != ZX_OK) {
-    return error;
-  }
-
-  if ((sh.flags & SDPCM_SHARED_ASSERT_BUILT) == 0) {
-    BRCMF_DBG(INFO, "firmware not built with -assert");
-  } else if (sh.flags & SDPCM_SHARED_ASSERT) {
-    BRCMF_ERR("assertion in dongle");
-  }
-
-  if (sh.flags & SDPCM_SHARED_TRAP) {
-    BRCMF_ERR("firmware trap in dongle");
-  }
-
-  return ZX_OK;
-}
-#endif /* !defined(NDEBUG) */
 
 static zx_status_t brcmf_sdio_bus_rxctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen,
                                         int* rxlen_out) {
@@ -2744,7 +2731,7 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 }
 
 static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus, const void* firmware,
-                                                 uint32_t firmware_size) {
+                                                 size_t firmware_size) {
   zx_status_t err;
 
   BRCMF_DBG(TRACE, "Enter");
@@ -2752,7 +2739,7 @@ static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus, const v
   err = brcmf_sdiod_ramrw(bus->sdiodev, true, bus->ci->rambase, const_cast<void*>(firmware),
                           firmware_size);
   if (err != ZX_OK)
-    BRCMF_ERR("error %d on writing %u membytes at 0x%08x", err, firmware_size, bus->ci->rambase);
+    BRCMF_ERR("error %d on writing %zu membytes at 0x%08x", err, firmware_size, bus->ci->rambase);
   else if (!brcmf_sdio_verifymemory(bus->sdiodev, bus->ci->rambase, firmware, firmware_size)) {
     err = ZX_ERR_IO;
   }
@@ -2779,7 +2766,7 @@ static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, const void*
 }
 
 static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus, const void* firmware,
-                                                uint32_t firmware_size, const void* nvram,
+                                                size_t firmware_size, const void* nvram,
                                                 size_t nvram_size) {
   zx_status_t bcmerror = ZX_OK;
   uint32_t rstvec;
@@ -3080,12 +3067,121 @@ static void brcmf_sdio_dataworker(WorkItem* work) {
   sdio_release_host(bus->sdiodev->func1);
 }
 
+zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAFETY_ANALYSIS {
+  zx_status_t status = ZX_OK;
+  brcmf_bus* bus_if = drvr->bus_if;
+
+  std::string firmware_binary;
+  if ((status = wlan::brcmfmac::GetFirmwareBinary(
+           drvr->device, brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
+           static_cast<wlan::brcmfmac::CommonCoreId>(bus_if->chip), bus_if->chiprev,
+           &firmware_binary)) != ZX_OK) {
+    BRCMF_ERR("Load firmware binary failed, error: %s\n", zx_status_get_string(status));
+    if (reload)
+      drvr->fw_reloading.unlock();
+    return status;
+  }
+
+  const size_t padded_size_firmware = ZX_ROUNDUP(firmware_binary.size(), SDIOD_SIZE_ALIGNMENT);
+  firmware_binary.resize(padded_size_firmware, '\0');
+
+  std::string nvram_binary;
+  if ((status =
+           wlan::brcmfmac::GetNvramBinary(drvr->device, brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
+                                          static_cast<wlan::brcmfmac::CommonCoreId>(bus_if->chip),
+                                          bus_if->chiprev, &nvram_binary)) != ZX_OK) {
+    BRCMF_ERR("Load nvram binary failed, error: %s\n", zx_status_get_string(status));
+    if (reload)
+      drvr->fw_reloading.unlock();
+    return status;
+  }
+
+  const size_t padded_size_nvram = ZX_ROUNDUP(nvram_binary.size(), SDIOD_SIZE_ALIGNMENT);
+  nvram_binary.resize(padded_size_nvram, '\0');
+
+  if (firmware_binary.size() > std::numeric_limits<uint32_t>::max()) {
+    BRCMF_ERR("Firmware binary size too large");
+    if (reload)
+      drvr->fw_reloading.unlock();
+    return ZX_ERR_INTERNAL;
+  }
+
+  if ((status = brcmf_sdio_firmware_callback(drvr, firmware_binary.data(), firmware_binary.size(),
+                                             nvram_binary.data(), nvram_binary.size())) != ZX_OK) {
+    BRCMF_ERR("Load nvram binary failed, error: %s\n", zx_status_get_string(status));
+    if (reload)
+      drvr->fw_reloading.unlock();
+    return status;
+  }
+
+  std::string clm_binary;
+  if ((status =
+           wlan::brcmfmac::GetClmBinary(drvr->device, brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
+                                        static_cast<wlan::brcmfmac::CommonCoreId>(bus_if->chip),
+                                        bus_if->chiprev, &clm_binary)) != ZX_OK) {
+    BRCMF_ERR("Load CLM binary failed, error: %s\n", zx_status_get_string(status));
+    if (reload)
+      drvr->fw_reloading.unlock();
+    return status;
+  }
+
+  // Unlock firmware reload lock after reloading the firmware or in other failure branches above if
+  // it's a reload.
+  if (reload)
+    drvr->fw_reloading.unlock();
+
+  // The firmware IOVAR accesses to upload the CLM blob are always on ifidx 0, so we stub out an
+  // appropriate brcmf_if instance here.
+  brcmf_if ifp = {};
+  ifp.drvr = drvr;
+  ifp.ifidx = 0;
+  if ((status = brcmf_c_process_clm_blob(&ifp, clm_binary)) != ZX_OK) {
+    BRCMF_ERR("Process clm blob fail.\n");
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+void brcmf_sdio_fw_recovery_worker(WorkItem* work) TA_NO_THREAD_SAFETY_ANALYSIS {
+  struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, recovery_work);
+
+  struct brcmf_sdio_dev* sdiod = bus->sdiodev;
+  struct brcmf_pub* drvr = sdiod->drvr;
+  zx_status_t error = ZX_OK;
+
+  // Lock the firmware reload mutex for this function so that no interrupt will be handled in
+  // the middle of it.
+  drvr->fw_reloading.lock();
+
+  brcmf_sdio_reset(bus);
+
+  if ((error = brcmf_sdio_load_files(drvr, true)) != ZX_OK) {
+    BRCMF_ERR("Failed to reload images - error: %s", zx_status_get_string(error));
+    goto fail;
+  }
+
+  if ((error = brcmf_bus_started(sdiod->drvr, true)) != ZX_OK) {
+    BRCMF_ERR("Initialization after bus started failed.\n");
+    goto fail;
+  }
+
+fail:
+  // Notice that here we set drvr_resetting but not fw_reloading to false, drvr_resetting is set to
+  // true before the worker is added into the workqueue, and fw_loading is set to false in
+  // brcmf_sdio_load_files(), which marks that the firmware loading is finished.
+  drvr->drvr_resetting.store(false);
+}
+
 int brcmf_sdio_oob_irqhandler(void* cookie) {
   struct brcmf_sdio_dev* sdiodev = static_cast<decltype(sdiodev)>(cookie);
   zx_status_t status;
   uint32_t intstatus;
 
   while ((status = zx_interrupt_wait(sdiodev->irq_handle, NULL)) == ZX_OK) {
+    // Sleep the interrupt handling when reloading the firmware to reduce the chaos in driver caused
+    // by queued interrupts.
+    std::lock_guard<std::mutex> guard(sdiodev->drvr->fw_reloading);
     BRCMF_DBG_THROTTLE(INTR, "OOB intr triggered");
     sdio_claim_host(sdiodev->func1);
     if (brcmf_sdio_intr_rstatus(sdiodev->bus)) {
@@ -3545,7 +3641,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
 };
 
 zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
-                                         uint32_t firmware_size, const void* nvram,
+                                         size_t firmware_size, const void* nvram,
                                          size_t nvram_size) {
   zx_status_t err = ZX_OK;
   struct brcmf_sdio_dev* sdiodev = drvr->bus_if->bus_priv.sdio;
@@ -3655,9 +3751,14 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
     // and figure out this logic.
     brcmf_sdio_wd_timer(bus, true);
 
-    err = brcmf_sdiod_intr_register(sdiodev);
-    if (err != ZX_OK) {
-      BRCMF_ERR("intr register failed:%d", err);
+    // brcmf_sdiod_intr_register() creates the interrupt thread and enables the sdio interrupt
+    // through sdio proto, so it can be skipped while doing crash recovery.
+    if (bus->sdiodev->drvr->fw_reloading.try_lock()) {
+      err = brcmf_sdiod_intr_register(sdiodev);
+      if (err != ZX_OK) {
+        BRCMF_ERR("intr register failed:%d", err);
+      }
+      bus->sdiodev->drvr->fw_reloading.unlock();
     }
   }
 
@@ -3716,6 +3817,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     goto fail;
   }
   bus->datawork = WorkItem(brcmf_sdio_dataworker);
+  bus->recovery_work = WorkItem(brcmf_sdio_fw_recovery_worker);
   bus->brcmf_wq = wq;
 
   /* attempt to attach to the dongle */
@@ -3828,15 +3930,14 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
   if (bus) {
     /* De-register interrupt handler */
     brcmf_sdiod_intr_unregister(bus->sdiodev);
-
     brcmf_proto_bcdc_detach(bus->sdiodev->drvr);
+
     brcmf_detach(bus->sdiodev->drvr);
 
     bus->datawork.Cancel();
     if (bus->brcmf_wq) {
       delete bus->brcmf_wq;
     }
-
     if (bus->ci) {
       if (bus->sdiodev->state != BRCMF_SDIOD_NOMEDIUM) {
         sdio_claim_host(bus->sdiodev->func1);
@@ -3866,7 +3967,40 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
     free(bus);
   }
 
-  BRCMF_DBG(TRACE, "Disconnected");
+  BRCMF_DBG(TRACE, "Bus Disconnected");
+}
+
+/*Reset things When recovering from firmware crash*/
+zx_status_t brcmf_sdio_reset(struct brcmf_sdio* bus) {
+  BRCMF_DBG(TRACE, "Enter");
+  zx_status_t err = ZX_OK;
+
+  // Stop watch dog timer temporarily.
+  brcmf_sdio_wd_timer(bus, false);
+
+  // Flush the glom rx list.
+  brcmf_sdio_free_glom(bus);
+
+  // Clean up the data path.
+  bus->datawork.Cancel();
+  bus->brcmf_wq->Flush();
+
+  // Flush rx buffer.
+  memset(bus->rxbuf, 0, bus->rxblen);
+
+  // Flush tx queue.
+  brcmu_pktq_flush(&bus->txq, true, NULL, NULL);
+
+  // Do clean up in upper layers
+  if ((err = brcmf_reset(bus->sdiodev->drvr)) != ZX_OK) {
+    BRCMF_ERR("Reset higher layer failed -- error: %s", zx_status_get_string(err));
+    return err;
+  }
+
+  // Restart watchdog timer
+  brcmf_sdio_wd_timer(bus, true);
+
+  return ZX_OK;
 }
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {

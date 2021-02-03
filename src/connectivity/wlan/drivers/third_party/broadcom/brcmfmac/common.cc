@@ -258,6 +258,10 @@ zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country)
     BRCMF_ERR("Firmware rejected country setting: %s fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
+
+  // Back up the country code for recovery.
+  memcpy(drvr->last_country_code, code, WLANPHY_ALPHA2_LEN);
+
   return err;
 }
 
@@ -357,6 +361,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   uint8_t buf[BRCMF_DCMD_SMLEN];
   struct brcmf_rev_info_le revinfo;
   struct brcmf_rev_info* ri;
+  struct brcmf_pub* drvr = ifp->drvr;
   char* clmver;
   char* ptr;
   zx_status_t err;
@@ -369,7 +374,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   }
 
   err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo), &fw_err);
-  ri = &ifp->drvr->revinfo;
+  ri = &drvr->revinfo;
   if (err != ZX_OK) {
     BRCMF_ERR("Failed to retrieve revision info: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
@@ -394,7 +399,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* locate firmware version number for ethtool */
     ptr = strrchr((char*)buf, ' ') + 1;
-    strlcpy(ifp->drvr->fwver, ptr, sizeof(ifp->drvr->fwver));
+    strlcpy(drvr->fwver, ptr, sizeof(drvr->fwver));
   }
 
   /* Query for 'clmver' to get CLM version info from firmware */
@@ -406,7 +411,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   } else {
     clmver = (char*)buf;
     /* store CLM version for adding it to revinfo debugfs file */
-    memcpy(ifp->drvr->clmver, clmver, sizeof(ifp->drvr->clmver));
+    memcpy(drvr->clmver, clmver, sizeof(drvr->clmver));
 
     /* Replace all newline/linefeed characters with space
      * character
@@ -421,7 +426,15 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     BRCMF_INFO("CLM version = %s", clmver);
   }
 
-  brcmf_set_country(ifp->drvr, &country);
+  if (drvr->drvr_resetting.load()) {
+    // If it's driver recovery process, reset the country code to the one before crash.
+    const wlanphy_country_t reset_country = {
+        {drvr->last_country_code[0], drvr->last_country_code[1]}};
+    BRCMF_INFO("Recovering country code %c%c.", reset_country.alpha2[0], reset_country.alpha2[1]);
+    brcmf_set_country(drvr, &reset_country);
+  } else {
+    brcmf_set_country(drvr, &country);
+  }
   brcmf_set_init_cfg_params(ifp);
 
   brcmf_c_set_joinpref_default(ifp);
@@ -490,7 +503,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   }
 
   /* do bus specific preinit here */
-  err = brcmf_bus_preinit(ifp->drvr->bus_if);
+  err = brcmf_bus_preinit(drvr->bus_if);
 done:
   return err;
 }

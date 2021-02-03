@@ -119,7 +119,7 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr) {
   // Here is where we would likely simulate loading the firmware into the target. For now,
   // we don't try.
 
-  status = brcmf_bus_started(drvr);
+  status = brcmf_bus_started(drvr, false);
   if (status != ZX_OK) {
     BRCMF_ERR("Failed to start (simulated) bus");
     brcmf_detach(drvr);

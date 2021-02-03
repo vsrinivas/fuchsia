@@ -101,6 +101,7 @@ struct brcmf_bus {
     struct brcmf_usbdev* usb;
     struct brcmf_simdev* sim;
   } bus_priv;
+
   enum brcmf_bus_state state;
   uint maxctl;
   uint32_t chip;

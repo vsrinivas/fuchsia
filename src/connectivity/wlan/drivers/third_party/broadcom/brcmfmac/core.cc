@@ -420,7 +420,6 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
   }
 
   ifp->pend_8021x_cnt.store(0);
-
   /* Get current TOE mode from dongle */
   if (brcmf_fil_iovar_int_get(ifp, "toe_ol", &toe_ol, nullptr) == ZX_OK &&
       (toe_ol & TOE_TX_CSUM_OL) != 0) {
@@ -428,7 +427,6 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
   } else {
     ndev->features &= ~NETIF_F_IP_CSUM;
   }
-
   if (brcmf_cfg80211_up(ndev) != ZX_OK) {
     BRCMF_ERR("failed to bring up cfg80211");
     return ZX_ERR_IO;
@@ -598,25 +596,31 @@ zx_status_t brcmf_attach(brcmf_pub* drvr) {
   return ZX_OK;
 }
 
-zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
+// There are two versions of this function, one is called in normal driver init process, another is
+// called in driver restarting process when firmware crash. These two versions switched by toggling
+// parameter "drvr_restarting".
+zx_status_t brcmf_bus_started(brcmf_pub* drvr, bool drvr_restarting) {
   zx_status_t ret = ZX_ERR_IO;
   struct brcmf_bus* bus_if = drvr->bus_if;
-  struct brcmf_if* ifp;
+  struct brcmf_if* ifp = drvr->iflist[0];
 
   BRCMF_DBG(TRACE, "Enter");
 
-  /* add primary networking interface */
-  // TODO(fxbug.dev/29361): Name uniqueness
-  ret = brcmf_add_if(drvr, 0, 0, kPrimaryNetworkInterfaceName, NULL, &ifp);
-  if (ret != ZX_OK) {
-    return ret;
+  if (!drvr_restarting) {
+    /* Add primary networking interface */
+    // TODO(fxbug.dev/29361): Name uniqueness
+    ret = brcmf_add_if(drvr, 0, 0, kPrimaryNetworkInterfaceName, NULL, &ifp);
+    if (ret != ZX_OK) {
+      return ret;
+    }
   }
-
-  /* signal bus ready */
+  /* Signal bus ready */
   brcmf_bus_change_state(bus_if, BRCMF_BUS_UP);
+
   /* Bus is ready, do any initialization */
   ret = brcmf_c_preinit_dcmds(ifp);
   if (ret != ZX_OK) {
+    BRCMF_ERR("preinit fail.\n");
     goto fail;
   }
 
@@ -629,14 +633,24 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   }
   brcmf_feat_attach(drvr);
 
-  brcmf_proto_add_iface(drvr, ifp->ifidx);
-
-  ret = brcmf_cfg80211_attach(drvr);
-  if (ret != ZX_OK) {
-    BRCMF_ERR("brcmf_cfg80211_attach failed (%d).", ret);
-    goto fail;
+  if (drvr_restarting) {
+    ret = brcmf_proto_reset(drvr);
+    if (ret != ZX_OK) {
+      BRCMF_ERR("proto_init fail.\n");
+      goto fail;
+    }
   }
 
+  if (!drvr_restarting) {
+    brcmf_proto_add_iface(drvr, ifp->ifidx);
+    ret = brcmf_cfg80211_attach(drvr);
+    if (ret != ZX_OK) {
+      BRCMF_ERR("brcmf_cfg80211_attach failed (%d).", ret);
+      goto fail;
+    }
+  }
+
+  // Set event mask based on the event handler registered in brcmf_cfg80211_attch above.
   ret = brcmf_fweh_activate_events(ifp);
   if (ret != ZX_OK) {
     BRCMF_ERR("FWEH activation failed (%d)", ret);
@@ -644,7 +658,6 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   }
 
   ret = brcmf_net_attach(ifp, false);
-
   if (ret != ZX_OK) {
     goto fail;
   }
@@ -652,7 +665,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   return ZX_OK;
 
 fail:
-  BRCMF_ERR("brcmf_bus started failed: (%d)", ret);
+  BRCMF_ERR("bus started failed: (%d)", ret);
   if (drvr->config) {
     brcmf_cfg80211_detach(drvr->config);
     drvr->config = NULL;
@@ -685,13 +698,11 @@ void brcmf_dev_reset(brcmf_pub* drvr) {
 }
 
 void brcmf_detach(brcmf_pub* drvr) {
-  int32_t i;
   BRCMF_DBG(TRACE, "Enter");
 
   if (drvr == NULL) {
     return;
   }
-
   /* stop firmware event handling */
   brcmf_fweh_detach(drvr);
 
@@ -702,13 +713,31 @@ void brcmf_detach(brcmf_pub* drvr) {
   brcmf_bus_change_state(drvr->bus_if, BRCMF_BUS_DOWN);
 
   /* make sure primary interface removed last */
-  for (i = BRCMF_MAX_IFS - 1; i > -1; i--) {
+  for (int i = BRCMF_MAX_IFS - 1; i > -1; i--) {
     brcmf_remove_interface(drvr->iflist[i], false);
   }
 
   brcmf_cfg80211_detach(drvr->config);
-
   brcmf_bus_stop(drvr->bus_if);
+}
+
+zx_status_t brcmf_reset(brcmf_pub* drvr) {
+  BRCMF_DBG(TRACE, "Enter");
+  zx_status_t err = ZX_OK;
+
+  if (drvr == NULL) {
+    return ZX_ERR_INTERNAL;
+  }
+  // Remove all interfaces other than the primary one.
+  for (int i = BRCMF_MAX_IFS - 1; i > 0; i--) {
+    brcmf_remove_interface(drvr->iflist[i], false);
+  }
+
+  if ((err = brcmf_clear_states(drvr->config)) != ZX_OK) {
+    BRCMF_ERR("Clear driver status failed -- error: %s", zx_status_get_string(err));
+    return err;
+  }
+  return ZX_OK;
 }
 
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,

@@ -97,6 +97,7 @@ struct brcmf_bcdc {
 
 zx_status_t brcmf_proto_bcdc_attach(brcmf_pub* drvr);
 void brcmf_proto_bcdc_detach(brcmf_pub* drvr);
+zx_status_t brcmf_proto_bcdc_reset(brcmf_pub* drvr);
 void brcmf_proto_bcdc_txflowblock(brcmf_pub* drvr, bool state);
 void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, brcmf_netbuf* txp, bool success);
 

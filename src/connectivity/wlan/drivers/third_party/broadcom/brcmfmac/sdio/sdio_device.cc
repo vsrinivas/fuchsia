@@ -64,52 +64,11 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  std::string firmware_binary;
-  if ((status = GetFirmwareBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
-                                  static_cast<CommonCoreId>(bus->chip), bus->chiprev,
-                                  &firmware_binary)) != ZX_OK) {
+  if ((status = brcmf_sdio_load_files(device->drvr(), false)) != ZX_OK) {
     return status;
   }
 
-  const size_t padded_size_firmware = ZX_ROUNDUP(firmware_binary.size(), SDIOD_SIZE_ALIGNMENT);
-  firmware_binary.resize(padded_size_firmware, '\0');
-
-  std::string nvram_binary;
-  if ((status = GetNvramBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
-                               static_cast<CommonCoreId>(bus->chip), bus->chiprev,
-                               &nvram_binary)) != ZX_OK) {
-    return status;
-  }
-
-  const size_t padded_size_nvram = ZX_ROUNDUP(nvram_binary.size(), SDIOD_SIZE_ALIGNMENT);
-  nvram_binary.resize(padded_size_nvram, '\0');
-
-  if (firmware_binary.size() > std::numeric_limits<uint32_t>::max()) {
-    BRCMF_ERR("Firmware binary size too large");
-    return ZX_ERR_INTERNAL;
-  }
-  if ((status = brcmf_sdio_firmware_callback(device->drvr(), firmware_binary.data(),
-                                             static_cast<uint32_t>(firmware_binary.size()),
-                                             nvram_binary.data(), nvram_binary.size())) != ZX_OK) {
-    return status;
-  }
-
-  // CLM blob loading is optional, and only performed if the blob binary exists.
-  std::string clm_binary;
-  if ((status = GetClmBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
-                             static_cast<CommonCoreId>(bus->chip), bus->chiprev, &clm_binary)) ==
-      ZX_OK) {
-    // The firmware IOVAR accesses to upload the CLM blob are always on ifidx 0, so we stub out an
-    // appropriate brcmf_if instance here.
-    brcmf_if ifp = {};
-    ifp.drvr = device->drvr();
-    ifp.ifidx = 0;
-    if ((status = brcmf_c_process_clm_blob(&ifp, clm_binary)) != ZX_OK) {
-      return status;
-    }
-  }
-
-  if ((status = brcmf_bus_started(device->drvr())) != ZX_OK) {
+  if ((status = brcmf_bus_started(device->drvr(), false)) != ZX_OK) {
     return status;
   }
 

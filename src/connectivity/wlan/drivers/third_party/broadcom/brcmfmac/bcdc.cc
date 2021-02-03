@@ -396,6 +396,7 @@ zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
   proto->query_dcmd = brcmf_proto_bcdc_query_dcmd;
   proto->set_dcmd = brcmf_proto_bcdc_set_dcmd;
   proto->tx_queue_data = brcmf_proto_bcdc_tx_queue_data;
+  proto->reset = brcmf_proto_bcdc_reset;
   proto->pd = bcdc;
 
   proto->hdrpull = brcmf_proto_bcdc_hdrpull;
@@ -425,4 +426,16 @@ void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr) {
   free(bcdc);
   free(drvr->proto);
   drvr->proto = nullptr;
+}
+
+zx_status_t brcmf_proto_bcdc_reset(struct brcmf_pub* drvr) {
+  if (drvr->proto == nullptr) {
+    BRCMF_ERR("No protocol for driver now.");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
+
+  memset(bcdc->buf, 0, BRCMF_DCMD_MAXLEN);
+  return ZX_OK;
 }

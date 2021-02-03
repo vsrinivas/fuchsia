@@ -506,6 +506,7 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
                                         bool aborted, bool fw_abort);
 void brcmf_enable_mpc(struct brcmf_if* ndev, int mpc);
 
+zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg);
 void brcmf_free_net_device_vif(struct net_device* ndev);
 
 // Is an AP Start operation in progress? Exposed for state inspection in tests.

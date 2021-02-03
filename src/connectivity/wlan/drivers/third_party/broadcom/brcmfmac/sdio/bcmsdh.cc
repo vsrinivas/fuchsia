@@ -235,6 +235,7 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
 
 void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_state state) {
   if (sdiodev->state == BRCMF_SDIOD_NOMEDIUM || state == sdiodev->state) {
+    BRCMF_ERR("No medium or equal state: %d\n", sdiodev->state);
     return;
   }
 
@@ -611,11 +612,11 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
 }
 
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              void* data, uint32_t data_size) {
+                              void* data, size_t data_size) {
   zx_status_t err = ZX_OK;
   // SBSDIO_SB_OFT_ADDR_LIMIT is the max transfer limit a single chunk.
   uint32_t transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
-  uint32_t transfer_size;
+  size_t transfer_size;
 
   /* Determine initial transfer parameters */
   sdio_claim_host(sdiodev->func1);
@@ -655,7 +656,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
       data = static_cast<char*>(data) + transfer_size;
     address += transfer_size;
     transfer_address += transfer_size;
-    transfer_size = std::min<uint32_t>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
+    transfer_size = std::min<size_t>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   }
 
   sdio_release_host(sdiodev->func1);

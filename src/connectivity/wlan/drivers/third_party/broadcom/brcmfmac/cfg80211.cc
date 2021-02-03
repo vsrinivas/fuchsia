@@ -2363,15 +2363,20 @@ static zx_status_t brcmf_inform_single_bss(struct net_device* ndev, struct brcmf
   return ZX_OK;
 }
 
-static void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
+static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   struct escan_info* escan = &cfg->escan_info;
+  zx_status_t err = ZX_OK;
 
   brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
   if (cfg->scan_request) {
     escan->escan_state = WL_ESCAN_STATE_IDLE;
-    brcmf_abort_escan(escan->ifp);
+    if ((err = brcmf_abort_escan(escan->ifp)) != ZX_OK) {
+      BRCMF_ERR("Abort scan failed -- error: %s", zx_status_get_string(err));
+      return err;
+    }
   }
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
+  return ZX_OK;
 }
 
 // Abort scanning immediately and inform SME right away
@@ -5528,7 +5533,6 @@ static zx_status_t __brcmf_cfg80211_up(struct brcmf_if* ifp) {
 
 static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-
   /*
    * While going down, if associated with AP disassociate
    * from AP to save power
@@ -5675,10 +5679,10 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
 }
 
 zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
-  struct net_device* ndev = brcmf_get_ifp(drvr, 0)->ndev;
   struct brcmf_cfg80211_info* cfg;
   struct brcmf_cfg80211_vif* vif;
-  struct brcmf_if* ifp;
+  struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
+  struct net_device* ndev = ifp->ndev;
   zx_status_t err = ZX_OK;
   bcme_status_t fw_err = BCME_OK;
   int32_t io_type;
@@ -5689,7 +5693,6 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
     return ZX_ERR_UNAVAILABLE;
   }
 
-  ifp = ndev_to_if(ndev);
   cfg = static_cast<decltype(cfg)>(calloc(1, sizeof(struct brcmf_cfg80211_info)));
   if (cfg == nullptr) {
     goto cfg80211_info_out;
@@ -5774,4 +5777,29 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
   brcmf_deinit_cfg(cfg);
   brcmf_clear_assoc_ies(cfg);
   free(cfg);
+}
+
+zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
+  struct brcmf_pub* drvr = cfg->pub;
+  struct brcmf_cfg80211_vif* vif = drvr->iflist[0]->vif;
+  zx_status_t err = ZX_OK;
+
+  // Stop all the timers(for all interfaces).
+  cfg->disconnect_timer->Stop();
+  cfg->signal_report_timer->Stop();
+  cfg->ap_start_timer->Stop();
+  cfg->connect_timer->Stop();
+
+  // Clear all driver scan states.
+  if ((err = brcmf_abort_scanning(cfg)) != ZX_OK)
+    return err;
+
+  brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
+
+  // Clear connect and disconnect states for primary iface.
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &vif->sme_state);
+
+  return ZX_OK;
 }

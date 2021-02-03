@@ -192,6 +192,7 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, con
   }
 
   drvr->proto_block.unlock();
+
   return err;
 }
 
