@@ -463,13 +463,7 @@ config("linker_gc_sanitizer") {
 }
 
 config("linker_gc_profile") {
-  cflags = [
-    # This enables the use of SHF_LINK_ORDER for profile sections.
-    "-fbinutils-version=none",
-  ]
-  asmflags = cflags
-  ldflags = cflags
-  configs = [ ":linker_gc" ]
+  # TODO(fxbug.dev/51509): See if we can enable linker GC for profile.
 }
 
 config("default_linker_gc") {
