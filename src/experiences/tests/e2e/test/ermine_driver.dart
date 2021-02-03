@@ -44,12 +44,14 @@ class ErmineDriver {
   /// This restarts the workstation session and connects to the running instance
   /// of Ermine using FlutterDriver.
   Future<void> setUp() async {
-    // TODO(http://fxbug.dev/66199): Uncomment once session restart is fixed.
     // Restart the workstation session.
-    // final result = await sl4f.ssh.run('session_control restart');
-    // if (result.exitCode != 0) {
-    //   fail('failed to restart workstation session.');
-    // }
+    final result = await sl4f.ssh.run('session_control restart');
+    if (result.exitCode != 0) {
+      fail('failed to restart workstation session.');
+    }
+
+    // Wait for Ermine to start.
+    expect(await component.search('ermine.cmx'), isTrue);
 
     // Initialize Ermine's flutter driver and web driver connectors.
     await _connector.initialize();

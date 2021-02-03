@@ -63,12 +63,8 @@ void main() {
     runningComponents = await ermine.component.list();
     expect(runningComponents.where((e) => e.contains(componentUrl)).length, 2);
 
-    // Close second instance by injecting 'exit\n'.
-    await Future.delayed(Duration(seconds: 1));
-    await input.text('exit');
-    await input.keyPress(kEnterKey);
-    await Future.delayed(Duration(seconds: 1));
-
+    // Close second instance clicking the close button on view title bar.
+    await ermine.driver.tap(find.byValueKey('close'));
     views = await ermine.launchedViews();
     terminalViews = views.where((view) => view['url'] == componentUrl);
     expect(terminalViews.length, 1);
@@ -76,8 +72,12 @@ void main() {
     runningComponents = await ermine.component.list();
     expect(runningComponents.where((e) => e.contains(componentUrl)).length, 1);
 
-    // Close the third instance by clicking the close button on view title bar.
-    await ermine.driver.tap(find.byValueKey('close'));
+    // Close the third instance by injecting 'exit\n'.
+    await Future.delayed(Duration(seconds: 1));
+    await input.text('exit');
+    await input.keyPress(kEnterKey);
+    await Future.delayed(Duration(seconds: 1));
+
     views = await ermine.launchedViews();
     terminalViews = views.where((view) => view['url'] == componentUrl);
     expect(terminalViews.length, 0);
