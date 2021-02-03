@@ -43,9 +43,7 @@ pub fn validate(
                 }
             }
         }
-        None => {
-            return Ok(());
-        }
+        None => {}
     }
 
     let package_manifest = read_package_manifest(package_manifest_path)?;
@@ -370,10 +368,8 @@ mod tests {
     #[test]
     fn validate_returns_ok_if_runner_not_provided() {
         let tmp_dir = TempDir::new().unwrap();
-        let package_manifest = tmp_file(&tmp_dir, "test.fini", "");
+        let package_manifest = tmp_file(&tmp_dir, "test.fini", fini_file!("bin/hello_world"));
 
-        // Normally, an empty package manifest file would yield an error.
-        // However, since no runner is given, this should return Ok.
         let component_manifest = tmp_file(
             &tmp_dir,
             "test.cmx",
@@ -385,6 +381,24 @@ mod tests {
         );
 
         assert_matches!(validate(&component_manifest, &package_manifest, None), Ok(()));
+    }
+
+    #[test]
+    fn validate_returns_err_if_runner_not_provided_and_binary_not_found() {
+        let tmp_dir = TempDir::new().unwrap();
+        let package_manifest = tmp_file(&tmp_dir, "test.fini", fini_file!("bin/hello_world"));
+
+        let component_manifest = tmp_file(
+            &tmp_dir,
+            "test.cmx",
+            json!({
+                "program": {
+                    "binary": "test/hello_world"
+                }
+            }),
+        );
+
+        assert_matches!(validate(&component_manifest, &package_manifest, None), Err(_));
     }
 
     #[test]
