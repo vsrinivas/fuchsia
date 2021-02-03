@@ -723,10 +723,51 @@ TEST(ImageFormat, R8G8Formats_V1_LLCPP) {
   EXPECT_EQ(18u * 17u * 1, ImageFormatImageSize(*optional_format));
 }
 
+TEST(ImageFormat, GoldfishOptimal_V2_LLCPP) {
+  constexpr uint32_t kWidth = 64;
+  constexpr uint32_t kHeight = 128;
+  constexpr uint32_t kStride = kWidth * 6;
+
+  auto linear_image_format_bgra32 =
+      allocator.make_table_builder<sysmem_v2::ImageFormat>()
+          .set_pixel_format(sysmem::MakeTracking(
+              &allocator,
+              allocator.make_table_builder<sysmem_v2::PixelFormat>()
+                  .set_type(sysmem::MakeTracking(&allocator, sysmem_v2::PixelFormatType::BGRA32))
+                  .build()))
+          .set_coded_width(sysmem::MakeTracking(&allocator, kWidth))
+          .set_coded_height(sysmem::MakeTracking(&allocator, kHeight))
+          .set_bytes_per_row(sysmem::MakeTracking(&allocator, kStride))
+          .build();
+  auto goldfish_optimal_image_format_bgra32 =
+      allocator.make_table_builder<sysmem_v2::ImageFormat>()
+          .set_pixel_format(sysmem::MakeTracking(
+              &allocator,
+              allocator.make_table_builder<sysmem_v2::PixelFormat>()
+                  .set_type(sysmem::MakeTracking(&allocator, sysmem_v2::PixelFormatType::BGRA32))
+                  .set_format_modifier_value(sysmem::MakeTracking(
+                      &allocator, sysmem_v2::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL))
+                  .build()))
+          .set_coded_width(sysmem::MakeTracking(&allocator, kWidth))
+          .set_coded_height(sysmem::MakeTracking(&allocator, kHeight))
+          .set_bytes_per_row(sysmem::MakeTracking(&allocator, kStride))
+          .build();
+  EXPECT_EQ(ImageFormatImageSize(linear_image_format_bgra32),
+            ImageFormatImageSize(goldfish_optimal_image_format_bgra32));
+  EXPECT_EQ(ImageFormatCodedWidthMinDivisor(linear_image_format_bgra32.pixel_format()),
+            ImageFormatCodedWidthMinDivisor(goldfish_optimal_image_format_bgra32.pixel_format()));
+  EXPECT_EQ(ImageFormatCodedHeightMinDivisor(linear_image_format_bgra32.pixel_format()),
+            ImageFormatCodedHeightMinDivisor(goldfish_optimal_image_format_bgra32.pixel_format()));
+  EXPECT_EQ(ImageFormatSampleAlignment(linear_image_format_bgra32.pixel_format()),
+            ImageFormatSampleAlignment(goldfish_optimal_image_format_bgra32.pixel_format()));
+}
+
 TEST(ImageFormat, CorrectModifiers) {
   EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
             sysmem_v2::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER);
   EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER,
             sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16 | sysmem_v1::FORMAT_MODIFIER_ARM_YUV_BIT |
                 sysmem_v1::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT);
+  EXPECT_EQ(sysmem_v1::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL,
+            sysmem_v2::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
 }

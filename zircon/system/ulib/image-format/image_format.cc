@@ -183,7 +183,6 @@ class IntelTiledFormats : public ImageFormatSet {
     }
   }
 };
-
 class AfbcFormats : public ImageFormatSet {
  public:
   const char* Name() const override { return "AfbcFormats"; }
@@ -446,6 +445,54 @@ class LinearFormats : public ImageFormatSet {
 
 constexpr LinearFormats kLinearFormats;
 
+class GoldfishFormats : public ImageFormatSet {
+ public:
+  const char* Name() const override { return "GoldfishFormats"; }
+
+  bool IsSupported(const PixelFormat& pixel_format) const override {
+    if (!pixel_format.has_type()) {
+      return false;
+    }
+    if (!pixel_format.has_format_modifier_value()) {
+      return false;
+    }
+    switch (pixel_format.format_modifier_value()) {
+      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL:
+        return true;
+      default:
+        return false;
+    }
+  }
+  uint64_t ImageFormatImageSize(const ImageFormat& image_format) const override {
+    ZX_DEBUG_ASSERT(image_format.has_pixel_format());
+    ZX_DEBUG_ASSERT(image_format.pixel_format().has_type());
+    ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
+    ZX_DEBUG_ASSERT(image_format.has_coded_height());
+    ZX_DEBUG_ASSERT(image_format.has_bytes_per_row());
+    uint32_t coded_height = image_format.has_coded_height() ? image_format.coded_height() : 0;
+    uint32_t bytes_per_row = image_format.has_bytes_per_row() ? image_format.bytes_per_row() : 0;
+    return linear_size(coded_height, bytes_per_row, image_format.pixel_format().type());
+  }
+  bool ImageFormatPlaneByteOffset(const ImageFormat& image_format, uint32_t plane,
+                                  uint64_t* offset_out) const override {
+    ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
+    if (plane == 0) {
+      *offset_out = 0;
+      return true;
+    }
+    return false;
+  }
+  bool ImageFormatPlaneRowBytes(const ImageFormat& image_format, uint32_t plane,
+                                uint32_t* row_bytes_out) const override {
+    if (plane == 0) {
+      *row_bytes_out = image_format.bytes_per_row();
+      return true;
+    } else {
+      return false;
+    }
+  }
+};
+
 class ArmTELinearFormats : public ImageFormatSet {
  public:
   const char* Name() const override { return "ArmTELinearFormats"; }
@@ -527,12 +574,10 @@ class ArmTELinearFormats : public ImageFormatSet {
 constexpr IntelTiledFormats kIntelFormats;
 constexpr AfbcFormats kAfbcFormats;
 constexpr ArmTELinearFormats kArmTELinearFormats;
+constexpr GoldfishFormats kGoldfishFormats;
 
 constexpr const ImageFormatSet* kImageFormats[] = {
-    &kLinearFormats,
-    &kIntelFormats,
-    &kAfbcFormats,
-    &kArmTELinearFormats,
+    &kLinearFormats, &kIntelFormats, &kAfbcFormats, &kArmTELinearFormats, &kGoldfishFormats,
 };
 
 }  // namespace
