@@ -11,11 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )
 
 // Archive allows interacting with the build artifact repository.
@@ -115,30 +117,37 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 
 	logger.Infof(ctx, "downloading to %s", dst)
 
-	// We don't want to leak files if we are interrupted during a download.
-	// So we'll remove all destination files in the case of an error.
-	args := []string{
-		"cp",
-		"-build", buildID,
-		"-src", src,
-		"-dst", dst,
-	}
-
-	if fromRoot {
-		args = append(args, "-root")
-	}
-	if srcsFile != "" {
-		args = append(args, "-srcs-file", srcsFile)
-	}
-
-	_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
-	if err != nil {
-		defer os.RemoveAll(dst)
-		if len(stderr) != 0 {
-			return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
+	// The `artifacts` utility can occasionally run into transient issues. This implements a retry policy
+	// that attempts to avoid such issues causing flakes.
+	eb := retry.NewExponentialBackoff(100*time.Millisecond, 10*time.Second, 2)
+	// ~12 seconds to hit backoff ceiling; 2.5 minutes of slack (given the above EB)
+	retryCap := uint64(22)
+	return retry.Retry(ctx, retry.WithMaxAttempts(eb, retryCap), func() error {
+		// We don't want to leak files if we are interrupted during a download.
+		// So we'll remove all destination files in the case of an error.
+		args := []string{
+			"cp",
+			"-build", buildID,
+			"-src", src,
+			"-dst", dst,
 		}
-		return fmt.Errorf("artifacts failed: %w", err)
-	}
 
-	return nil
+		if fromRoot {
+			args = append(args, "-root")
+		}
+		if srcsFile != "" {
+			args = append(args, "-srcs-file", srcsFile)
+		}
+
+		_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
+		if err != nil {
+			defer os.RemoveAll(dst)
+			if len(stderr) != 0 {
+				return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
+			}
+			return fmt.Errorf("artifacts failed: %w", err)
+		}
+
+		return nil
+	}, nil)
 }
