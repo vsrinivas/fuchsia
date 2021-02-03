@@ -251,9 +251,7 @@ async fn handle_client_request_connect(
         .lookup(NetworkIdentifier::new(network.ssid.clone(), network.type_.into()))
         .await
         .pop()
-        .ok_or_else(|| {
-            format_err!("Network not found: {}", String::from_utf8_lossy(&network.ssid))
-        })?;
+        .ok_or_else(|| format_err!("Requested network not found in saved networks"))?;
 
     let network_id = fidl_policy::NetworkIdentifier {
         ssid: network_config.ssid,
