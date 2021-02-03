@@ -196,7 +196,9 @@ void DeviceImpl::SetSoftwareMuteState(
   mute_state_.software_muted = muted;
   UpdateControllerStreamingState();
   for (auto& stream : streams_) {
-    stream->SetMuteState(mute_state_);
+    if (stream) {
+      stream->SetMuteState(mute_state_);
+    }
   }
   callback();
   for (auto& client : clients_) {
