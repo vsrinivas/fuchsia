@@ -4,7 +4,7 @@
 
 use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::Diagnostics;
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 
 /// A trivial `Diagnostics` implementation that simply sends every event it receives to two other
 /// `Diagnostics` implementations.
@@ -29,7 +29,7 @@ impl<L: Diagnostics, R: Diagnostics> Diagnostics for CompositeDiagnostics<L, R> 
         self.right.success(sample);
     }
 
-    fn failure(&self, error: &HttpsDateError) {
+    fn failure(&self, error: &HttpsDateErrorType) {
         self.left.failure(error);
         self.right.failure(error);
     }
@@ -57,7 +57,7 @@ mod test {
             polls: vec![],
         };
     }
-    const TEST_ERROR: HttpsDateError = HttpsDateError::NetworkError;
+    const TEST_ERROR: HttpsDateErrorType = HttpsDateErrorType::NetworkError;
     const TEST_PHASE: Phase = Phase::Converge;
 
     #[test]

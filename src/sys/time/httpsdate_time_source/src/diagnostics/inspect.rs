@@ -10,7 +10,7 @@ use fuchsia_inspect::{
     UintProperty,
 };
 use fuchsia_zircon as zx;
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 use log::warn;
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ pub struct InspectDiagnostics {
     /// Monotonic time at which the last error occurred.
     last_failure_time: IntProperty,
     /// Counters for failed attempts to produce samples, keyed by error type.
-    failure_counts: Mutex<HashMap<HttpsDateError, UintProperty>>,
+    failure_counts: Mutex<HashMap<HttpsDateErrorType, UintProperty>>,
     /// Diagnostic data for the most recent successful samples.
     recent_successes_buffer: Mutex<SampleMetricBuffer>,
     /// The current phase the algorithm is in.
@@ -65,7 +65,7 @@ impl Diagnostics for InspectDiagnostics {
         self.recent_successes_buffer.lock().update(sample);
     }
 
-    fn failure(&self, error: &HttpsDateError) {
+    fn failure(&self, error: &HttpsDateErrorType) {
         let mut failure_counts_lock = self.failure_counts.lock();
         match failure_counts_lock.get(error) {
             Some(uint_property) => uint_property.add(1),
@@ -312,7 +312,7 @@ mod test {
             }
         );
 
-        inspect.failure(&HttpsDateError::NoCertificatesPresented);
+        inspect.failure(&HttpsDateErrorType::NoCertificatesPresented);
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -323,8 +323,8 @@ mod test {
             }
         );
 
-        inspect.failure(&HttpsDateError::NoCertificatesPresented);
-        inspect.failure(&HttpsDateError::NetworkError);
+        inspect.failure(&HttpsDateErrorType::NoCertificatesPresented);
+        inspect.failure(&HttpsDateErrorType::NetworkError);
         assert_inspect_tree!(
             inspector,
             root: contains {

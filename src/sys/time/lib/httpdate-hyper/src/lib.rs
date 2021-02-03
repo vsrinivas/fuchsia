@@ -7,13 +7,13 @@ use hyper;
 use rustls::Certificate;
 use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 use webpki;
 use webpki_roots_fuchsia;
 
 type DateTime = chrono::DateTime<chrono::FixedOffset>;
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum HttpsDateError {
+#[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
+pub enum HttpsDateErrorType {
     InvalidHostname,
     SchemeNotHttps,
     NoCertificatesPresented,
@@ -24,7 +24,59 @@ pub enum HttpsDateError {
     DateFormatError,
 }
 
-impl std::error::Error for HttpsDateError {}
+/// An error encountered while retrieving time from a server.
+#[derive(Error)]
+pub struct HttpsDateError {
+    /// The rough category of error.
+    error_type: HttpsDateErrorType,
+    /// The underlying error, if any, that triggered the error.
+    source: Option<anyhow::Error>,
+}
+
+impl HttpsDateError {
+    /// Create a new `HttpsDateError`.
+    pub fn new(error_type: HttpsDateErrorType) -> Self {
+        Self { error_type, source: None }
+    }
+
+    /// Add or replace the underlying source error.
+    pub fn with_source(mut self, source: anyhow::Error) -> Self {
+        self.source = Some(source);
+        self
+    }
+
+    pub fn error_type(&self) -> HttpsDateErrorType {
+        self.error_type
+    }
+}
+
+/// An extension trait to simplify mapping general errors to `HttpsDateError`.
+trait HttpsDateResultExt<T> {
+    /// Map an error in a Result to HttpsDateError with the given error_type.
+    fn httpsdate_err(self, error_type: HttpsDateErrorType) -> Result<T, HttpsDateError>;
+}
+
+impl<T, E> HttpsDateResultExt<T> for Result<T, E>
+where
+    E: std::error::Error + Send + Sync + 'static,
+{
+    fn httpsdate_err(self, error_type: HttpsDateErrorType) -> Result<T, HttpsDateError> {
+        self.map_err(|e| HttpsDateError::new(error_type).with_source(anyhow::Error::new(e)))
+    }
+}
+
+// Manual implementation provided to shorten output in logs.
+impl std::fmt::Debug for HttpsDateError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.source.as_ref() {
+            None => self.error_type.fmt(formatter),
+            Some(source) => {
+                formatter.write_fmt(format_args!("{:?}: {:?}", self.error_type, source))
+            }
+        }
+    }
+}
+
 impl std::fmt::Display for HttpsDateError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
@@ -63,13 +115,13 @@ impl RecordingVerifier {
         let presented_certs = self.presented_certs.lock().unwrap();
         let presented_certs = presented_certs.borrow();
         if presented_certs.len() == 0 {
-            return Err(HttpsDateError::NoCertificatesPresented);
+            return Err(HttpsDateError::new(HttpsDateErrorType::NoCertificatesPresented));
         };
 
         let untrusted_der: Vec<&[u8]> =
             presented_certs.iter().map(|certificate| certificate.0.as_slice()).collect();
         let leaf = webpki::EndEntityCert::from(untrusted_der[0])
-            .map_err(|_| HttpsDateError::CorruptLeafCertificate)?;
+            .httpsdate_err(HttpsDateErrorType::CorruptLeafCertificate)?;
 
         leaf.verify_is_valid_tls_server_cert(
             ALLOWED_SIG_ALGS,
@@ -77,10 +129,10 @@ impl RecordingVerifier {
             &untrusted_der[1..],
             time,
         )
-        .map_err(|_| HttpsDateError::InvalidCertificateChain)?;
+        .httpsdate_err(HttpsDateErrorType::InvalidCertificateChain)?;
 
         leaf.verify_is_valid_for_dns_name(dns_name)
-            .map_err(|_| HttpsDateError::InvalidCertificateChain)
+            .httpsdate_err(HttpsDateErrorType::InvalidCertificateChain)
     }
 }
 
@@ -157,16 +209,16 @@ impl NetworkTimeClient {
     pub async fn get_network_time(&mut self, uri: hyper::Uri) -> Result<DateTime, HttpsDateError> {
         match uri.scheme_str() {
             Some("https") => (),
-            _ => return Err(HttpsDateError::SchemeNotHttps),
+            _ => return Err(HttpsDateError::new(HttpsDateErrorType::SchemeNotHttps)),
         }
         let dns_name = match uri.host() {
             Some(host) => webpki::DNSNameRef::try_from_ascii_str(host)
-                .map_err(|_| HttpsDateError::InvalidHostname)?,
-            None => return Err(HttpsDateError::InvalidHostname),
+                .httpsdate_err(HttpsDateErrorType::InvalidHostname)?,
+            None => return Err(HttpsDateError::new(HttpsDateErrorType::InvalidHostname)),
         };
 
         let response =
-            self.client.get(uri.clone()).await.map_err(|_| HttpsDateError::NetworkError)?;
+            self.client.get(uri.clone()).await.httpsdate_err(HttpsDateErrorType::NetworkError)?;
 
         // Ok, so now we pull the Date header out of the response.
         // Technically the Date header is the date of page creation, but it's the best
@@ -176,15 +228,17 @@ impl NetworkTimeClient {
         // or .well-known/time, but neither of these proposals appear to
         // have gone anywhere.
         let date_header: String = match response.headers().get("date") {
-            Some(date) => date.to_str().map_err(|_| HttpsDateError::DateFormatError)?.to_string(),
-            _ => return Err(HttpsDateError::NoDateInResponse),
+            Some(date) => {
+                date.to_str().httpsdate_err(HttpsDateErrorType::DateFormatError)?.to_string()
+            }
+            _ => return Err(HttpsDateError::new(HttpsDateErrorType::NoDateInResponse)),
         };
 
         // Per RFC7231 the date header is specified as RFC2822 with a UTC timezone.
         let response_time = DateTime::parse_from_rfc2822(&date_header)
-            .map_err(|_| HttpsDateError::DateFormatError)?;
+            .httpsdate_err(HttpsDateErrorType::DateFormatError)?;
         if response_time.timezone().utc_minus_local() != 0 {
-            return Err(HttpsDateError::DateFormatError);
+            return Err(HttpsDateError::new(HttpsDateErrorType::DateFormatError));
         }
 
         // Finally verify the the certificate chain against the response time
@@ -202,7 +256,7 @@ mod test {
     use fuchsia_async as fasync;
     use futures::{
         future::{ready, TryFutureExt},
-        stream::TryStreamExt,
+        stream::{StreamExt, TryStreamExt},
     };
     use hyper::{
         server::accept::from_stream,
@@ -281,6 +335,20 @@ mod test {
         server_port
     }
 
+    /// Serve a fake server that crashes when receiving a request.
+    fn serve_crash() -> u16 {
+        let addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), 0);
+        let listener = fasync::net::TcpListener::bind(&addr).unwrap();
+        let server_port = listener.local_addr().unwrap().port();
+
+        let connection_dropper =
+            listener.accept_stream().for_each(|conn_result| ready(drop(conn_result)));
+
+        fasync::Task::spawn(connection_dropper).detach();
+
+        server_port
+    }
+
     /// Simple pem parser that doesn't validate format.
     fn parse_pem(contents: &str) -> Vec<Vec<u8>> {
         // Blindly assume format is correct for our test
@@ -313,6 +381,19 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_network_err() {
+        let open_port = serve_crash();
+
+        let mut client = NetworkTimeClient::new_with_trust_anchors(&TEST_TLS_SERVER_ROOTS);
+
+        let url = format!("https://localhost:{}/", open_port).parse::<hyper::Uri>().unwrap();
+        assert_eq!(
+            client.get_network_time(url).await.unwrap_err().error_type(),
+            HttpsDateErrorType::NetworkError
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_untrusted_cert() {
         let time = *CERT_NOT_BEFORE + chrono::Duration::days(1);
         let open_port = serve_fake(time);
@@ -324,8 +405,8 @@ mod test {
 
         let url = format!("https://localhost:{}/", open_port).parse::<hyper::Uri>().unwrap();
         assert_eq!(
-            client.get_network_time(url).await.unwrap_err(),
-            HttpsDateError::InvalidCertificateChain
+            client.get_network_time(url).await.unwrap_err().error_type(),
+            HttpsDateErrorType::InvalidCertificateChain
         );
     }
 
@@ -338,8 +419,8 @@ mod test {
 
         let url = format!("https://localhost:{}/", open_port).parse::<hyper::Uri>().unwrap();
         assert_eq!(
-            client.get_network_time(url).await.unwrap_err(),
-            HttpsDateError::InvalidCertificateChain
+            client.get_network_time(url).await.unwrap_err().error_type(),
+            HttpsDateErrorType::InvalidCertificateChain
         );
     }
 
@@ -347,7 +428,10 @@ mod test {
     async fn test_http_rejected() {
         let mut client = NetworkTimeClient::new_with_trust_anchors(&TEST_TLS_SERVER_ROOTS);
         let url = "http://localhost/".parse::<hyper::Uri>().unwrap();
-        assert_eq!(client.get_network_time(url).await.unwrap_err(), HttpsDateError::SchemeNotHttps);
+        assert_eq!(
+            client.get_network_time(url).await.unwrap_err().error_type(),
+            HttpsDateErrorType::SchemeNotHttps
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -360,8 +444,8 @@ mod test {
 
         let url = format!("https://localhost:{}/", open_port).parse::<hyper::Uri>().unwrap();
         assert_eq!(
-            client.get_network_time(url).await.unwrap_err(),
-            HttpsDateError::DateFormatError
+            client.get_network_time(url).await.unwrap_err().error_type(),
+            HttpsDateErrorType::DateFormatError
         );
     }
 }

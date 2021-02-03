@@ -15,14 +15,14 @@ pub use self::fake::FakeDiagnostics;
 pub use self::inspect::InspectDiagnostics;
 
 use crate::datatypes::{HttpsSample, Phase};
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 
 /// A standard interface for recording sample production attempts for diagnostic purposes.
 pub trait Diagnostics: Send + Sync {
     /// Records a successful attempt to produce a sample.
     fn success(&self, sample: &HttpsSample);
     /// Records a failed attempt to produce a sample.
-    fn failure(&self, error: &HttpsDateError);
+    fn failure(&self, error: &HttpsDateErrorType);
     /// Records a change in the phase.
     fn phase_update(&self, phase: &Phase);
 }

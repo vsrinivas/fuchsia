@@ -8,7 +8,7 @@ use fidl_fuchsia_cobalt::{CobaltEvent, HistogramBucket};
 use fuchsia_cobalt::{CobaltConnector, CobaltEventExt, CobaltSender, ConnectionType};
 use fuchsia_zircon as zx;
 use futures::Future;
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 use parking_lot::Mutex;
 use time_metrics_registry::{
     HttpsdateBoundSizeMetricDimensionPhase as CobaltPhase, TimeMetricDimensionDirection,
@@ -124,7 +124,7 @@ impl Diagnostics for CobaltDiagnostics {
         poll_offset_events.for_each(|event| sender.log_cobalt_event(event));
     }
 
-    fn failure(&self, _error: &HttpsDateError) {
+    fn failure(&self, _error: &HttpsDateErrorType) {
         // Currently, no failure events are registered with cobalt.
     }
 

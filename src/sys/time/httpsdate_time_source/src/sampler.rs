@@ -4,11 +4,12 @@
 
 use crate::bound::Bound;
 use crate::datatypes::{HttpsSample, Poll};
+use anyhow::format_err;
 use async_trait::async_trait;
 use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, lock::Mutex, FutureExt};
-use httpdate_hyper::{HttpsDateError, NetworkTimeClient};
+use httpdate_hyper::{HttpsDateError, HttpsDateErrorType, NetworkTimeClient};
 use hyper::Uri;
 use log::warn;
 
@@ -35,10 +36,14 @@ pub trait HttpsDateClient {
 #[async_trait]
 impl HttpsDateClient for NetworkTimeClient {
     async fn request_utc(&mut self, uri: &Uri) -> Result<zx::Time, HttpsDateError> {
-        let utc = self
-            .get_network_time(uri.clone())
-            .on_timeout(fasync::Time::after(HTTPS_TIMEOUT), || Err(HttpsDateError::NetworkError))
-            .await?;
+        let utc =
+            self.get_network_time(uri.clone())
+                .on_timeout(fasync::Time::after(HTTPS_TIMEOUT), || {
+                    Err(HttpsDateError::new(HttpsDateErrorType::NetworkError).with_source(
+                        format_err!("Timed out after {:?} sec", HTTPS_TIMEOUT.into_seconds()),
+                    ))
+                })
+                .await?;
         Ok(zx::Time::from_nanos(utc.timestamp_nanos()))
     }
 }
@@ -448,12 +453,14 @@ mod test {
     async fn test_produce_sample_fails_if_initial_poll_fails() {
         let sampler = HttpsSamplerImpl::new_with_client(
             TEST_URI.clone(),
-            TestClient::with_offset_responses(vec![Err(HttpsDateError::NetworkError)]),
+            TestClient::with_offset_responses(vec![Err(HttpsDateError::new(
+                HttpsDateErrorType::NetworkError,
+            ))]),
         );
 
         match sampler.produce_sample(3, false).await {
             Ok(_) => panic!("Expected error but received Ok"),
-            Err(e) => assert_eq!(e, HttpsDateError::NetworkError),
+            Err(e) => assert_eq!(e.error_type(), HttpsDateErrorType::NetworkError),
         };
     }
 
@@ -464,7 +471,7 @@ mod test {
             TestClient::with_offset_responses(vec![
                 Ok(TEST_UTC_OFFSET),
                 Ok(TEST_UTC_OFFSET),
-                Err(HttpsDateError::NetworkError),
+                Err(HttpsDateError::new(HttpsDateErrorType::NetworkError)),
             ]),
         );
 
@@ -570,10 +577,16 @@ mod test {
                     center_offset: Some(zx::Duration::from_nanos(100)),
                 }],
             }),
-            Err(HttpsDateError::NetworkError),
-            Err(HttpsDateError::NoCertificatesPresented),
+            Err(HttpsDateErrorType::NetworkError),
+            Err(HttpsDateErrorType::NoCertificatesPresented),
         ];
-        let (fake_sampler, complete_fut) = FakeSampler::with_responses(expected_responses.clone());
+        let (fake_sampler, complete_fut) = FakeSampler::with_responses(
+            expected_responses
+                .iter()
+                .cloned()
+                .map(|response| response.map_err(HttpsDateError::new))
+                .collect::<Vec<_>>(),
+        );
         for expected in expected_responses {
             assert_eq!(
                 expected,
@@ -581,6 +594,7 @@ mod test {
                     .produce_sample(1, false)
                     .and_then(|sample_fut| async move { Ok(sample_fut.await) })
                     .await
+                    .map_err(|e| e.error_type())
             );
         }
 

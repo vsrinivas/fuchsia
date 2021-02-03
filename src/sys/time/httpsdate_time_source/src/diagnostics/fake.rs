@@ -4,7 +4,7 @@
 
 use crate::datatypes::{HttpsSample, Phase};
 use crate::diagnostics::Diagnostics;
-use httpdate_hyper::HttpsDateError;
+use httpdate_hyper::HttpsDateErrorType;
 use parking_lot::Mutex;
 
 /// A fake `Diagnostics` implementation useful for verifying unittests.
@@ -12,7 +12,7 @@ pub struct FakeDiagnostics {
     /// An ordered list of the successes received since the last reset.
     successes: Mutex<Vec<HttpsSample>>,
     /// An ordered list of the failures received since the last reset.
-    failures: Mutex<Vec<HttpsDateError>>,
+    failures: Mutex<Vec<HttpsDateErrorType>>,
     /// An ordered list of phase updates received since the last reset.
     phases: Mutex<Vec<Phase>>,
 }
@@ -33,7 +33,7 @@ impl FakeDiagnostics {
     }
 
     /// Returns a copy of the failures received since the last reset.
-    pub fn failures(&self) -> Vec<HttpsDateError> {
+    pub fn failures(&self) -> Vec<HttpsDateErrorType> {
         self.failures.lock().clone()
     }
 
@@ -55,7 +55,7 @@ impl Diagnostics for FakeDiagnostics {
         self.successes.lock().push(sample.clone());
     }
 
-    fn failure(&self, error: &HttpsDateError) {
+    fn failure(&self, error: &HttpsDateErrorType) {
         self.failures.lock().push(*error);
     }
 
@@ -69,7 +69,7 @@ impl<T: AsRef<FakeDiagnostics> + Send + Sync> Diagnostics for T {
         self.as_ref().success(sample);
     }
 
-    fn failure(&self, error: &HttpsDateError) {
+    fn failure(&self, error: &HttpsDateErrorType) {
         self.as_ref().failure(error);
     }
 
@@ -113,8 +113,8 @@ mod test {
             ],
         };
     }
-    const ERROR_1: HttpsDateError = HttpsDateError::NetworkError;
-    const ERROR_2: HttpsDateError = HttpsDateError::InvalidHostname;
+    const ERROR_1: HttpsDateErrorType = HttpsDateErrorType::NetworkError;
+    const ERROR_2: HttpsDateErrorType = HttpsDateErrorType::InvalidHostname;
     const PHASE_1: Phase = Phase::Initial;
     const PHASE_2: Phase = Phase::Maintain;
 
