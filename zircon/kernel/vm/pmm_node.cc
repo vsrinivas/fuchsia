@@ -41,22 +41,22 @@ zx_status_t fail_with(zx_status_t status) {
   return status;
 }
 
+}  // namespace
+
 // Poison a page |p| with value |value|. Accesses to a poisoned page via the physmap are not
 // allowed and may cause faults or kASAN checks.
-void AsanPoisonPage(vm_page_t* p, uint8_t value) {
+void PmmNode::AsanPoisonPage(vm_page_t* p, uint8_t value) {
 #if __has_feature(address_sanitizer)
   asan_poison_shadow(reinterpret_cast<uintptr_t>(paddr_to_physmap(p->paddr())), PAGE_SIZE, value);
 #endif  // __has_feature(address_sanitizer)
 }
 
 // Unpoison a page |p|. Accesses to a unpoisoned pages will not cause KASAN check failures.
-void AsanUnpoisonPage(vm_page_t* p) {
+void PmmNode::AsanUnpoisonPage(vm_page_t* p) {
 #if __has_feature(address_sanitizer)
   asan_unpoison_shadow(reinterpret_cast<uintptr_t>(paddr_to_physmap(p->paddr())), PAGE_SIZE);
 #endif  // __has_feature(address_sanitizer)
 }
-
-}  // namespace
 
 PmmNode::PmmNode() {
   // Initialize the reclaimation watermarks such that system never
@@ -414,7 +414,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
   return fail_with(ZX_ERR_NOT_FOUND);
 }
 
-static void MarkPageAsFree(vm_page* page) {
+void PmmNode::FreePageHelperLocked(vm_page* page) {
   LTRACEF("page %p state %u paddr %#" PRIxPTR "\n", page, page->state(), page->paddr());
 
   DEBUG_ASSERT(page->state() != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
@@ -423,19 +423,20 @@ static void MarkPageAsFree(vm_page* page) {
   // mark it free
   page->set_state(VM_PAGE_STATE_FREE);
 
+  if (unlikely(free_fill_enabled_)) {
+    checker_.FillPattern(page);
+  }
+
   AsanPoisonPage(page, kAsanPmmFreeMagic);
 }
 
 void PmmNode::FreePage(vm_page* page) {
-  // pages freed individually shouldn't be in a queue
-  DEBUG_ASSERT(!list_in_list(&page->queue_node));
-  MarkPageAsFree(page);
-
   Guard<Mutex> guard{&lock_};
 
-  if (free_fill_enabled_) {
-    checker_.FillPattern(page);
-  }
+  // pages freed individually shouldn't be in a queue
+  DEBUG_ASSERT(!list_in_list(&page->queue_node));
+
+  FreePageHelperLocked(page);
 
   // add it to the free queue
   if constexpr (!__has_feature(address_sanitizer)) {
@@ -448,38 +449,19 @@ void PmmNode::FreePage(vm_page* page) {
   IncrementFreeCountLocked(1);
 }
 
-// Calls |func| on each element of |list| and returns the number of pages processed.
-template <typename Func>
-static uint64_t ProcessList(list_node* list, Func&& func) {
+void PmmNode::FreeListLocked(list_node* list) {
+  DEBUG_ASSERT(list);
+
+  // process list backwards so the head is as hot as possible
   uint64_t count = 0;
-  // Walk the list backwards so the head of the list remains hot in the cache.
   for (vm_page* page = list_peek_tail_type(list, vm_page, queue_node); page != nullptr;
        page = list_prev_type(list, &page->queue_node, vm_page, queue_node)) {
-    ktl::forward<Func>(func)(page);
+    FreePageHelperLocked(page);
     count++;
   }
-  return count;
-}
 
-uint64_t PmmNode::FreeListPre(list_node* list) {
-  // If we don't have kASAN or PMM checker enabled (the common case), we can process the list
-  // without holding the lock. However, we must be holding the lock to determine whether the PMM
-  // checker is enabled. Process the list assuming PMM checker is not enabled and then later on in
-  // |FreeListPostLocked|, we can reprocess the list if needed.
-  return ProcessList(list, [](vm_page* page) { MarkPageAsFree(page); });
-}
-
-void PmmNode::FreeListPostLocked(list_node* list, uint64_t count) {
-  if (free_fill_enabled_) {
-    ProcessList(list, [&](vm_page* page) {
-      AssertHeld(lock_);
-      checker_.FillPattern(page);
-    });
-  }
-
-  // Splice the freed pages onto the free list.
   if constexpr (!__has_feature(address_sanitizer)) {
-    // Splice list at the head of free_list_.
+    // splice list at the head of free_list_
     list_splice_after(list, &free_list_);
   } else {
     // If address sanitizer is enabled, put the pages at the tail to maximize reuse distance.
@@ -494,16 +476,9 @@ void PmmNode::FreeListPostLocked(list_node* list, uint64_t count) {
 }
 
 void PmmNode::FreeList(list_node* list) {
-  DEBUG_ASSERT(list);
-  uint64_t count = FreeListPre(list);
   Guard<Mutex> guard{&lock_};
-  FreeListPostLocked(list, count);
-}
 
-void PmmNode::FreeListLocked(list_node* list) {
-  DEBUG_ASSERT(list);
-  uint64_t count = FreeListPre(list);
-  FreeListPostLocked(list, count);
+  FreeListLocked(list);
 }
 
 void PmmNode::AllocPages(uint alloc_flags, page_request_t* req) {
