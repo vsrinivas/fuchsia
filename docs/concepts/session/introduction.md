@@ -85,9 +85,9 @@ integrating new runtimes into their products.
 Consider a session child component that displays content to the user when it
 receives a ping from the network. The session offers the network-listening
 component the `ElementManager` FIDL protocol. The `ElementManager` protocol
-allows components to add other components as children of the session at
-runtime. The network listener then calls `ElementManager.proposeElement` to add
-an `Element` (i.e. a component) to the session.
+allows components to add other components ([`Elements`][doc-element]) as
+children of the session at runtime. The network listener then calls
+`ElementManager.proposeElement` to add the `Element` to the session.
 
 ![Element Manager](images/element-manager.png)
 
@@ -104,3 +104,4 @@ that implement the `ElementManager` protocol.
 [doc-component-manager]: /docs/concepts/components/v2/component_manager.md
 [doc-compositors]: /docs/concepts/graphics/scenic/scenic.md#compositors
 [doc-fidl]: /docs/concepts/fidl/overview.md
+[doc-element]: /docs/concepts/session/element.md
