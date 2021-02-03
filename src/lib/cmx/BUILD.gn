@@ -32,11 +32,9 @@ source_set("cmx") {
     "//src/lib/cmx/facet_parser:cmx_facet_parser",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/trace",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -57,9 +55,7 @@ executable("cmx_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/googletest:gmock",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 
   # TODO(fxbug.dev/46552): Fix the leaks and remove this.
@@ -85,9 +81,7 @@ fuzzer("cmx_fuzzer") {
   deps = [
     ":cmx",
     "//src/lib/files",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
   public_deps = [
     "//garnet/public/lib/json",

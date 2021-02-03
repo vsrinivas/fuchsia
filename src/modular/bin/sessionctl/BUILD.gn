@@ -38,11 +38,9 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
     "//src/modular/lib/async/cpp:future",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 
   deps = [

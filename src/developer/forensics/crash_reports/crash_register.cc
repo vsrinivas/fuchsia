@@ -13,10 +13,9 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-#include "zircon/third_party/rapidjson/include/rapidjson/error/en.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/include/rapidjson/error/en.h"
+#include "third_party/rapidjson/include/rapidjson/prettywriter.h"
+#include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -61,8 +60,8 @@ void CrashRegister::Upsert(std::string component_url,
 }
 
 void CrashRegister::UpsertWithAck(std::string component_url,
-                                 fuchsia::feedback::CrashReportingProduct product,
-                                 UpsertWithAckCallback callback) {
+                                  fuchsia::feedback::CrashReportingProduct product,
+                                  UpsertWithAckCallback callback) {
   Upsert(std::move(component_url), std::move(product));
   callback();
 }

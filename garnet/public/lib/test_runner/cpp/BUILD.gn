@@ -14,10 +14,8 @@ source_set("cpp") {
 
   deps = [
     "//src/lib/fsl",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-default",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 
   public_deps = [

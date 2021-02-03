@@ -13,10 +13,10 @@
 #include <unordered_set>
 
 #include "lib/trace/internal/event_common.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/ostreamwrapper.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/rapidjson.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/writer.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/ostreamwrapper.h"
+#include "third_party/rapidjson/include/rapidjson/rapidjson.h"
+#include "third_party/rapidjson/include/rapidjson/writer.h"
 
 namespace memory {
 

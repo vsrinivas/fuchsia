@@ -175,13 +175,11 @@ source_set("audio_core_lib") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/media/audio/lib/clock",
+    "//third_party/rapidjson",
     "//zircon/public/lib/ffl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 
   deps = [

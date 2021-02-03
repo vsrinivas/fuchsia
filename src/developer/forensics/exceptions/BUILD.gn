@@ -34,14 +34,12 @@ source_set("lib") {
     "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//third_party/rapidjson",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 

@@ -70,6 +70,7 @@ source_set("src") {
     "//src/virtualization/lib/guest_config",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
     "//src/virtualization/tests:guest_console",
+    "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
@@ -77,9 +78,6 @@ source_set("src") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/syslog",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 
   public_deps = [
@@ -108,12 +106,10 @@ executable("bin") {
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs:memfs-cpp",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -142,13 +138,11 @@ executable("sandbox_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//src/lib/testing/predicates",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/syslog",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 

@@ -6,9 +6,8 @@
 
 #include <algorithm>
 
-// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 
 namespace forensics {
 namespace feedback_data {

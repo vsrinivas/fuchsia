@@ -26,8 +26,6 @@ executable("configuration_tests") {
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/configuration",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 }

@@ -20,10 +20,8 @@ source_set("chromium") {
   public_deps = [
     "//garnet/lib/perfmon",
     "//third_party/modp_b64",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/trace-reader",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

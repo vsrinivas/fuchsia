@@ -90,10 +90,10 @@ static_library("blobfs") {
     "//zircon/system/ulib/digest",
 
     # Seekable zstd include_dirs config required for all compilation units that incorporate it.
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/ulib/zstd:zstdseek",
   ]
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/chunked-compression",
     "//src/storage/fvm",
     "//third_party/boringssl",
@@ -112,9 +112,6 @@ static_library("blobfs") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//sdk/lib/syslog/cpp",
     "//zircon/third_party/ulib/zstd",
     "//zircon/third_party/ulib/zstd:zstdseek",
   ]

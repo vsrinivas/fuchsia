@@ -21,12 +21,10 @@ if (is_host) {
       "//src/lib/fidl_codec",
       "//src/lib/fxl",
       "//third_party/protobuf:protobuf_full",
+      "//third_party/rapidjson",
       "//tools/fidlcat/lib:host_lib",
       "//zircon/public/lib/fidl_base",
       "//zircon/system/ulib/cmdline",
-
-      # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-      "//zircon/third_party/rapidjson",
     ]
   }
 

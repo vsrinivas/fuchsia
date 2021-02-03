@@ -5,9 +5,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-#include <zircon/third_party/rapidjson/include/rapidjson/document.h>
-#include <zircon/third_party/rapidjson/include/rapidjson/error/en.h>
+#include <third_party/rapidjson/include/rapidjson/document.h>
+#include <third_party/rapidjson/include/rapidjson/error/en.h>
 
 namespace forensics {
 namespace exceptions {

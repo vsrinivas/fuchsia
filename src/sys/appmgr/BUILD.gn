@@ -84,6 +84,7 @@ source_set("lib") {
     "//src/lib/loader_service",
     "//src/lib/pkg_url",
     "//third_party/googletest:gtest_prod",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
@@ -96,9 +97,6 @@ source_set("lib") {
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 
   configs += [ "//build/config:all_source" ]

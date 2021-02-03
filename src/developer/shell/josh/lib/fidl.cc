@@ -20,9 +20,8 @@
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "third_party/quickjs/quickjs.h"
-// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-#include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/writer.h"
+#include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/include/rapidjson/writer.h"
 
 namespace shell::fidl {
 

@@ -123,12 +123,12 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//third_party/crashpad/*",
     "//third_party/mesa/src/intel/vulkan/tests/*",
     "//third_party/openssh-portable/*",
+    "//third_party/rapidjson/*",
     "//third_party/rust_crates/*",
     "//vendor/*",
     "//zircon/system/ulib/elf-search/test/*",
     "//zircon/system/ulib/fit/test/*",
     "//zircon/system/ulib/lazy_init/test/*",
-    "//zircon/third_party/rapidjson/*",
   ]
 
   args = [ "detect_leaks=0" ]

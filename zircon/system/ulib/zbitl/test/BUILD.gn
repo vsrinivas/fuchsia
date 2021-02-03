@@ -98,11 +98,9 @@ test("zbitl-unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
     "//zircon/kernel/lib/efi",
     "//zircon/system/ulib/zbitl",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
   deps += copy_test_deps
 

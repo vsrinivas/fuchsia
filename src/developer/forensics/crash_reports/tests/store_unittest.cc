@@ -21,8 +21,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/timekeeper/test_clock.h"
-// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -51,9 +50,10 @@ class StoreTest : public UnitTestFixture {
                     const StorageSize max_cache_size = StorageSize::Bytes(0)) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
-    store_ = std::make_unique<Store>(&tags_, info_context_,
-                                     /*temp_root=*/Store::Root{tmp_dir_.path(), max_tmp_size},
-                                     /*persistent_root=*/Store::Root{cache_dir_.path(), max_cache_size});
+    store_ =
+        std::make_unique<Store>(&tags_, info_context_,
+                                /*temp_root=*/Store::Root{tmp_dir_.path(), max_tmp_size},
+                                /*persistent_root=*/Store::Root{cache_dir_.path(), max_cache_size});
   }
 
   std::optional<ReportId> Add(const std::string& program_shortname,

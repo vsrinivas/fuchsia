@@ -48,9 +48,7 @@ source_set("config") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -166,9 +164,7 @@ source_set("data_register") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -269,9 +265,7 @@ source_set("metadata") {
     ":constants",
     ":errors",
     "//src/developer/forensics/utils:errors",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 }
 

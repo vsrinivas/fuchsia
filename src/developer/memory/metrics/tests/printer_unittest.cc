@@ -10,7 +10,7 @@
 #include "src/developer/memory/metrics/summary.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace memory {
 namespace test {

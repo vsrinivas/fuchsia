@@ -23,11 +23,9 @@ executable("bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/tests/integration_input_tests/touch:fuchsia.test.ui",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 

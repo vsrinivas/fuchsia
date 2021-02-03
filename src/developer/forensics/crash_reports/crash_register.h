@@ -19,8 +19,7 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
-// TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -35,7 +34,7 @@ class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
   // |fuchsia::feedback::CrashReportingProductRegister|
   void Upsert(std::string component_url, fuchsia::feedback::CrashReportingProduct product) override;
   void UpsertWithAck(std::string component_url, fuchsia::feedback::CrashReportingProduct product,
-                    UpsertWithAckCallback callback) override;
+                     UpsertWithAckCallback callback) override;
 
   // Returns the Product registered by clients for a given component URL, otherwise the default
   // Product for the platform.

@@ -11,8 +11,7 @@ source_set("srcs") {
     "json_merge.h",
   ]
 
-  # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-  public_deps = [ "//zircon/third_party/rapidjson" ]
+  public_deps = [ "//third_party/rapidjson" ]
 }
 
 executable("json_merge") {

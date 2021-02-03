@@ -14,6 +14,6 @@ source_set("cpp") {
   ]
   deps = [
     "//src/lib/fsl",
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 }

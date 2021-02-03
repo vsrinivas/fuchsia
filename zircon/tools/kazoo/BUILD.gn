@@ -47,7 +47,7 @@ zx_library("kazoo_lib") {
 
   deps = [ "//zircon/system/public" ]
 
-  public_deps = [ "//zircon/third_party/rapidjson" ]
+  public_deps = [ "//third_party/rapidjson" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config/zircon:Wno-conversion" ]

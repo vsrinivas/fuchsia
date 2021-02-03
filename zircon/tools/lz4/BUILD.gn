@@ -4,8 +4,8 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-lz4_lib = "//zircon/third_party/lz4/lib"
-lz4_programs = "//zircon/third_party/lz4/programs"
+lz4_lib = "//third_party/lz4/lib"
+lz4_programs = "//third_party/lz4/programs"
 
 zx_host_tool("lz4") {
   sources = [

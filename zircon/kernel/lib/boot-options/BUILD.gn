@@ -81,10 +81,8 @@ if (is_host) {
       "word-view.cc",
     ]
     deps = [
+      "//third_party/rapidjson",
       "//zircon/system/ulib/uart",
-
-      # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-      "//zircon/third_party/rapidjson",
     ]
   }
 }

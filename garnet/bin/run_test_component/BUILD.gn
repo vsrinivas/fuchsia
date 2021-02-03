@@ -53,7 +53,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

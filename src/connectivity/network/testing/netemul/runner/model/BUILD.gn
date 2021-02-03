@@ -36,9 +36,7 @@ source_set("model") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -52,8 +50,6 @@ executable("model_unittest") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
+    "//third_party/rapidjson",
   ]
 }

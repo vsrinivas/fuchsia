@@ -53,11 +53,9 @@ static_library("fidl_codec") {
   public_deps = [ "//src/lib/fxl" ]
   deps = [
     ":value_proto",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fidl_base",
     "//zircon/system/public",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -98,12 +96,10 @@ executable("fidl_codec_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
     "//zircon/system/public:public",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 

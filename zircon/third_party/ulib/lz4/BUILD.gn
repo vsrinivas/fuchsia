@@ -5,7 +5,7 @@
 import("//build/zircon/migrated_targets.gni")
 
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
-lz4_lib = "//zircon/third_party/lz4/lib"
+lz4_lib = "//third_party/lz4/lib"
 
 zx_library("lz4") {
   host = true

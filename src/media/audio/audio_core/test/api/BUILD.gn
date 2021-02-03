@@ -14,10 +14,8 @@ loadable_module("audio-core-api-test-effects") {
   deps = [
     "//sdk/lib/media/audio/effects",
     "//sdk/lib/syslog/cpp",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/fzl",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 
