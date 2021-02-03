@@ -175,7 +175,6 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   Devnode* devnode_ = nullptr;
 };
 
-// BUG(fxbug.dev/32713): We currently never free these after allocating them
 struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   explicit Devnode(fbl::String name);
   ~Devnode();
