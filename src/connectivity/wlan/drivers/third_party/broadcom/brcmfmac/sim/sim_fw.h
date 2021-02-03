@@ -204,7 +204,7 @@ class SimFirmware {
   };
 
   SimFirmware() = delete;
-  explicit SimFirmware(brcmf_simdev* simdev, simulation::Environment* env);
+  explicit SimFirmware(brcmf_simdev* simdev);
   ~SimFirmware();
 
   SimErrorInjector err_inj_;
@@ -439,6 +439,9 @@ class SimFirmware {
   void ScheduleLinkEvent(zx::duration when, uint16_t ifidx);
   void SendAPStartLinkEvent(uint16_t ifidx);
   zx_status_t StopInterface(const int32_t bsscfgidx);
+
+  // Schedule an event to release and re-create itself.
+  void ResetSimFirmware();
 
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.

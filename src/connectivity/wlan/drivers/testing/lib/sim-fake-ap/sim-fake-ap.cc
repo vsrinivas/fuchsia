@@ -363,10 +363,12 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
         return;
       }
 
-      // Make sure this client is not associated to continue authentication
+      // Remove the client and start the authentication and association process again if it is
+      // already connected.
       auto client = FindClient(auth_req_frame->src_addr_);
       if (client && client->status_ == Client::ASSOCIATED) {
-        return;
+        RemoveClient(auth_req_frame->src_addr_);
+        client = nullptr;
       }
 
       if (!client) {

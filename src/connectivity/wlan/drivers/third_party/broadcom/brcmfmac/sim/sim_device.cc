@@ -55,7 +55,7 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
 
   std::unique_ptr<brcmf_bus> bus;
   if ((status = brcmf_sim_alloc(device->drvr(), &bus, device->fake_dev_mgr_,
-                                device->sim_environ_.get())) != ZX_OK) {
+                                device->sim_environ_)) != ZX_OK) {
     dev_mgr->DeviceAsyncRemove(device->phy_device_);
     // Ownership of the device has been transferred to dev_mgr
     device.release();

@@ -20,10 +20,23 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
 namespace wlan::brcmfmac {
 
-SimHardware::SimHardware(simulation::Environment* env) : env_(env) { env->AddStation(this); }
+SimHardware::SimHardware(std::shared_ptr<simulation::Environment> env) : env_(env) {
+  env->AddStation(this);
+}
+
+SimHardware::~SimHardware() {
+  // Clean all the events the firmware scheduled.
+  for (uint64_t id : scheduled_ids) {
+    // Directly calls CancelNotification() in sim-env because the ids in the list don't have
+    // to be removed right before the release of sim-hw.
+    env_->CancelNotification(id);
+  }
+  env_->RemoveStation(this);
+}
 
 void SimHardware::SetCallbacks(const EventHandlers& handlers) { event_handlers_ = handlers; }
 
@@ -62,10 +75,32 @@ void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
 
 void SimHardware::RequestCallback(std::function<void()> callback, zx::duration delay,
                                   uint64_t* id_out) {
-  env_->ScheduleNotification(std::move(callback), delay, id_out);
+  // Always store the event id scheduled by the simulated firmware.
+  uint64_t tmp_id = 0;
+  if (env_->ScheduleNotification(std::move(callback), delay, &tmp_id) != ZX_OK) {
+    BRCMF_ERR("Fail to schedule event from sim-hw.");
+    return;
+  }
+
+  // Store the id if we get an value from sim-env.
+  scheduled_ids.push_back(tmp_id);
+
+  // Report back the id if firmware needs.
+  if (id_out != nullptr) {
+    *id_out = tmp_id;
+  }
 }
 
-void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(id); }
+void SimHardware::CancelCallback(uint64_t id) {
+  if (env_->CancelNotification(id) != ZX_OK) {
+    BRCMF_ERR("Event has already been cancelled or executed.");
+    return;
+  }
+  // Remove event from the list if it's cancelled successfully, but the those event who have already
+  // been executed will still remain in the list, and sim-fw will still try to cancel them in
+  // destructor.
+  scheduled_ids.remove(id);
+}
 
 void SimHardware::Tx(const simulation::SimFrame& frame) {
   simulation::WlanTxInfo info = {.channel = channel_};

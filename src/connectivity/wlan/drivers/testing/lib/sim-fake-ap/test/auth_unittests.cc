@@ -127,7 +127,7 @@ TEST_F(AuthTest, SharedKeyBasicUse) {
   EXPECT_EQ(auth_resps_received_.empty(), true);
 }
 
-TEST_F(AuthTest, OpenSystemIgnoreTest) {
+TEST_F(AuthTest, OpenSystemAuthTwiceTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN});
 
   simulation::SimAuthFrame auth_req_frame1(kClientMacAddr, kApBssid, 3, simulation::AUTH_TYPE_OPEN,
@@ -136,7 +136,7 @@ TEST_F(AuthTest, OpenSystemIgnoreTest) {
       std::bind(&simulation::Environment::Tx, &env_, auth_req_frame1, kDefaultTxInfo, this),
       zx::sec(1));
 
-  // Associated station will be ignored
+  // Send Authentication request after station is associated.
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                           wlan_ieee80211::StatusCode::SUCCESS);
   env_.ScheduleNotification(
@@ -155,8 +155,8 @@ TEST_F(AuthTest, OpenSystemIgnoreTest) {
       zx::sec(4));
 
   env_.Run(kSimulatedClockDuration);
-  // The second resp will be ignored
-  EXPECT_EQ(auth_resps_received_.size(), (size_t)1);
+  // Both authentication succeeded.
+  EXPECT_EQ(auth_resps_received_.size(), (size_t)2);
 }
 
 TEST_F(AuthTest, SharedKeyIgnoreTest) {

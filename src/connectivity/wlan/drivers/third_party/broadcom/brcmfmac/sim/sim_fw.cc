@@ -52,8 +52,7 @@ namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 #define SIM_FW_CHK_CMD_LEN(dcmd_len, exp_len) \
   (((dcmd_len) < (exp_len)) ? ZX_ERR_INVALID_ARGS : ZX_OK)
 
-SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
-    : simdev_(simdev), hw_(env) {
+SimFirmware::SimFirmware(brcmf_simdev* simdev) : simdev_(simdev), hw_(simdev->env) {
   // Configure the chanspec encode/decoder
   d11_inf_.io_type = kIoType;
   brcmu_d11_attach(&d11_inf_);
@@ -444,7 +443,6 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           memcpy(assoc_opts->bssid.byte, join_params->params_le.bssid, ETH_ALEN);
           assoc_opts->ssid.len = join_params->ssid_le.SSID_len;
           memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID, IEEE80211_MAX_SSID_LEN);
-
           AssocInit(std::move(assoc_opts), channel);
 
           BRCMF_DBG(SIM, "Auth start from C_SET_SSID");
@@ -1976,6 +1974,15 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
     }
     return ZX_OK;
   }
+
+  if (!std::strncmp(name, "crash", cmd_len)) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
+    // No need to check the value of 'crash' iovar.
+    ResetSimFirmware();
+    return ZX_OK;
+  }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'", name);
   return ZX_OK;
@@ -2926,6 +2933,14 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
   }
 
   brcmf_sim_rx_frame(simdev_, std::move(buf));
+}
+
+// This function schedules an event for brcmf_sim_reset() instead of directly calling this function,
+// this is because this function will delete and recreated the sim-fw, so that sim-fw will release
+// itself if this function is in the same call chain, which leads a segment fault.
+void SimFirmware::ResetSimFirmware() {
+  // The crash happens immediately after 'crash' iovar is received from firmware.
+  hw_.RequestCallback(std::bind(&brcmf_sim_firmware_crash, simdev_), zx::sec(0));
 }
 
 void SimFirmware::convert_chanspec_to_channel(uint16_t chanspec, wlan_channel_t* channel) {

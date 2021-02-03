@@ -64,7 +64,7 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
     .rxctl = [](brcmf_bus* bus, unsigned char* msg, uint len,
                 int* rxlen_out) { return BUS_OP(bus)->BusRxCtl(msg, len, rxlen_out); },
     .gettxq = [](brcmf_bus* bus) { return BUS_OP(bus)->BusGetTxQueue(); },
-};
+    .recovery = [](brcmf_bus* bus) { return brcmf_sim_recovery(bus); }};
 #undef BUS_OP
 
 // Get device-specific information
@@ -80,13 +80,14 @@ static void brcmf_sim_probe(struct brcmf_bus* bus) {
 
 zx_status_t brcmf_sim_alloc(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
                             ::wlan::simulation::FakeDevMgr* dev_mgr,
-                            ::wlan::simulation::Environment* env) {
+                            std::shared_ptr<::wlan::simulation::Environment> env) {
   auto simdev = new brcmf_simdev();
   auto bus_if = std::make_unique<brcmf_bus>();
 
   // Initialize inter-structure pointers
   simdev->drvr = drvr;
-  simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(simdev, env);
+  simdev->env = env;
+  simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(simdev);
   simdev->dev_mgr = dev_mgr;
   simdev->settings = std::make_unique<brcmf_mp_device>();
   bus_if->bus_priv.sim = simdev;
@@ -121,11 +122,10 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr) {
 
   status = brcmf_bus_started(drvr, false);
   if (status != ZX_OK) {
-    BRCMF_ERR("Failed to start (simulated) bus");
+    BRCMF_ERR("brcmf_bus_started failed: %s", zx_status_get_string(status));
     brcmf_detach(drvr);
     brcmf_proto_bcdc_detach(drvr);
   }
-
   return status;
 }
 
@@ -164,6 +164,26 @@ void brcmf_sim_rx_frame(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_
   if (status == ZX_OK) {
     brcmf_rx_frame(simdev->drvr, netbuf, false);
   }
+}
+
+zx_status_t brcmf_sim_recovery(brcmf_bus* bus) {
+  brcmf_simdev* simdev = bus->bus_priv.sim;
+
+  // Go through the recovery process in SIM bus(Here we just do firmware reset
+  // instead of firmware reload).
+  simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(simdev);
+  return ZX_OK;
+}
+
+void brcmf_sim_firmware_crash(brcmf_simdev* simdev) {
+  brcmf_pub* drvr = simdev->drvr;
+  zx_status_t err = drvr->recovery_trigger->firmware_crash_.Inc();
+  if (err != ZX_OK) {
+    BRCMF_ERR("Increase recovery trigger condition failed -- error: %s", zx_status_get_string(err));
+  }
+  // Clear the counters of all TriggerConditions here instead of inside brcmf_recovery_worker() to
+  // break deadlock.
+  drvr->recovery_trigger->ClearStatistics();
 }
 
 void brcmf_sim_exit(brcmf_bus* bus) {

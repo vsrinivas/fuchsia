@@ -604,8 +604,10 @@ void brcmf_recovery_worker(WorkItem* work) {
 
 fail:
   // Clean the counters for all the trigger conditions at the end of the recovery process to ensure
-  // all the counters are 0 after driver is recovered and start working.
-  drvr->recovery_trigger->ClearStatistics();
+  // all the counters are 0 after driver is recovered and start working. Skip it here for SIM to
+  // break deadlock.
+  if (brcmf_bus_get_bus_type(bus) != BRCMF_BUS_TYPE_SIM)
+    drvr->recovery_trigger->ClearStatistics();
   // Notice that here we set drvr_resetting but not fw_reloading to false, drvr_resetting is set to
   // true before the worker is added into the workqueue, and fw_loading is set to false in
   // brcmf_sdio_load_files(), which marks that the firmware loading is finished.

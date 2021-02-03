@@ -35,6 +35,8 @@ Timer::Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, boo
   }
 }
 
+Timer::~Timer() { Stop(); }
+
 // Set timer with timeout @interval. If interval is 0, return without setting
 // the timer (can be used to stop a periodic timer)
 void Timer::Start(zx_duration_t interval) {

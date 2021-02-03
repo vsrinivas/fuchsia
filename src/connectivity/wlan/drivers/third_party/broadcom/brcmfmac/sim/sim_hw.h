@@ -36,7 +36,8 @@ class SimHardware : public simulation::StationIfc {
     RxHandler rx_handler;
   };
 
-  explicit SimHardware(simulation::Environment* env);
+  explicit SimHardware(std::shared_ptr<simulation::Environment> env);
+  ~SimHardware();
 
   // Tells us how to call the SimFirmware instance
   void SetCallbacks(const EventHandlers& handlers);
@@ -66,8 +67,9 @@ class SimHardware : public simulation::StationIfc {
  private:
   bool rx_enabled_ = false;
   wlan_channel_t channel_;
-  simulation::Environment* env_;
+  std::shared_ptr<simulation::Environment> env_;
   EventHandlers event_handlers_;
+  std::list<uint64_t> scheduled_ids;
 };
 
 }  // namespace wlan::brcmfmac

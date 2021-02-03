@@ -32,7 +32,7 @@ class Timer {
  public:
   Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, bool periodic);
   // If timer is active it will call the callback function, must wait/cancel timer
-  ~Timer() { Stop(); }
+  ~Timer();
   // To avoid accidentally creating multiple timers using the same callback/data
   Timer(const Timer&) = delete;
   Timer(Timer&& t) = delete;

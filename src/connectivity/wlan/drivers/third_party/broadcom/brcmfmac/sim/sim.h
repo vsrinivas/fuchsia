@@ -27,6 +27,7 @@ struct brcmf_bus;
 struct brcmf_simdev {
   std::unique_ptr<::wlan::brcmfmac::SimFirmware> sim_fw;
   ::wlan::simulation::FakeDevMgr* dev_mgr;
+  std::shared_ptr<::wlan::simulation::Environment> env;
   std::unique_ptr<brcmf_mp_device> settings;
   brcmf_pub* drvr;
 };
@@ -34,7 +35,7 @@ struct brcmf_simdev {
 // Allocate device and bus structures
 zx_status_t brcmf_sim_alloc(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
                             ::wlan::simulation::FakeDevMgr* dev_mgr,
-                            ::wlan::simulation::Environment* env);
+                            std::shared_ptr<::wlan::simulation::Environment> env);
 
 // Perform initialization on the appropriate bus structures
 zx_status_t brcmf_sim_register(brcmf_pub* drvr);
@@ -45,5 +46,9 @@ void brcmf_sim_rx_event(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_
 void brcmf_sim_rx_frame(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer);
 // Simulator cleanup
 void brcmf_sim_exit(brcmf_bus* bus);
+// Conduct bus layer recovery in SIM
+zx_status_t brcmf_sim_recovery(brcmf_bus* bus);
+// Simluates the firmware crash and notify driver through RecoveryTrigger
+void brcmf_sim_firmware_crash(brcmf_simdev* simdev);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_H_
