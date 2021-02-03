@@ -21,6 +21,7 @@ require (
 	github.com/pkg/sftp v1.12.0
 	github.com/smartystreets/assertions v1.2.0 // indirect
 	github.com/smartystreets/goconvey v1.6.4 // indirect
+	github.com/spf13/pflag v1.0.5
 	go.chromium.org/luci v0.0.0-20200828094204-41b976d93de1
 	go.fuchsia.dev/fuchsia/garnet v0.0.0-20200821151753-3226fa91b98e // indirect
 	go.fuchsia.dev/fuchsia/src v0.0.0-20200821151753-3226fa91b98e
@@ -45,6 +46,7 @@ replace (
 	github.com/google/go-cmp => ../third_party/golibs/github.com/google/go-cmp
 	github.com/google/subcommands => ../third_party/golibs/github.com/google/subcommands
 	github.com/pkg/sftp => ../third_party/golibs/github.com/pkg/sftp
+	github.com/spf13/pflag => ../third_party/golibs/github.com/spf13/pflag
 	go.fuchsia.dev/fuchsia/garnet => ../garnet
 	go.fuchsia.dev/fuchsia/src => ../src
 	golang.org/x/crypto => ../third_party/golibs/golang.org/x/crypto
