@@ -51,7 +51,7 @@ static_library("libunwindstack") {
     #"Maps.cpp",
   ]
 
-  if (current_toolchain != host_toolchain) {
+  if (is_fuchsia) {
     # This project does some locking but doesn't annotate usage.
     configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
 

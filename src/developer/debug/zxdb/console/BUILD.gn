@@ -201,7 +201,7 @@ static_library("console") {
     "//zircon/system/ulib/cmdline",
   ]
 
-  if (current_toolchain != host_toolchain) {
+  if (is_fuchsia) {
     deps += [
       "//sdk/lib/fdio",
       "//src/lib/fxl",

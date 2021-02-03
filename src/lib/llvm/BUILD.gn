@@ -3,11 +3,12 @@
 # found in the LICENSE file.
 
 config("LLVM_config") {
-  include_dirs = [ "//prebuilt/third_party/llvm/${host_platform}/include" ]
+  include_dirs = [ "//prebuilt/third_party/llvm/${current_platform}/include" ]
   if (current_os == "linux") {
-    libs = [ "//prebuilt/third_party/llvm/${host_platform}/lib/libLLVM.so" ]
+    libs = [ "//prebuilt/third_party/llvm/${current_platform}/lib/libLLVM.so" ]
   } else if (current_os == "mac") {
-    libs = [ "//prebuilt/third_party/llvm/${host_platform}/lib/libLLVM.dylib" ]
+    libs =
+        [ "//prebuilt/third_party/llvm/${current_platform}/lib/libLLVM.dylib" ]
   }
 }
 
@@ -16,6 +17,8 @@ group("LLVM") {
 }
 
 config("LLVMHeaderOnly_config") {
+  # elflib depends on LLVM headers and is compiled on target. Since we don't have Fuchsia variant
+  # of LLVM library yet, use host_platform's include directory for now.
   include_dirs = [ "//prebuilt/third_party/llvm/${host_platform}/include" ]
 }
 
@@ -26,9 +29,9 @@ group("LLVMHeaderOnly") {
 template("llvm_library") {
   config(target_name + "_config") {
     visibility = [ ":*" ]
-    include_dirs = [ "//prebuilt/third_party/llvm/${host_platform}/include" ]
+    include_dirs = [ "//prebuilt/third_party/llvm/${current_platform}/include" ]
     libs = [
-      "//prebuilt/third_party/llvm/${host_platform}/lib/lib${target_name}.a",
+      "//prebuilt/third_party/llvm/${current_platform}/lib/lib${target_name}.a",
     ]
   }
 
