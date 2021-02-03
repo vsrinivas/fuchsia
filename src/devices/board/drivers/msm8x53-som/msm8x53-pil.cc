@@ -102,7 +102,8 @@ zx_status_t Msm8x53::PilInit() {
       {"clock-crypto", std::size(clk_crypto_fragment), clk_crypto_fragment},
   };
 
-  auto status = pbus_.CompositeDeviceAdd(&dev, fragments, std::size(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&dev, reinterpret_cast<uint64_t>(fragments),
+                                         std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not add dev %d", __func__, status);
     return status;

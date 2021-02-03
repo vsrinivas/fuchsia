@@ -83,8 +83,8 @@ zx_status_t Astro::MaliInit() {
   mali_btis[0].iommu_index = 0;
   mali_btis[0].bti_id = BTI_MALI;
 
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&mali_dev, mali_fragments, countof(mali_fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(
+      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

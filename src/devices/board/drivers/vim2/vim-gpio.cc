@@ -169,7 +169,8 @@ zx_status_t Vim::GpioInit() {
   light_dev.metadata_list = light_metadata;
   light_dev.metadata_count = std::size(light_metadata);
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, std::size(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(fragments),
+                                    std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d", status);
     return status;

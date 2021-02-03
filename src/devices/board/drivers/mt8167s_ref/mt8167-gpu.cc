@@ -93,7 +93,8 @@ zx_status_t Mt8167::GpuInit() {
   gpu_dev.bti_list = gpu_btis;
   gpu_dev.bti_count = countof(gpu_btis);
 
-  auto status = pbus_.CompositeDeviceAdd(&gpu_dev, fragments, countof(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&gpu_dev, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
     return status;

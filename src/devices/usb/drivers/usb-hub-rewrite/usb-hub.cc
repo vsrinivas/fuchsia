@@ -195,14 +195,15 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
               auto raw_desc = descriptor.descriptor;
               // TODO (fxbug.dev/57998): Don't pass zxdev() around.
               return RunBlocking<zx_status_t>([raw_desc, this]() {
-                       auto status =
-                           bus_.SetHubInterface(zxdev(), this, &usb_hub_interface_protocol_ops_);
+                       auto status = bus_.SetHubInterface(reinterpret_cast<uint64_t>(zxdev()), this,
+                                                          &usb_hub_interface_protocol_ops_);
                        if (status != ZX_OK) {
                          return status;
                        }
                        // TODO (fxbug.dev/56002): Support multi-TT hubs properly. Currently, we
                        // operate in single-TT mode even if the hub supports multiple TTs.
-                       return bus_.ConfigureHub(zxdev(), speed_, &raw_desc, false);
+                       return bus_.ConfigureHub(reinterpret_cast<uint64_t>(zxdev()), speed_,
+                                                &raw_desc, false);
                      })
                   .then(
                       [](fit::result<zx_status_t, void>& status) -> fit::result<void, zx_status_t> {
@@ -352,7 +353,9 @@ void UsbHubDevice::HandleDeviceDisconnected(PortNumber port) {
   bool link_status = port_status_[PortNumberToIndex(port).value()].link_active;
   port_status_[PortNumberToIndex(port).value()].Reset();
   if (link_status) {
-    async::PostTask(loop_.dispatcher(), [=]() { bus_.DeviceRemoved(zxdev(), port.value()); });
+    async::PostTask(loop_.dispatcher(), [=]() {
+      bus_.DeviceRemoved(reinterpret_cast<uint64_t>(zxdev()), port.value());
+    });
   }
 }
 
@@ -362,7 +365,7 @@ void UsbHubDevice::HandleResetComplete(PortNumber port) {
   auto speed = port_status_[PortNumberToIndex(port).value()].GetSpeed(speed_);
   async::PostTask(loop_.dispatcher(), [this, port, speed]() {
     // Online the device in xHCI
-    zx_status_t status = bus_.DeviceAdded(zxdev(), port.value(), speed);
+    zx_status_t status = bus_.DeviceAdded(reinterpret_cast<uint64_t>(zxdev()), port.value(), speed);
     executor_->schedule_task(fit::make_promise([this, port, status]() {
       fbl::AutoLock lock(&async_execution_context_);
       {

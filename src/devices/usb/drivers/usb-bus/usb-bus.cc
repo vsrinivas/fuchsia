@@ -137,8 +137,8 @@ zx_status_t UsbBus::UsbBusInterfaceReinitializeDevice(uint32_t device_id) {
     bool descriptors_changed =
         memcmp(&old_desc, &updated_desc, sizeof(usb_device_descriptor_t)) != 0;
     if (descriptors_changed) {
-      zxlogf(INFO, "device updated from VID 0x%x PID 0x%x to VID 0x%x PID 0x%x",
-             old_desc.idVendor, old_desc.idProduct, updated_desc.idVendor, updated_desc.idProduct);
+      zxlogf(INFO, "device updated from VID 0x%x PID 0x%x to VID 0x%x PID 0x%x", old_desc.idVendor,
+             old_desc.idProduct, updated_desc.idVendor, updated_desc.idProduct);
 
       status = UsbBusInterfaceRemoveDevice(device_id);
       if (status != ZX_OK) {
@@ -159,9 +159,9 @@ zx_status_t UsbBus::UsbBusInterfaceReinitializeDevice(uint32_t device_id) {
   return device->Reinitialize();
 }
 
-zx_status_t UsbBus::GetDeviceId(zx_device_t* device, uint32_t* out) {
+zx_status_t UsbBus::GetDeviceId(/* zx_device_t* */ uint64_t device, uint32_t* out) {
   usb_protocol_t usb;
-  if (device_get_protocol(device, ZX_PROTOCOL_USB, &usb) != ZX_OK) {
+  if (device_get_protocol(reinterpret_cast<zx_device_t*>(device), ZX_PROTOCOL_USB, &usb) != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
   auto id = usb_get_device_id(&usb);
@@ -172,7 +172,7 @@ zx_status_t UsbBus::GetDeviceId(zx_device_t* device, uint32_t* out) {
   return ZX_OK;
 }
 
-zx_status_t UsbBus::UsbBusConfigureHub(zx_device_t* hub_device, usb_speed_t speed,
+zx_status_t UsbBus::UsbBusConfigureHub(/* zx_device_t* */ uint64_t hub_device, usb_speed_t speed,
                                        const usb_hub_descriptor_t* desc, bool multi_tt) {
   uint32_t hub_id;
   if (GetDeviceId(hub_device, &hub_id) != ZX_OK) {
@@ -181,7 +181,8 @@ zx_status_t UsbBus::UsbBusConfigureHub(zx_device_t* hub_device, usb_speed_t spee
   return hci_.ConfigureHub(hub_id, speed, desc, multi_tt);
 }
 
-zx_status_t UsbBus::UsbBusDeviceAdded(zx_device_t* hub_device, uint32_t port, usb_speed_t speed) {
+zx_status_t UsbBus::UsbBusDeviceAdded(/* zx_device_t* */ uint64_t hub_device, uint32_t port,
+                                      usb_speed_t speed) {
   uint32_t hub_id;
   if (GetDeviceId(hub_device, &hub_id) != ZX_OK) {
     return ZX_ERR_INTERNAL;
@@ -189,7 +190,7 @@ zx_status_t UsbBus::UsbBusDeviceAdded(zx_device_t* hub_device, uint32_t port, us
   return hci_.HubDeviceAdded(hub_id, port, speed);
 }
 
-zx_status_t UsbBus::UsbBusDeviceRemoved(zx_device_t* hub_device, uint32_t port) {
+zx_status_t UsbBus::UsbBusDeviceRemoved(/* zx_device_t* */ uint64_t hub_device, uint32_t port) {
   uint32_t hub_id;
   if (GetDeviceId(hub_device, &hub_id) != ZX_OK) {
     return ZX_ERR_INTERNAL;
@@ -197,7 +198,7 @@ zx_status_t UsbBus::UsbBusDeviceRemoved(zx_device_t* hub_device, uint32_t port) 
   return hci_.HubDeviceRemoved(hub_id, port);
 }
 
-zx_status_t UsbBus::UsbBusSetHubInterface(zx_device_t* usb_device,
+zx_status_t UsbBus::UsbBusSetHubInterface(/* zx_device_t* */ uint64_t usb_device,
                                           const usb_hub_interface_protocol_t* hub) {
   uint32_t usb_device_id;
   auto status = GetDeviceId(usb_device, &usb_device_id);

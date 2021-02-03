@@ -263,11 +263,11 @@ zx_status_t Mt8167::Msdc2Init() {
   };
 
   if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-    status =
-        pbus_.CompositeDeviceAdd(&msdc2_dev, cleo_fragments, std::size(cleo_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&msdc2_dev, reinterpret_cast<uint64_t>(cleo_fragments),
+                                      std::size(cleo_fragments), UINT32_MAX);
   } else {
-    status =
-        pbus_.CompositeDeviceAdd(&msdc2_dev, ref_fragments, std::size(ref_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&msdc2_dev, reinterpret_cast<uint64_t>(ref_fragments),
+                                      std::size(ref_fragments), UINT32_MAX);
   }
 
   if (status != ZX_OK) {

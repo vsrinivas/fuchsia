@@ -14,7 +14,6 @@ _LIBRARY_LABEL = r'^//sdk/banjo/([^:]+):\1(\.\.\.)?$'
 
 _DUMMY_LIBRARIES = set(
     [
-        'ddk.driver',
         'ddk.physiter',
         'zircon.hw.pci',
         'zircon.hw.usb',

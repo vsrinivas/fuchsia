@@ -489,15 +489,18 @@ zx_status_t Sherlock::AudioInit() {
   tdm_dev.metadata_list = tdm_metadata;
   tdm_dev.metadata_count = countof(tdm_metadata);
   if (is_sherlock) {
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, sherlock_tdm_i2s_fragments,
-                                      countof(sherlock_tdm_i2s_fragments), UINT32_MAX);
+    status =
+        pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(sherlock_tdm_i2s_fragments),
+                                 countof(sherlock_tdm_i2s_fragments), UINT32_MAX);
   } else {
     if (is_ernie) {
-      status = pbus_.CompositeDeviceAdd(&tdm_dev, ernie_tdm_i2s_fragments,
-                                        countof(ernie_tdm_i2s_fragments), UINT32_MAX);
+      status =
+          pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(ernie_tdm_i2s_fragments),
+                                   countof(ernie_tdm_i2s_fragments), UINT32_MAX);
     } else {
-      status = pbus_.CompositeDeviceAdd(&tdm_dev, luis_tdm_i2s_fragments,
-                                        countof(luis_tdm_i2s_fragments), UINT32_MAX);
+      status =
+          pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(luis_tdm_i2s_fragments),
+                                   countof(luis_tdm_i2s_fragments), UINT32_MAX);
     }
   }
   if (status != ZX_OK) {
@@ -554,8 +557,8 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.bti_count = countof(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
-                                      UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
+                                      countof(tdm_pcm_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
@@ -662,8 +665,8 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.bti_count = countof(pcm_in_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
-                                      UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
+                                      countof(tdm_pcm_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;

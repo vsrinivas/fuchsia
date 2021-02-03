@@ -192,7 +192,8 @@ constexpr pbus_dev_t cpu_dev = []() {
 namespace sherlock {
 
 zx_status_t Sherlock::LuisCpuInit() {
-  zx_status_t result = pbus_.CompositeDeviceAdd(&cpu_dev, fragments, countof(fragments), 1);
+  zx_status_t result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
+                                                countof(fragments), 1);
 
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);

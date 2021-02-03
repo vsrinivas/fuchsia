@@ -102,8 +102,8 @@ static const device_fragment_t fragments[] = {
 };
 
 zx_status_t Sherlock::NnaInit() {
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&nna_dev, fragments, countof(fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&nna_dev, reinterpret_cast<uint64_t>(fragments),
+                                                countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

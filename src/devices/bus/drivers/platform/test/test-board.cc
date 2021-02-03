@@ -280,7 +280,8 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev.metadata_list = test_metadata_1;
   pdev.metadata_count = std::size(test_metadata_1);
 
-  status = pbus_composite_device_add(&pbus, &pdev, composite, std::size(composite), UINT32_MAX);
+  status = pbus_composite_device_add(&pbus, &pdev, reinterpret_cast<uint64_t>(composite),
+                                     std::size(composite), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
   }
@@ -303,7 +304,8 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev2.metadata_list = test_metadata_2;
   pdev2.metadata_count = std::size(test_metadata_2);
 
-  status = pbus_composite_device_add(&pbus, &pdev2, composite2, std::size(composite2), UINT32_MAX);
+  status = pbus_composite_device_add(&pbus, &pdev2, reinterpret_cast<uint64_t>(composite2),
+                                     std::size(composite2), UINT32_MAX);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
@@ -324,7 +326,8 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev_goldfish_composite.metadata_list = test_metadata_goldfish_control;
   pdev_goldfish_composite.metadata_count = std::size(test_metadata_goldfish_control);
 
-  status = pbus_composite_device_add(&pbus, &pdev_goldfish_composite, goldfish_composite,
+  status = pbus_composite_device_add(&pbus, &pdev_goldfish_composite,
+                                     reinterpret_cast<uint64_t>(goldfish_composite),
                                      std::size(goldfish_composite), UINT32_MAX);
 
   if (status != ZX_OK) {

@@ -80,7 +80,8 @@ zx_status_t As370::LightInit() {
   light_dev.metadata_list = light_metadata;
   light_dev.metadata_count = countof(light_metadata);
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(fragments),
+                                    countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;

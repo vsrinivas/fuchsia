@@ -311,7 +311,8 @@ zx_status_t Mt8167::AudioInit() {
       return status;
     }
 
-    status = pbus_.CompositeDeviceAdd(&controller_out, mt8167s_controller_fragments,
+    status = pbus_.CompositeDeviceAdd(&controller_out,
+                                      reinterpret_cast<uint64_t>(mt8167s_controller_fragments),
                                       countof(mt8167s_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
@@ -345,14 +346,16 @@ zx_status_t Mt8167::AudioInit() {
       return status;
     }
 
-    status = pbus_.CompositeDeviceAdd(&controller_out, cleo_controller_fragments,
+    status = pbus_.CompositeDeviceAdd(&controller_out,
+                                      reinterpret_cast<uint64_t>(cleo_controller_fragments),
                                       countof(cleo_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
       return status;
     }
   }
-  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&dev_in, reinterpret_cast<uint64_t>(in_fragments),
+                                    countof(in_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;

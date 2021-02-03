@@ -241,8 +241,8 @@ zx_status_t Nelson::SdioInit() {
 
   SdEmmcConfigurePortB();
 
-  status =
-      pbus_.CompositeDeviceAdd(&sd_emmc_dev, sdio_fragments, countof(sdio_fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&sd_emmc_dev, reinterpret_cast<uint64_t>(sdio_fragments),
+                                    countof(sdio_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd sd_emmc failed: %d", __func__, status);
     return status;

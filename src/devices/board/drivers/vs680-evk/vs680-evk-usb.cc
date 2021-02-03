@@ -179,7 +179,8 @@ zx_status_t Vs680Evk::UsbInit() {
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = config;
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
+  status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
+                                    countof(dwc2_fragments), 1);
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);

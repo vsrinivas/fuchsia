@@ -170,7 +170,8 @@ zx_status_t Astro::DisplayInit() {
 
   // TODO(payamm): Change from 1 to UINT32_MAX to separate DSI and Display into two different
   // devhosts once support for it lands.
-  auto status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
+  auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;

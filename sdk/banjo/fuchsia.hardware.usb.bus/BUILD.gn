@@ -7,7 +7,6 @@ import("//build/banjo/banjo.gni")
 banjo("fuchsia.hardware.usb.bus") {
   sources = [ "usb-bus.banjo" ]
   deps = [
-    "//sdk/banjo/ddk.driver",
     "//sdk/banjo/fuchsia.hardware.usb.hub",
     "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor",
     "//sdk/banjo/zircon.hw.usb",

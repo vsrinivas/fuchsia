@@ -87,7 +87,8 @@ constexpr pbus_dev_t backlight_dev = []() {
 }();
 
 zx_status_t Sherlock::BacklightInit() {
-  auto status = pbus_.CompositeDeviceAdd(&backlight_dev, fragments, countof(fragments), 1);
+  auto status = pbus_.CompositeDeviceAdd(&backlight_dev, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }

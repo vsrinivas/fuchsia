@@ -250,13 +250,17 @@ zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t
   return ZX_OK;
 }
 
-zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
-                                                const device_fragment_t* fragments_list,
-                                                size_t fragments_count,
-                                                uint32_t coresident_device_index) {
+zx_status_t PlatformBus::PBusCompositeDeviceAdd(
+    const pbus_dev_t* pdev,
+    /* const device_fragment_t* */ uint64_t raw_fragments_list, size_t fragments_count,
+    uint32_t coresident_device_index) {
   if (!pdev || !pdev->name) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  const device_fragment_t* fragments_list =
+      reinterpret_cast<const device_fragment_t*>(raw_fragments_list);
+
   // Do not allow adding composite devices in our devhost.
   // The index must be greater than zero to specify one of the other fragments, or UINT32_MAX
   // to create a new devhost.

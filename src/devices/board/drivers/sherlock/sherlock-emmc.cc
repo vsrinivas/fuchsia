@@ -167,8 +167,8 @@ zx_status_t Sherlock::EmmcInit() {
     emmc_dev.metadata_count = countof(luis_emmc_metadata);
   }
 
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
+                                                countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;

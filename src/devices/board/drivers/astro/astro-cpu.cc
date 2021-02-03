@@ -144,7 +144,8 @@ zx_status_t Astro::CpuInit() {
     return result;
   }
 
-  result = pbus_.CompositeDeviceAdd(&cpu_dev, fragments, countof(fragments), 1);
+  result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
+                                    countof(fragments), 1);
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d", __func__, result);
   }

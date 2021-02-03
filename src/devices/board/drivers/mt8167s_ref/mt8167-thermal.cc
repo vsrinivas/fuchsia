@@ -137,7 +137,8 @@ static const device_fragment_t fragments[] = {
 namespace board_mt8167 {
 
 zx_status_t Mt8167::ThermalInit() {
-  auto status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&thermal_dev, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd thermal failed: %d", __FUNCTION__, status);
   }

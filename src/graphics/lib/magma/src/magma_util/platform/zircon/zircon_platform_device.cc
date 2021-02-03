@@ -11,6 +11,7 @@
 #include <zircon/process.h>
 
 #include <ddk/device.h>
+#include <ddk/driver.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

@@ -76,8 +76,8 @@ static const device_fragment_t mali_fragments[] = {
 };
 
 zx_status_t Sherlock::MaliInit() {
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&mali_dev, mali_fragments, countof(mali_fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(
+      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::MaliInit: CompositeDeviceAdd failed: %d", status);
     return status;

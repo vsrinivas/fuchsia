@@ -4,7 +4,6 @@
 
 library fuchsia.hardware.platform.device;
 
-using ddk.driver;
 using zx;
 
 struct PdevDeviceInfo {

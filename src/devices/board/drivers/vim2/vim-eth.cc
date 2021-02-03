@@ -188,15 +188,16 @@ zx_status_t Vim::EthInit() {
   gpio_impl_.SetAltFunction(S912_ETH_TXD3, S912_ETH_TXD3_FN);
 
   // Add a composite device for ethernet board in a new devhost.
-  auto status =
-      pbus_.CompositeDeviceAdd(&eth_board_dev, eth_fragments, std::size(eth_fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, reinterpret_cast<uint64_t>(eth_fragments),
+                                         std::size(eth_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 
   // Add a composite device for dwmac driver in the ethernet board driver's devhost.
-  status = pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_fragments, std::size(dwmac_fragments), 1);
+  status = pbus_.CompositeDeviceAdd(&dwmac_dev, reinterpret_cast<uint64_t>(dwmac_fragments),
+                                    std::size(dwmac_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

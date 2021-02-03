@@ -74,7 +74,8 @@ zx_status_t Nelson::BacklightInit() {
       .metadata_count = countof(backlight_metadata),
   };
 
-  auto status = pbus_.CompositeDeviceAdd(&backlight_dev, fragments, countof(fragments), 1);
+  auto status = pbus_.CompositeDeviceAdd(&backlight_dev, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }

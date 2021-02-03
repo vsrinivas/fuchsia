@@ -229,7 +229,8 @@ zx_status_t Nelson::AudioInit() {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAdd(&controller_out, ref_controller_fragments,
+    status = pbus_.CompositeDeviceAdd(&controller_out,
+                                      reinterpret_cast<uint64_t>(ref_controller_fragments),
                                       countof(ref_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
@@ -292,7 +293,8 @@ zx_status_t Nelson::AudioInit() {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAdd(&controller_out, p2_controller_fragments,
+    status = pbus_.CompositeDeviceAdd(&controller_out,
+                                      reinterpret_cast<uint64_t>(p2_controller_fragments),
                                       countof(p2_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);

@@ -93,8 +93,8 @@ zx_status_t Vim3::SdioInit() {
   gpio_impl_.SetAltFunction(A311D_SDIO_CLK, A311D_GPIOX_4_SDIO_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_SDIO_CMD, A311D_GPIOX_5_SDIO_CMD_FN);
 
-  if ((status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, countof(sdio_fragments),
-                                         UINT32_MAX)) != ZX_OK) {
+  if ((status = pbus_.CompositeDeviceAdd(&sdio_dev, reinterpret_cast<uint64_t>(sdio_fragments),
+                                         countof(sdio_fragments), UINT32_MAX)) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sdio_dev: %d", status);
     return status;
   }

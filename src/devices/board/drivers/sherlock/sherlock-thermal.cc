@@ -349,7 +349,8 @@ zx_status_t Sherlock::SherlockThermalInit() {
   }
 
   // The PLL sensor is controlled by a legacy thermal device, which performs DVFS.
-  status = pbus_.CompositeDeviceAdd(&thermal_dev_pll, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&thermal_dev_pll, reinterpret_cast<uint64_t>(fragments),
+                                    countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

@@ -114,7 +114,8 @@ zx_status_t Vim::EmmcInit() {
   gpio_impl_.SetAltFunction(S912_EMMC_CMD, S912_EMMC_CMD_FN);
   gpio_impl_.SetAltFunction(S912_EMMC_DS, S912_EMMC_DS_FN);
 
-  status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
+                                    countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d", status);
     return status;

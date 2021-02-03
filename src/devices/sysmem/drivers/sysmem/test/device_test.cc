@@ -44,7 +44,8 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev, const device_fragment_t* fragments_list,
+  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
+                                     /* const device_fragment_t* */ uint64_t fragments_list,
                                      size_t fragments_count, uint32_t coresident_device_index) {
     return ZX_ERR_NOT_SUPPORTED;
   }

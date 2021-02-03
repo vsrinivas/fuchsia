@@ -186,8 +186,8 @@ zx_status_t Vim::UartInit() {
   gpio_impl_.Write(BT_EN, 1);
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_fragments, countof(bt_uart_fragments),
-                                    UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, reinterpret_cast<uint64_t>(bt_uart_fragments),
+                                    countof(bt_uart_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "UartInit: pbus_device_add failed: %d", status);
     return status;

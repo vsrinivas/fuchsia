@@ -19,7 +19,6 @@ python_host_test("analyze_deps_test") {
 # currently not connected to the build graph.
 group("banjo") {
   deps = [
-    "ddk.driver",
     "ddk.hw.wlan.ieee80211",
     "ddk.hw.wlan.wlaninfo",
     "ddk.physiter",

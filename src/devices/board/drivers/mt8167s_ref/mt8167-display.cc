@@ -286,7 +286,8 @@ zx_status_t Mt8167::DisplayInit() {
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
   // Load display driver in same devhost as DSI driver.
-  status = pbus_.CompositeDeviceAdd(&display_dev, fragments, std::size(fragments), 3);
+  status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
+                                    std::size(fragments), 3);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;

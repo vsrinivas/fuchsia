@@ -142,8 +142,8 @@ zx_status_t Nelson::SpiInit() {
     buf->Write32(spicc1_clk_sel_fclk_div2 | spicc1_clk_en | spicc1_clk_div(5), HHI_SPICC_CLK_CNTL);
   }
 
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&spi_dev, fragments, std::size(fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&spi_dev, reinterpret_cast<uint64_t>(fragments),
+                                                std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

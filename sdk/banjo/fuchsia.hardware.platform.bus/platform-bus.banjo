@@ -4,7 +4,6 @@
 
 library fuchsia.hardware.platform.bus;
 
-using ddk.driver;
 using fuchsia.hardware.platform.device;
 using zx;
 
@@ -92,7 +91,6 @@ protocol PbusSysSuspend {
              uint8 suspend_reason) -> (zx.status out_status, uint8 out_state);
 };
 
-
 [BanjoLayout="ddk-protocol", DefaultProtocol]
 protocol PBus {
     /// Adds a new platform device to the bus, using configuration provided by |dev|.
@@ -124,6 +122,8 @@ protocol PBus {
     /// |coresident_device_index|, or a new devhost if |coresident_device_index| is UINT32_MAX.
     /// |coresident_device_index| is not allowed to be zero, since we don't want platform device
     /// drivers running in the platform bus's devhost.
-    CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceFragment> fragments,
+    // Note: fragments is of type device_fragment_t*.
+    // TODO(fxb/69023): restore type.
+    CompositeDeviceAdd(PbusDev dev, uint64 fragments, uint64 fragments_count,
                        uint32 coresident_device_index) -> (zx.status s);
 };

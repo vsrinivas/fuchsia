@@ -86,7 +86,8 @@ zx_status_t C18::Msdc0Init() {
       {"gpio-reset", std::size(reset_gpio_fragment), reset_gpio_fragment},
   };
 
-  status = pbus_.CompositeDeviceAdd(&msdc0_dev, fragments, std::size(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&msdc0_dev, reinterpret_cast<uint64_t>(fragments),
+                                    std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC0 failed: %d", __FUNCTION__, status);
   }

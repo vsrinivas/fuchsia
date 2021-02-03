@@ -113,7 +113,8 @@ zx_status_t Vim3::EmmcInit() {
 
   gpio_impl_.ConfigOut(A311D_GPIOBOOT(14), 1);
 
-  status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
+                                    countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
     return status;

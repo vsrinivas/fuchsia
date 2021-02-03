@@ -203,8 +203,8 @@ zx_status_t As370::AudioInit() {
   // we can have these drivers in different devhosts.
   constexpr uint32_t controller_coresident_device_index = 1;
   status =
-      pbus_.CompositeDeviceAdd(&controller_out, controller_fragments, countof(controller_fragments),
-                               controller_coresident_device_index);
+      pbus_.CompositeDeviceAdd(&controller_out, reinterpret_cast<uint64_t>(controller_fragments),
+                               countof(controller_fragments), controller_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
     return status;
@@ -215,8 +215,8 @@ zx_status_t As370::AudioInit() {
   // When autoproxying (fxbug.dev/33274) or its replacement is in place,
   // we can have these drivers in different devhosts.
   constexpr uint32_t in_coresident_device_index = 1;
-  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments),
-                                    in_coresident_device_index);
+  status = pbus_.CompositeDeviceAdd(&dev_in, reinterpret_cast<uint64_t>(in_fragments),
+                                    countof(in_fragments), in_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
     return status;

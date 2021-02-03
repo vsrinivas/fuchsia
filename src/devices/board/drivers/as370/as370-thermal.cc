@@ -106,8 +106,8 @@ zx_status_t As370::ThermalInit() {
   thermal_dev.metadata_list = thermal_metadata;
   thermal_dev.metadata_count = countof(thermal_metadata);
 
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&thermal_dev, reinterpret_cast<uint64_t>(fragments),
+                                                countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
     return status;

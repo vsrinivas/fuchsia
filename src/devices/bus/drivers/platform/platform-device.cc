@@ -76,7 +76,7 @@ zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
       return ZX_ERR_NOT_SUPPORTED;
     };
     pbus_ops_.composite_device_add =
-        [](void* ctx, const pbus_dev_t* dev, const device_fragment_t* fragments_list,
+        [](void* ctx, const pbus_dev_t* dev, /* const device_fragment_t* */ uint64_t fragments_list,
            size_t fragments_count,
            uint32_t t_coresident_device_index) { return ZX_ERR_NOT_SUPPORTED; };
   }

@@ -91,8 +91,8 @@ static pbus_dev_t hevc_enc_dev = []() {
 }();
 
 zx_status_t Sherlock::HevcEncInit() {
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&hevc_enc_dev, fragments, countof(fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(
+      &hevc_enc_dev, reinterpret_cast<uint64_t>(fragments), countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::HevcEncInit: CompositeDeviceAdd() failed: %d", status);
     return status;

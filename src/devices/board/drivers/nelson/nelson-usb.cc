@@ -242,7 +242,8 @@ zx_status_t Nelson::UsbInit() {
   }
 
   // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
-  status = pbus_.CompositeDeviceAdd(&xhci_dev, xhci_fragments, countof(xhci_fragments), 1);
+  status = pbus_.CompositeDeviceAdd(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
+                                    countof(xhci_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
@@ -269,7 +270,8 @@ zx_status_t Nelson::UsbInit() {
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
+  status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
+                                    countof(dwc2_fragments), 1);
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);
