@@ -28,7 +28,7 @@ import (
 type Seconds uint32
 
 func (s Seconds) String() string {
-	return s.Duration().String()
+	return fmt.Sprintf("%ds", s)
 }
 
 func (s Seconds) Duration() time.Duration {
