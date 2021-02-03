@@ -109,8 +109,10 @@ mod tests {
     use {
         super::{Arc, IfaceManagerApi, Mutex, PhyManagerApi, RegulatoryManager, SetCountryRequest},
         crate::{
-            access_point::state_machine as ap_fsm, client::types,
-            mode_management::phy_manager::PhyManagerError, regulatory_manager::REGION_CODE_LEN,
+            access_point::state_machine as ap_fsm,
+            client::types,
+            mode_management::phy_manager::{CreateClientIfacesReason, PhyManagerError},
+            regulatory_manager::REGION_CODE_LEN,
         },
         anyhow::{format_err, Error},
         async_trait::async_trait,
@@ -964,7 +966,10 @@ mod tests {
             unimplemented!();
         }
 
-        async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
+        async fn create_all_client_ifaces(
+            &mut self,
+            _reason: CreateClientIfacesReason,
+        ) -> Result<Vec<u16>, (Vec<u16>, PhyManagerError)> {
             unimplemented!();
         }
 

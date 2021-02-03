@@ -33,6 +33,17 @@ pub(crate) enum PhyManagerError {
     IfaceDestroyFailure,
 }
 
+/// There are a variety of reasons why the calling code may want to create client interfaces.  The
+/// main logic to do so is identical, but there are different intents for making the call.  This
+/// enum allows callers to express their intent when making the call to ensure that internal
+/// PhyManager state remains consistent with the current desired mode of operation.
+#[derive(PartialEq)]
+pub(crate) enum CreateClientIfacesReason {
+    StartClientConnections,
+    #[cfg(test)]
+    RecoverClientIfaces,
+}
+
 /// Stores information about a WLAN PHY and any interfaces that belong to it.
 pub(crate) struct PhyContainer {
     phy_info: fidl_device::PhyInfo,
@@ -62,8 +73,13 @@ pub(crate) trait PhyManagerApi {
     fn on_iface_removed(&mut self, iface_id: u16);
 
     /// Creates client interfaces for all PHYs that are capable of acting as clients.  For newly
-    /// discovered PHYs, create client interfaces if the PHY can support them.
-    async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError>;
+    /// discovered PHYs, create client interfaces if the PHY can support them.  This method returns
+    /// a vector containing all newly-created client interface IDs along with a representation of
+    /// any errors encountered along the way.
+    async fn create_all_client_ifaces(
+        &mut self,
+        reason: CreateClientIfacesReason,
+    ) -> Result<Vec<u16>, (Vec<u16>, PhyManagerError)>;
 
     /// Destroys all client interfaces.  Do not allow the creation of client interfaces for newly
     /// discovered PHYs.
@@ -308,22 +324,58 @@ impl PhyManagerApi for PhyManager {
         }
     }
 
-    async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
-        self.client_connections_enabled = true;
+    async fn create_all_client_ifaces(
+        &mut self,
+        reason: CreateClientIfacesReason,
+    ) -> Result<Vec<u16>, (Vec<u16>, PhyManagerError)> {
+        if reason == CreateClientIfacesReason::StartClientConnections {
+            self.client_connections_enabled = true;
+        }
 
-        let client_capable_phy_ids = self.phys_for_role(MacRole::Client);
+        let mut recovered_iface_ids = Vec::new();
+        let mut error_encountered = Ok(());
 
-        for client_phy in client_capable_phy_ids.iter() {
-            let phy_container =
-                self.phys.get_mut(&client_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
-            if phy_container.client_ifaces.is_empty() {
-                let iface_id =
-                    create_iface(&self.device_service, *client_phy, MacRole::Client, None).await?;
-                phy_container.client_ifaces.insert(iface_id);
+        if self.client_connections_enabled {
+            let client_capable_phy_ids = self.phys_for_role(MacRole::Client);
+
+            for client_phy in client_capable_phy_ids.iter() {
+                let phy_container = match self.phys.get_mut(&client_phy) {
+                    Some(phy_container) => phy_container,
+                    None => {
+                        error_encountered = Err(PhyManagerError::PhyQueryFailure);
+                        continue;
+                    }
+                };
+
+                // If a PHY should be able to have a client interface and it does not, create a new
+                // client interface for the PHY.
+                if phy_container.client_ifaces.is_empty() {
+                    let iface_id = match create_iface(
+                        &self.device_service,
+                        *client_phy,
+                        MacRole::Client,
+                        None,
+                    )
+                    .await
+                    {
+                        Ok(iface_id) => iface_id,
+                        Err(e) => {
+                            warn!("Failed to recover iface for PHY {}: {:?}", client_phy, e);
+                            error_encountered = Err(e);
+                            continue;
+                        }
+                    };
+                    phy_container.client_ifaces.insert(iface_id);
+
+                    recovered_iface_ids.push(iface_id);
+                }
             }
         }
 
-        Ok(())
+        match error_encountered {
+            Ok(()) => Ok(recovered_iface_ids),
+            Err(e) => Err((recovered_iface_ids, e)),
+        }
     }
 
     async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
@@ -780,7 +832,8 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
 
         {
-            let start_connections_fut = phy_manager.create_all_client_ifaces();
+            let start_connections_fut = phy_manager
+                .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections);
             pin_mut!(start_connections_fut);
             assert!(exec.run_until_stalled(&mut start_connections_fut).is_ready());
         }
@@ -1732,7 +1785,8 @@ mod tests {
         phy_manager.suggest_ap_mac(mac.clone().unwrap());
 
         // Start client connections so that an IfaceRequest is issued for the client.
-        let start_client_future = phy_manager.create_all_client_ifaces();
+        let start_client_future =
+            phy_manager.create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections);
         pin_mut!(start_client_future);
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Pending);
 
@@ -1849,5 +1903,189 @@ mod tests {
 
         phy_manager.save_region_code(None);
         assert_eq!(phy_manager.saved_region_code, None);
+    }
+
+    /// Tests the case where multiple client interfaces need to be recovered.
+    #[test]
+    fn test_recover_client_interfaces_succeeds() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+
+        // Make it look like client connections have been enabled.
+        phy_manager.client_connections_enabled = true;
+
+        // Create four fake PHY entries.  For the sake of this test, each PHY will eventually
+        // receive and interface ID equal to its PHY ID.
+        for phy_id in 0..4 {
+            let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Client];
+            let phy_info = fake_phy_info(phy_id, fake_mac_roles);
+            phy_manager.phys.insert(phy_id, PhyContainer::new(phy_info));
+
+            // Give the 0th and 2nd PHYs have client interfaces.
+            if phy_id % 2 == 0 {
+                let phy_container = phy_manager.phys.get_mut(&phy_id).expect("missing PHY");
+                phy_container.client_ifaces.insert(phy_id);
+            }
+        }
+
+        // There are now two PHYs with client interfaces and two without.  This looks like two
+        // interfaces have undergone recovery.  Run recover_client_ifaces and ensure that the two
+        // PHYs that are missing client interfaces have interfaces created for them.
+        {
+            let recovery_fut =
+                phy_manager.create_all_client_ifaces(CreateClientIfacesReason::RecoverClientIfaces);
+            pin_mut!(recovery_fut);
+            assert_variant!(exec.run_until_stalled(&mut recovery_fut), Poll::Pending);
+
+            loop {
+                // The recovery future will only stall out when either
+                // 1. It needs to create a client interface for a PHY that does not have one.
+                // 2. The futures completes and has recovered all possible interfaces.
+                match exec.run_until_stalled(&mut recovery_fut) {
+                    Poll::Pending => {}
+                    Poll::Ready(result) => {
+                        let iface_ids = result.expect("recovery failed unexpectedly");
+                        assert!(iface_ids.contains(&1));
+                        assert!(iface_ids.contains(&3));
+                        break;
+                    }
+                }
+
+                // Make sure that the stalled future has made a FIDL request to create a client
+                // interface.  Send back a response assigning an interface ID equal to the PHY ID.
+                assert_variant!(
+                    exec.run_until_stalled(&mut test_values.stream.next()),
+                    Poll::Ready(Some(Ok(
+                        fidl_service::DeviceServiceRequest::CreateIface {
+                            req,
+                            responder,
+                        }
+                    ))) => {
+                        let mut response =
+                            fidl_service::CreateIfaceResponse { iface_id: req.phy_id };
+                        let response = Some(&mut response);
+                        responder.send(ZX_OK, response).expect("sending fake iface id");
+                    }
+                );
+            }
+        }
+
+        // Make sure all of the PHYs have interface IDs and that the IDs match the PHY IDs,
+        // indicating that they were assigned correctly.
+        for phy_id in phy_manager.phys.keys() {
+            assert_eq!(phy_manager.phys[phy_id].client_ifaces.len(), 1);
+            assert!(phy_manager.phys[phy_id].client_ifaces.contains(phy_id));
+        }
+    }
+
+    /// Tests the case where a client interface needs to be recovered and recovery fails.
+    #[test]
+    fn test_recover_client_interfaces_fails() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+
+        // Make it look like client connections have been enabled.
+        phy_manager.client_connections_enabled = true;
+
+        // For this test, use three PHYs (0, 1, and 2).  Let recovery fail for PHYs 0 and 2 and
+        // succeed for PHY 1.  Verify that a create interface request is sent for each PHY and at
+        // the end, verify that only one recovered interface is listed and that PHY 1 has been
+        // assigned that interface.
+        for phy_id in 0..3 {
+            let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Client];
+            let phy_info = fake_phy_info(phy_id, fake_mac_roles);
+            phy_manager.phys.insert(phy_id, PhyContainer::new(phy_info));
+        }
+
+        // Run recovery.
+        {
+            let recovery_fut =
+                phy_manager.create_all_client_ifaces(CreateClientIfacesReason::RecoverClientIfaces);
+            pin_mut!(recovery_fut);
+            assert_variant!(exec.run_until_stalled(&mut recovery_fut), Poll::Pending);
+
+            loop {
+                match exec.run_until_stalled(&mut recovery_fut) {
+                    Poll::Pending => {}
+                    Poll::Ready(result) => {
+                        let iface_ids = assert_variant!(result, Err((iface_ids, _)) => iface_ids);
+                        assert_eq!(iface_ids, vec![1]);
+                        break;
+                    }
+                }
+
+                // Make sure that the stalled future has made a FIDL request to create a client
+                // interface.  Send back a response assigning an interface ID equal to the PHY ID.
+                assert_variant!(
+                    exec.run_until_stalled(&mut test_values.stream.next()),
+                    Poll::Ready(Some(Ok(
+                        fidl_service::DeviceServiceRequest::CreateIface {
+                            req,
+                            responder,
+                        }
+                    ))) => {
+                        let mut response =
+                            fidl_service::CreateIfaceResponse { iface_id: req.phy_id };
+                        let response = Some(&mut response);
+
+                        // As noted above, let the requests for 0 and 2 "fail" and let the request
+                        // for PHY 1 succeed.
+                        let result_code = match req.phy_id {
+                            1 => ZX_OK,
+                            _ => ZX_ERR_NOT_FOUND,
+                        };
+
+                        responder.send(result_code, response).expect("sending fake iface id");
+                    }
+                );
+            }
+        }
+
+        // Make sure PHYs 0 and 2 do not have interfaces and that PHY 1 does.
+        for phy_id in phy_manager.phys.keys() {
+            match phy_id {
+                1 => {
+                    assert_eq!(phy_manager.phys[phy_id].client_ifaces.len(), 1);
+                    assert!(phy_manager.phys[phy_id].client_ifaces.contains(phy_id));
+                }
+                _ => assert!(phy_manager.phys[phy_id].client_ifaces.is_empty()),
+            }
+        }
+    }
+
+    /// Tests the case where a PHY is client-capable, but client connections are disabled and a
+    /// caller requests attempts to recover client interfaces.
+    #[test]
+    fn test_recover_client_interfaces_while_disabled() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
+
+        // Create a fake PHY entry without client interfaces.  Note that client connections have
+        // not been set to enabled.
+        let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Client];
+        let phy_info = fake_phy_info(0, fake_mac_roles);
+        phy_manager.phys.insert(0, PhyContainer::new(phy_info));
+
+        // Run recovery and ensure that it completes immediately and does not recover any
+        // interfaces.
+        {
+            let recovery_fut =
+                phy_manager.create_all_client_ifaces(CreateClientIfacesReason::RecoverClientIfaces);
+            pin_mut!(recovery_fut);
+            assert_variant!(
+                exec.run_until_stalled(&mut recovery_fut),
+                Poll::Ready(Ok(recovered_ifaces)) => {
+                    assert!(recovered_ifaces.is_empty());
+                }
+            );
+        }
+
+        // Verify that there are no client interfaces.
+        for (_, phy_container) in phy_manager.phys {
+            assert!(phy_container.client_ifaces.is_empty());
+        }
     }
 }

@@ -10,7 +10,9 @@ use {
         },
         config_management::SavedNetworksManager,
         mode_management::{
-            iface_manager_api::IfaceManagerApi, iface_manager_types::*, phy_manager::PhyManagerApi,
+            iface_manager_api::IfaceManagerApi,
+            iface_manager_types::*,
+            phy_manager::{CreateClientIfacesReason, PhyManagerApi},
         },
         util::{future_with_metadata, listener},
     },
@@ -599,8 +601,11 @@ impl IfaceManagerService {
 
     async fn start_client_connections(&mut self) -> Result<(), Error> {
         let mut phy_manager = self.phy_manager.lock().await;
-        match phy_manager.create_all_client_ifaces().await {
-            Ok(()) => {
+        match phy_manager
+            .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections)
+            .await
+        {
+            Ok(_) => {
                 // Send an update to the update listener indicating that client connections are now
                 // enabled.
                 let update = listener::ClientStateUpdate {
@@ -614,7 +619,7 @@ impl IfaceManagerService {
                     error!("Failed to send state update: {:?}", e)
                 };
             }
-            phy_manager_error => {
+            Err((_, phy_manager_error)) => {
                 return Err(format_err!(
                     "could not start client connection {:?}",
                     phy_manager_error
@@ -1111,11 +1116,14 @@ mod tests {
 
         fn on_iface_removed(&mut self, _iface_id: u16) {}
 
-        async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
+        async fn create_all_client_ifaces(
+            &mut self,
+            _reason: CreateClientIfacesReason,
+        ) -> Result<Vec<u16>, (Vec<u16>, PhyManagerError)> {
             if self.create_iface_ok {
-                Ok(())
+                Ok(vec![TEST_CLIENT_IFACE_ID])
             } else {
-                Err(PhyManagerError::IfaceCreateFailure)
+                Err((vec![], PhyManagerError::IfaceCreateFailure))
             }
         }
 

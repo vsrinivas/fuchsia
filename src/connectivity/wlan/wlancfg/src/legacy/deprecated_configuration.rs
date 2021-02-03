@@ -68,10 +68,20 @@ impl DeprecatedConfigurator {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::mode_management::phy_manager::PhyManagerError,
-        crate::regulatory_manager::REGION_CODE_LEN, async_trait::async_trait,
-        fidl::endpoints::create_proxy, fidl_fuchsia_net::MacAddress, fuchsia_async as fasync,
-        futures::task::Poll, pin_utils::pin_mut, std::unimplemented, wlan_common::assert_variant,
+        super::*,
+        crate::mode_management::phy_manager::PhyManagerError,
+        crate::{
+            mode_management::phy_manager::CreateClientIfacesReason,
+            regulatory_manager::REGION_CODE_LEN,
+        },
+        async_trait::async_trait,
+        fidl::endpoints::create_proxy,
+        fidl_fuchsia_net::MacAddress,
+        fuchsia_async as fasync,
+        futures::task::Poll,
+        pin_utils::pin_mut,
+        std::unimplemented,
+        wlan_common::assert_variant,
     };
 
     #[derive(Debug)]
@@ -101,7 +111,10 @@ mod tests {
             unimplemented!();
         }
 
-        async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
+        async fn create_all_client_ifaces(
+            &mut self,
+            _reason: CreateClientIfacesReason,
+        ) -> Result<Vec<u16>, (Vec<u16>, PhyManagerError)> {
             unimplemented!();
         }
 
