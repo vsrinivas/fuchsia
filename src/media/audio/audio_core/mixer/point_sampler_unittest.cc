@@ -31,14 +31,14 @@ TEST(PointSamplerTest, Construction) {
   //
   // These formats are supported
   auto mixer =
-      SelectPointSampler(1, 48000, fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 96000);
+      SelectPointSampler(1, 48000, fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000);
   EXPECT_NE(mixer, nullptr);
 
-  mixer = SelectPointSampler(2, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000);
+  mixer = SelectPointSampler(2, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 44100);
   EXPECT_NE(mixer, nullptr);
 
   mixer =
-      SelectPointSampler(2, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 22050);
+      SelectPointSampler(2, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 24000);
   EXPECT_NE(mixer, nullptr);
 
   mixer = SelectPointSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000);
@@ -47,16 +47,16 @@ TEST(PointSamplerTest, Construction) {
   //
   // These formats are not supported
   mixer =
-      SelectPointSampler(5, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 22050);
+      SelectPointSampler(5, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 24000);
   EXPECT_EQ(mixer, nullptr);
 
-  mixer = SelectPointSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 9, 96000);
+  mixer = SelectPointSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 9, 48000);
   EXPECT_EQ(mixer, nullptr);
 
-  mixer = SelectPointSampler(4, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16, 3, 48000);
+  mixer = SelectPointSampler(1, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 24000);
   EXPECT_EQ(mixer, nullptr);
 
-  mixer = SelectPointSampler(3, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000);
+  mixer = SelectPointSampler(2, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000);
   EXPECT_EQ(mixer, nullptr);
 }
 

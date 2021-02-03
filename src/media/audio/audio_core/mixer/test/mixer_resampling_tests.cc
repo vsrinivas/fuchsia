@@ -48,6 +48,7 @@ void TestBasicPosition(Resampler samplerType) {
 
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, samplerType);
+  ASSERT_NE(mixer, nullptr);
 
   //
   // Check: source supply equals destination demand.
@@ -122,6 +123,7 @@ TEST(Resampling, Position_Basic_Linear) { TestBasicPosition(Resampler::LinearInt
 TEST(Resampling, Position_Fractional_Point) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
                            Resampler::SampleAndHold);
+  ASSERT_NE(mixer, nullptr);
 
   //
   // Check: source supply exceeds destination demand
@@ -169,6 +171,7 @@ TEST(Resampling, Position_Fractional_Point) {
 TEST(Resampling, Position_Fractional_Linear) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                            Resampler::LinearInterpolation);
+  ASSERT_NE(mixer, nullptr);
 
   //
   // Check: Source supply exceeds destination demand
@@ -217,6 +220,7 @@ TEST(Resampling, Position_Fractional_Linear) {
 void TestRateModulo(Resampler sampler_type) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 32000, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   float source[] = {0.0f, 0.1f, 0.2f};
   float accum[3];
@@ -250,10 +254,6 @@ void TestRateModulo(Resampler sampler_type) {
   EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
 }
 
-// Verify PointSampler correctly incorporates rate_modulo & denominator
-// parameters into position and interpolation results.
-TEST(Resampling, Rate_Modulo_Point) { TestRateModulo(Resampler::SampleAndHold); }
-
 // Verify LinearSampler correctly incorporates rate_modulo & denominator
 // parameters into position and interpolation results.
 TEST(Resampling, Rate_Modulo_Linear) { TestRateModulo(Resampler::LinearInterpolation); }
@@ -262,6 +262,7 @@ TEST(Resampling, Rate_Modulo_Linear) { TestRateModulo(Resampler::LinearInterpola
 void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   float accum[3];
   uint32_t dest_offset;
@@ -315,6 +316,7 @@ void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
 void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   float accum[3];
   uint32_t dest_offset;
@@ -363,38 +365,11 @@ void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
 }
 
 // For provided sampler, validate src_pos_modulo for early rollover.
-void TestPositionModuloEarlyRolloverPoint(bool mute = false) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100,
-                           Resampler::SampleAndHold);
-  float accum[3];
-  uint32_t dest_offset;
-  int32_t frac_src_offset;
-  float source[3] = {0.0f};
-
-  // Non-zero src_pos_modulo, early-rollover case.
-  dest_offset = 0;
-  frac_src_offset = Mixer::FRAC_ONE - 1;
-
-  auto& info = mixer->bookkeeping();
-  info.step_size = Mixer::FRAC_ONE;
-  info.rate_modulo = 1;
-  info.denominator = 2;
-  info.src_pos_modulo = 0;
-  if (mute) {
-    info.gain.SetSourceGain(Gain::kMinGainDb);
-  }
-
-  mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source) << kPtsFractionalBits,
-             &frac_src_offset, false);
-  EXPECT_EQ(2u, dest_offset);
-  EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
-  EXPECT_EQ(0u, info.src_pos_modulo);
-}
-
-// For provided sampler, validate src_pos_modulo for early rollover.
 void TestPositionModuloEarlyRolloverLinear(bool mute = false) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100,
                            Resampler::LinearInterpolation);
+  ASSERT_NE(mixer, nullptr);
+
   float accum[3];
   uint32_t dest_offset;
   int32_t frac_src_offset;
@@ -426,6 +401,7 @@ void TestPositionModuloEarlyRolloverLinear(bool mute = false) {
 void TestLateSourceOffset(Resampler sampler_type) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   if (mixer->pos_filter_width().raw_value() > 0) {
     float source[4] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -447,16 +423,6 @@ void TestLateSourceOffset(Resampler sampler_type) {
   }
 }
 
-// Verify PointSampler correctly incorporates src_pos_modulo (along with
-// rate_modulo and denominator) into position and interpolation results.
-TEST(Resampling, Position_Modulo_Point) { TestPositionModuloNoRollover(Resampler::SampleAndHold); }
-
-TEST(Resampling, Position_Modulo_Point_Rollover) {
-  TestPositionModuloRollover(Resampler::SampleAndHold);
-}
-
-TEST(Resampling, Position_Modulo_Point_Early_Rollover) { TestPositionModuloEarlyRolloverPoint(); }
-
 // Verify LinearSampler correctly incorporates src_pos_modulo (along with
 // rate_modulo and denominator) into position and interpolation results.
 TEST(Resampling, Position_Modulo_Linear) {
@@ -468,20 +434,6 @@ TEST(Resampling, Position_Modulo_Linear_Rollover) {
 }
 
 TEST(Resampling, Position_Modulo_Linear_Early_Rollover) { TestPositionModuloEarlyRolloverLinear(); }
-
-// Verify PointSampler correctly incorporates src_pos_modulo (along with
-// rate_modulo and denominator) into position and interpolation results.
-TEST(Resampling, Position_Modulo_Point_Mute) {
-  TestPositionModuloNoRollover(Resampler::SampleAndHold, true);
-}
-
-TEST(Resampling, Position_Modulo_Point_Mute_Rollover) {
-  TestPositionModuloRollover(Resampler::SampleAndHold, true);
-}
-
-TEST(Resampling, Position_Modulo_Point_Mute_Early_Rollover) {
-  TestPositionModuloEarlyRolloverPoint(true);
-}
 
 // Verify LinearSampler correctly incorporates src_pos_modulo (along with
 // rate_modulo and denominator) into position and interpolation results.
@@ -505,6 +457,7 @@ TEST(Resampling, Position_Modulo_Linear_Mute_Early_Rollover) {
 void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_frames_per_second) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, source_frames_per_second, 1,
                            dest_frames_per_second, Resampler::LinearInterpolation);
+  ASSERT_NE(mixer, nullptr);
 
   //
   // Base check: interpolated value is exactly calculated, no rounding.
@@ -657,6 +610,7 @@ TEST(Resampling, Linear_Interp_Rate_Max_Error) { TestLinearInterpolation(38426, 
 TEST(Resampling, FilterWidth_Point) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
+  ASSERT_NE(mixer, nullptr);
 
   EXPECT_EQ(mixer->pos_filter_width().raw_value(), Mixer::FRAC_HALF);
   EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_HALF - 1);
@@ -671,6 +625,7 @@ TEST(Resampling, FilterWidth_Point) {
 TEST(Resampling, FilterWidth_Linear) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 48000,
                            Resampler::LinearInterpolation);
+  ASSERT_NE(mixer, nullptr);
 
   EXPECT_EQ(mixer->pos_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
   EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
@@ -693,6 +648,7 @@ TEST(Resampling, Linear_LateSourcePosition) {
 TEST(Resampling, Reset_Linear) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                            Resampler::LinearInterpolation);
+  ASSERT_NE(mixer, nullptr);
 
   // When src_offset ends on fractional val, it caches that sample for next mix
   // Source (offset 0.5 of 3) has 2.5. Destination (offset 2 of 4) wants 2.

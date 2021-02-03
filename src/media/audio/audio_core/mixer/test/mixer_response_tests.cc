@@ -34,6 +34,11 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   auto accum_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
 
   auto mixer = SelectMixer(SampleFormat, 1, 48000, 1, 48000, Resampler::SampleAndHold);
+  if (mixer == nullptr) {
+    ADD_FAILURE() << "null mixer";
+    return 0.0;
+  }
+
   auto [amplitude, expected_amplitude] = SampleFormatToAmplitudes(SampleFormat);
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
@@ -451,6 +456,7 @@ void EvaluatePhaseResults(double* phase_results, const double* phase_limits,
 void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                           double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 48000, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize, freq_resp_results, sinad_results,
                             phase_results);
@@ -464,6 +470,7 @@ void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results, dou
 void TestDownSampleRatio0(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                           double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 191999, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), (kFreqTestBufSize << 2) - 1, freq_resp_results,
                             sinad_results, phase_results);
@@ -474,6 +481,7 @@ void TestDownSampleRatio0(Resampler sampler_type, double* freq_resp_results, dou
 void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                           double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 48000 * 2, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize << 1, freq_resp_results, sinad_results,
                             phase_results);
@@ -484,6 +492,7 @@ void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results, dou
 void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                           double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 88200, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), round(kFreqTestBufSize * 88200.0 / 48000.0),
                             freq_resp_results, sinad_results, phase_results);
@@ -493,6 +502,7 @@ void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results, dou
 void TestMicroSampleRatio(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                           double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 48001, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize + 1, freq_resp_results, sinad_results,
                             phase_results);
@@ -503,6 +513,7 @@ void TestMicroSampleRatio(Resampler sampler_type, double* freq_resp_results, dou
 void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                         double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 44100, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), round(kFreqTestBufSize * 44100.0 / 48000.0),
                             freq_resp_results, sinad_results, phase_results);
@@ -513,6 +524,7 @@ void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results, doubl
 void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                         double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 24000, 1, 24000 * 2, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), kFreqTestBufSize >> 1, freq_resp_results, sinad_results,
                             phase_results);
@@ -524,6 +536,7 @@ void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results, doubl
 void TestUpSampleRatio3(Resampler sampler_type, double* freq_resp_results, double* sinad_results,
                         double* phase_results) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 12001, 1, 48000, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   MeasureFreqRespSinadPhase(mixer.get(), (kFreqTestBufSize >> 2) + 1, freq_resp_results,
                             sinad_results, phase_results);
@@ -554,225 +567,6 @@ TEST(Phase, Point_Unity) {
 
   EvaluatePhaseResults(AudioResult::PhasePointUnity.data(),
                        AudioResult::kPrevPhasePointUnity.data());
-}
-
-// Measure Freq Response for Point sampler for down-sampling ratio #0.
-TEST(FrequencyResponse, Point_DownSamp0) {
-  TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
-                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
-
-  EvaluateFreqRespResults(AudioResult::FreqRespPointDown0.data(),
-                          AudioResult::kPrevFreqRespPointDown0.data());
-}
-
-// Measure SINAD for Point sampler for down-sampling ratio #0.
-TEST(Sinad, Point_DownSamp0) {
-  TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
-                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
-
-  EvaluateSinadResults(AudioResult::SinadPointDown0.data(),
-                       AudioResult::kPrevSinadPointDown0.data());
-}
-
-// Measure Out-of-band Rejection for Point sampler for down-sampling ratio #0.
-TEST(Rejection, Point_DownSamp0) {
-  TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
-                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
-
-  EvaluateRejectionResults(AudioResult::SinadPointDown0.data(),
-                           AudioResult::kPrevSinadPointDown0.data());
-}
-
-// Measure Phase Response for Point sampler for down-sampling ratio #0.
-TEST(Phase, Point_DownSamp0) {
-  TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
-                       AudioResult::SinadPointDown0.data(), AudioResult::PhasePointDown0.data());
-
-  EvaluatePhaseResults(AudioResult::PhasePointDown0.data(),
-                       AudioResult::kPrevPhasePointDown0.data());
-}
-
-// Measure Freq Response for Point sampler for down-sampling ratio #1.
-TEST(FrequencyResponse, Point_DownSamp1) {
-  TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
-                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
-
-  EvaluateFreqRespResults(AudioResult::FreqRespPointDown1.data(),
-                          AudioResult::kPrevFreqRespPointDown1.data());
-}
-
-// Measure SINAD for Point sampler for down-sampling ratio #1.
-TEST(Sinad, Point_DownSamp1) {
-  TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
-                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
-
-  EvaluateSinadResults(AudioResult::SinadPointDown1.data(),
-                       AudioResult::kPrevSinadPointDown1.data());
-}
-
-// Measure Out-of-band Rejection for Point sampler for down-sampling ratio #1.
-TEST(Rejection, Point_DownSamp1) {
-  TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
-                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
-
-  EvaluateRejectionResults(AudioResult::SinadPointDown1.data(),
-                           AudioResult::kPrevSinadPointDown1.data());
-}
-
-// Measure Phase Response for Point sampler for down-sampling ratio #1.
-TEST(Phase, Point_DownSamp1) {
-  TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
-                       AudioResult::SinadPointDown1.data(), AudioResult::PhasePointDown1.data());
-
-  EvaluatePhaseResults(AudioResult::PhasePointDown1.data(),
-                       AudioResult::kPrevPhasePointDown1.data());
-}
-
-// Measure Freq Response for Point sampler for down-sampling ratio #2.
-TEST(FrequencyResponse, Point_DownSamp2) {
-  TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
-                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
-
-  EvaluateFreqRespResults(AudioResult::FreqRespPointDown2.data(),
-                          AudioResult::kPrevFreqRespPointDown2.data());
-}
-
-// Measure SINAD for Point sampler for down-sampling ratio #2.
-TEST(Sinad, Point_DownSamp2) {
-  TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
-                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
-
-  EvaluateSinadResults(AudioResult::SinadPointDown2.data(),
-                       AudioResult::kPrevSinadPointDown2.data());
-}
-
-// Measure Out-of-band Rejection for Point sampler for down-sampling ratio #2.
-TEST(Rejection, Point_DownSamp2) {
-  TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
-                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
-
-  EvaluateRejectionResults(AudioResult::SinadPointDown2.data(),
-                           AudioResult::kPrevSinadPointDown2.data());
-}
-
-// Measure Phase Response for Point sampler for down-sampling ratio #2.
-TEST(Phase, Point_DownSamp2) {
-  TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
-                       AudioResult::SinadPointDown2.data(), AudioResult::PhasePointDown2.data());
-
-  EvaluatePhaseResults(AudioResult::PhasePointDown2.data(),
-                       AudioResult::kPrevPhasePointDown2.data());
-}
-
-// Measure Freq Response for Point sampler with minimum down-sampling rate change.
-TEST(FrequencyResponse, Point_MicroSRC) {
-  TestMicroSampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointMicro.data(),
-                       AudioResult::SinadPointMicro.data(), AudioResult::PhasePointMicro.data());
-
-  EvaluateFreqRespResults(AudioResult::FreqRespPointMicro.data(),
-                          AudioResult::kPrevFreqRespPointMicro.data());
-}
-
-// Measure SINAD for Point sampler with minimum down-sampling rate change.
-TEST(Sinad, Point_MicroSRC) {
-  TestMicroSampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointMicro.data(),
-                       AudioResult::SinadPointMicro.data(), AudioResult::PhasePointMicro.data());
-
-  EvaluateSinadResults(AudioResult::SinadPointMicro.data(),
-                       AudioResult::kPrevSinadPointMicro.data());
-}
-
-// Measure Out-of-band Rejection for Point sampler with minimum down-sampling rate change.
-TEST(Rejection, Point_MicroSRC) {
-  TestMicroSampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointMicro.data(),
-                       AudioResult::SinadPointMicro.data(), AudioResult::PhasePointMicro.data());
-
-  EvaluateRejectionResults(AudioResult::SinadPointMicro.data(),
-                           AudioResult::kPrevSinadPointMicro.data());
-}
-
-// Measure Phase Response for Point sampler with minimum down-sampling rate change.
-TEST(Phase, Point_MicroSRC) {
-  TestMicroSampleRatio(Resampler::SampleAndHold, AudioResult::FreqRespPointMicro.data(),
-                       AudioResult::SinadPointMicro.data(), AudioResult::PhasePointMicro.data());
-
-  EvaluatePhaseResults(AudioResult::PhasePointMicro.data(),
-                       AudioResult::kPrevPhasePointMicro.data());
-}
-
-// Measure Freq Response for Point sampler for up-sampling ratio #1.
-TEST(FrequencyResponse, Point_UpSamp1) {
-  TestUpSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointUp1.data(),
-                     AudioResult::SinadPointUp1.data(), AudioResult::PhasePointUp1.data());
-
-  EvaluateFreqRespResults(AudioResult::FreqRespPointUp1.data(),
-                          AudioResult::kPrevFreqRespPointUp1.data());
-}
-
-// Measure SINAD for Point sampler for up-sampling ratio #1.
-TEST(Sinad, Point_UpSamp1) {
-  TestUpSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointUp1.data(),
-                     AudioResult::SinadPointUp1.data(), AudioResult::PhasePointUp1.data());
-
-  EvaluateSinadResults(AudioResult::SinadPointUp1.data(), AudioResult::kPrevSinadPointUp1.data());
-}
-
-// Measure Phase Response for Point sampler for up-sampling ratio #1.
-TEST(Phase, Point_UpSamp1) {
-  TestUpSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointUp1.data(),
-                     AudioResult::SinadPointUp1.data(), AudioResult::PhasePointUp1.data());
-
-  EvaluatePhaseResults(AudioResult::PhasePointUp1.data(), AudioResult::kPrevPhasePointUp1.data());
-}
-
-// Measure Freq Response for Point sampler for up-sampling ratio #2.
-TEST(FrequencyResponse, Point_UpSamp2) {
-  TestUpSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointUp2.data(),
-                     AudioResult::SinadPointUp2.data(), AudioResult::PhasePointUp2.data());
-
-  EvaluateFreqRespResults(AudioResult::FreqRespPointUp2.data(),
-                          AudioResult::kPrevFreqRespPointUp2.data());
-}
-
-// Measure SINAD for Point sampler for up-sampling ratio #2.
-TEST(Sinad, Point_UpSamp2) {
-  TestUpSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointUp2.data(),
-                     AudioResult::SinadPointUp2.data(), AudioResult::PhasePointUp2.data());
-
-  EvaluateSinadResults(AudioResult::SinadPointUp2.data(), AudioResult::kPrevSinadPointUp2.data());
-}
-
-// Measure Phase Response for Point sampler for up-sampling ratio #2.
-TEST(Phase, Point_UpSamp2) {
-  TestUpSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointUp2.data(),
-                     AudioResult::SinadPointUp2.data(), AudioResult::PhasePointUp2.data());
-
-  EvaluatePhaseResults(AudioResult::PhasePointUp2.data(), AudioResult::kPrevPhasePointUp2.data());
-}
-
-// Measure Freq Response for Point sampler for up-sampling ratio #3.
-TEST(FrequencyResponse, Point_UpSamp3) {
-  TestUpSampleRatio3(Resampler::SampleAndHold, AudioResult::FreqRespPointUp3.data(),
-                     AudioResult::SinadPointUp3.data(), AudioResult::PhasePointUp3.data());
-
-  EvaluateFreqRespResults(AudioResult::FreqRespPointUp3.data(),
-                          AudioResult::kPrevFreqRespPointUp3.data());
-}
-
-// Measure SINAD for Point sampler for up-sampling ratio #3.
-TEST(Sinad, Point_UpSamp3) {
-  TestUpSampleRatio3(Resampler::SampleAndHold, AudioResult::FreqRespPointUp3.data(),
-                     AudioResult::SinadPointUp3.data(), AudioResult::PhasePointUp3.data());
-
-  EvaluateSinadResults(AudioResult::SinadPointUp3.data(), AudioResult::kPrevSinadPointUp3.data());
-}
-
-// Measure Phase Response for Point sampler for up-sampling ratio #3.
-TEST(Phase, Point_UpSamp3) {
-  TestUpSampleRatio3(Resampler::SampleAndHold, AudioResult::FreqRespPointUp3.data(),
-                     AudioResult::SinadPointUp3.data(), AudioResult::PhasePointUp3.data());
-
-  EvaluatePhaseResults(AudioResult::PhasePointUp3.data(), AudioResult::kPrevPhasePointUp3.data());
 }
 
 // Measure Freq Response for Linear sampler, no rate conversion.
@@ -1314,6 +1108,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
 
   // Mix the N-channel source[] into the N-channel accum[].
   auto mixer = SelectMixer(ASF::FLOAT, num_chans, source_rate, num_chans, dest_rate, sampler_type);
+  ASSERT_NE(mixer, nullptr);
 
   auto num_dest_frames = kFreqTestBufSize;
   auto dest_format = Format::Create<ASF::FLOAT>(num_chans, dest_rate).take_value();
@@ -1424,36 +1219,6 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
       phase_rad[freq_idx] = result.phases[frequency_to_measure];
     }
   }
-}
-
-// Measure Freq Response for NxN Point sampler, with minimum down-sampling rate change.
-TEST(FrequencyResponse, Point_NxN) {
-  TestNxNEquivalence(Resampler::SampleAndHold, AudioResult::FreqRespPointNxN.data(),
-                     AudioResult::SinadPointNxN.data(), AudioResult::PhasePointNxN.data());
-
-  // Final param signals to evaluate only at summary frequencies.
-  EvaluateFreqRespResults(AudioResult::FreqRespPointNxN.data(),
-                          AudioResult::kPrevFreqRespPointMicro.data(), true);
-}
-
-// Measure SINAD for NxN Point sampler, with minimum down-sampling rate change.
-TEST(Sinad, Point_NxN) {
-  TestNxNEquivalence(Resampler::SampleAndHold, AudioResult::FreqRespPointNxN.data(),
-                     AudioResult::SinadPointNxN.data(), AudioResult::PhasePointNxN.data());
-
-  // Final param signals to evaluate only at summary frequencies.
-  EvaluateSinadResults(AudioResult::SinadPointNxN.data(), AudioResult::kPrevSinadPointMicro.data(),
-                       true);
-}
-
-// Measure Phase Response for NxN Point sampler, with minimum down-sampling rate change.
-TEST(Phase, Point_NxN) {
-  TestNxNEquivalence(Resampler::SampleAndHold, AudioResult::FreqRespPointNxN.data(),
-                     AudioResult::SinadPointNxN.data(), AudioResult::PhasePointNxN.data());
-
-  // Final param signals to evaluate only at summary frequencies.
-  EvaluatePhaseResults(AudioResult::PhasePointNxN.data(), AudioResult::kPrevPhasePointMicro.data(),
-                       true);
 }
 
 // Measure Freq Response for NxN Linear sampler, with minimum down-sampling rate change.

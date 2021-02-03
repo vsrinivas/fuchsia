@@ -17,6 +17,8 @@ using ASF = fuchsia::media::AudioSampleFormat;
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
 void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_db) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 48000, 1, 48000, Resampler::SampleAndHold);
+  ASSERT_NE(mixer, nullptr);
+
   auto format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
@@ -115,6 +117,8 @@ TEST(DynamicRange, 90Down) {
 // Test our mix level and noise floor, when rechannelizing mono into stereo.
 TEST(DynamicRange, MonoToStereo) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 48000, 2, 48000, Resampler::SampleAndHold);
+  ASSERT_NE(mixer, nullptr);
+
   auto mono_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
   auto stereo_format = Format::Create<ASF::FLOAT>(2, 48000).take_value();
 
@@ -154,6 +158,8 @@ TEST(DynamicRange, MonoToStereo) {
 // Test our mix level and noise floor, when rechannelizing stereo into mono.
 TEST(DynamicRange, StereoToMono) {
   auto mixer = SelectMixer(ASF::FLOAT, 2, 48000, 1, 48000, Resampler::SampleAndHold);
+  ASSERT_NE(mixer, nullptr);
+
   auto mono_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
   auto stereo_format = Format::Create<ASF::FLOAT>(2, 48000).take_value();
 
@@ -223,8 +229,9 @@ TEST(DynamicRange, StereoToMono) {
 template <ASF SampleFormat>
 void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   auto mixer = SelectMixer(SampleFormat, 1, 48000, 1, 48000, Resampler::SampleAndHold);
-  auto [amplitude, expected_amplitude] = SampleFormatToAmplitudes(SampleFormat);
+  ASSERT_NE(mixer, nullptr);
 
+  auto [amplitude, expected_amplitude] = SampleFormatToAmplitudes(SampleFormat);
   auto format = Format::Create<SampleFormat>(1, 48000).take_value();
   auto float_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
 

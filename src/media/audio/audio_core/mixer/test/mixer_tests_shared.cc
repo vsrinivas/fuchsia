@@ -72,6 +72,8 @@ void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
 // By default, does not gain-scale or accumulate (both can be overridden).
 void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate, int32_t num_frames,
            float gain_db) {
+  ASSERT_NE(mixer, nullptr);
+
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 

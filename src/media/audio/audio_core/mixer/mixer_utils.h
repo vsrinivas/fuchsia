@@ -49,14 +49,18 @@ template <typename SrcSampleType>
 class SampleNormalizer<SrcSampleType,
                        typename std::enable_if_t<std::is_same_v<SrcSampleType, int16_t>>> {
  public:
-  static inline float Read(const SrcSampleType* src) { return kInt16ToFloat * (*src); }
+  static inline float Read(const SrcSampleType* src) {
+    return kInt16ToFloat * static_cast<float>(*src);
+  }
 };
 
 template <typename SrcSampleType>
 class SampleNormalizer<SrcSampleType,
                        typename std::enable_if_t<std::is_same_v<SrcSampleType, int32_t>>> {
  public:
-  static inline float Read(const SrcSampleType* src) { return kInt24In32ToFloat * (*src); }
+  static inline float Read(const SrcSampleType* src) {
+    return kInt24In32ToFloat * static_cast<double>(*src);
+  }
 };
 
 template <typename SrcSampleType>

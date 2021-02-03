@@ -68,13 +68,6 @@ double AudioResult::LevelToleranceInterpolation = 0.0;
 constexpr double AudioResult::kPrevLevelToleranceInterpolation;
 
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointUnity = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointDown0 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointDown1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointDown2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointMicro = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointUp1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointUp2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointUp3 = {NAN};
 
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespLinearUnity = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespLinearDown0 = {NAN};
@@ -94,7 +87,6 @@ std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespS
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp2 = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespSincUp3 = {NAN};
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespPointNxN = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::FreqRespLinearNxN = {NAN};
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
@@ -117,55 +109,6 @@ const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
       -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
       -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
       -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointDown0 = {
-       0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-       0.000,     0.000,     0.000,     0.000,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.002,    -0.003,    -0.004,    -0.007,    -0.010,    -0.016,    -0.025,
-      -0.039,    -0.056,    -0.100,    -0.148,    -0.156,    -0.164,    -0.172,    -0.190,    -0.214      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointDown1 = {
-       0.000,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointDown2 = {
-       0.000,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.002,
-      -0.002,    -0.003,    -0.005,    -0.008,    -0.012,    -0.019,    -0.030,    -0.046,    -0.074,    -0.119,
-      -0.185,    -0.266,    -0.476,    -0.711,    -0.748,    -0.785,    -0.826,    -0.913,    -1.032      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointMicro = {
-       0.000,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.002,    -0.002,    -0.003,    -0.005,
-      -0.007,    -0.010,    -0.016,    -0.025,    -0.039,    -0.062,    -0.100,    -0.156,    -0.248,    -0.401,
-      -0.630,    -0.912,    -1.650,    -2.501,    -2.640,    -2.783,    -2.931,    -3.256,    -3.707      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointUp1 = {
-       0.000,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.002,    -0.002,    -0.003,    -0.005,
-      -0.008,    -0.012,    -0.019,    -0.030,    -0.046,    -0.074,    -0.118,    -0.185,    -0.294,    -0.476,
-      -0.748,    -1.085,    -1.969,    -2.999,    -3.168,    -3.344,    -3.524,    -3.922, -INFINITY      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointUp2 = {
-       0.000,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.001,    -0.001,    -0.001,    -0.002,    -0.002,    -0.003,    -0.005,    -0.008,    -0.012,
-      -0.019,    -0.029,    -0.048,    -0.075,    -0.117,    -0.186,    -0.302,    -0.474,    -0.761,    -1.249,
-      -2.010,    -3.010, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointUp3 = {
-       0.000,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,    -0.001,
-      -0.001,    -0.002,    -0.003,    -0.004,    -0.007,    -0.010,    -0.016,    -0.025,    -0.040,    -0.064,
-      -0.100,    -0.155,    -0.256,    -0.401,    -0.629,    -1.008,    -1.650,    -2.640, -INFINITY, -INFINITY,
-   -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY      };
 
 const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
     AudioResult::kPrevFreqRespLinearUnity = {
@@ -280,13 +223,6 @@ const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY      };
 
 const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
-    AudioResult::kPrevFreqRespPointNxN = {
-   -INFINITY,     0.000,     0.000,     0.000,     0.000,     0.000,    -0.001,     0.000,     0.000,     0.000,
-       0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-      -0.007,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-       0.000,    -0.912,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000      };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
     AudioResult::kPrevFreqRespLinearNxN = {
    -INFINITY,     0.000,     0.000,     0.000,     0.000,     0.000,    -0.001,     0.000,     0.000,     0.000,
        0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
@@ -295,13 +231,6 @@ const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx>
 // clang-format on
 
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointMicro = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUp3 = {NAN};
 
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearUnity = {NAN};
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearDown0 = {NAN};
@@ -321,7 +250,6 @@ std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp1 =
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp2 = {NAN};
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadSincUp3 = {NAN};
 
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointNxN = {-INFINITY};
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearNxN = {-INFINITY};
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
@@ -343,62 +271,6 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
       153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,
       153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,
       153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745, -INFINITY,
-    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY      };
-
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointDown0 = {
-      160.000,    78.100,    75.968,    74.574,    72.571,    70.944,    68.714,    66.678,    64.610,    62.450,
-       60.464,    58.641,    56.311,    54.539,    52.543,    50.509,    48.535,    46.510,    44.519,    42.442,
-       40.508,    38.574,    36.417,    34.478,    32.534,    30.525,    28.449,    26.508,    24.496,    22.418,
-       20.472,    18.878,    16.353,    14.604,    14.379,    14.160,    13.946,    13.512,    12.980,     0.219,
-       -0.001,    -0.001,    -0.001,    -0.001,    -0.001,     0.000,     0.000,     0.000,     0.001,     1.563,
-        2.229,     2.256      };
-
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointDown1 = {
-      160.000,   153.714,   153.745,   153.745,   153.714,   153.745,   153.745,   153.745,   153.745,   153.745,
-      153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,
-      153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,
-      153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,   153.745,    -0.000,
-        0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-    -INFINITY, -INFINITY      };
-
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointDown2 = {
-      160.000,    71.336,    69.207,    67.815,    65.812,    64.186,    61.956,    59.920,    57.853,    55.693,
-       53.707,    51.884,    49.554,    47.782,    45.787,    43.752,    41.778,    39.753,    37.762,    35.685,
-       33.751,    31.816,    29.658,    27.717,    25.772,    23.760,    21.679,    19.730,    17.705,    15.605,
-       13.628,    11.995,     9.369,     7.505,     7.262,     7.027,     6.790,     6.313,     5.721,     0.967,
-        0.000,    -0.001,    -0.001,    -0.001,    -0.001,     0.000,    -0.001,     0.000, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY      };
-
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointMicro = {
-      160.000,    66.059,    63.927,    62.533,    60.530,    58.903,    56.673,    54.636,    52.569,    50.409,
-       48.423,    46.600,    44.269,    42.498,    40.502,    38.467,    36.493,    34.468,    32.476,    30.398,
-       28.464,    26.527,    24.367,    22.422,    20.471,    18.449,    16.352,    14.379,    12.315,    10.150,
-        8.073,     6.315,     3.354,     1.087,     0.775,     0.467,     0.160,    -0.479,    -1.297,     2.256,
-    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY      };
-
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUp1 = {
-      160.000,    65.316,    63.187,    61.794,    59.792,    58.166,    55.936,    53.900,    51.833,    49.673,
-       47.687,    45.863,    43.533,    41.762,    39.766,    37.731,    35.757,    33.732,    31.740,    29.662,
-       27.727,    25.790,    23.629,    21.683,    19.731,    17.706,    15.605,    13.626,    11.551,     9.369,
-        7.263,     5.471,     2.414,     0.023,    -0.310,    -0.643,    -0.972,    -1.664, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY      };
-
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUp2 = {
-      160.000,    61.281,    59.152,    57.759,    55.757,    54.130,    51.901,    49.865,    47.798,    45.637,
-       43.652,    41.828,    39.498,    37.726,    35.730,    33.695,    31.720,    29.695,    27.701,    25.622,
-       23.684,    21.742,    19.573,    17.616,    15.645,    13.590,    11.439,     9.383,     7.180,     4.772,
-        2.302,     0.002, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY      };
-
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUp3 = {
-      160.000,    54.018,    51.882,    50.489,    48.488,    46.861,    44.631,    42.595,    40.528,    38.368,
-       36.382,    34.558,    32.227,    30.455,    28.458,    26.421,    24.443,    22.413,    20.413,    18.322,
-       16.367,    14.399,    12.182,    10.155,     8.072,     5.830,     3.353,     0.775, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY      };
 
@@ -530,14 +402,6 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY      };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointNxN = {
-    -INFINITY,     0.000,     0.000,     0.000,     0.000,     0.000,    56.673,     0.000,     0.000,     0.000,
-        0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-       28.464,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-        0.000,     6.315,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-        0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
-        0.000,     0.000      };
-
 const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearNxN = {
     -INFINITY,     0.000,     0.000,     0.000,     0.000,     0.000,   120.182,     0.000,     0.000,     0.000,
         0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,     0.000,
@@ -550,13 +414,6 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
 constexpr double AudioResult::kPhaseTolerance;
 
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointUnity = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointDown0 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointDown1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointDown2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointMicro = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointUp1 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointUp2 = {NAN};
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointUp3 = {NAN};
 
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseLinearUnity = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseLinearDown0 = {NAN};
@@ -576,7 +433,6 @@ std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSinc
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp2 = {NAN};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseSincUp3 = {NAN};
 
-std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhasePointNxN = {-INFINITY};
 std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::PhaseLinearNxN = {-INFINITY};
 
 // clang-format off
@@ -585,48 +441,6 @@ const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPr
       0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,
       0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,   0.00000,  -0.00000,  -0.00000,  -0.00000,
      -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointDown0 = {
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,
-     -0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,  -0.00000,  -0.00000,   0.00000,  -0.00000,   0.00000,
-      0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,   0.00000,  -0.00000,
-     -0.00000,  -0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,  -0.00000,   0.00000,  -0.00000    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointDown1 = {
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,
-      0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,   0.00000,  -0.00000,  -0.00000,  -0.00000,
-     -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointDown2 = {
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00001,   0.00001,   0.00001,   0.00001,   0.00001,   0.00002,
-      0.00002,   0.00003,   0.00003,   0.00004,   0.00004,   0.00004,   0.00005,   0.00005,   0.00005    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointMicro = {
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,   0.00000,  -0.00000,  -0.00000,
-     -0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,  -0.00000,  -0.00000,   0.00000,  -0.00000,  -0.00000,
-      0.00000,  -0.00000,   0.00000,  -0.00000,   0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointUp1 = {
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,
-      0.00000,   0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,
-      0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000, -INFINITY    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointUp2 = {
-      0.00000,   0.00086,   0.00110,   0.00129,   0.00163,   0.00197,   0.00254,   0.00321,   0.00407,   0.00523,
-      0.00657,   0.00810,   0.01059,   0.01299,   0.01635,   0.02066,   0.02593,   0.03274,   0.04118,   0.05230,
-      0.06534,   0.08164,   0.10465,   0.13082,   0.16361,   0.20618,   0.26178,   0.32727,   0.41240,   0.52352,
-      0.65439,   0.78525, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointUp3 = {
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,  -0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,
-      0.00000,  -0.00000,   0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000,  -0.00000, -INFINITY, -INFINITY,
-    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY    };
 
 const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhaseLinearUnity = {
       0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
@@ -723,12 +537,6 @@ const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPr
      -0.00000,  -0.00000,  -0.00000,  -0.00001,  -0.00001,  -0.00001,  -0.00001,  -0.00001,  -0.00002,  -0.00002,
      -0.00003,  -0.00003,  -0.00004,  -0.00006,  -0.00007,  -0.00009,  -0.00011,  -0.00014, -INFINITY, -INFINITY,
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY    };
-
-const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhasePointNxN = {
-    -INFINITY,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-     -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,
-      0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000    };
 
 const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> AudioResult::kPrevPhaseLinearNxN = {
     -INFINITY,   0.00000,   0.00000,   0.00000,   0.00000,   0.00000,  -0.00000,   0.00000,   0.00000,   0.00000,
@@ -858,13 +666,6 @@ void AudioResult::DumpFreqRespValues() {
   printf("\n   (all results given in dB)");
 
   DumpFreqRespValueSet(AudioResult::FreqRespPointUnity.data(), "FreqRespPointUnity");
-  DumpFreqRespValueSet(AudioResult::FreqRespPointDown0.data(), "FreqRespPointDown0");
-  DumpFreqRespValueSet(AudioResult::FreqRespPointDown1.data(), "FreqRespPointDown1");
-  DumpFreqRespValueSet(AudioResult::FreqRespPointDown2.data(), "FreqRespPointDown2");
-  DumpFreqRespValueSet(AudioResult::FreqRespPointMicro.data(), "FreqRespPointMicro");
-  DumpFreqRespValueSet(AudioResult::FreqRespPointUp1.data(), "FreqRespPointUp1");
-  DumpFreqRespValueSet(AudioResult::FreqRespPointUp2.data(), "FreqRespPointUp2");
-  DumpFreqRespValueSet(AudioResult::FreqRespPointUp3.data(), "FreqRespPointUp3");
 
   DumpFreqRespValueSet(AudioResult::FreqRespLinearUnity.data(), "FreqRespLinearUnity");
   DumpFreqRespValueSet(AudioResult::FreqRespLinearDown0.data(), "FreqRespLinearDown0");
@@ -884,7 +685,6 @@ void AudioResult::DumpFreqRespValues() {
   DumpFreqRespValueSet(AudioResult::FreqRespSincUp2.data(), "FreqRespSincUp2");
   DumpFreqRespValueSet(AudioResult::FreqRespSincUp3.data(), "FreqRespSincUp3");
 
-  DumpFreqRespValueSet(AudioResult::FreqRespPointNxN.data(), "FreqRespPointNxN");
   DumpFreqRespValueSet(AudioResult::FreqRespLinearNxN.data(), "FreqRespLinearNxN");
 }
 
@@ -893,13 +693,6 @@ void AudioResult::DumpSinadValues() {
   printf("\n   (all results given in dB)");
 
   DumpSinadValueSet(AudioResult::SinadPointUnity.data(), "SinadPointUnity");
-  DumpSinadValueSet(AudioResult::SinadPointDown0.data(), "SinadPointDown0");
-  DumpSinadValueSet(AudioResult::SinadPointDown1.data(), "SinadPointDown1");
-  DumpSinadValueSet(AudioResult::SinadPointDown2.data(), "SinadPointDown2");
-  DumpSinadValueSet(AudioResult::SinadPointMicro.data(), "SinadPointMicro");
-  DumpSinadValueSet(AudioResult::SinadPointUp1.data(), "SinadPointUp1");
-  DumpSinadValueSet(AudioResult::SinadPointUp2.data(), "SinadPointUp2");
-  DumpSinadValueSet(AudioResult::SinadPointUp3.data(), "SinadPointUp3");
 
   DumpSinadValueSet(AudioResult::SinadLinearUnity.data(), "SinadLinearUnity");
   DumpSinadValueSet(AudioResult::SinadLinearDown0.data(), "SinadLinearDown0");
@@ -919,7 +712,6 @@ void AudioResult::DumpSinadValues() {
   DumpSinadValueSet(AudioResult::SinadSincUp2.data(), "SinadSincUp2");
   DumpSinadValueSet(AudioResult::SinadSincUp3.data(), "SinadSincUp3");
 
-  DumpSinadValueSet(AudioResult::SinadPointNxN.data(), "SinadPointNxN");
   DumpSinadValueSet(AudioResult::SinadLinearNxN.data(), "SinadLinearNxN");
 }
 
@@ -928,13 +720,6 @@ void AudioResult::DumpPhaseValues() {
   printf("\n   (all results given in radians)");
 
   DumpPhaseValueSet(AudioResult::PhasePointUnity.data(), "PhasePointUnity");
-  DumpPhaseValueSet(AudioResult::PhasePointDown0.data(), "PhasePointDown0");
-  DumpPhaseValueSet(AudioResult::PhasePointDown1.data(), "PhasePointDown1");
-  DumpPhaseValueSet(AudioResult::PhasePointDown2.data(), "PhasePointDown2");
-  DumpPhaseValueSet(AudioResult::PhasePointMicro.data(), "PhasePointMicro");
-  DumpPhaseValueSet(AudioResult::PhasePointUp1.data(), "PhasePointUp1");
-  DumpPhaseValueSet(AudioResult::PhasePointUp2.data(), "PhasePointUp2");
-  DumpPhaseValueSet(AudioResult::PhasePointUp3.data(), "PhasePointUp3");
 
   DumpPhaseValueSet(AudioResult::PhaseLinearUnity.data(), "PhaseLinearUnity");
   DumpPhaseValueSet(AudioResult::PhaseLinearDown0.data(), "PhaseLinearDown0");
@@ -954,7 +739,6 @@ void AudioResult::DumpPhaseValues() {
   DumpPhaseValueSet(AudioResult::PhaseSincUp2.data(), "PhaseSincUp2");
   DumpPhaseValueSet(AudioResult::PhaseSincUp3.data(), "PhaseSincUp3");
 
-  DumpPhaseValueSet(AudioResult::PhasePointNxN.data(), "PhasePointNxN");
   DumpPhaseValueSet(AudioResult::PhaseLinearNxN.data(), "PhaseLinearNxN");
 }
 

@@ -29,7 +29,7 @@ using Resampler = ::media::audio::Mixer::Resampler;
 //
 // Create PointSampler objects for incoming buffers of type uint8
 TEST(DataFormats, PointSampler_8) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 32000, 1, 16000,
+  EXPECT_EQ(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 32000, 1, 16000,
                                  Resampler::SampleAndHold));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 4, 48000, 4, 48000,
                                  Resampler::SampleAndHold));
@@ -39,23 +39,23 @@ TEST(DataFormats, PointSampler_8) {
 TEST(DataFormats, PointSampler_16) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 24000, 1, 24000,
                                  Resampler::SampleAndHold));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 2, 11025,
+  EXPECT_EQ(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 2, 11025,
                                  Resampler::SampleAndHold));
 }
 
 // Create PointSampler objects for incoming buffers of type int24-in-32
 TEST(DataFormats, PointSampler_24) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1,
-                                 8000, Resampler::SampleAndHold));
+  EXPECT_EQ(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1,
+                                 48000, Resampler::SampleAndHold));
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 8000, 4,
                                  8000, Resampler::SampleAndHold));
 }
 
 // Create PointSampler objects for incoming buffers of type float
 TEST(DataFormats, PointSampler_Float) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 2, 16000,
+  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 2, 48000,
                                  Resampler::SampleAndHold));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 16000,
+  EXPECT_EQ(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 16000,
                                  Resampler::SampleAndHold));
 }
 

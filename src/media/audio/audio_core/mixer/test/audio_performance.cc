@@ -125,6 +125,10 @@ void AudioPerformance::ProfileMixerCreationTypeChanRateFormat(
 
     auto mixer1 = SelectMixer(sample_format, num_input_chans, source_rate, num_output_chans,
                               dest_rate, sampler_type);
+    if (!mixer1) {
+      return;
+    }
+
     mixer1->EagerlyPrepare();
     auto t1 = zx::clock::get_monotonic();
 
@@ -499,6 +503,9 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
   }
 
   auto output_producer = SelectOutputProducer(SampleFormat, num_chans);
+  if (!output_producer) {
+    return;
+  }
 
   using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
   uint32_t num_samples = kFreqTestBufSize * num_chans;

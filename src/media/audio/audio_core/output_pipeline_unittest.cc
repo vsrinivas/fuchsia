@@ -118,19 +118,34 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
     return stream;
   }
 
-  void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
+  // If tolerance is not supplied, we FLOAT_EQ compare.
+  void CheckBuffer(void* buffer, float expected_sample, size_t num_samples,
+                   float tolerance = 0.0f) {
     float* floats = reinterpret_cast<float*>(buffer);
     for (size_t i = 0; i < num_samples; ++i) {
-      EXPECT_FLOAT_EQ(expected_sample, floats[i])
-          << "failed at sample " << i << " of " << num_samples << ": {"
-          << ([floats, num_samples]() {
-               std::ostringstream out;
-               for (size_t i = 0; i < num_samples; ++i) {
-                 out << floats[i] << ",";
-               }
-               return out.str();
-             })()
-          << "}";
+      if (tolerance) {
+        EXPECT_NEAR(expected_sample, floats[i], std::abs(tolerance))
+            << "failed at sample " << i << " of " << num_samples << ": {"
+            << ([floats, num_samples]() {
+                 std::ostringstream out;
+                 for (size_t i = 0; i < num_samples; ++i) {
+                   out << floats[i] << ", ";
+                 }
+                 return out.str();
+               })()
+            << "}";
+      } else {
+        EXPECT_FLOAT_EQ(expected_sample, floats[i])
+            << "failed at sample " << i << " of " << num_samples << ": {"
+            << ([floats, num_samples]() {
+                 std::ostringstream out;
+                 for (size_t i = 0; i < num_samples; ++i) {
+                   out << floats[i] << ", ";
+                 }
+                 return out.str();
+               })()
+            << "}";
+      }
     }
   }
 
@@ -577,22 +592,32 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
   EXPECT_EQ(zx::duration(0), pipeline->GetPresentationDelay());
 
   // MEDIA streams require 302 frames of lead time. They run through an effect that introduces 300
-  // frames of delay; also SampleAndHold resamplers in the 'default' and 'linearize' MixStages each
+  // frames of delay; SampleAndHold resamplers in the 'default' and 'linearize' MixStages each
   // add 1 frame of lead time.
   const auto default_delay = zx::duration(kDefaultFormat.frames_per_ns().Inverse().Scale(
       kMixLeadTimeFrames + kEffects1LeadTimeFrames + kMixLeadTimeFrames));
-  EXPECT_EQ(default_delay, default_stream->GetPresentationDelay());
+  EXPECT_EQ(default_delay, default_stream->GetPresentationDelay())
+      << default_delay.get() << ", " << default_stream->GetPresentationDelay().get() << ", off by "
+      << (default_delay - default_stream->GetPresentationDelay()).get() << " nsec";
 
   // COMMUNICATION streams require 902 frames of lead time. They run through an effect that
-  // introduces 900 frames of delay; also SampleAndHold resamplers in the 'default' and 'linearize'
+  // introduces 900 frames of delay; SampleAndHold resamplers in the 'default' and 'linearize'
   // MixStages each add 1 frame of lead time.
   const auto communications_delay = zx::duration(
       zx::sec(kMixLeadTimeFrames + kEffects2LeadTimeFrames + kMixLeadTimeFrames).to_nsecs() /
       kDefaultFormat.frames_per_second());
-  EXPECT_EQ(communications_delay, communications_stream->GetPresentationDelay());
+  EXPECT_EQ(communications_delay, communications_stream->GetPresentationDelay())
+      << communications_delay.get() << ", " << communications_stream->GetPresentationDelay().get()
+      << ", off by " << (communications_delay - communications_stream->GetPresentationDelay()).get()
+      << " nsec";
+}
+
+void* SampleOffset(void* ptr, size_t offset) {
+  return reinterpret_cast<void*>(reinterpret_cast<float*>(ptr) + offset);
 }
 
 void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
+  constexpr auto kChannelCount = 2;
   static const PipelineConfig::MixGroup root{
       .name = "linearize",
       .input_streams =
@@ -611,19 +636,19 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
           .effects = {},
           .loopback = true,
           .output_rate = 24000,
-          .output_channels = 2,
+          .output_channels = kChannelCount,
       }},
       .loopback = false,
       .output_rate = 48000,
-      .output_channels = 2,
+      .output_channels = kChannelCount,
   };
 
-  // Add the stream with a usage that routes to the mix stage. We request a simple point sampler
-  // to make data verification a bit simpler.
-  const Mixer::Resampler resampler = Mixer::Resampler::SampleAndHold;
+  // Add the stream with a usage that routes to the mix stage. Our stream will be rate-converted, so
+  // we cannot use SampleAndHold -- we must use WindowedSinc.
+  const Mixer::Resampler resampler = Mixer::Resampler::WindowedSinc;
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
 
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, 2 * PAGE_SIZE);
   std::shared_ptr<PacketQueue> stream;
 
   if (clock_mode == ClockMode::SAME) {
@@ -646,36 +671,66 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   pipeline->AddInput(stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), std::nullopt,
                      resampler);
 
-  bool packet_released[2] = {};
+  bool packet_released[3] = {};
+  constexpr auto kFramesPerRead = 240u;
+
+  constexpr auto kVal1 = 1.0f;
+  constexpr auto kVal2 = -1.0f;
+
+  // Count of transition frames between kVal1 and kVal2 in the output. Sinc samplers will converge
+  // within a filter width; here we expect a settling to +/-7.5% in about 5 frames.
+  constexpr auto kNumTransitionFrames = 5;
+  constexpr auto kValTolerance = 0.075f;
+
+  constexpr auto sample_start = kNumTransitionFrames * kChannelCount;
+  constexpr auto sample_end = (kFramesPerRead - kNumTransitionFrames) * kChannelCount;
+  constexpr auto sample_length = sample_end - sample_start;
   {
     stream->PushPacket(packet_factory.CreatePacket(
-        1.0, zx::msec(5), [&packet_released] { packet_released[0] = true; }));
+        kVal1, zx::msec(5), [&packet_released] { packet_released[0] = true; }));
     stream->PushPacket(packet_factory.CreatePacket(
-        100.0, zx::msec(5), [&packet_released] { packet_released[1] = true; }));
+        kVal2, zx::msec(5), [&packet_released] { packet_released[1] = true; }));
+
+    // We push an extra packet so this test won't need to worry about ring-out values.
+    stream->PushPacket(packet_factory.CreatePacket(
+        kVal2, zx::msec(5), [&packet_released] { packet_released[2] = true; }));
   }
 
   {
-    auto buf = pipeline->ReadLock(Fixed(0), 240);
+    auto buf = pipeline->ReadLock(Fixed(0), kFramesPerRead);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
     EXPECT_TRUE(packet_released[0]);
     EXPECT_FALSE(packet_released[1]);
-    EXPECT_EQ(buf->start().Floor(), 0u);
-    EXPECT_EQ(buf->length().Floor(), 240u);
-    CheckBuffer(buf->payload(), 1.0, 240);
+
+    EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->length().Floor(), kFramesPerRead);
+    auto arr = SampleOffset(buf->payload(), sample_start);
+    CheckBuffer(arr, kVal1, sample_length, kValTolerance * kVal1);
   }
 
   {
-    auto buf = pipeline->ReadLock(Fixed(240), 240);
+    auto buf = pipeline->ReadLock(Fixed(kFramesPerRead), kFramesPerRead);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
-    EXPECT_TRUE(packet_released[0]);
     EXPECT_TRUE(packet_released[1]);
-    EXPECT_EQ(buf->start().Floor(), 240u);
-    EXPECT_EQ(buf->length().Floor(), 240u);
-    CheckBuffer(buf->payload(), 100.0, 240);
+    EXPECT_FALSE(packet_released[2]);
+
+    EXPECT_EQ(buf->start().Floor(), kFramesPerRead);
+    EXPECT_EQ(buf->length().Floor(), kFramesPerRead);
+
+    auto arr = SampleOffset(buf->payload(), sample_start);
+    CheckBuffer(arr, kVal2, sample_length, kValTolerance * kVal2);
+  }
+
+  {
+    auto buf = pipeline->ReadLock(Fixed(kFramesPerRead * 2), kFramesPerRead);
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(buf);
+    EXPECT_TRUE(packet_released[2]);
   }
 }
 
