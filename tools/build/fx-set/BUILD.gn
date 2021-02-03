@@ -13,6 +13,14 @@ go_library("main") {
     "main.go",
     "main_test.go",
   ]
+
+  deps = [
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:github.com/spf13/pflag",
+    "//tools/lib/color",
+    "//tools/lib/command",
+    "//tools/lib/logger",
+  ]
 }
 
 go_binary("fx-set") {
