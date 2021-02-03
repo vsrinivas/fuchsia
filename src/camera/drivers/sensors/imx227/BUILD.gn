@@ -5,6 +5,15 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":imx227_bind_test",
+    ":imx227_unittest",
+  ]
+}
 
 bind_rules("imx227_bind") {
   rules = "imx227.bind"
@@ -16,12 +25,7 @@ bind_rules("imx227_bind") {
   ]
 }
 
-group("bind_test") {
-  testonly = true
-  deps = [ ":imx227_bind_test" ]
-}
-
-source_set("source") {
+source_set("lib") {
   sources = [
     "imx227.cc",
     "imx227_otp.cc",
@@ -55,10 +59,10 @@ source_set("source") {
 driver_module("driver") {
   output_name = "imx227"
 
-  sources = [ "test/imx227_hardware_test.cc" ]
+  sources = [ "imx227_hardware_test.cc" ]
 
   deps = [
-    ":source",
+    ":lib",
     "//sdk/fidl/fuchsia.driver.test",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
@@ -72,4 +76,22 @@ driver_package("imx227") {
       name = "imx227.so"
     },
   ]
+}
+
+executable("imx227_unittest_bin") {
+  testonly = true
+  sources = [ "imx227_unittest.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_mock",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//sdk/banjo/fuchsia.hardware.mipicsi:fuchsia.hardware.mipicsi_mock",
+    "//src/devices/i2c/testing/mock-i2c",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("imx227_unittest") {
+  deps = [ ":imx227_unittest_bin" ]
 }

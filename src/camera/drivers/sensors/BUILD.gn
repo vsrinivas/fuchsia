@@ -6,7 +6,7 @@ group("sensors") {
   deps = [ "imx227" ]
 }
 
-group("bind_test") {
+group("tests") {
   testonly = true
-  deps = [ "imx227:bind_test" ]
+  deps = [ "imx227:tests" ]
 }

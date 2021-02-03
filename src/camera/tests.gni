@@ -7,7 +7,6 @@ camera_tests = {
   deps = [
     "//src/camera/drivers/controller/sherlock/test",
     "//src/camera/drivers/controller/test",
-    "//src/camera/drivers/sensors/imx227/test",
   ]
 
   tests = [
@@ -19,11 +18,6 @@ camera_tests = {
     {
       name = "sherlock_configs_test"
       manifest = "//src/camera/drivers/controller/sherlock/test/meta/sherlock_configs_test.cmx"
-      environments = [ sherlock_env ]
-    },
-    {
-      name = "imx227_test"
-      manifest = "//src/camera/drivers/sensors/imx227/test/meta/imx227_test.cmx"
       environments = [ sherlock_env ]
     },
 
