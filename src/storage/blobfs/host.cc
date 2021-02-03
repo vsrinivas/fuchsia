@@ -226,9 +226,13 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   }
 
   // TODO(smklein): This is hardcoded alongside the check against "kBlockCountMax" above.
-  inode->extents[0].SetStart(start_block);
-  inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
-  inode->extent_count = 1;
+  if (inode->block_count > 0) {
+    inode->extents[0].SetStart(start_block);
+    inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
+    inode->extent_count = 1;
+  } else {
+    inode->extent_count = 0;
+  }
 
   if (json_recorder) {
     json_recorder->Append(info.path.c_str(), info.digest.ToString().c_str(), info.length,

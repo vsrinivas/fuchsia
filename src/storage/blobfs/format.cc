@@ -22,6 +22,8 @@
 namespace blobfs {
 namespace {
 
+using ::block_client::BlockDevice;
+
 // Attempts to format the device as an FVM-based filesystem.
 //
 // If |device| does not speak FVM protocols, returns ZX_OK.

@@ -452,5 +452,13 @@ TEST(BlobfsHostTest, GetNodeWithAnInvalidNodeIndexIsAnError) {
   EXPECT_EQ(node.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
+TEST(BlobfsHostTest, CreateBlobfsWithNullBlobPassesFsck) {
+  std::unique_ptr<Blobfs> blobfs = CreateBlobfs(/*block_count=*/500, {});
+  ASSERT_TRUE(blobfs);
+  AddUncompressedBlob(/*data_size=*/0, *blobfs);
+  BlobfsChecker checker(std::move(blobfs));
+  ASSERT_EQ(checker.Check(), ZX_OK);
+}
+
 }  // namespace
 }  // namespace blobfs

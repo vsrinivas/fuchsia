@@ -70,6 +70,12 @@ void BlobfsChecker::TraverseInodeBitmap() {
           valid = false;
           break;
         }
+        if (extent->Length() == 0) {
+          FX_LOGS(ERROR) << "check: Found zero-length extent at idx " << extents->ExtentIndex()
+                         << " within inode " << n;
+          valid = false;
+          break;
+        }
 
         uint64_t start_block = extent->Start();
         uint64_t end_block = extent->Start() + extent->Length();

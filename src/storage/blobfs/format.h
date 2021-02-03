@@ -61,9 +61,11 @@ constexpr uint32_t kBlobfsCompactMerkleTreeVersion = 0x00000009;
 constexpr uint64_t kBlobfsRevisionBackupSuperblock = 0x00000002;
 // Revision 3: migrated away from old compression formats.
 constexpr uint64_t kBlobfsRevisionNoOldCompressionFormats = 0x00000003;
+// Revision 4: fixed host-side tool bug which generated a zero-length extent for the null blob.
+constexpr uint64_t kBlobfsRevisionHostToolHandlesNullBlobCorrectly = 0x00000004;
 
 // When this next changes, consider enabling the OldestRevisionNotUpdated test.
-constexpr uint64_t kBlobfsCurrentRevision = 0x00000003;
+constexpr uint64_t kBlobfsCurrentRevision = 0x00000004;
 
 constexpr uint32_t kBlobFlagClean          = 1;
 constexpr uint32_t kBlobFlagFVM            = 4;
