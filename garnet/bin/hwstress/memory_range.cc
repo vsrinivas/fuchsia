@@ -15,7 +15,7 @@
 namespace hwstress {
 
 zx::status<std::unique_ptr<MemoryRange>> MemoryRange::Create(uint64_t size, CacheMode mode) {
-  ZX_ASSERT(size % ZX_PAGE_SIZE == 0);
+  ZX_ASSERT(size % zx_system_get_page_size() == 0);
 
   // Create the VMO.
   zx::vmo vmo;
@@ -36,8 +36,7 @@ zx::status<std::unique_ptr<MemoryRange>> MemoryRange::Create(uint64_t size, Cach
   zx_vaddr_t addr;
   status = zx::vmar::root_self()->map(
       /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
-      /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/size,
-      &addr);
+      /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/size, &addr);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -48,8 +47,8 @@ zx::status<std::unique_ptr<MemoryRange>> MemoryRange::Create(uint64_t size, Cach
 
 MemoryRange::MemoryRange(zx::vmo vmo, uint8_t* addr, uint64_t size, CacheMode mode)
     : vmo_(std::move(vmo)), addr_(addr), size_(size), cache_mode_(mode) {
-  ZX_ASSERT(reinterpret_cast<uintptr_t>(addr) % ZX_PAGE_SIZE == 0);
-  ZX_ASSERT(size % ZX_PAGE_SIZE == 0);
+  ZX_ASSERT(reinterpret_cast<uintptr_t>(addr) % zx_system_get_page_size() == 0);
+  ZX_ASSERT(size % zx_system_get_page_size() == 0);
 }
 
 void MemoryRange::DoCacheOp(uint32_t operation) {

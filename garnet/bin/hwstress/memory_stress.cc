@@ -98,7 +98,7 @@ void RowHammer(StatusLine* status, MemoryRange* memory, zx::duration duration, u
   WritePattern(memory->span(), SimplePattern(pattern));
 
   // Get random numbers returning a random page.
-  uint32_t num_pages = memory->size_bytes() / ZX_PAGE_SIZE;
+  uint32_t num_pages = memory->size_bytes() / zx_system_get_page_size();
   std::default_random_engine rng = CreateRandomEngine();
   std::uniform_int_distribution<uint32_t> random_page(0, num_pages - 1);
 
@@ -124,7 +124,8 @@ void RowHammer(StatusLine* status, MemoryRange* memory, zx::duration duration, u
     volatile uint32_t* targets[kAddressesPerIteration];
     uint8_t* data = memory->bytes();
     for (auto& target : targets) {
-      target = reinterpret_cast<volatile uint32_t*>(data + random_page(rng) * ZX_PAGE_SIZE);
+      target =
+          reinterpret_cast<volatile uint32_t*>(data + random_page(rng) * zx_system_get_page_size());
     }
 
     // Quickly activate the different rows.
@@ -277,7 +278,7 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
     uint64_t total_bytes = maybe_stats->total_bytes();
     auto test_bytes =
         static_cast<uint64_t>(total_bytes * (args.ram_to_test_percent.value() / 100.));
-    return fitx::ok(RoundUp(test_bytes, ZX_PAGE_SIZE));
+    return fitx::ok(RoundUp(test_bytes, zx_system_get_page_size()));
   }
 
   // Otherwise, try and calculate a reasonable value based on free memory.
@@ -294,7 +295,7 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
     // We don't have 300MiB free: just use 1MiB.
     return zx::ok(MiB(1));
   }
-  return zx::ok(RoundUp(free_bytes - slack, ZX_PAGE_SIZE));
+  return zx::ok(RoundUp(free_bytes - slack, zx_system_get_page_size()));
 }
 
 MemoryWorkloadGenerator ::MemoryWorkloadGenerator(const std::vector<MemoryWorkload>& workloads,

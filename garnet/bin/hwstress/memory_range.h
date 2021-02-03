@@ -32,7 +32,7 @@ class MemoryRange {
 
   // Create and map a memory range of the given size.
   //
-  // Size must be aligned to ZX_PAGE_SIZE.
+  // Size must be aligned to zx_system_get_page_size().
   static zx::status<std::unique_ptr<MemoryRange>> Create(uint64_t size, CacheMode mode);
 
   // Create a MemoryRange from the given pre-mapped VMO.
@@ -45,11 +45,11 @@ class MemoryRange {
   fbl::Span<uint8_t> span() const { return fbl::Span<uint8_t>(addr_, size_); }
 
   // Get a raw pointer to the memory represented in bytes.
-  uint8_t* bytes() const ASSUME_ALIGNED(ZX_PAGE_SIZE) { return addr_; }
+  uint8_t* bytes() const ASSUME_ALIGNED(ZX_MIN_PAGE_SIZE) { return addr_; }
   uint64_t size_bytes() const { return size_; }
 
   // Get a raw pointer to the memory represented as 64-bit words.
-  uint64_t* words() const ASSUME_ALIGNED(ZX_PAGE_SIZE) {
+  uint64_t* words() const ASSUME_ALIGNED(ZX_MIN_PAGE_SIZE) {
     return reinterpret_cast<uint64_t*>(addr_);
   }
   uint64_t size_words() const { return size_ / sizeof(uint64_t); }
