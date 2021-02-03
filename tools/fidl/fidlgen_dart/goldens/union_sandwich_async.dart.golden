@@ -409,10 +409,10 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
   static const $fieldType2 = $fidl.Uint32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, before, $offset + 0);
-    $fieldType1.encode($encoder, union, $offset + 8);
-    $fieldType2.encode($encoder, after, $offset + 32);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, before, $offset + 0, $depth);
+    $fieldType1.encode($encoder, union, $offset + 8, $depth);
+    $fieldType2.encode($encoder, after, $offset + 32, $depth);
   }
 
   @override
@@ -427,11 +427,11 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
   }
 
   static SandwichUnionSize8Alignment4 _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return SandwichUnionSize8Alignment4(
-        before: $fieldType0.decode($decoder, $offset + 0),
-        union: $fieldType1.decode($decoder, $offset + 8),
-        after: $fieldType2.decode($decoder, $offset + 32));
+        before: $fieldType0.decode($decoder, $offset + 0, $depth),
+        union: $fieldType1.decode($decoder, $offset + 8, $depth),
+        after: $fieldType2.decode($decoder, $offset + 32, $depth));
   }
 }
 
@@ -479,10 +479,10 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
   static const $fieldType2 = $fidl.Int32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, before, $offset + 0);
-    $fieldType1.encode($encoder, union, $offset + 8);
-    $fieldType2.encode($encoder, after, $offset + 32);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, before, $offset + 0, $depth);
+    $fieldType1.encode($encoder, union, $offset + 8, $depth);
+    $fieldType2.encode($encoder, after, $offset + 32, $depth);
   }
 
   @override
@@ -497,11 +497,11 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
   }
 
   static SandwichUnionSize12Alignment4 _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return SandwichUnionSize12Alignment4(
-        before: $fieldType0.decode($decoder, $offset + 0),
-        union: $fieldType1.decode($decoder, $offset + 8),
-        after: $fieldType2.decode($decoder, $offset + 32));
+        before: $fieldType0.decode($decoder, $offset + 0, $depth),
+        union: $fieldType1.decode($decoder, $offset + 8, $depth),
+        after: $fieldType2.decode($decoder, $offset + 32, $depth));
   }
 }
 
@@ -543,9 +543,9 @@ class StructSize16Alignment8 extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint64Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, f1, $offset + 0);
-    $fieldType1.encode($encoder, f2, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+    $fieldType1.encode($encoder, f2, $offset + 8, $depth);
   }
 
   @override
@@ -558,10 +558,10 @@ class StructSize16Alignment8 extends $fidl.Struct {
   }
 
   static StructSize16Alignment8 _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructSize16Alignment8(
-        f1: $fieldType0.decode($decoder, $offset + 0),
-        f2: $fieldType1.decode($decoder, $offset + 8));
+        f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+        f2: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -608,10 +608,10 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
   static const $fieldType2 = $fidl.Uint32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, before, $offset + 0);
-    $fieldType1.encode($encoder, union, $offset + 8);
-    $fieldType2.encode($encoder, after, $offset + 32);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, before, $offset + 0, $depth);
+    $fieldType1.encode($encoder, union, $offset + 8, $depth);
+    $fieldType2.encode($encoder, after, $offset + 32, $depth);
   }
 
   @override
@@ -626,11 +626,11 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
   }
 
   static SandwichUnionSize24Alignment8 _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return SandwichUnionSize24Alignment8(
-        before: $fieldType0.decode($decoder, $offset + 0),
-        union: $fieldType1.decode($decoder, $offset + 8),
-        after: $fieldType2.decode($decoder, $offset + 32));
+        before: $fieldType0.decode($decoder, $offset + 0, $depth),
+        union: $fieldType1.decode($decoder, $offset + 8, $depth),
+        after: $fieldType2.decode($decoder, $offset + 32, $depth));
   }
 }
 
@@ -678,10 +678,10 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
   static const $fieldType2 = $fidl.Uint32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, before, $offset + 0);
-    $fieldType1.encode($encoder, union, $offset + 8);
-    $fieldType2.encode($encoder, after, $offset + 32);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, before, $offset + 0, $depth);
+    $fieldType1.encode($encoder, union, $offset + 8, $depth);
+    $fieldType2.encode($encoder, after, $offset + 32, $depth);
   }
 
   @override
@@ -696,11 +696,11 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
   }
 
   static SandwichUnionSize36Alignment4 _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return SandwichUnionSize36Alignment4(
-        before: $fieldType0.decode($decoder, $offset + 0),
-        union: $fieldType1.decode($decoder, $offset + 8),
-        after: $fieldType2.decode($decoder, $offset + 32));
+        before: $fieldType0.decode($decoder, $offset + 0, $depth),
+        union: $fieldType1.decode($decoder, $offset + 8, $depth),
+        after: $fieldType2.decode($decoder, $offset + 32, $depth));
   }
 }
 

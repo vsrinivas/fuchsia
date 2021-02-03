@@ -161,8 +161,8 @@ class ExampleFooResponse extends $fidl.Struct {
   static const $fieldType0 = $fidl.Int64Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, y, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, y, $offset + 0, $depth);
   }
 
   @override
@@ -170,8 +170,10 @@ class ExampleFooResponse extends $fidl.Struct {
     return r'ExampleFooResponse' r'(y: ' + y.toString() + r')';
   }
 
-  static ExampleFooResponse _structDecode($fidl.Decoder $decoder, int $offset) {
-    return ExampleFooResponse(y: $fieldType0.decode($decoder, $offset + 0));
+  static ExampleFooResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return ExampleFooResponse(
+        y: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -296,7 +298,7 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
     final List<$fidl.MemberType> $types = _kExample_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kExample_foo_Type.encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -323,7 +325,7 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
                   $message, _kExample_foo_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.foo(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($responseValue) {

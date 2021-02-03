@@ -245,13 +245,13 @@ class HandlesInTypes extends $fidl.Struct {
   static const $fieldType5 = kUnionWithHandle_Type;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, normalHandle, $offset + 0);
-    $fieldType1.encode($encoder, handleInVec, $offset + 8);
-    $fieldType2.encode($encoder, handleInArray, $offset + 24);
-    $fieldType3.encode($encoder, handleInMixedVecArray, $offset + 48);
-    $fieldType4.encode($encoder, tableWithHandle, $offset + 64);
-    $fieldType5.encode($encoder, unionWithHandle, $offset + 80);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, normalHandle, $offset + 0, $depth);
+    $fieldType1.encode($encoder, handleInVec, $offset + 8, $depth);
+    $fieldType2.encode($encoder, handleInArray, $offset + 24, $depth);
+    $fieldType3.encode($encoder, handleInMixedVecArray, $offset + 48, $depth);
+    $fieldType4.encode($encoder, tableWithHandle, $offset + 64, $depth);
+    $fieldType5.encode($encoder, unionWithHandle, $offset + 80, $depth);
   }
 
   @override
@@ -271,14 +271,16 @@ class HandlesInTypes extends $fidl.Struct {
         r')';
   }
 
-  static HandlesInTypes _structDecode($fidl.Decoder $decoder, int $offset) {
+  static HandlesInTypes _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return HandlesInTypes(
-        normalHandle: $fieldType0.decode($decoder, $offset + 0),
-        handleInVec: $fieldType1.decode($decoder, $offset + 8),
-        handleInArray: $fieldType2.decode($decoder, $offset + 24),
-        handleInMixedVecArray: $fieldType3.decode($decoder, $offset + 48),
-        tableWithHandle: $fieldType4.decode($decoder, $offset + 64),
-        unionWithHandle: $fieldType5.decode($decoder, $offset + 80));
+        normalHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
+        handleInVec: $fieldType1.decode($decoder, $offset + 8, $depth),
+        handleInArray: $fieldType2.decode($decoder, $offset + 24, $depth),
+        handleInMixedVecArray:
+            $fieldType3.decode($decoder, $offset + 48, $depth),
+        tableWithHandle: $fieldType4.decode($decoder, $offset + 64, $depth),
+        unionWithHandle: $fieldType5.decode($decoder, $offset + 80, $depth));
   }
 }
 

@@ -186,20 +186,20 @@ abstract class FidlType<T, I extends Iterable<T>> {
   int encodingInlineSize() => inlineSize;
   int decodingInlineSize() => inlineSize;
 
-  void encode(Encoder encoder, T value, int offset);
+  void encode(Encoder encoder, T value, int offset, int depth);
 
-  void encodeArray(Encoder encoder, Iterable<T> value, int offset) {
+  void encodeArray(Encoder encoder, Iterable<T> value, int offset, int depth) {
     int off = offset;
     final int stride = encodingInlineSize();
     for (final element in value) {
-      encode(encoder, element, off);
+      encode(encoder, element, off, depth);
       off += stride;
     }
   }
 
-  T decode(Decoder decoder, int offset);
+  T decode(Decoder decoder, int offset, int depth);
 
-  I decodeArray(Decoder decoder, int count, int offset);
+  I decodeArray(Decoder decoder, int count, int offset, int depth);
 }
 
 abstract class SimpleFidlType<T> extends FidlType<T, List<T>> {
@@ -207,9 +207,9 @@ abstract class SimpleFidlType<T> extends FidlType<T, List<T>> {
       : super(inlineSize: inlineSize);
 
   @override
-  List<T> decodeArray(Decoder decoder, int count, int offset) =>
-      List<T>.generate(
-          count, (int i) => decode(decoder, offset + i * decodingInlineSize()));
+  List<T> decodeArray(Decoder decoder, int count, int offset, int depth) =>
+      List<T>.generate(count,
+          (int i) => decode(decoder, offset + i * decodingInlineSize(), depth));
 }
 
 /// This encodes/decodes the UnknowRawData assuming it is in an envelope, i.e.
@@ -222,7 +222,7 @@ class UnknownRawDataType extends SimpleFidlType<UnknownRawData> {
   final int numHandles;
 
   @override
-  void encode(Encoder encoder, UnknownRawData value, int offset) {
+  void encode(Encoder encoder, UnknownRawData value, int offset, int depth) {
     _copyUint8(encoder.data, value.data, offset);
     for (int i = 0; i < value.handles.length; i++) {
       encoder.addHandle(value.handles[i]);
@@ -230,7 +230,7 @@ class UnknownRawDataType extends SimpleFidlType<UnknownRawData> {
   }
 
   @override
-  UnknownRawData decode(Decoder decoder, int offset) {
+  UnknownRawData decode(Decoder decoder, int offset, int depth) {
     final Uint8List data = Uint8List(numBytes);
     for (var i = 0; i < numBytes; i++) {
       data[i] = decoder.decodeUint8(offset + i);
@@ -245,12 +245,13 @@ class BoolType extends SimpleFidlType<bool> {
   const BoolType() : super(inlineSize: 1);
 
   @override
-  void encode(Encoder encoder, bool value, int offset) {
+  void encode(Encoder encoder, bool value, int offset, int depth) {
     encoder.encodeBool(value, offset);
   }
 
   @override
-  bool decode(Decoder decoder, int offset) => decoder.decodeBool(offset);
+  bool decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeBool(offset);
 }
 
 class StatusType extends Int32Type {
@@ -261,20 +262,22 @@ class Int8Type extends FidlType<int, Int8List> {
   const Int8Type() : super(inlineSize: 1);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeInt8(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeInt8(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeInt8(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyInt8(encoder.data, value, offset);
   }
 
   @override
-  Int8List decodeArray(Decoder decoder, int count, int offset) {
+  Int8List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asInt8List(offset, count);
   }
 }
@@ -283,20 +286,22 @@ class Int16Type extends FidlType<int, Int16List> {
   const Int16Type() : super(inlineSize: 2);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeInt16(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeInt16(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeInt16(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyInt16(encoder.data, value, offset);
   }
 
   @override
-  Int16List decodeArray(Decoder decoder, int count, int offset) {
+  Int16List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asInt16List(offset, count);
   }
 }
@@ -305,20 +310,22 @@ class Int32Type extends FidlType<int, Int32List> {
   const Int32Type() : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeInt32(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeInt32(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeInt32(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyInt32(encoder.data, value, offset);
   }
 
   @override
-  Int32List decodeArray(Decoder decoder, int count, int offset) {
+  Int32List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asInt32List(offset, count);
   }
 }
@@ -327,20 +334,22 @@ class Int64Type extends FidlType<int, Int64List> {
   const Int64Type() : super(inlineSize: 8);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeInt64(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeInt64(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeInt64(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyInt64(encoder.data, value, offset);
   }
 
   @override
-  Int64List decodeArray(Decoder decoder, int count, int offset) {
+  Int64List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asInt64List(offset, count);
   }
 }
@@ -349,20 +358,22 @@ class Uint8Type extends FidlType<int, Uint8List> {
   const Uint8Type() : super(inlineSize: 1);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeUint8(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeUint8(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeUint8(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyUint8(encoder.data, value, offset);
   }
 
   @override
-  Uint8List decodeArray(Decoder decoder, int count, int offset) {
+  Uint8List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asUint8List(offset, count);
   }
 }
@@ -371,20 +382,22 @@ class Uint16Type extends FidlType<int, Uint16List> {
   const Uint16Type() : super(inlineSize: 2);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeUint16(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeUint16(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeUint16(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyUint16(encoder.data, value, offset);
   }
 
   @override
-  Uint16List decodeArray(Decoder decoder, int count, int offset) {
+  Uint16List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asUint16List(offset, count);
   }
 }
@@ -393,20 +406,22 @@ class Uint32Type extends FidlType<int, Uint32List> {
   const Uint32Type() : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeUint32(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeUint32(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeUint32(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyUint32(encoder.data, value, offset);
   }
 
   @override
-  Uint32List decodeArray(Decoder decoder, int count, int offset) {
+  Uint32List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asUint32List(offset, count);
   }
 }
@@ -415,20 +430,22 @@ class Uint64Type extends FidlType<int, Uint64List> {
   const Uint64Type() : super(inlineSize: 8);
 
   @override
-  void encode(Encoder encoder, int value, int offset) {
+  void encode(Encoder encoder, int value, int offset, int depth) {
     encoder.encodeUint64(value, offset);
   }
 
   @override
-  int decode(Decoder decoder, int offset) => decoder.decodeUint64(offset);
+  int decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeUint64(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<int> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<int> value, int offset, int depth) {
     _copyUint64(encoder.data, value, offset);
   }
 
   @override
-  Uint64List decodeArray(Decoder decoder, int count, int offset) {
+  Uint64List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asUint64List(offset, count);
   }
 }
@@ -437,20 +454,22 @@ class Float32Type extends FidlType<double, Float32List> {
   const Float32Type() : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, double value, int offset) {
+  void encode(Encoder encoder, double value, int offset, int depth) {
     encoder.encodeFloat32(value, offset);
   }
 
   @override
-  double decode(Decoder decoder, int offset) => decoder.decodeFloat32(offset);
+  double decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeFloat32(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<double> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<double> value, int offset, int depth) {
     _copyFloat32(encoder.data, value, offset);
   }
 
   @override
-  Float32List decodeArray(Decoder decoder, int count, int offset) {
+  Float32List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asFloat32List(offset, count);
   }
 }
@@ -459,20 +478,22 @@ class Float64Type extends FidlType<double, Float64List> {
   const Float64Type() : super(inlineSize: 8);
 
   @override
-  void encode(Encoder encoder, double value, int offset) {
+  void encode(Encoder encoder, double value, int offset, int depth) {
     encoder.encodeFloat64(value, offset);
   }
 
   @override
-  double decode(Decoder decoder, int offset) => decoder.decodeFloat64(offset);
+  double decode(Decoder decoder, int offset, int depth) =>
+      decoder.decodeFloat64(offset);
 
   @override
-  void encodeArray(Encoder encoder, Iterable<double> value, int offset) {
+  void encodeArray(
+      Encoder encoder, Iterable<double> value, int offset, int depth) {
     _copyFloat64(encoder.data, value, offset);
   }
 
   @override
-  Float64List decodeArray(Decoder decoder, int count, int offset) {
+  Float64List decodeArray(Decoder decoder, int count, int offset, int depth) {
     return decoder.data.buffer.asFloat64List(offset, count);
   }
 }
@@ -524,11 +545,12 @@ abstract class _BaseHandleType<W> extends SimpleFidlType<W> {
   Handle? unwrap(W wrapper);
 
   @override
-  void encode(Encoder encoder, W value, int offset) =>
+  void encode(Encoder encoder, W value, int offset, int depth) =>
       _encodeHandle(encoder, unwrap(value), offset, false);
 
   @override
-  W decode(Decoder decoder, int offset) => wrap(_decodeHandle(decoder, offset));
+  W decode(Decoder decoder, int offset, int depth) =>
+      wrap(_decodeHandle(decoder, offset));
 }
 
 class NullableHandleType<W> extends SimpleFidlType<W?> {
@@ -536,11 +558,12 @@ class NullableHandleType<W> extends SimpleFidlType<W?> {
   const NullableHandleType(this._base) : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, W? value, int offset) => _encodeHandle(
-      encoder, value == null ? null : _base.unwrap(value), offset, true);
+  void encode(Encoder encoder, W? value, int offset, int depth) =>
+      _encodeHandle(
+          encoder, value == null ? null : _base.unwrap(value), offset, true);
 
   @override
-  W? decode(Decoder decoder, int offset) {
+  W? decode(Decoder decoder, int offset, int depth) {
     final Handle? handle = _decodeNullableHandle(decoder, offset);
     return handle == null ? null : _base.wrap(handle);
   }
@@ -601,11 +624,12 @@ class InterfaceHandleType<T> extends SimpleFidlType<InterfaceHandle<T>> {
   const InterfaceHandleType() : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, InterfaceHandle<T> value, int offset) =>
+  void encode(
+          Encoder encoder, InterfaceHandle<T> value, int offset, int depth) =>
       _encodeHandle(encoder, value.channel?.handle, offset, false);
 
   @override
-  InterfaceHandle<T> decode(Decoder decoder, int offset) =>
+  InterfaceHandle<T> decode(Decoder decoder, int offset, int depth) =>
       InterfaceHandle<T>(Channel(_decodeHandle(decoder, offset)));
 }
 
@@ -614,12 +638,13 @@ class NullableInterfaceHandleType<T>
   const NullableInterfaceHandleType() : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, InterfaceHandle<T>? value, int offset) =>
+  void encode(
+          Encoder encoder, InterfaceHandle<T>? value, int offset, int depth) =>
       _encodeHandle(
           encoder, value == null ? null : value.channel?.handle, offset, true);
 
   @override
-  InterfaceHandle<T>? decode(Decoder decoder, int offset) {
+  InterfaceHandle<T>? decode(Decoder decoder, int offset, int depth) {
     final Handle? handle = _decodeNullableHandle(decoder, offset);
     return handle == null ? null : InterfaceHandle<T>(Channel(handle));
   }
@@ -629,11 +654,12 @@ class InterfaceRequestType<T> extends SimpleFidlType<InterfaceRequest<T>> {
   const InterfaceRequestType() : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, InterfaceRequest<T> value, int offset) =>
+  void encode(
+          Encoder encoder, InterfaceRequest<T> value, int offset, int depth) =>
       _encodeHandle(encoder, value.channel?.handle, offset, false);
 
   @override
-  InterfaceRequest<T> decode(Decoder decoder, int offset) =>
+  InterfaceRequest<T> decode(Decoder decoder, int offset, int depth) =>
       InterfaceRequest<T>(Channel(_decodeHandle(decoder, offset)));
 }
 
@@ -642,31 +668,31 @@ class NullableInterfaceRequestType<T>
   const NullableInterfaceRequestType() : super(inlineSize: 4);
 
   @override
-  void encode(Encoder encoder, InterfaceRequest<T>? value, int offset) =>
+  void encode(
+          Encoder encoder, InterfaceRequest<T>? value, int offset, int depth) =>
       _encodeHandle(
           encoder, value == null ? null : value.channel?.handle, offset, true);
 
   @override
-  InterfaceRequest<T>? decode(Decoder decoder, int offset) {
+  InterfaceRequest<T>? decode(Decoder decoder, int offset, int depth) {
     final Handle? handle = _decodeNullableHandle(decoder, offset);
     return handle == null ? null : InterfaceRequest<T>(Channel(handle));
   }
 }
 
-void _encodeString(
-    Encoder encoder, String value, int offset, int? maybeElementCount) {
+void _encodeString(Encoder encoder, String value, int offset, int depth,
+    int? maybeElementCount) {
   final bytes = Utf8Encoder().convert(value);
   final int size = bytes.length;
   _throwIfExceedsLimit(size, maybeElementCount);
   encoder
     ..encodeUint64(size, offset) // size
     ..encodeUint64(kAllocPresent, offset + 8); // data
-  int childOffset = encoder.alloc(size);
+  int childOffset = encoder.alloc(size, depth);
   _copyUint8(encoder.data, bytes, childOffset);
-  encoder.allocComplete();
 }
 
-String? _decodeString(Decoder decoder, int offset) {
+String? _decodeString(Decoder decoder, int offset, int depth) {
   final int size = decoder.decodeUint64(offset);
   final int data = decoder.decodeUint64(offset + 8);
   if (data == kAllocAbsent) {
@@ -677,13 +703,11 @@ String? _decodeString(Decoder decoder, int offset) {
     return null;
   }
   final Uint8List bytes =
-      decoder.data.buffer.asUint8List(decoder.claimMemory(size), size);
+      decoder.data.buffer.asUint8List(decoder.claimMemory(size, depth), size);
   try {
     return const Utf8Decoder().convert(bytes, 0, size);
   } on FormatException {
     throw FidlError('Received a string with invalid UTF8: $bytes');
-  } finally {
-    decoder.claimMemoryComplete();
   }
 }
 
@@ -703,13 +727,13 @@ class StringType extends SimpleFidlType<String> {
   // See fidl_string_t.
 
   @override
-  void encode(Encoder encoder, String value, int offset) {
-    _encodeString(encoder, value, offset, maybeElementCount);
+  void encode(Encoder encoder, String value, int offset, int depth) {
+    _encodeString(encoder, value, offset, depth, maybeElementCount);
   }
 
   @override
-  String decode(Decoder decoder, int offset) {
-    String? value = _decodeString(decoder, offset);
+  String decode(Decoder decoder, int offset, int depth) {
+    String? value = _decodeString(decoder, offset, depth);
     if (value == null) {
       throw _notNullable;
     }
@@ -725,17 +749,17 @@ class NullableStringType extends SimpleFidlType<String?> {
 
   final int? maybeElementCount;
   @override
-  void encode(Encoder encoder, String? value, int offset) {
+  void encode(Encoder encoder, String? value, int offset, int depth) {
     if (value == null) {
       _encodeNullVector(encoder, offset);
     } else {
-      _encodeString(encoder, value, offset, maybeElementCount);
+      _encodeString(encoder, value, offset, depth, maybeElementCount);
     }
   }
 
   @override
-  String? decode(Decoder decoder, int offset) {
-    String? value = _decodeString(decoder, offset);
+  String? decode(Decoder decoder, int offset, int depth) {
+    String? value = _decodeString(decoder, offset, depth);
     if (value != null) {
       _throwIfExceedsLimit(value.length, maybeElementCount);
     }
@@ -749,27 +773,25 @@ class PointerType<T> extends SimpleFidlType<T?> {
   final FidlType element;
 
   @override
-  void encode(Encoder encoder, T? value, int offset) {
+  void encode(Encoder encoder, T? value, int offset, int depth) {
     if (value == null) {
       encoder.encodeUint64(kAllocAbsent, offset);
     } else {
       encoder.encodeUint64(kAllocPresent, offset);
-      int childOffset = encoder.alloc(element.encodingInlineSize());
-      element.encode(encoder, value, childOffset);
-      encoder.allocComplete();
+      int childOffset = encoder.alloc(element.encodingInlineSize(), depth);
+      element.encode(encoder, value, childOffset, depth + 1);
     }
   }
 
   @override
-  T? decode(Decoder decoder, int offset) {
+  T? decode(Decoder decoder, int offset, int depth) {
     final int data = decoder.decodeUint64(offset);
     validateEncoded(data);
     if (data == kAllocAbsent) {
       return null;
     }
-    T? decoded = element.decode(
-        decoder, decoder.claimMemory(element.decodingInlineSize()));
-    decoder.claimMemoryComplete();
+    T? decoded = element.decode(decoder,
+        decoder.claimMemory(element.decodingInlineSize(), depth), depth + 1);
     return decoded;
   }
 
@@ -789,12 +811,12 @@ class MemberType<T> {
   final FidlType type;
   final int offset;
 
-  void encode(Encoder encoder, T value, int base) {
-    type.encode(encoder, value, base + offset);
+  void encode(Encoder encoder, T value, int base, int depth) {
+    type.encode(encoder, value, base + offset, depth);
   }
 
-  T decode(Decoder decoder, int base) {
-    return type.decode(decoder, base + offset);
+  T decode(Decoder decoder, int base, int depth) {
+    return type.decode(decoder, base + offset, depth);
   }
 }
 
@@ -807,31 +829,30 @@ class StructType<T extends Struct> extends SimpleFidlType<T> {
   final StructDecode<T> structDecode;
 
   @override
-  void encode(Encoder encoder, T value, int offset) {
-    value.$encode(encoder, offset);
+  void encode(Encoder encoder, T value, int offset, int depth) {
+    value.$encode(encoder, offset, depth);
   }
 
   @override
-  T decode(Decoder decoder, int offset) {
-    return structDecode(decoder, offset);
+  T decode(Decoder decoder, int offset, int depth) {
+    return structDecode(decoder, offset, depth);
   }
 }
 
 const int _kEnvelopeSize = 16;
 
 void _encodeEnvelopePresent<T, I extends Iterable<T>>(
-    Encoder encoder, int offset, T field, FidlType<T, I> fieldType) {
+    Encoder encoder, int offset, int depth, T field, FidlType<T, I> fieldType) {
   int numHandles = encoder.countHandles();
-  final fieldOffset = encoder.alloc(fieldType.encodingInlineSize());
-  fieldType.encode(encoder, field, fieldOffset);
+  final fieldOffset = encoder.alloc(fieldType.encodingInlineSize(), depth);
+  fieldType.encode(encoder, field, fieldOffset, depth + 1);
   numHandles = encoder.countHandles() - numHandles;
   final numBytes = encoder.nextOffset() - fieldOffset;
 
   encoder
     ..encodeUint32(numBytes, offset)
     ..encodeUint32(numHandles, offset + 4)
-    ..encodeUint64(kAllocPresent, offset + 8)
-    ..allocComplete();
+    ..encodeUint64(kAllocPresent, offset + 8);
 }
 
 void _encodeEnvelopeAbsent(Encoder encoder, int offset) {
@@ -845,10 +866,11 @@ class EnvelopeHeader {
   EnvelopeHeader(this.numBytes, this.numHandles, this.fieldPresent);
 }
 
-T? _decodeEnvelope<T>(Decoder decoder, int offset, SimpleFidlType<T>? fieldType,
+T? _decodeEnvelope<T>(
+    Decoder decoder, int offset, int depth, SimpleFidlType<T>? fieldType,
     {bool isEmpty = false}) {
   final header = _decodeEnvelopeHeader(decoder, offset);
-  return _decodeEnvelopeContent(decoder, header, fieldType, isEmpty);
+  return _decodeEnvelopeContent(decoder, header, fieldType, depth, isEmpty);
 }
 
 EnvelopeHeader _decodeEnvelopeHeader(Decoder decoder, int offset) {
@@ -860,19 +882,19 @@ EnvelopeHeader _decodeEnvelopeHeader(Decoder decoder, int offset) {
 }
 
 T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
-    EnvelopeHeader header, FidlType<T, I>? fieldType, bool isEmpty) {
+    EnvelopeHeader header, FidlType<T, I>? fieldType, int depth, bool isEmpty) {
   switch (header.fieldPresent) {
     case kAllocPresent:
       if (isEmpty) throw FidlError('expected empty envelope');
       if (fieldType != null) {
-        final fieldOffset = decoder.claimMemory(fieldType.decodingInlineSize());
+        final fieldOffset =
+            decoder.claimMemory(fieldType.decodingInlineSize(), depth);
         final claimedHandles = decoder.countClaimedHandles();
-        final field = fieldType.decode(decoder, fieldOffset);
+        final field = fieldType.decode(decoder, fieldOffset, depth + 1);
         final numBytesConsumed = decoder.nextOffset() - fieldOffset;
         final numHandlesConsumed =
             decoder.countClaimedHandles() - claimedHandles;
 
-        decoder.claimMemoryComplete();
         if (header.numHandles != numHandlesConsumed) {
           throw FidlError('envelope handles were mis-sized',
               FidlErrorCode.fidlInvaliNumHandlesInEnvelope);
@@ -884,7 +906,7 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
         return field;
       }
 
-      decoder.claimMemory(header.numBytes);
+      decoder.claimMemory(header.numBytes, depth);
       for (int i = 0; i < header.numHandles; i++) {
         final handle = decoder.claimHandle();
         try {
@@ -894,7 +916,6 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
           // best effort
         }
       }
-      decoder.claimMemoryComplete();
       return null;
     case kAllocAbsent:
       if (header.numBytes != 0)
@@ -930,7 +951,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
   final bool resource;
 
   @override
-  void encode(Encoder encoder, T value, int offset) {
+  void encode(Encoder encoder, T value, int offset, int depth) {
     final unknownDataMap = value.$unknownData;
 
     // Determining max index
@@ -954,7 +975,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       ..encodeUint64(kAllocPresent, offset + 8);
 
     // Sizing
-    int envelopeOffset = encoder.alloc(maxOrdinal * _kEnvelopeSize);
+    int envelopeOffset = encoder.alloc(maxOrdinal * _kEnvelopeSize, depth);
 
     // Envelopes, and fields.
     for (int i = 0; i <= maxIndex; i++) {
@@ -977,17 +998,17 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       }
 
       if (field != null && fieldType != null) {
-        _encodeEnvelopePresent(encoder, envelopeOffset, field, fieldType);
+        _encodeEnvelopePresent(
+            encoder, envelopeOffset, depth + 1, field, fieldType);
       } else {
         _encodeEnvelopeAbsent(encoder, envelopeOffset);
       }
       envelopeOffset += _kEnvelopeSize;
     }
-    encoder.allocComplete();
   }
 
   @override
-  T decode(Decoder decoder, int offset) {
+  T decode(Decoder decoder, int offset, int depth) {
     // Header.
     final int maxOrdinal = decoder.decodeUint64(offset);
     final int data = decoder.decodeUint64(offset + 8);
@@ -1006,7 +1027,8 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
     }
 
     // Offsets.
-    int envelopeOffset = decoder.claimMemory(maxOrdinal * _kEnvelopeSize);
+    int envelopeOffset =
+        decoder.claimMemory(maxOrdinal * _kEnvelopeSize, depth);
 
     // Envelopes, and fields.
     final Map<int, dynamic> argv = {};
@@ -1026,6 +1048,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
           fieldType ??
               UnknownRawDataType(
                   numBytes: header.numBytes, numHandles: header.numHandles),
+          depth + 1,
           false);
       if (field != null) {
         if (fieldType != null) {
@@ -1037,14 +1060,13 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       }
       envelopeOffset += _kEnvelopeSize;
     }
-    decoder.claimMemoryComplete();
 
     return ctor(argv, unknownData);
   }
 }
 
 void _encodeUnion<T extends XUnion>(Encoder encoder, T value, int offset,
-    Map<int, FidlType> members, bool flexible, bool resource) {
+    int depth, Map<int, FidlType> members, bool flexible, bool resource) {
   final int envelopeOffset = offset + 8;
   final int ordinal = value.$ordinal;
   var fieldType = members[ordinal];
@@ -1059,12 +1081,13 @@ void _encodeUnion<T extends XUnion>(Encoder encoder, T value, int offset,
         FidlErrorCode.fidlStrictXUnionUnknownField);
 
   encoder.encodeUint64(ordinal, offset);
-  _encodeEnvelopePresent(encoder, envelopeOffset, data, fieldType);
+  _encodeEnvelopePresent(encoder, envelopeOffset, depth, data, fieldType);
 }
 
 T? _decodeUnion<T extends XUnion>(
     Decoder decoder,
     int offset,
+    int depth,
     Map<int, FidlType> members,
     XUnionFactory<T> ctor,
     bool flexible,
@@ -1072,7 +1095,7 @@ T? _decodeUnion<T extends XUnion>(
   final int envelopeOffset = offset + 8;
   final int ordinal = decoder.decodeUint64(offset);
   if (ordinal == 0) {
-    _decodeEnvelope(decoder, envelopeOffset, null, isEmpty: true);
+    _decodeEnvelope(decoder, envelopeOffset, depth, null, isEmpty: true);
     return null;
   } else {
     final header = _decodeEnvelopeHeader(decoder, envelopeOffset);
@@ -1083,6 +1106,7 @@ T? _decodeUnion<T extends XUnion>(
           header,
           UnknownRawDataType(
               numBytes: header.numBytes, numHandles: header.numHandles),
+          depth,
           false);
       if (unknownData == null) throw FidlError('Bad xunion: missing content');
 
@@ -1095,7 +1119,8 @@ T? _decodeUnion<T extends XUnion>(
       _maybeThrowOnUnknownHandles(resource, unknownData);
       return ctor(ordinal, unknownData);
     }
-    final field = _decodeEnvelopeContent(decoder, header, fieldType, false);
+    final field =
+        _decodeEnvelopeContent(decoder, header, fieldType, depth, false);
     if (field == null) throw FidlError('Bad xunion: missing content');
     return ctor(ordinal, field);
   }
@@ -1115,12 +1140,13 @@ class UnionType<T extends XUnion> extends SimpleFidlType<T> {
   final bool resource;
 
   @override
-  void encode(Encoder encoder, T value, int offset) =>
-      _encodeUnion(encoder, value, offset, members, flexible, resource);
+  void encode(Encoder encoder, T value, int offset, int depth) =>
+      _encodeUnion(encoder, value, offset, depth, members, flexible, resource);
 
   @override
-  T decode(Decoder decoder, int offset) {
-    T? value = _decodeUnion(decoder, offset, members, ctor, flexible, resource);
+  T decode(Decoder decoder, int offset, int depth) {
+    T? value =
+        _decodeUnion(decoder, offset, depth, members, ctor, flexible, resource);
     if (value == null) {
       throw _notNullable;
     }
@@ -1142,18 +1168,18 @@ class NullableUnionType<T extends XUnion> extends SimpleFidlType<T?> {
   final bool resource;
 
   @override
-  void encode(Encoder encoder, T? value, int offset) {
+  void encode(Encoder encoder, T? value, int offset, int depth) {
     if (value == null) {
       encoder.encodeUint64(0, offset);
       _encodeEnvelopeAbsent(encoder, offset + 8);
     } else {
-      _encodeUnion(encoder, value, offset, members, flexible, resource);
+      _encodeUnion(encoder, value, offset, depth, members, flexible, resource);
     }
   }
 
   @override
-  T? decode(Decoder decoder, int offset) =>
-      _decodeUnion(decoder, offset, members, ctor, flexible, resource);
+  T? decode(Decoder decoder, int offset, int depth) =>
+      _decodeUnion(decoder, offset, depth, members, ctor, flexible, resource);
 }
 
 class EnumType<T extends Enum> extends SimpleFidlType<T> {
@@ -1177,13 +1203,13 @@ class EnumType<T extends Enum> extends SimpleFidlType<T> {
   int get inlineSize => type.inlineSize;
 
   @override
-  void encode(Encoder encoder, T value, int offset) {
-    type.encode(encoder, value.$value, offset);
+  void encode(Encoder encoder, T value, int offset, int depth) {
+    type.encode(encoder, value.$value, offset, depth);
   }
 
   @override
-  T decode(Decoder decoder, int offset) {
-    return ctor(type.decode(decoder, offset));
+  T decode(Decoder decoder, int offset, int depth) {
+    return ctor(type.decode(decoder, offset, depth));
   }
 }
 
@@ -1200,13 +1226,13 @@ class BitsType<T extends Bits> extends SimpleFidlType<T> {
   int get inlineSize => type.inlineSize;
 
   @override
-  void encode(Encoder encoder, T value, int offset) {
-    type.encode(encoder, value.$value, offset);
+  void encode(Encoder encoder, T value, int offset, int depth) {
+    type.encode(encoder, value.$value, offset, depth);
   }
 
   @override
-  T decode(Decoder decoder, int offset) {
-    return ctor(type.decode(decoder, offset));
+  T decode(Decoder decoder, int offset, int depth) {
+    return ctor(type.decode(decoder, offset, depth));
   }
 }
 
@@ -1247,28 +1273,28 @@ void _encodeVector<T, I extends Iterable<T>>(
     FidlType<T, I> element,
     Iterable<T> value,
     int offset,
+    int depth,
     int? maybeElementCount) {
   final int count = value.length;
   _throwIfExceedsLimit(count, maybeElementCount);
   encoder
     ..encodeUint64(count, offset) // count
     ..encodeUint64(kAllocPresent, offset + 8); // data
-  int childOffset = encoder.alloc(count * element.encodingInlineSize());
-  element.encodeArray(encoder, value, childOffset);
-  encoder.allocComplete();
+  int childOffset = encoder.alloc(count * element.encodingInlineSize(), depth);
+  element.encodeArray(encoder, value, childOffset, depth + 1);
 }
 
 I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
-    FidlType<T, I> element, int offset, int? maybeElementCount) {
+    FidlType<T, I> element, int offset, int depth, int? maybeElementCount) {
   final int count = decoder.decodeUint64(offset);
   final int data = decoder.decodeUint64(offset + 8);
   _throwIfExceedsLimit(count, maybeElementCount);
   if (data == kAllocAbsent) {
     return null;
   }
-  final int base = decoder.claimMemory(count * element.decodingInlineSize());
-  I? out = element.decodeArray(decoder, count, base);
-  decoder.claimMemoryComplete();
+  final int base =
+      decoder.claimMemory(count * element.decodingInlineSize(), depth);
+  I? out = element.decodeArray(decoder, count, base, depth + 1);
   return out;
 }
 
@@ -1282,12 +1308,13 @@ class VectorType<T, I extends Iterable<T>> extends SimpleFidlType<I> {
   final int? maybeElementCount;
 
   @override
-  void encode(Encoder encoder, Iterable<T> value, int offset) =>
-      _encodeVector(encoder, element, value, offset, maybeElementCount);
+  void encode(Encoder encoder, Iterable<T> value, int offset, int depth) =>
+      _encodeVector(encoder, element, value, offset, depth, maybeElementCount);
 
   @override
-  I decode(Decoder decoder, int offset) {
-    I? value = _decodeVector<T, I>(decoder, element, offset, maybeElementCount);
+  I decode(Decoder decoder, int offset, int depth) {
+    I? value =
+        _decodeVector<T, I>(decoder, element, offset, depth, maybeElementCount);
     if (value == null) {
       throw _notNullable;
     }
@@ -1305,17 +1332,17 @@ class NullableVectorType<T, I extends Iterable<T>> extends SimpleFidlType<I?> {
   final int? maybeElementCount;
 
   @override
-  void encode(Encoder encoder, Iterable<T>? value, int offset) {
+  void encode(Encoder encoder, Iterable<T>? value, int offset, int depth) {
     if (value == null) {
       _encodeNullVector(encoder, offset);
     } else {
-      _encodeVector(encoder, element, value, offset, maybeElementCount);
+      _encodeVector(encoder, element, value, offset, depth, maybeElementCount);
     }
   }
 
   @override
-  I? decode(Decoder decoder, int offset) =>
-      _decodeVector(decoder, element, offset, maybeElementCount);
+  I? decode(Decoder decoder, int offset, int depth) =>
+      _decodeVector(decoder, element, offset, depth, maybeElementCount);
 }
 
 class ArrayType<T, I extends Iterable<T>> extends SimpleFidlType<I> {
@@ -1331,12 +1358,12 @@ class ArrayType<T, I extends Iterable<T>> extends SimpleFidlType<I> {
   int get inlineSize => elementCount * element.inlineSize;
 
   @override
-  void encode(Encoder encoder, Iterable<T> value, int offset) {
+  void encode(Encoder encoder, Iterable<T> value, int offset, int depth) {
     _throwIfCountMismatch(value.length, elementCount);
-    element.encodeArray(encoder, value, offset);
+    element.encodeArray(encoder, value, offset, depth);
   }
 
   @override
-  I decode(Decoder decoder, int offset) =>
-      element.decodeArray(decoder, elementCount, offset);
+  I decode(Decoder decoder, int offset, int depth) =>
+      element.decodeArray(decoder, elementCount, offset, depth);
 }

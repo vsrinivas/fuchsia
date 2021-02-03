@@ -62,8 +62,8 @@ class Foo extends $fidl.Struct {
   static const $fieldType0 = lib$dependent.kMyEnum_Type;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, field, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, field, $offset + 0, $depth);
   }
 
   @override
@@ -71,8 +71,8 @@ class Foo extends $fidl.Struct {
     return r'Foo' r'(field: ' + field.toString() + r')';
   }
 
-  static Foo _structDecode($fidl.Decoder $decoder, int $offset) {
-    return Foo(field: $fieldType0.decode($decoder, $offset + 0));
+  static Foo _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    return Foo(field: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 

@@ -396,7 +396,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
         $encoder,
         _kProtocol_RequestStrictResponseFlexible_Type
             .encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<FlexibleFoo>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -420,7 +420,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
         $encoder,
         _kProtocol_RequestFlexibleResponseStrict_Type
             .encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<StrictFoo>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -449,7 +449,7 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
                   _kProtocol_RequestStrictResponseFlexible_Type
                       .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
             return _impl.requestStrictResponseFlexible(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {
@@ -492,7 +492,7 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
                   _kProtocol_RequestFlexibleResponseStrict_Type
                       .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
             return _impl.requestFlexibleResponseStrict(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {

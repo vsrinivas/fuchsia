@@ -72,9 +72,9 @@ class ExampleUseOfVectors extends $fidl.Struct {
       maybeElementCount: null);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, vectorOfUint8, $offset + 0);
-    $fieldType1.encode($encoder, vectorOfVectorOfBool, $offset + 16);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, vectorOfUint8, $offset + 0, $depth);
+    $fieldType1.encode($encoder, vectorOfVectorOfBool, $offset + 16, $depth);
   }
 
   @override
@@ -87,10 +87,11 @@ class ExampleUseOfVectors extends $fidl.Struct {
   }
 
   static ExampleUseOfVectors _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return ExampleUseOfVectors(
-        vectorOfUint8: $fieldType0.decode($decoder, $offset + 0),
-        vectorOfVectorOfBool: $fieldType1.decode($decoder, $offset + 16));
+        vectorOfUint8: $fieldType0.decode($decoder, $offset + 0, $depth),
+        vectorOfVectorOfBool:
+            $fieldType1.decode($decoder, $offset + 16, $depth));
   }
 }
 

@@ -118,8 +118,8 @@ void encode{{ .Name }}Benchmark(run, teardown) {
 	final value = {{ .Value }};
 	run(() {
 		final Encoder encoder = Encoder()
-			..alloc({{ .ValueType}}.inlineSize);
-		{{ .ValueType }}.encode(encoder, value, 0);
+			..alloc({{ .ValueType}}.inlineSize, 0);
+		{{ .ValueType }}.encode(encoder, value, 0, 1);
   });
 }
 void decode{{ .Name }}Benchmark(run, teardown) {
@@ -130,12 +130,12 @@ void decode{{ .Name }}Benchmark(run, teardown) {
   });
 {{- end }}
 	final value = {{ .Value }};
-	final Encoder encoder = Encoder()..alloc({{ .ValueType}}.inlineSize);
-	{{ .ValueType }}.encode(encoder, value, 0);
+	final Encoder encoder = Encoder()..alloc({{ .ValueType}}.inlineSize, 0);
+	{{ .ValueType }}.encode(encoder, value, 0, 1);
 	run(() {
 		final Decoder decoder = Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
-			..claimMemory({{ .ValueType}}.inlineSize);
-			{{ .ValueType }}.decode(decoder, 0);
+			..claimMemory({{ .ValueType}}.inlineSize, 0);
+			{{ .ValueType }}.decode(decoder, 0, 1);
   });
 }
 {{ end }}

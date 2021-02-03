@@ -15,7 +15,7 @@ abstract class Struct {
   @override
   int get hashCode => deepHash($fields);
 
-  void $encode(Encoder encoder, int offset);
+  void $encode(Encoder encoder, int offset, int depth);
 
   @override
   bool operator ==(dynamic other) {
@@ -30,4 +30,4 @@ abstract class Struct {
   }
 }
 
-typedef StructDecode<T> = T Function(Decoder decoder, int offset);
+typedef StructDecode<T> = T Function(Decoder decoder, int offset, int depth);

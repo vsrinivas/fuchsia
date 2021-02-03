@@ -535,8 +535,8 @@ class Struct extends $fidl.Struct {
   static const $fieldType0 = $fidl.Int32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, field, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, field, $offset + 0, $depth);
   }
 
   @override
@@ -544,8 +544,8 @@ class Struct extends $fidl.Struct {
     return r'Struct' r'(field: ' + field.toString() + r')';
   }
 
-  static Struct _structDecode($fidl.Decoder $decoder, int $offset) {
-    return Struct(field: $fieldType0.decode($decoder, $offset + 0));
+  static Struct _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    return Struct(field: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 

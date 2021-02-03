@@ -49,7 +49,7 @@ $async.Future<void>
 				($fidl.Decoder decoder) {
 					return {{ .AsyncResponseClass }}(
 						{{- range $index, $response := .Response.WireParameters }}
-							$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize),
+							$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize, 1),
 						{{- end -}}
 					);
 				}
@@ -81,7 +81,7 @@ $async.Future<void>
 			{{ .TypeSymbol }}.encodingResponseInlineSize(),
 			() {
 				{{- range $index, $response := .Response.WireParameters }}
-					$types[{{ $index }}].encode($encoder, $response.{{ .Name }}, $fidl.kMessageHeaderSize);
+					$types[{{ $index }}].encode($encoder, $response.{{ .Name }}, $fidl.kMessageHeaderSize, 1);
 				{{- end -}}
 			}
 		);
@@ -323,7 +323,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
 					{{ .TypeSymbol }}.encodingRequestInlineSize(),
 					() {
 						{{- range $index, $request := .Request }}
-							$types[{{ $index }}].encode($encoder, {{ .Name }}, $fidl.kMessageHeaderSize);
+							$types[{{ $index }}].encode($encoder, {{ .Name }}, $fidl.kMessageHeaderSize, 1);
 						{{- end -}}
 					}
 				);
@@ -403,7 +403,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
 								($fidl.Decoder decoder) {
 									return _impl.{{ .Name }}(
 										{{- range $index, $request := .Request }}
-											$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize),
+											$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize, 1),
 										{{- end }}
 									);
 								}

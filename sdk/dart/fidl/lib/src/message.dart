@@ -92,21 +92,11 @@ class OutgoingMessage extends _BaseMessage {
       data.setUint32(kMessageTxidOffset, value, Endian.little);
 }
 
-void _validateEncoding(Encoder encoder) {
-  if (encoder.nextOutOfLineDepth != 0) {
-    int ool = encoder.nextOutOfLineDepth;
-    throw FidlError(
-        'Encoding completed with a non-zero out-of-line-depth ($ool)');
-  }
-}
-
 /// Encodes a FIDL message that contains a single parameter.
 void encodeMessage<T>(
     Encoder encoder, int inlineSize, MemberType typ, T value) {
-  encoder.alloc(inlineSize);
-  typ.encode(encoder, value, kMessageHeaderSize);
-  encoder.allocComplete();
-  _validateEncoding(encoder);
+  encoder.alloc(inlineSize, 0);
+  typ.encode(encoder, value, kMessageHeaderSize, 1);
 }
 
 /// Encodes a FIDL message with multiple parameters.  The callback parameter
@@ -116,10 +106,8 @@ void encodeMessage<T>(
 /// MemberType.encode() must pass in a concrete type, rather than an element
 /// popped from a List<FidlType>.
 void encodeMessageWithCallback(Encoder encoder, int inlineSize, Function() f) {
-  encoder.alloc(inlineSize);
+  encoder.alloc(inlineSize, 0);
   f();
-  encoder.allocComplete();
-  _validateEncoding(encoder);
 }
 
 void _validateDecoding(Decoder decoder) {
@@ -141,20 +129,13 @@ void _validateDecoding(Decoder decoder) {
         'Message contains extra handles (unclaimed: $unclaimed, total: $total)',
         FidlErrorCode.fidlTooManyHandles);
   }
-
-  if (decoder.nextOutOfLineDepth != 0) {
-    int ool = decoder.nextOutOfLineDepth;
-    throw FidlError(
-        'Decoding completed with a non-zero out-of-line-depth ($ool)');
-  }
 }
 
 /// Decodes a FIDL message that contains a single parameter.
 T decodeMessage<T>(IncomingMessage message, int inlineSize, MemberType typ) {
   final Decoder decoder = Decoder(message)
-    ..claimMemory(kMessageHeaderSize + inlineSize);
-  T decoded = typ.decode(decoder, kMessageHeaderSize);
-  decoder.claimMemoryComplete();
+    ..claimMemory(kMessageHeaderSize + inlineSize, 0);
+  T decoded = typ.decode(decoder, kMessageHeaderSize, 1);
   _validateDecoding(decoder);
   return decoded;
 }
@@ -172,9 +153,8 @@ T decodeMessage<T>(IncomingMessage message, int inlineSize, MemberType typ) {
 A decodeMessageWithCallback<A>(
     IncomingMessage message, int inlineSize, A Function(Decoder decoder) f) {
   final Decoder decoder = Decoder(message)
-    ..claimMemory(kMessageHeaderSize + inlineSize);
+    ..claimMemory(kMessageHeaderSize + inlineSize, 0);
   A out = f(decoder);
-  decoder.claimMemoryComplete();
   _validateDecoding(decoder);
   return out;
 }

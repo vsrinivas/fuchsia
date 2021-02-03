@@ -340,8 +340,8 @@ class ExampleStruct extends $fidl.Struct {
   static const $fieldType0 = $fidl.Uint32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, member, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, member, $offset + 0, $depth);
   }
 
   @override
@@ -349,8 +349,10 @@ class ExampleStruct extends $fidl.Struct {
     return r'ExampleStruct' r'(member: ' + member.toString() + r')';
   }
 
-  static ExampleStruct _structDecode($fidl.Decoder $decoder, int $offset) {
-    return ExampleStruct(member: $fieldType0.decode($decoder, $offset + 0));
+  static ExampleStruct _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return ExampleStruct(
+        member: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -498,7 +500,7 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
     $fidl.encodeMessageWithCallback(
         $encoder, _kExampleProtocol_Method_Type.encodingRequestInlineSize(),
         () {
-      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize, 1);
     });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
@@ -526,7 +528,7 @@ class ExampleProtocolBinding extends $fidl.AsyncBinding<ExampleProtocol> {
                   _kExampleProtocol_Method_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.method(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
         } catch (_e) {

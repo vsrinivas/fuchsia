@@ -62,8 +62,8 @@ class Baz extends $fidl.Struct {
   static const $fieldType0 = lib$middle.kBar_Type;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, g, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, g, $offset + 0, $depth);
   }
 
   @override
@@ -71,8 +71,8 @@ class Baz extends $fidl.Struct {
     return r'Baz' r'(g: ' + g.toString() + r')';
   }
 
-  static Baz _structDecode($fidl.Decoder $decoder, int $offset) {
-    return Baz(g: $fieldType0.decode($decoder, $offset + 0));
+  static Baz _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    return Baz(g: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 

@@ -512,10 +512,10 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
   static const $fieldType2 = $fidl.Int64Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
-    $fieldType2.encode($encoder, c, $offset + 16);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
+    $fieldType2.encode($encoder, c, $offset + 16, $depth);
   }
 
   @override
@@ -530,11 +530,11 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
   }
 
   static WithErrorSyntaxResponseAsStructResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return WithErrorSyntaxResponseAsStructResponse(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8),
-        c: $fieldType2.decode($decoder, $offset + 16));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth),
+        c: $fieldType2.decode($decoder, $offset + 16, $depth));
   }
 }
 
@@ -570,8 +570,8 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
   static const $fieldType0 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, reserved, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   @override
@@ -582,9 +582,9 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
   }
 
   static WithErrorSyntaxErrorAsPrimitiveResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return WithErrorSyntaxErrorAsPrimitiveResponse(
-        reserved: $fieldType0.decode($decoder, $offset + 0));
+        reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -620,8 +620,8 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
   static const $fieldType0 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, reserved, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   @override
@@ -632,9 +632,9 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
   }
 
   static WithErrorSyntaxErrorAsEnumResponse _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return WithErrorSyntaxErrorAsEnumResponse(
-        reserved: $fieldType0.decode($decoder, $offset + 0));
+        reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -1030,7 +1030,7 @@ class WithAndWithoutRequestResponseProxy
         $encoder,
         _kWithAndWithoutRequestResponse_WithRequestNoResponse_Type
             .encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize, 1);
     });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
@@ -1054,7 +1054,7 @@ class WithAndWithoutRequestResponseProxy
         $encoder,
         _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type
             .encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -1078,7 +1078,7 @@ class WithAndWithoutRequestResponseProxy
         $encoder,
         _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
             .encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, arg, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<String>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -1270,7 +1270,7 @@ class WithAndWithoutRequestResponseBinding
                   _kWithAndWithoutRequestResponse_WithRequestNoResponse_Type
                       .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
             return _impl.withRequestNoResponse(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
         } catch (_e) {
@@ -1297,7 +1297,7 @@ class WithAndWithoutRequestResponseBinding
                   _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type
                       .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
             return _impl.withRequestEmptyResponse(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {
@@ -1334,7 +1334,7 @@ class WithAndWithoutRequestResponseBinding
                   _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
                       .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
             return _impl.withRequestWithResponse(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {
@@ -1909,8 +1909,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
                   _kChannelProtocol_EventA_Type.decodeResponseInlineSize(),
                   ($fidl.Decoder decoder) {
             return ChannelProtocol$EventA$Response(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           }));
         } catch (_e) {
@@ -2028,8 +2028,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     $fidl.encodeMessageWithCallback(
         $encoder, _kChannelProtocol_MethodA_Type.encodingRequestInlineSize(),
         () {
-      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
-      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize, 1);
     });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
@@ -2057,8 +2057,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     $fidl.encodeMessageWithCallback(
         $encoder, _kChannelProtocol_MethodB_Type.encodingRequestInlineSize(),
         () {
-      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
-      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -2080,7 +2080,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     $fidl.encodeMessageWithCallback(
         $encoder, _kChannelProtocol_TakeHandle_Type.encodingRequestInlineSize(),
         () {
-      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, h, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -2101,7 +2101,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
         _kChannelProtocol_MutateSocket_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
         _kChannelProtocol_MutateSocket_Type.encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<$zircon.Socket>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -2131,8 +2131,10 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
                 _kChannelProtocol_EventA_Type.response!;
             $fidl.encodeMessageWithCallback($encoder,
                 _kChannelProtocol_EventA_Type.encodingResponseInlineSize(), () {
-              $types[0].encode($encoder, $response.a, $fidl.kMessageHeaderSize);
-              $types[1].encode($encoder, $response.b, $fidl.kMessageHeaderSize);
+              $types[0]
+                  .encode($encoder, $response.a, $fidl.kMessageHeaderSize, 1);
+              $types[1]
+                  .encode($encoder, $response.b, $fidl.kMessageHeaderSize, 1);
             });
             sendMessage($encoder.message);
           }));
@@ -2159,8 +2161,8 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
                   _kChannelProtocol_MethodA_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.methodA(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
         } catch (_e) {
@@ -2184,8 +2186,8 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
                   _kChannelProtocol_MethodB_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.methodB(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {
@@ -2225,7 +2227,7 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
                   _kChannelProtocol_TakeHandle_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.takeHandle(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {
@@ -2259,7 +2261,7 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
                   _kChannelProtocol_MutateSocket_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.mutateSocket(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {
@@ -2455,7 +2457,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
     final List<$fidl.MemberType> $types = _kTransitional_Request_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kTransitional_Request_Type.encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -2475,7 +2477,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
     final List<$fidl.MemberType> $types = _kTransitional_OneWay_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kTransitional_OneWay_Type.encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, x, $fidl.kMessageHeaderSize, 1);
     });
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
@@ -2537,7 +2539,7 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
                   _kTransitional_Request_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.request(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {
@@ -2577,7 +2579,7 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
                   _kTransitional_OneWay_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.oneWay(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
         } catch (_e) {

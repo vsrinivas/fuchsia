@@ -62,8 +62,8 @@ class DocCommentWithQuotes extends $fidl.Struct {
   static const $fieldType0 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, reserved, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   @override
@@ -72,9 +72,9 @@ class DocCommentWithQuotes extends $fidl.Struct {
   }
 
   static DocCommentWithQuotes _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return DocCommentWithQuotes(
-        reserved: $fieldType0.decode($decoder, $offset + 0));
+        reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 

@@ -67,9 +67,9 @@ class Padding1ByteEnd extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 2);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 2, $depth);
   }
 
   @override
@@ -81,10 +81,11 @@ class Padding1ByteEnd extends $fidl.Struct {
         r')';
   }
 
-  static Padding1ByteEnd _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding1ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding1ByteEnd(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 2));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 2, $depth));
   }
 }
 
@@ -125,9 +126,9 @@ class Padding2ByteEnd extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint16Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 4);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   @override
@@ -139,10 +140,11 @@ class Padding2ByteEnd extends $fidl.Struct {
         r')';
   }
 
-  static Padding2ByteEnd _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding2ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding2ByteEnd(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 4));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 4, $depth));
   }
 }
 
@@ -183,9 +185,9 @@ class Padding3ByteEnd extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 4);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   @override
@@ -197,10 +199,11 @@ class Padding3ByteEnd extends $fidl.Struct {
         r')';
   }
 
-  static Padding3ByteEnd _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding3ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding3ByteEnd(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 4));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 4, $depth));
   }
 }
 
@@ -241,9 +244,9 @@ class Padding4ByteEnd extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
   }
 
   @override
@@ -255,10 +258,11 @@ class Padding4ByteEnd extends $fidl.Struct {
         r')';
   }
 
-  static Padding4ByteEnd _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding4ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding4ByteEnd(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -305,10 +309,10 @@ class Padding5ByteEnd extends $fidl.Struct {
   static const $fieldType2 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
-    $fieldType2.encode($encoder, c, $offset + 10);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
+    $fieldType2.encode($encoder, c, $offset + 10, $depth);
   }
 
   @override
@@ -322,11 +326,12 @@ class Padding5ByteEnd extends $fidl.Struct {
         r')';
   }
 
-  static Padding5ByteEnd _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding5ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding5ByteEnd(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8),
-        c: $fieldType2.decode($decoder, $offset + 10));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth),
+        c: $fieldType2.decode($decoder, $offset + 10, $depth));
   }
 }
 
@@ -367,9 +372,9 @@ class Padding6ByteEnd extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint16Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
   }
 
   @override
@@ -381,10 +386,11 @@ class Padding6ByteEnd extends $fidl.Struct {
         r')';
   }
 
-  static Padding6ByteEnd _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding6ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding6ByteEnd(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -425,9 +431,9 @@ class Padding7ByteEnd extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
   }
 
   @override
@@ -439,10 +445,11 @@ class Padding7ByteEnd extends $fidl.Struct {
         r')';
   }
 
-  static Padding7ByteEnd _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding7ByteEnd _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding7ByteEnd(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -483,9 +490,9 @@ class Padding1ByteMiddle extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint16Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 2);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 2, $depth);
   }
 
   @override
@@ -497,10 +504,11 @@ class Padding1ByteMiddle extends $fidl.Struct {
         r')';
   }
 
-  static Padding1ByteMiddle _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding1ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding1ByteMiddle(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 2));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 2, $depth));
   }
 }
 
@@ -541,9 +549,9 @@ class Padding2ByteMiddle extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 4);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   @override
@@ -555,10 +563,11 @@ class Padding2ByteMiddle extends $fidl.Struct {
         r')';
   }
 
-  static Padding2ByteMiddle _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding2ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding2ByteMiddle(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 4));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 4, $depth));
   }
 }
 
@@ -599,9 +608,9 @@ class Padding3ByteMiddle extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 4);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   @override
@@ -613,10 +622,11 @@ class Padding3ByteMiddle extends $fidl.Struct {
         r')';
   }
 
-  static Padding3ByteMiddle _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding3ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding3ByteMiddle(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 4));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 4, $depth));
   }
 }
 
@@ -657,9 +667,9 @@ class Padding4ByteMiddle extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint64Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
   }
 
   @override
@@ -671,10 +681,11 @@ class Padding4ByteMiddle extends $fidl.Struct {
         r')';
   }
 
-  static Padding4ByteMiddle _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding4ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding4ByteMiddle(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -721,10 +732,10 @@ class Padding5ByteMiddle extends $fidl.Struct {
   static const $fieldType2 = $fidl.Uint64Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 2);
-    $fieldType2.encode($encoder, c, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 2, $depth);
+    $fieldType2.encode($encoder, c, $offset + 8, $depth);
   }
 
   @override
@@ -738,11 +749,12 @@ class Padding5ByteMiddle extends $fidl.Struct {
         r')';
   }
 
-  static Padding5ByteMiddle _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding5ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding5ByteMiddle(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 2),
-        c: $fieldType2.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 2, $depth),
+        c: $fieldType2.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -783,9 +795,9 @@ class Padding6ByteMiddle extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint64Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
   }
 
   @override
@@ -797,10 +809,11 @@ class Padding6ByteMiddle extends $fidl.Struct {
         r')';
   }
 
-  static Padding6ByteMiddle _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding6ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding6ByteMiddle(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -841,9 +854,9 @@ class Padding7ByteMiddle extends $fidl.Struct {
   static const $fieldType1 = $fidl.Uint64Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
   }
 
   @override
@@ -855,10 +868,11 @@ class Padding7ByteMiddle extends $fidl.Struct {
         r')';
   }
 
-  static Padding7ByteMiddle _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Padding7ByteMiddle _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding7ByteMiddle(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -911,11 +925,11 @@ class Padding4ByteAlignmentLength12 extends $fidl.Struct {
   static const $fieldType3 = $fidl.Uint16Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 4);
-    $fieldType2.encode($encoder, c, $offset + 6);
-    $fieldType3.encode($encoder, d, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
+    $fieldType2.encode($encoder, c, $offset + 6, $depth);
+    $fieldType3.encode($encoder, d, $offset + 8, $depth);
   }
 
   @override
@@ -932,12 +946,12 @@ class Padding4ByteAlignmentLength12 extends $fidl.Struct {
   }
 
   static Padding4ByteAlignmentLength12 _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding4ByteAlignmentLength12(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 4),
-        c: $fieldType2.decode($decoder, $offset + 6),
-        d: $fieldType3.decode($decoder, $offset + 8));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 4, $depth),
+        c: $fieldType2.decode($decoder, $offset + 6, $depth),
+        d: $fieldType3.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -985,10 +999,10 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
   static const $fieldType2 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 2);
-    $fieldType2.encode($encoder, c, $offset + 4);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 2, $depth);
+    $fieldType2.encode($encoder, c, $offset + 4, $depth);
   }
 
   @override
@@ -1003,11 +1017,11 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
   }
 
   static Padding2ByteAlignmentLength6 _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Padding2ByteAlignmentLength6(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 2),
-        c: $fieldType2.decode($decoder, $offset + 4));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 2, $depth),
+        c: $fieldType2.decode($decoder, $offset + 4, $depth));
   }
 }
 

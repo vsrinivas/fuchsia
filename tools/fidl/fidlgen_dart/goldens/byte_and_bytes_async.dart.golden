@@ -92,11 +92,11 @@ class ByteAndBytes extends $fidl.Struct {
       element: $fidl.Uint8Type(), maybeElementCount: 1024);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, singleByte, $offset + 0);
-    $fieldType1.encode($encoder, manyBytes, $offset + 8);
-    $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24);
-    $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
+    $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
+    $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
+    $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
   }
 
   @override
@@ -112,12 +112,13 @@ class ByteAndBytes extends $fidl.Struct {
         r')';
   }
 
-  static ByteAndBytes _structDecode($fidl.Decoder $decoder, int $offset) {
+  static ByteAndBytes _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return ByteAndBytes(
-        singleByte: $fieldType0.decode($decoder, $offset + 0),
-        manyBytes: $fieldType1.decode($decoder, $offset + 8),
-        onlyOneKBytes: $fieldType2.decode($decoder, $offset + 24),
-        optOnlyOneKBytes: $fieldType3.decode($decoder, $offset + 40));
+        singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
+        manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
+        onlyOneKBytes: $fieldType2.decode($decoder, $offset + 24, $depth),
+        optOnlyOneKBytes: $fieldType3.decode($decoder, $offset + 40, $depth));
   }
 }
 

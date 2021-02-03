@@ -169,8 +169,8 @@ class StructWithNullableString extends $fidl.Struct {
   static const $fieldType0 = $fidl.NullableStringType(maybeElementCount: null);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -179,9 +179,9 @@ class StructWithNullableString extends $fidl.Struct {
   }
 
   static StructWithNullableString _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableString(
-        val: $fieldType0.decode($decoder, $offset + 0));
+        val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -224,8 +224,8 @@ class StructWithNullableVector extends $fidl.Struct {
       element: $fidl.Int32Type(), maybeElementCount: null);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -234,9 +234,9 @@ class StructWithNullableVector extends $fidl.Struct {
   }
 
   static StructWithNullableVector _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableVector(
-        val: $fieldType0.decode($decoder, $offset + 0));
+        val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -279,8 +279,8 @@ class StructWithNullableHandle extends $fidl.Struct {
       $fidl.VmoType(objectType: 3, rights: 2147483648));
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -289,9 +289,9 @@ class StructWithNullableHandle extends $fidl.Struct {
   }
 
   static StructWithNullableHandle _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableHandle(
-        val: $fieldType0.decode($decoder, $offset + 0));
+        val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -334,8 +334,8 @@ class StructWithNullableProtocol extends $fidl.Struct {
       $fidl.NullableInterfaceHandleType<SimpleProtocol>();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -344,9 +344,9 @@ class StructWithNullableProtocol extends $fidl.Struct {
   }
 
   static StructWithNullableProtocol _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableProtocol(
-        val: $fieldType0.decode($decoder, $offset + 0));
+        val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -390,8 +390,8 @@ class StructWithNullableRequest extends $fidl.Struct {
       $fidl.NullableInterfaceRequestType<SimpleProtocol>();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -400,9 +400,9 @@ class StructWithNullableRequest extends $fidl.Struct {
   }
 
   static StructWithNullableRequest _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableRequest(
-        val: $fieldType0.decode($decoder, $offset + 0));
+        val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -438,8 +438,8 @@ class Int32Wrapper extends $fidl.Struct {
   static const $fieldType0 = $fidl.Int32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -447,8 +447,9 @@ class Int32Wrapper extends $fidl.Struct {
     return r'Int32Wrapper' r'(val: ' + val.toString() + r')';
   }
 
-  static Int32Wrapper _structDecode($fidl.Decoder $decoder, int $offset) {
-    return Int32Wrapper(val: $fieldType0.decode($decoder, $offset + 0));
+  static Int32Wrapper _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return Int32Wrapper(val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -491,8 +492,8 @@ class StructWithNullableStruct extends $fidl.Struct {
       $fidl.PointerType<Int32Wrapper>(element: kInt32Wrapper_Type);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -501,9 +502,9 @@ class StructWithNullableStruct extends $fidl.Struct {
   }
 
   static StructWithNullableStruct _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableStruct(
-        val: $fieldType0.decode($decoder, $offset + 0));
+        val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -545,8 +546,8 @@ class StructWithNullableUnion extends $fidl.Struct {
   static const $fieldType0 = kSimpleUnion_OptType;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, val, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, val, $offset + 0, $depth);
   }
 
   @override
@@ -555,9 +556,9 @@ class StructWithNullableUnion extends $fidl.Struct {
   }
 
   static StructWithNullableUnion _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableUnion(
-        val: $fieldType0.decode($decoder, $offset + 0));
+        val: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -680,8 +681,8 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
     final List<$fidl.MemberType> $types = _kSimpleProtocol_Add_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kSimpleProtocol_Add_Type.encodingRequestInlineSize(), () {
-      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
-      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
+      $types[0].encode($encoder, a, $fidl.kMessageHeaderSize, 1);
+      $types[1].encode($encoder, b, $fidl.kMessageHeaderSize, 1);
     });
     final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -709,8 +710,8 @@ class SimpleProtocolBinding extends $fidl.AsyncBinding<SimpleProtocol> {
                   $message, _kSimpleProtocol_Add_Type.decodeRequestInlineSize(),
                   ($fidl.Decoder decoder) {
             return _impl.add(
-              $types[0].decode(decoder, $fidl.kMessageHeaderSize),
-              $types[1].decode(decoder, $fidl.kMessageHeaderSize),
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+              $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
           $future.then(($response) {

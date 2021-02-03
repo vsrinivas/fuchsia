@@ -67,9 +67,9 @@ class Int8Int32 extends $fidl.Struct {
   static const $fieldType1 = $fidl.Int32Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 4);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   @override
@@ -77,10 +77,11 @@ class Int8Int32 extends $fidl.Struct {
     return r'Int8Int32' r'(a: ' + a.toString() + r', b: ' + b.toString() + r')';
   }
 
-  static Int8Int32 _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Int8Int32 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Int8Int32(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 4));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 4, $depth));
   }
 }
 
@@ -120,9 +121,9 @@ class Int16Int8 extends $fidl.Struct {
   static const $fieldType1 = $fidl.Int8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 2);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 2, $depth);
   }
 
   @override
@@ -130,10 +131,11 @@ class Int16Int8 extends $fidl.Struct {
     return r'Int16Int8' r'(a: ' + a.toString() + r', b: ' + b.toString() + r')';
   }
 
-  static Int16Int8 _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Int16Int8 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return Int16Int8(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 2));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 2, $depth));
   }
 }
 
@@ -168,8 +170,8 @@ class ArrayInt16Int8 extends $fidl.Struct {
       element: kInt16Int8_Type, elementCount: 3);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, arr, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, arr, $offset + 0, $depth);
   }
 
   @override
@@ -177,8 +179,10 @@ class ArrayInt16Int8 extends $fidl.Struct {
     return r'ArrayInt16Int8' r'(arr: ' + arr.toString() + r')';
   }
 
-  static ArrayInt16Int8 _structDecode($fidl.Decoder $decoder, int $offset) {
-    return ArrayInt16Int8(arr: $fieldType0.decode($decoder, $offset + 0));
+  static ArrayInt16Int8 _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return ArrayInt16Int8(
+        arr: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -225,10 +229,10 @@ class StructPaddingTestStruct extends $fidl.Struct {
   static const $fieldType2 = kArrayInt16Int8_Type;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, trailing, $offset + 0);
-    $fieldType1.encode($encoder, inner, $offset + 4);
-    $fieldType2.encode($encoder, array, $offset + 12);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, trailing, $offset + 0, $depth);
+    $fieldType1.encode($encoder, inner, $offset + 4, $depth);
+    $fieldType2.encode($encoder, array, $offset + 12, $depth);
   }
 
   @override
@@ -243,11 +247,11 @@ class StructPaddingTestStruct extends $fidl.Struct {
   }
 
   static StructPaddingTestStruct _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructPaddingTestStruct(
-        trailing: $fieldType0.decode($decoder, $offset + 0),
-        inner: $fieldType1.decode($decoder, $offset + 4),
-        array: $fieldType2.decode($decoder, $offset + 12));
+        trailing: $fieldType0.decode($decoder, $offset + 0, $depth),
+        inner: $fieldType1.decode($decoder, $offset + 4, $depth),
+        array: $fieldType2.decode($decoder, $offset + 12, $depth));
   }
 }
 
@@ -298,9 +302,9 @@ class NonInlineStructTestStruct extends $fidl.Struct {
       $fidl.HandleType(objectType: 0, rights: 2147483648);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, element, $offset + 0);
-    $fieldType1.encode($encoder, h, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, element, $offset + 0, $depth);
+    $fieldType1.encode($encoder, h, $offset + 8, $depth);
   }
 
   @override
@@ -313,10 +317,10 @@ class NonInlineStructTestStruct extends $fidl.Struct {
   }
 
   static NonInlineStructTestStruct _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return NonInlineStructTestStruct(
-        element: $fieldType0.decode($decoder, $offset + 0),
-        h: $fieldType1.decode($decoder, $offset + 8));
+        element: $fieldType0.decode($decoder, $offset + 0, $depth),
+        h: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 
@@ -358,9 +362,9 @@ class TopLevelStruct extends $fidl.Struct {
   static const $fieldType1 = kNonInlineStructTestStruct_Type;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
-    $fieldType1.encode($encoder, b, $offset + 24);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 24, $depth);
   }
 
   @override
@@ -372,10 +376,11 @@ class TopLevelStruct extends $fidl.Struct {
         r')';
   }
 
-  static TopLevelStruct _structDecode($fidl.Decoder $decoder, int $offset) {
+  static TopLevelStruct _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return TopLevelStruct(
-        a: $fieldType0.decode($decoder, $offset + 0),
-        b: $fieldType1.decode($decoder, $offset + 24));
+        a: $fieldType0.decode($decoder, $offset + 0, $depth),
+        b: $fieldType1.decode($decoder, $offset + 24, $depth));
   }
 }
 

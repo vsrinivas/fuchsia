@@ -2175,8 +2175,8 @@ class Pizza extends $fidl.Struct {
       maybeElementCount: null);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, toppings, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
   }
 
   @override
@@ -2184,8 +2184,8 @@ class Pizza extends $fidl.Struct {
     return r'Pizza' r'(toppings: ' + toppings.toString() + r')';
   }
 
-  static Pizza _structDecode($fidl.Decoder $decoder, int $offset) {
-    return Pizza(toppings: $fieldType0.decode($decoder, $offset + 0));
+  static Pizza _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    return Pizza(toppings: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -2219,8 +2219,8 @@ class Pasta extends $fidl.Struct {
   static const $fieldType0 = $fidl.StringType(maybeElementCount: 16);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, sauce, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
   }
 
   @override
@@ -2228,8 +2228,8 @@ class Pasta extends $fidl.Struct {
     return r'Pasta' r'(sauce: ' + sauce.toString() + r')';
   }
 
-  static Pasta _structDecode($fidl.Decoder $decoder, int $offset) {
-    return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0));
+  static Pasta _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -2270,8 +2270,8 @@ class NullableUnionStruct extends $fidl.Struct {
   static const $fieldType0 = kUnion_OptType;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, theUnion, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, theUnion, $offset + 0, $depth);
   }
 
   @override
@@ -2280,9 +2280,9 @@ class NullableUnionStruct extends $fidl.Struct {
   }
 
   static NullableUnionStruct _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return NullableUnionStruct(
-        theUnion: $fieldType0.decode($decoder, $offset + 0));
+        theUnion: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -2317,8 +2317,8 @@ class Empty extends $fidl.Struct {
   static const $fieldType0 = $fidl.Uint8Type();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, reserved, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   @override
@@ -2326,8 +2326,8 @@ class Empty extends $fidl.Struct {
     return r'Empty' r'(reserved: ' + reserved.toString() + r')';
   }
 
-  static Empty _structDecode($fidl.Decoder $decoder, int $offset) {
-    return Empty(reserved: $fieldType0.decode($decoder, $offset + 0));
+  static Empty _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    return Empty(reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -2368,8 +2368,8 @@ class StructWithNullableXUnion extends $fidl.Struct {
   static const $fieldType0 = kOlderSimpleUnion_OptType;
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, x1, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, x1, $offset + 0, $depth);
   }
 
   @override
@@ -2378,9 +2378,9 @@ class StructWithNullableXUnion extends $fidl.Struct {
   }
 
   static StructWithNullableXUnion _structDecode(
-      $fidl.Decoder $decoder, int $offset) {
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return StructWithNullableXUnion(
-        x1: $fieldType0.decode($decoder, $offset + 0));
+        x1: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 

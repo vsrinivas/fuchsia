@@ -64,9 +64,9 @@ class {{ .Name }} extends $fidl.Struct {
   {{- end }}
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
     {{- range $index, $member := .Members }}
-    $fieldType{{ $index }}.encode($encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV1 }});
+    $fieldType{{ $index }}.encode($encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV1 }}, $depth);
     {{- end }}
   }
 
@@ -79,11 +79,11 @@ class {{ .Name }} extends $fidl.Struct {
     )';
   }
 
-  static {{ .Name }} _structDecode($fidl.Decoder $decoder, int $offset) {
+  static {{ .Name }} _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     return {{ .Name }}(
     {{ range $index, $member := .Members }}
     {{- if ne $index 0 }},{{ end }}
-    {{ $member.Name }}: $fieldType{{ $index }}.decode($decoder, $offset + {{ $member.OffsetV1 }})
+    {{ $member.Name }}: $fieldType{{ $index }}.decode($decoder, $offset + {{ $member.OffsetV1 }}, $depth)
     {{- end -}}
     );
   }

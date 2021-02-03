@@ -230,8 +230,8 @@ class StructSmallArray extends $fidl.Struct {
       element: $fidl.Uint32Type(), elementCount: 2);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
   }
 
   @override
@@ -239,8 +239,10 @@ class StructSmallArray extends $fidl.Struct {
     return r'StructSmallArray' r'(a: ' + a.toString() + r')';
   }
 
-  static StructSmallArray _structDecode($fidl.Decoder $decoder, int $offset) {
-    return StructSmallArray(a: $fieldType0.decode($decoder, $offset + 0));
+  static StructSmallArray _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return StructSmallArray(
+        a: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 
@@ -276,8 +278,8 @@ class StructLargeArray extends $fidl.Struct {
       element: $fidl.Uint32Type(), elementCount: 100);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, a, $offset + 0);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
   }
 
   @override
@@ -285,8 +287,10 @@ class StructLargeArray extends $fidl.Struct {
     return r'StructLargeArray' r'(a: ' + a.toString() + r')';
   }
 
-  static StructLargeArray _structDecode($fidl.Decoder $decoder, int $offset) {
-    return StructLargeArray(a: $fieldType0.decode($decoder, $offset + 0));
+  static StructLargeArray _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return StructLargeArray(
+        a: $fieldType0.decode($decoder, $offset + 0, $depth));
   }
 }
 

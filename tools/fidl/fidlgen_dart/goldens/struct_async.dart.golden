@@ -67,9 +67,9 @@ class Simple extends $fidl.Struct {
   static const $fieldType1 = $fidl.BoolType();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, f1, $offset + 0);
-    $fieldType1.encode($encoder, f2, $offset + 1);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+    $fieldType1.encode($encoder, f2, $offset + 1, $depth);
   }
 
   @override
@@ -81,10 +81,10 @@ class Simple extends $fidl.Struct {
         r')';
   }
 
-  static Simple _structDecode($fidl.Decoder $decoder, int $offset) {
+  static Simple _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     return Simple(
-        f1: $fieldType0.decode($decoder, $offset + 0),
-        f2: $fieldType1.decode($decoder, $offset + 1));
+        f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+        f2: $fieldType1.decode($decoder, $offset + 1, $depth));
   }
 }
 
@@ -124,9 +124,9 @@ class BasicStruct extends $fidl.Struct {
   static const $fieldType1 = $fidl.StringType(maybeElementCount: null);
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset) {
-    $fieldType0.encode($encoder, x, $offset + 0);
-    $fieldType1.encode($encoder, y, $offset + 8);
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, x, $offset + 0, $depth);
+    $fieldType1.encode($encoder, y, $offset + 8, $depth);
   }
 
   @override
@@ -138,10 +138,11 @@ class BasicStruct extends $fidl.Struct {
         r')';
   }
 
-  static BasicStruct _structDecode($fidl.Decoder $decoder, int $offset) {
+  static BasicStruct _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
     return BasicStruct(
-        x: $fieldType0.decode($decoder, $offset + 0),
-        y: $fieldType1.decode($decoder, $offset + 8));
+        x: $fieldType0.decode($decoder, $offset + 0, $depth),
+        y: $fieldType1.decode($decoder, $offset + 8, $depth));
   }
 }
 

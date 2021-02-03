@@ -25,16 +25,16 @@ void main() async {
 
     // TODO(fxbug.dev/56687): test in GIDL
     test('unknown ordinal flexible with handles', () async {
-      var encoder = Encoder()..alloc(24);
-      kExampleXunion_Type.encode(encoder, xunion, 0);
+      var encoder = Encoder()..alloc(24, 0);
+      kExampleXunion_Type.encode(encoder, xunion, 0, 1);
 
       // overwrite the ordinal to be unknown
       encoder.encodeUint64(0x1234, 0);
 
       final decoder =
           Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
-            ..claimMemory(24);
-      ExampleXunion unknownXunion = kExampleXunion_Type.decode(decoder, 0);
+            ..claimMemory(24, 0);
+      ExampleXunion unknownXunion = kExampleXunion_Type.decode(decoder, 0, 1);
       UnknownRawData actual = unknownXunion.$data;
       final expectedData = Uint8List.fromList([
         0x01, 0x00, 0x00, 0x00, // n1
@@ -45,8 +45,8 @@ void main() async {
       expect(actual.data, equals(expectedData));
       expect(actual.handles.length, equals(1));
 
-      encoder = Encoder()..alloc(24);
-      kExampleXunion_Type.encode(encoder, unknownXunion, 0);
+      encoder = Encoder()..alloc(24, 0);
+      kExampleXunion_Type.encode(encoder, unknownXunion, 0, 1);
 
       expect(encoder.message.data.lengthInBytes, 40);
       final bytes = encoder.message.data.buffer.asUint8List(0, 40);
@@ -64,7 +64,7 @@ void main() async {
     });
 
     test('encode integer bounds', () {
-      final encoder = Encoder()..alloc(1024);
+      final encoder = Encoder()..alloc(1024, 0);
 
       encoder.encodeInt8(-128, 0);
       encoder.encodeInt8(127, 0);
@@ -95,23 +95,6 @@ void main() async {
       encoder.encodeUint32(4294967295, 0);
       expect(() => encoder.encodeUint32(-1, 0), throwsException);
       expect(() => encoder.encodeUint32(4294967296, 0), throwsException);
-    });
-
-    test('encode out of line depth check', () {
-      MemberType member = MemberType(
-        type: kExampleXunion_Type,
-        offset: 0,
-      );
-
-      final encoder = Encoder()
-        ..encodeMessageHeader(0, 0)
-        // An alloc call without a matching allocComplete call should cause an
-        //error.
-        ..alloc(0);
-      expect(
-          () => encodeMessage(encoder, kExampleXunion_Type.encodingInlineSize(),
-              member, xunion),
-          throwsA(predicate((err) => err is FidlError)));
     });
   });
 }
