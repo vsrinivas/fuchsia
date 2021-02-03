@@ -49,7 +49,14 @@ Add a directory pattern you want to exclude the search from. Alternatively one c
 
 ### Useful Fuchsia-specific extensions
 
-- [fuchsia.git helper](https://marketplace.visualstudio.com/items?itemName=jwing.fuchsia-git-helper&ssr=false): Adds an "Open in..." option to the editor context menus.
+- [FIDL Language Support](https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.language-fidl){:.external}
+  Provides syntax support and LSP-based language features
+  [FIDL](/docs/development/languages/fidl/README.md).
+- [Fuchsia.git Helper](https://marketplace.visualstudio.com/items?itemName=jwing.fuchsia-git-helper){:.external}
+  Adds an "Open in..." option to the editor context menus.
+- [FuchsiAware](https://marketplace.visualstudio.com/items?itemName=RichKadel.fuchsiaware){:.external}
+  Assists with browsing Fuchsia artifacts, such as by linking from component URLs to component
+  manifests.
 
 ## Language specifics
 Each language may require extra configuration. See more for
