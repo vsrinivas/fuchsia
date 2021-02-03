@@ -181,7 +181,7 @@ class Image : public View<Storage, Check> {
       auto error = std::move(result).error_value();
       return fitx::error{ErrorType{
           .zbi_error = error.zbi_error,
-          .write_offset = error.item_offset,
+          .write_offset = new_size,
           .write_error = std::move(error.storage_error),
       }};
     }
@@ -197,9 +197,11 @@ class Image : public View<Storage, Check> {
     ZX_DEBUG_ASSERT(new_size % ZBI_ALIGNMENT == 0);
 
     if (auto result = Traits::EnsureCapacity(this->storage(), new_size); result.is_error()) {
-      return fitx::error{Error{"cannot ensure sufficient capacity",
-                               static_cast<uint32_t>(this->size_bytes()),
-                               std::move(result.error_value())}};
+      return fitx::error{Error{
+          "cannot ensure sufficient capacity",
+          new_size,
+          std::move(result.error_value()),
+      }};
     }
     if (auto result =
             this->WriteHeader(ZBI_CONTAINER_HEADER(new_size - uint32_t{sizeof(zbi_header_t)}), 0);
