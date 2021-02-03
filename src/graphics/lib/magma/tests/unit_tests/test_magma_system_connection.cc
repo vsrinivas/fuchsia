@@ -163,6 +163,28 @@ TEST(MagmaSystemConnection, Semaphores) {
   EXPECT_FALSE(connection.ReleaseObject(semaphore->id(), magma::PlatformObject::SEMAPHORE));
 }
 
+TEST(MagmaSystemConnection, BadSemaphoreImport) {
+  auto msd_dev = new MsdMockDevice();
+  auto dev =
+      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+
+  auto msd_connection = msd_device_open(msd_dev, 0);
+  ASSERT_TRUE(msd_connection);
+
+  MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
+
+  constexpr uint32_t kBogusHandle = 0xabcd1234;
+  EXPECT_FALSE(connection.ImportObject(kBogusHandle, magma::PlatformObject::SEMAPHORE));
+
+  auto buffer = magma::PlatformBuffer::Create(4096, "test");
+  ASSERT_TRUE(buffer);
+
+  uint32_t buffer_handle;
+  ASSERT_TRUE(buffer->duplicate_handle(&buffer_handle));
+
+  EXPECT_FALSE(connection.ImportObject(buffer_handle, magma::PlatformObject::SEMAPHORE));
+}
+
 TEST(MagmaSystemConnection, BufferSharing) {
   auto msd_dev = new MsdMockDevice();
   auto dev =
@@ -194,6 +216,29 @@ TEST(MagmaSystemConnection, BufferSharing) {
   auto buf_1 = connection_1.LookupBuffer(buf_id_1);
 
   EXPECT_EQ(buf_0->id(), buf_1->id());
+}
+
+TEST(MagmaSystemConnection, BadBufferImport) {
+  auto msd_dev = new MsdMockDevice();
+  auto dev =
+      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+
+  auto msd_connection = msd_device_open(msd_dev, 0);
+  ASSERT_TRUE(msd_connection);
+
+  MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
+
+  constexpr uint32_t kBogusHandle = 0xabcd1234;
+  uint64_t id;
+  EXPECT_FALSE(connection.ImportBuffer(kBogusHandle, &id));
+
+  auto semaphore = magma::PlatformSemaphore::Create();
+  ASSERT_TRUE(semaphore);
+
+  uint32_t semaphore_handle;
+  ASSERT_TRUE(semaphore->duplicate_handle(&semaphore_handle));
+
+  EXPECT_FALSE(connection.ImportBuffer(semaphore_handle, &id));
 }
 
 TEST(MagmaSystemConnection, PerformanceCounters) {

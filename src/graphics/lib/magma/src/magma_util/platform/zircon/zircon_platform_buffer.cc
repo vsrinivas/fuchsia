@@ -520,13 +520,12 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char
 
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle) {
   uint64_t size;
-  // presumably this will fail if handle is invalid or not a vmo handle, so we perform no
-  // additional error checking
   zx::vmo vmo(handle);
-  auto status = vmo.get_size(&size);
 
+  // get_size fails if handle is not a VMO
+  zx_status_t status = vmo.get_size(&size);
   if (status != ZX_OK)
-    return DRETP(nullptr, "zx_vmo_get_size failed");
+    return DRETP(nullptr, "zx_vmo_get_size failed: %d", status);
 
   if (!magma::is_page_aligned(size))
     return DRETP(nullptr, "attempting to import vmo with invalid size");

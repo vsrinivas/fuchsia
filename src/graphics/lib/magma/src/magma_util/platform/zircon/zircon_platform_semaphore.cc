@@ -78,11 +78,15 @@ std::unique_ptr<PlatformSemaphore> PlatformSemaphore::Create() {
 std::unique_ptr<PlatformSemaphore> PlatformSemaphore::Import(uint32_t handle) {
   zx::event event(handle);
 
-  uint64_t koid;
-  if (!PlatformObject::IdFromHandle(event.get(), &koid))
-    return DRETP(nullptr, "couldn't get koid from handle");
+  zx_info_handle_basic_t info;
+  zx_status_t status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "couldn't get handle info %d", status);
 
-  return std::make_unique<ZirconPlatformSemaphore>(std::move(event), koid);
+  if (info.type != ZX_OBJ_TYPE_EVENT)
+    return DRETP(nullptr, "invalid object type: %d", info.type);
+
+  return std::make_unique<ZirconPlatformSemaphore>(std::move(event), info.koid);
 }
 
 }  // namespace magma
