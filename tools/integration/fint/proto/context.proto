@@ -46,4 +46,7 @@ message Context {
   string clang_toolchain_dir = 8;
   string gcc_toolchain_dir = 9;
   string rust_toolchain_dir = 10;
+
+  // Whether to build for the purposes of collecting coverage.
+  bool collect_coverage = 11;
 }

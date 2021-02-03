@@ -217,6 +217,8 @@ func TestGenArgs(t *testing.T) {
 		// Args that are expected to be included in the return value. Order does
 		// not matter.
 		expectedArgs []string
+		// Args that are not expected to be included in the return value.
+		unexpectedArgs []string
 		// Whether `expectedArgs` must be found in the same relative order in
 		// the return value. Disabled by default to make tests less fragile.
 		orderMatters bool
@@ -374,7 +376,23 @@ func TestGenArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "profile variant with changed files",
+			name: "profile variant with changed files and collect_coverage=true",
+			contextSpec: &fintpb.Context{
+				ChangedFiles: []*fintpb.Context_ChangedFile{
+					{Path: "src/foo.cc"},
+					{Path: "src/bar.cc"},
+				},
+				CollectCoverage: true,
+			},
+			staticSpec: &fintpb.Static{
+				Variants: []string{`profile`},
+			},
+			expectedArgs: []string{
+				`profile_source_files=["//src/foo.cc","//src/bar.cc"]`,
+			},
+		},
+		{
+			name: "profile variant with changed files and collect_coverage=false",
 			contextSpec: &fintpb.Context{
 				ChangedFiles: []*fintpb.Context_ChangedFile{
 					{Path: "src/foo.cc"},
@@ -384,7 +402,7 @@ func TestGenArgs(t *testing.T) {
 			staticSpec: &fintpb.Static{
 				Variants: []string{`profile`},
 			},
-			expectedArgs: []string{
+			unexpectedArgs: []string{
 				`profile_source_files=["//src/foo.cc","//src/bar.cc"]`,
 			},
 		},
@@ -465,6 +483,9 @@ func TestGenArgs(t *testing.T) {
 			}
 
 			assertSubset(t, tc.expectedArgs, args, tc.orderMatters)
+			if len(tc.unexpectedArgs) > 0 {
+				assertNotOverlap(t, tc.unexpectedArgs, args)
+			}
 		})
 	}
 }
@@ -475,6 +496,17 @@ func TestGenArgs(t *testing.T) {
 func assertSubset(t *testing.T, subset, set []string, orderMatters bool) {
 	if isSub, msg := isSubset(subset, set, orderMatters); !isSub {
 		t.Fatalf(msg)
+	}
+}
+
+// assertNotOverlap checks that every item in `set1` is not in `set2`.
+func assertNotOverlap(t *testing.T, set1, set2 []string) {
+	for _, i := range set1 {
+		for _, j := range set2 {
+			if i == j {
+				t.Fatalf("%v and %v have one or more overlapping elements", set1, set2)
+			}
+		}
 	}
 }
 
