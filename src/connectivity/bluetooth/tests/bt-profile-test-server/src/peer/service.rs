@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    bt_rfcomm::ServerChannel,
     fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier,
     fuchsia_bluetooth::{profile::Psm, types::PeerId},
     log::warn,
@@ -36,8 +37,14 @@ pub struct ServiceSet {
     /// Each service, stored as a ServiceRecord, is assigned a unique ServiceHandle.
     records: Slab<ServiceRecord>,
 
-    /// A single PSM can be specified by multiple services.
-    psm_to_services: HashMap<Psm, HashSet<ServiceHandle>>,
+    /// A single PSM can be specified by multiple services. However, these services
+    /// must be registered together. Therefore, each PSM is uniquely mapped to a
+    /// RegistrationHandle.
+    psm_to_handle: HashMap<Psm, RegistrationHandle>,
+
+    /// A single RFCOMM Server Channel can only be specified by a single service and therefore
+    /// a RegistrationHandle.
+    rfcomm_channel_to_handle: HashMap<ServerChannel, RegistrationHandle>,
 
     /// The ServiceClassIds supported by each registration. This is used to speed
     /// up the matching to a service search.
@@ -50,7 +57,8 @@ impl ServiceSet {
             peer_id,
             reg_to_service: HashMap::new(),
             records: Slab::new(),
-            psm_to_services: HashMap::new(),
+            psm_to_handle: HashMap::new(),
+            rfcomm_channel_to_handle: HashMap::new(),
             reg_to_svc_ids: HashMap::new(),
         }
     }
@@ -64,21 +72,16 @@ impl ServiceSet {
         self.reg_to_svc_ids.get(handle)
     }
 
-    /// Checks if the provided `psm` is registered by any of the services.
-    ///
     /// Returns the RegistrationHandle of the service specifying the PSM, or
     /// None if not registered.
     pub fn psm_registered(&self, psm: Psm) -> Option<RegistrationHandle> {
-        for (reg_handle, handles) in &self.reg_to_service {
-            for service_handle in handles {
-                if let Some(record) = self.records.get(service_handle.clone()) {
-                    if record.contains_psm(&psm) {
-                        return Some(reg_handle.clone());
-                    }
-                }
-            }
-        }
-        None
+        self.psm_to_handle.get(&psm).cloned()
+    }
+
+    /// Returns the RegistrationHandle of the service specifying the RFCOMM `channel` number, or
+    /// None if not registered.
+    pub fn rfcomm_channel_registered(&self, channel: ServerChannel) -> Option<RegistrationHandle> {
+        self.rfcomm_channel_to_handle.get(&channel).cloned()
     }
 
     /// Returns a map of ServiceRecords (if any), that conform to the provided Service Class `ids`.
@@ -114,14 +117,20 @@ impl ServiceSet {
             return None;
         }
 
-        // Any service in `records` must not request a psm in `existing_psms`.
-        let existing_psms = self.psm_to_services.keys().cloned().collect();
-        for record in &records {
-            // The requested PSMs must not be registered already.
-            if !record.is_disjoint(&existing_psms) {
-                warn!("PSM already registered");
-                return None;
-            }
+        // Any new service must not request an already allocated L2CAP PSM / RFCOMM channel.
+        let existing_psms: HashSet<Psm> = self.psm_to_handle.keys().cloned().collect();
+        let new_psms = records.iter().map(|record| record.psms()).flatten().collect();
+        if !existing_psms.is_disjoint(&new_psms) {
+            warn!("PSM already registered");
+            return None;
+        }
+        let existing_rfcomm_channels: HashSet<ServerChannel> =
+            self.rfcomm_channel_to_handle.keys().cloned().collect();
+        let new_rfcomm_channels =
+            records.iter().map(|record| record.rfcomm_channels()).flatten().collect();
+        if !existing_rfcomm_channels.is_disjoint(&new_rfcomm_channels) {
+            warn!("RFCOMM channel already registered");
+            return None;
         }
 
         let mut assigned_handles = HashSet::new();
@@ -135,11 +144,6 @@ impl ServiceSet {
             // Register the ServiceRecord with the unique PeerId,ServiceHandle combination.
             record.register_service_record(RegisteredServiceId::new(self.peer_id, next));
 
-            // Save the (psm, handle) mappings.
-            for psm in record.psms() {
-                self.psm_to_services.entry(psm.clone()).or_insert(HashSet::new()).insert(next);
-            }
-
             // Update the set of ServiceClassIds, save the assigned handle, and store the
             // ServiceRecord.
             service_class_ids = service_class_ids.union(record.service_ids()).cloned().collect();
@@ -147,57 +151,75 @@ impl ServiceSet {
             entry.insert(record);
         }
 
-        // The RegistrationHandle is the min of the (nonempty) `assigned_handles` set.
-        let registration_handle = assigned_handles.iter().min().cloned().unwrap();
+        // The RegistrationHandle is the smallest handle in the (nonempty) `assigned_handles`.
+        let registration_handle = assigned_handles.iter().min().cloned().expect("is nonempty");
+        // Save metadata to speed up the matching process.
         self.reg_to_svc_ids.insert(registration_handle, service_class_ids);
         self.reg_to_service.insert(registration_handle, assigned_handles);
+        new_psms.iter().for_each(|psm| {
+            self.psm_to_handle.insert(*psm, registration_handle);
+        });
+        new_rfcomm_channels.iter().for_each(|sc| {
+            self.rfcomm_channel_to_handle.insert(*sc, registration_handle);
+        });
 
         Some(registration_handle)
     }
 
-    /// Unregisters the service(s) associated with the RegistrationHandle `handle`.
+    /// Unregisters the service(s) associated with the registered `handle`.
     ///
-    /// Returns true if any services were unregistered.
-    pub fn unregister_service(&mut self, handle: &RegistrationHandle) -> bool {
+    /// Returns the set of removed services.
+    pub fn unregister_service(&mut self, handle: &RegistrationHandle) -> Vec<ServiceRecord> {
+        let mut removed_services = Vec::new();
+        // Remove the registered handle.
         let removed = self.reg_to_service.remove(handle);
         if removed.is_none() {
-            return false;
+            return removed_services;
         }
 
+        // Update the ServiceClassProfileId cache.
         self.reg_to_svc_ids.remove(handle);
 
         for svc_handle in removed.expect("just checked") {
-            if self.records.contains(svc_handle.clone()) {
-                let psms = self.records.remove(svc_handle.clone()).psms();
-                for psm in psms {
-                    self.psm_to_services.remove(&psm);
-                }
+            if self.records.contains(svc_handle) {
+                // Remove the entry for the service record.
+                let removed = self.records.remove(svc_handle);
+                // Update the PSM and RFCOMM channel caches.
+                removed.psms().iter().for_each(|psm| {
+                    self.psm_to_handle.remove(psm);
+                });
+                removed.rfcomm_channels().iter().for_each(|channel| {
+                    self.rfcomm_channel_to_handle.remove(channel);
+                });
+                removed_services.push(removed);
             }
         }
-
-        true
+        removed_services
     }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use {matches::assert_matches, std::convert::TryFrom};
 
-    // Builds a ServiceRecord with the provided `psm`.
-    pub(crate) fn build_a2dp_service_record(psm: Psm) -> ServiceRecord {
-        let mut service_ids = HashSet::new();
-        service_ids.insert(ServiceClassProfileIdentifier::AudioSink);
-        service_ids.insert(ServiceClassProfileIdentifier::AudioSource);
-
-        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![], vec![])
-    }
+    use crate::{
+        profile::tests::{build_a2dp_service_definition, build_rfcomm_service_definition},
+        types::Connection,
+    };
 
     fn build_avrcp_service_record(psm: Psm) -> ServiceRecord {
         let mut service_ids = HashSet::new();
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControl);
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControlController);
 
-        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![], vec![])
+        ServiceRecord::new(
+            service_ids,
+            Some(Connection::L2cap(psm)),
+            HashSet::new(),
+            vec![],
+            vec![],
+        )
     }
 
     #[test]
@@ -207,15 +229,14 @@ pub(crate) mod tests {
 
         // Single, valid record, is successful.
         let psm0 = Psm::new(19);
-        let single_record = vec![build_a2dp_service_record(psm0)];
-        let reg_handle = manager.register_service(single_record);
+        let (_, single_record) = build_a2dp_service_definition(psm0);
+        let reg_handle = manager.register_service(vec![single_record]);
         assert!(reg_handle.is_some());
         assert_eq!(reg_handle, manager.psm_registered(psm0));
 
         // The relevant ServiceClassProfileIds should be registered for this handle.
         let mut expected_ids = HashSet::new();
         expected_ids.insert(ServiceClassProfileIdentifier::AudioSink);
-        expected_ids.insert(ServiceClassProfileIdentifier::AudioSource);
         let service_ids =
             manager.get_service_ids_for_registration_handle(&reg_handle.unwrap()).unwrap();
         assert_eq!(expected_ids, service_ids.clone());
@@ -223,19 +244,18 @@ pub(crate) mod tests {
         // Multiple, valid records, is successful.
         let psm1 = Psm::new(20);
         let psm2 = Psm::new(21);
-        let records = vec![build_a2dp_service_record(psm1), build_a2dp_service_record(psm2)];
-        let reg_handle2 = manager.register_service(records);
+        let (_, record1) = build_a2dp_service_definition(psm1);
+        let (_, record2) = build_a2dp_service_definition(psm2);
+        let reg_handle2 = manager.register_service(vec![record1, record2]);
         assert!(reg_handle2.is_some());
         assert_eq!(reg_handle2, manager.psm_registered(psm1));
         assert_eq!(reg_handle2, manager.psm_registered(psm2));
 
         // Multiple records with overlapping PSMs is successful since they are registered together.
         let (psm3, psm4) = (Psm::new(22), Psm::new(23));
-        let overlapping = vec![
-            build_avrcp_service_record(psm3),
-            build_avrcp_service_record(psm3),
-            build_a2dp_service_record(psm4),
-        ];
+        let (_, record4) = build_a2dp_service_definition(psm4);
+        let overlapping =
+            vec![build_avrcp_service_record(psm3), build_avrcp_service_record(psm3), record4];
         let reg_handle3 = manager.register_service(overlapping);
         assert!(reg_handle3.is_some());
         assert_eq!(reg_handle3, manager.psm_registered(psm3));
@@ -248,8 +268,8 @@ pub(crate) mod tests {
         let service_ids = service_ids.unwrap();
         assert_eq!(&expected_ids, service_ids);
 
-        // Unregistering a service should succeed. Only the relevant PSMs should be removed.
-        assert!(manager.unregister_service(&reg_handle3.unwrap()));
+        // Unregistering a service should succeed. Only the relevant services should be removed.
+        assert_eq!(3, manager.unregister_service(&reg_handle3.unwrap()).len());
         assert_eq!(reg_handle, manager.psm_registered(psm0));
         assert_eq!(reg_handle2, manager.psm_registered(psm1));
         assert_eq!(reg_handle2, manager.psm_registered(psm2));
@@ -257,24 +277,50 @@ pub(crate) mod tests {
         assert_eq!(None, manager.psm_registered(psm4));
 
         // Unregistering the same service shouldn't do anything.
-        assert_eq!(false, manager.unregister_service(&reg_handle3.unwrap()));
+        assert_eq!(0, manager.unregister_service(&reg_handle3.unwrap()).len());
     }
 
     #[test]
-    fn test_register_service_error() {
+    fn register_empty_service_is_error() {
+        let mut manager = ServiceSet::new(PeerId(16));
+        let empty_records = vec![];
+        assert_eq!(manager.register_service(empty_records), None);
+    }
+
+    #[test]
+    fn register_duplicate_services_is_error() {
         let id = PeerId(123);
         let mut manager = ServiceSet::new(id);
 
-        // Empty ServiceRecords is invalid
-        let empty_records = vec![];
-        assert_eq!(None, manager.register_service(empty_records));
-        assert!(manager.get_service_records(&HashSet::new()).is_empty());
-
-        // Attempting to register the same PSM fails the second time.
         let psm = Psm::new(19);
-        let single_record = vec![build_a2dp_service_record(psm)];
-        assert!(manager.register_service(single_record).is_some());
-        let duplicate_record = vec![build_a2dp_service_record(psm)];
-        assert_eq!(None, manager.register_service(duplicate_record));
+        let (_, single_record) = build_a2dp_service_definition(psm);
+        assert!(manager.register_service(vec![single_record.clone()]).is_some());
+        // Attempting to register the same PSM fails the second time.
+        assert_eq!(manager.register_service(vec![single_record]), None);
+    }
+
+    #[test]
+    fn register_rfcomm_service_is_ok() {
+        let id = PeerId(123);
+        let mut manager = ServiceSet::new(id);
+
+        let random_channel = ServerChannel::try_from(3).unwrap();
+        assert_matches!(manager.rfcomm_channel_registered(random_channel), None);
+
+        // Build an RFCOMM record and assign it a server channel.
+        let example_channel = ServerChannel::try_from(17).unwrap();
+        let (_, mut rfcomm_record) = build_rfcomm_service_definition(None);
+        assert_matches!(rfcomm_record.set_rfcomm_channel(example_channel), Ok(_));
+
+        let handle1 =
+            manager.register_service(vec![rfcomm_record.clone()]).expect("should register");
+        assert_matches!(manager.rfcomm_channel_registered(example_channel), Some(_));
+
+        // Registering an RFCOMM service with the same channel number should fail.
+        assert_matches!(manager.register_service(vec![rfcomm_record]), None);
+
+        // Unregistering services should work - should remove the service.
+        assert_matches!(manager.unregister_service(&handle1).len(), 1usize);
+        assert_matches!(manager.rfcomm_channel_registered(example_channel), None);
     }
 }

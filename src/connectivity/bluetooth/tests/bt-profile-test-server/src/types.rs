@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::{
         profile::{Attribute, Psm},
@@ -13,6 +14,17 @@ use {
 };
 
 use crate::peer::service::ServiceHandle;
+use crate::profile::build_l2cap_descriptor;
+
+/// The connection type of a service.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Connection {
+    /// L2CAP connections are specified by a PSM.
+    L2cap(Psm),
+    /// RFCOMM connections are specified by a ServerChannel number. None is used if
+    /// the server channel number has not been assigned yet.
+    Rfcomm(Option<ServerChannel>),
+}
 
 /// Convenience type for storing the fields of a Profile.ServiceFound response.
 pub struct ServiceFoundResponse {
@@ -64,8 +76,9 @@ pub struct ServiceRecord {
     /// The Service Class IDs specified by this record. There must be at least one.
     svc_ids: HashSet<bredr::ServiceClassProfileIdentifier>,
 
-    /// The PSM specified by this record. It is valid to not specify a primary PSM.
-    primary_psm: Option<Psm>,
+    /// The primary connection specified by this record. It is valid to not specify
+    /// a connection type.
+    primary_connection: Option<Connection>,
 
     /// Any additional PSMs specified by this record. If none, this will be empty.
     additional_psms: HashSet<Psm>,
@@ -85,14 +98,14 @@ pub struct ServiceRecord {
 impl ServiceRecord {
     pub fn new(
         svc_ids: HashSet<bredr::ServiceClassProfileIdentifier>,
-        primary_psm: Option<Psm>,
+        primary_connection: Option<Connection>,
         additional_psms: HashSet<Psm>,
         profile_descriptors: Vec<bredr::ProfileDescriptor>,
         additional_attributes: Vec<Attribute>,
     ) -> Self {
         Self {
             svc_ids,
-            primary_psm,
+            primary_connection,
             additional_psms,
             profile_descriptors,
             additional_attributes,
@@ -112,10 +125,38 @@ impl ServiceRecord {
     /// Returns all the PSMs specified by this record.
     pub fn psms(&self) -> HashSet<Psm> {
         let mut psms = HashSet::new();
-        if let Some(psm) = self.primary_psm {
+        if let Some(Connection::L2cap(psm)) = self.primary_connection {
             psms.insert(psm);
         }
         psms.union(&self.additional_psms).cloned().collect()
+    }
+
+    /// Returns the RFCOMM channels specified by this record.
+    /// TODO(fxbug.dev/66002): Return any RFCOMM channels allocated in the additional protocols.
+    pub fn rfcomm_channels(&self) -> HashSet<ServerChannel> {
+        let mut channels = HashSet::new();
+        if let Some(Connection::Rfcomm(Some(sc))) = self.primary_connection {
+            channels.insert(sc);
+        }
+        channels
+    }
+
+    /// Returns true if this record requests RFCOMM.
+    pub fn requests_rfcomm(&self) -> bool {
+        match self.primary_connection {
+            Some(Connection::Rfcomm(_)) => true,
+            _ => false,
+        }
+    }
+
+    /// Sets the RFCOMM server channel `number` for this record - returns an Error
+    /// if this record doesn't request RFCOMM.
+    pub fn set_rfcomm_channel(&mut self, number: ServerChannel) -> Result<(), Error> {
+        if !self.requests_rfcomm() {
+            return Err(format_err!("Assigning RFCOMM channel to non-RFCOMM record"));
+        }
+        self.primary_connection = Some(Connection::Rfcomm(Some(number)));
+        Ok(())
     }
 
     /// Returns true if the Service has been registered. Namely, it must be assigned
@@ -136,25 +177,12 @@ impl ServiceRecord {
         self.reg_id.ok_or(format_err!("The ServiceRecord has not been registered"))
     }
 
-    /// Returns true if the provided `psm` is specified by this record.
-    pub fn contains_psm(&self, psm: &Psm) -> bool {
-        self.primary_psm.map_or(false, |primary| &primary == psm)
-            || self.additional_psms.contains(psm)
-    }
-
     /// Returns true if the provided `id` is specified by this record.
     pub fn contains_service_class_identifier(
         &self,
         id: &bredr::ServiceClassProfileIdentifier,
     ) -> bool {
         self.svc_ids.contains(id)
-    }
-
-    /// Returns true if the PSMs specified by this record do not overlap with
-    /// the PSMs in `other`.
-    pub fn is_disjoint(&self, other: &HashSet<Psm>) -> bool {
-        self.primary_psm.map_or(true, |psm| !other.contains(&psm))
-            && self.additional_psms.is_disjoint(other)
     }
 
     /// Marks the ServiceRecord as registered by assigning it a unique `reg_id`.
@@ -168,34 +196,40 @@ impl ServiceRecord {
     /// Returns an error if the ServiceRecord has not been registered.
     // TODO(fxbug.dev/51454): Build the full ServiceFoundResponse. Right now, we just
     // build the primary L2CAP Protocol, ServiceClassIdentifiers, and Profile Descriptors.
-    // TODO(fxbug.dev/51454): Filter response to only include attributes requested by
-    // the search. Right now we just return everything regardless - this is OK
-    // according to Profile API.
     pub fn to_service_found_response(&self) -> Result<ServiceFoundResponse, Error> {
         let peer_id = self.reg_id.ok_or(format_err!("The service has not been registered."))?.0;
         let mut attributes = vec![];
 
-        // 1. Build the (optional) primary Protocol Descriptor List. This is both returned and included
-        //    in `attributes`.
-        let prot_list = if let Some(psm) = self.primary_psm {
-            let prot_list = vec![
-                Some(Box::new(Uuid::new16(bredr::ProtocolIdentifier::L2Cap as u16).into())),
-                Some(Box::new(bredr::DataElement::Uint16(psm.into()))),
-            ];
+        // 1. Build the (optional) primary Protocol Descriptor List. This is both returned and
+        // included in `attributes`.
+        let (protocol, attribute_list) = match self.primary_connection {
+            Some(Connection::L2cap(psm)) => {
+                let prot_list = vec![
+                    Some(Box::new(Uuid::new16(bredr::ProtocolIdentifier::L2Cap as u16).into())),
+                    Some(Box::new(bredr::DataElement::Uint16(psm.into()))),
+                ];
+                (Some(build_l2cap_descriptor(psm)), Some(prot_list))
+            }
+            Some(Connection::Rfcomm(Some(channel_number))) => {
+                let prot_list = vec![
+                    Some(Box::new(Uuid::new16(bredr::ProtocolIdentifier::L2Cap as u16).into())),
+                    Some(Box::new(Uuid::new16(bredr::ProtocolIdentifier::Rfcomm as u16).into())),
+                    Some(Box::new(bredr::DataElement::Uint8(channel_number.into()))),
+                ];
+                let rfcomm_protocol =
+                    build_rfcomm_protocol(channel_number).iter().map(|p| p.into()).collect();
+                (Some(rfcomm_protocol), Some(prot_list))
+            }
+            _ => (None, None),
+        };
+        if let Some(attr) = attribute_list {
             attributes.push(bredr::Attribute {
                 id: bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
                 element: bredr::DataElement::Sequence(vec![Some(Box::new(
-                    bredr::DataElement::Sequence(prot_list),
+                    bredr::DataElement::Sequence(attr),
                 ))]),
             });
-
-            Some(vec![bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![bredr::DataElement::Uint16(psm.into())],
-            }])
-        } else {
-            None
-        };
+        }
 
         // 2. Add the Service Class ID List Attribute. There should always be at least one.
         let svc_ids_list: Vec<bredr::ServiceClassProfileIdentifier> =
@@ -231,16 +265,17 @@ impl ServiceRecord {
             self.additional_attributes.iter().map(|attr| bredr::Attribute::from(attr)).collect();
         attributes.append(&mut additional_attributes);
 
-        Ok(ServiceFoundResponse { id: peer_id, protocol: prot_list, attributes })
+        Ok(ServiceFoundResponse { id: peer_id, protocol, attributes })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use fidl_fuchsia_bluetooth as fidl_bt;
-    use fuchsia_bluetooth::profile::DataElement;
+    use {
+        fidl_fuchsia_bluetooth as fidl_bt, fuchsia_bluetooth::profile::DataElement,
+        matches::assert_matches, std::convert::TryFrom,
+    };
 
     /// Returns the expected attributes in raw form.
     fn expected_attributes() -> Vec<bredr::Attribute> {
@@ -284,6 +319,7 @@ mod tests {
     fn test_service_record() {
         let primary_psm = Psm::new(20);
         let additional_psm = Psm::new(10);
+        let primary_connection = Connection::L2cap(primary_psm);
         let mut additional = HashSet::new();
         additional.insert(additional_psm);
         let mut ids = HashSet::new();
@@ -295,10 +331,9 @@ mod tests {
         }];
         let additional_attrs = vec![Attribute { id: 0x2400, element: DataElement::Uint8(10) }];
         let mut service_record =
-            ServiceRecord::new(ids, Some(primary_psm), additional, descs, additional_attrs);
+            ServiceRecord::new(ids, Some(primary_connection), additional, descs, additional_attrs);
 
         // Creating the initial ServiceRecord should not be registered.
-        assert!(service_record.contains_psm(&primary_psm));
         assert_eq!(false, service_record.is_registered());
         assert!(service_record
             .contains_service_class_identifier(&bredr::ServiceClassProfileIdentifier::AudioSource));
@@ -306,13 +341,6 @@ mod tests {
         expected_psms.insert(additional_psm);
         expected_psms.insert(primary_psm);
         assert_eq!(expected_psms, service_record.psms());
-
-        let mut random_psms = HashSet::new();
-        random_psms.insert(Psm::new(14));
-        random_psms.insert(Psm::new(19));
-        assert!(service_record.is_disjoint(&random_psms));
-        random_psms.insert(primary_psm);
-        assert!(!service_record.is_disjoint(&random_psms));
 
         // Register the record, as ServiceManager would, by updating the unique handles.
         let peer_id = PeerId(123);
@@ -330,5 +358,41 @@ mod tests {
             }])
         );
         assert_eq!(response.attributes, expected_attributes());
+    }
+
+    #[test]
+    fn new_service_record_with_rfcomm() {
+        let mut ids = HashSet::new();
+        ids.insert(bredr::ServiceClassProfileIdentifier::Handsfree);
+        let primary_connection = Some(Connection::Rfcomm(None));
+        let profile_descriptors = vec![bredr::ProfileDescriptor {
+            profile_id: bredr::ServiceClassProfileIdentifier::Handsfree,
+            major_version: 1,
+            minor_version: 8,
+        }];
+        let mut rfcomm_record = ServiceRecord::new(
+            ids,
+            primary_connection,
+            HashSet::new(),
+            profile_descriptors,
+            Vec::new(),
+        );
+        assert!(!rfcomm_record.is_registered());
+
+        // No PSMs associated with this record.
+        assert_eq!(rfcomm_record.psms(), HashSet::new());
+        // No RFCOMM channel numbers since they have not been assigned yet.
+        assert_eq!(rfcomm_record.rfcomm_channels(), HashSet::new());
+
+        let channel_number = ServerChannel::try_from(7).unwrap();
+        assert_matches!(rfcomm_record.set_rfcomm_channel(channel_number), Ok(_));
+
+        let mut expected_rfcomm_channels = HashSet::new();
+        expected_rfcomm_channels.insert(channel_number);
+        assert_eq!(rfcomm_record.rfcomm_channels(), expected_rfcomm_channels);
+        // Registration is OK.
+        let handle = RegisteredServiceId::new(PeerId(6313), /* handle= */ 9);
+        rfcomm_record.register_service_record(handle);
+        assert!(rfcomm_record.is_registered());
     }
 }
