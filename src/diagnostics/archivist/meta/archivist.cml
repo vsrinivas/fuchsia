@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/inspect/client.shard.cml" ],
     program: {
         binary: "bin/archivist",
         args: [
@@ -21,11 +22,6 @@
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",
             ],
-        },
-        {
-            directory: "diagnostics",
-            rights: [ "connect" ],
-            path: "/diagnostics",
         },
     ],
     use: [
@@ -89,11 +85,6 @@
                 "fuchsia.logger.LogSink",
             ],
             from: "self",
-        },
-        {
-            directory: "diagnostics",
-            from: "self",
-            to: "framework",
         },
     ],
 }

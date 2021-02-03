@@ -1,14 +1,12 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     program: {
         binary: "bin/font_provider",
     },
     capabilities: [
-        {
-            directory: "diagnostics",
-            rights: [ "connect" ],
-            path: "/diagnostics",
-        },
         {
             protocol: [
                 "fuchsia.fonts.experimental.Provider",
@@ -34,11 +32,6 @@
                 "fuchsia.fonts.Provider",
             ],
             from: "self",
-        },
-        {
-            directory: "diagnostics",
-            from: "self",
-            to: "framework",
         },
     ],
 }

@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     program: {
         binary: "bin/fshost",
         lifecycle: { stop_event: "notify" },
@@ -70,13 +73,6 @@
                 "rw*",
             ],
             path: "/fs/tmp",
-        },
-
-        // Diagnostics/Inspect
-        {
-            directory: "diagnostics",
-            rights: [ "connect" ],
-            path: "/diagnostics",
         },
 
         // TODO: this volume directory is only used by the paver lib in netsvc under
@@ -194,11 +190,6 @@
         {
             directory: "tmp",
             from: "self",
-        },
-        {
-            directory: "diagnostics",
-            from: "self",
-            to: "framework",
         },
         {
             directory: "volume",

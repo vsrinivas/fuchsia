@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     program: {
         binary: "bin/launcher",
         args: [
@@ -11,11 +14,6 @@
     capabilities: [
         {
             protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
-        },
-        {
-            directory: "diagnostics",
-            rights: [ "connect" ],
-            path: "/diagnostics",
         },
     ],
     use: [
@@ -42,11 +40,6 @@
         {
             protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
             from: "self",
-        },
-        {
-            directory: "diagnostics",
-            from: "self",
-            to: "framework",
         },
     ],
 }

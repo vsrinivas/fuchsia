@@ -1,23 +1,12 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     program: {
         binary: "bin/stub_inspect_component",
     },
-    capabilities: [
-        {
-            directory: "diagnostics",
-            rights: [ "connect" ],
-            path: "/diagnostics",
-        },
-    ],
     use: [
         { runner: "elf" },
-    ],
-    expose: [
-        {
-            directory: "diagnostics",
-            from: "self",
-            to: "framework",
-        },
     ],
 }
