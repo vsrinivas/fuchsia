@@ -24,6 +24,7 @@ import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/zx_host_tool.gni")
+import("//build/zbi/kernel_cmdline_verify.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
@@ -551,40 +552,10 @@ zbi("fuchsia_unverified") {
 }
 
 if (dev_fuchsia_zbi_kernel_cmdline_golden != "") {
-  action("fuchsia_zbi_verify") {
-    testonly = true
-
-    script = "//build/zbi/verify_zbi_kernel_cmdline.py"
-    stamp_file = "$target_gen_dir/$target_name.verified"
-    scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
-    scrutiny_tool =
-        get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
-
-    inputs = [
-      scrutiny_tool,
-      dev_fuchsia_zbi_kernel_cmdline_golden,
-      "$root_out_dir/fuchsia_unverified.zbi",
-    ]
-
-    outputs = [ stamp_file ]
-
-    args = [
-      "--zbi-file",
-      rebase_path(inputs[2], root_build_dir),
-      "--kernel-cmdline-golden-file",
-      rebase_path(dev_fuchsia_zbi_kernel_cmdline_golden, root_build_dir),
-      "--scrutiny",
-      rebase_path(scrutiny_tool, root_build_dir),
-      "--fuchsia-dir",
-      rebase_path("//", root_build_dir),
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
-    ]
-
-    deps = [
-      ":fuchsia_unverified",
-      scrutiny_target,
-    ]
+  kernel_cmdline_verify("fuchsia_zbi_verify") {
+    zbi = "$root_out_dir/fuchsia_unverified.zbi"
+    golden = dev_fuchsia_zbi_kernel_cmdline_golden
+    deps = [ ":fuchsia_unverified" ]
   }
 }
 
@@ -654,7 +625,6 @@ copy("fuchsia") {
     deps += [ ":fuchsia_zbi_verify" ]
   }
 }
-
 default_image_deps += [ ":fuchsia" ]
 
 if (!use_vboot && custom_signing_script == "") {
