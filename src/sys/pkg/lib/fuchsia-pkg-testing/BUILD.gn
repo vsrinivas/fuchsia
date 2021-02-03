@@ -86,8 +86,9 @@ fuchsia_component("fuchsia-pkg-testing-tests-component") {
 }
 
 rustc_test("pkgfs_test") {
+  name = "pkgfs_test"
   edition = "2018"
-  source_root = "tests/pkgfs_test.rs"
+  source_root = "tests/lib.rs"
   deps = [
     ":fuchsia-pkg-testing",
     "//garnet/lib/rust/io_util",
@@ -107,7 +108,9 @@ rustc_test("pkgfs_test") {
   ]
 
   sources = [
+    "tests/gc_test.rs",
     "tests/get_buffer.rs",
+    "tests/lib.rs",
     "tests/pkgfs_test.rs",
   ]
 }
