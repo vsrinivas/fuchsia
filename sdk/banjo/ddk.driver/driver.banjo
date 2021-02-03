@@ -8,15 +8,5 @@ library ddk.driver;
 struct ZxDevice {
 };
 
-// TODO: Not need this anymore.
-struct ZxProtocolDevice {
-};
-
-struct ZxDeviceProp {
-};
-
-struct DeviceAddArgs {
-};
-
 struct DeviceFragment {
 };
