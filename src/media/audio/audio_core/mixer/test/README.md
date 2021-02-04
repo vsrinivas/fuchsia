@@ -153,12 +153,6 @@ increasing the number of fractional bits, we can improve our SRC quality.
 This could be refactored to increase code reuse, leading to higher code resilience and easier future
 extensibility.
 
-*   fxbug.dev/13332
-
-    In addition to the existing resamplers (SampleAndHold, LinearInterpolation), we should create
-new ones with increased fidelity. This would more fully allow clients to make the
-quality-vs.-performance tradeoff themselves.
-
 *   fxbug.dev/13356
 
     The Gain object contains two functions, through which clients can provide two (float) values and

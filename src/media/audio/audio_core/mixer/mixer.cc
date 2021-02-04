@@ -6,7 +6,6 @@
 
 #include <lib/trace/event.h>
 
-#include "src/media/audio/audio_core/mixer/linear_sampler.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/mixer/point_sampler.h"
 #include "src/media/audio/audio_core/mixer/sinc_sampler.h"
@@ -38,8 +37,6 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& src_
   switch (resampler) {
     case Resampler::SampleAndHold:
       return mixer::PointSampler::Select(src_format, dest_format);
-    case Resampler::LinearInterpolation:
-      return mixer::LinearSampler::Select(src_format, dest_format);
     case Resampler::WindowedSinc:
       return mixer::SincSampler::Select(src_format, dest_format);
 
@@ -49,7 +46,7 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& src_
   }
 
   // Use SampleAndHold if no rate conversion (unity 1:1). Otherwise, use WindowedSinc (with
-  // integrated low-pass filter). Unless explicitly invoked, we do not use LinearInterpolation.
+  // integrated low-pass filter).
   TimelineRate src_to_dest(dest_format.frames_per_second, src_format.frames_per_second);
   if (src_to_dest.subject_delta() == 1 && src_to_dest.reference_delta() == 1) {
     return mixer::PointSampler::Select(src_format, dest_format);

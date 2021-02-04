@@ -227,8 +227,8 @@ bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   auto info = &bookkeeping();
 
   // For now, we continue to use this proliferation of template specializations, largely to keep the
-  // designs congruent between the Point, Linear and Sinc samplers. Previously when we removed most
-  // of these specializations from Point/Linear, we regained only about 75K of blob space, while
+  // designs congruent between the Point and Sinc samplers. Previously when we removed most
+  // of these specializations from Point, we regained only about 75K of blob space, while
   // mixer microbenchmarks running times ballooned to ~3x of their previous durations.
   if (info->gain.IsUnity()) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest, dest_frames, dest_offset, src,

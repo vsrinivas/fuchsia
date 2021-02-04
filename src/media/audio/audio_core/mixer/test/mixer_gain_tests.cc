@@ -180,8 +180,4 @@ void TestAccumulatorClear(Resampler sampler_type) {
 
 // Validate the SampleAndHold interpolator for this behavior.
 TEST(MixGain, Accumulator_Clear_Point) { TestAccumulatorClear(Resampler::SampleAndHold); }
-
-// Validate the same assertions, with LinearInterpolation interpolator.
-TEST(MixGain, Accumulator_Clear_Linear) { TestAccumulatorClear(Resampler::LinearInterpolation); }
-
 }  // namespace media::audio::test

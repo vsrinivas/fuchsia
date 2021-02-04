@@ -59,42 +59,6 @@ TEST(DataFormats, PointSampler_Float) {
                                  Resampler::SampleAndHold));
 }
 
-// If the source sample rate is NOT an integer-multiple of the destination rate
-// (including when the destination is an integer multiple of the SOURCE rate),
-// select the LinearSampler
-//
-// Create LinearSampler objects for incoming buffers of type uint8
-TEST(DataFormats, LinearSampler_8) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 22050, 2, 44100,
-                                 Resampler::LinearInterpolation));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 44100, 1, 48000,
-                                 Resampler::LinearInterpolation));
-}
-
-// Create LinearSampler objects for incoming buffers of type int16
-TEST(DataFormats, LinearSampler_16) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 44100, 1, 48000,
-                                 Resampler::LinearInterpolation));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 8, 48000, 8, 44100,
-                                 Resampler::LinearInterpolation));
-}
-
-// Create LinearSampler objects for incoming buffers of type int24-in-32
-TEST(DataFormats, LinearSampler_24) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 16000, 2,
-                                 48000, Resampler::LinearInterpolation));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 16000, 4,
-                                 48000, Resampler::LinearInterpolation));
-}
-
-// Create LinearSampler objects for incoming buffers of type float
-TEST(DataFormats, LinearSampler_Float) {
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 2, 44100,
-                                 Resampler::LinearInterpolation));
-  EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 44100,
-                                 Resampler::LinearInterpolation));
-}
-
 // TODO(mpuryear): use value-parameterized tests for these and other test cases throughout this file
 //
 // Create WindowedSinc objects for incoming buffers of type uint8
@@ -282,14 +246,6 @@ TEST(PassThru, StereoToMono_Cancel) {
 
   DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Each(FloatEq(0.0f)));
-
-  // Now try with the other resampler
-  std::memset(accum, 0, std::size(accum) * sizeof(float));
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
-                      Resampler::LinearInterpolation);
-
-  DoMix(mixer.get(), source, accum, false, std::size(accum));
-  EXPECT_THAT(accum, Each(FloatEq(0.0f)));
 }
 
 // Validate that we correctly mix stereo->mono, including rounding.
@@ -305,14 +261,6 @@ TEST(PassThru, StereoToMono_Round) {
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
                            Resampler::SampleAndHold);
-
-  DoMix(mixer.get(), source, accum, false, std::size(accum));
-  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
-
-  // Now try with the other resampler
-  std::memset(accum, 0, std::size(accum) * sizeof(float));
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
-                      Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -339,14 +287,6 @@ TEST(PassThru, QuadToMono) {
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4, 24000, 1, 24000,
                            Resampler::SampleAndHold);
-
-  DoMix(mixer.get(), source, accum, false, std::size(accum));
-  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
-
-  // Now try with the other resampler
-  std::memset(accum, 0, std::size(accum) * sizeof(float));
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4, 8000, 1, 8000,
-                      Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -378,14 +318,6 @@ TEST(PassThru, QuadToStereo_Round) {
 
   DoMix(mixer.get(), source, accum, false, std::size(accum) / 2);  // dest frames have 2 samples
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
-
-  // Now try with the other resampler
-  std::memset(accum, 0, std::size(accum) * sizeof(float));
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4, 44100, 2, 44100,
-                      Resampler::LinearInterpolation);
-
-  DoMix(mixer.get(), source, accum, false, std::size(accum) / 2);  // dest frames have 2 samples
-  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
 // Are all valid data values passed correctly to 16-bit outputs
@@ -402,15 +334,7 @@ TEST(PassThru, MonoToQuad) {
   NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 4, 48000,
-                           Resampler::LinearInterpolation);
-
-  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
-  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
-
-  // Now try with the other resampler
-  std::memset(accum, 0, std::size(accum) * sizeof(float));
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 4, 48000,
-                      Resampler::SampleAndHold);
+                           Resampler::SampleAndHold);
 
   DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -429,14 +353,6 @@ TEST(PassThru, StereoToQuad) {
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 48000, 4, 48000,
                            Resampler::SampleAndHold);
-
-  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
-  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
-
-  // Now try with the other resampler
-  std::memset(accum, 0, std::size(accum) * sizeof(float));
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 48000, 4, 48000,
-                      Resampler::LinearInterpolation);
 
   DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));

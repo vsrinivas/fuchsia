@@ -39,7 +39,6 @@ void AudioPerformance::ProfileMixerCreation() {
   DisplayMixerCreationColumnHeader();
 
   ProfileMixerCreationType(Resampler::SampleAndHold);
-  ProfileMixerCreationType(Resampler::LinearInterpolation);
   ProfileMixerCreationType(Resampler::WindowedSinc);
 
   DisplayMixerCreationColumnHeader();
@@ -52,7 +51,7 @@ void AudioPerformance::DisplayMixerCreationLegend() {
   printf("\n   Elapsed time in microsec for a Mixer object to be created\n");
   printf(
       "\n   For mixer configuration R-fff.IO sssss:ddddd, where:\n"
-      "\t     R: Resampler type - [P]oint, [L]inear, [W]indowed Sinc\n"
+      "\t     R: Resampler type - [P]oint, [W]indowed Sinc\n"
       "\t   fff: Format - un8, i16, i24, f32\n"
       "\t     I: Input channels (one-digit number)\n"
       "\t     O: Output channels (one-digit number)\n"
@@ -157,9 +156,6 @@ void AudioPerformance::ProfileMixerCreationTypeChanRateFormat(
     case Resampler::SampleAndHold:
       sampler_ch = 'P';
       break;
-    case Resampler::LinearInterpolation:
-      sampler_ch = 'L';
-      break;
     case Resampler::WindowedSinc:
       sampler_ch = 'W';
       break;
@@ -199,7 +195,6 @@ void AudioPerformance::ProfileMixing() {
   DisplayMixerColumnHeader();
 
   ProfileSampler(Resampler::SampleAndHold);
-  ProfileSampler(Resampler::LinearInterpolation);
   ProfileSampler(Resampler::WindowedSinc);
 
   DisplayMixerColumnHeader();
@@ -212,7 +207,7 @@ void AudioPerformance::DisplayMixerConfigLegend() {
   printf("\n   Elapsed time in microsec for Mix() to produce %u frames\n", kFreqTestBufSize);
   printf(
       "\n   For mixer configuration R-fff.IOGAnnnnn, where:\n"
-      "\t     R: Resampler type - [P]oint, [L]inear, [W]indowed Sinc\n"
+      "\t     R: Resampler type - [P]oint, [W]indowed Sinc\n"
       "\t   fff: Format - un8, i16, i24, f32\n"
       "\t     I: Input channels (one-digit number)\n"
       "\t     O: Output channels (one-digit number)\n"
@@ -421,9 +416,6 @@ void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_
   switch (sampler_type) {
     case Resampler::SampleAndHold:
       sampler_ch = 'P';
-      break;
-    case Resampler::LinearInterpolation:
-      sampler_ch = 'L';
       break;
     case Resampler::WindowedSinc:
       sampler_ch = 'W';

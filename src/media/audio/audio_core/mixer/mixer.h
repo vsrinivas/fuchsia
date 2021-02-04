@@ -218,7 +218,6 @@ class Mixer {
   enum class Resampler {
     Default = 0,
     SampleAndHold,
-    LinearInterpolation,
     WindowedSinc,
   };
 
