@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/operation/ethernet.h>
 #include <stdio.h>
@@ -344,12 +345,11 @@ static zx_status_t tap_device_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* 
 }
 
 zx_status_t TapDevice::Reply(zx_txid_t txid, const fidl_outgoing_msg_t* msg) {
-  // TODO(fxbug.dev/66977) Support the iovec mode.
-  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
-  auto header = reinterpret_cast<fidl_message_header_t*>(msg->byte.bytes);
-  header->txid = txid;
-  return channel_.write_etc(0, msg->byte.bytes, msg->byte.num_bytes, msg->byte.handles,
-                            msg->byte.num_handles);
+  auto adapter = fidl::OutgoingMessageAdaptorFromC(msg);
+  fidl::OutgoingMessage& message = adapter.GetOutgoingMessage();
+  message.set_txid(txid);
+  message.Write(channel_);
+  return message.status();
 }
 
 int TapDevice::Thread() {

@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/fit/variant.h>
 #include <zircon/assert.h>
 
 #include <memory>
@@ -246,6 +247,57 @@ class OutgoingIovecMessage final : public OutgoingMessage {
   fidl_iovec_substitution_t* substitutions_;
   uint32_t substitutions_capacity_;
   uint32_t substitutions_actual_;
+};
+
+// OutgoingMessageAdaptorFromC holds an instance of any of the subclasses of
+// OutgoingMessage.
+// It is used in cases where an instance of OutgoingMessage is needed but the type
+// is not known upfront. This can happen when converting from other forms of
+// outgoing messages that can store multiple types, such as the C fidl_outgoing_msg_t.
+class OutgoingMessageAdaptorFromC {
+ public:
+  // Creates an OutgoingMessageAdaptorFromC from a fidl_outgoing_msg_t.
+  // Because substitutions and capacities can't be specified, the
+  // fidl_outgoing_msg_t must already be in encoded form.
+  explicit OutgoingMessageAdaptorFromC(const fidl_outgoing_msg_t* c_msg) {
+    switch (c_msg->type) {
+      case FIDL_OUTGOING_MSG_TYPE_BYTE:
+        msg_.emplace<fidl::OutgoingByteMessage>(reinterpret_cast<uint8_t*>(c_msg->byte.bytes),
+                                                c_msg->byte.num_bytes, c_msg->byte.num_bytes,
+                                                c_msg->byte.handles, c_msg->byte.num_handles,
+                                                c_msg->byte.num_handles);
+        break;
+      case FIDL_OUTGOING_MSG_TYPE_IOVEC:
+        msg_.emplace<fidl::OutgoingIovecMessage>(fidl::OutgoingIovecMessage::constructor_args{
+            .iovecs = c_msg->iovec.iovecs,
+            .iovecs_actual = c_msg->iovec.num_iovecs,
+            .iovecs_capacity = c_msg->iovec.num_iovecs,
+            .substitutions = nullptr,
+            .substitutions_actual = 0,
+            .substitutions_capacity = 0,
+            .handles = c_msg->iovec.handles,
+            .handle_actual = c_msg->iovec.num_handles,
+            .handle_capacity = c_msg->iovec.num_iovecs,
+        });
+        break;
+      default:
+        ZX_PANIC("unknown message type");
+    }
+  }
+
+  fidl::OutgoingMessage& GetOutgoingMessage() {
+    switch (msg_.index()) {
+      case 1:
+        return fit::get<fidl::OutgoingByteMessage>(msg_);
+      case 2:
+        return fit::get<fidl::OutgoingIovecMessage>(msg_);
+      default:
+        ZX_PANIC("unhandled index");
+    }
+  }
+
+ private:
+  fit::variant<fit::monostate, fidl::OutgoingByteMessage, fidl::OutgoingIovecMessage> msg_;
 };
 
 namespace internal {

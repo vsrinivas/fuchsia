@@ -12,14 +12,11 @@ static_assert(alignof(fidl::Transaction) > 1);
 constexpr uintptr_t kTransactionIsBoxed = 0x1;
 
 zx_status_t DdkReply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
-  ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
-  fidl::OutgoingByteMessage message(reinterpret_cast<uint8_t*>(msg->byte.bytes),
-                                    msg->byte.num_bytes, msg->byte.num_bytes, msg->byte.handles,
-                                    msg->byte.num_handles, msg->byte.num_handles);
+  fidl::OutgoingMessageAdaptorFromC message(msg);
   // If FromDdkInternalTransaction returns a unique_ptr variant, it will be destroyed when exiting
   // this scope.
   auto fidl_txn = FromDdkInternalTransaction(ddk::internal::Transaction::FromTxn(txn));
-  std::visit([&](auto&& arg) { arg->Reply(&message); }, fidl_txn);
+  std::visit([&](auto&& arg) { arg->Reply(&message.GetOutgoingMessage()); }, fidl_txn);
   return ZX_OK;
 }
 
