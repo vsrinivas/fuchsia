@@ -34,6 +34,9 @@ mod fuchsia;
 #[cfg(target_os = "fuchsia")]
 pub use crate::fuchsia::*;
 
+mod session_cache;
+pub use session_cache::C4CapableSessionCache;
+
 #[cfg(target_os = "fuchsia")]
 mod happy_eyeballs;
 
@@ -138,7 +141,7 @@ pub fn new_https_client_dangerous(
 
 /// Returns a new Fuchsia-compatible hyper client for making HTTP and HTTPS requests.
 pub fn new_https_client_from_tcp_options(tcp_options: TcpOptions) -> HttpsClient {
-    let mut tls = rustls::ClientConfig::new();
+    let mut tls = new_rustls_client_config();
     configure_cert_store(&mut tls);
     new_https_client_dangerous(tls, tcp_options)
 }
@@ -146,4 +149,14 @@ pub fn new_https_client_from_tcp_options(tcp_options: TcpOptions) -> HttpsClient
 /// Returns a new Fuchsia-compatible hyper client for making HTTP and HTTPS requests.
 pub fn new_https_client() -> HttpsClient {
     new_https_client_from_tcp_options(std::default::Default::default())
+}
+
+/// Returns a rustls::ClientConfig for further construction with improved session cache and without
+/// a configured certificate store.
+pub fn new_rustls_client_config() -> rustls::ClientConfig {
+    let mut config = rustls::ClientConfig::new();
+    // The default depth for the ClientSessionMemoryCache in the default ClientConfig is 32; this
+    // value is assumed to be a sufficient default here as well.
+    config.set_persistence(session_cache::C4CapableSessionCache::new(32));
+    config
 }
