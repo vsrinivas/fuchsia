@@ -10,12 +10,9 @@ mod counter;
 
 use {
     crate::{actor_runner::ActorRunner, counter::start_counter, environment::Environment},
-    fuchsia_async::TimeoutExt,
-    futures::{
-        future::{select, select_all, Either},
-        FutureExt,
-    },
-    log::{debug, error, info, set_logger, set_max_level, LevelFilter},
+    fuchsia_async::{Task, TimeoutExt},
+    futures::future::{select, select_all, Either},
+    log::{error, info, set_logger, set_max_level, LevelFilter},
     rand::{rngs::SmallRng, FromEntropy, Rng},
     std::{
         io::{stdout, Write},
@@ -96,53 +93,54 @@ pub async fn run_test<E: 'static + Environment>(mut env: E) {
     // When the target operation count is hit, the counter task exits.
     let (mut counter_task, counter_tx) = start_counter(target_operations);
 
-    // A monotonically increasing counter representing the current instance.
-    // On every environment reset, the instance ID is incremented.
-    let mut instance_id: u64 = 0;
+    // A monotonically increasing counter representing the current generation.
+    // On every environment reset, the generation is incremented.
+    let mut generation: u64 = 0;
+
+    // Start all the runners
+    let mut runner_tasks: Vec<Task<(ActorRunner, u64)>> =
+        env.actor_runners().into_iter().map(|r| r.run(counter_tx.clone(), generation)).collect();
 
     let test_loop = async move {
         loop {
-            {
-                debug!("Creating instance-under-test #{}", instance_id);
+            let joined_runners = select_all(runner_tasks.drain(..));
 
-                let configs = env.actor_configs();
-                let mut tasks = vec![];
-
-                // Create runners for all the actor configs
-                for config in configs {
-                    let runner = ActorRunner::new(config);
-                    let future = runner.run(instance_id.clone(), counter_tx.clone());
-                    let future = future.boxed();
-                    tasks.push(future);
+            // Wait for one of the runners or the counter task to return
+            let either = select(counter_task, joined_runners).await;
+            match either {
+                Either::Left(_) => {
+                    // The counter task returned.
+                    // The target operation count was hit.
+                    // The test has completed.
+                    info!("Test completed {} operations!", target_operations);
+                    break;
                 }
+                Either::Right((((runner, runner_generation), _, mut other_runner_tasks), task)) => {
+                    // Normally, actor runners run indefinitely.
+                    // However, one of the actor runners has returned.
+                    // This is because an actor has requested an environment reset.
 
-                let runners_future = select_all(tasks);
+                    // Move the counter task back
+                    counter_task = task;
 
-                // Wait for one of the runners or the counter task to return
-                let either = select(counter_task, runners_future).await;
-                match either {
-                    Either::Left(_) => {
-                        // The counter task returned.
-                        // The target operation count was hit.
-                        // The test has completed.
-                        info!("Test completed {} operations!", target_operations);
-                        break;
+                    // Did the runner request a reset at the current generation?
+                    if runner_generation == generation {
+                        // Reset the environment
+                        info!("Resetting environment");
+                        env.reset().await;
+
+                        // Advance the generation
+                        generation += 1;
                     }
-                    Either::Right((_, task)) => {
-                        // Normally, actor runners run indefinitely.
-                        // However, one of the actor runners has returned.
-                        // This is because an actor has requested an environment reset.
 
-                        // Get the counter task back
-                        counter_task = task;
-                    }
+                    // Restart this runner with the current generation
+                    let task = runner.run(counter_tx.clone(), generation);
+                    other_runner_tasks.push(task);
+
+                    // Move the runner tasks back
+                    runner_tasks = other_runner_tasks;
                 }
-
-                instance_id += 1;
             }
-
-            info!("Resetting environment");
-            env.reset().await;
         }
     };
 

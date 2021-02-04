@@ -58,14 +58,13 @@ pub struct Args {
 // The path to the blobfs filesystem in the test's namespace
 pub const BLOBFS_MOUNT_PATH: &str = "/blobfs";
 
-// This stress test will run on an executor that has 3 threads
-#[fasync::run(3)]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Get arguments from command line
     let args: Args = argh::from_env();
 
     // Initialize logging
-    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Debug));
+    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
 
     // Setup the blobfs environment
     let env = BlobfsEnvironment::new(args).await;

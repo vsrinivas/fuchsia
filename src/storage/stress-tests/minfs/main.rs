@@ -54,14 +54,13 @@ pub struct Args {
     time_limit_secs: Option<u64>,
 }
 
-// This stress test will run on an executor that has 3 threads
-#[fasync::run(3)]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Get arguments from command line
     let args: Args = argh::from_env();
 
     // Initialize logging
-    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Debug));
+    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
 
     // Setup the minfs environment
     let env = MinfsEnvironment::new(args).await;

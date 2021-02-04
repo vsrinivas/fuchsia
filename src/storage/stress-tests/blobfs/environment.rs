@@ -7,17 +7,19 @@ use {
         blob_actor::BlobActor, deletion_actor::DeletionActor, instance_actor::InstanceActor, Args,
         BLOBFS_MOUNT_PATH,
     },
+    async_trait::async_trait,
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fs_management::Blobfs,
     fuchsia_zircon::Vmo,
-    futures::future::BoxFuture,
+    futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
+    std::sync::Arc,
     storage_stress_test_utils::{
         fvm::{get_volume_path, FvmInstance},
         io::Directory,
     },
-    stress_test::{actor::ActorConfig, environment::Environment, random_seed},
+    stress_test::{actor::ActorRunner, environment::Environment, random_seed},
 };
 
 // All partitions in this test have their type set to this arbitrary GUID.
@@ -31,9 +33,9 @@ pub struct BlobfsEnvironment {
     args: Args,
     vmo: Vmo,
     volume_guid: Guid,
-    blob_actor: BlobActor,
-    deletion_actor: DeletionActor,
-    instance_actor: InstanceActor,
+    blob_actor: Arc<Mutex<BlobActor>>,
+    deletion_actor: Arc<Mutex<DeletionActor>>,
+    instance_actor: Arc<Mutex<InstanceActor>>,
 }
 
 pub fn open_blobfs_root() -> Directory {
@@ -73,20 +75,22 @@ impl BlobfsEnvironment {
         blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
 
         // Create the instance actor
-        let instance_actor = InstanceActor { fvm, blobfs };
+        let instance_actor = Arc::new(Mutex::new(InstanceActor { fvm, blobfs }));
 
         let mut rng = SmallRng::from_seed(seed.to_le_bytes());
 
         // Create the blob actor
-        let blob_actor = BlobActor {
+        let blob_actor = Arc::new(Mutex::new(BlobActor {
             blobs: vec![],
             root_dir: open_blobfs_root(),
             rng: SmallRng::from_seed(rng.gen()),
-        };
+        }));
 
         // Create the deletion actor
-        let deletion_actor =
-            DeletionActor { root_dir: open_blobfs_root(), rng: SmallRng::from_seed(rng.gen()) };
+        let deletion_actor = Arc::new(Mutex::new(DeletionActor {
+            root_dir: open_blobfs_root(),
+            rng: SmallRng::from_seed(rng.gen()),
+        }));
 
         Self { seed, args, vmo, volume_guid, instance_actor, blob_actor, deletion_actor }
     }
@@ -98,6 +102,7 @@ impl std::fmt::Debug for BlobfsEnvironment {
     }
 }
 
+#[async_trait]
 impl Environment for BlobfsEnvironment {
     fn target_operations(&self) -> Option<u64> {
         self.args.num_operations
@@ -107,26 +112,28 @@ impl Environment for BlobfsEnvironment {
         self.args.time_limit_secs
     }
 
-    fn actor_configs<'a>(&'a mut self) -> Vec<ActorConfig<'a>> {
-        let mut configs = vec![
-            ActorConfig::new("blob_actor", &mut self.blob_actor, 0),
-            ActorConfig::new("deletion_actor", &mut self.deletion_actor, 10),
+    fn actor_runners(&mut self) -> Vec<ActorRunner> {
+        let mut runners = vec![
+            ActorRunner::new("blob_actor", 0, self.blob_actor.clone()),
+            ActorRunner::new("deletion_actor", 10, self.deletion_actor.clone()),
         ];
 
         if let Some(secs) = self.args.disconnect_secs {
             if secs > 0 {
-                let config = ActorConfig::new("instance_actor", &mut self.instance_actor, secs);
-                configs.push(config);
+                let runner = ActorRunner::new("instance_actor", secs, self.instance_actor.clone());
+                runners.push(runner);
             }
         }
 
-        configs
+        runners
     }
 
-    fn reset(&mut self) -> BoxFuture<'_, ()> {
-        Box::pin(async move {
+    async fn reset(&mut self) {
+        {
+            let mut actor = self.instance_actor.lock().await;
+
             // Kill the blobfs process in case it was still running
-            let _ = self.instance_actor.blobfs.kill();
+            let _ = actor.blobfs.kill();
 
             // Create a ramdisk and setup FVM.
             let fvm = FvmInstance::new(
@@ -148,13 +155,21 @@ impl Environment for BlobfsEnvironment {
             blobfs.fsck().unwrap();
             blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
 
-            // Replace the instance with a new one
-            self.instance_actor.fvm = fvm;
-            self.instance_actor.blobfs = blobfs;
+            // Replace the fvm and blobfs instances
+            actor.fvm = fvm;
+            actor.blobfs = blobfs;
+        }
 
+        {
             // Replace the root directory with a new one
-            self.blob_actor.root_dir = open_blobfs_root();
-            self.deletion_actor.root_dir = open_blobfs_root();
-        })
+            let mut actor = self.blob_actor.lock().await;
+            actor.root_dir = open_blobfs_root();
+        }
+
+        {
+            // Replace the root directory with a new one
+            let mut actor = self.deletion_actor.lock().await;
+            actor.root_dir = open_blobfs_root();
+        }
     }
 }

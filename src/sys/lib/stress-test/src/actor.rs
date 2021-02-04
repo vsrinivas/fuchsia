@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub use crate::actor_runner::ActorRunner;
+
 use async_trait::async_trait;
 
 pub enum ActorError {
@@ -19,27 +21,8 @@ pub enum ActorError {
     /// ResetEnvironment to establish a new connection.
     ResetEnvironment,
 }
-
-/// Describes the actor and how it should be run in the test.
-pub struct ActorConfig<'a> {
-    // The name of this actor
-    pub name: String,
-
-    // A mutable reference to the actor for this configuration
-    pub actor: &'a mut dyn Actor,
-
-    // The number of seconds to wait between actor operations
-    pub delay: u64,
-}
-
-impl<'a> ActorConfig<'a> {
-    pub fn new(name: &str, actor: &'a mut dyn Actor, delay: u64) -> Self {
-        Self { name: name.to_string(), actor, delay }
-    }
-}
-
 #[async_trait]
-pub trait Actor: Send + Sync {
+pub trait Actor: Sync + Send + 'static {
     // ActorRunner invokes this function, instructing the actor
     // to perform exactly one operation and return result.
     async fn perform(&mut self) -> Result<(), ActorError>;
