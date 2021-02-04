@@ -15,7 +15,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <fuchsia/hardware/composite/cpp/banjo.h>
 
 #include "banjo-internal.h"
 
@@ -380,19 +379,6 @@ public:
         }
     }
 
-    ApiProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        api_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_API, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     ApiProtocolClient(zx_device_t* parent, const char* fragment_name) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
@@ -428,20 +414,6 @@ public:
                                         ApiProtocolClient* result) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
-    }
-
-    // Create a ApiProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           ApiProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
         if (!found) {
           return ZX_ERR_NOT_FOUND;
         }

@@ -7,7 +7,8 @@ use {
     anyhow::{format_err, Error},
     pest::iterators::{Pair, Pairs},
     serde::Serialize,
-    std::collections::{BTreeMap, HashSet, VecDeque},
+    std::cmp::Ordering,
+    std::collections::{BTreeMap, BinaryHeap, HashSet},
     std::fmt,
     std::str::FromStr,
     thiserror::Error,
@@ -578,7 +579,7 @@ impl Method {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Debug, Hash, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Serialize, Debug, Hash)]
 pub enum Decl {
     Struct { attributes: Attrs, name: Ident, fields: Vec<StructField> },
     Union { attributes: Attrs, name: Ident, fields: Vec<UnionField> },
@@ -587,6 +588,37 @@ pub enum Decl {
     Protocol { attributes: Attrs, name: Ident, methods: Vec<Method> },
     Resource { attributes: Attrs, ty: Ty, values: Vec<Constant> },
     Alias(Ident, Ident),
+}
+
+impl Decl {
+    fn get_order(&self) -> Option<(u32, &str)> {
+        // FIDL order:
+        //  - protocols first, then the rest;
+        //  - within a group, reverse alphabetical order.
+        // The ordering data will achieve the exact opposite, which is ok since
+        // we'll later use a BinaryHeap as a queue and pop elements from it.
+        match self {
+            Decl::Protocol { name, .. } => Some((1, &name.name)),
+            Decl::Struct { name, .. } => Some((0, &name.name)),
+            Decl::Union { name, .. } => Some((0, &name.name)),
+            Decl::Enum { name, .. } => Some((0, &name.name)),
+            Decl::Alias(to, _from) => Some((0, &to.name)),
+            Decl::Constant { name, .. } => Some((0, &name.name)),
+            Decl::Resource { .. } => None,
+        }
+    }
+}
+
+impl Ord for Decl {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.get_order().cmp(&other.get_order())
+    }
+}
+
+impl PartialOrd for Decl {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[derive(PartialEq, Serialize, Debug)]
@@ -1054,16 +1086,16 @@ impl BanjoAst {
         let inverse_dependencies = inverse_dependencies;
 
         // Start with all decls that have no incoming edges.
+        // The list is sorted in ascending order.
         let mut decls_without_deps = degrees
             .iter()
-            .rev() // To match the fidlc order.
             .filter(|(_, &degrees)| degrees == 0)
             .map(|(&decl, _)| decl)
-            .collect::<VecDeque<_>>();
+            .collect::<BinaryHeap<_>>();
 
         let mut decl_order = Vec::new();
         // Pull one out of the queue.
-        while let Some(decl) = decls_without_deps.pop_front() {
+        while let Some(decl) = decls_without_deps.pop() {
             assert_eq!(degrees.get(decl), Some(&0));
             decl_order.push(decl);
 
@@ -1074,7 +1106,7 @@ impl BanjoAst {
                     assert_ne!(*degree, 0);
                     *degree -= 1;
                     if *degree == 0 {
-                        decls_without_deps.push_back(inverse_dep);
+                        decls_without_deps.push(inverse_dep);
                     }
                 }
             }

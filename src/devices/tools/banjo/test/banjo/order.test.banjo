@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.order;
+
+const uint32 LL_CONSTANT = 12345;
+
+struct ZzStruct {
+    int8 something;
+};
+
+enum MmEnum : uint32 {
+    one = 1;
+    two = 2;
+    three = 3;
+};
+
+struct XxStruct {
+    ZzStruct field;
+    MmEnum field_again;
+};

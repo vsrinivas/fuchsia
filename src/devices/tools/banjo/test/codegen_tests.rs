@@ -26,6 +26,7 @@ mod c {
     codegen_test!(example_7, CBackend, ["banjo/example-7.test.banjo"], "c/example-7.h");
     codegen_test!(example_8, CBackend, ["banjo/example-8.test.banjo"], "c/example-8.h");
     codegen_test!(example_9, CBackend, ["banjo/example-9.test.banjo"], "c/example-9.h");
+    codegen_test!(order, CBackend, ["banjo/order.test.banjo"], "c/order.h");
     codegen_test!(point, CBackend, ["banjo/point.test.banjo"], "c/point.h");
     codegen_test!(
         preserve_names,

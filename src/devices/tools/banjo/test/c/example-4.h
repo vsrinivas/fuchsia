@@ -15,9 +15,9 @@ __BEGIN_CDECLS
 
 // Forward declarations
 typedef struct interface_protocol interface_protocol_t;
+typedef struct point point_t;
 typedef uint32_t enum_t;
 #define ENUM_X UINT32_C(23)
-typedef struct point point_t;
 
 // Declarations
 typedef struct interface_protocol_ops {

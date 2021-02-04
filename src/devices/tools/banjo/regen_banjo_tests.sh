@@ -82,7 +82,7 @@ do
     with_rust=false
   fi
 
-  if [ "$filename" = "constants" ]; then
+  if [ "$filename" = "constants" ] || [ "$filename" = "order" ]; then
     with_cpp=false
     with_rust=false
   fi

@@ -33,6 +33,10 @@ _simple_libraries = [
     name = "example3"
     backends = [ "c" ]
   },
+  {
+    name = "order"
+    backends = [ "c" ]
+  },
 ]
 
 _base_label = "//src/devices/tools/fidlgen_banjo/tests"

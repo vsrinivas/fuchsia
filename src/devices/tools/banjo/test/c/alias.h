@@ -14,9 +14,9 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef struct some_struct some_struct_t;
 typedef some_struct_t second_struct_t;
 typedef uint32_t first_primitive_t;
-typedef struct some_struct some_struct_t;
 
 // Declarations
 struct some_struct {

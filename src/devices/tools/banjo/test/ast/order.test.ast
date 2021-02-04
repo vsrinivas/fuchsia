@@ -1,0 +1,138 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.order",
+    namespaces: {
+        "banjo.examples.order": [
+            Constant {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order",
+                    ),
+                    name: "LL_CONSTANT",
+                },
+                ty: UInt32,
+                value: Constant(
+                    "12345",
+                ),
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order",
+                    ),
+                    name: "ZzStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Int8,
+                        ident: Ident {
+                            namespace: None,
+                            name: "something",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+            Enum {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order",
+                    ),
+                    name: "MmEnum",
+                },
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "one",
+                        value: Constant(
+                            "1",
+                        ),
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "two",
+                        value: Constant(
+                            "2",
+                        ),
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "three",
+                        value: Constant(
+                            "3",
+                        ),
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order",
+                    ),
+                    name: "XxStruct",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.order",
+                                ),
+                                name: "ZzStruct",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "field",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "banjo.examples.order",
+                                ),
+                                name: "MmEnum",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "field_again",
+                        },
+                        val: None,
+                    },
+                ],
+            },
+        ],
+    },
+}
