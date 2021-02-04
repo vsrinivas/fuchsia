@@ -5,12 +5,14 @@
 #include <lib/devmgr-integration-test/fixture.h>
 
 #include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/clock.h>
 
 namespace devmgr_integration_test {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 // static
 __EXPORT
@@ -22,14 +24,11 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
     return status;
   }
   fdio_cpp::FdioCaller caller(std::move(dir_fd));
-  zx_status_t status2;
-  status = fuchsia_io_DirectoryWatch(caller.borrow_channel(), fuchsia_io_WATCH_MASK_REMOVED, 0,
-                                     server.release(), &status2);
-  if (status == ZX_OK) {
-    status = status2;
-  }
-  if (status != ZX_OK) {
-    return status;
+  auto result =
+      fio::Directory::Call::Watch(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()),
+                                  fio::WATCH_MASK_REMOVED, 0, zx::channel(server.release()));
+  if (!result.ok()) {
+    return result.status();
   }
   *out_dir_watcher = std::make_unique<DirWatcher>(std::move(client));
   return ZX_OK;
@@ -53,13 +52,13 @@ zx_status_t DirWatcher::WaitForRemoval(const fbl::String& filename, zx::duration
     //  uint8_t event
     //  uint8_t len
     //  char* name
-    uint8_t buf[fuchsia_io_MAX_BUF];
+    uint8_t buf[fio::MAX_BUF];
     uint32_t actual_len;
     status = client_.read(0, buf, nullptr, sizeof(buf), 0, &actual_len, nullptr);
     if (status != ZX_OK) {
       return status;
     }
-    if (buf[0] != fuchsia_io_WATCH_EVENT_REMOVED) {
+    if (buf[0] != fio::WATCH_EVENT_REMOVED) {
       continue;
     }
     if (filename.length() == 0) {
