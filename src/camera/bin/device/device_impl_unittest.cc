@@ -68,8 +68,9 @@ class DeviceImplTest : public gtest::RealLoopFixture {
     ASSERT_TRUE(controller_result.is_ok());
     controller_ = controller_result.take_value();
 
-    fuchsia::sysmem::AllocatorHandle allocator;
+    fuchsia::sysmem::AllocatorSyncPtr allocator;
     context_->svc()->Connect(allocator.NewRequest());
+    allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
     fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
     fake_listener_registry_.GetHandler()(registry.NewRequest());
@@ -77,7 +78,7 @@ class DeviceImplTest : public gtest::RealLoopFixture {
     zx::event bad_state_event;
     ASSERT_EQ(zx::event::create(0, &bad_state_event), ZX_OK);
     auto device_promise = DeviceImpl::Create(dispatcher(), executor_, MetricsReporter(*context_),
-                                             std::move(controller), std::move(allocator),
+                                             std::move(controller), allocator.Unbind(),
                                              std::move(registry), std::move(bad_state_event));
     bool device_created = false;
     executor_.schedule_task(device_promise.then(

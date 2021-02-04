@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/lib/fake_camera/fake_camera.h"
+
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include "src/camera/lib/fake_camera/fake_camera.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 constexpr auto kCameraIdentifier = "FakeCameraTest";
@@ -19,6 +21,7 @@ class FakeCameraTest : public gtest::RealLoopFixture {
  protected:
   virtual void SetUp() override {
     context_->svc()->Connect(allocator_.NewRequest());
+    allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
     allocator_.set_error_handler(MakeErrorHandler("Sysmem Allocator"));
   }
 
