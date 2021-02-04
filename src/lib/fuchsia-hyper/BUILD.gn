@@ -14,22 +14,29 @@ rustc_library("fuchsia-hyper") {
   deps = [
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:lru-cache-v0_1_2",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:rustls",
     "//third_party/rust_crates:tokio",
+  ]
+  test_deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:webpki",
   ]
   if (is_host) {
     deps += [
       "//third_party/rust_crates:async-std",
       "//third_party/rust_crates:rustls-native-certs-v0_3_0",
       "//third_party/rust_crates:tower-service-v0_3_0",
-      "//third_party/rust_crates:webpki",
     ]
-    test_deps = [ "//third_party/rust_crates:anyhow" ]
   } else {
     deps += [
       "//garnet/lib/rust/webpki-roots-fuchsia",
@@ -42,19 +49,19 @@ rustc_library("fuchsia-hyper") {
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:socket2",
     ]
-    test_deps = [
+    test_deps += [
       "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
       "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:matches",
-      "//third_party/rust_crates:parking_lot",
       "//third_party/rust_crates:test-case",
     ]
   }
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/lib.rs",
+    "src/session_cache.rs",
+  ]
   if (is_host) {
     sources += [ "src/not_fuchsia.rs" ]
   } else {

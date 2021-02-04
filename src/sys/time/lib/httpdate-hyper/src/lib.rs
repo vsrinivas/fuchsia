@@ -175,7 +175,7 @@ impl NetworkTimeClient {
         // we need to use a non-standard verifier, `RecordingVerifier`, to allow
         // us to defer trust evaluation until after we've parsed the response.
         let verifier = Arc::new(RecordingVerifier::default());
-        let mut config = rustls::ClientConfig::new();
+        let mut config = fuchsia_hyper::new_rustls_client_config();
         config.root_store.add_server_trust_anchors(trust_anchors);
         config
             .dangerous()
