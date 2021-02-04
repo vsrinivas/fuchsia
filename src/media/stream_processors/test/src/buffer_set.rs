@@ -11,8 +11,9 @@ use fidl::endpoints::{create_endpoints, ClientEnd, Proxy};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem::*;
 use fuchsia_component::client;
+use fuchsia_runtime;
 use fuchsia_stream_processors::*;
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use std::{
     convert::TryFrom,
     fmt,
@@ -66,6 +67,12 @@ pub enum BufferSetType {
 }
 
 pub struct BufferSetFactory;
+
+fn set_allocator_name(sysmem_client: &fidl_fuchsia_sysmem::AllocatorProxy) -> Result<()> {
+    let name = fuchsia_runtime::process_self().get_name()?;
+    let koid = fuchsia_runtime::process_self().get_koid()?;
+    Ok(sysmem_client.set_debug_client_info(name.to_str()?, koid.raw_koid())?)
+}
 
 // This client only intends to be filling one input buffer or hashing one output buffer at any given
 // time.
@@ -138,6 +145,8 @@ impl BufferSetFactory {
 
         let sysmem_client =
             client::connect_to_service::<AllocatorMarker>().context("Connecting to sysmem")?;
+
+        set_allocator_name(&sysmem_client).context("Setting sysmem allocator name")?;
 
         sysmem_client
             .allocate_shared_collection(client_token_request)

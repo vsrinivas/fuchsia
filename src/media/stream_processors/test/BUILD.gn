@@ -37,6 +37,7 @@ rustc_library("stream_processor_test_lib") {
     "//src/lib/fidl_table_validation",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/mundane",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
