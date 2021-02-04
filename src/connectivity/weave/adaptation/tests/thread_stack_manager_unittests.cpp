@@ -357,6 +357,8 @@ TEST_F(ThreadStackManagerTest, GetProvisionNoCredential) {
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_NO_ERROR);
 
   EXPECT_EQ(net_info.NetworkType, kNetworkType_Thread);
+  EXPECT_TRUE(net_info.FieldPresent.NetworkId);
+  EXPECT_EQ(net_info.NetworkId, Internal::kThreadNetworkId);
   EXPECT_TRUE(net_info.FieldPresent.ThreadExtendedPANId);
   EXPECT_FALSE(net_info.FieldPresent.ThreadNetworkKey);
 
@@ -393,6 +395,8 @@ TEST_F(ThreadStackManagerTest, GetProvisionWithCredential) {
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, true), WEAVE_NO_ERROR);
 
   EXPECT_EQ(net_info.NetworkType, kNetworkType_Thread);
+  EXPECT_TRUE(net_info.FieldPresent.NetworkId);
+  EXPECT_EQ(net_info.NetworkId, Internal::kThreadNetworkId);
   EXPECT_TRUE(net_info.FieldPresent.ThreadExtendedPANId);
   EXPECT_TRUE(net_info.FieldPresent.ThreadNetworkKey);
 

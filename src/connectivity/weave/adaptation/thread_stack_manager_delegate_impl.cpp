@@ -254,6 +254,8 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetThreadProvision(DeviceNetworkInfo
   // Start copying provision info.
   netInfo.Reset();
   netInfo.NetworkType = kNetworkType_Thread;
+  netInfo.NetworkId = Internal::kThreadNetworkId;
+  netInfo.FieldPresent.NetworkId = true;
 
   // Copy network name.
   if (identity.has_raw_name()) {
