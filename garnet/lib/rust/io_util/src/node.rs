@@ -5,17 +5,17 @@
 //! Utility functions for fuchsia.io nodes.
 
 use {
-    fidl_fuchsia_io::{DirectoryEvent, DirectoryObject, DirectoryProxy, NodeInfo, NodeProxy},
+    fidl_fuchsia_io::{
+        DirectoryEvent, DirectoryObject, DirectoryProxy, FileEvent, FileObject, FileProxy,
+        NodeInfo, NodeProxy,
+    },
     fuchsia_zircon_status as zx_status,
     futures::prelude::*,
     thiserror::Error,
 };
 
 #[cfg(target_os = "fuchsia")]
-use {
-    fidl_fuchsia_io::{FileEvent, FileObject, FileProxy, NodeMarker},
-    fuchsia_zircon as zx,
-};
+use {fidl_fuchsia_io::NodeMarker, fuchsia_zircon as zx};
 
 /// An error encountered while opening a node
 #[derive(Debug, Error)]
