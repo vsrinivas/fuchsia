@@ -132,34 +132,34 @@ class FormatConfidenceIntervalTest(unittest.TestCase):
     def test_confidence_interval_formatting(self):
         Format = perfcompare.FormatConfidenceInterval
 
-        self.assertEquals(Format(12345.6789, 2222), '12346 +/- 2222')
-        self.assertEquals(Format(12345.6789, 0.02222), '12345.679 +/- 0.022')
-        self.assertEquals(Format(12345.6789, 0.07777), '12345.679 +/- 0.078')
-        self.assertEquals(Format(12345.6789, 0.09911), '12345.679 +/- 0.099')
+        self.assertEqual(Format(12345.6789, 2222), '12346 +/- 2222')
+        self.assertEqual(Format(12345.6789, 0.02222), '12345.679 +/- 0.022')
+        self.assertEqual(Format(12345.6789, 0.07777), '12345.679 +/- 0.078')
+        self.assertEqual(Format(12345.6789, 0.09911), '12345.679 +/- 0.099')
         # Corner case: rounding 0.09950 to 2 significant figures produces
         # 0.100, which looks like 3 significant figures rather than 2.
-        self.assertEquals(Format(12345.6789, 0.09950), '12345.679 +/- 0.100')
-        self.assertEquals(Format(12345.6789, 2e-5), '12345.678900 +/- 0.000020')
+        self.assertEqual(Format(12345.6789, 0.09950), '12345.679 +/- 0.100')
+        self.assertEqual(Format(12345.6789, 2e-5), '12345.678900 +/- 0.000020')
 
         # Corner case: the offset is a power of 10.
-        self.assertEquals(Format(12345.6789, 0.1), '12345.68 +/- 0.10')
-        self.assertEquals(Format(12345.6789, 0.01), '12345.679 +/- 0.010')
+        self.assertEqual(Format(12345.6789, 0.1), '12345.68 +/- 0.10')
+        self.assertEqual(Format(12345.6789, 0.01), '12345.679 +/- 0.010')
 
         # Corner case: zero offset.
-        self.assertEquals(Format(12345.6789, 0), '12345.7 +/- 0')
+        self.assertEqual(Format(12345.6789, 0), '12345.7 +/- 0')
 
         # Corner case: negative offset.  This does not make sense for a
         # confidence interval and should not happen, but let's ensure it
         # gets formatted anyway in case that it useful for debugging.
-        self.assertEquals(Format(12345.6789, -1), '12345.7 +/- -1')
+        self.assertEqual(Format(12345.6789, -1), '12345.7 +/- -1')
 
         # Corner cases: infinity and NaN.
-        self.assertEquals(Format(12345.6789, numpy.inf), '12345.7 +/- inf')
-        self.assertEquals(Format(12345.6789, -numpy.inf), '12345.7 +/- -inf')
-        self.assertEquals(Format(12345.6789, numpy.nan), '12345.7 +/- nan')
-        self.assertEquals(Format(numpy.inf, 0.1234), 'inf +/- 0.12')
-        self.assertEquals(Format(-numpy.inf, 0.1234), '-inf +/- 0.12')
-        self.assertEquals(Format(numpy.nan, 0.1234), 'nan +/- 0.12')
+        self.assertEqual(Format(12345.6789, numpy.inf), '12345.7 +/- inf')
+        self.assertEqual(Format(12345.6789, -numpy.inf), '12345.7 +/- -inf')
+        self.assertEqual(Format(12345.6789, numpy.nan), '12345.7 +/- nan')
+        self.assertEqual(Format(numpy.inf, 0.1234), 'inf +/- 0.12')
+        self.assertEqual(Format(-numpy.inf, 0.1234), '-inf +/- 0.12')
+        self.assertEqual(Format(numpy.nan, 0.1234), 'nan +/- 0.12')
 
 
 # Generate some example perf test data, allowing variation at each level of
@@ -217,13 +217,13 @@ class StatisticsTest(TempDirTestCase):
                 [[5, 6], [7, 8]]]
         dataset = perfcompare.MultiBootDataset(self.DirOfData(data))
         boot_datasets = list(dataset.GetBootDatasets())
-        self.assertEquals(len(boot_datasets), 2)
-        self.assertEquals(list(boot_datasets[0].GetProcessDatasets()),
-                          [[self.ResultsDictForValues([1, 2])],
-                           [self.ResultsDictForValues([3, 4])]])
-        self.assertEquals(list(boot_datasets[1].GetProcessDatasets()),
-                          [[self.ResultsDictForValues([5, 6])],
-                           [self.ResultsDictForValues([7, 8])]])
+        self.assertEqual(len(boot_datasets), 2)
+        self.assertEqual(list(boot_datasets[0].GetProcessDatasets()),
+                         [[self.ResultsDictForValues([1, 2])],
+                          [self.ResultsDictForValues([3, 4])]])
+        self.assertEqual(list(boot_datasets[1].GetProcessDatasets()),
+                         [[self.ResultsDictForValues([5, 6])],
+                          [self.ResultsDictForValues([7, 8])]])
 
     def TarFileOfDir(self, dir_path, write_mode):
         tar_filename = os.path.join(self.MakeTempDir(), 'out.tar')
@@ -235,22 +235,22 @@ class StatisticsTest(TempDirTestCase):
     def test_readback_of_data_from_tar_file(self):
         data = [[[1, 2], [3, 4]]]
         dir_path = self.DirOfData(data)
-        self.assertEquals(len(os.listdir(os.path.join(dir_path, 'by_boot'))), 1)
+        self.assertEqual(len(os.listdir(os.path.join(dir_path, 'by_boot'))), 1)
         # Test the uncompressed and gzipped cases.
         for write_mode in ('w', 'w:gz'):
             tar_filename = self.TarFileOfDir(
                 os.path.join(dir_path, 'by_boot', 'boot000000'), write_mode)
             boot_dataset = perfcompare.SingleBootDataset(tar_filename)
-            self.assertEquals(list(boot_dataset.GetProcessDatasets()),
-                              [[self.ResultsDictForValues([1, 2])],
-                               [self.ResultsDictForValues([3, 4])]])
+            self.assertEqual(list(boot_dataset.GetProcessDatasets()),
+                             [[self.ResultsDictForValues([1, 2])],
+                              [self.ResultsDictForValues([3, 4])]])
 
     def CheckConfidenceInterval(self, data, interval_string):
         dir_path = self.DirOfData(data)
         test_name = 'example_suite: ExampleTest'
         stats = perfcompare.StatsFromMultiBootDataset(
             perfcompare.MultiBootDataset(dir_path))[test_name]
-        self.assertEquals(stats.FormatConfidenceInterval(), interval_string)
+        self.assertEqual(stats.FormatConfidenceInterval(), interval_string)
 
     # Test the CIs produced with variation at different levels of the
     # multi-level sampling process.
@@ -336,7 +336,7 @@ class PerfCompareTest(TempDirTestCase):
         results = perfcompare.StatsFromMultiBootDataset(
             perfcompare.MultiBootDataset(dir_path))
         test_name = 'fuchsia.example: ClockGetTimeExample'
-        self.assertEquals(
+        self.assertEqual(
             results[test_name].FormatConfidenceInterval(),
             '992 +/- 26 ns')
 
@@ -349,11 +349,11 @@ class PerfCompareTest(TempDirTestCase):
     def test_mean_and_stddev(self):
         values = [10, 5, 15]
         mean_val, stddev_val = perfcompare.MeanAndStddev(values)
-        self.assertEquals(mean_val, 10.0)
-        self.assertEquals(perfcompare.Mean(values), 10.0)
-        self.assertEquals(stddev_val, 5.0)
+        self.assertEqual(mean_val, 10.0)
+        self.assertEqual(perfcompare.Mean(values), 10.0)
+        self.assertEqual(stddev_val, 5.0)
         # Single-value sample.
-        self.assertEquals(perfcompare.MeanAndStddev([123]), (123.0, None))
+        self.assertEqual(perfcompare.MeanAndStddev([123]), (123.0, None))
         # Check error cases.
         self.assertRaises(AssertionError, lambda: perfcompare.Mean([]))
         self.assertRaises(AssertionError, lambda: perfcompare.MeanAndStddev([]))
@@ -456,30 +456,30 @@ class PerfCompareTest(TempDirTestCase):
         # software-under-test.
         interval_test = Interval(10, 20)
         interval_real = perfcompare.Stats([1, 2, 3], 'some_unit').interval
-        self.assertEquals(type(interval_test[0]), type(interval_real[0]))
-        self.assertEquals(type(interval_test[1]), type(interval_real[1]))
+        self.assertEqual(type(interval_test[0]), type(interval_real[0]))
+        self.assertEqual(type(interval_test[1]), type(interval_real[1]))
 
         def Format(interval_before, interval_after):
             return perfcompare.FormatFactorRange(Interval(*interval_before),
                                                  Interval(*interval_after))
 
-        self.assertEquals(Format((1, 2), (3, 4)), '1.500-4.000')
+        self.assertEqual(Format((1, 2), (3, 4)), '1.500-4.000')
         # Test zero "min" values.
-        self.assertEquals(Format((0, 2), (3, 4)), '1.500-inf')
-        self.assertEquals(Format((1, 2), (0, 4)), '0.000-4.000')
+        self.assertEqual(Format((0, 2), (3, 4)), '1.500-inf')
+        self.assertEqual(Format((1, 2), (0, 4)), '0.000-4.000')
         # Test zero "min" and "max" values.
-        self.assertEquals(Format((0, 0), (3, 4)), 'inf-inf')
-        self.assertEquals(Format((1, 2), (0, 0)), '0.000-0.000')
+        self.assertEqual(Format((0, 0), (3, 4)), 'inf-inf')
+        self.assertEqual(Format((1, 2), (0, 0)), '0.000-0.000')
         # Test zero "max" values, with negative "min".
-        self.assertEquals(Format((-1, 0), (3, 4)), 'ci_too_wide')
-        self.assertEquals(Format((1, 2), (-3, 0)), 'ci_too_wide')
+        self.assertEqual(Format((-1, 0), (3, 4)), 'ci_too_wide')
+        self.assertEqual(Format((1, 2), (-3, 0)), 'ci_too_wide')
         # All values zero.
-        self.assertEquals(Format((0, 0), (0, 0)), 'no_change')
+        self.assertEqual(Format((0, 0), (0, 0)), 'no_change')
 
     def test_mismatch_rate(self):
-        self.assertEquals(perfcompare.MismatchRate([(0,1), (2,3)]), 1)
-        self.assertEquals(perfcompare.MismatchRate([(0,2), (1,3)]), 0)
-        self.assertEquals(perfcompare.MismatchRate([(0,2), (1,3), (4,5)]), 2./3)
+        self.assertEqual(perfcompare.MismatchRate([(0,1), (2,3)]), 1)
+        self.assertEqual(perfcompare.MismatchRate([(0,2), (1,3)]), 0)
+        self.assertEqual(perfcompare.MismatchRate([(0,2), (1,3), (4,5)]), 2./3)
 
     def test_validate_perfcompare(self):
         def MakeExampleDirs(**kwargs):
@@ -518,7 +518,7 @@ class RunLocalTest(TempDirTestCase):
         commands = []
         # Dummy version of subprocess.check_call() for testing.
         def DummyRunCmd(cmd, shell=False):
-            self.assertEquals(shell, True)
+            self.assertEqual(shell, True)
             commands.append(cmd)
             if cmd == 'set -o errexit -o nounset; my_iter_cmd':
                 WriteJsonFile(iter_temp_file,
@@ -535,9 +535,9 @@ class RunLocalTest(TempDirTestCase):
                           '--reboot_cmd', 'my_reboot_cmd',
                           '--dest', dest_dir],
                          stdout, run_cmd=DummyRunCmd)
-        self.assertEquals(commands,
-                          ['set -o errexit -o nounset; my_reboot_cmd',
-                           'set -o errexit -o nounset; my_iter_cmd'] * 4)
+        self.assertEqual(commands,
+                         ['set -o errexit -o nounset; my_reboot_cmd',
+                          'set -o errexit -o nounset; my_iter_cmd'] * 4)
         GOLDEN.AssertCaseEq('run_local', stdout.getvalue())
 
     # "run_local" should give an error if the temporary files specified by
