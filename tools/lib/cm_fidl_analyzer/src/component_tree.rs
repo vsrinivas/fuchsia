@@ -150,6 +150,14 @@ impl ComponentNode {
         self.url.clone()
     }
 
+    pub fn moniker(&self) -> Option<&PartialMoniker> {
+        self.node_path.0.last()
+    }
+
+    pub fn node_path(&self) -> NodePath {
+        self.node_path.clone()
+    }
+
     // Creates a new `ComponentNode` with the specified declaration, url, parent, and moniker.
     // Does not populate the node's `children` field.
     fn new(
@@ -211,6 +219,14 @@ impl ComponentTree {
             Some(ref parent) => Ok(Some(self.get_node(parent)?)),
             None => Ok(None),
         }
+    }
+
+    pub fn get_child_node(
+        &self,
+        node: &ComponentNode,
+        moniker: PartialMoniker,
+    ) -> Result<&ComponentNode, ComponentTreeError> {
+        Ok(self.get_node(&node.node_path.extended(moniker))?)
     }
 
     /// Returns the children of `node`, or returns an error if `node` contains an invalid `NodePath` as
