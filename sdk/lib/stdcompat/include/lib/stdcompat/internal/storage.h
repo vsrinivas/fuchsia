@@ -719,7 +719,7 @@ class indexed_storage<DestructorClass, type_index<Ts, Is>...> {
   base_type base_;
 };
 
-// Internal variant storage type used by fit::optional and fit::variant.
+// Internal variant storage type used by cpp17::optional and cpp17::variant.
 // Specializations of this type select trivial vs. non-trivial copy/move
 // construction, assignment operators, and destructor based on the storage class
 // of the types in Ts.

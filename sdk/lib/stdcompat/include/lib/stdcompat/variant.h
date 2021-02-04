@@ -27,7 +27,7 @@ using std::variant_alternative_t;
 using std::variant_size;
 using std::variant_size_v;
 
-};  // namespace cpp17
+}  // namespace cpp17
 
 #else  // Provide polyfill for std::variant and related constructs.
 
@@ -634,6 +634,6 @@ constexpr bool holds_alternative(const variant<Ts...>& value) {
 
 }  // namespace cpp17
 
-#endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#endif  // __cpp_lib_variant >= 2016L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VARIANT_H_
