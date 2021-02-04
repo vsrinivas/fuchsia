@@ -516,11 +516,15 @@ def main_arg_parser() -> argparse.ArgumentParser:
         action="store_false",
         dest="check_output_freshness")
 
+    # This affects the set of files that are allowed to be written.
+    # TODO(fangism): remove this flag entirely, disallowing writes to inputs
     parser.add_argument(
         "--writeable-depfile-inputs",
         action="store_true",
-        default=True,  # Goal: False (remove this flag entirely)
-        help="Allow writes to inputs found in depfiles.")
+        default=False,
+        help=
+        "Allow writes to inputs found in depfiles.  Only effective with --check-access-permissions."
+    )
     parser.add_argument(
         "--no-writeable-depfile-inputs",
         action="store_false",
