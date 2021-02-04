@@ -139,7 +139,7 @@ void ThreadStackManagerDelegateImpl::OnPlatformEvent(const WeaveDeviceEvent* eve
 bool ThreadStackManagerDelegateImpl::IsThreadEnabled() {
   DeviceState device_state;
 
-  if (!is_thread_supported_) {
+  if (!IsThreadSupported()) {
     return false;
   }
 
@@ -162,7 +162,7 @@ bool ThreadStackManagerDelegateImpl::IsThreadEnabled() {
 }
 
 WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadEnabled(bool val) {
-  if (!is_thread_supported_) {
+  if (!IsThreadSupported()) {
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
 
@@ -180,7 +180,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadEnabled(bool val) {
 bool ThreadStackManagerDelegateImpl::IsThreadProvisioned() {
   DeviceState device_state;
 
-  if (!is_thread_supported_) {
+  if (!IsThreadSupported()) {
     return false;
   }
 
@@ -202,7 +202,7 @@ bool ThreadStackManagerDelegateImpl::IsThreadProvisioned() {
 bool ThreadStackManagerDelegateImpl::IsThreadAttached() {
   DeviceState device_state;
 
-  if (!is_thread_supported_) {
+  if (!IsThreadSupported()) {
     return false;
   }
 
@@ -220,7 +220,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetThreadProvision(DeviceNetworkInfo
   Identity identity;
   zx_status_t status;
 
-  if (!is_thread_supported_) {
+  if (!IsThreadSupported()) {
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
 
@@ -322,7 +322,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
   std::unique_ptr<Credential> credential;
   Identity identity;
 
-  if (!is_thread_supported_) {
+  if (!IsThreadSupported()) {
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
 
@@ -370,7 +370,7 @@ void ThreadStackManagerDelegateImpl::ClearThreadProvision() {
     return;
   }
 
-  if (!is_thread_supported_) {
+  if (!IsThreadSupported()) {
     return;
   }
 
@@ -384,7 +384,7 @@ ThreadDeviceType ThreadStackManagerDelegateImpl::GetThreadDeviceType() {
   DeviceState device_state;
 
   // Get the device state.
-  if (GetDeviceState(&device_state) != ZX_OK || !is_thread_supported_) {
+  if (GetDeviceState(&device_state) != ZX_OK || !IsThreadSupported()) {
     return ThreadDeviceType::kThreadDeviceType_NotSupported;
   }
 
