@@ -233,14 +233,6 @@ IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle
 
 IncomingMessage::~IncomingMessage() { FidlHandleInfoCloseMany(handles(), handle_actual()); }
 
-void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_info_t* handles,
-                           uint32_t handle_capacity) {
-  zx_status_t status = fidl::OutgoingToIncomingMessage(outgoing_message.message(), handles,
-                                                       handle_capacity, &message_);
-  ZX_ASSERT(status == ZX_OK);
-  outgoing_message.ReleaseHandles();
-}
-
 void IncomingMessage::Decode(const fidl_type_t* message_type) {
   status_ =
       fidl_decode_etc(message_type, bytes(), byte_actual(), handles(), handle_actual(), &error_);
@@ -249,48 +241,81 @@ void IncomingMessage::Decode(const fidl_type_t* message_type) {
 
 }  // namespace internal
 
-zx_status_t OutgoingToIncomingMessage(const fidl_outgoing_msg_t* input,
-                                      zx_handle_info_t* handle_buf, uint32_t handle_buf_count,
-                                      fidl_incoming_msg_t* output) {
-  ZX_DEBUG_ASSERT(input->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
-  if (input->byte.num_handles > handle_buf_count) {
-    return ZX_ERR_OUT_OF_RANGE;
+OutgoingToIncomingMessage::OutgoingToIncomingMessage(OutgoingMessage& input) {
+  fidl_outgoing_msg_t* outgoing_msg = input.message();
+  fidl_incoming_msg_t result;
+  buf_handles_ = std::make_unique<zx_handle_info_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  result.handles = buf_handles_.get();
+  zx_handle_disposition_t* handles;
+  switch (outgoing_msg->type) {
+    case FIDL_OUTGOING_MSG_TYPE_BYTE: {
+      result.bytes = outgoing_msg->byte.bytes;
+      result.num_bytes = outgoing_msg->byte.num_bytes;
+      handles = outgoing_msg->byte.handles;
+      result.num_handles = outgoing_msg->byte.num_handles;
+      break;
+    }
+    case FIDL_OUTGOING_MSG_TYPE_IOVEC: {
+      uint32_t num_bytes = 0;
+      buf_bytes_ = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+      for (uint32_t i = 0; i < outgoing_msg->iovec.num_iovecs; i++) {
+        if (num_bytes > ZX_CHANNEL_MAX_MSG_BYTES) {
+          status_ = ZX_ERR_OUT_OF_RANGE;
+          input.ReleaseHandles();
+          return;
+        }
+        auto iovec = outgoing_msg->iovec.iovecs[i];
+        memcpy(&buf_bytes_[num_bytes], iovec.buffer, iovec.capacity);
+        num_bytes += iovec.capacity;
+      }
+      result.bytes = buf_bytes_.get();
+      result.num_bytes = num_bytes;
+      handles = outgoing_msg->iovec.handles;
+      result.num_handles = outgoing_msg->iovec.num_handles;
+      break;
+    }
+    default:
+      ZX_PANIC("unknown message type");
   }
-  for (size_t i = 0; i < input->byte.num_handles; i++) {
-    zx_handle_disposition_t hd = input->byte.handles[i];
+  input.ReleaseHandles();
+
+  if (result.num_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
+    status_ = ZX_ERR_OUT_OF_RANGE;
+    return;
+  }
+  for (size_t i = 0; i < result.num_handles; i++) {
+    zx_handle_disposition_t hd = handles[i];
     if (hd.operation != ZX_HANDLE_OP_MOVE) {
-      return ZX_ERR_INVALID_ARGS;
+      status_ = ZX_ERR_INVALID_ARGS;
+      return;
     }
     if (hd.result != ZX_OK) {
-      return ZX_ERR_INVALID_ARGS;
+      status_ = ZX_ERR_INVALID_ARGS;
+      return;
     }
 #ifdef __Fuchsia__
     zx_info_handle_basic_t info;
     zx_status_t status =
         zx_object_get_info(hd.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
-      return status;
+      status_ = status;
+      return;
     }
-    handle_buf[i] = zx_handle_info_t{
+    result.handles[i] = zx_handle_info_t{
         .handle = hd.handle,
         .type = info.type,
         .rights = info.rights,
     };
 #else
-    handle_buf[i] = zx_handle_info_t{
+    result.handles[i] = zx_handle_info_t{
         .handle = hd.handle,
         .type = ZX_OBJ_TYPE_NONE,
         .rights = ZX_RIGHT_SAME_RIGHTS,
     };
 #endif
   }
-  *output = fidl_incoming_msg_t{
-      .bytes = input->byte.bytes,
-      .handles = handle_buf,
-      .num_bytes = input->byte.num_bytes,
-      .num_handles = input->byte.num_handles,
-  };
-  return ZX_OK;
+  incoming_message_ = result;
+  status_ = ZX_OK;
 }
 
 }  // namespace fidl

@@ -311,29 +311,6 @@ struct Handles {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      zx_handle_info_t
-          handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-      Init(outgoing_message, handles,
-           std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
-      if (ok()) {
-        Decode<struct Handles>();
-      }
-    }
   };
 };
 }  // namespace wire

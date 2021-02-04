@@ -529,26 +529,6 @@ class Table final {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<Table>();
-      }
-    }
   };
 
   class Builder;
@@ -1005,26 +985,6 @@ struct Struct {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Struct>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1154,26 +1114,6 @@ class Interface final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<MethodRequest>();
-        }
-      }
     };
 
    private:
@@ -1290,26 +1230,6 @@ class Interface final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<OnEventResponse>();
-        }
-      }
     };
 
    private:

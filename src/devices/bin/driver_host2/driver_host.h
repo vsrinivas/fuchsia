@@ -24,7 +24,10 @@ class Driver : public llcpp::fuchsia::driver::framework::Driver::Interface,
 
   void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver> binding);
 
-  zx::status<> Start(const fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher);
+  // Starts the driver.
+  //
+  // The handles in |message| will be consumed.
+  zx::status<> Start(fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher);
 
  private:
   void* library_;

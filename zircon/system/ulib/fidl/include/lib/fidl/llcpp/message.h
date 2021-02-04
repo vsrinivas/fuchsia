@@ -10,6 +10,8 @@
 #include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 
+#include <memory>
+
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/server_end.h>
@@ -277,11 +279,6 @@ class IncomingMessage : public ::fidl::Result {
   fidl_incoming_msg_t* message() { return &message_; }
 
  protected:
-  // Initialize the |IncomingMessage| from an |OutgoingMessage|. The handles within
-  // |OutgoingMessage| are transferred to the |IncomingMessage|.
-  // This is intended only for tests.
-  void Init(OutgoingMessage& outgoing_message, zx_handle_info_t* handles, uint32_t handle_capacity);
-
   // Reset the byte pointer. Used to relase the control onwership of the bytes.
   void ResetBytes() { message_.bytes = nullptr; }
 
@@ -325,14 +322,34 @@ using UnownedEncodedMessage = typename FidlType::UnownedEncodedMessage;
 template <typename FidlType>
 using DecodedMessage = typename FidlType::DecodedMessage;
 
-// Convert an outgoing message to an incoming message.
+// Converts an outgoing message to an incoming message and stores the
+// result alongside needed buffers.
 //
 // In doing so, it will make syscalls to fetch rights and type information
 // of any provided handles. The caller is responsible for ensuring that
 // outputted handle rights and object types are checked appropriately.
-zx_status_t OutgoingToIncomingMessage(const fidl_outgoing_msg_t* input,
-                                      zx_handle_info_t* handle_buf, uint32_t handle_buf_count,
-                                      fidl_incoming_msg_t* output);
+//
+// |OutgoingToIncomingMessage| must be in scope when |incoming_message|
+// is referenced, because buffers used by |incoming_message| are held by
+// |OutgoingToIncomingMessage|.
+class OutgoingToIncomingMessage {
+ public:
+  explicit OutgoingToIncomingMessage(OutgoingMessage& outgoing_msg);
+  fidl_incoming_msg_t* incoming_message() {
+    ZX_DEBUG_ASSERT(ok());
+    return &incoming_message_;
+  }
+  zx_status_t status() const { return status_; }
+  bool ok() const { return status_ == ZX_OK; }
+
+ private:
+  fidl_incoming_msg_t incoming_message_ = {};
+  zx_status_t status_ = ZX_ERR_BAD_STATE;
+
+  std::unique_ptr<uint8_t[]> buf_bytes_;
+  std::unique_ptr<zx_handle_info_t[]> buf_handles_;
+};
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_MESSAGE_H_

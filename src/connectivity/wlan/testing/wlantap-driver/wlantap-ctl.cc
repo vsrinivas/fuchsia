@@ -68,8 +68,9 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
         completer.Reply(encoded.status());
         return;
       }
-      auto decoded =
-          fidl::DecodedMessage<wlantap::WlantapPhyConfig>::FromOutgoingWithRawHandleCopy(&encoded);
+      fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
+      ZX_ASSERT(converted.ok());
+      fidl::DecodedMessage<wlantap::WlantapPhyConfig> decoded(converted.incoming_message());
       if (!decoded.ok()) {
         completer.Reply(status);
         return;

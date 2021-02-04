@@ -72,7 +72,9 @@ class LinearSnap {
            outgoing_message.handle_actual() * sizeof(zx_handle_disposition_t));
     snap_handles_count_ = outgoing_message.handle_actual();
 
-    auto decoded = fidl::DecodedMessage<FidlType>::FromOutgoingWithRawHandleCopy(&encoded);
+    fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
+    ZX_ASSERT(converted.ok());
+    auto decoded = fidl::DecodedMessage<FidlType>(converted.incoming_message());
     ZX_ASSERT(decoded.ok());
     ZX_ASSERT(decoded.error() == nullptr);
     // Release the ownership of the primary object (the handles are closed by the LinearSnap

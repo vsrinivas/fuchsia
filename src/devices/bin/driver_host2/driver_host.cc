@@ -74,16 +74,13 @@ void Driver::set_binding(
   binding_ = std::make_optional(std::move(binding));
 }
 
-zx::status<> Driver::Start(const fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher) {
-  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_incoming_msg_t msg;
-  zx_status_t status = fidl::OutgoingToIncomingMessage(message.message(), handle_infos,
-                                                       ZX_CHANNEL_MAX_MSG_HANDLES, &msg);
-  if (status != ZX_OK) {
-    return zx::make_status(status);
+zx::status<> Driver::Start(fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher) {
+  fidl::OutgoingToIncomingMessage converted(message);
+  if (converted.status() != ZX_OK) {
+    return zx::make_status(converted.status());
   }
-  record_->start(&msg, dispatcher, &opaque_);
-  return zx::make_status(status);
+  record_->start(converted.incoming_message(), dispatcher, &opaque_);
+  return zx::make_status(converted.status());
 }
 
 DriverHost::DriverHost(async::Loop* loop) : loop_(loop) {}

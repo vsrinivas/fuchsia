@@ -204,26 +204,6 @@ struct Padding7ByteMiddle {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding7ByteMiddle>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -321,26 +301,6 @@ struct Padding7ByteEnd {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding7ByteEnd>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -439,26 +399,6 @@ struct Padding6ByteMiddle {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding6ByteMiddle>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -556,26 +496,6 @@ struct Padding6ByteEnd {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding6ByteEnd>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -676,26 +596,6 @@ struct Padding5ByteMiddle {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding5ByteMiddle>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -795,26 +695,6 @@ struct Padding5ByteEnd {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding5ByteEnd>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -913,26 +793,6 @@ struct Padding4ByteMiddle {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding4ByteMiddle>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1030,26 +890,6 @@ struct Padding4ByteEnd {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding4ByteEnd>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1153,26 +993,6 @@ struct Padding4ByteAlignmentLength12 {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding4ByteAlignmentLength12>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1271,26 +1091,6 @@ struct Padding3ByteMiddle {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding3ByteMiddle>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1388,26 +1188,6 @@ struct Padding3ByteEnd {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding3ByteEnd>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1506,26 +1286,6 @@ struct Padding2ByteMiddle {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding2ByteMiddle>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1623,26 +1383,6 @@ struct Padding2ByteEnd {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding2ByteEnd>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1744,26 +1484,6 @@ struct Padding2ByteAlignmentLength6 {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding2ByteAlignmentLength6>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1862,26 +1582,6 @@ struct Padding1ByteMiddle {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding1ByteMiddle>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1979,26 +1679,6 @@ struct Padding1ByteEnd {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Padding1ByteEnd>();
-      }
-    }
   };
 };
 }  // namespace wire

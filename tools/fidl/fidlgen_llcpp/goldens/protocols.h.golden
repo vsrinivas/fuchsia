@@ -800,26 +800,6 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct WithErrorSyntax_ResponseAsStruct_Response>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -920,26 +900,6 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct WithErrorSyntax_ErrorAsPrimitive_Response>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1039,26 +999,6 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct WithErrorSyntax_ErrorAsEnum_Response>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -1190,26 +1130,6 @@ class Transitional final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<RequestResponse>();
-        }
-      }
     };
 
    private:
@@ -1334,26 +1254,6 @@ class Transitional final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<RequestRequest>();
-        }
-      }
     };
 
    private:
@@ -1477,26 +1377,6 @@ class Transitional final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<OneWayRequest>();
-        }
-      }
     };
 
    private:
@@ -1615,26 +1495,6 @@ class Transitional final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<EventResponse>();
-        }
-      }
     };
 
    private:
@@ -2131,26 +1991,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<MethodARequest>();
-        }
-      }
     };
 
    private:
@@ -2274,26 +2114,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<EventAResponse>();
-        }
-      }
     };
 
    private:
@@ -2413,26 +2233,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<MethodBResponse>();
-        }
-      }
     };
 
    private:
@@ -2559,26 +2359,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<MethodBRequest>();
-        }
-      }
     };
 
    private:
@@ -2696,26 +2476,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<TakeHandleResponse>();
-        }
-      }
     };
 
    private:
@@ -2849,29 +2609,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        zx_handle_info_t
-            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-        Init(outgoing_message, handles,
-             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
-        if (ok()) {
-          Decode<TakeHandleRequest>();
-        }
-      }
     };
 
    private:
@@ -3003,29 +2740,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        zx_handle_info_t
-            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-        Init(outgoing_message, handles,
-             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
-        if (ok()) {
-          Decode<MutateSocketResponse>();
-        }
-      }
     };
 
    private:
@@ -3160,29 +2874,6 @@ class ChannelProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        zx_handle_info_t
-            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-        Init(outgoing_message, handles,
-             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
-        if (ok()) {
-          Decode<MutateSocketRequest>();
-        }
-      }
     };
 
    private:
@@ -3976,26 +3667,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<NoRequestNoResponseRequest>();
-        }
-      }
     };
 
    private:
@@ -4113,26 +3784,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<NoRequestEmptyResponseResponse>();
-        }
-      }
     };
 
    private:
@@ -4255,26 +3906,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<NoRequestEmptyResponseRequest>();
-        }
-      }
     };
 
    private:
@@ -4403,26 +4034,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<NoRequestWithResponseResponse>();
-        }
-      }
     };
 
    private:
@@ -4546,26 +4157,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<NoRequestWithResponseRequest>();
-        }
-      }
     };
 
    private:
@@ -4700,26 +4291,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<WithRequestNoResponseRequest>();
-        }
-      }
     };
 
    private:
@@ -4837,26 +4408,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<WithRequestEmptyResponseResponse>();
-        }
-      }
     };
 
    private:
@@ -4990,26 +4541,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<WithRequestEmptyResponseRequest>();
-        }
-      }
     };
 
    private:
@@ -5138,26 +4669,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<WithRequestWithResponseResponse>();
-        }
-      }
     };
 
    private:
@@ -5292,26 +4803,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<WithRequestWithResponseRequest>();
-        }
-      }
     };
 
    private:
@@ -5429,26 +4920,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<OnEmptyResponseResponse>();
-        }
-      }
     };
 
    private:
@@ -5576,26 +5047,6 @@ class WithAndWithoutRequestResponse final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<OnWithResponseResponse>();
-        }
-      }
     };
 
    private:
@@ -6594,26 +6045,6 @@ class WithErrorSyntax final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<ResponseAsStructResponse>();
-        }
-      }
     };
 
    private:
@@ -6735,26 +6166,6 @@ class WithErrorSyntax final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<ResponseAsStructRequest>();
-        }
-      }
     };
 
    private:
@@ -6885,26 +6296,6 @@ class WithErrorSyntax final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<ErrorAsPrimitiveResponse>();
-        }
-      }
     };
 
    private:
@@ -7026,26 +6417,6 @@ class WithErrorSyntax final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<ErrorAsPrimitiveRequest>();
-        }
-      }
     };
 
    private:
@@ -7176,26 +6547,6 @@ class WithErrorSyntax final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<ErrorAsEnumResponse>();
-        }
-      }
     };
 
    private:
@@ -7317,26 +6668,6 @@ class WithErrorSyntax final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<ErrorAsEnumRequest>();
-        }
-      }
     };
 
    private:

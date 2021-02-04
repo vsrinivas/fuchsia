@@ -40,7 +40,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      auto decoded = fidl::DecodedMessage<FidlType>::FromOutgoingWithRawHandleCopy(&encoded);
+      fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
+      auto decoded = fidl::DecodedMessage<FidlType>(converted.incoming_message());
       ZX_ASSERT(decoded.ok());
     }
 

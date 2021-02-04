@@ -63,9 +63,9 @@ TEST(LlcppTypesTests, DecodedMessageTest) {
   fidl::OwnedEncodedMessage<TypesTest::NonNullableChannelRequest> encoded(&msg);
 
   {
+    fidl::OutgoingToIncomingMessage converted(encoded.GetOutgoingMessage());
     auto decoded =
-        fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
-            &encoded);
+        fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>(converted.incoming_message());
 
     HelperExpectPeerValid(channel_1);
   }
@@ -107,10 +107,11 @@ TEST(LlcppTypesTests, RoundTripTest) {
   HelperExpectPeerValid(channel_1);
 
   // Decode
+  fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
+  ASSERT_TRUE(converted.ok());
   auto decoded =
-      fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
-          encoded);
-  EXPECT_TRUE(decoded.ok());
+      fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>(converted.incoming_message());
+  ASSERT_TRUE(decoded.ok());
   EXPECT_NULL(decoded.error(), "%s", decoded.error());
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10);
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x6134182769bd4a1lu);

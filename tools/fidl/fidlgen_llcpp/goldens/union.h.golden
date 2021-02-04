@@ -3800,26 +3800,6 @@ struct StructWithNullableXUnion {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct StructWithNullableXUnion>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -3915,26 +3895,6 @@ struct Pizza {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Pizza>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -4028,26 +3988,6 @@ struct Pasta {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Pasta>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -4196,26 +4136,6 @@ class TestProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<StrictXUnionHenceResponseMayBeStackAllocatedResponse>();
-        }
-      }
     };
 
    private:
@@ -4350,26 +4270,6 @@ class TestProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>();
-        }
-      }
     };
 
    private:
@@ -4506,26 +4406,6 @@ class TestProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* outgoing_message) {
-        return DecodedMessage(outgoing_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>();
-        }
-      }
     };
 
    private:
@@ -4660,26 +4540,6 @@ class TestProtocol final {
       // handles won't be closed When the object is destroyed. After calling
       // this method, the DecodedMessage object should not be used anymore.
       void ReleasePrimaryObject() { ResetBytes(); }
-
-      // These methods should only be used for testing purpose.
-      // They create an DecodedMessage using the bytes of an outgoing message
-      // and copying the handles.
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          UnownedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-      static DecodedMessage FromOutgoingWithRawHandleCopy(
-          OwnedEncodedMessage* encoded_message) {
-        return DecodedMessage(encoded_message->GetOutgoingMessage());
-      }
-
-     private:
-      DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-        Init(outgoing_message, nullptr, 0);
-        if (ok()) {
-          Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>();
-        }
-      }
     };
 
    private:
@@ -5285,26 +5145,6 @@ struct NullableUnionStruct {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct NullableUnionStruct>();
-      }
-    }
   };
 };
 }  // namespace wire
@@ -5398,26 +5238,6 @@ struct Empty {
     // won't be closed When the object is destroyed. After calling this method,
     // the DecodedMessage object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingByteMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct Empty>();
-      }
-    }
   };
 };
 }  // namespace wire
