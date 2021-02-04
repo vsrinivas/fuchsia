@@ -45,6 +45,8 @@ zx_library("inspect") {
     "//zircon/public/lib/zx",
   ]
 
+  data_deps = [ "//sdk/lib/diagnostics/inspect:client_includes" ]
+
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

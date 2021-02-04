@@ -22,5 +22,7 @@ sdk_source_set("cpp") {
     "//zircon/system/ulib/inspect",
   ]
 
+  data_deps = [ "//sdk/lib/diagnostics/inspect:client_includes" ]
+
   public_configs = [ "//sdk/config" ]
 }

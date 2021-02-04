@@ -209,13 +209,29 @@ directory to the framework. This typically looks as follows:
 
 ```
 {
+    capabilities: [
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
     expose: [
         {
-            directory: "/diagnostics",
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
+    ],
+}
+```
+
+There's a useful manifest include that simplifies this and is required by Inspect libraries:
+
+```
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
     ]
 }
 ```
