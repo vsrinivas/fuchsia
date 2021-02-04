@@ -77,24 +77,20 @@ table StorageDecl {
 /// Declares a runner capability backed by a service.
 table RunnerDecl {
     /// The name of this runner.
+    /// Must be non-empty, unique among runners declared in the same `ComponentDecl`.
     1: fuchsia.component.name name;
 
-    /// The provider of the underlying service relative to the component itself.
-    /// Must be `parent`, `self`, or `child`.
-    2: Ref source;
-
-    /// The path of the capability within the specified source.
-    3: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+    /// The path to the runner protocol in the component's outgoing directory.
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 };
 
 /// Declares a resolver which is responsible for resolving component URLs to actual components.
 /// See `fuchsia.sys2.ComponentResolver` for the protocol resolvers are expected to implement.
 table ResolverDecl {
     /// The name of this resolver.
-    /// Must be non-empty, unique among resolvers declared in the same `ComponentDecl`, and
-    /// contain only the following characters: [a-z0-9-_.].
+    /// Must be non-empty, unique among resolvers declared in the same `ComponentDecl`.
     1: fuchsia.component.name name;
 
-    /// The path of the capability in the declaring component's namespace.
+    /// The path to the resolver protocol in the component's outgoing directory
     2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 };

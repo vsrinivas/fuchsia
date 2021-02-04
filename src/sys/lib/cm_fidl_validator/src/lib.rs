@@ -983,21 +983,6 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_runner_decl(&mut self, runner: &'a fsys::RunnerDecl) {
-        match runner.source.as_ref() {
-            Some(fsys::Ref::Self_(_)) => None,
-            Some(fsys::Ref::Child(child)) => {
-                self.validate_source_child(child, "RunnerDecl");
-                Some(&child.name as &str)
-            }
-            Some(_) => {
-                self.errors.push(Error::invalid_field("RunnerDecl", "source"));
-                None
-            }
-            None => {
-                self.errors.push(Error::missing_field("RunnerDecl", "source"));
-                None
-            }
-        };
         if check_name(runner.name.as_ref(), "RunnerDecl", "name", &mut self.errors) {
             let name = runner.name.as_ref().unwrap();
             if !self.all_capability_ids.insert(name) {
@@ -3319,7 +3304,6 @@ mod tests {
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("source_elf".to_string()),
-                        source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/path".to_string()),
                         ..RunnerDecl::EMPTY
                     }),
@@ -5347,7 +5331,6 @@ mod tests {
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: None,
-                        source: None,
                         source_path: None,
                         ..RunnerDecl::EMPTY
                     }),
@@ -5370,7 +5353,6 @@ mod tests {
                 Error::missing_field("StorageDecl", "source"),
                 Error::missing_field("StorageDecl", "name"),
                 Error::missing_field("StorageDecl", "backing_dir"),
-                Error::missing_field("RunnerDecl", "source"),
                 Error::missing_field("RunnerDecl", "name"),
                 Error::missing_field("RunnerDecl", "source_path"),
                 Error::missing_field("ResolverDecl", "name"),
@@ -5408,9 +5390,6 @@ mod tests {
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("^bad".to_string()),
-                        source: Some(Ref::Collection(CollectionRef {
-                            name: "/bad".to_string()
-                        })),
                         source_path: Some("&bad".to_string()),
                         ..RunnerDecl::EMPTY
                     }),
@@ -5432,7 +5411,6 @@ mod tests {
                 Error::invalid_field("StorageDecl", "source"),
                 Error::invalid_field("StorageDecl", "name"),
                 Error::invalid_field("StorageDecl", "backing_dir"),
-                Error::invalid_field("RunnerDecl", "source"),
                 Error::invalid_field("RunnerDecl", "name"),
                 Error::invalid_field("RunnerDecl", "source_path"),
                 Error::invalid_field("ResolverDecl", "name"),
@@ -5452,25 +5430,11 @@ mod tests {
                         subdir: None,
                         ..StorageDecl::EMPTY
                     }),
-                    CapabilityDecl::Runner(RunnerDecl {
-                        name: Some("bar".to_string()),
-                        source: Some(Ref::Collection(CollectionRef {
-                            name: "invalid".to_string(),
-                        })),
-                        source_path: Some("/foo".to_string()),
-                        ..RunnerDecl::EMPTY
-                    }),
-                    CapabilityDecl::Resolver(ResolverDecl {
-                        name: Some("baz".to_string()),
-                        source_path: Some("/foo".to_string()),
-                        ..ResolverDecl::EMPTY
-                    }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("StorageDecl", "source"),
-                Error::invalid_field("RunnerDecl", "source"),
             ])),
         },
         test_validate_capabilities_long_identifiers => {
@@ -5505,10 +5469,6 @@ mod tests {
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("a".repeat(101)),
-                        source: Some(Ref::Child(ChildRef {
-                            name: "b".repeat(101),
-                            collection: None,
-                        })),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
                         ..RunnerDecl::EMPTY
                     }),
@@ -5530,7 +5490,6 @@ mod tests {
                 Error::field_too_long("StorageDecl", "source.child.name"),
                 Error::field_too_long("StorageDecl", "name"),
                 Error::field_too_long("StorageDecl", "backing_dir"),
-                Error::field_too_long("RunnerDecl", "source.child.name"),
                 Error::field_too_long("RunnerDecl", "name"),
                 Error::field_too_long("RunnerDecl", "source_path"),
                 Error::field_too_long("ResolverDecl", "name"),
@@ -5589,13 +5548,11 @@ mod tests {
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("runner".to_string()),
-                        source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/runner".to_string()),
                         ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("runner".to_string()),
-                        source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/runner".to_string()),
                         ..RunnerDecl::EMPTY
                     }),

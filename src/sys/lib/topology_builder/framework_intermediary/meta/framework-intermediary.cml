@@ -10,7 +10,6 @@
         },
         {
             runner: "topology_builder_mocks",
-            from: "self",
             path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
         { protocol: "fuchsia.topology.builder.FrameworkIntermediary" },

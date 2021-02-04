@@ -1968,7 +1968,6 @@ async fn use_runner_from_parent_environment() {
                 )
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
                 .build(),
@@ -2036,7 +2035,6 @@ async fn use_runner_from_environment_in_collection() {
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
                 .build(),
@@ -2105,7 +2103,6 @@ async fn use_runner_from_grandparent_environment() {
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
                 .build(),
@@ -2193,7 +2190,6 @@ async fn use_runner_from_sibling_environment() {
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
                 .build(),
@@ -2255,7 +2251,6 @@ async fn use_runner_from_inherited_environment() {
                 )
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
                 .build(),
@@ -2326,7 +2321,6 @@ async fn use_runner_from_environment_not_found() {
                 )
                 .runner(RunnerDecl {
                     name: "elf".into(),
-                    source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
                 .build(),

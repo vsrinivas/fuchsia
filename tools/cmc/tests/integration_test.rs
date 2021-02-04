@@ -212,7 +212,6 @@ fn main() {
             }),
             CapabilityDecl::Runner(RunnerDecl {
                 name: Some("dart_runner".to_string()),
-                source: Some(Ref::Self_(SelfRef {})),
                 source_path: Some("/svc/fuchsia.sys2.Runner".to_string()),
                 ..RunnerDecl::EMPTY
             }),

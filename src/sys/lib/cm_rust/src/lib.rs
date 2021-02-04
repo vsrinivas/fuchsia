@@ -715,7 +715,6 @@ fsys::StorageDecl,
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
 {
     name: CapabilityName,
-    source: RunnerSource,
     source_path: CapabilityPath,
 });
 fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
@@ -810,12 +809,7 @@ impl Clone for ProgramDecl {
 
 impl Default for ProgramDecl {
     fn default() -> Self {
-        Self {
-            runner: None,
-            info: fdata::Dictionary {
-                ..fdata::Dictionary::EMPTY
-            },
-        }
+        Self { runner: None, info: fdata::Dictionary { ..fdata::Dictionary::EMPTY } }
     }
 }
 
@@ -1659,28 +1653,6 @@ impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RunnerSource {
-    Self_,
-}
-
-impl FidlIntoNative<RunnerSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> RunnerSource {
-        match self.unwrap() {
-            fsys::Ref::Self_(_) => RunnerSource::Self_,
-            _ => panic!("invalid RunnerSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            RunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistrationSource {
     Parent,
     Self_,
@@ -2212,7 +2184,6 @@ mod tests {
                     fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                         name: Some("elf".to_string()),
                         source_path: Some("/elf".to_string()),
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         ..fsys::RunnerDecl::EMPTY
                     }),
                     fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
@@ -2484,7 +2455,6 @@ mod tests {
                         CapabilityDecl::Runner(RunnerDecl {
                             name: "elf".into(),
                             source_path: "/elf".try_into().unwrap(),
-                            source: RunnerSource::Self_,
                         }),
                         CapabilityDecl::Resolver(ResolverDecl {
                             name: "pkg".into(),

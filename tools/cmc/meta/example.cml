@@ -39,7 +39,6 @@
         },
         {
             runner: "dart_runner",
-            from: "self",
             path: "/svc/fuchsia.sys2.Runner",
         },
         {

@@ -44,7 +44,6 @@
         // Component runner for drivers
         {
             runner: "driver",
-            from: "self",
             path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
     ],

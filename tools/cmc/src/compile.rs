@@ -1422,7 +1422,6 @@ mod tests {
                     {
                         "runner": "web",
                         "path": "/svc/fuchsia.component.ComponentRunner",
-                        "from": "self",
                     },
                     {
                         "storage": "data-storage",
@@ -1610,7 +1609,6 @@ mod tests {
                     fsys::CapabilityDecl::Runner (
                         fsys::RunnerDecl {
                             name: Some("web".to_string()),
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_path: Some("/svc/fuchsia.component.ComponentRunner".to_string()),
                             ..fsys::RunnerDecl::EMPTY
                         }
@@ -2266,7 +2264,6 @@ mod tests {
                     {
                         "runner": "myrunner",
                         "path": "/runner",
-                        "from": "self"
                     },
                     {
                         "resolver": "myresolver",
@@ -2359,7 +2356,6 @@ mod tests {
                     fsys::CapabilityDecl::Runner (
                         fsys::RunnerDecl {
                             name: Some("myrunner".to_string()),
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_path: Some("/runner".to_string()),
                             ..fsys::RunnerDecl::EMPTY
                         }
@@ -2670,7 +2666,6 @@ mod tests {
                     {
                         "runner": "myrunner",
                         "path": "/runner",
-                        "from": "self",
                     },
                     {
                         "protocol": "fuchsia.serve.service",
@@ -2851,7 +2846,6 @@ mod tests {
                     fsys::CapabilityDecl::Runner (
                         fsys::RunnerDecl {
                             name: Some("myrunner".to_string()),
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_path: Some("/runner".to_string()),
                             ..fsys::RunnerDecl::EMPTY
                         }

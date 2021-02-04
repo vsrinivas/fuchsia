@@ -67,10 +67,6 @@ pub fn translate_capabilities(
             out_capabilities.push(fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                 name: Some(n.clone().into()),
                 source_path: Some(capability.path.clone().expect("missing path").into()),
-                source: Some(offer_source_from_ref(
-                    capability.from.as_ref().unwrap().into(),
-                    None,
-                )?),
                 ..fsys::RunnerDecl::EMPTY
             }));
         } else if let Some(n) = &capability.resolver {

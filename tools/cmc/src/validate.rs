@@ -345,8 +345,8 @@ impl<'a> ValidationContext<'a> {
                 return Err(Error::validate("\"backing_dir\" should be present with \"storage\""));
             }
         }
-        if capability.runner.is_some() && capability.from.is_none() {
-            return Err(Error::validate("\"from\" should be present with \"runner\""));
+        if capability.runner.is_some() && capability.from.is_some() {
+            return Err(Error::validate("\"from\" should not be present with \"runner\""));
         }
         if capability.runner.is_some() && capability.path.is_none() {
             return Err(Error::validate("\"path\" should be present with \"runner\""));
@@ -1949,7 +1949,6 @@ mod tests {
                     {
                         "runner": "foo_runner",
                         "path": "/svc/runner",
-                        "from": "self",
                     },
                     {
                         "resolver": "foo_resolver",
@@ -2601,7 +2600,6 @@ mod tests {
                     {
                         "runner": "foo_runner",
                         "path": "/svc/fuchsia.sys2.ComponentRunner",
-                        "from": "self",
                     },
                     {
                         "resolver": "foo_resolver",
@@ -3385,24 +3383,7 @@ mod tests {
                 "capabilities": [
                     {
                         "runner": "a",
-                        "from": "#minfs",
                         "path": "/minfs",
-                    },
-                    {
-                        "runner": "b",
-                        "from": "parent",
-                        "path": "/data",
-                    },
-                    {
-                        "runner": "c",
-                        "from": "self",
-                        "path": "/runner",
-                    },
-                ],
-                "children": [
-                    {
-                        "name": "minfs",
-                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm",
                     },
                 ],
             }),
@@ -3419,22 +3400,23 @@ mod tests {
                 "capabilities": [
                     {
                         "runner": "abcdefghijklmnopqrstuvwxyz0123456789_-runner",
-                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "path": "/example",
                     },
                 ]
             }),
             Ok(())
         ),
-        test_cml_runner_invalid_from(
+        test_cml_runner_extraneous_from(
             json!({
-                    "capabilities": [ {
-                        "runner": "minfs",
-                        "from": "#missing",
-                        "path": "/minfs"
-                    } ]
-                }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
+                "capabilities": [
+                    {
+                        "runner": "a",
+                        "path": "/example",
+                        "from": "self",
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"from\" should not be present with \"runner\""
         ),
         test_cml_capability_missing_name(
             json!({
@@ -3473,7 +3455,6 @@ mod tests {
                 "capabilities": [
                     {
                         "runner": "pkg_resolver",
-                        "from": "self",
                         "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                     {
@@ -3591,7 +3572,6 @@ mod tests {
                      {
                          "runner": "dart",
                          "path": "/svc/fuchsia.component.Runner",
-                         "from": "parent"
                      }
                 ],
             }),
@@ -4251,7 +4231,6 @@ mod tests {
                "capabilities": [
                     {
                         "runner": "logger",
-                        "path": "/logs",
                         "from": "parent"
                     }
                 ]

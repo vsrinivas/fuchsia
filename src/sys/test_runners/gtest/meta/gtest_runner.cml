@@ -6,7 +6,6 @@
     capabilities: [
         {
             runner: "gtest_runner",
-            from: "self",
             path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
     ],

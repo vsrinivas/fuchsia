@@ -153,7 +153,6 @@ mod tests {
         },
         cm_rust::{
             CapabilityPath, ComponentDecl, RegistrationSource, RunnerDecl, RunnerRegistration,
-            RunnerSource,
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::{join, prelude::*},
@@ -466,7 +465,6 @@ mod tests {
                         )
                         .runner(RunnerDecl {
                             name: "foo".into(),
-                            source: RunnerSource::Self_,
                             source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                         })
                         .add_environment(
