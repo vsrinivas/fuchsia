@@ -387,6 +387,9 @@ void Guest::StartContainer() {
       FX_LOGS(INFO) << "Container started";
       SetupUser();
       break;
+    case vm_tools::tremplin::StartContainerResponse::STARTING:
+      FX_LOGS(INFO) << "Container starting";
+      break;
     case vm_tools::tremplin::StartContainerResponse::FAILED:
       FX_LOGS(ERROR) << "Failed to start container: " << response.failure_reason();
       break;
@@ -516,6 +519,15 @@ grpc::Status Guest::UpdateStartStatus(::grpc::ServerContext* context,
                                       ::vm_tools::tremplin::EmptyMessage* response) {
   TRACE_DURATION("linux_runner", "Guest::UpdateStartStatus");
   FX_LOGS(INFO) << "Update Start Status";
+  switch (request->status()) {
+    case vm_tools::tremplin::ContainerStartProgress::STARTED:
+      FX_LOGS(INFO) << "Container started";
+      SetupUser();
+      break;
+    default:
+      FX_LOGS(ERROR) << "Unknown start status: " << request->status();
+      break;
+  }
   return grpc::Status::OK;
 }
 grpc::Status Guest::UpdateExportStatus(::grpc::ServerContext* context,
