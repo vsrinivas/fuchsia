@@ -72,7 +72,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_c",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",

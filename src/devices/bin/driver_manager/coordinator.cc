@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/pkg/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -59,6 +59,8 @@
 #include "package_resolver.h"
 #include "src/devices/lib/log/log.h"
 #include "vmo_writer.h"
+
+namespace fio = llcpp::fuchsia::io;
 
 namespace {
 
@@ -206,7 +208,7 @@ const Driver* Coordinator::LibnameToDriver(const fbl::StringPiece& libname) cons
 static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
   int fd = -1;
   zx_status_t r = fdio_open_fd(
-      libname.data(), fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_EXECUTABLE, &fd);
+      libname.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
   if (r != ZX_OK) {
     LOGF(ERROR, "Cannot open driver '%s'", libname.data());
     return ZX_ERR_IO;
@@ -354,7 +356,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
                                             size_t max) const {
   // TODO: Remove VLA.
   char tmp[max];
-  char name_buf[fuchsia_io_MAX_FILENAME + strlen("dev/")];
+  char name_buf[fio::MAX_FILENAME + strlen("dev/")];
   char* path = tmp + max - 1;
   *path = 0;
   size_t total = 1;
@@ -370,7 +372,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
       name = "dev";
     } else if (itr->composite() != nullptr) {
       strcpy(name_buf, "dev/");
-      strncpy(name_buf + strlen("dev/"), itr->name().data(), fuchsia_io_MAX_FILENAME);
+      strncpy(name_buf + strlen("dev/"), itr->name().data(), fio::MAX_FILENAME);
       name_buf[sizeof(name_buf) - 1] = 0;
       name = name_buf;
     } else {

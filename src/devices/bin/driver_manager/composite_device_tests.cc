@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 
 #include <vector>
 
@@ -13,6 +13,8 @@
 
 #include "multiple_device_test.h"
 #include "src/devices/lib/log/log.h"
+
+namespace fio = llcpp::fuchsia::io;
 
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.
@@ -777,8 +779,8 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
   {
     zx::channel remote;
     ASSERT_OK(zx::channel::create(0, &watcher, &remote));
-    ASSERT_OK(devfs_watch(coordinator()->root_device()->self, std::move(remote),
-                          fuchsia_io_WATCH_MASK_ADDED));
+    ASSERT_OK(
+        devfs_watch(coordinator()->root_device()->self, std::move(remote), fio::WATCH_MASK_ADDED));
   }
 
   size_t device_indexes[2];
@@ -807,11 +809,11 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
       kCompositeDevName, device_indexes, std::size(device_indexes), fragment_device_indexes,
       &composite_remote_coordinator, &composite_remote_controller));
 
-  uint8_t msg[fuchsia_io_MAX_FILENAME + 2];
+  uint8_t msg[fio::MAX_FILENAME + 2];
   uint32_t msg_len = 0;
   ASSERT_OK(watcher.read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
   ASSERT_EQ(msg_len, 2 + strlen(kCompositeDevName));
-  ASSERT_EQ(msg[0], fuchsia_io_WATCH_EVENT_ADDED);
+  ASSERT_EQ(msg[0], fio::WATCH_EVENT_ADDED);
   ASSERT_EQ(msg[1], strlen(kCompositeDevName));
   ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kCompositeDevName), msg + 2, msg[1]);
 }

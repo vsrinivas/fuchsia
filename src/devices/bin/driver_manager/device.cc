@@ -7,7 +7,7 @@
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/driver/test/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -25,6 +25,8 @@
 #include "resume_task.h"
 #include "src/devices/lib/log/log.h"
 #include "suspend_task.h"
+
+namespace fio = llcpp::fuchsia::io;
 
 // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;
@@ -1049,7 +1051,7 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
 void Device::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
                             DirectoryWatchCompleter::Sync& completer) {
   llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result response;
-  if (mask & (~fuchsia_io_WATCH_MASK_ALL) || options != 0) {
+  if (mask & (~fio::WATCH_MASK_ALL) || options != 0) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
