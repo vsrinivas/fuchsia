@@ -393,6 +393,11 @@ multiconst!(u64, [
     ZX_CLOCK_ARGS_VERSION_1 = 1 << 58;
 ]);
 
+// from //zircon/system/public/zircon/syscalls/exception.h
+multiconst!(u32, [
+    ZX_EXCEPTION_CHANNEL_DEBUGGER = 1 << 0;
+]);
+
 /// A byte used only to control memory alignment. All padding bytes are considered equal
 /// regardless of their content.
 ///
