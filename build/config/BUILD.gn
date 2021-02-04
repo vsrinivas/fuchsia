@@ -792,6 +792,7 @@ config("Wno-conversion") {
     "//src/zircon/tests/evil/*",
     "//third_party/*",
     "//tools/bootserver_old/*",
+    "//tools/netprotocol/*",
     "//tools/vboot_reference/*",
     "//vendor/*",
     "//zircon/system/ulib/fs-host/*",

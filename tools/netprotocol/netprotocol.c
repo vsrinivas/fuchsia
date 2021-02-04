@@ -48,9 +48,7 @@ static int netboot_timeout_get_msec(const struct timeval* end_tv) {
   struct timeval now_tv;
   gettimeofday(&now_tv, NULL);
   timersub(end_tv, &now_tv, &wait_tv);
-
-  // Since this is a delta value, less concern over downcast
-  return (int)(wait_tv.tv_sec * 1000 + wait_tv.tv_usec / 1000);
+  return wait_tv.tv_sec * 1000 + wait_tv.tv_usec / 1000;
 }
 
 static int netboot_bind_to_cmd_port(int socket) {
@@ -67,7 +65,7 @@ static int netboot_bind_to_cmd_port(int socket) {
   return -1;
 }
 
-static int netboot_send_query(int socket, uint16_t port, const char* ifname) {
+static int netboot_send_query(int socket, unsigned port, const char* ifname) {
   const char* hostname = "*";
   size_t hostname_len = strlen(hostname) + 1;
 
@@ -205,7 +203,6 @@ int netboot_handle_custom_getopt(int argc, char* const* argv, const struct optio
   int retval = -1;
   int ch;
   while ((ch = getopt_long_only(argc, argv, "t:", combined_opts, NULL)) != -1) {
-    int int_val = 0;
     switch (ch) {
       case 't':
         netboot_timeout = atoi(optarg);
@@ -214,18 +211,10 @@ int netboot_handle_custom_getopt(int argc, char* const* argv, const struct optio
         netboot_wait = false;
         break;
       case 'b':
-        int_val = atoi(optarg);
-        if (int_val > UINT16_MAX) {
-          goto err;
-        }
-        tftp_block_size = (uint16_t)int_val;
+        tftp_block_size = atoi(optarg);
         break;
       case 'w':
-        int_val = atoi(optarg);
-        if (int_val > UINT16_MAX) {
-          goto err;
-        }
-        tftp_window_size = (uint16_t)int_val;
+        tftp_window_size = atoi(optarg);
         break;
       default:
         if (opt_callback && opt_callback(ch, argc, argv)) {
@@ -251,14 +240,14 @@ void netboot_usage(bool show_tftp_opts) {
   fprintf(stderr, "    --timeout=<msec>    Set discovery timeout to <msec>.\n");
   fprintf(stderr, "    --nowait            Do not wait for first packet before timing out.\n");
   if (show_tftp_opts) {
-    fprintf(stderr, "    --block-size=<sz>   Set tftp block size (default=%d, max=%d).\n",
-            TFTP_DEFAULT_BLOCK_SZ, UINT16_MAX);
-    fprintf(stderr, "    --window-size=<sz>  Set tftp window size (default=%d, max=%d).\n",
-            TFTP_DEFAULT_WINDOW_SZ, UINT16_MAX);
+    fprintf(stderr, "    --block-size=<sz>   Set tftp block size (default=%d).\n",
+            TFTP_DEFAULT_BLOCK_SZ);
+    fprintf(stderr, "    --window-size=<sz>  Set tftp window size (default=%d).\n",
+            TFTP_DEFAULT_WINDOW_SZ);
   }
 }
 
-int netboot_discover(uint16_t port, const char* ifname, on_device_cb callback, void* data) {
+int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* data) {
   if (!callback) {
     errno = EINVAL;
     return -1;
@@ -299,6 +288,7 @@ int netboot_discover(uint16_t port, const char* ifname, on_device_cb callback, v
 #else
   struct timeval end_tv = netboot_timeout_init(netboot_timeout);
 #endif
+
   for (;;) {
     int wait_ms = netboot_timeout_get_msec(&end_tv);
     if (wait_ms < 0) {
