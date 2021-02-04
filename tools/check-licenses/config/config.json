@@ -48,8 +48,6 @@
     "tests",
     "tools/check-licenses/golden",
     "vendor",
-    "zircon/third_party/lz4/programs",
-    "zircon/third_party/lz4/tests",
     "third_party/lz4/programs",
     "third_party/lz4/tests"
   ],
