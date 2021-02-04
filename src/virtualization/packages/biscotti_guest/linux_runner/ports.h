@@ -9,6 +9,7 @@ namespace linux_runner {
 
 static constexpr uint32_t kStartupListenerPort = 7777;
 static constexpr uint32_t kTremplinListenerPort = 7778;
+static constexpr uint32_t kCrashListenerPort = 7779;
 static constexpr uint32_t kMaitredPort = 8888;
 static constexpr uint32_t kGarconPort = 8889;
 static constexpr uint32_t kTremplinPort = 8890;

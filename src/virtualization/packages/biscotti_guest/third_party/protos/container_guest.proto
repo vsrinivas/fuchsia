@@ -146,6 +146,9 @@ message InstallLinuxPackageRequest {
   // Package ID to install in the form "package_name;version;arch;data". Used
   // when |file_path| is empty.
   string package_id = 5;
+
+  // Command identifier to track installation progress.
+  string command_uuid = 6;
 }
 
 // Response sent back from a request to install a Linux package.
@@ -206,28 +209,121 @@ message GetDebugInformationResponse {
   string debug_information = 1;
 }
 
-// Request to search for Linux packages that are not installed and that match
-// the passed query.
-message AppSearchRequest {
-  // Query (plaintext) to search. Query is compared against the names of
-  // packages.
-  string query = 1;
+message ConnectChunnelRequest {
+  uint32 chunneld_port = 1;
+
+  uint32 target_tcp4_port = 2;
 }
 
-// Response for AppSearch containing packages that match the searched
-// search query and are not installed.
-message AppSearchResponse {
-  message AppSearchResult {
-    string package_name = 1;
+message ConnectChunnelResponse {
+  // If true, chunnel launched successfully.
+  bool success = 1;
+
+  // The failure_reason if chunnel could not be started.
+  string failure_reason = 2;
+}
+
+// Request protobuf for applying Ansible playbook.
+message ApplyAnsiblePlaybookRequest {
+  // Ansible playbook to be applied.
+  string playbook = 1;
+}
+
+// Response sent back from a request to apply Ansible playbook.
+message ApplyAnsiblePlaybookResponse {
+  enum Status {
+    UNKNOWN = 0;
+
+    // Application process was successfully started, all further updates will be
+    // sent via the ApplyAnsiblePlaybookProgress signal.
+    STARTED = 1;
+
+    // Failed to start up for a general reason, specific details are given in
+    // failure_reason.
+    FAILED = 2;
   }
-  // List of valid packages matching the search query.
-  repeated AppSearchResult packages = 1;
+  Status status = 1;
+
+  // Contains a textual reason for the failure in case of a FAILED status.
+  string failure_reason = 2;
+}
+
+// Request for the container to configure itself to allow sideloading android
+// apps.
+message ConfigureForArcSideloadRequest {}
+
+// Response from the sideloading configuration.
+message ConfigureForArcSideloadResponse {
+  enum Status {
+    UNKNOWN = 0;
+
+    SUCCEEDED = 2;
+
+    FAILED = 3;
+  }
+
+  // Status of the request.
+  Status status = 1;
+
+  // If status is FAILED, contains the reason the request failed.
+  string failure_reason = 2;
+}
+
+// Request to watch files and notify if there are changes.
+message AddFileWatchRequest {
+  // Directory in container relative to $HOME to watch.
+  string path = 1;
+}
+
+message AddFileWatchResponse {
+  enum Status {
+    // The current status is unknown.
+    UNKNOWN = 0;
+
+    // Watch added successfully.
+    SUCCEEDED = 2;
+
+    // Add watch failed.
+    FAILED = 1;
+  }
+
+  // Add watch status.
+  Status status = 1;
+
+  // The failure_reason if the watcher could not be added.
+  string failure_reason = 2;
+}
+
+// Request to stop watching files.
+message RemoveFileWatchRequest {
+  // Directory in container relative to $HOME to stop watching.
+  string path = 1;
+}
+
+message RemoveFileWatchResponse {
+  enum Status {
+    // The current status is unknown.
+    UNKNOWN = 0;
+
+    // Watch removed successfully.
+    SUCCEEDED = 2;
+
+    // Remove watch failed.
+    FAILED = 1;
+  }
+
+  // Remove watch status.
+  Status status = 1;
+
+  // The failure_reason if the watcher could not be removed.
+  string failure_reason = 2;
 }
 
 // Implemented by garcon inside of the container.
 service Garcon {
   // Called to launch an application in a container.
-  rpc LaunchApplication(LaunchApplicationRequest) returns (LaunchApplicationResponse);
+  rpc LaunchApplication(LaunchApplicationRequest)
+      returns (LaunchApplicationResponse);
 
   // Get an application icon from the container.
   rpc GetIcon(IconRequest) returns (IconResponse);
@@ -236,10 +332,12 @@ service Garcon {
   rpc LaunchVshd(LaunchVshdRequest) returns (LaunchVshdResponse);
 
   // Gets information about a Linux package file in the container.
-  rpc GetLinuxPackageInfo(LinuxPackageInfoRequest) returns (LinuxPackageInfoResponse);
+  rpc GetLinuxPackageInfo(LinuxPackageInfoRequest)
+      returns (LinuxPackageInfoResponse);
 
   // Install a Linux package file in the container.
-  rpc InstallLinuxPackage(InstallLinuxPackageRequest) returns (InstallLinuxPackageResponse);
+  rpc InstallLinuxPackage(InstallLinuxPackageRequest)
+      returns (InstallLinuxPackageResponse);
 
   // Uninstalls the package that owns the specified file. Results are in
   // signals.
@@ -247,8 +345,24 @@ service Garcon {
       returns (UninstallPackageOwningFileResponse);
 
   // Get debug information about container state.
-  rpc GetDebugInformation(GetDebugInformationRequest) returns (GetDebugInformationResponse);
+  rpc GetDebugInformation(GetDebugInformationRequest)
+      returns (GetDebugInformationResponse);
 
-  // Search for and return not installed apps matching passed query.
-  rpc AppSearch(AppSearchRequest) returns (AppSearchResponse);
+  // Connects to chunnel to forward traffic to localhost.
+  rpc ConnectChunnel(ConnectChunnelRequest) returns (ConnectChunnelResponse);
+
+  // Apply Ansible playbook to the container.
+  rpc ApplyAnsiblePlaybook(ApplyAnsiblePlaybookRequest)
+      returns (ApplyAnsiblePlaybookResponse);
+
+  // Configure the container to allow sideloading android apps.
+  rpc ConfigureForArcSideload(ConfigureForArcSideloadRequest)
+      returns (ConfigureForArcSideloadResponse);
+
+  // Watch files in the specified directory and notify if there are changes.
+  // This is used by FilesApp.
+  rpc AddFileWatch(AddFileWatchRequest) returns (AddFileWatchResponse);
+
+  // Stop watching files in the specified directory.
+  rpc RemoveFileWatch(RemoveFileWatchRequest) returns (RemoveFileWatchResponse);
 }

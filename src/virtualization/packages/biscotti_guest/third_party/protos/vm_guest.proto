@@ -40,6 +40,12 @@ message NetworkConfigRequest {
   ResolvConfig resolv_config = 2;
 }
 
+// Parameters needed to spawn a container guest.
+message ConfigureContainerGuestRequest {
+  // Token which cicerone will check to verify that the guest spawned.
+  string container_token = 1;
+}
+
 // Description of a single process that should be spawned by maitre'd.
 message LaunchProcessRequest {
   // Process arguments.  argv[0] must be either an absolute path or the name of
@@ -102,6 +108,18 @@ message MountRequest {
   string fstype = 3;
   uint64 mountflags = 4;
   string options = 5;
+
+  // If |create_target| is true and the |target| directory doesn't exist,
+  // maitred creates it. If |target| does exist, this value is ignored.
+  bool create_target = 6;
+
+  // If |permissions| is a non-zero value, maitred runs chmod with the value for
+  // the mounted directory.
+  uint32 permissions = 7;
+
+  // If |mkfs_if_necessary| is true and maitred fails to mount the device,
+  // maitred runs mkfs.btrfs to the device and tries to mount it again.
+  bool mkfs_if_needed = 8;
 }
 
 // Request to mount a 9P filesystem via a vsock socket using the trans=fd
@@ -122,31 +140,48 @@ message MountResponse {
 // The request protobuf for a StartTermina message. StartTermina requests that
 // maitred run all VM guest setup necessary to start containers.
 message StartTerminaRequest {
+  enum Feature {
+    UNKNOWN = 0;
+    USED_BY_TESTS = 1;
+    START_LXD = 2;
+    RESET_LXD_ON_LAUNCH = 3;
+  }
   // The address for tremplin to connect to.
   uint32 tremplin_ipv4_address = 1;
 
   // The IPv4 address config for LXD. Expected to be in a "xxx.xxx.xxx.xxx/yy"
   // format.
   string lxd_ipv4_subnet = 2;
+
+  // Name of the device containing the stateful partition.
+  string stateful_device = 3;
+
+  // Allow termina to support privileged containers.
+  bool allow_privileged_containers = 4;
+
+  // Which termina features to enable.
+  repeated Feature feature = 5;
 }
 
 message StartTerminaResponse {
-  enum Status {
-    // The result of StartTermina is unknown.
+  enum MountResult {
+    // The mountability of the disk is unknown, typically because the
+    // call failed before trying to mount the disk.
     UNKNOWN = 0;
 
-    // Termina services were started successfully.
+    // The disk mount succeeded completely.
     SUCCESS = 1;
 
-    // Termina services didn't start successfully. Check failure_reason.
-    FAILED = 2;
+    // The disk mount succeeded, but some data loss is
+    // likely. Currently this occurrs when the initial mount fails,
+    // but succeeds on a retry with -o usebackuproots.
+    PARTIAL_DATA_LOSS = 2;
+
+    // The disk is unmountable.
+    FAILURE = 3;
   }
 
-  // The status of starting Termina services.
-  Status status = 1;
-
-  // If status is FAILED, the reason why StartTermina failed.
-  string failure_reason = 2;
+  MountResult mount_result = 1;
 }
 
 message SetResolvConfigRequest {
@@ -165,10 +200,74 @@ message SetTimeRequest {
   google.protobuf.Timestamp time = 1;
 }
 
+// Response to GetKernelVersion, containing detailed Termina kernel information
+// for enterprise reporting.
+message GetKernelVersionResponse {
+  string kernel_release = 1;
+  string kernel_version = 2;
+}
+
+// Request to resize the stateful filesystem to a new size.
+// This is an asynchronous request; its state may be queried with
+// the GetResizeStatus method.
+message ResizeFilesystemRequest {
+  // Requested size of the stateful filesystem in bytes.
+  uint64 size = 1;
+}
+
+// Response to ResizeFilesystemRequest.
+message ResizeFilesystemResponse {
+  enum ResizeStatus {
+    // Could not start the filesystem request due to an error.
+    FAILED = 0;
+
+    // Another resize request is already in progress; this request will not be
+    // carried out.
+    ALREADY_IN_PROGRESS = 1;
+
+    // Resize is started and can be monitored via GetResizeStatus.
+    STARTED = 2;
+  }
+
+  ResizeStatus status = 1;
+}
+
+// Response to GetResizeStatus request.
+message GetResizeStatusResponse {
+  // True if a resize operation started by ResizeFilesystemRequest is underway.
+  bool resize_in_progress = 1;
+
+  // Current size of the stateful partition.
+  // If a resize is in progress, this is the size before the resize started.
+  uint64 current_size = 2;
+
+  // Final target size of the current resize operation, if one is in progress.
+  uint64 target_size = 3;
+}
+
+// Response to GetResizeBounds request.
+message GetResizeBoundsResponse {
+  // Minimum size in bytes that can be passed to ResizeFilesystem.
+  uint64 minimum_size = 1;
+}
+
 // Implemented by maitred inside the VM.
 service Maitred {
   // Set up networking inside the VM so that it can access the internet.
   rpc ConfigureNetwork(NetworkConfigRequest) returns (EmptyMessage);
+
+  // Set up a container guest in the VM, so that it can interface with cicerone.
+  rpc ConfigureContainerGuest(ConfigureContainerGuestRequest)
+      returns (EmptyMessage);
+
+  // DEPRECATED. Use OnHostNetworkChanged instead.
+  // Reset IPv6 in VM and restart SLAAC process to acquire a new configuration.
+  rpc ResetIPv6(EmptyMessage) returns (EmptyMessage);
+
+  // Informs the guest that the host network has changed. The guest should
+  // perform any actions necessary, such as resetting potentially stale sockets,
+  // flushing DNS caches, and renegotiating SLAAC addresses for IPv6.
+  rpc OnHostNetworkChanged(EmptyMessage) returns (EmptyMessage);
 
   // Initiate a shut-down of the VM.
   rpc Shutdown(EmptyMessage) returns (EmptyMessage);
@@ -195,4 +294,20 @@ service Maitred {
 
   // Sets the resolv config (nameservers, search domains, and local domain).
   rpc SetResolvConfig(SetResolvConfigRequest) returns (EmptyMessage);
+
+  // Returns the kernel release and version for enterprise reporting.
+  rpc GetKernelVersion(EmptyMessage) returns (GetKernelVersionResponse);
+
+  // Resizes the stateful filesystem.
+  rpc ResizeFilesystem(ResizeFilesystemRequest)
+      returns (ResizeFilesystemResponse);
+
+  // Queries the status of the most recent ResizeFilesystem request.
+  rpc GetResizeStatus(EmptyMessage) returns (GetResizeStatusResponse);
+
+  // Gets information about the valid range of parameters to ResizeFilesystem.
+  rpc GetResizeBounds(EmptyMessage) returns (GetResizeBoundsResponse);
+
+  // Prepares to suspend the VM.
+  rpc PrepareToSuspend(EmptyMessage) returns (EmptyMessage);
 }

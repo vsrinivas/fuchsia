@@ -165,6 +165,10 @@ fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Guest::StartGrpcServ
   guest_env_->GetHostVsockEndpoint(socket_endpoint.NewRequest());
   GrpcVsockServerBuilder builder(std::move(socket_endpoint));
 
+  // CrashListener
+  builder.AddListenPort(kCrashListenerPort);
+  builder.RegisterService(&crash_listener_);
+
   // LogCollector
   builder.AddListenPort(kLogCollectorPort);
   builder.RegisterService(&log_collector_);

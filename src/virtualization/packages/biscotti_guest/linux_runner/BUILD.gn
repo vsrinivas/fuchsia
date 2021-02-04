@@ -43,6 +43,7 @@ config("linux_runner_net_config") {
 
 source_set("lib") {
   sources = [
+    "crash_listener.h",
     "guest.cc",
     "guest.h",
     "linux_component.cc",

@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
+#include "src/virtualization/packages/biscotti_guest/linux_runner/crash_listener.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/linux_component.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/log_collector.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/container_guest.grpc.pb.h"
@@ -146,6 +147,7 @@ class Guest : public vm_tools::StartupListener::Service,
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;
   std::unique_ptr<vm_tools::container::Garcon::Stub> garcon_;
+  CrashListener crash_listener_;
   LogCollector log_collector_;
   guest::ScenicWaylandDispatcher wayland_dispatcher_;
   // Requests queued up waiting for the guest to fully boot.

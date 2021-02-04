@@ -11,16 +11,6 @@ package vm_tools;
 
 import "common.proto";
 
-// Used to indicate a crash of an application inside the VM.
-message CrashReportRequest {
-  // Name of the program that crashed.
-  string exe_name = 1;
-  // The core dump after it’s been converted to a minidump.
-  bytes minidump = 2;
-  // Any additional metadata that we want to upload with the minidump.
-  map<string, string> metadata = 3;
-}
-
 // Timestamp message as defined by google.protobuf.timestamp.proto
 message Timestamp {
   // Represents seconds of UTC time since Unix epoch
@@ -79,19 +69,32 @@ service LogCollector {
   rpc CollectUserLogs(LogRequest) returns (EmptyMessage);
 }
 
-// Service responsible for collecting crash reports from Chrome OS-controlled
-// applications within the VM.
-service CrashCollector {
-  // When an application in the VM crashes, maitre’d prepares
-  // the crash report by converting the core dump to a minidump,
-  // and then sends this request to concierge so that it
-  // can launch crash-reporter to report the crash.
-  rpc CollectCrashReport(CrashReportRequest) returns (EmptyMessage);
-}
-
 // Service that is notified whenever a new VM starts up.
 service StartupListener {
   // Called by each VM when it starts up to indicate that it is ready to handle
   // incoming requests.
   rpc VmReady(EmptyMessage) returns (EmptyMessage);
+}
+
+// A message representing one of more log messages from the serial out
+// of a specific VM. Used by anomaly_detector. Placed in this package
+// because it needs to include LogRequest.
+message VmKernelLogRequest {
+  // The type of VM sending logs. Note that the values here should match
+  // the ones in concierge_service.proto for ease of conversion.
+  enum VmType {
+    // Default value indicating an unknown or custom VM.
+    UNKNOWN = 0;
+
+    // VM is associated with a specific feature.
+    TERMINA = 1;
+    ARC_VM = 2;
+    PLUGIN_VM = 3;
+  };
+
+  VmType vm_type = 1;
+
+  int32 cid = 2;
+
+  repeated LogRecord records = 3;
 }

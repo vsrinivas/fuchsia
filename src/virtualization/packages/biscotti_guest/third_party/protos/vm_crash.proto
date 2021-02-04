@@ -1,0 +1,43 @@
+// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+
+package vm_tools.cicerone;
+option go_package = "vm_crash";
+
+import "common.proto";
+
+message MetricsConsentResponse {
+  bool consent_granted = 1;
+}
+
+message CrashReport {
+  // Key/value pairs for the metadata file.
+  map<string, string> metadata = 1;
+
+  // The binary contents of the minidump to upload.
+  bytes minidump = 2;
+
+  // Data on the process tree collected inside the VM.
+  string process_tree = 3;
+}
+
+// Message sent when a VM service has stopped unexpectedly.
+message FailureReport {
+  // Name of the process that failed.
+  string failed_process = 1;
+}
+
+// Service that is notified of crashes inside the VM.
+service CrashListener {
+  rpc CheckMetricsConsent(EmptyMessage) returns (MetricsConsentResponse);
+  rpc SendCrashReport(CrashReport) returns (EmptyMessage);
+  rpc SendFailureReport(FailureReport) returns (EmptyMessage);
+
+  // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
+  // well.
+}

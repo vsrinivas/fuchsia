@@ -41,9 +41,13 @@ message SetupConnectionRequest {
   // Initial window size (cols) of the pty.
   int32 window_cols = 7;
   // True if using a noninteractive client and a pty should not be allocated.
-  // The logic here is inverted from a sane value to keep backwards
-  // compatibility with the current behavior (always allocate a pty).
+  // The logic here is inverted to keep backwards compatibility with the
+  // current behavior (always allocate a pty).
   bool nopty = 8;
+  // Optional: directory to set for current working directory.
+  string cwd = 9;
+  // Optional: use /proc/<cwd_pid>/cwd for current working directory.
+  int32 cwd_pid = 10;
 }
 
 // Response to a SetupConnectionRequest.
@@ -53,6 +57,8 @@ message SetupConnectionResponse {
   // Short description of any error encountered when setting up the
   // connection.
   string description = 2;
+  // Process ID of new shell.
+  int32 pid = 3;
 }
 
 // A message that indicates to either the server or the client a change
@@ -96,6 +102,15 @@ message WindowResizeMessage {
   int32 cols = 2;
 }
 
+// Encapsulates a POSIX signal to be sent to the target program.
+enum Signal {
+  SIGNAL_UNKNOWN = 0;
+  SIGNAL_HUP = 1;
+  SIGNAL_INT = 2;
+  SIGNAL_QUIT = 3;
+  SIGNAL_TERM = 15;
+}
+
 // Wrapper message for all messages that can be sent to the host/client.
 message HostMessage {
   oneof msg {
@@ -110,5 +125,6 @@ message GuestMessage {
     DataMessage data_message = 1;
     ConnectionStatusMessage status_message = 2;
     WindowResizeMessage resize_message = 3;
+    Signal signal = 4;
   }
 }

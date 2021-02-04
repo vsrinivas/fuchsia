@@ -12,6 +12,7 @@ proto_library("vm_cc_proto") {
     "container_guest.proto",
     "container_host.proto",
     "tremplin.proto",
+    "vm_crash.proto",
     "vm_guest.proto",
     "vm_host.proto",
   ]

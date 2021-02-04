@@ -14,6 +14,59 @@ option go_package = "tremplin_proto";
 // go code makes it difficult to have imports.
 message EmptyMessage {}
 
+message StartLxdRequest {
+  bool reset_lxd_db = 1;
+}
+
+message StartLxdResponse {
+  enum Status {
+    // The status of creating the container is unknown.
+    UNKNOWN = 0;
+
+    // LXD is starting.
+    STARTING = 1;
+
+    // LXD is already running.
+    ALREADY_RUNNING = 2;
+
+    // Could not launch LXD.
+    FAILED = 3;
+  }
+
+  // LXD launch status
+  Status status = 1;
+
+  // The failure_reason if LXD could not be started.
+  string failure_reason = 2;
+}
+
+// Sent by tremplin to update the host on the start progress of starting LXD.
+message StartLxdProgress {
+  enum Status {
+    // The status of creating the container is unknown.
+    UNKNOWN = 0;
+
+    // LXD is starting.
+    STARTING = 1;
+
+    // Something went wrong, Tremplin is trying to recover LXD.
+    // This is still an in-progress status.
+    RECOVERING = 2;
+
+    // LXD is now running.
+    STARTED = 3;
+
+    // Could not launch LXD.
+    FAILED = 4;
+  }
+
+  // LXD launch status
+  Status status = 1;
+
+  // The failure_reason if LXD could not be started.
+  string failure_reason = 2;
+}
+
 message CreateContainerRequest {
   // Name of the container to start within the VM.
   string container_name = 1;
@@ -23,6 +76,12 @@ message CreateContainerRequest {
 
   // LXD image alias.
   string image_alias = 3;
+
+  // rootfs path to create the container from.
+  string rootfs_path = 4;
+
+  // metadata path to create the container from.
+  string metadata_path = 5;
 }
 
 message CreateContainerResponse {
@@ -88,11 +147,46 @@ message StartContainerRequest {
   // Container token.
   string token = 4;
 
-  // If true, StartContainer will return immediately and provide updates to the
-  // host via UpdateStartStatus. If false, StartContainer will block until the
-  // container has started. This field will be required to be true once all
-  // clients are migrated to use async.
-  bool async = 5;
+  // Deprecated.  All calls are async.
+  bool async = 5 [deprecated = true];
+
+  // Represents the privilege level with which a container should be started. If
+  // the container is already running this should take effect on the next boot.
+  enum PrivilegeLevel {
+    // Don't change the privilege level of the container.
+    UNCHANGED = 0;
+
+    // Make the container unprivileged.
+    UNPRIVILEGED = 1;
+
+    // Make the container privileged.
+    PRIVILEGED = 2;
+  }
+
+  PrivilegeLevel privilege_level = 6;
+}
+
+// OsRelease encapsulates a subset of the os-release info as documented
+// at https://www.freedesktop.org/software/systemd/man/os-release.html.
+message OsRelease {
+  // A pretty operating system name in a format suitable for presentation to the
+  // user. May or may not contain a release code name or OS version of some
+  // kind, as suitable. (e.g. "Debian GNU/Linux 10 (buster)").
+  string pretty_name = 1;
+
+  // A string identifying the operating system, without a version component,
+  // and suitable for presentation to the user (e.g. "Debian GNU/Linux").
+  string name = 2;
+
+  // String identifying OS version possibly including release codename.
+  // (e.g. "10 (buster)").
+  string version = 3;
+
+  // Lower case string (mostly numeric) identifying OS version (e.g. "10").
+  string version_id = 4;
+
+  // Lower case string identifying the operating system (e.g. "debian").
+  string id = 5;
 }
 
 message StartContainerResponse {
@@ -124,6 +218,9 @@ message StartContainerResponse {
 
   // The failure_reason if the container could not be started.
   string failure_reason = 2;
+
+  // OS strings found in the container's /etc/os-release, e.g. "stretch".
+  OsRelease os_release = 3;
 }
 
 message GetContainerUsernameRequest {
@@ -332,7 +429,7 @@ message SetTimezoneRequest {
   // (see 'man timezone'). Used if the guest VM does not support timezone-data
   // timezone names.
   //
-  // cicerone/tzif_parser.h can extract these strings from TZif files.
+  // brillo/timezone/tzif_parser.h can extract these strings from TZif files.
   string posix_tz_string = 2;
 
   // Containers for which we want to set the timezone.
@@ -380,6 +477,28 @@ message ExportContainerResponse {
   string failure_reason = 2;
 }
 
+message CancelExportContainerRequest {
+  // Name of the container currently being exported.
+  string in_progress_container_name = 1;
+}
+
+message CancelExportContainerResponse {
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // The cancel for the in-progress request has been queued.
+    // The in-progress request may yet complete before the cancel is processed.
+    CANCEL_QUEUED = 1;
+
+    // No in-progress request was found with that container name.
+    OPERATION_NOT_FOUND = 2;
+  }
+
+  // The status of the cancellation.
+  Status status = 1;
+}
+
 // Sent by tremplin to update the host on the export progress of a container.
 message ContainerExportProgress {
   // Name of the container to export.
@@ -395,32 +514,55 @@ message ContainerExportProgress {
     // One or more steps failed and the container could not be exported.
     FAILED = 2;
 
-    // Deprecated.  The container is exporting into a tar file.
-    EXPORTING_TAR = 3;
+    // Deprecated. The container is exporting into a tar file.
+    EXPORTING_TAR = 3 [deprecated = true];
 
-    // Deprecated.  The container tar file is being compressed into an image
+    // Deprecated. The container tar file is being compressed into an image
     // file.
-    EXPORTING_COMPRESS = 4;
+    EXPORTING_COMPRESS = 4 [deprecated = true];
 
-    // The exported image file is being downloaded.
-    EXPORTING_DOWNLOAD = 5;
+    // Deprecated. The exported image file is being downloaded.
+    EXPORTING_DOWNLOAD = 5 [deprecated = true];
 
-    // The exported image file is being packed.  This is equivalent to
-    // tar/compress.
-    EXPORTING_PACK = 6;
+    // Deprecated. The exported image file is being packed. This is equivalent
+    // to tar/compress.
+    EXPORTING_PACK = 6 [deprecated = true];
+
+    // EXPORTING_PACK and EXPORTING_DOWNLOAD have been combined into
+    // EXPORTING_STREAMING. The exported image file is being tar'd, compressed'd
+    // and download'd out of the container.
+    EXPORTING_STREAMING = 7;
+
+    // The export has been cancelled.
+    CANCELLED = 8;
   }
 
   // Container status.
   Status status = 2;
 
-  // Percentage progress for the current stage given in status.
-  uint32 progress_percent = 3;
+  // Deprecated. Percentage progress for the current stage given in status.
+  uint32 progress_percent = 3 [deprecated = true];
 
-  // Speed (bytes per second) for the current stage given in status.
-  uint64 progress_speed = 4;
+  // Deprecated. Speed (bytes per second) for the current stage given in status.
+  uint64 progress_speed = 4 [deprecated = true];
 
   // Details relating to the failure state.
   string failure_reason = 5;
+
+  // Total number of files in the input container.
+  uint32 total_input_files = 6;
+
+  // Total size of the files in the input container.
+  uint64 total_input_bytes = 7;
+
+  // Number of files in the input container that have been downloaded.
+  uint32 input_files_streamed = 8;
+
+  // Size of the files in the input container that have been downloaded.
+  uint64 input_bytes_streamed = 9;
+
+  // Number of compressed bytes that have been exported.
+  uint64 bytes_exported = 10;
 }
 
 message ImportContainerRequest {
@@ -432,6 +574,9 @@ message ImportContainerRequest {
   // to the VM root mount point (/mnt/shared) as returned in seneschal
   // SharePathResponse.path.  E.g.: "MyFiles/export/backup.tar.gz".
   string import_path = 2;
+
+  // The amount of bytes that this operation can use. Zero means unlimited.
+  uint64 available_disk_space = 3;
 }
 
 message ImportContainerResponse {
@@ -452,6 +597,28 @@ message ImportContainerResponse {
 
   // Details relating to the failure state.
   string failure_reason = 2;
+}
+
+message CancelImportContainerRequest {
+  // Name of the container currently being imported.
+  string in_progress_container_name = 1;
+}
+
+message CancelImportContainerResponse {
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // The cancel for the in-progress request has been queued.
+    // The in-progress request may yet complete before the cancel is processed.
+    CANCEL_QUEUED = 1;
+
+    // No in-progress request was found with that container name.
+    OPERATION_NOT_FOUND = 2;
+  }
+
+  // The status of the cancellation.
+  Status status = 1;
 }
 
 // Sent by tremplin to update the host on the import progress of a container.
@@ -475,8 +642,14 @@ message ContainerImportProgress {
     // The image is being unpacked to create a container.
     IMPORTING_UNPACK = 4;
 
-    // The container could be imported due to mismatched architecture.
+    // The container could not be imported due to mismatched architecture.
     FAILED_ARCHITECTURE = 5;
+
+    // The container could not be imported due to insufficient space.
+    FAILED_SPACE = 6;
+
+    // The import has been cancelled.
+    CANCELLED = 7;
   }
 
   // Container status.
@@ -497,6 +670,12 @@ message ContainerImportProgress {
   // Architecture of container which failed to import.
   // Set when status is FAILED_ARCHITECTURE.
   string architecture_container = 7;
+
+  // Disk space available. Set when status is FAILED_SPACE.
+  uint64 disk_space_available_bytes = 8;
+
+  // Disk space required. Set when status is FAILED_SPACE.
+  uint64 disk_space_required_bytes = 9;
 }
 
 // Sent by tremplin to update the host that a container has shutdown.
@@ -505,26 +684,190 @@ message ContainerShutdownInfo {
   string container_name = 1;
 }
 
+// Sent by tremplin to update the host on listening ports in containers.
+message ListeningPortInfo {
+  message ContainerPortInfo {
+    // All IPv4 TCP ports that are currently listening on the loopback
+    // interface.
+    repeated uint32 listening_tcp4_ports = 1;
+  }
+
+  // Map of container names to ContainerPortInfo, which contains information
+  // about listening ports.
+  map<string, ContainerPortInfo> container_ports = 1;
+}
+
+// Sent to Tremplin to start it upgrading a container.
+message UpgradeContainerRequest {
+  enum Version {
+    // Unknown version.
+    UNKNOWN = 0;
+
+    //  Debian 9 AKA Stretch.
+    DEBIAN_STRETCH = 1;
+
+    // Debian 10 AKA Buster.
+    DEBIAN_BUSTER = 2;
+  }
+
+  // Name of the container e.g. penguin.
+  string container_name = 1;
+
+  // Source version to upgrade from.
+  Version source_version = 2;
+
+  // Version to upgrade to.
+  Version target_version = 3;
+}
+
+// Sent by Tremplin to report the status of an in-progress container upgrade.
+message UpgradeContainerResponse {
+  enum Status {
+    // The result is unknown.
+    UNKNOWN = 0;
+
+    // Upgrade successfully started.
+    STARTED = 1;
+
+    // An upgrade is already running.
+    ALREADY_RUNNING = 2;
+
+    // Upgrade path not supported e.g. buster->stretch.
+    NOT_SUPPORTED = 3;
+
+    // The container is already at the target version
+    ALREADY_UPGRADED = 4;
+
+    // Failed to start the upgrade for some other reason.
+    FAILED = 5;
+  }
+
+  // The status.
+  Status status = 1;
+
+  // Human-readable message.
+  string failure_reason = 2;
+}
+
+// Periodically sent by Tremplin to report the status of an active upgrade,
+// including being sent once upon completion.
+message UpgradeContainerProgress {
+  enum Status {
+    // The current status is unknown.
+    UNKNOWN = 0;
+
+    // Still in progress.
+    IN_PROGRESS = 1;
+
+    // Completed successfully.
+    SUCCEEDED = 2;
+
+    // Failed to complete.
+    FAILED = 3;
+  }
+
+  // Name of the container this progress refers to.
+  string container_name = 1;
+
+  // The current status.
+  Status status = 2;
+
+  // Human-readable messages detailing progress.
+  repeated string progress_messages = 3;
+
+  // Human-readable failure reason if upgrade failed.
+  string failure_reason = 4;
+}
+
+// Request to cancel an in-progress upgrade.
+message CancelUpgradeContainerRequest {
+  // Name of the container to cancel the upgrade on.
+  string container_name = 1;
+}
+
+// The response to trying to cancel an upgrade.
+message CancelUpgradeContainerResponse {
+  enum Status {
+    // The status is unknown.
+    UNKNOWN = 0;
+
+    // Upgrade was not in progress, nothing to do.
+    NOT_RUNNING = 1;
+
+    // Upgrade cancelled.
+    CANCELLED = 2;
+
+    // Failed to cancel.
+    FAILED = 3;
+  }
+
+  // The status.
+  Status status = 1;
+
+  // Human-readable failure reason if cancellation failed.
+  string failure_reason = 2;
+}
+
+// Request to inform tremplin that the host network has changed, invalidating
+// any connected sockets that were using it.
+message HostNetworkChangedRequest {}
+
+// The response to the host network changing.
+message HostNetworkChangedResponse {}
+
+// Request for Tremplin to collect and report debug info e.g. additional error
+// logs which aren't in syslog, current state.
+message GetDebugInfoRequest {}
+
+// The response containing a bunch of debug info.
+message GetDebugInfoResponse {
+  // Debug information in arbitrary format.
+  string debug_information = 1;
+}
+
 // Tremplin service methods.
 service Tremplin {
+  rpc StartLxd(StartLxdRequest) returns (StartLxdResponse);
   rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
   rpc DeleteContainer(DeleteContainerRequest) returns (DeleteContainerResponse);
   rpc StartContainer(StartContainerRequest) returns (StartContainerResponse);
-  rpc GetContainerUsername(GetContainerUsernameRequest) returns (GetContainerUsernameResponse);
+  rpc GetContainerUsername(GetContainerUsernameRequest)
+      returns (GetContainerUsernameResponse);
   rpc SetUpUser(SetUpUserRequest) returns (SetUpUserResponse);
-  rpc GetContainerInfo(GetContainerInfoRequest) returns (GetContainerInfoResponse);
+  rpc GetContainerInfo(GetContainerInfoRequest)
+      returns (GetContainerInfoResponse);
   rpc SetTimezone(SetTimezoneRequest) returns (SetTimezoneResponse);
   rpc ExportContainer(ExportContainerRequest) returns (ExportContainerResponse);
+  rpc CancelExportContainer(CancelExportContainerRequest)
+      returns (CancelExportContainerResponse);
   rpc ImportContainer(ImportContainerRequest) returns (ImportContainerResponse);
+  rpc CancelImportContainer(CancelImportContainerRequest)
+      returns (CancelImportContainerResponse);
+  rpc UpgradeContainer(UpgradeContainerRequest)
+      returns (UpgradeContainerResponse);
+  rpc CancelUpgradeContainer(CancelUpgradeContainerRequest)
+      returns (CancelUpgradeContainerResponse);
+  rpc HostNetworkChanged(HostNetworkChangedRequest)
+      returns (HostNetworkChangedResponse);
+  rpc GetDebugInfo(GetDebugInfoRequest) returns (GetDebugInfoResponse);
+
+  // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
+  // well.
 }
 
 // Service that is notified of events from tremplin.
 service TremplinListener {
   rpc TremplinReady(TremplinStartupInfo) returns (EmptyMessage);
+  rpc UpdateStartLxdStatus(StartLxdProgress) returns (EmptyMessage);
   rpc UpdateCreateStatus(ContainerCreationProgress) returns (EmptyMessage);
   rpc UpdateDeletionStatus(ContainerDeletionProgress) returns (EmptyMessage);
   rpc UpdateStartStatus(ContainerStartProgress) returns (EmptyMessage);
   rpc UpdateExportStatus(ContainerExportProgress) returns (EmptyMessage);
   rpc UpdateImportStatus(ContainerImportProgress) returns (EmptyMessage);
   rpc ContainerShutdown(ContainerShutdownInfo) returns (EmptyMessage);
+  rpc UpdateListeningPorts(ListeningPortInfo) returns (EmptyMessage);
+  rpc UpgradeContainerStatus(UpgradeContainerProgress) returns (EmptyMessage);
+
+  // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
+  // well.
 }

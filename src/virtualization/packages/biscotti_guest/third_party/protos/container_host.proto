@@ -29,6 +29,9 @@ message ContainerShutdownInfo {
 
 // Corresponds to a .desktop file from the Desktop Entry Spec:
 // https://www.freedesktop.org/wiki/Specifications/desktop-entry-spec/
+// with some additional parameters to support broader compatibility.
+// This message is replicated in system_api/dbus/vm_applications/apps.proto,
+// and the two definitions should be kept in sync.
 message Application {
   // A "localestring". Entries with a provided locale should set the |locale|
   // field to the value inside the [] and default entries should leave it empty.
@@ -65,10 +68,14 @@ message Application {
   bool startup_notify = 7;
   LocaleStrings keywords = 9;
   string executable_file_name = 10;
+  string exec = 12;
 
   // If set, the package_id of the installed package that owns this .desktop
   // file. If not set, the .desktop file is not owned by an installed package.
   string package_id = 8;
+
+  // Similar to |mime_types| for applications that do not support mime types.
+  repeated string extensions = 11;
 }
 
 // Request protobuf for notifying the host of our list of installed
@@ -87,6 +94,16 @@ message OpenUrlRequest {
 
   // The security token the container was given.
   string token = 2;
+}
+
+// A message sent to indicate how many UpdateApplicationList are
+// scheduled to be sent.
+message PendingAppListUpdateCount {
+  // Security token for the container.
+  string token = 1;
+
+  // The number of app list updates that have been triggered but not yet sent.
+  uint32 count = 2;
 }
 
 // Progress update when a Linux package install is in progress or completed.
@@ -118,6 +135,9 @@ message InstallLinuxPackageProgressInfo {
 
   // Details relating to the failure state.
   string failure_details = 4;
+
+  // Command identifier to track installation progress.
+  string command_uuid = 5;
 }
 
 message UninstallPackageProgressInfo {
@@ -148,6 +168,32 @@ message UninstallPackageProgressInfo {
   string failure_details = 4;
 }
 
+message ApplyAnsiblePlaybookProgressInfo {
+  // The security token the container was given.
+  string token = 1;
+
+  enum Status {
+    UNKNOWN = 0;
+
+    // Application has completed and was successful. No further signals will be
+    // sent after this one.
+    SUCCEEDED = 1;
+
+    // Application failed to complete, the specific reason will be in
+    // failure_details. No further signals will be sent after this one.
+    FAILED = 2;
+
+    // Ansible playbook is being currently applied.
+    IN_PROGRESS = 3;
+  }
+
+  // Current status of the application progress.
+  Status status = 2;
+
+  // Details relating to the failure state.
+  string failure_details = 3;
+}
+
 // Request protobuf for opening a new terminal in the container.
 message OpenTerminalRequest {
   // The security token the container was given.
@@ -168,6 +214,15 @@ message UpdateMimeTypesRequest {
   map<string, string> mime_type_mappings = 2;
 }
 
+// For notifying a watched directory has a change.
+message FileWatchTriggeredInfo {
+  // The security token the container was given.
+  string token = 1;
+
+  // The watched directory in the container relative to $HOME that has a change.
+  string path = 2;
+}
+
 // Service that is notified of events from a container.
 service ContainerListener {
   // Called by each container when it starts up to indicate that it is ready to
@@ -180,7 +235,13 @@ service ContainerListener {
 
   // Called by a container to update the list of applications installed within
   // the container.
-  rpc UpdateApplicationList(UpdateApplicationListRequest) returns (EmptyMessage);
+  rpc UpdateApplicationList(UpdateApplicationListRequest)
+      returns (EmptyMessage);
+
+  // Called by a container to indicate that an app list update has
+  // been scheduled or completed.
+  rpc PendingUpdateApplicationListCalls(PendingAppListUpdateCount)
+      returns (EmptyMessage);
 
   // Called by a container to open the specified URL with the browser in the
   // host.
@@ -188,9 +249,16 @@ service ContainerListener {
 
   // Called by a container during a Linux package install to update on progress
   // and completion/failure.
-  rpc InstallLinuxPackageProgress(InstallLinuxPackageProgressInfo) returns (EmptyMessage);
+  rpc InstallLinuxPackageProgress(InstallLinuxPackageProgressInfo)
+      returns (EmptyMessage);
 
-  rpc UninstallPackageProgress(UninstallPackageProgressInfo) returns (EmptyMessage);
+  rpc UninstallPackageProgress(UninstallPackageProgressInfo)
+      returns (EmptyMessage);
+
+  // Called by a container during a Ansible playbook application to update on
+  // progress and completion/failure.
+  rpc ApplyAnsiblePlaybookProgress(ApplyAnsiblePlaybookProgressInfo)
+      returns (EmptyMessage);
 
   // Called by a container to have the host open a new terminal that is
   // connected to the container.
@@ -199,6 +267,10 @@ service ContainerListener {
   // Called by a container to update the MIME type associations for this
   // container.
   rpc UpdateMimeTypes(UpdateMimeTypesRequest) returns (EmptyMessage);
+
+  // Called by a container when there is a change in a watched directory. Used
+  // for FilesApp.
+  rpc FileWatchTriggered(FileWatchTriggeredInfo) returns (EmptyMessage);
 
   // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
   // well.
