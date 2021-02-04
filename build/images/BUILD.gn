@@ -175,11 +175,12 @@ action("pkgsvr_index") {
   deps = [ ":monolith_meta_far_merkle_index" ]
   inputs = [ monolith_meta_far_merkle_index ]
 
-  hermetic_deps = false
   script = "//build/images/manifest_content_expand.sh"
+  depfile = "${target_out_dir}/${target_name}.d"
   args = [
     rebase_path(monolith_meta_far_merkle_index, root_build_dir),
     rebase_path(outputs[0], root_build_dir),
+    rebase_path(depfile, root_build_dir),
   ]
 }
 
@@ -208,11 +209,12 @@ action("cache_index") {
   deps = [ ":preinstall_meta_far_merkle_index" ]
   inputs = [ preinstall_meta_far_merkle_index ]
 
-  hermetic_deps = false
   script = "//build/images/manifest_content_expand.sh"
+  depfile = "${target_out_dir}/${target_name}.d"
   args = [
     rebase_path(preinstall_meta_far_merkle_index, root_build_dir),
     rebase_path(outputs[0], root_build_dir),
+    rebase_path(depfile, root_build_dir),
   ]
 }
 
@@ -2021,11 +2023,13 @@ action("update_packages.manifest") {
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":update_meta_far_merkle_index" ]
   inputs = [ update_meta_far_merkle_index ]
-  hermetic_deps = false
-  script = "manifest_content_expand.sh"
+
+  script = "//build/images/manifest_content_expand.sh"
+  depfile = "${target_out_dir}/${target_name}.d"
   args = [
     rebase_path(update_meta_far_merkle_index, root_build_dir),
     rebase_path(outputs[0], root_build_dir),
+    rebase_path(depfile, root_build_dir),
   ]
 }
 
@@ -2160,11 +2164,13 @@ action("update_prime_packages.manifest") {
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":update_prime_meta_far_merkle_index" ]
   inputs = [ update_prime_meta_far_merkle_index ]
-  hermetic_deps = false
-  script = "manifest_content_expand.sh"
+
+  script = "//build/images/manifest_content_expand.sh"
+  depfile = "${target_out_dir}/${target_name}.d"
   args = [
     rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
     rebase_path(outputs[0], root_build_dir),
+    rebase_path(depfile, root_build_dir),
   ]
 }
 

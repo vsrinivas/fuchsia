@@ -39,6 +39,9 @@ template("vboot") {
                              "testonly",
                              "visibility",
                            ])
+
+    # TODO(fxbug.dev/69049): script is a soft link, so fsatrace logged access to
+    # the destination. Switch to use hard link and remove this suppression.
     hermetic_deps = false
     script = "//prebuilt/tools/futility/${host_platform}/futility"
     outputs = [ output_file ]

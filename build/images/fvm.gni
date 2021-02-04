@@ -144,7 +144,6 @@ template("generate_fvm") {
                            ])
     tool = "//src/storage/bin/fvm"
     outputs = [ invoker.output_name ]
-    hermetic_deps = false
     args = rebase_path(outputs, root_build_dir)
     if (defined(invoker.args)) {
       args += invoker.args

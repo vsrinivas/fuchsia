@@ -163,12 +163,13 @@ template("assemble_system") {
     visibility = [ ":*" ]
     testonly = true
     inputs = [ meta_far_merkle_index ]
-    outputs = [ "$target_out_dir/${target_name}" ]
+    outputs = [ "${target_out_dir}/${target_name}" ]
     deps = [ ":${image_name}_meta_far_merkle_index" ]
-    hermetic_deps = false
+    depfile = "${target_out_dir}/${target_name}.d"
     script = "//build/images/manifest_content_expand.sh"
     args = rebase_path(inputs, root_build_dir) +
-           rebase_path(outputs, root_build_dir)
+           rebase_path(outputs, root_build_dir) +
+           [ rebase_path(depfile, root_build_dir) ]
   }
 
   system_image_manifest_args =

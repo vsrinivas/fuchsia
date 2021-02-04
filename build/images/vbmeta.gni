@@ -112,6 +112,8 @@ template("vbmeta") {
   }
 
   action("${target_name}__vb_desc") {
+    # TODO(fxbug.dev/69047): This is a "stamping" action, figure out how to
+    # handle this class of actions.
     hermetic_deps = false
     script = "//third_party/android/platform/external/avb/avbtool.py"
 
