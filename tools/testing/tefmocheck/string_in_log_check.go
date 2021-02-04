@@ -145,14 +145,6 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType, ExceptSuccessfulSwarmingResult: true})
 	// For fxbug.dev/43188.
 	ret = append(ret, &stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType})
-	// For fxbug.dev/57463.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/61452.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToResolveIPErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/65073.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.PackageRepoSetupErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/65073.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.SerialReadErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/53854.
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
@@ -203,7 +195,14 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 
 	// testrunner logs this when the serial socket goes away unexpectedly.
 	ret = append(ret, &stringInLogCheck{String: ".sock: write: broken pipe", Type: swarmingOutputType})
-
+	// For fxbug.dev/57463.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
+	// For fxbug.dev/61452.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToResolveIPErrorMsg), Type: swarmingOutputType})
+	// For fxbug.dev/65073.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.PackageRepoSetupErrorMsg), Type: swarmingOutputType})
+	// For fxbug.dev/65073.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.SerialReadErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/53101.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
 	// For fxbug.dev/51441.
