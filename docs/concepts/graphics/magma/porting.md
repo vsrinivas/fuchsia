@@ -60,7 +60,7 @@ The gpu vendor supplies and maintains the system driver using the Zircon DDK.
 
 Not required to be open source; for bringup, the repo may be hosted by the Magma team internally and only the binary objects will be distributed.
 
-The client driver library should provide a conformant implementation of Vulkan 1.0/1.1.  It must also implement several Fuchsia specific variants of common KHR Vulkan extensions for external memory and semaphores. These are currently WIP and subject to change, but can be found in the Fuchsia internal [Vulkan header](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/HEAD/include/vulkan/vulkan.h):
+The client driver library should provide a conformant implementation of Vulkan 1.0/1.1/1.2.  It must also implement several Fuchsia-specific extensions of common KHR Vulkan extensions for external memory and semaphores. These are currently WIP and subject to change, but can be found in the Fuchsia internal [Vulkan header](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/HEAD/include/vulkan/vulkan.h):
 
 * VK_FUCHSIA_external_memory
 * VK_FUCHSIA_external_semaphore
@@ -74,7 +74,7 @@ Eventually, the vendor will be able to build and test for Fuchsia, so the Fuchsi
 ### Bring-up Tasks
 
 * Build the vendor code
-* If closed source, make a static library as a distributable prebuilt that can be linked with dependencies in fuchsia to make a complete shared library that can be loaded into the application’s process space
+* If closed source, make a static library as a distributable prebuilt that can be linked with dependencies in Fuchsia to make a complete shared library that can be loaded into the application’s process space
 * Port any os dependencies to Fuchsia (Fuchsia provides a c library with a lot of posix support and a std c++ library)
 * Rework system integration layer to use magma interfaces instead of kernel interfaces
 * Implement Fuchsia Vulkan extensions
@@ -83,8 +83,8 @@ Eventually, the vendor will be able to build and test for Fuchsia, so the Fuchsi
 
 * A simple Vulkan test passes
 	* Test: [vkreadback](/src/graphics/tests/vkreadback) (draws a color then reads back the framebuffer values)
-* Add support for fuchsia window system integration extensions using zircon framebuffer library
+* Add support for Fuchsia window system integration extensions using zircon framebuffer library
     * Test: [vkcube](/src/graphics/examples/vkcube/) (animated, using VK_KHR_swapchain)
-* Add support for fuchsia external memory and semaphore extensions
+* Add support for Fuchsia external memory and semaphore extensions
 	* Test: [vkext](/src/graphics/tests/vkext)
 
