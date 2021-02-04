@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//src/fonts/build/fonts.gni")
+import("//src/sys/build/components.gni")
 
 group("fonts") {
   public_deps = [
@@ -117,41 +116,42 @@ rustc_binary("font_provider") {
   ]
 }
 
-package("pkg") {
-  package_name = "fonts"
-
+fuchsia_component("font_provider_cm") {
+  manifest = "meta/fonts.cml"
+  component_name = "fonts"
   deps = [ ":font_provider" ]
+}
 
-  binaries = [
-    {
-      name = "font_provider"
-    },
-  ]
-  meta = [
-    # TODO: Remove fonts.cmx once external clients aren't using it.
-    {
-      path = rebase_path("meta/fonts.cmx")
-      dest = "fonts.cmx"
-    },
-    {
-      path = rebase_path("meta/fonts.cml")
-      dest = "fonts.cm"
-    },
-    {
-      path = rebase_path("meta/fonts_for_downstream_tests.cmx")
-      dest = "fonts_for_downstream_tests.cmx"
-    },
+# TODO: Remove fonts.cmx once external clients aren't using it.
+fuchsia_component("font_provider_cmx") {
+  manifest = "meta/fonts.cmx"
+  component_name = "fonts"
+  deps = [ ":font_provider" ]
+}
+fuchsia_component("font_provider_cmx_tests") {
+  manifest = "meta/fonts_for_downstream_tests.cmx"
+  component_name = "fonts_for_downstream_tests"
+  deps = [ ":font_provider" ]
+}
+
+fuchsia_package("pkg") {
+  package_name = "fonts"
+  deps = [
+    ":font_provider_cm",
+    ":font_provider_cmx",
+    ":font_provider_cmx_tests",
   ]
 }
 
-test_package("font_provider_unit_tests") {
+fuchsia_component("font_provider_unit_tests_cmp") {
+  testonly = true
+  manifest = "meta/font_provider_bin_test.cml"
+  component_name = "font_provider_bin_test"
   deps = [ ":font_provider_test" ]
+}
 
-  v2_tests = [
-    {
-      name = "font_provider_bin_test"
-    },
-  ]
+fuchsia_test_package("font_provider_unit_tests") {
+  test_components = [ ":font_provider_unit_tests_cmp" ]
 }
 
 # Re-export:

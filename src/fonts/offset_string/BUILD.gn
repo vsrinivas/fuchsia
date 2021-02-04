@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("offset_string") {
   edition = "2018"
@@ -25,14 +25,15 @@ rustc_library("offset_string") {
   ]
 }
 
-test_package("offset_string_tests") {
+fuchsia_component("offset_string_tests_cmp") {
+  testonly = true
+  manifest = "meta/offset_string_lib_test.cmx"
+  component_name = "offset_string_lib_test"
   deps = [ ":offset_string_test" ]
+}
 
-  tests = [
-    {
-      name = "offset_string_lib_test"
-    },
-  ]
+fuchsia_test_package("offset_string_tests") {
+  test_components = [ ":offset_string_tests_cmp" ]
 }
 
 group("tests") {

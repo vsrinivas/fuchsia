@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("smoke") {
   testonly = true
@@ -28,12 +28,13 @@ rustc_test("font_provider_smoke_tests_bin") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("font_provider_smoke_tests") {
+fuchsia_component("font_provider_smoke_tests_cmp") {
+  testonly = true
+  manifest = "meta/font_provider_smoke_tests.cmx"
+  component_name = "font_provider_smoke_tests"
   deps = [ ":font_provider_smoke_tests_bin" ]
+}
 
-  tests = [
-    {
-      name = "font_provider_smoke_tests"
-    },
-  ]
+fuchsia_test_package("font_provider_smoke_tests") {
+  test_components = [ ":font_provider_smoke_tests_cmp" ]
 }

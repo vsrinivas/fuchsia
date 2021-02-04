@@ -12,7 +12,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/font_provider_smoke_tests"
+        "binary": "bin/font_provider_smoke_tests"
     },
     "sandbox": {
         "services": [

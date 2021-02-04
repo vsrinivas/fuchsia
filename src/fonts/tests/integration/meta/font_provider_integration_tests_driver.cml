@@ -4,7 +4,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "test/font_provider_integration_tests",
+        binary: "bin/font_provider_integration_tests",
     },
     collections: [
         {

@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("font_info") {
   edition = "2018"
@@ -57,21 +56,21 @@ rustc_test("font_info_test_bin") {
 }
 
 # Needed for testing on Fuchsia
-test_package("font_info_tests") {
+fuchsia_component("font_info_tests_cmp") {
+  testonly = true
+  manifest = "meta/font_info_test.cmx"
+  component_name = "font_info_test"
   deps = [ ":font_info_test_bin" ]
+}
 
-  resources = [
-    {
-      path = rebase_path("//src/fonts/test_data/sample_font.ttf")
-      dest = "sample_font.ttf"
-    },
-  ]
+resource("testdata") {
+  sources = [ "//src/fonts/test_data/sample_font.ttf" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  tests = [
-    {
-      name = "font_info_test"
-    },
-  ]
+fuchsia_test_package("font_info_tests") {
+  test_components = [ ":font_info_tests_cmp" ]
+  deps = [ ":testdata" ]
 }
 
 if (is_host) {

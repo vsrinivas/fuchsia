@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//tools/cmc/build/cmc.gni")
 
 group("integration") {
@@ -98,77 +98,100 @@ cmc_merge("fonts_with_large_fonts_cml") {
   output_name = "fonts_with_large_fonts.cml"
 }
 
-test_package("font_provider_integration_tests") {
+# Integration test font collections
+resource("testdata") {
+  sources = [
+    "aliases.font_manifest.json",
+    "ephemeral.font_manifest.json",
+  ]
+  outputs = [ "data/testdata/{{source_file_part}}" ]
+}
+
+fuchsia_component("fonts_with_aliases_fonts") {
+  testonly = true
+  manifest = "${target_out_dir}/fonts_with_aliases_fonts.cml"
   deps = [
-    ":font_provider_integration_tests_bin",
     ":fonts_with_aliases_fonts_cml",
+    ":testdata",
+    "//src/fonts:font_provider",
+  ]
+}
+
+fuchsia_component("fonts_with_ephemeral_fonts") {
+  testonly = true
+  manifest = "${target_out_dir}/fonts_with_ephemeral_fonts.cml"
+  deps = [
     ":fonts_with_ephemeral_fonts_cml",
+    ":testdata",
+    "//src/fonts:font_provider",
+  ]
+}
+
+fuchsia_component("fonts_with_large_fonts") {
+  testonly = true
+  manifest = "${target_out_dir}/fonts_with_large_fonts.cml"
+  deps = [
     ":fonts_with_large_fonts_cml",
-    ":fonts_with_medium_fonts_cml",
-    ":fonts_with_small_fonts_cml",
     "//src/fonts:font_provider",
     "//src/fonts/collections:test-fonts-large-collection",
+  ]
+}
+
+fuchsia_component("fonts_with_medium_fonts") {
+  testonly = true
+  manifest = "${target_out_dir}/fonts_with_medium_fonts.cml"
+  deps = [
+    ":fonts_with_medium_fonts_cml",
+    "//src/fonts:font_provider",
     "//src/fonts/collections:test-fonts-medium-collection",
+  ]
+}
+
+fuchsia_component("fonts_with_small_fonts") {
+  testonly = true
+  manifest = "${target_out_dir}/fonts_with_small_fonts.cml"
+  deps = [
+    ":fonts_with_small_fonts_cml",
+    "//src/fonts:font_provider",
     "//src/fonts/collections:test-fonts-small-collection",
-    "//src/fonts/testing/mock_font_resolver:mock_font_resolver_bin",
   ]
+}
 
-  meta = [
-    {
-      path = rebase_path("${target_out_dir}/fonts_with_ephemeral_fonts.cml")
-      dest = "fonts_with_ephemeral_fonts.cm"
-    },
-    {
-      path = rebase_path("${target_out_dir}/fonts_with_aliases_fonts.cml")
-      dest = "fonts_with_aliases_fonts.cm"
-    },
-    {
-      path = rebase_path("${target_out_dir}/fonts_with_small_fonts.cml")
-      dest = "fonts_with_small_fonts.cm"
-    },
-    {
-      path = rebase_path("${target_out_dir}/fonts_with_medium_fonts.cml")
-      dest = "fonts_with_medium_fonts.cm"
-    },
-    {
-      path = rebase_path("${target_out_dir}/fonts_with_large_fonts.cml")
-      dest = "fonts_with_large_fonts.cm"
-    },
-    {
-      path = rebase_path(
-              "../../testing/mock_font_resolver/meta/mock_font_resolver.cml")
-      dest = "mock_font_resolver.cm"
-    },
-    {
-      path = rebase_path("meta/font_provider_integration_tests_driver.cml")
-      dest = "test_driver.cm"
-    },
-  ]
+# Main integration test driver and capability providers
+fuchsia_component("font_provider_integration_tests_driver") {
+  testonly = true
+  component_name = "test_driver"
+  manifest = "meta/font_provider_integration_tests_driver.cml"
+  deps = [ ":font_provider_integration_tests_bin" ]
+}
 
-  binaries = [
-    {
-      name = "mock_font_resolver"
-    },
-    {
-      name = "font_provider"
-    },
-  ]
+fuchsia_component("mock_font_resolver_cm") {
+  testonly = true
+  component_name = "mock_font_resolver"
+  manifest =
+      "//src/fonts/testing/mock_font_resolver/meta/mock_font_resolver.cml"
+  deps = [ "//src/fonts/testing/mock_font_resolver:mock_font_resolver_bin" ]
+}
 
-  v2_tests = [
-    {
-      name = "font_provider_integration_tests"
-      environments = basic_envs
-    },
-  ]
+fuchsia_component("font_provider_integration_tests_cmp") {
+  testonly = true
+  component_name = "font_provider_integration_tests"
+  manifest = "meta/font_provider_integration_tests.cml"
+}
 
-  resources = [
-    {
-      path = rebase_path("ephemeral.font_manifest.json")
-      dest = "testdata/ephemeral.font_manifest.json"
-    },
-    {
-      path = rebase_path("aliases.font_manifest.json")
-      dest = "testdata/aliases.font_manifest.json"
-    },
+# Integration test package
+fuchsia_test_package("font_provider_integration_tests") {
+  test_components = [ ":font_provider_integration_tests_cmp" ]
+  deps = [
+    ":font_provider_integration_tests_driver",
+    ":fonts_with_aliases_fonts",
+    ":fonts_with_ephemeral_fonts",
+    ":fonts_with_large_fonts",
+    ":fonts_with_medium_fonts",
+    ":fonts_with_small_fonts",
+    ":mock_font_resolver_cm",
   ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
