@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -56,7 +56,7 @@ def touch(path):
             return
 
 def write_build_id_dir(build_id_dir, mods):
-    for build_id, path in mods.iteritems():
+    for build_id, path in mods.items():
         mkdir(os.path.join(build_id_dir, build_id[:2]))
         link(path, os.path.join(build_id_dir, build_id[:2], build_id[2:] + ".debug"))
 
@@ -71,7 +71,7 @@ def fix_path(path, rel_to):
 # rel_to is assumed to be an absolute path
 def write_ids_txt(ids_path, rel_to, mods):
     with open(ids_path, "w") as f:
-        for build_id, path in sorted(mods.iteritems()):
+        for build_id, path in sorted(mods.items()):
             path = fix_path(mods[build_id], rel_to)
             f.write("%s %s\n" % (build_id, path))
 
@@ -98,10 +98,9 @@ def main():
 
     args = parser.parse_args()
 
-        
     input_paths = map(os.path.abspath, args.input)
-    input_paths = filter(os.path.exists, input_paths) # conventionally ignore empty inputs
-    input_dirs = map(os.path.isdir, input_paths)
+    input_paths = list(filter(os.path.exists, input_paths)) # conventionally ignore empty inputs
+    input_dirs = list(map(os.path.isdir, input_paths))
     if len(input_dirs) > 0:
         assert len(input_dirs) == len(input_paths), "input formats cannot be mixed"
         in_fmt = build_id_fmt
