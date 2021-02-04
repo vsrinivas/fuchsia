@@ -128,6 +128,7 @@ declare_args() {
 #       type (required)
 #         [string] A partition type accepted by fvm (e.g. blob, data, data-unsafe)
 #
+#   inputs (optional)
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
@@ -137,6 +138,7 @@ template("generate_fvm") {
   compiled_action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "inputs",
                              "deps",
                              "metadata",
                              "testonly",

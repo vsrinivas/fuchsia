@@ -1208,6 +1208,7 @@ if (fvm_partition != "") {
   # fastboot flashing. The image will be used for emu/qemu as well.
   fvm_generation_args = []
   fvm_partitions = []
+  fvm_inputs = []
   fvm_deps = []
   if (fvm_emmc_partition_size != "") {
     # If "fvm_emmc_partition_size" is specified, generate for emmc devices.
@@ -1252,6 +1253,7 @@ if (fvm_partition != "") {
       "--sparse",
       rebase_path(fvm_blob_sparse_blk_path),
     ]
+    fvm_inputs = [ fvm_blob_sparse_blk_path ]
     fvm_deps = [ ":fvm.blob.sparse.blk" ]
   } else {
     assert(
@@ -1279,6 +1281,7 @@ if (fvm_partition != "") {
       ]
       image_paths = [ "IMAGE_FVM_FASTBOOT=$rebased_output_name" ]
     }
+    inputs = fvm_inputs
     deps = fvm_deps
   }
   default_image_deps += [ ":fvm.fastboot.blk" ]
