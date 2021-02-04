@@ -33,10 +33,20 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
     return status;
   }
 
+  inspect->fw_recovered_ = inspect->root_.CreateUint("fw_recovered", 0);
+  if ((status = inspect->fw_recovered_24hrs_.Init(&inspect->root_, 24, "fw_recovered_24hrs", 0)) !=
+      ZX_OK) {
+    return status;
+  }
+
   // Start timers.
   constexpr bool kPeriodic = true;
   inspect->timer_hr_ = std::make_unique<Timer>(
-      dispatcher, [inspect = inspect.get()]() { inspect->tx_qfull_24hrs_.SlideWindow(); },
+      dispatcher,
+      [inspect = inspect.get()]() {
+        inspect->tx_qfull_24hrs_.SlideWindow();
+        inspect->fw_recovered_24hrs_.SlideWindow();
+      },
       kPeriodic);
   inspect->timer_hr_->Start(zx::hour(1).get());
 
@@ -47,6 +57,11 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
 void DeviceInspect::LogTxQueueFull() {
   tx_qfull_.Add(1);
   tx_qfull_24hrs_.Add(1);
+}
+
+void DeviceInspect::LogFwRecovered() {
+  fw_recovered_.Add(1);
+  fw_recovered_24hrs_.Add(1);
 }
 
 }  // namespace wlan::brcmfmac

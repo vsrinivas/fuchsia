@@ -33,9 +33,11 @@
 #include "cfg80211.h"
 #include "common.h"
 #include "debug.h"
+#include "device.h"
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "inspect/device_inspect.h"
 #include "linuxisms.h"
 #include "macros.h"
 #include "netbuf.h"
@@ -602,6 +604,7 @@ void brcmf_recovery_worker(WorkItem* work) {
     goto fail;
   }
 
+  drvr->device->GetInspect()->LogFwRecovered();
 fail:
   // Clean the counters for all the trigger conditions at the end of the recovery process to ensure
   // all the counters are 0 after driver is recovered and start working. Skip it here for SIM to

@@ -35,6 +35,19 @@ source_set("stub_device") {
   ]
 }
 
+source_set("device_inspect_utils") {
+  testonly = true
+  sources = [ "device_inspect_test_utils.cc" ]
+  public = [ "device_inspect_test_utils.h" ]
+  public_deps = [
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
+    "//zircon/system/ulib/fit",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 executable("bcmdhd_crossdriver_test") {
   output_name = "bcmdhd_crossdriver_test"
   testonly = true
@@ -99,19 +112,17 @@ executable("device_inspect_test") {
   testonly = true
   sources = [
     "device_inspect_test.cc",
-    "device_inspect_test_utils.cc",
-    "device_inspect_test_utils.h",
     "windowed_uint_property_test.cc",
   ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/inspect/testing/cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:device_inspect_utils",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/public",
-    "//zircon/system/ulib/fit",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
   ]

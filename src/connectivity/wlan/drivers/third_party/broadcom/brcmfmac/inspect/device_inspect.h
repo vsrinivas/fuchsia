@@ -38,6 +38,7 @@ class DeviceInspect {
 
   // Metrics APIs.
   void LogTxQueueFull();
+  void LogFwRecovered();
 
  private:
   // Only constructible through Create().
@@ -50,6 +51,8 @@ class DeviceInspect {
   // Metrics tracked
   inspect::UintProperty tx_qfull_;
   WindowedUintProperty tx_qfull_24hrs_;
+  inspect::UintProperty fw_recovered_;
+  WindowedUintProperty fw_recovered_24hrs_;
 };
 
 }  // namespace wlan::brcmfmac
