@@ -24,7 +24,10 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#topology_builder_framework_intermediary" ],
+            to: [
+                "#topology_builder_collection",
+                "#topology_builder_framework_intermediary",
+            ],
         },
     ],
     environments: [
