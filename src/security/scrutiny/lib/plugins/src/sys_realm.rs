@@ -50,6 +50,10 @@ impl DataController for FindSysRealmComponents {
             component_urls.insert(sysmgr.services.get(svc).unwrap().clone());
         }
 
+        for app in &sysmgr.apps {
+            component_urls.insert(app.clone());
+        }
+
         let mut component_ids = HashMap::<i32, String>::new();
         let components = model.get::<Components>()?;
         for c in &components.entries {
@@ -145,12 +149,23 @@ mod tests {
 
     struct SysRealmProvider {
         pkg_name: String,
-        manifest_path: String,
-        service_name: String,
         config_path: String,
         config_content: String,
+        service_provider: ServiceProvider,
+        app: Option<SysApp>,
+    }
+
+    struct ServiceProvider {
         sandbox: ComponentV1Manifest,
         serialized_sandbox: String,
+        manifest_path: String,
+        service_name: String,
+    }
+
+    struct SysApp {
+        sandbox: ComponentV1Manifest,
+        serialized_sandbox: String,
+        manifest_path: String,
     }
 
     impl SysRealmProvider {
@@ -164,22 +179,31 @@ mod tests {
         ) -> Self {
             Self {
                 pkg_name,
-                manifest_path,
-                service_name,
                 config_path,
                 config_content,
-                serialized_sandbox: serde_json::to_string::<ComponentV1Manifest>(&sandbox).unwrap(),
-                sandbox,
+                service_provider: ServiceProvider {
+                    serialized_sandbox: serde_json::to_string::<ComponentV1Manifest>(&sandbox)
+                        .unwrap(),
+                    sandbox,
+                    manifest_path,
+                    service_name,
+                },
+                app: None,
             }
         }
     }
 
     impl From<&SysRealmProvider> for PackageDefinition {
         fn from(src: &SysRealmProvider) -> PackageDefinition {
-            let src_manifests = test_utils::create_test_cmx_map(vec![(
-                src.manifest_path.clone(),
-                src.sandbox.clone(),
-            )]);
+            let mut manifests = vec![(
+                src.service_provider.manifest_path.clone(),
+                src.service_provider.sandbox.clone(),
+            )];
+            if let Some(app) = &src.app {
+                manifests.push((app.manifest_path.clone(), app.sandbox.clone()));
+            }
+
+            let src_manifests = test_utils::create_test_cmx_map(manifests);
 
             test_utils::create_test_package_with_cms(src.pkg_name.clone(), src_manifests)
         }
@@ -187,14 +211,19 @@ mod tests {
 
     #[test]
     fn test_regular_sys_realm() {
-        let foo_provider = SysRealmProvider::new(
+        let mut foo_provider = SysRealmProvider::new(
             String::from("fuchsia-pkg://fuchsia.com/foo"),
             String::from("meta/foo-server.cmx"),
             String::from("fuchsia.test.service.foo"),
             String::from("data/sysmgr/foo.config"),
+            // This string itself doesn't seem to be used anywhere. It
+            // seems like the meta data comes directly from the service package
+            // definitions pushed into the mock package reader. We'll supply it
+            // anyway for the sake of consistency.
             String::from(
                 r#"{
-                "services": {"fuchsia.test.service.foo": "fuchsia-pkg://fuchsia.com/foo#meta/foo-server.cmx"}
+                "services": {"fuchsia.test.service.foo": "fuchsia-pkg://fuchsia.com/foo#meta/foo-server.cmx"},
+                "apps": ["fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"]
             }"#,
             ),
             ComponentV1Manifest {
@@ -205,6 +234,20 @@ mod tests {
                 features: Some(vec![String::from("isolated-temp")]),
             },
         );
+        foo_provider.app = {
+            let sandbox = ComponentV1Manifest {
+                dev: None,
+                services: None,
+                system: None,
+                pkgfs: None,
+                features: Some(vec![String::from("config-data")]),
+            };
+            Some(SysApp {
+                manifest_path: String::from("meta/foo-app.cmx"),
+                serialized_sandbox: serde_json::to_string::<ComponentV1Manifest>(&sandbox).unwrap(),
+                sandbox,
+            })
+        };
 
         let bar_provider = SysRealmProvider::new(
             String::from("fuchsia-pkg://fuchsia.com/bar"),
@@ -256,27 +299,34 @@ mod tests {
                 url: format!(
                     "{}#{}",
                     foo_provider.pkg_name.clone(),
-                    foo_provider.manifest_path.clone()
+                    foo_provider.service_provider.manifest_path.clone()
                 ),
                 features: ManifestContent { features: Some(vec![String::from("isolated-temp")]) },
-                manifest: foo_provider.serialized_sandbox.clone(),
+                manifest: foo_provider.service_provider.serialized_sandbox.clone(),
+            });
+
+            let sys_app = foo_provider.app.as_ref().unwrap();
+            manifests.insert(ComponentManifest {
+                url: format!("{}#{}", foo_provider.pkg_name.clone(), sys_app.manifest_path.clone()),
+                features: ManifestContent { features: Some(vec![String::from("config-data")]) },
+                manifest: sys_app.serialized_sandbox.clone(),
             });
 
             manifests.insert(ComponentManifest {
                 url: format!(
                     "{}#{}",
                     bar_provider.pkg_name.clone(),
-                    bar_provider.manifest_path.clone()
+                    bar_provider.service_provider.manifest_path.clone()
                 ),
                 features: ManifestContent { features: None },
-                manifest: bar_provider.serialized_sandbox.clone(),
+                manifest: bar_provider.service_provider.serialized_sandbox.clone(),
             });
 
             manifests.insert(ComponentManifest {
                 url: format!(
                     "{}#{}",
                     buzz_provider.pkg_name.clone(),
-                    buzz_provider.manifest_path.clone()
+                    buzz_provider.service_provider.manifest_path.clone()
                 ),
                 features: ManifestContent {
                     features: Some(vec![
@@ -285,7 +335,7 @@ mod tests {
                         String::from("isolated-cache"),
                     ]),
                 },
-                manifest: buzz_provider.serialized_sandbox.clone(),
+                manifest: buzz_provider.service_provider.serialized_sandbox.clone(),
             });
             manifests
         };
@@ -294,22 +344,39 @@ mod tests {
 
         // create the service package definitions
         let foo_services = vec![(
-            foo_provider.service_name.clone(),
-            format!("{}#{}", foo_provider.pkg_name.clone(), foo_provider.manifest_path.clone()),
+            foo_provider.service_provider.service_name.clone(),
+            format!(
+                "{}#{}",
+                foo_provider.pkg_name.clone(),
+                foo_provider.service_provider.manifest_path.clone()
+            ),
         )];
-        mock.append_service_pkg_def(test_utils::create_svc_pkg_def(foo_services));
+        let foo_apps = vec![format!(
+            "{}#{}",
+            foo_provider.pkg_name.clone(),
+            foo_provider.app.as_ref().unwrap().manifest_path.clone()
+        )];
+        mock.append_service_pkg_def(test_utils::create_svc_pkg_def(foo_services, foo_apps));
 
         let bar_services = vec![(
-            bar_provider.service_name.clone(),
-            format!("{}#{}", bar_provider.pkg_name.clone(), bar_provider.manifest_path.clone()),
+            bar_provider.service_provider.service_name.clone(),
+            format!(
+                "{}#{}",
+                bar_provider.pkg_name.clone(),
+                bar_provider.service_provider.manifest_path.clone()
+            ),
         )];
-        mock.append_service_pkg_def(test_utils::create_svc_pkg_def(bar_services));
+        mock.append_service_pkg_def(test_utils::create_svc_pkg_def(bar_services, vec![]));
 
         let buzz_services = vec![(
-            buzz_provider.service_name.clone(),
-            format!("{}#{}", buzz_provider.pkg_name.clone(), buzz_provider.manifest_path.clone()),
+            buzz_provider.service_provider.service_name.clone(),
+            format!(
+                "{}#{}",
+                buzz_provider.pkg_name.clone(),
+                buzz_provider.service_provider.manifest_path.clone()
+            ),
         )];
-        mock.append_service_pkg_def(test_utils::create_svc_pkg_def(buzz_services));
+        mock.append_service_pkg_def(test_utils::create_svc_pkg_def(buzz_services, vec![]));
 
         // Create a config-data package that has appropriate entries for the
         // sysmgr package
@@ -366,6 +433,7 @@ mod tests {
             sys_realm.query(model.clone(), "".into()).unwrap(),
         )
         .unwrap();
+        assert_eq!(actual_sys_realm.len(), 4);
 
         // Remove everything in `actual_sys_realm` that appears in the expected
         // output while also removing from `expected`.

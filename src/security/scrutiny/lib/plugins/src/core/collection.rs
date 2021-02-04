@@ -381,13 +381,15 @@ impl DataCollection for Zbi {
 /// Defines all the services exposed by sysmgr.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Sysmgr {
-    // Mapping from service-name -> url.
+    /// Mapping from service-name -> url.
     pub services: HashMap<String, String>,
+    /// Url of sys realm apps, started when the sys realm starts
+    pub apps: Vec<String>,
 }
 
 impl Sysmgr {
-    pub fn new(services: HashMap<String, String>) -> Self {
-        Self { services }
+    pub fn new(services: HashMap<String, String>, apps: Vec<String>) -> Self {
+        Self { services, apps }
     }
 
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, String> {

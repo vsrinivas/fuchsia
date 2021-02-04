@@ -146,21 +146,27 @@ pub fn create_test_package_with_meta(
 /// Creates a package definition which maps a set of service names to a set
 /// of files in the package which represent components that provide that
 /// service.
-pub fn create_svc_pkg_def(entries: Vec<(String, String)>) -> ServicePackageDefinition {
+pub fn create_svc_pkg_def(
+    services: Vec<(String, String)>,
+    apps: Vec<String>,
+) -> ServicePackageDefinition {
     ServicePackageDefinition {
         services: Some(
-            entries.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
+            services.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
         ),
+        apps: Some(apps.clone()),
     }
 }
 
 pub fn create_svc_pkg_def_with_array(
-    entries: Vec<(String, Vec<String>)>,
+    services: Vec<(String, Vec<String>)>,
+    apps: Vec<String>,
 ) -> ServicePackageDefinition {
     ServicePackageDefinition {
         services: Some(
-            entries.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
+            services.into_iter().map(|entry| (entry.0, serde_json::json!(entry.1))).collect(),
         ),
+        apps: Some(apps.clone()),
     }
 }
 

@@ -20,7 +20,7 @@ use {
     regex::Regex,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{bootfs::*, env, zbi::*},
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::str,
     std::sync::Arc,
 };
@@ -95,8 +95,9 @@ impl PackageDataCollector {
     }
 
     /// Combine service name->url mappings defined in config-data.
-    fn merge_services(&self, served: &Vec<PackageDefinition>) -> Result<ServiceMapping> {
-        let mut combined = ServiceMapping::new();
+    fn merge_services(&self, served: &Vec<PackageDefinition>) -> Result<SysManagerConfig> {
+        let mut sys_config =
+            SysManagerConfig { services: ServiceMapping::new(), apps: HashSet::<String>::new() };
 
         // Find and add all services as defined in config-data
         for pkg_def in served {
@@ -107,12 +108,20 @@ impl PackageDataCollector {
                             .package_reader
                             .read_service_package_definition(data.to_string())?;
 
+                        if let Some(apps) = service_pkg.apps {
+                            for app in apps {
+                                sys_config.apps.insert(app);
+                            }
+                        }
+
                         if let Some(services) = service_pkg.services {
                             for (service_name, service_url_or_array) in services {
-                                if combined.contains_key(&service_name) {
+                                if sys_config.services.contains_key(&service_name) {
                                     debug!(
                                         "Service mapping collision on {} between {} and {}",
-                                        service_name, combined[&service_name], service_url_or_array
+                                        service_name,
+                                        sys_config.services[&service_name],
+                                        service_url_or_array
                                     );
                                 }
 
@@ -141,7 +150,7 @@ impl PackageDataCollector {
                                     continue;
                                 }
 
-                                combined.insert(service_name, service_url);
+                                sys_config.services.insert(service_name, service_url);
                             }
                         } else {
                             debug!("Expected service with name {} to exist. Optimistically continuing.", name);
@@ -152,7 +161,7 @@ impl PackageDataCollector {
                 break;
             }
         }
-        Ok(combined)
+        Ok(sys_config)
     }
 
     /// Extracts the ZBI from the update package and parses it into the ZBI
@@ -507,12 +516,14 @@ impl DataCollector for PackageDataCollector {
         let sysmgr_services = self.merge_services(&served_packages)?;
 
         info!(
-            "Done collecting. Found {} services, {} served packages.",
-            sysmgr_services.keys().len(),
+            "Done collecting. Found in the sys realm {} services, {} apps in {} served packages.",
+            sysmgr_services.services.keys().len(),
+            sysmgr_services.apps.len(),
             served_packages.len(),
         );
 
-        let response = PackageDataCollector::build_model(served_packages, sysmgr_services.clone())?;
+        let response =
+            PackageDataCollector::build_model(served_packages, sysmgr_services.services.clone())?;
 
         let mut model_comps = vec![];
         for (_, val) in response.components.into_iter() {
@@ -522,7 +533,10 @@ impl DataCollector for PackageDataCollector {
         model.set(Packages::new(response.packages))?;
         model.set(Manifests::new(response.manifests))?;
         model.set(Routes::new(response.routes))?;
-        model.set(Sysmgr::new(sysmgr_services))?;
+        model.set(Sysmgr::new(
+            sysmgr_services.services,
+            sysmgr_services.apps.into_iter().collect(),
+        ))?;
         if let Some(zbi) = response.zbi {
             model.set(zbi)?;
         } else {
@@ -581,7 +595,8 @@ pub mod tests {
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();
-        assert_eq!(0, result.len());
+        assert_eq!(0, result.services.len());
+        assert_eq!(0, result.apps.len());
     }
 
     #[test]
@@ -597,21 +612,28 @@ pub mod tests {
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();
-        assert_eq!(0, result.len());
+        assert_eq!(0, result.services.len());
+        assert_eq!(0, result.apps.len());
     }
 
     #[test]
     fn test_merge_services_takes_the_last_defined_duplicate_config_data_services() {
         let mock_reader = MockPackageReader::new();
         // We will need 2 service package definitions that map the same service to different components
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(vec![(
-            String::from("fuchsia.test.foo.bar"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
-        )]));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(vec![(
-            String::from("fuchsia.test.foo.bar"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
-        )]));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![(
+                String::from("fuchsia.test.foo.bar"),
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+            )],
+            vec![],
+        ));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![(
+                String::from("fuchsia.test.foo.bar"),
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
+            )],
+            vec![],
+        ));
 
         let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
 
@@ -622,26 +644,33 @@ pub mod tests {
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();
-        assert_eq!(1, result.len());
-        assert!(result.contains_key("fuchsia.test.foo.bar"));
+        assert_eq!(1, result.services.len());
+        assert!(result.services.contains_key("fuchsia.test.foo.bar"));
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
-            result.get("fuchsia.test.foo.bar").unwrap()
+            result.services.get("fuchsia.test.foo.bar").unwrap()
         );
+        assert_eq!(0, result.apps.len());
     }
 
     #[test]
     fn test_merge_services_merges_unique_service_names() {
         let mock_reader = MockPackageReader::new();
         // We will need 2 service package definitions that map different services
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(vec![(
-            String::from("fuchsia.test.foo.service1"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
-        )]));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(vec![(
-            String::from("fuchsia.test.foo.service2"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
-        )]));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![(
+                String::from("fuchsia.test.foo.service1"),
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+            )],
+            vec![],
+        ));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![(
+                String::from("fuchsia.test.foo.service2"),
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
+            )],
+            vec![],
+        ));
 
         let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
 
@@ -652,25 +681,132 @@ pub mod tests {
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();
-        assert_eq!(2, result.len());
+        assert_eq!(2, result.services.len());
+        assert_eq!(0, result.apps.len());
+    }
+
+    #[test]
+    fn test_merge_services_with_only_duplicate_apps() {
+        let mock_reader = MockPackageReader::new();
+        // We will need 2 service package definitions that map different services
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![],
+            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+        ));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![],
+            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+        ));
+
+        let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
+
+        let mut meta = HashMap::new();
+        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
+        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        let pkg = create_test_package_with_meta(String::from(CONFIG_DATA_PKG_URL), meta);
+        let served = vec![pkg];
+
+        let result = collector.merge_services(&served).unwrap();
+        assert_eq!(1, result.apps.len());
+        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"));
+        assert_eq!(0, result.services.len());
+    }
+
+    #[test]
+    fn test_merge_services_with_only_apps() {
+        let mock_reader = MockPackageReader::new();
+        // We will need 2 service package definitions that map different services
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![],
+            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+        ));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![],
+            vec![String::from("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx")],
+        ));
+
+        let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
+
+        let mut meta = HashMap::new();
+        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
+        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        let pkg = create_test_package_with_meta(String::from(CONFIG_DATA_PKG_URL), meta);
+        let served = vec![pkg];
+
+        let result = collector.merge_services(&served).unwrap();
+        assert_eq!(2, result.apps.len());
+        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx"));
+        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"));
+        assert_eq!(0, result.services.len());
+    }
+
+    #[test]
+    fn test_merge_services_with_apps_and_services() {
+        let mock_reader = MockPackageReader::new();
+        // We will need 2 service package definitions that map different services
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![(
+                String::from("fuchsia.test.foo.service1"),
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+            )],
+            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+        ));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![(
+                String::from("fuchsia.test.foo.service2"),
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
+            )],
+            vec![String::from("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx")],
+        ));
+
+        let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
+
+        let mut meta = HashMap::new();
+        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
+        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        let pkg = create_test_package_with_meta(String::from(CONFIG_DATA_PKG_URL), meta);
+        let served = vec![pkg];
+
+        let result = collector.merge_services(&served).unwrap();
+        assert_eq!(2, result.apps.len());
+        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx"));
+        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"));
+
+        assert_eq!(2, result.services.len());
+        assert!(result.services.contains_key("fuchsia.test.foo.service2"));
+        assert_eq!(
+            "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
+            result.services.get("fuchsia.test.foo.service2").unwrap()
+        );
+        assert!(result.services.contains_key("fuchsia.test.foo.service1"));
+        assert_eq!(
+            "fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx",
+            result.services.get("fuchsia.test.foo.service1").unwrap()
+        );
     }
 
     #[test]
     fn test_merge_services_reads_first_value_when_given_an_array_for_service_url_mapping() {
         let mock_reader = MockPackageReader::new();
         // Create 2 service map definitions that map different services
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(vec![(
-            String::from("fuchsia.test.foo.service1"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
-        )]));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def_with_array(vec![(
-            String::from("fuchsia.test.foo.service2"),
-            vec![
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
-                String::from("--foo"),
-                String::from("--bar"),
-            ],
-        )]));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def(
+            vec![(
+                String::from("fuchsia.test.foo.service1"),
+                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+            )],
+            vec![],
+        ));
+        mock_reader.append_service_pkg_def(create_svc_pkg_def_with_array(
+            vec![(
+                String::from("fuchsia.test.foo.service2"),
+                vec![
+                    String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
+                    String::from("--foo"),
+                    String::from("--bar"),
+                ],
+            )],
+            vec![],
+        ));
 
         let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
 
@@ -681,10 +817,10 @@ pub mod tests {
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();
-        assert_eq!(2, result.len());
+        assert_eq!(2, result.services.len());
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
-            result.get("fuchsia.test.foo.service2").unwrap()
+            result.services.get("fuchsia.test.foo.service2").unwrap()
         );
     }
 

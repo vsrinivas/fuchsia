@@ -4,9 +4,18 @@
 
 // Structs used in parsing packages
 
-use {crate::core::util::jsons::*, serde::Serialize, std::collections::HashMap};
+use {
+    crate::core::util::jsons::*,
+    serde::Serialize,
+    std::collections::{HashMap, HashSet},
+};
 
 pub type ServiceMapping = HashMap<String, String>;
+
+pub struct SysManagerConfig {
+    pub services: ServiceMapping,
+    pub apps: HashSet<String>,
+}
 
 /// Defines the interior properties of a package that we care about for
 /// constructing the model.

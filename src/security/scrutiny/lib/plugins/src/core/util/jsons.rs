@@ -80,6 +80,8 @@ pub struct Custom {
 pub struct ServicePackageDefinition {
     /// Map of a service name to a provider (ie. component) of that service.
     pub services: Option<HashMap<String, Value>>,
+    /// List of component Urls started on sys realm launch
+    pub apps: Option<Vec<String>>,
     // FIXME: Other json structs are built such that unused fields are present but commented out.
     // This one omits the completely.
 }
