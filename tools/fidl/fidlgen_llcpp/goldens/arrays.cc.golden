@@ -10,7 +10,7 @@ namespace fidl {
 namespace test {
 namespace arrays {
 
-void ::llcpp::fidl::test::arrays::UnionSmallArray::
+void ::llcpp::fidl::test::arrays::wire::UnionSmallArray::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionSmallArray) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionSmallArray, ordinal_) ==
@@ -19,7 +19,7 @@ void ::llcpp::fidl::test::arrays::UnionSmallArray::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::arrays::UnionLargeArray::
+void ::llcpp::fidl::test::arrays::wire::UnionLargeArray::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionLargeArray) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionLargeArray, ordinal_) ==

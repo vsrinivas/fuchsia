@@ -10,14 +10,15 @@ namespace fidl {
 namespace test {
 namespace union_ {
 
-void ::llcpp::fidl::test::union_::Union::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::union_::wire::Union::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Union) == sizeof(fidl_xunion_t));
   static_assert(offsetof(Union, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(Union, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::StrictUnion::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::union_::wire::StrictUnion::
+    SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictUnion, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -25,7 +26,7 @@ void ::llcpp::fidl::test::union_::StrictUnion::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::StrictSimpleXUnion::
+void ::llcpp::fidl::test::union_::wire::StrictSimpleXUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictSimpleXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictSimpleXUnion, ordinal_) ==
@@ -34,14 +35,15 @@ void ::llcpp::fidl::test::union_::StrictSimpleXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::StrictFoo::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::union_::wire::StrictFoo::
+    SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictFoo, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(StrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::StrictBoundedXUnion::
+void ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictBoundedXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictBoundedXUnion, ordinal_) ==
@@ -50,7 +52,7 @@ void ::llcpp::fidl::test::union_::StrictBoundedXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::ReverseOrdinalUnion::
+void ::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ReverseOrdinalUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ReverseOrdinalUnion, ordinal_) ==
@@ -59,7 +61,7 @@ void ::llcpp::fidl::test::union_::ReverseOrdinalUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::StrictPizzaOrPasta::
+void ::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictPizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictPizzaOrPasta, ordinal_) ==
@@ -68,14 +70,16 @@ void ::llcpp::fidl::test::union_::StrictPizzaOrPasta::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::PizzaOrPasta::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::union_::wire::PizzaOrPasta::
+    SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(PizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(PizzaOrPasta, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(PizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta::which() const -> Tag {
+auto ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta::which() const
+    -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kPizza:
@@ -86,7 +90,7 @@ auto ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta::
+void ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexiblePizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FlexiblePizzaOrPasta, ordinal_) ==
@@ -95,7 +99,7 @@ void ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::ExplicitPizzaOrPasta::
+void ::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitPizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitPizzaOrPasta, ordinal_) ==
@@ -103,7 +107,7 @@ void ::llcpp::fidl::test::union_::ExplicitPizzaOrPasta::
   static_assert(offsetof(ExplicitPizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::OlderSimpleUnion::which() const -> Tag {
+auto ::llcpp::fidl::test::union_::wire::OlderSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kI:
@@ -114,7 +118,7 @@ auto ::llcpp::fidl::test::union_::OlderSimpleUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::OlderSimpleUnion::
+void ::llcpp::fidl::test::union_::wire::OlderSimpleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(OlderSimpleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(OlderSimpleUnion, ordinal_) ==
@@ -526,7 +530,7 @@ void TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
 }
 
-auto ::llcpp::fidl::test::union_::NewerSimpleUnion::which() const -> Tag {
+auto ::llcpp::fidl::test::union_::wire::NewerSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kI:
@@ -538,7 +542,7 @@ auto ::llcpp::fidl::test::union_::NewerSimpleUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::NewerSimpleUnion::
+void ::llcpp::fidl::test::union_::wire::NewerSimpleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(NewerSimpleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(NewerSimpleUnion, ordinal_) ==
@@ -546,7 +550,7 @@ void ::llcpp::fidl::test::union_::NewerSimpleUnion::
   static_assert(offsetof(NewerSimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::FlexibleUnion::which() const -> Tag {
+auto ::llcpp::fidl::test::union_::wire::FlexibleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kPrimitive:
@@ -558,7 +562,7 @@ auto ::llcpp::fidl::test::union_::FlexibleUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::FlexibleUnion::
+void ::llcpp::fidl::test::union_::wire::FlexibleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FlexibleUnion, ordinal_) ==
@@ -566,7 +570,7 @@ void ::llcpp::fidl::test::union_::FlexibleUnion::
   static_assert(offsetof(FlexibleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::FlexibleFoo::which() const -> Tag {
+auto ::llcpp::fidl::test::union_::wire::FlexibleFoo::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kS:
@@ -577,7 +581,8 @@ auto ::llcpp::fidl::test::union_::FlexibleFoo::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::FlexibleFoo::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::union_::wire::FlexibleFoo::
+    SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FlexibleFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FlexibleFoo, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -585,7 +590,7 @@ void ::llcpp::fidl::test::union_::FlexibleFoo::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::FieldCollision::
+void ::llcpp::fidl::test::union_::wire::FieldCollision::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FieldCollision) == sizeof(fidl_xunion_t));
   static_assert(offsetof(FieldCollision, ordinal_) ==
@@ -593,7 +598,7 @@ void ::llcpp::fidl::test::union_::FieldCollision::
   static_assert(offsetof(FieldCollision, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::ExplicitXUnion::which() const -> Tag {
+auto ::llcpp::fidl::test::union_::wire::ExplicitXUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kI:
@@ -604,7 +609,7 @@ auto ::llcpp::fidl::test::union_::ExplicitXUnion::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::ExplicitXUnion::
+void ::llcpp::fidl::test::union_::wire::ExplicitXUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitXUnion, ordinal_) ==
@@ -613,7 +618,7 @@ void ::llcpp::fidl::test::union_::ExplicitXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::ExplicitUnion::
+void ::llcpp::fidl::test::union_::wire::ExplicitUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitUnion, ordinal_) ==
@@ -622,7 +627,7 @@ void ::llcpp::fidl::test::union_::ExplicitUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::union_::ExplicitStrictFoo::
+void ::llcpp::fidl::test::union_::wire::ExplicitStrictFoo::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitStrictFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitStrictFoo, ordinal_) ==
@@ -630,7 +635,7 @@ void ::llcpp::fidl::test::union_::ExplicitStrictFoo::
   static_assert(offsetof(ExplicitStrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-auto ::llcpp::fidl::test::union_::ExplicitFoo::which() const -> Tag {
+auto ::llcpp::fidl::test::union_::wire::ExplicitFoo::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kS:
@@ -641,7 +646,8 @@ auto ::llcpp::fidl::test::union_::ExplicitFoo::which() const -> Tag {
   }
 }
 
-void ::llcpp::fidl::test::union_::ExplicitFoo::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::union_::wire::ExplicitFoo::
+    SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExplicitFoo, ordinal_) ==
                 offsetof(fidl_xunion_t, tag));
@@ -649,8 +655,8 @@ void ::llcpp::fidl::test::union_::ExplicitFoo::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
-auto ::llcpp::fidl::test::union_::XUnionContainingEmptyStruct::which() const
-    -> Tag {
+auto ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct::which()
+    const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kEmpty:
@@ -660,7 +666,7 @@ auto ::llcpp::fidl::test::union_::XUnionContainingEmptyStruct::which() const
   }
 }
 
-void ::llcpp::fidl::test::union_::XUnionContainingEmptyStruct::
+void ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(XUnionContainingEmptyStruct) == sizeof(fidl_xunion_t));
   static_assert(offsetof(XUnionContainingEmptyStruct, ordinal_) ==

@@ -43,6 +43,8 @@ namespace fidl {
 namespace test {
 namespace consts {
 
+namespace wire {
+
 enum class EnumType : int32_t {
 
   VALUE = 1u,
@@ -50,6 +52,11 @@ enum class EnumType : int32_t {
   true_ = 2u,
 };
 
+}  // namespace wire
+
+using EnumType = wire::EnumType;
+
+namespace wire {
 // |BitsType| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -102,51 +109,58 @@ class BitsType final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::VALUE =
-    ::llcpp::fidl::test::consts::BitsType(1u);
-constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::true_ =
-    ::llcpp::fidl::test::consts::BitsType(2u);
-constexpr const ::llcpp::fidl::test::consts::BitsType BitsType::kMask =
-    ::llcpp::fidl::test::consts::BitsType(3u);
+constexpr const ::llcpp::fidl::test::consts::wire::BitsType BitsType::VALUE =
+    ::llcpp::fidl::test::consts::wire::BitsType(1u);
+constexpr const ::llcpp::fidl::test::consts::wire::BitsType BitsType::true_ =
+    ::llcpp::fidl::test::consts::wire::BitsType(2u);
+constexpr const ::llcpp::fidl::test::consts::wire::BitsType BitsType::kMask =
+    ::llcpp::fidl::test::consts::wire::BitsType(3u);
 
-constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator~()
-    const {
-  return ::llcpp::fidl::test::consts::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::wire::BitsType
+BitsType::operator~() const {
+  return ::llcpp::fidl::test::consts::wire::BitsType(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator|(
-    const ::llcpp::fidl::test::consts::BitsType& other) const {
-  return ::llcpp::fidl::test::consts::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::wire::BitsType
+BitsType::operator|(
+    const ::llcpp::fidl::test::consts::wire::BitsType& other) const {
+  return ::llcpp::fidl::test::consts::wire::BitsType(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator&(
-    const ::llcpp::fidl::test::consts::BitsType& other) const {
-  return ::llcpp::fidl::test::consts::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::wire::BitsType
+BitsType::operator&(
+    const ::llcpp::fidl::test::consts::wire::BitsType& other) const {
+  return ::llcpp::fidl::test::consts::wire::BitsType(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::consts::BitsType BitsType::operator^(
-    const ::llcpp::fidl::test::consts::BitsType& other) const {
-  return ::llcpp::fidl::test::consts::BitsType(
+constexpr inline ::llcpp::fidl::test::consts::wire::BitsType
+BitsType::operator^(
+    const ::llcpp::fidl::test::consts::wire::BitsType& other) const {
+  return ::llcpp::fidl::test::consts::wire::BitsType(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsType::operator|=(
-    const ::llcpp::fidl::test::consts::BitsType& other) {
+    const ::llcpp::fidl::test::consts::wire::BitsType& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void BitsType::operator&=(
-    const ::llcpp::fidl::test::consts::BitsType& other) {
+    const ::llcpp::fidl::test::consts::wire::BitsType& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void BitsType::operator^=(
-    const ::llcpp::fidl::test::consts::BitsType& other) {
+    const ::llcpp::fidl::test::consts::wire::BitsType& other) {
   this->value_ ^= other.value_;
 }
+
+}  // namespace wire
+
+using BitsType = wire::BitsType;
 
 extern const char USERNAME[];
 
@@ -192,14 +206,15 @@ constexpr uint16_t ANSWER = 42u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::consts::EnumType>
+struct IsFidlType<::llcpp::fidl::test::consts::wire::EnumType>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::consts::BitsType>
+struct IsFidlType<::llcpp::fidl::test::consts::wire::BitsType>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::consts::BitsType>);
-static_assert(sizeof(::llcpp::fidl::test::consts::BitsType) ==
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::consts::wire::BitsType>);
+static_assert(sizeof(::llcpp::fidl::test::consts::wire::BitsType) ==
               sizeof(uint32_t));
 
 }  // namespace fidl

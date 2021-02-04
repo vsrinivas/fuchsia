@@ -9,8 +9,8 @@ namespace llcpp {
 namespace fidl {
 namespace test {
 namespace placementofattributes {
-auto ::llcpp::fidl::test::placementofattributes::ExampleXUnion::which() const
-    -> Tag {
+auto ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion::which()
+    const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
     case Ordinal::kVariant:
@@ -20,7 +20,7 @@ auto ::llcpp::fidl::test::placementofattributes::ExampleXUnion::which() const
   }
 }
 
-void ::llcpp::fidl::test::placementofattributes::ExampleXUnion::
+void ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExampleXUnion, ordinal_) ==
@@ -29,7 +29,7 @@ void ::llcpp::fidl::test::placementofattributes::ExampleXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::placementofattributes::ExampleUnion::
+void ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ExampleUnion, ordinal_) ==

@@ -43,8 +43,12 @@ namespace fidl {
 namespace test {
 namespace bindingsdenylist {
 
+namespace wire {
 class OnlyLlcpp;
+}  // namespace wire
+using OnlyLlcpp = wire::OnlyLlcpp;
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_bindingsdenylist_OnlyLlcppTable;
 
 class OnlyLlcpp {
@@ -148,6 +152,8 @@ class OnlyLlcpp {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
 constexpr uint32_t AllBindings = 0u;
 
 }  // namespace bindingsdenylist
@@ -158,13 +164,13 @@ constexpr uint32_t AllBindings = 0u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::bindingsdenylist::OnlyLlcpp>
+struct IsFidlType<::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::bindingsdenylist::OnlyLlcpp>
+struct IsUnion<::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::bindingsdenylist::OnlyLlcpp>);
+              ::llcpp::fidl::test::bindingsdenylist::wire::OnlyLlcpp>);
 
 }  // namespace fidl
 

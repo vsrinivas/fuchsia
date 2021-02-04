@@ -44,10 +44,17 @@ namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
 
+namespace wire {
 class StrictFoo;
+}  // namespace wire
+using StrictFoo = wire::StrictFoo;
+namespace wire {
 class FlexibleFoo;
+}  // namespace wire
+using FlexibleFoo = wire::FlexibleFoo;
 class Protocol;
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_StrictFooTable;
 
 class StrictFoo {
@@ -209,6 +216,9 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_FlexibleFooTable;
 
 class FlexibleFoo {
@@ -367,6 +377,8 @@ class FlexibleFoo {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
+
+}  // namespace wire
 
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
@@ -1483,22 +1495,23 @@ class Protocol final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::StrictFoo>
+struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::requestflexibleenvelope::StrictFoo>
+struct IsUnion<::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo>);
+              ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo>
+struct IsFidlType<
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo>
+struct IsUnion<::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo>);
+              ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::requestflexibleenvelope::Protocol::

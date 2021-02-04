@@ -44,33 +44,109 @@ namespace fidl {
 namespace test {
 namespace union_ {
 
+namespace wire {
 class Union;
+}  // namespace wire
+using Union = wire::Union;
+namespace wire {
 struct StructWithNullableXUnion;
+}  // namespace wire
+using StructWithNullableXUnion = wire::StructWithNullableXUnion;  // struct
+namespace wire {
 class StrictUnion;
+}  // namespace wire
+using StrictUnion = wire::StrictUnion;
+namespace wire {
 class StrictSimpleXUnion;
+}  // namespace wire
+using StrictSimpleXUnion = wire::StrictSimpleXUnion;
+namespace wire {
 class StrictFoo;
+}  // namespace wire
+using StrictFoo = wire::StrictFoo;
+namespace wire {
 class StrictBoundedXUnion;
+}  // namespace wire
+using StrictBoundedXUnion = wire::StrictBoundedXUnion;
+namespace wire {
 class ReverseOrdinalUnion;
+}  // namespace wire
+using ReverseOrdinalUnion = wire::ReverseOrdinalUnion;
+namespace wire {
 struct Pizza;
+}  // namespace wire
+using Pizza = wire::Pizza;  // struct
+namespace wire {
 struct Pasta;
+}  // namespace wire
+using Pasta = wire::Pasta;  // struct
+namespace wire {
 class StrictPizzaOrPasta;
+}  // namespace wire
+using StrictPizzaOrPasta = wire::StrictPizzaOrPasta;
+namespace wire {
 class PizzaOrPasta;
+}  // namespace wire
+using PizzaOrPasta = wire::PizzaOrPasta;
+namespace wire {
 class FlexiblePizzaOrPasta;
+}  // namespace wire
+using FlexiblePizzaOrPasta = wire::FlexiblePizzaOrPasta;
+namespace wire {
 class ExplicitPizzaOrPasta;
+}  // namespace wire
+using ExplicitPizzaOrPasta = wire::ExplicitPizzaOrPasta;
+namespace wire {
 class OlderSimpleUnion;
+}  // namespace wire
+using OlderSimpleUnion = wire::OlderSimpleUnion;
 class TestProtocol;
+namespace wire {
 struct NullableUnionStruct;
+}  // namespace wire
+using NullableUnionStruct = wire::NullableUnionStruct;  // struct
+namespace wire {
 class NewerSimpleUnion;
+}  // namespace wire
+using NewerSimpleUnion = wire::NewerSimpleUnion;
+namespace wire {
 class FlexibleUnion;
+}  // namespace wire
+using FlexibleUnion = wire::FlexibleUnion;
+namespace wire {
 class FlexibleFoo;
+}  // namespace wire
+using FlexibleFoo = wire::FlexibleFoo;
+namespace wire {
 class FieldCollision;
+}  // namespace wire
+using FieldCollision = wire::FieldCollision;
+namespace wire {
 class ExplicitXUnion;
+}  // namespace wire
+using ExplicitXUnion = wire::ExplicitXUnion;
+namespace wire {
 class ExplicitUnion;
+}  // namespace wire
+using ExplicitUnion = wire::ExplicitUnion;
+namespace wire {
 class ExplicitStrictFoo;
+}  // namespace wire
+using ExplicitStrictFoo = wire::ExplicitStrictFoo;
+namespace wire {
 class ExplicitFoo;
+}  // namespace wire
+using ExplicitFoo = wire::ExplicitFoo;
+namespace wire {
 struct Empty;
+}  // namespace wire
+using Empty = wire::Empty;  // struct
+namespace wire {
 class XUnionContainingEmptyStruct;
+}  // namespace wire
+using XUnionContainingEmptyStruct = wire::XUnionContainingEmptyStruct;
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_UnionTable;
 
 class Union {
@@ -315,6 +391,9 @@ class Union {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictUnionTable;
 
 class StrictUnion {
@@ -561,6 +640,9 @@ class StrictUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictSimpleXUnionTable;
 
 class StrictSimpleXUnion {
@@ -784,6 +866,9 @@ class StrictSimpleXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictFooTable;
 
 class StrictFoo {
@@ -944,6 +1029,9 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictBoundedXUnionTable;
 
 class StrictBoundedXUnion {
@@ -1051,6 +1139,9 @@ class StrictBoundedXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ReverseOrdinalUnionTable;
 
 class ReverseOrdinalUnion {
@@ -1217,6 +1308,9 @@ class ReverseOrdinalUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StrictPizzaOrPastaTable;
 
 class StrictPizzaOrPasta {
@@ -1393,6 +1487,9 @@ class StrictPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_PizzaOrPastaTable;
 
 class PizzaOrPasta {
@@ -1566,6 +1663,9 @@ class PizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FlexiblePizzaOrPastaTable;
 
 class FlexiblePizzaOrPasta {
@@ -1740,6 +1840,9 @@ class FlexiblePizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitPizzaOrPastaTable;
 
 class ExplicitPizzaOrPasta {
@@ -1916,6 +2019,9 @@ class ExplicitPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_OlderSimpleUnionTable;
 
 class OlderSimpleUnion {
@@ -2074,6 +2180,9 @@ class OlderSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_NewerSimpleUnionTable;
 
 class NewerSimpleUnion {
@@ -2300,6 +2409,9 @@ class NewerSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FlexibleUnionTable;
 
 class FlexibleUnion {
@@ -2545,6 +2657,9 @@ class FlexibleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FlexibleFooTable;
 
 class FlexibleFoo {
@@ -2703,6 +2818,9 @@ class FlexibleFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_FieldCollisionTable;
 
 class FieldCollision {
@@ -2813,6 +2931,9 @@ class FieldCollision {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitXUnionTable;
 
 class ExplicitXUnion {
@@ -2969,6 +3090,9 @@ class ExplicitXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitUnionTable;
 
 class ExplicitUnion {
@@ -3141,6 +3265,9 @@ class ExplicitUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitStrictFooTable;
 
 class ExplicitStrictFoo {
@@ -3305,6 +3432,9 @@ class ExplicitStrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_ExplicitFooTable;
 
 class ExplicitFoo {
@@ -3463,6 +3593,9 @@ class ExplicitFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_XUnionContainingEmptyStructTable;
 
 class XUnionContainingEmptyStruct {
@@ -3573,6 +3706,9 @@ class XUnionContainingEmptyStruct {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
@@ -3686,7 +3822,9 @@ struct StructWithNullableXUnion {
     }
   };
 };
+}  // namespace wire
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_PizzaTable;
 
 struct Pizza {
@@ -3799,7 +3937,9 @@ struct Pizza {
     }
   };
 };
+}  // namespace wire
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_PastaTable;
 
 struct Pasta {
@@ -3910,6 +4050,7 @@ struct Pasta {
     }
   };
 };
+}  // namespace wire
 
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
@@ -5050,6 +5191,7 @@ class TestProtocol final {
   class WeakEventSender;
 };
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_NullableUnionStructTable;
 
 struct NullableUnionStruct {
@@ -5165,7 +5307,9 @@ struct NullableUnionStruct {
     }
   };
 };
+}  // namespace wire
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_union_EmptyTable;
 
 struct Empty {
@@ -5276,6 +5420,7 @@ struct Empty {
     }
   };
 };
+}  // namespace wire
 
 }  // namespace union_
 }  // namespace test
@@ -5285,135 +5430,143 @@ struct Empty {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::Union> : public std::true_type {
-};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::Union> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Union>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::StructWithNullableXUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::Union>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::union_::StructWithNullableXUnion>
+struct IsUnion<::llcpp::fidl::test::union_::wire::Union>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Union>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::StructWithNullableXUnion>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::union_::wire::StructWithNullableXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::StructWithNullableXUnion>);
-static_assert(offsetof(::llcpp::fidl::test::union_::StructWithNullableXUnion,
-                       x1) == 0);
+              ::llcpp::fidl::test::union_::wire::StructWithNullableXUnion>);
 static_assert(
-    sizeof(::llcpp::fidl::test::union_::StructWithNullableXUnion) ==
-    ::llcpp::fidl::test::union_::StructWithNullableXUnion::PrimarySize);
+    offsetof(::llcpp::fidl::test::union_::wire::StructWithNullableXUnion, x1) ==
+    0);
+static_assert(
+    sizeof(::llcpp::fidl::test::union_::wire::StructWithNullableXUnion) ==
+    ::llcpp::fidl::test::union_::wire::StructWithNullableXUnion::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::StrictUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::StrictUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::StrictSimpleXUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::StrictSimpleXUnion>
+struct IsUnion<::llcpp::fidl::test::union_::wire::StrictUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictSimpleXUnion>);
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::StrictUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::StrictFoo>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictSimpleXUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::StrictFoo> : public std::true_type {
-};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::StrictBoundedXUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::StrictBoundedXUnion>
+struct IsUnion<::llcpp::fidl::test::union_::wire::StrictSimpleXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::StrictBoundedXUnion>);
+              ::llcpp::fidl::test::union_::wire::StrictSimpleXUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::ReverseOrdinalUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::ReverseOrdinalUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::ReverseOrdinalUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::Pizza> : public std::true_type {
-};
-template <>
-struct IsStruct<::llcpp::fidl::test::union_::Pizza> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Pizza>);
-static_assert(offsetof(::llcpp::fidl::test::union_::Pizza, toppings) == 0);
-static_assert(sizeof(::llcpp::fidl::test::union_::Pizza) ==
-              ::llcpp::fidl::test::union_::Pizza::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::Pasta> : public std::true_type {
-};
-template <>
-struct IsStruct<::llcpp::fidl::test::union_::Pasta> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Pasta>);
-static_assert(offsetof(::llcpp::fidl::test::union_::Pasta, sauce) == 0);
-static_assert(sizeof(::llcpp::fidl::test::union_::Pasta) ==
-              ::llcpp::fidl::test::union_::Pasta::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::StrictPizzaOrPasta>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::StrictPizzaOrPasta>
+struct IsUnion<::llcpp::fidl::test::union_::wire::StrictFoo>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::StrictPizzaOrPasta>);
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::StrictFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::PizzaOrPasta>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictBoundedXUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::PizzaOrPasta>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::PizzaOrPasta>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::FlexiblePizzaOrPasta>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::FlexiblePizzaOrPasta>
+struct IsUnion<::llcpp::fidl::test::union_::wire::StrictBoundedXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta>);
+              ::llcpp::fidl::test::union_::wire::StrictBoundedXUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::ExplicitPizzaOrPasta>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::ExplicitPizzaOrPasta>
+struct IsUnion<::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::ExplicitPizzaOrPasta>);
+              ::llcpp::fidl::test::union_::wire::ReverseOrdinalUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::OlderSimpleUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::Pizza>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::OlderSimpleUnion>
+struct IsStruct<::llcpp::fidl::test::union_::wire::Pizza>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::OlderSimpleUnion>);
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Pizza>);
+static_assert(offsetof(::llcpp::fidl::test::union_::wire::Pizza, toppings) ==
+              0);
+static_assert(sizeof(::llcpp::fidl::test::union_::wire::Pizza) ==
+              ::llcpp::fidl::test::union_::wire::Pizza::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::Pasta>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::union_::wire::Pasta>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Pasta>);
+static_assert(offsetof(::llcpp::fidl::test::union_::wire::Pasta, sauce) == 0);
+static_assert(sizeof(::llcpp::fidl::test::union_::wire::Pasta) ==
+              ::llcpp::fidl::test::union_::wire::Pasta::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::StrictPizzaOrPasta>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::PizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::PizzaOrPasta>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::PizzaOrPasta>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::FlexiblePizzaOrPasta>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::ExplicitPizzaOrPasta>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::OlderSimpleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::OlderSimpleUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::OlderSimpleUnion>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::union_::TestProtocol::
@@ -5479,108 +5632,113 @@ static_assert(
              xu) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::NullableUnionStruct>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::NullableUnionStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::union_::NullableUnionStruct>
+struct IsStruct<::llcpp::fidl::test::union_::wire::NullableUnionStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::NullableUnionStruct>);
-static_assert(offsetof(::llcpp::fidl::test::union_::NullableUnionStruct,
+              ::llcpp::fidl::test::union_::wire::NullableUnionStruct>);
+static_assert(offsetof(::llcpp::fidl::test::union_::wire::NullableUnionStruct,
                        the_union) == 0);
-static_assert(sizeof(::llcpp::fidl::test::union_::NullableUnionStruct) ==
-              ::llcpp::fidl::test::union_::NullableUnionStruct::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::NewerSimpleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::NewerSimpleUnion>
-    : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::NewerSimpleUnion>);
+    sizeof(::llcpp::fidl::test::union_::wire::NullableUnionStruct) ==
+    ::llcpp::fidl::test::union_::wire::NullableUnionStruct::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::union_::FlexibleUnion>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::NewerSimpleUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::union_::FlexibleUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::FlexibleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::FlexibleFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::FlexibleFoo>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::FlexibleFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::FieldCollision>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::FieldCollision>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::FieldCollision>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::ExplicitXUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::ExplicitXUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitXUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::ExplicitUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::ExplicitUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::ExplicitStrictFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::ExplicitStrictFoo>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitStrictFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::ExplicitFoo>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::ExplicitFoo>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::union_::ExplicitFoo>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::Empty> : public std::true_type {
-};
-template <>
-struct IsStruct<::llcpp::fidl::test::union_::Empty> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::union_::Empty>);
-static_assert(offsetof(::llcpp::fidl::test::union_::Empty, __reserved) == 0);
-static_assert(sizeof(::llcpp::fidl::test::union_::Empty) ==
-              ::llcpp::fidl::test::union_::Empty::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::union_::XUnionContainingEmptyStruct>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::union_::XUnionContainingEmptyStruct>
+struct IsUnion<::llcpp::fidl::test::union_::wire::NewerSimpleUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::union_::XUnionContainingEmptyStruct>);
+              ::llcpp::fidl::test::union_::wire::NewerSimpleUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::FlexibleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::FlexibleUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::FlexibleUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::FlexibleFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::FlexibleFoo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::FlexibleFoo>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::FieldCollision>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::FieldCollision>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::FieldCollision>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitXUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitXUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::ExplicitXUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::ExplicitUnion>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitStrictFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitStrictFoo>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::ExplicitStrictFoo>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::ExplicitFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::ExplicitFoo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::ExplicitFoo>);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::union_::wire::Empty>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::union_::wire::Empty>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::union_::wire::Empty>);
+static_assert(offsetof(::llcpp::fidl::test::union_::wire::Empty, __reserved) ==
+              0);
+static_assert(sizeof(::llcpp::fidl::test::union_::wire::Empty) ==
+              ::llcpp::fidl::test::union_::wire::Empty::PrimarySize);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::union_::wire::XUnionContainingEmptyStruct>);
 
 }  // namespace fidl
 

@@ -11,7 +11,7 @@ namespace test {
 namespace typealiases {
 
 #ifdef __Fuchsia__
-void ExampleOfUseOfAliases::_CloseHandles() {
+void wire::ExampleOfUseOfAliases::_CloseHandles() {
   field_of_channel.reset();
   field_of_client_end.reset();
   field_of_nullable_client_end.reset();

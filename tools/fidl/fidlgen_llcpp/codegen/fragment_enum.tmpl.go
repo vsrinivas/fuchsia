@@ -6,6 +6,7 @@ package codegen
 
 const fragmentEnumTmpl = `
 {{- define "EnumForwardDeclaration" }}
+namespace wire {
 {{ if .IsStrict }}
 {{range .DocComments}}
 //{{ . }}
@@ -58,16 +59,20 @@ private:
 };
 
 {{- range $member := .Members }}
-constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
+constexpr const {{ $.Namespace }}::wire::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::wire::{{ $.Name }}({{ $member.Value }});
 {{- end }}
 {{ end }}
+
+}  // namespace wire
+
+using {{ .Name }} = wire::{{ .Name }};
 
 {{ end }}
 
 {{- define "EnumTraits" }}
 
 template <>
-struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+struct IsFidlType<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
 
 {{- end }}
 `

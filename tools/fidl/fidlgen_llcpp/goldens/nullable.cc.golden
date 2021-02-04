@@ -11,15 +11,15 @@ namespace test {
 namespace nullable {
 
 #ifdef __Fuchsia__
-void StructWithNullableRequest::_CloseHandles() { val.reset(); }
+void wire::StructWithNullableRequest::_CloseHandles() { val.reset(); }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void StructWithNullableProtocol::_CloseHandles() { val.reset(); }
+void wire::StructWithNullableProtocol::_CloseHandles() { val.reset(); }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void StructWithNullableHandle::_CloseHandles() { val.reset(); }
+void wire::StructWithNullableHandle::_CloseHandles() { val.reset(); }
 #endif  // __Fuchsia__
 
 namespace {
@@ -204,7 +204,7 @@ void SimpleProtocol::AddResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kSimpleProtocol_Add_Ordinal);
 }
 
-void ::llcpp::fidl::test::nullable::SimpleUnion::
+void ::llcpp::fidl::test::nullable::wire::SimpleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(SimpleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(SimpleUnion, ordinal_) ==

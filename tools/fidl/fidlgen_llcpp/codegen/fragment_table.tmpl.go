@@ -6,7 +6,9 @@ package codegen
 
 const fragmentTableTmpl = `
 {{- define "TableForwardDeclaration" }}
+namespace wire {
 class {{ .Name }};
+}  // namespace wire
 {{- end }}
 
 {{- define "TableMemberCloseHandles" }}
@@ -23,6 +25,9 @@ class {{ .Name }};
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
+
+namespace wire {
+
 extern "C" const fidl_type_t {{ .TableType }};
 {{ range .DocComments }}
 //{{ . }}
@@ -429,10 +434,13 @@ private:
   {{ .Name }}::Frame frame_;
   {{- end }}
 };
+} // namespace wire
+
+using {{ .Name }} = wire::{{ .Name }};
+
 {{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{ end }}
-
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
@@ -440,7 +448,7 @@ private:
 {{- define "TableDefinition" }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
-void {{ .Name }}::_CloseHandles() {
+void wire::{{ .Name }}::_CloseHandles() {
   {{- range .Members }}
     {{- template "TableMemberCloseHandles" . }}
   {{- end }}
@@ -456,12 +464,12 @@ void {{ .Name }}::_CloseHandles() {
 #ifdef __Fuchsia__
 {{- end }}
 template <>
-struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+struct IsFidlType<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
 template <>
-struct IsTable<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+struct IsTable<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
 template <>
-struct IsTableBuilder<{{ .Namespace }}::{{ .Name }}::Builder> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
+struct IsTableBuilder<{{ .Namespace }}::wire::{{ .Name }}::Builder> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ .Namespace }}::wire::{{ .Name }}>);
 {{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}

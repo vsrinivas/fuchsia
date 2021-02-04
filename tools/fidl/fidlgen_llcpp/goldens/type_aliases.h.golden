@@ -45,6 +45,8 @@ namespace fidl {
 namespace test {
 namespace typealiases {
 
+namespace wire {
+
 enum class obj_type : uint32_t {
 
   NONE = 0u,
@@ -52,9 +54,17 @@ enum class obj_type : uint32_t {
   CHANNEL = 4u,
 };
 
+}  // namespace wire
+
+using obj_type = wire::obj_type;
+
+namespace wire {
 struct ExampleOfUseOfAliases;
+}  // namespace wire
+using ExampleOfUseOfAliases = wire::ExampleOfUseOfAliases;  // struct
 
 #ifdef __Fuchsia__
+namespace wire {
 extern "C" const fidl_type_t fidl_test_typealiases_ExampleOfUseOfAliasesTable;
 
 struct ExampleOfUseOfAliases {
@@ -198,6 +208,7 @@ struct ExampleOfUseOfAliases {
     }
   };
 };
+}  // namespace wire
 #endif  // __Fuchsia__
 
 }  // namespace typealiases
@@ -208,37 +219,45 @@ struct ExampleOfUseOfAliases {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::typealiases::obj_type>
+struct IsFidlType<::llcpp::fidl::test::typealiases::wire::obj_type>
     : public std::true_type {};
 
 #ifdef __Fuchsia__
 template <>
-struct IsFidlType<::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases>
+struct IsFidlType<::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases>
+struct IsStruct<::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases>);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_u32) == 0);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_of_strings) == 8);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_of_strings_at_most_nine) == 24);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_of_strings_at_most_5) == 40);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_of_ref_me_at_most_5) == 56);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_channel) == 72);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_client_end) == 76);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_nullable_client_end) == 80);
+              ::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases>);
 static_assert(
-    sizeof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases) ==
-    ::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases::PrimarySize);
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_u32) == 0);
+static_assert(
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_vec_of_strings) == 8);
+static_assert(
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_vec_of_strings_at_most_nine) == 24);
+static_assert(
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_vec_of_strings_at_most_5) == 40);
+static_assert(
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_vec_of_ref_me_at_most_5) == 56);
+static_assert(
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_channel) == 72);
+static_assert(
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_client_end) == 76);
+static_assert(
+    offsetof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases,
+             field_of_nullable_client_end) == 80);
+static_assert(
+    sizeof(::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases) ==
+    ::llcpp::fidl::test::typealiases::wire::ExampleOfUseOfAliases::PrimarySize);
 #endif  // __Fuchsia__
 
 }  // namespace fidl

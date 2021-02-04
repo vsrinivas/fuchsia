@@ -10,7 +10,7 @@ namespace fidl {
 namespace test {
 namespace error {
 
-void ::llcpp::fidl::test::error::Example_foo_Result::
+void ::llcpp::fidl::test::error::wire::Example_foo_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Example_foo_Result) == sizeof(fidl_xunion_t));
   static_assert(offsetof(Example_foo_Result, ordinal_) ==

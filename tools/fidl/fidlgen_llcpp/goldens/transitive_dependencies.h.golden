@@ -44,8 +44,12 @@ namespace fidl {
 namespace test {
 namespace transitivedependencies {
 
+namespace wire {
 struct Baz;
+}  // namespace wire
+using Baz = wire::Baz;  // struct
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
 
 struct Baz {
@@ -157,6 +161,7 @@ struct Baz {
     }
   };
 };
+}  // namespace wire
 
 }  // namespace transitivedependencies
 }  // namespace test
@@ -166,17 +171,18 @@ struct Baz {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::transitivedependencies::Baz>
+struct IsFidlType<::llcpp::fidl::test::transitivedependencies::wire::Baz>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::transitivedependencies::Baz>
+struct IsStruct<::llcpp::fidl::test::transitivedependencies::wire::Baz>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::transitivedependencies::Baz>);
-static_assert(offsetof(::llcpp::fidl::test::transitivedependencies::Baz, g) ==
-              0);
-static_assert(sizeof(::llcpp::fidl::test::transitivedependencies::Baz) ==
-              ::llcpp::fidl::test::transitivedependencies::Baz::PrimarySize);
+              ::llcpp::fidl::test::transitivedependencies::wire::Baz>);
+static_assert(offsetof(::llcpp::fidl::test::transitivedependencies::wire::Baz,
+                       g) == 0);
+static_assert(
+    sizeof(::llcpp::fidl::test::transitivedependencies::wire::Baz) ==
+    ::llcpp::fidl::test::transitivedependencies::wire::Baz::PrimarySize);
 
 }  // namespace fidl
 

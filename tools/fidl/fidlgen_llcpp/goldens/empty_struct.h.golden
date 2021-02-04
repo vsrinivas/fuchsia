@@ -44,9 +44,13 @@ namespace fidl {
 namespace test {
 namespace emptystruct {
 
+namespace wire {
 struct Empty;
+}  // namespace wire
+using Empty = wire::Empty;  // struct
 class EmptyProtocol;
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_emptystruct_EmptyTable;
 
 struct Empty {
@@ -157,6 +161,7 @@ struct Empty {
     }
   };
 };
+}  // namespace wire
 
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendRequestTable;
@@ -1124,17 +1129,17 @@ class EmptyProtocol final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::emptystruct::Empty>
+struct IsFidlType<::llcpp::fidl::test::emptystruct::wire::Empty>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::emptystruct::Empty>
+struct IsStruct<::llcpp::fidl::test::emptystruct::wire::Empty>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::emptystruct::Empty>);
-static_assert(offsetof(::llcpp::fidl::test::emptystruct::Empty, __reserved) ==
-              0);
-static_assert(sizeof(::llcpp::fidl::test::emptystruct::Empty) ==
-              ::llcpp::fidl::test::emptystruct::Empty::PrimarySize);
+    std::is_standard_layout_v<::llcpp::fidl::test::emptystruct::wire::Empty>);
+static_assert(offsetof(::llcpp::fidl::test::emptystruct::wire::Empty,
+                       __reserved) == 0);
+static_assert(sizeof(::llcpp::fidl::test::emptystruct::wire::Empty) ==
+              ::llcpp::fidl::test::emptystruct::wire::Empty::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::emptystruct::EmptyProtocol::SendRequest>

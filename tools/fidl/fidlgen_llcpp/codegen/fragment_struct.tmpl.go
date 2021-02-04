@@ -6,7 +6,10 @@ package codegen
 
 const fragmentStructTmpl = `
 {{- define "StructForwardDeclaration" }}
+namespace wire {
 struct {{ .Name }};
+}  // namespace wire
+using {{ .Name }} = wire::{{ .Name }}; // struct
 {{- end }}
 
 {{- define "StructMemberCloseHandles" }}
@@ -29,6 +32,7 @@ struct {{ .Name }};
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
+namespace wire {
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
 //{{ . }}
@@ -177,6 +181,7 @@ struct {{ .Name }} {
     }
   };
 };
+}  // namespace wire
 {{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}
@@ -187,7 +192,7 @@ struct {{ .Name }} {
 {{- define "StructDefinition" }}
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
-void {{ .Name }}::_CloseHandles() {
+void wire::{{ .Name }}::_CloseHandles() {
   {{- range .Members }}
     {{- template "StructMemberCloseHandles" . }}
   {{- end }}
@@ -203,15 +208,15 @@ void {{ .Name }}::_CloseHandles() {
 #ifdef __Fuchsia__
 {{- end }}
 template <>
-struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+struct IsFidlType<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
 template <>
-struct IsStruct<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
+struct IsStruct<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ .Namespace }}::wire::{{ .Name }}>);
 {{- $struct := . }}
 {{- range .Members }}
-static_assert(offsetof({{ $struct.Namespace }}::{{ $struct.Name }}, {{ .Name }}) == {{ .Offset }});
+static_assert(offsetof({{ $struct.Namespace }}::wire::{{ $struct.Name }}, {{ .Name }}) == {{ .Offset }});
 {{- end }}
-static_assert(sizeof({{ .Namespace }}::{{ .Name }}) == {{ .Namespace }}::{{ .Name }}::PrimarySize);
+static_assert(sizeof({{ .Namespace }}::wire::{{ .Name }}) == {{ .Namespace }}::wire::{{ .Name }}::PrimarySize);
 {{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}

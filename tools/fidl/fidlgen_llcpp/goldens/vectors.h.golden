@@ -43,8 +43,12 @@ namespace fidl {
 namespace test {
 namespace vectors {
 
+namespace wire {
 struct ExampleUseOfVectors;
+}  // namespace wire
+using ExampleUseOfVectors = wire::ExampleUseOfVectors;  // struct
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;
 
 struct ExampleUseOfVectors {
@@ -162,6 +166,7 @@ struct ExampleUseOfVectors {
     }
   };
 };
+}  // namespace wire
 
 }  // namespace vectors
 }  // namespace test
@@ -171,19 +176,20 @@ struct ExampleUseOfVectors {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::vectors::ExampleUseOfVectors>
+struct IsFidlType<::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::vectors::ExampleUseOfVectors>
+struct IsStruct<::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::vectors::ExampleUseOfVectors>);
-static_assert(offsetof(::llcpp::fidl::test::vectors::ExampleUseOfVectors,
+              ::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors>);
+static_assert(offsetof(::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors,
                        vector_of_uint8) == 0);
-static_assert(offsetof(::llcpp::fidl::test::vectors::ExampleUseOfVectors,
+static_assert(offsetof(::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors,
                        vector_of_vector_of_bool) == 16);
-static_assert(sizeof(::llcpp::fidl::test::vectors::ExampleUseOfVectors) ==
-              ::llcpp::fidl::test::vectors::ExampleUseOfVectors::PrimarySize);
+static_assert(
+    sizeof(::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors) ==
+    ::llcpp::fidl::test::vectors::wire::ExampleUseOfVectors::PrimarySize);
 
 }  // namespace fidl
 

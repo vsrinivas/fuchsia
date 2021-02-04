@@ -44,10 +44,17 @@ namespace fidl {
 namespace test {
 namespace error {
 
+namespace wire {
 struct Example_foo_Response;
+}  // namespace wire
+using Example_foo_Response = wire::Example_foo_Response;  // struct
+namespace wire {
 class Example_foo_Result;
+}  // namespace wire
+using Example_foo_Result = wire::Example_foo_Result;
 class Example;
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
 
 class Example_foo_Result {
@@ -225,6 +232,9 @@ class Example_foo_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
 
 struct Example_foo_Response {
@@ -338,6 +348,7 @@ struct Example_foo_Response {
     }
   };
 };
+}  // namespace wire
 
 extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
@@ -897,26 +908,27 @@ class Example final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::error::Example_foo_Response>
+struct IsFidlType<::llcpp::fidl::test::error::wire::Example_foo_Response>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::error::Example_foo_Response>
+struct IsStruct<::llcpp::fidl::test::error::wire::Example_foo_Response>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::error::Example_foo_Response>);
-static_assert(offsetof(::llcpp::fidl::test::error::Example_foo_Response, y) ==
-              0);
-static_assert(sizeof(::llcpp::fidl::test::error::Example_foo_Response) ==
-              ::llcpp::fidl::test::error::Example_foo_Response::PrimarySize);
+              ::llcpp::fidl::test::error::wire::Example_foo_Response>);
+static_assert(offsetof(::llcpp::fidl::test::error::wire::Example_foo_Response,
+                       y) == 0);
+static_assert(
+    sizeof(::llcpp::fidl::test::error::wire::Example_foo_Response) ==
+    ::llcpp::fidl::test::error::wire::Example_foo_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::error::Example_foo_Result>
+struct IsFidlType<::llcpp::fidl::test::error::wire::Example_foo_Result>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::error::Example_foo_Result>
+struct IsUnion<::llcpp::fidl::test::error::wire::Example_foo_Result>
     : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::error::Example_foo_Result>);
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::error::wire::Example_foo_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::error::Example::fooRequest>

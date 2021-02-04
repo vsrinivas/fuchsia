@@ -6,6 +6,7 @@ package codegen
 
 const fragmentBitsTmpl = `
 {{- define "BitsForwardDeclaration" }}
+namespace wire {
 {{- range .DocComments }}
 //{{ . }}
 {{- end }}
@@ -71,50 +72,54 @@ private:
 };
 
 {{- range $member := .Members }}
-constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
+constexpr const {{ $.Namespace }}::wire::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::wire::{{ $.Name }}({{ $member.Value }});
 {{- end }}
-constexpr const {{ .Namespace }}::{{ .Name }} {{ .Name }}::kMask = {{ $.Namespace }}::{{ $.Name }}({{ .Mask }}u);
+constexpr const {{ .Namespace }}::wire::{{ .Name }} {{ .Name }}::kMask = {{ $.Namespace }}::wire::{{ $.Name }}({{ .Mask }}u);
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator~() const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(~this->value_ & kMask.value_));
+constexpr inline {{ .Namespace }}::wire::{{ .Name }} {{ .Name }}::operator~() const {
+  return {{ $.Namespace }}::wire::{{ $.Name }}(static_cast<{{ .Type }}>(~this->value_ & kMask.value_));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator|(
-    const {{ .Namespace }}::{{ .Name }}& other) const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ | other.value_));
+constexpr inline {{ .Namespace }}::wire::{{ .Name }} {{ .Name }}::operator|(
+    const {{ .Namespace }}::wire::{{ .Name }}& other) const {
+  return {{ $.Namespace }}::wire::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ | other.value_));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator&(
-    const {{ .Namespace }}::{{ .Name }}& other) const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ & other.value_));
+constexpr inline {{ .Namespace }}::wire::{{ .Name }} {{ .Name }}::operator&(
+    const {{ .Namespace }}::wire::{{ .Name }}& other) const {
+  return {{ $.Namespace }}::wire::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ & other.value_));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator^(
-    const {{ .Namespace }}::{{ .Name }}& other) const {
-  return {{ $.Namespace }}::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ ^ other.value_));
+constexpr inline {{ .Namespace }}::wire::{{ .Name }} {{ .Name }}::operator^(
+    const {{ .Namespace }}::wire::{{ .Name }}& other) const {
+  return {{ $.Namespace }}::wire::{{ $.Name }}(static_cast<{{ .Type }}>(this->value_ ^ other.value_));
 }
 
 constexpr inline void {{ .Name }}::operator|=(
-    const {{ .Namespace }}::{{ .Name }}& other) {
+    const {{ .Namespace }}::wire::{{ .Name }}& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void {{ .Name }}::operator&=(
-    const {{ .Namespace }}::{{ .Name }}& other) {
+    const {{ .Namespace }}::wire::{{ .Name }}& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void {{ .Name }}::operator^=(
-    const {{ .Namespace }}::{{ .Name }}& other) {
+    const {{ .Namespace }}::wire::{{ .Name }}& other) {
   this->value_ ^= other.value_;
 }
+
+}  // namespace wire
+
+using {{ .Name }} = wire::{{ .Name }};
 {{ end }}
 
 {{- define "BitsTraits" }}
 
 template <>
-struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
-static_assert(sizeof({{ .Namespace }}::{{ .Name }}) == sizeof({{ .Type }}));
+struct IsFidlType<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ .Namespace }}::wire::{{ .Name }}>);
+static_assert(sizeof({{ .Namespace }}::wire::{{ .Name }}) == sizeof({{ .Type }}));
 {{- end }}
 `

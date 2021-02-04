@@ -10,7 +10,7 @@ namespace fidl {
 namespace test {
 namespace handlesintypes {
 #ifdef __Fuchsia__
-auto ::llcpp::fidl::test::handlesintypes::UnionWithHandle::which() const
+auto ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::which() const
     -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -21,7 +21,7 @@ auto ::llcpp::fidl::test::handlesintypes::UnionWithHandle::which() const
   }
 }
 
-void ::llcpp::fidl::test::handlesintypes::UnionWithHandle::
+void ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionWithHandle) == sizeof(fidl_xunion_t));
   static_assert(offsetof(UnionWithHandle, ordinal_) ==
@@ -29,7 +29,7 @@ void ::llcpp::fidl::test::handlesintypes::UnionWithHandle::
   static_assert(offsetof(UnionWithHandle, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-void UnionWithHandle::_CloseHandles() {
+void wire::UnionWithHandle::_CloseHandles() {
   switch (ordinal_) {
     case Ordinal::kH: {
       mutable_h().reset();
@@ -42,7 +42,7 @@ void UnionWithHandle::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void TableWithHandle::_CloseHandles() {
+void wire::TableWithHandle::_CloseHandles() {
   if (has_h()) {
     h().reset();
   }
@@ -50,7 +50,7 @@ void TableWithHandle::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void HandlesInTypes::_CloseHandles() {
+void wire::HandlesInTypes::_CloseHandles() {
   normal_handle.reset();
   {
     ::zx::vmo* handle_in_vec_element = handle_in_vec.mutable_data();

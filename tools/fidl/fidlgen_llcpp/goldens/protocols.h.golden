@@ -46,6 +46,8 @@ namespace fidl {
 namespace test {
 namespace protocols {
 
+namespace wire {
+
 enum class obj_type : uint32_t {
 
   NONE = 0u,
@@ -53,14 +55,39 @@ enum class obj_type : uint32_t {
   SOCKET = 14u,
 };
 
+}  // namespace wire
+
+using obj_type = wire::obj_type;
+
+namespace wire {
 struct WithErrorSyntax_ResponseAsStruct_Response;
+}  // namespace wire
+using WithErrorSyntax_ResponseAsStruct_Response =
+    wire::WithErrorSyntax_ResponseAsStruct_Response;  // struct
+namespace wire {
 class WithErrorSyntax_ResponseAsStruct_Result;
+}  // namespace wire
+using WithErrorSyntax_ResponseAsStruct_Result =
+    wire::WithErrorSyntax_ResponseAsStruct_Result;
+namespace wire {
 struct WithErrorSyntax_ErrorAsPrimitive_Response;
+}  // namespace wire
+using WithErrorSyntax_ErrorAsPrimitive_Response =
+    wire::WithErrorSyntax_ErrorAsPrimitive_Response;  // struct
+namespace wire {
 class WithErrorSyntax_ErrorAsPrimitive_Result;
+}  // namespace wire
+using WithErrorSyntax_ErrorAsPrimitive_Result =
+    wire::WithErrorSyntax_ErrorAsPrimitive_Result;
+namespace wire {
 struct WithErrorSyntax_ErrorAsEnum_Response;
+}  // namespace wire
+using WithErrorSyntax_ErrorAsEnum_Response =
+    wire::WithErrorSyntax_ErrorAsEnum_Response;  // struct
 class Transitional;
 class ChannelProtocol;
 class WithAndWithoutRequestResponse;
+namespace wire {
 
 enum class ErrorEnun : uint32_t {
 
@@ -69,9 +96,18 @@ enum class ErrorEnun : uint32_t {
   ERR_BAR = 2u,
 };
 
+}  // namespace wire
+
+using ErrorEnun = wire::ErrorEnun;
+
+namespace wire {
 class WithErrorSyntax_ErrorAsEnum_Result;
+}  // namespace wire
+using WithErrorSyntax_ErrorAsEnum_Result =
+    wire::WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
 
+namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
@@ -266,6 +302,9 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
@@ -460,6 +499,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
@@ -656,6 +698,9 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
@@ -777,7 +822,9 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
     }
   };
 };
+}  // namespace wire
 
+namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
@@ -895,7 +942,9 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
     }
   };
 };
+}  // namespace wire
 
+namespace wire {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
@@ -1012,6 +1061,7 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
     }
   };
 };
+}  // namespace wire
 
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestRequestTable;
@@ -7838,97 +7888,95 @@ class WithErrorSyntax final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::protocols::obj_type>
+struct IsFidlType<::llcpp::fidl::test::protocols::wire::obj_type>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
+struct IsFidlType<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ResponseAsStruct_Response>
     : public std::true_type {};
 template <>
-struct IsStruct<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
+struct IsStruct<::llcpp::fidl::test::protocols::wire::
+                    WithErrorSyntax_ResponseAsStruct_Response>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::wire::
                                   WithErrorSyntax_ResponseAsStruct_Response>);
-static_assert(offsetof(::llcpp::fidl::test::protocols::
+static_assert(offsetof(::llcpp::fidl::test::protocols::wire::
                            WithErrorSyntax_ResponseAsStruct_Response,
                        a) == 0);
-static_assert(offsetof(::llcpp::fidl::test::protocols::
+static_assert(offsetof(::llcpp::fidl::test::protocols::wire::
                            WithErrorSyntax_ResponseAsStruct_Response,
                        b) == 8);
-static_assert(offsetof(::llcpp::fidl::test::protocols::
+static_assert(offsetof(::llcpp::fidl::test::protocols::wire::
                            WithErrorSyntax_ResponseAsStruct_Response,
                        c) == 16);
-static_assert(sizeof(::llcpp::fidl::test::protocols::
+static_assert(sizeof(::llcpp::fidl::test::protocols::wire::
                          WithErrorSyntax_ResponseAsStruct_Response) ==
-              ::llcpp::fidl::test::protocols::
+              ::llcpp::fidl::test::protocols::wire::
                   WithErrorSyntax_ResponseAsStruct_Response::PrimarySize);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
+struct IsFidlType<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
 template <>
-struct IsUnion<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
+struct IsUnion<::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::wire::
                                   WithErrorSyntax_ResponseAsStruct_Result>);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+struct IsFidlType<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ErrorAsPrimitive_Response>
     : public std::true_type {};
 template <>
-struct IsStruct<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+struct IsStruct<::llcpp::fidl::test::protocols::wire::
+                    WithErrorSyntax_ErrorAsPrimitive_Response>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::wire::
                                   WithErrorSyntax_ErrorAsPrimitive_Response>);
-static_assert(offsetof(::llcpp::fidl::test::protocols::
+static_assert(offsetof(::llcpp::fidl::test::protocols::wire::
                            WithErrorSyntax_ErrorAsPrimitive_Response,
                        __reserved) == 0);
-static_assert(sizeof(::llcpp::fidl::test::protocols::
+static_assert(sizeof(::llcpp::fidl::test::protocols::wire::
                          WithErrorSyntax_ErrorAsPrimitive_Response) ==
-              ::llcpp::fidl::test::protocols::
+              ::llcpp::fidl::test::protocols::wire::
                   WithErrorSyntax_ErrorAsPrimitive_Response::PrimarySize);
 
 template <>
-struct IsFidlType<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+struct IsFidlType<::llcpp::fidl::test::protocols::wire::
+                      WithErrorSyntax_ErrorAsPrimitive_Result>
     : public std::true_type {};
 template <>
-struct IsUnion<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+struct IsUnion<::llcpp::fidl::test::protocols::wire::
+                   WithErrorSyntax_ErrorAsPrimitive_Result>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::protocols::
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::wire::
                                   WithErrorSyntax_ErrorAsPrimitive_Result>);
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
     : public std::true_type {};
 template <>
 struct IsStruct<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<
-        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>);
-static_assert(
-    offsetof(
-        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response,
-        __reserved) == 0);
-static_assert(
-    sizeof(
-        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response) ==
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response::
-        PrimarySize);
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::wire::
+                                  WithErrorSyntax_ErrorAsEnum_Response>);
+static_assert(offsetof(::llcpp::fidl::test::protocols::wire::
+                           WithErrorSyntax_ErrorAsEnum_Response,
+                       __reserved) == 0);
+static_assert(sizeof(::llcpp::fidl::test::protocols::wire::
+                         WithErrorSyntax_ErrorAsEnum_Response) ==
+              ::llcpp::fidl::test::protocols::wire::
+                  WithErrorSyntax_ErrorAsEnum_Response::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::protocols::Transitional::RequestRequest>
@@ -8318,20 +8366,20 @@ static_assert(
              ret) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::protocols::ErrorEnun>
+struct IsFidlType<::llcpp::fidl::test::protocols::wire::ErrorEnun>
     : public std::true_type {};
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
 template <>
 struct IsUnion<
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<
-        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>);
+    std::is_standard_layout_v<::llcpp::fidl::test::protocols::wire::
+                                  WithErrorSyntax_ErrorAsEnum_Result>);
 
 template <>
 struct IsFidlType<

@@ -230,7 +230,7 @@ zx_status_t AddressSpaceDevice::OpenChildDriver(
   }
 
   AddressSpaceChildDriverPingMessage* ping =
-      reinterpret_cast<struct AddressSpaceChildDriverPingMessage*>(io_buffer.virt());
+      reinterpret_cast<AddressSpaceChildDriverPingMessage*>(io_buffer.virt());
   memset(ping, 0, sizeof(*ping));
   ping->offset = dma_region_paddr_;
   ping->metadata = static_cast<uint64_t>(type);
@@ -389,7 +389,7 @@ void AddressSpaceChildDriver::Ping(
     PingCompleter::Sync& completer) {
   using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
   AddressSpaceChildDriverPingMessage* output =
-      reinterpret_cast<struct AddressSpaceChildDriverPingMessage*>(io_buffer_.virt());
+      reinterpret_cast<AddressSpaceChildDriverPingMessage*>(io_buffer_.virt());
   *output = ping;
   output->offset += dma_region_paddr_;
   device_->ChildDriverPing(handle_);

@@ -43,8 +43,12 @@ namespace fidl {
 namespace test {
 namespace escaping {
 
+namespace wire {
 struct DocCommentWithQuotes;
+}  // namespace wire
+using DocCommentWithQuotes = wire::DocCommentWithQuotes;  // struct
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
 
 // "pleaseescapethisdocommentproperly"
@@ -159,6 +163,7 @@ struct DocCommentWithQuotes {
     }
   };
 };
+}  // namespace wire
 
 }  // namespace escaping
 }  // namespace test
@@ -168,17 +173,19 @@ struct DocCommentWithQuotes {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::escaping::DocCommentWithQuotes>
+struct IsFidlType<::llcpp::fidl::test::escaping::wire::DocCommentWithQuotes>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::escaping::DocCommentWithQuotes>
+struct IsStruct<::llcpp::fidl::test::escaping::wire::DocCommentWithQuotes>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::escaping::DocCommentWithQuotes>);
-static_assert(offsetof(::llcpp::fidl::test::escaping::DocCommentWithQuotes,
-                       __reserved) == 0);
-static_assert(sizeof(::llcpp::fidl::test::escaping::DocCommentWithQuotes) ==
-              ::llcpp::fidl::test::escaping::DocCommentWithQuotes::PrimarySize);
+              ::llcpp::fidl::test::escaping::wire::DocCommentWithQuotes>);
+static_assert(
+    offsetof(::llcpp::fidl::test::escaping::wire::DocCommentWithQuotes,
+             __reserved) == 0);
+static_assert(
+    sizeof(::llcpp::fidl::test::escaping::wire::DocCommentWithQuotes) ==
+    ::llcpp::fidl::test::escaping::wire::DocCommentWithQuotes::PrimarySize);
 
 }  // namespace fidl
 

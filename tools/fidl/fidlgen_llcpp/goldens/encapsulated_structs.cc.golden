@@ -11,11 +11,11 @@ namespace test {
 namespace encapsulatedstructs {
 
 #ifdef __Fuchsia__
-void NonInlineStructTestStruct::_CloseHandles() { h.reset(); }
+void wire::NonInlineStructTestStruct::_CloseHandles() { h.reset(); }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void TopLevelStruct::_CloseHandles() { b._CloseHandles(); }
+void wire::TopLevelStruct::_CloseHandles() { b._CloseHandles(); }
 #endif  // __Fuchsia__
 
 }  // namespace encapsulatedstructs

@@ -43,11 +43,23 @@ namespace fidl {
 namespace test {
 namespace table {
 
+namespace wire {
 class SimpleTable;
+}  // namespace wire
+namespace wire {
 class ReverseOrdinalTable;
+}  // namespace wire
+namespace wire {
 class OlderSimpleTable;
+}  // namespace wire
+namespace wire {
 class NewerSimpleTable;
+}  // namespace wire
+namespace wire {
 class EmptyTable;
+}  // namespace wire
+
+namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_SimpleTableTable;
 
@@ -428,6 +440,11 @@ class SimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   SimpleTable::Frame frame_;
 };
+}  // namespace wire
+
+using SimpleTable = wire::SimpleTable;
+
+namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_ReverseOrdinalTableTable;
 
@@ -889,6 +906,11 @@ class ReverseOrdinalTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   ReverseOrdinalTable::Frame frame_;
 };
+}  // namespace wire
+
+using ReverseOrdinalTable = wire::ReverseOrdinalTable;
+
+namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_OlderSimpleTableTable;
 
@@ -1190,6 +1212,11 @@ class OlderSimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   OlderSimpleTable::Frame frame_;
 };
+}  // namespace wire
+
+using OlderSimpleTable = wire::OlderSimpleTable;
+
+namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_NewerSimpleTableTable;
 
@@ -1652,6 +1679,11 @@ class NewerSimpleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   NewerSimpleTable::Frame frame_;
 };
+}  // namespace wire
+
+using NewerSimpleTable = wire::NewerSimpleTable;
+
+namespace wire {
 
 extern "C" const fidl_type_t fidl_test_table_EmptyTableTable;
 
@@ -1865,6 +1897,9 @@ class EmptyTable::UnownedBuilder final {
  private:
   uint64_t max_ordinal_ = 0;
 };
+}  // namespace wire
+
+using EmptyTable = wire::EmptyTable;
 
 }  // namespace table
 }  // namespace test
@@ -1874,64 +1909,67 @@ class EmptyTable::UnownedBuilder final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::table::SimpleTable>
+struct IsFidlType<::llcpp::fidl::test::table::wire::SimpleTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::table::SimpleTable>
+struct IsTable<::llcpp::fidl::test::table::wire::SimpleTable>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::table::SimpleTable::Builder>
+struct IsTableBuilder<::llcpp::fidl::test::table::wire::SimpleTable::Builder>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::table::SimpleTable>);
+    std::is_standard_layout_v<::llcpp::fidl::test::table::wire::SimpleTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::table::ReverseOrdinalTable>
+struct IsFidlType<::llcpp::fidl::test::table::wire::ReverseOrdinalTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::table::ReverseOrdinalTable>
+struct IsTable<::llcpp::fidl::test::table::wire::ReverseOrdinalTable>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::table::ReverseOrdinalTable::Builder>
+struct IsTableBuilder<
+    ::llcpp::fidl::test::table::wire::ReverseOrdinalTable::Builder>
     : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::table::ReverseOrdinalTable>);
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::table::wire::ReverseOrdinalTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::table::OlderSimpleTable>
+struct IsFidlType<::llcpp::fidl::test::table::wire::OlderSimpleTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::table::OlderSimpleTable>
+struct IsTable<::llcpp::fidl::test::table::wire::OlderSimpleTable>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::table::OlderSimpleTable::Builder>
+struct IsTableBuilder<
+    ::llcpp::fidl::test::table::wire::OlderSimpleTable::Builder>
     : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::table::OlderSimpleTable>);
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::table::wire::OlderSimpleTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::table::NewerSimpleTable>
+struct IsFidlType<::llcpp::fidl::test::table::wire::NewerSimpleTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::table::NewerSimpleTable>
+struct IsTable<::llcpp::fidl::test::table::wire::NewerSimpleTable>
     : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::table::NewerSimpleTable::Builder>
+struct IsTableBuilder<
+    ::llcpp::fidl::test::table::wire::NewerSimpleTable::Builder>
     : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::table::NewerSimpleTable>);
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::table::wire::NewerSimpleTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::table::EmptyTable>
+struct IsFidlType<::llcpp::fidl::test::table::wire::EmptyTable>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::table::EmptyTable> : public std::true_type {
-};
+struct IsTable<::llcpp::fidl::test::table::wire::EmptyTable>
+    : public std::true_type {};
 template <>
-struct IsTableBuilder<::llcpp::fidl::test::table::EmptyTable::Builder>
+struct IsTableBuilder<::llcpp::fidl::test::table::wire::EmptyTable::Builder>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::llcpp::fidl::test::table::EmptyTable>);
+    std::is_standard_layout_v<::llcpp::fidl::test::table::wire::EmptyTable>);
 
 }  // namespace fidl
 

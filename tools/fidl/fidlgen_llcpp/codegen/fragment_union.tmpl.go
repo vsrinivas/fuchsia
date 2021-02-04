@@ -6,7 +6,10 @@ package codegen
 
 const fragmentUnionTmpl = `
 {{- define "UnionForwardDeclaration" }}
+namespace wire {
 class {{ .Name }};
+}  // namespace wire
+using {{ .Name }} = wire::{{ .Name }};
 {{- end }}
 
 {{- define "UnionMemberCloseHandles" }}
@@ -24,6 +27,7 @@ class {{ .Name }};
 {{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
+namespace wire {
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
 //{{ . }}
@@ -158,6 +162,9 @@ class {{ .Name }} {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
+
+}  // namespace wire
+
 {{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}
@@ -170,7 +177,7 @@ class {{ .Name }} {
 #ifdef __Fuchsia__
 {{- end }}
 {{- if .IsFlexible }}
-auto {{ .Namespace }}::{{ .Name }}::which() const -> Tag {
+auto {{ .Namespace }}::wire::{{ .Name }}::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
   {{- range .Members }}
@@ -183,14 +190,14 @@ auto {{ .Namespace }}::{{ .Name }}::which() const -> Tag {
 }
 {{- end }}
 
-void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
+void {{ .Namespace }}::wire::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof({{ .Name }}) == sizeof(fidl_xunion_t));
   static_assert(offsetof({{ .Name }}, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 {{- if .IsResourceType }}
-void {{ .Name }}::_CloseHandles() {
+void wire::{{ .Name }}::_CloseHandles() {
   switch (ordinal_) {
   {{- range .Members }}
     {{- template "UnionMemberCloseHandles" . }}
@@ -213,10 +220,10 @@ void {{ .Name }}::_CloseHandles() {
 #ifdef __Fuchsia__
 {{- end }}
 template <>
-struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+struct IsFidlType<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
 template <>
-struct IsUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
-static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
+struct IsUnion<{{ .Namespace }}::wire::{{ .Name }}> : public std::true_type {};
+static_assert(std::is_standard_layout_v<{{ .Namespace }}::wire::{{ .Name }}>);
 {{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}

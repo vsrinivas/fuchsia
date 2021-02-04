@@ -11,7 +11,7 @@ namespace test {
 namespace handles {
 
 #ifdef __Fuchsia__
-void Handles::_CloseHandles() {
+void wire::Handles::_CloseHandles() {
   plain_handle.reset();
   bti_handle.reset();
   channel_handle.reset();

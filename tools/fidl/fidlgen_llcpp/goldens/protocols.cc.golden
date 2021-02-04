@@ -10,8 +10,8 @@ namespace fidl {
 namespace test {
 namespace protocols {
 
-void ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
-    SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::protocols::wire::
+    WithErrorSyntax_ResponseAsStruct_Result::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ResponseAsStruct_Result) ==
                 sizeof(fidl_xunion_t));
   static_assert(offsetof(WithErrorSyntax_ResponseAsStruct_Result, ordinal_) ==
@@ -20,8 +20,8 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
-    SizeAndOffsetAssertionHelper() {
+void ::llcpp::fidl::test::protocols::wire::
+    WithErrorSyntax_ErrorAsPrimitive_Result::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ErrorAsPrimitive_Result) ==
                 sizeof(fidl_xunion_t));
   static_assert(offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, ordinal_) ==
@@ -1999,7 +1999,7 @@ zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
   return _response.status();
 }
 
-void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::
+void ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ErrorAsEnum_Result) ==
                 sizeof(fidl_xunion_t));

@@ -45,16 +45,33 @@ namespace fidl {
 namespace test {
 namespace placementofattributes {
 
+namespace wire {
 class ExampleXUnion;
+}  // namespace wire
+using ExampleXUnion = wire::ExampleXUnion;
+namespace wire {
 class ExampleUnion;
+}  // namespace wire
+using ExampleUnion = wire::ExampleUnion;
+namespace wire {
 class ExampleTable;
+}  // namespace wire
+namespace wire {
 struct ExampleStruct;
+}  // namespace wire
+using ExampleStruct = wire::ExampleStruct;  // struct
+namespace wire {
 
 enum class ExampleEnum : uint32_t {
 
   MEMBER = 1u,
 };
 
+}  // namespace wire
+
+using ExampleEnum = wire::ExampleEnum;
+
+namespace wire {
 // |ExampleBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -106,60 +123,68 @@ class ExampleBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::fidl::test::placementofattributes::ExampleBits
+constexpr const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
     ExampleBits::MEMBER =
-        ::llcpp::fidl::test::placementofattributes::ExampleBits(1u);
-constexpr const ::llcpp::fidl::test::placementofattributes::ExampleBits
+        ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(1u);
+constexpr const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
     ExampleBits::kMask =
-        ::llcpp::fidl::test::placementofattributes::ExampleBits(1u);
+        ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(1u);
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
 ExampleBits::operator~() const {
-  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
+  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
 ExampleBits::operator|(
-    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other)
+    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits& other)
     const {
-  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
+  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
 ExampleBits::operator&(
-    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other)
+    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits& other)
     const {
-  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
+  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+constexpr inline ::llcpp::fidl::test::placementofattributes::wire::ExampleBits
 ExampleBits::operator^(
-    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other)
+    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits& other)
     const {
-  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
+  return ::llcpp::fidl::test::placementofattributes::wire::ExampleBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void ExampleBits::operator|=(
-    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other) {
+    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits&
+        other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void ExampleBits::operator&=(
-    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other) {
+    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits&
+        other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void ExampleBits::operator^=(
-    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other) {
+    const ::llcpp::fidl::test::placementofattributes::wire::ExampleBits&
+        other) {
   this->value_ ^= other.value_;
 }
 
+}  // namespace wire
+
+using ExampleBits = wire::ExampleBits;
+
 class ExampleProtocol;
 
+namespace wire {
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
 
 class ExampleXUnion {
@@ -264,6 +289,9 @@ class ExampleXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
 
 class ExampleUnion {
@@ -369,6 +397,10 @@ class ExampleUnion {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
+
+}  // namespace wire
+
+namespace wire {
 
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleTableTable;
 
@@ -671,7 +703,11 @@ class ExampleTable::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   ExampleTable::Frame frame_;
 };
+}  // namespace wire
 
+using ExampleTable = wire::ExampleTable;
+
+namespace wire {
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
 
 struct ExampleStruct {
@@ -784,6 +820,7 @@ struct ExampleStruct {
     }
   };
 };
+}  // namespace wire
 
 constexpr uint32_t EXAMPLE_CONST = 0u;
 
@@ -1134,62 +1171,68 @@ class ExampleProtocol final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleXUnion>
+struct IsFidlType<
+    ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion>
     : public std::true_type {};
 template <>
-struct IsUnion<::llcpp::fidl::test::placementofattributes::ExampleXUnion>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::ExampleXUnion>);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::fidl::test::placementofattributes::ExampleUnion>
+struct IsUnion<::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::ExampleUnion>);
+              ::llcpp::fidl::test::placementofattributes::wire::ExampleXUnion>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleTable>
+struct IsFidlType<
+    ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion>
     : public std::true_type {};
 template <>
-struct IsTable<::llcpp::fidl::test::placementofattributes::ExampleTable>
+struct IsUnion<::llcpp::fidl::test::placementofattributes::wire::ExampleUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::placementofattributes::wire::ExampleUnion>);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::placementofattributes::wire::ExampleTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::llcpp::fidl::test::placementofattributes::wire::ExampleTable>
     : public std::true_type {};
 template <>
 struct IsTableBuilder<
-    ::llcpp::fidl::test::placementofattributes::ExampleTable::Builder>
+    ::llcpp::fidl::test::placementofattributes::wire::ExampleTable::Builder>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::ExampleTable>);
+              ::llcpp::fidl::test::placementofattributes::wire::ExampleTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleStruct>
+struct IsFidlType<
+    ::llcpp::fidl::test::placementofattributes::wire::ExampleStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::fidl::test::placementofattributes::ExampleStruct>
+struct IsStruct<::llcpp::fidl::test::placementofattributes::wire::ExampleStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::ExampleStruct>);
+              ::llcpp::fidl::test::placementofattributes::wire::ExampleStruct>);
 static_assert(
-    offsetof(::llcpp::fidl::test::placementofattributes::ExampleStruct,
+    offsetof(::llcpp::fidl::test::placementofattributes::wire::ExampleStruct,
              member) == 0);
 static_assert(
-    sizeof(::llcpp::fidl::test::placementofattributes::ExampleStruct) ==
-    ::llcpp::fidl::test::placementofattributes::ExampleStruct::PrimarySize);
+    sizeof(::llcpp::fidl::test::placementofattributes::wire::ExampleStruct) ==
+    ::llcpp::fidl::test::placementofattributes::wire::ExampleStruct::
+        PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleEnum>
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::wire::ExampleEnum>
     : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleBits>
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::wire::ExampleBits>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::llcpp::fidl::test::placementofattributes::ExampleBits>);
-static_assert(sizeof(::llcpp::fidl::test::placementofattributes::ExampleBits) ==
-              sizeof(uint32_t));
+              ::llcpp::fidl::test::placementofattributes::wire::ExampleBits>);
+static_assert(
+    sizeof(::llcpp::fidl::test::placementofattributes::wire::ExampleBits) ==
+    sizeof(uint32_t));
 
 template <>
 struct IsFidlType<

@@ -44,8 +44,12 @@ namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
 
+namespace wire {
 struct Foo;
+}  // namespace wire
+using Foo = wire::Foo;  // struct
 
+namespace wire {
 extern "C" const fidl_type_t
     fidl_test_structdefaultvalueenumlibraryreference_FooTable;
 
@@ -158,6 +162,7 @@ struct Foo {
     }
   };
 };
+}  // namespace wire
 
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
@@ -168,22 +173,23 @@ namespace fidl {
 
 template <>
 struct IsFidlType<
-    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo>
+    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::wire::Foo>
     : public std::true_type {};
 template <>
 struct IsStruct<
-    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo>
+    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::wire::Foo>
     : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::
+                  wire::Foo>);
 static_assert(
-    std::is_standard_layout_v<
-        ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo>);
-static_assert(
-    offsetof(::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo,
-             field) == 0);
-static_assert(
-    sizeof(::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo) ==
-    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo::
-        PrimarySize);
+    offsetof(
+        ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::wire::Foo,
+        field) == 0);
+static_assert(sizeof(::llcpp::fidl::test::
+                         structdefaultvalueenumlibraryreference::wire::Foo) ==
+              ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::
+                  wire::Foo::PrimarySize);
 
 }  // namespace fidl
 
