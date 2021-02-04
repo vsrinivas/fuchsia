@@ -30,12 +30,12 @@ using std::wstring_view;
 #include <exception>
 #include <ios>
 #include <iterator>
-#include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
 
 #include "internal/exception.h"
+#include "memory.h"
 
 namespace cpp17 {
 
@@ -47,12 +47,6 @@ constexpr void constexpr_swap(T& a, T& b) noexcept {
   T tmp = std::move(a);
   a = std::move(b);
   b = std::move(tmp);
-}
-
-// Constexpr filler for C++17 std::addressof.
-template <typename T>
-constexpr T* addressof(T& arg) {
-  return reinterpret_cast<T*>(&const_cast<char&>(reinterpret_cast<const volatile char&>(arg)));
 }
 
 }  // namespace internal
@@ -218,7 +212,7 @@ class basic_string_view {
   }
 
   constexpr size_type find(CharT ch, size_type pos = 0) const {
-    return find(basic_string_view(internal::addressof(ch), 1), pos);
+    return find(basic_string_view(addressof(ch), 1), pos);
   }
 
   constexpr size_type find(const CharT* s, size_type pos, size_type count) const {
@@ -258,7 +252,7 @@ class basic_string_view {
   }
 
   constexpr size_type rfind(CharT ch, size_type pos = npos) const {
-    return rfind(basic_string_view(internal::addressof(ch), 1), pos);
+    return rfind(basic_string_view(addressof(ch), 1), pos);
   }
 
   constexpr size_type rfind(const CharT* s, size_type pos, size_type count) const {
@@ -281,7 +275,7 @@ class basic_string_view {
   }
 
   constexpr size_type find_first_of(CharT c, size_type pos = 0) const noexcept {
-    return find_first_of(basic_string_view(internal::addressof(c), 1), pos);
+    return find_first_of(basic_string_view(addressof(c), 1), pos);
   }
 
   constexpr size_type find_first_of(const CharT* s, size_type pos, size_type count) const {
@@ -310,7 +304,7 @@ class basic_string_view {
 
   constexpr size_type find_last_of(CharT c,
                                    size_type pos = basic_string_view::npos) const noexcept {
-    return find_last_of(basic_string_view(internal::addressof(c), 1), pos);
+    return find_last_of(basic_string_view(addressof(c), 1), pos);
   }
 
   constexpr size_type find_last_of(const CharT* s, size_type pos, size_type count) const {
@@ -332,7 +326,7 @@ class basic_string_view {
   }
 
   constexpr size_type find_first_not_of(CharT c, size_type pos = 0) const noexcept {
-    return find_first_not_of(basic_string_view(internal::addressof(c), 1), pos);
+    return find_first_not_of(basic_string_view(addressof(c), 1), pos);
   }
 
   constexpr size_type find_first_not_of(const CharT* s, size_type pos, size_type count) const {
@@ -360,7 +354,7 @@ class basic_string_view {
 
   constexpr size_type find_last_not_of(CharT c,
                                        size_type pos = basic_string_view::npos) const noexcept {
-    return find_last_not_of(basic_string_view(internal::addressof(c), 1), pos);
+    return find_last_not_of(basic_string_view(addressof(c), 1), pos);
   }
 
   constexpr size_type find_last_not_of(const CharT* s, size_type pos, size_type count) const {

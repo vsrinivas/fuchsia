@@ -34,6 +34,10 @@
 #define __cpp_lib_logical_traits 201510L
 #endif
 
+#if !defined(__cpp_lib_addressof_constexpr) && __cplusplus >= 201603L
+#define __cpp_lib_addressof_constexpr 201603L
+#endif
+
 #endif  // __has_include(<version>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VERSION_H_
