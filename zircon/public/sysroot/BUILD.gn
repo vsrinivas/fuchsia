@@ -193,6 +193,9 @@ if (current_toolchain != sysroot_toolchain) {
     #
     action("${prefix}_headers") {
       hermetic_deps = false
+
+      # TODO(fxbug.dev/69028): self-caching outputs is intended in copy_directory.py
+      all_outputs_fresh = false
       script = "copy_directory.py"
       args = [
         "--dst=" + rebase_path(_sysroot_dir, root_build_dir) + "/include",
@@ -407,6 +410,8 @@ if (current_toolchain != sysroot_toolchain) {
   }
 
   action("headers") {
+    # TODO(fxbug.dev/69028): self-caching outputs is intended populate_sysroot_headers.py
+    all_outputs_fresh = false
     inputs = [ sysroot_entries_json_file ]
     outputs = sysroot_headers
     script = "populate_sysroot_headers.py"
