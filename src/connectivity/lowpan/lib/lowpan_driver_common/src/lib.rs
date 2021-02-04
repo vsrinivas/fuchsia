@@ -72,6 +72,11 @@ where
                             futures.push(driver.serve_to(stream));
                         }
                     }
+                    if let Some(server_end) = protocols.counters {
+                        if let Some(stream) = server_end.into_stream().ok() {
+                            futures.push(driver.serve_to(stream));
+                        }
+                    }
                     if let Some(server_end) = protocols.device_test {
                         if let Some(stream) = server_end.into_stream().ok() {
                             futures.push(driver.serve_to(stream));

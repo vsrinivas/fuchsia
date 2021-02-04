@@ -9,6 +9,7 @@ fidl("fuchsia.lowpan.device") {
 
   sources = [
     "device.fidl",
+    "device_counters.fidl",
     "device_route.fidl",
     "energy_scanner.fidl",
     "misc.fidl",

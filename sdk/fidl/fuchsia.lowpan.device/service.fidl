@@ -46,6 +46,7 @@ resource table Protocols {
     3: request<fuchsia.lowpan.test.DeviceTest> device_test;
     4: request<DeviceRoute> device_route;
     5: request<DeviceRouteExtra> device_route_extra;
+    6: request<Counters> counters;
 };
 
 /// Struct describing changes to the devices being managed

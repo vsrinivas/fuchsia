@@ -9,9 +9,9 @@ use super::*;
 use anyhow::Error;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute, NetworkScanParameters,
-    OnMeshPrefix, ProvisionError, ProvisioningMonitorMarker, ProvisioningMonitorRequest,
-    ProvisioningProgress,
+    AllCounters, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute,
+    NetworkScanParameters, OnMeshPrefix, ProvisionError, ProvisioningMonitorMarker,
+    ProvisioningMonitorRequest, ProvisioningProgress,
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_zircon_status as zx_status;
@@ -432,12 +432,12 @@ impl Driver for DummyDevice {
         }]);
     }
 
-    async fn get_counters(&self) -> ZxResult<Counters> {
-        return Ok(Counters::EMPTY);
+    async fn get_counters(&self) -> ZxResult<AllCounters> {
+        return Ok(AllCounters::EMPTY);
     }
 
-    async fn reset_counters(&self) -> ZxResult<Counters> {
-        return Ok(Counters::EMPTY);
+    async fn reset_counters(&self) -> ZxResult<AllCounters> {
+        return Ok(AllCounters::EMPTY);
     }
 
     async fn register_on_mesh_prefix(&self, _net: OnMeshPrefix) -> ZxResult<()> {

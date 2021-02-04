@@ -12,8 +12,8 @@ use fasync::Time;
 use fidl_fuchsia_lowpan::BeaconInfo;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceState, EnergyScanParameters, ExternalRoute, NetworkScanParameters, OnMeshPrefix,
-    ProvisioningMonitorMarker,
+    AllCounters, DeviceState, EnergyScanParameters, ExternalRoute, NetworkScanParameters,
+    OnMeshPrefix, ProvisioningMonitorMarker,
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_async::TimeoutExt;
@@ -1097,14 +1097,14 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             .collect::<Vec<_>>())
     }
 
-    async fn get_counters(&self) -> ZxResult<Counters> {
+    async fn get_counters(&self) -> ZxResult<AllCounters> {
         // TODO: Implement.
-        return Ok(Counters::EMPTY);
+        return Ok(AllCounters::EMPTY);
     }
 
-    async fn reset_counters(&self) -> ZxResult<Counters> {
+    async fn reset_counters(&self) -> ZxResult<AllCounters> {
         // TODO: Implement.
-        return Ok(Counters::EMPTY);
+        return Ok(AllCounters::EMPTY);
     }
 }
 

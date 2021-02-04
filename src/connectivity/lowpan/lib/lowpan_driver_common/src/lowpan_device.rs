@@ -9,10 +9,11 @@ use fidl::endpoints::RequestStream;
 use fidl_fuchsia_factory_lowpan::*;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    DeviceExtraRequest, DeviceExtraRequestStream, DeviceRequest, DeviceRequestStream,
-    DeviceRouteExtraRequest, DeviceRouteExtraRequestStream, DeviceRouteRequest,
-    DeviceRouteRequestStream, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute,
-    NetworkScanParameters, OnMeshPrefix, ProvisioningMonitorMarker,
+    AllCounters, CountersRequest, CountersRequestStream, DeviceExtraRequest,
+    DeviceExtraRequestStream, DeviceRequest, DeviceRequestStream, DeviceRouteExtraRequest,
+    DeviceRouteExtraRequestStream, DeviceRouteRequest, DeviceRouteRequestStream, DeviceState,
+    EnergyScanParameters, EnergyScanResult, ExternalRoute, NetworkScanParameters, OnMeshPrefix,
+    ProvisioningMonitorMarker,
 };
 use fidl_fuchsia_lowpan_test::*;
 use futures::stream::BoxStream;
@@ -198,11 +199,11 @@ pub trait Driver: Send + Sync {
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>>;
 
     /// Returns a snapshot of the counters without resetting the counters.
-    async fn get_counters(&self) -> ZxResult<Counters>;
+    async fn get_counters(&self) -> ZxResult<AllCounters>;
 
     /// Resets all of the counters to zero returning the counter values
     /// immediately prior.
-    async fn reset_counters(&self) -> ZxResult<Counters>;
+    async fn reset_counters(&self) -> ZxResult<AllCounters>;
 
     /// Registers an on-mesh prefix to be advertised on the
     /// current network.
@@ -668,20 +669,6 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
                         .await
                         .context("error in get_neighbor_table_snapshot request")?;
                 }
-                DeviceTestRequest::GetCounters { responder, .. } => {
-                    self.get_counters()
-                        .err_into::<Error>()
-                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
-                        .await
-                        .context("error in get_counters request")?;
-                }
-                DeviceTestRequest::ResetCounters { responder, .. } => {
-                    self.reset_counters()
-                        .err_into::<Error>()
-                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
-                        .await
-                        .context("error in reset_counters request")?;
-                }
             }
             Result::<(), Error>::Ok(())
         };
@@ -840,6 +827,52 @@ impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
             request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
         {
             fx_log_err!("Error serving DeviceTestRequestStream: {:?}", err);
+
+            // TODO: Properly route epitaph codes. This is tricky to do because
+            //       `request_stream` is consumed by `try_for_each_concurrent`,
+            //       which means that code like the code below will not work:
+            //
+            // ```
+            // if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+            //     request_stream.into_inner().0
+            //         .shutdown_with_epitaph(*epitaph);
+            // }
+            // ```
+
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<CountersRequestStream> for T {
+    async fn serve_to(&self, request_stream: CountersRequestStream) -> anyhow::Result<()> {
+        let closure = |command| async {
+            match command {
+                CountersRequest::Get { responder, .. } => {
+                    self.get_counters()
+                        .err_into::<Error>()
+                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .await
+                        .context("error in get_counters request")?;
+                }
+                CountersRequest::Reset { responder, .. } => {
+                    self.reset_counters()
+                        .err_into::<Error>()
+                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .await
+                        .context("error in reset_counters request")?;
+                }
+            }
+            Result::<(), Error>::Ok(())
+        };
+
+        if let Some(err) =
+            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
+        {
+            fx_log_err!("Error serving CountersRequestStream: {:?}", err);
 
             // TODO: Properly route epitaph codes. This is tricky to do because
             //       `request_stream` is consumed by `try_for_each_concurrent`,

@@ -1,0 +1,122 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.device;
+
+protocol Counters {
+    /// Returns a snapshot of the counters without resetting the counters.
+    Get() -> (AllCounters counters);
+
+    /// Resets all of the counters to zero returning the counter values
+    /// immediately prior.
+    Reset() -> (AllCounters counters);
+};
+
+/// Table describing all counters.
+///
+/// May be empty if no counters are supported.
+table AllCounters {
+    /// MAC Counters for TX
+    1: MacCounters mac_tx;
+
+    /// MAC Counters for RX
+    2: MacCounters mac_rx;
+};
+
+/// Counters associated with the MAC layer.
+///
+/// Some counters are only valid for RX or TX.
+table MacCounters {
+    /// The total number of frames
+    1: uint32 total;
+
+    /// The total number of unicast frames
+    2: uint32 unicast;
+
+    /// The total number of broadcast frames
+    3: uint32 broadcast;
+
+    /// The number of frames with ack request
+    4: uint32 ack_requested;
+
+    /// The number of frames that were acked
+    5: uint32 acked;
+
+    /// The number of frames without ack request
+    6: uint32 no_ack_requested;
+
+    /// The number of data frames
+    7: uint32 data;
+
+    /// The number of data poll frames
+    8: uint32 data_poll;
+
+    /// The number of beacon frames
+    9: uint32 beacon;
+
+    /// The number of beacon request frames
+    10: uint32 beacon_request;
+
+    /// The number of other types of frames
+    11: uint32 other;
+
+    /// The number of frames filtered by address filter (allowlist
+    /// or denylist).
+    12: uint32 address_filtered;
+
+    /// The number of retransmission attempts.
+    /// TX only.
+    13: uint32 retries;
+
+    /// The number of expired retransmission retries for direct message.
+    /// TX only.
+    14: uint32 direct_max_retry_expiry;
+
+    /// The number of expired retransmission retries for indirect message
+    /// TX only.
+    15: uint32 indirect_max_retry_expiry;
+
+    /// The number of received frames filtered by destination check.
+    /// RX only.
+    16: uint32 dest_addr_filtered;
+
+    /// The number of received duplicated frames.
+    /// RX only.
+    17: uint32 duplicated;
+
+    /// The number of received frames with no or malformed content.
+    /// RX only.
+    18: uint32 err_no_frame;
+
+    /// The number of received frames from unknown neighbor.
+    /// RX only.
+    19: uint32 err_unknown_neighbor;
+
+    /// The number of received frames whose source address is invalid.
+    /// RX only.
+    20: uint32 err_invalid_src_addr;
+
+    /// The number of received frames with security error.
+    /// RX only.
+    21: uint32 err_sec;
+
+    /// The number of received frames with FCS error.
+    /// RX only.
+    22: uint32 err_fcs;
+
+    /// The number of CCA failures.
+    /// TX only.
+    23: uint32 err_cca;
+
+    /// The number of frame transmission failures due to abort error.
+    /// TX only.
+    24: uint32 err_abort;
+
+    /// The number of frames that were dropped due to a busy channel.
+    /// TX only.
+    25: uint32 err_busy_channel;
+
+    /// The number of frames that encountered some other error.
+    26: uint32 err_other;
+};
