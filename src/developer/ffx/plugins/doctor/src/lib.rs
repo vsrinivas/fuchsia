@@ -8,10 +8,10 @@ use {
     anyhow::{Error, Result},
     async_std::future::timeout,
     async_trait::async_trait,
-    ffx_core::ffx_plugin,
+    ffx_core::{build_info, ffx_plugin},
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, Target},
+    fidl_fuchsia_developer_bridge::{DaemonProxy, Target, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     itertools::{Either, Itertools},
     std::collections::HashSet,
@@ -45,7 +45,7 @@ macro_rules! success_or_continue {
 
 #[derive(Debug, PartialEq)]
 enum StepType {
-    Started,
+    Started(Option<String>),
     AttemptStarted(usize, usize),
     DaemonForceRestart,
     DaemonRunning,
@@ -53,6 +53,7 @@ enum StepType {
     SpawningDaemon,
     ConnectingToDaemon,
     CommunicatingWithDaemon,
+    DaemonVersion(VersionInfo),
     ListingTargets(String),
     DaemonChecksFailed,
     NoTargetsFound,
@@ -97,7 +98,13 @@ impl StepType {
 impl std::fmt::Display for StepType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            StepType::Started => format!("{}{}{}", style::Bold, DAEMON_CHECK_INTRO, style::Reset),
+            StepType::Started(version_str) => {
+                let welcome_str = format!(
+                    "Welcome to ffx doctor. Frontend version: {}",
+                    version_str.as_ref().unwrap_or(&"Unknown".to_string())
+                );
+                format!("{}{}\n{}{}", style::Bold, welcome_str, DAEMON_CHECK_INTRO, style::Reset)
+            }
             StepType::AttemptStarted(i, total) => format!("\n\nAttempt {} of {}", i + 1, total),
             StepType::KillingZombieDaemons => KILLING_ZOMBIE_DAEMONS.to_string(),
             StepType::DaemonForceRestart => FORCE_DAEMON_RESTART_MESSAGE.to_string(),
@@ -105,6 +112,14 @@ impl std::fmt::Display for StepType {
             StepType::SpawningDaemon => SPAWNING_DAEMON.to_string(),
             StepType::ConnectingToDaemon => CONNECTING_TO_DAEMON.to_string(),
             StepType::CommunicatingWithDaemon => COMMUNICATING_WITH_DAEMON.to_string(),
+            StepType::DaemonVersion(version_info) => {
+                format!(
+                    "{}Daemon version: {}{}",
+                    style::Bold,
+                    version_info.build_version.as_ref().unwrap_or(&"Unknown".to_string()),
+                    style::Reset,
+                )
+            }
             StepType::ListingTargets(filter) => {
                 if filter.is_empty() {
                     String::from(LISTING_TARGETS_NO_FILTER)
@@ -217,6 +232,7 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         cmd.retry_count,
         delay,
         cmd.force_daemon_restart,
+        build_info().build_version,
     )
     .await
 }
@@ -228,11 +244,12 @@ async fn doctor(
     retry_count: usize,
     retry_delay: Duration,
     force_daemon_restart: bool,
+    build_version_string: Option<String>,
 ) -> Result<()> {
+    step_handler.output_step(StepType::Started(build_version_string)).await?;
+
     let mut proxy_opt: Option<DaemonProxy> = None;
     let mut targets_opt: Option<Vec<Target>> = None;
-    step_handler.output_step(StepType::Started).await?;
-
     for i in 0..retry_count {
         proxy_opt = None;
         if i > 0 {
@@ -276,7 +293,7 @@ async fn doctor(
         );
 
         step_handler.step(StepType::CommunicatingWithDaemon).await?;
-        match timeout(retry_delay, proxy_opt.as_ref().unwrap().echo_string("test")).await {
+        match timeout(retry_delay, proxy_opt.as_ref().unwrap().get_version_info()).await {
             Err(_) => {
                 step_handler.result(StepResult::Timeout).await?;
                 proxy_opt = None;
@@ -287,8 +304,9 @@ async fn doctor(
                 proxy_opt = None;
                 continue;
             }
-            Ok(_) => {
+            Ok(Ok(v)) => {
                 step_handler.result(StepResult::Success).await?;
+                step_handler.output_step(StepType::DaemonVersion(v)).await?;
             }
         };
 
@@ -401,6 +419,7 @@ mod test {
     const UNRESPONSIVE_NODENAME: &str = "fake-nodename-unresponsive";
     const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
+    const DAEMON_VERSION_STR: &str = "daemon-build-string";
 
     #[derive(PartialEq)]
     struct TestStep {
@@ -616,8 +635,8 @@ mod test {
                 DaemonRequest::GetRemoteControl { remote: _, target: _, responder } => {
                     responder.send(&mut Ok(())).unwrap();
                 }
-                DaemonRequest::EchoString { value, responder } => {
-                    responder.send(&value).unwrap();
+                DaemonRequest::GetVersionInfo { responder } => {
+                    responder.send(daemon_version_info()).unwrap();
                 }
                 DaemonRequest::ListTargets { value: _, responder } => {
                     responder.send(&mut vec![].drain(..)).unwrap();
@@ -680,8 +699,8 @@ mod test {
                         }
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    DaemonRequest::EchoString { value, responder } => {
-                        responder.send(&value).unwrap();
+                    DaemonRequest::GetVersionInfo { responder } => {
+                        responder.send(daemon_version_info()).unwrap();
                     }
                     DaemonRequest::ListTargets { value, responder } => {
                         if !value.is_empty() && value != NODENAME && value != UNRESPONSIVE_NODENAME
@@ -746,8 +765,8 @@ mod test {
                     DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
                         panic!("unexpected daemon call");
                     }
-                    DaemonRequest::EchoString { value, responder } => {
-                        responder.send(&value).unwrap();
+                    DaemonRequest::GetVersionInfo { responder } => {
+                        responder.send(daemon_version_info()).unwrap();
                     }
                     DaemonRequest::ListTargets { value: _, responder: _ } => {
                         // Do nothing
@@ -769,7 +788,7 @@ mod test {
                     DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
                         panic!("unexpected daemon call");
                     }
-                    DaemonRequest::EchoString { value: _, responder: _ } => {
+                    DaemonRequest::GetVersionInfo { responder: _ } => {
                         waiter.await.unwrap();
                     }
                     DaemonRequest::ListTargets { value: _, responder: _ } => {
@@ -788,6 +807,19 @@ mod test {
         anyhow!("")
     }
 
+    fn version_str() -> Option<String> {
+        Some(String::from("fake version"))
+    }
+
+    fn daemon_version_info() -> VersionInfo {
+        VersionInfo {
+            commit_hash: None,
+            commit_timestamp: None,
+            build_version: Some(DAEMON_VERSION_STR.to_string()),
+            ..VersionInfo::EMPTY
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_no_daemon_running_no_targets() {
         let fake = FakeDaemonManager::new(
@@ -798,11 +830,13 @@ mod test {
         );
 
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str())
+            .await
+            .unwrap();
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
                 TestStepEntry::step(StepType::KillingZombieDaemons),
@@ -813,6 +847,7 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -833,17 +868,20 @@ mod test {
         );
         let mut handler = FakeStepHandler::new();
 
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str())
+            .await
+            .unwrap();
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -863,17 +901,20 @@ mod test {
         );
         let mut handler = FakeStepHandler::new();
 
-        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false, version_str())
+            .await
+            .unwrap();
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Error(empty_error())),
                 TestStepEntry::output_step(StepType::AttemptStarted(1, 2)),
@@ -887,6 +928,7 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Error(empty_error())),
                 TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
@@ -910,11 +952,13 @@ mod test {
             ],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false, version_str())
+            .await
+            .unwrap();
         tx.send(()).unwrap();
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
                 TestStepEntry::step(StepType::KillingZombieDaemons),
@@ -932,6 +976,7 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -953,18 +998,21 @@ mod test {
             vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str())
+            .await
+            .unwrap();
         tx.send(()).unwrap();
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
@@ -1001,18 +1049,21 @@ mod test {
             vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        doctor(&mut handler, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY, false, version_str())
+            .await
+            .unwrap();
         tx.send(()).unwrap();
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(NODENAME.to_string())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
@@ -1042,20 +1093,29 @@ mod test {
         );
 
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, &NON_EXISTENT_NODENAME, 1, DEFAULT_RETRY_DELAY, false)
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            &NON_EXISTENT_NODENAME,
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+        )
+        .await
+        .unwrap();
         tx.send(()).unwrap();
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(NON_EXISTENT_NODENAME.to_string())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1075,11 +1135,11 @@ mod test {
             vec![Ok(setup_responsive_daemon_server())],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, true).await.unwrap();
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, true, version_str()).await.unwrap();
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::Started(version_str())),
                 TestStepEntry::output_step(StepType::DaemonForceRestart),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
@@ -1091,6 +1151,7 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
