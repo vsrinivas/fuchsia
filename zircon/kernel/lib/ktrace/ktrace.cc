@@ -225,9 +225,9 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
       }
       options = KTRACE_GRP_TO_MASK(options);
       ks->marker = 0;
-      ktrace_grpmask.store(options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
       ktrace_report_live_processes();
       ktrace_report_live_threads();
+      ktrace_grpmask.store(options ? options : KTRACE_GRP_TO_MASK(KTRACE_GRP_ALL));
       break;
 
     case KTRACE_ACTION_STOP: {

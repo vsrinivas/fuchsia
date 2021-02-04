@@ -1512,10 +1512,10 @@ void ktrace_report_live_threads() {
     t.canary().Assert();
     if (t.user_tid()) {
       ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.user_tid()),
-                  static_cast<uint32_t>(t.user_pid()), t.name());
+                  static_cast<uint32_t>(t.user_pid()), t.name(), /*always*/ true);
     } else {
       ktrace_name(TAG_KTHREAD_NAME, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(&t)), 0,
-                  t.name());
+                  t.name(), /*always*/ true);
     }
   }
 }

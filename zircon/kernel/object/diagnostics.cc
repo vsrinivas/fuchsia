@@ -353,7 +353,7 @@ void ktrace_report_live_processes() {
   auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
     char name[ZX_MAX_NAME_LEN];
     process->get_name(name);
-    ktrace_name(TAG_PROC_NAME, (uint32_t)process->get_koid(), 0, name);
+    ktrace_name(TAG_PROC_NAME, (uint32_t)process->get_koid(), 0, name, /*always*/ true);
   });
   GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }

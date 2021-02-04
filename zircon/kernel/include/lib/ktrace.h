@@ -282,8 +282,9 @@ inline void ktrace_counter(TraceEnabled<enabled>, uint32_t group, StringRef* str
 
 void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
 
-static inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name) {
-  ktrace_name_etc(tag, id, arg, name, false);
+inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name,
+                        bool always = false) {
+  ktrace_name_etc(tag, id, arg, name, always);
 }
 
 ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len);
