@@ -4,6 +4,7 @@
 
 pub mod directory;
 pub mod error;
+pub mod protocol;
 pub mod route;
 pub mod source;
 pub mod testing;

@@ -21,6 +21,7 @@ rustc_library("cm_fidl_analyzer") {
     "src/capability_routing/directory.rs",
     "src/capability_routing/error.rs",
     "src/capability_routing/mod.rs",
+    "src/capability_routing/protocol.rs",
     "src/capability_routing/route.rs",
     "src/capability_routing/source.rs",
     "src/capability_routing/testing.rs",
