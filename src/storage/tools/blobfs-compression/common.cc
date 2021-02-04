@@ -99,8 +99,13 @@ int BlobfsCompress(const uint8_t* src, size_t src_sz, uint8_t* dest_write_buf,
     return 1;
   }
 
-  progress.Final("Wrote %lu bytes (%2.0f%% compression)\n", compressed_size,
-                 static_cast<double>(compressed_size) / static_cast<double>(src_sz) * 100);
+  double compression_percent = static_cast<double>(src_sz) - static_cast<double>(compressed_size);
+  if (src_sz) {
+    compression_percent = compression_percent / static_cast<double>(src_sz) * 100;
+  } else {
+    compression_percent = 0;
+  }
+  progress.Final("Wrote %lu bytes (%2.0f%% compression)\n", compressed_size, compression_percent);
 
   *out_compressed_size = compressed_size;
   return 0;
