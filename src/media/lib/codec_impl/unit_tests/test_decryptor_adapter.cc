@@ -29,6 +29,7 @@
 
 #include "lib/media/codec_impl/codec_impl.h"
 #include "lib/media/codec_impl/decryptor_adapter.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace {
 
@@ -187,6 +188,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
 
     environment_->ConnectToService(allocator_.NewRequest());
+    allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
     PopulateInputData();
 
