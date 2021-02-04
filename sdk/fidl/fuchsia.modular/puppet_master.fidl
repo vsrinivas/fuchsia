@@ -87,17 +87,6 @@ protocol StoryPuppetMaster {
     // and message are returned in `result`.
     Execute() -> (ExecuteResult result);
 
-    // Set the `StoryInfo` extra field for a story that is to be
-    // created. This should be called before the first call to Execute().
-    // Any subsequent calls (either on the same channel or on a new
-    // StoryPuppetMaster for an existing story) are ignored.
-    // See story_info.fidl for details.
-    //
-    // DEPRECATED. This method is a no-op and will never return an error.
-    [Transitional = "Deprecated, no-op"]
-    SetStoryInfoExtra(vector<StoryInfoExtraEntry>:MAX story_info_extra)
-        -> () error ConfigureStoryError;
-
     /// Attach the `annotations` to the story. If the story does not yet exist,
     /// it will be created.
     ///

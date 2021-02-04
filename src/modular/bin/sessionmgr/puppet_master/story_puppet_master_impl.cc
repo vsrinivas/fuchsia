@@ -182,15 +182,6 @@ void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
       session_storage_, executor_, story_name_, std::move(enqueued_commands_), std::move(done)));
 }
 
-void StoryPuppetMasterImpl::SetStoryInfoExtra(
-    std::vector<fuchsia::modular::StoryInfoExtraEntry> story_info_extra,
-    SetStoryInfoExtraCallback callback) {
-  // This method is a no-op.
-  fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result{};
-  result.set_response({});
-  callback(std::move(result));
-}
-
 void StoryPuppetMasterImpl::Annotate(std::vector<fuchsia::modular::Annotation> annotations,
                                      AnnotateCallback callback) {
   operations_->Add(std::make_unique<AnnotateOperation>(
