@@ -644,6 +644,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             let core_signature = PolicyProxy::create(
                 policy_type,
                 policy_handler_factory.clone(),
+                messenger_factory.clone(),
                 core_messenger_factory.clone(),
                 policy_messenger_factory.clone(),
                 proxies

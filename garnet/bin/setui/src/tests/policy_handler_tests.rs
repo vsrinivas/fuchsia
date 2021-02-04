@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #[cfg(test)]
-use crate::handler::base::Request;
+use crate::handler::base::{Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::persist::Storage;
@@ -12,7 +12,7 @@ use crate::message::base::MessengerType;
 use crate::policy::base::response::{Payload, Response};
 use crate::policy::base::{PolicyInfo, PolicyType, Request as PolicyRequest, UnknownInfo};
 use crate::policy::policy_handler::{
-    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
+    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::privacy::types::PrivacyInfo;
 use crate::switchboard::base::SettingEvent;
@@ -58,6 +58,13 @@ impl<S: Storage> PolicyHandler for FakePolicyHandler<S> {
     }
 
     async fn handle_setting_event(&mut self, _event: SettingEvent) -> Option<EventTransform> {
+        None
+    }
+
+    async fn handle_setting_response(
+        &mut self,
+        _response: SettingResponse,
+    ) -> Option<ResponseTransform> {
         None
     }
 }

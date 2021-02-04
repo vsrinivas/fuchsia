@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
-use crate::handler::base::Request;
+use crate::handler::base::{Request, Response as SettingResponse};
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
 use crate::internal::core::message::{Audience, Messenger, Receptor, Signature};
@@ -53,6 +53,21 @@ pub trait PolicyHandler {
     ///
     /// [`EventTransform::Event`]: enum.EventTransform.html
     async fn handle_setting_event(&mut self, event: SettingEvent) -> Option<EventTransform>;
+
+    /// Called when a setting response is intercepted from the setting this policy handler
+    /// supervises.
+    ///
+    /// If there are no policies or the response does not need to be modified, `None` should be
+    /// returned.
+    ///
+    /// If this handler wants to modify the response and still let the original audience handle it,
+    /// [`Response`] should be returned, containing the modified response.
+    ///
+    /// [`Response`]: ResponseTransform::Response
+    async fn handle_setting_response(
+        &mut self,
+        response: SettingResponse,
+    ) -> Option<ResponseTransform>;
 }
 
 /// `RequestTransform` is returned by a [`PolicyHandler`] in response to a setting request that a
@@ -82,6 +97,19 @@ pub enum RequestTransform {
 pub enum EventTransform {
     /// A new, modified event that should be forwarded to the switchboard for processing.
     Event(SettingEvent),
+}
+
+/// `ResponseTransform` is returned by a [`PolicyHandler`] in response to a setting response that a
+/// [`PolicyProxy`] intercepted. The presence of this value indicates that the policy handler has
+/// decided to take action in order to apply policies.
+///
+/// [`PolicyHandler`]: trait.PolicyHandler.html
+/// [`PolicyProxy`]: ../policy_proxy/struct.PolicyProxy.html
+///
+#[derive(Clone, Debug, PartialEq)]
+pub enum ResponseTransform {
+    /// A new, modified response that should be forwarded.
+    Response(SettingResponse),
 }
 
 /// Trait used to create policy handlers.

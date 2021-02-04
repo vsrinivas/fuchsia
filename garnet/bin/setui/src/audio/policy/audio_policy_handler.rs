@@ -64,13 +64,13 @@ use crate::audio::policy::{
 use crate::audio::types::AudioInfo;
 use crate::audio::utils::round_volume_level;
 use crate::base::SettingInfo;
-use crate::handler::base::Request as SettingRequest;
+use crate::handler::base::{Request as SettingRequest, Response as SettingResponse};
 use crate::internal::core::Payload;
 use crate::policy::base as policy_base;
 use crate::policy::base::response::Error as PolicyError;
 use crate::policy::base::PolicyInfo;
 use crate::policy::policy_handler::{
-    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform,
+    ClientProxy, Create, EventTransform, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::switchboard::base::SettingEvent;
 use anyhow::{format_err, Error};
@@ -178,6 +178,22 @@ impl PolicyHandler for AudioPolicyHandler {
                 Some(EventTransform::Event(SettingEvent::Changed(SettingInfo::Audio(
                     self.transform_internal_audio_info(audio_info),
                 ))))
+            }
+            _ => None,
+        }
+    }
+
+    async fn handle_setting_response(
+        &mut self,
+        response: SettingResponse,
+    ) -> Option<ResponseTransform> {
+        match response {
+            Ok(Some(SettingInfo::Audio(audio_info))) => {
+                // The setting changed in response to a Set. Note that this is
+                // is not sent if there are no listeners.
+                Some(ResponseTransform::Response(Ok(Some(SettingInfo::Audio(
+                    self.transform_internal_audio_info(audio_info),
+                )))))
             }
             _ => None,
         }
