@@ -9,7 +9,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -69,7 +69,8 @@
 
 namespace {
 
-using filesystem_info_t = fuchsia_io_FilesystemInfo;
+namespace fio = ::llcpp::fuchsia::io;
+
 using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 
 constexpr char kTmpfsPath[] = "/fvm-tmp";
@@ -2174,19 +2175,17 @@ TEST_F(FvmTest, TestMounting) {
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
-  zx_status_t status;
-  filesystem_info_t filesystem_info;
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  ASSERT_EQ(
-      fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &filesystem_info),
-      ZX_OK);
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
-  const char* name = reinterpret_cast<const char*>(filesystem_info.name);
+  const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
 
   // Verify that MinFS does not try to use more of the VPartition than
   // was originally allocated.
-  ASSERT_LE(filesystem_info.total_bytes, kSliceSize * request.slice_count);
+  ASSERT_LE(result.value().info->total_bytes, kSliceSize * request.slice_count);
 
   // Clean up.
   ASSERT_EQ(umount(kMountPath), ZX_OK);
@@ -2257,19 +2256,17 @@ TEST_F(FvmTest, TestMkfs) {
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
-  zx_status_t status;
-  filesystem_info_t filesystem_info;
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  ASSERT_EQ(
-      fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &filesystem_info),
-      ZX_OK);
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
-  const char* name = reinterpret_cast<const char*>(filesystem_info.name);
+  const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
 
   // Verify that MinFS does not try to use more of the VPartition than
   // was originally allocated.
-  ASSERT_LE(filesystem_info.total_bytes, kSliceSize * request.slice_count);
+  ASSERT_LE(result.value().info->total_bytes, kSliceSize * request.slice_count);
 
   // Clean up.
   ASSERT_EQ(umount(kMountPath), ZX_OK);
