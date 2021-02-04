@@ -8,7 +8,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -77,24 +76,14 @@ func (c *SetCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interfac
 }
 
 func (c *SetCommand) run(ctx context.Context) error {
-	bytes, err := ioutil.ReadFile(c.staticSpecPath)
-	if err != nil {
-		return err
-	}
-
-	staticSpec, err := parseStatic(string(bytes))
+	staticSpec, err := fint.ReadStatic(c.staticSpecPath)
 	if err != nil {
 		return err
 	}
 
 	var contextSpec *fintpb.Context
 	if c.contextSpecPath != "" {
-		bytes, err = ioutil.ReadFile(c.contextSpecPath)
-		if err != nil {
-			return err
-		}
-
-		contextSpec, err = parseContext(string(bytes))
+		contextSpec, err = fint.ReadContext(c.contextSpecPath)
 		if err != nil {
 			return err
 		}

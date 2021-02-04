@@ -11,9 +11,8 @@ import("//third_party/protobuf/proto_library.gni")
 go_library("fint_lib") {
   sources = [
     "main.go",
-    "parse.go",
-    "parse_test.go",
     "set.go",
+    "set_test.go",
   ]
 
   deps = [

@@ -33,6 +33,8 @@ go_test("filetype_tests") {
 go_library("fint_lib") {
   sources = [
     "common.go",
+    "parse.go",
+    "parse_test.go",
     "set.go",
     "set_test.go",
     "should_build.go",
