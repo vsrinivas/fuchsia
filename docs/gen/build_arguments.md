@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/5dff9f5413fc213faf677983d32d7b6d4a65e88f/src/intel/vulkan/BUILD.gn#26)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/732d9dc2a4330b792d816ec394669a9e52671be4/src/intel/vulkan/BUILD.gn#26)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/5dff9f5413fc213faf677983d32d7b6d4a65e88f/src/intel/vulkan/BUILD.gn#28)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/732d9dc2a4330b792d816ec394669a9e52671be4/src/intel/vulkan/BUILD.gn#28)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
