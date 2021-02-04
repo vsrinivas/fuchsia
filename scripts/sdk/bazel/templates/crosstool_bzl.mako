@@ -52,10 +52,10 @@ def _configure_crosstool_impl(repository_ctx):
     sysroot_${arch.short_name} = repository_ctx.path(
         Label("@fuchsia_sdk//arch/${arch.short_name}/sysroot:BUILD")).dirname
     % endfor
-    # Set up the toolchain config file from the template.
+    # Set up the CROSSTOOL file from the template.
     repository_ctx.template(
-        "cc_toolchain_config.bzl",
-        Label("@fuchsia_sdk//build_defs/internal/crosstool:cc_toolchain_config.bzl.in"),
+        "CROSSTOOL",
+        Label("@fuchsia_sdk//build_defs/internal/crosstool:CROSSTOOL.in"),
         substitutions = {
             % for arch in data.arches:
             "%{SYSROOT_${arch.short_name.upper()}}": str(sysroot_${arch.short_name}),
