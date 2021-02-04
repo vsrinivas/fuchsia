@@ -111,6 +111,7 @@ zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_t* handles,
   return fidl_msg.Write(ch, 0);
 }
 
+async_dispatcher_t* g_dispatcher = nullptr;
 uint64_t next_ino = 2;
 
 std::unique_ptr<Devnode> root_devnode;
@@ -132,7 +133,8 @@ zx::channel g_devfs_root;
 
 }  // namespace
 
-struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>> {
+struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>,
+                                           fbl::NodeOptions::AllowRemoveFromContainer> {
   Watcher(Devnode* dn, zx::channel ch, uint32_t mask);
 
   Watcher(const Watcher&) = delete;
@@ -141,13 +143,26 @@ struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>> {
   Watcher(Watcher&&) = delete;
   Watcher& operator=(Watcher&&) = delete;
 
+  void HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
+
   Devnode* devnode = nullptr;
   zx::channel handle;
   uint32_t mask = 0;
+  async::WaitMethod<Watcher, &Watcher::HandleChannelClose> channel_close_wait{this};
 };
 
 Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
     : devnode(dn), handle(std::move(ch)), mask(mask) {}
+
+void Watcher::HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                 zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status == ZX_OK) {
+    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+      RemoveFromContainer();
+    }
+  }
+}
 
 class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
                   public AsyncLoopOwnedRpcHandler<DcIostate> {
@@ -365,9 +380,16 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
   // adding.
   if (watcher) {
     dn->watchers.push_front(std::move(watcher));
+
+    Watcher& watcher_ref = dn->watchers.front();
+    watcher_ref.channel_close_wait.set_object(watcher_ref.handle.get());
+    watcher_ref.channel_close_wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
+    watcher_ref.channel_close_wait.Begin(g_dispatcher);
   }
   return ZX_OK;
 }
+
+bool devfs_has_watchers(Devnode* dn) { return !dn->watchers.is_empty(); }
 
 namespace {
 
@@ -915,6 +937,7 @@ zx::unowned_channel devfs_root_borrow() { return zx::unowned_channel(g_devfs_roo
 zx::channel devfs_root_clone() { return zx::channel(fdio_service_clone(g_devfs_root.get())); }
 
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
+  g_dispatcher = dispatcher;
   root_devnode = std::make_unique<Devnode>("");
   if (!root_devnode) {
     return;

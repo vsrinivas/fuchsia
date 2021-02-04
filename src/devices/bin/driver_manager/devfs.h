@@ -15,6 +15,8 @@ class Device;
 struct Devnode;
 
 // Initializes a devfs directory from |device|.
+// This library is NOT thread safe. `dispatcher` must be a single threaded dispatcher, and all
+// callbacks from the dispatcher should be run on the thread that calls `devfs_init`.
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher);
 
 // Watches the devfs directory |dn|, and sends events to |watcher|.
@@ -38,5 +40,8 @@ void devfs_connect_diagnostics(zx::unowned_channel diagnostics_channel);
 // If ZX_OK is returned, then *device_out refers to the device at the given path
 // relative to the devnode.
 zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* device_out);
+
+// This method is exposed for testing. It returns true if the devfs has active watchers.
+bool devfs_has_watchers(Devnode* dn);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_
