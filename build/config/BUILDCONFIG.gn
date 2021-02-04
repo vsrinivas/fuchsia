@@ -251,6 +251,7 @@ if (zircon_toolchain == false) {
     "//build/config:no_rtti",
     "//build/config:symbol_visibility_hidden",
     "//build/config:rust_edition_2018",
+    "//build/config:rust_incremental",
     "//build/config:rust_no_features",
     "//build/config:rust_target",
     "//build/config:rust_2018_idioms",

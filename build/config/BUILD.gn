@@ -35,6 +35,10 @@ declare_args() {
   # **NOTE:** This is for **experimentation only** and should not normally be
   # changed.  Set the version of the C++ standard to compile for, 17 or 20.
   experimental_cxx_version = 17
+
+  # Enable incremental rust compilation. Takes a path to the directory to use
+  # as the cache.
+  rust_incremental = ""
 }
 
 # No frame pointers for host compiles.
@@ -64,6 +68,12 @@ config("rust_opt_level_z") {
 
 config("rust_no_features") {
   rustflags = [ "-Zallow-features=" ]
+}
+
+config("rust_incremental") {
+  if (rust_incremental != "") {
+    rustflags = [ "-Cincremental=" + rust_incremental ]
+  }
 }
 
 config("netstack3_only_specialization_feature") {
