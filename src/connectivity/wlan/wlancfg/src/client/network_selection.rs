@@ -39,7 +39,7 @@ const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_millis(50);
 /// Above or at this RSSI, we'll give 5G networks a preference
 const RSSI_CUTOFF_5G_PREFERENCE: i8 = -58;
 /// The score boost for 5G networks that we are giving preference to.
-const RSSI_5G_PREFERENCE_BOOST: i8 = 15;
+const RSSI_5G_PREFERENCE_BOOST: i8 = 20;
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
@@ -895,7 +895,7 @@ mod tests {
             channel: generate_channel(36),
             ..generate_random_bss()
         },
-        -34; "5GHz score is (RSSI + mod), when above threshold")]
+        -29; "5GHz score is (RSSI + mod), when above threshold")]
     #[test_case(types::Bss {
             rssi: -71,
             channel: generate_channel(36),
