@@ -234,6 +234,7 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
 
   auto firmware = std::make_unique<PcieFirmware>();
   firmware->buscore_ = buscore;
+  firmware->chipset_ = std::move(chipset);
   firmware->shared_ram_info_ = std::move(shared_ram_info);
   firmware->dma_d2h_scratch_buffer_ = std::move(dma_d2h_scratch_buffer);
   firmware->dma_d2h_ringupdate_buffer_ = std::move(dma_d2h_ringupdate_buffer);

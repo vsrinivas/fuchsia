@@ -15,8 +15,6 @@
 
 #include <ddk/driver.h>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
@@ -126,64 +124,54 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   }
 
   // Make sure the bus chip was brought up successfully.
-  const auto chip = pcie_buscore->chip();
-  if (chip == nullptr) {
-    BRCMF_ERR("No bus chip found");
+  const auto backplane = pcie_buscore->GetBackplane();
+  if (backplane == nullptr) {
+    BRCMF_ERR("No backplane found");
     return ZX_ERR_NO_RESOURCES;
   }
-  if (chip->chip == 0) {
+  if (backplane->chip_id() == CommonCoreId::kInvalid) {
     BRCMF_ERR("No bus chip ID found");
     return ZX_ERR_NO_RESOURCES;
   }
-  BRCMF_INFO("Found bus chip 0x%x rev. %d", chip->chip, chip->chiprev);
-
-  // Check that we can do a register read to confirm the bus chip information.
-  const uint32_t chipreg = PcieBuscore::GetBuscoreOps()->read32(
-      static_cast<void*>(pcie_buscore.get()), CORE_CC_REG(SI_ENUM_BASE, chipid));
-  const uint32_t chipreg_chip = (chipreg & CID_ID_MASK);
-  const uint32_t chipreg_rev = ((chipreg & CID_REV_MASK) >> CID_REV_SHIFT);
-  if (chip->chip != chipreg_chip || chip->chiprev != chipreg_rev) {
-    BRCMF_ERR("Bus chip read returned chip 0x%x rev. %d, expected 0x%x rev. %d", chipreg_chip,
-              chipreg_rev, chip->chip, chip->chiprev);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  BRCMF_INFO("Found bus chip 0x%x rev. %d", static_cast<int>(backplane->chip_id()),
+             backplane->chip_rev());
 
   // Check the PcieBuscore::CoreRegs locking model.
   {
     // Hold a CoreRegs instance for PCIE2_CORE.  We should then fail getting a conflicting
     // ARM_CR4_CORE instance, but succeed in getting a simultaneous PCIE2_CORE instance.
     {
-      PcieBuscore::CoreRegs pcie2_core_coreregs;
-      if (pcie2_core_coreregs.is_valid()) {
-        BRCMF_ERR("Empty CoreRegs instance should not be valid");
-        return ZX_ERR_BAD_STATE;
-      }
-      if ((status = pcie_buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pcie2_core_coreregs)) != ZX_OK) {
+      PcieBuscore::PcieRegisterWindow pcie2_core_coreregs;
+      if ((status = pcie_buscore->GetCoreWindow(Backplane::CoreId::kPcie2Core,
+                                                &pcie2_core_coreregs)) != ZX_OK) {
         BRCMF_ERR("Failed to get CoreRegs instance for PCIE2_CORE: %s",
                   zx_status_get_string(status));
         return status;
       }
-      PcieBuscore::CoreRegs arm_cr4_coreregs;
-      if ((status = pcie_buscore->GetCoreRegs(CHIPSET_ARM_CR4_CORE, &arm_cr4_coreregs)) == ZX_OK) {
+      PcieBuscore::PcieRegisterWindow arm_cr4_coreregs;
+      if ((status = pcie_buscore->GetCoreWindow(Backplane::CoreId::kArmCr4Core,
+                                                &arm_cr4_coreregs)) == ZX_OK) {
         BRCMF_ERR("Got conflicting CoreRegs instance for ARM_CR4_CORE: %s",
                   zx_status_get_string(status));
         return status;
       }
-      PcieBuscore::CoreRegs pcie2_core_coreregs_2;
-      if ((status = pcie_buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pcie2_core_coreregs_2)) !=
-          ZX_OK) {
+      PcieBuscore::PcieRegisterWindow pcie2_core_coreregs_2;
+      if ((status = pcie_buscore->GetCoreWindow(Backplane::CoreId::kPcie2Core,
+                                                &pcie2_core_coreregs_2)) != ZX_OK) {
         BRCMF_ERR("Failed to get simultaneous CoreRegs instance for PCIE2_CORE: %s",
                   zx_status_get_string(status));
         return status;
       }
       // Perform a smoke-test read.
-      pcie2_core_coreregs_2.RegRead(BRCMF_PCIE_PCIE2REG_INTMASK);
+      uint32_t value;
+      pcie2_core_coreregs_2.Read(BRCMF_PCIE_PCIE2REG_INTMASK, &value);
     }
 
     // Now that the CoreRegs instance for PCIE2_CORE has dropped out of scope, we can get
     // ARM_CR4_CORE.
-    PcieBuscore::CoreRegs arm_cr4_coreregs;
-    if ((status = pcie_buscore->GetCoreRegs(CHIPSET_ARM_CR4_CORE, &arm_cr4_coreregs)) != ZX_OK) {
+    PcieBuscore::PcieRegisterWindow arm_cr4_coreregs;
+    if ((status = pcie_buscore->GetCoreWindow(Backplane::CoreId::kArmCr4Core, &arm_cr4_coreregs)) !=
+        ZX_OK) {
       BRCMF_ERR("Failed to get CoreRegs instance for ARM_CR4_CORE: %s",
                 zx_status_get_string(status));
       return status;
@@ -259,12 +247,6 @@ zx_status_t RunPcieDeviceComponentsTest(zx_device_t* parent) {
   if ((status = PcieBus::Create(&device, &pcie_bus)) != ZX_OK) {
     BRCMF_ERR("PcieBus creation failed: %s", zx_status_get_string(status));
     return status;
-  }
-
-  // Check that the chip bringup was successful.
-  if (pcie_bus->GetBusOps()->get_ramsize(device.drvr()->bus_if) == 0) {
-    BRCMF_ERR("PcieBus returned 0 ramsize");
-    return ZX_ERR_NO_RESOURCES;
   }
 
   std::unique_ptr<MsgbufProto> msgbuf_proto;
