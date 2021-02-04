@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -39,6 +39,8 @@
 
 namespace {
 
+namespace fio = ::llcpp::fuchsia::io;
+
 const mount_options_t& test_mount_options() {
   static mount_options_t* options = []() {
     mount_options_t* options = new mount_options_t(default_mount_options);
@@ -61,13 +63,13 @@ void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
 
-  fuchsia_io_FilesystemInfo info;
-  zx_status_t status;
   fdio_cpp::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(strncmp(fs_name, reinterpret_cast<char*>(info.name), strlen(fs_name)), 0);
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->s);
+  fio::FilesystemInfo info = *result.value().info;
+  ASSERT_EQ(strncmp(fs_name, reinterpret_cast<char*>(info.name.data()), strlen(fs_name)), 0);
   ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
   ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
   // TODO(planders): eventually check that total/used counts are > 0
@@ -272,10 +274,11 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   // Try re-opening the root without O_ADMIN. We shouldn't be able to umount.
   fbl::unique_fd weak_root_fd(open(mount_path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(weak_root_fd);
-  zx_status_t status;
   fdio_cpp::FdioCaller caller(std::move(weak_root_fd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
-  ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+  auto result = fio::DirectoryAdmin::Call::Unmount(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->s, ZX_ERR_ACCESS_DENIED);
   weak_root_fd.reset(caller.release().release());
 
   // Try opening a non-root directory without O_ADMIN. We shouldn't be able
@@ -284,8 +287,10 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   fbl::unique_fd weak_subdir_fd(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(weak_subdir_fd);
   caller.reset(std::move(weak_subdir_fd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
-  ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+  auto result2 = fio::DirectoryAdmin::Call::Unmount(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_OK(result2.status());
+  ASSERT_EQ(result2->s, ZX_ERR_ACCESS_DENIED);
 
   // Try opening a new directory with O_ADMIN. It shouldn't open.
   weak_subdir_fd.reset(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY | O_ADMIN));
@@ -427,15 +432,11 @@ TEST(MountGetDeviceCase, MountGetDevice) {
 
   fbl::unique_fd mountfd(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
-  char device_buffer[1024];
-  char* device_path = static_cast<char*>(device_buffer);
-  zx_status_t status;
-  size_t path_len;
   fdio_cpp::FdioCaller caller(std::move(mountfd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status, device_path,
-                                                   sizeof(device_buffer), &path_len),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+  auto result = fio::DirectoryAdmin::Call::GetDevicePath(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->s, ZX_ERR_NOT_SUPPORTED);
 
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
@@ -446,20 +447,20 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status, device_path,
-                                                   sizeof(device_buffer), &path_len),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_GT(path_len, 0, "Device path not found");
-  ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
+  auto result2 = fio::DirectoryAdmin::Call::GetDevicePath(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_OK(result2.status());
+  ASSERT_OK(result2->s);
+  ASSERT_GT(result2.value().path.size(), 0, "Device path not found");
+  ASSERT_STR_EQ(ramdisk_path, std::string(result2.value().path.get()), "Unexpected device path");
 
   mountfd.reset(open(mount_path, O_RDONLY));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status, device_path,
-                                                   sizeof(device_buffer), &path_len),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
+  auto result3 = fio::DirectoryAdmin::Call::GetDevicePath(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_OK(result3.status());
+  ASSERT_EQ(result3->s, ZX_ERR_ACCESS_DENIED);
 
   ASSERT_EQ(umount(mount_path), ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
@@ -467,10 +468,10 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status, device_path,
-                                                   sizeof(device_buffer), &path_len),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+  auto result4 = fio::DirectoryAdmin::Call::GetDevicePath(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  ASSERT_OK(result4.status());
+  ASSERT_EQ(result4->s, ZX_ERR_NOT_SUPPORTED);
 
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
