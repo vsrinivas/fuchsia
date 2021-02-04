@@ -9,7 +9,7 @@ source_set("deprecated-fs-fidl-handler") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

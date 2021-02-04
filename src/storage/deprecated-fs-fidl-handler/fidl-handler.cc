@@ -4,7 +4,7 @@
 
 #include "fidl-handler.h"
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/txn_header.h>
 #include <stdio.h>
@@ -16,6 +16,8 @@
 
 namespace fs {
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 zx_status_t Reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   auto connection = FidlConnection::FromTxn(txn);
@@ -67,14 +69,12 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch) {
 }
 
 zx_status_t CloseMessage(FidlDispatchFunction dispatch) {
-  fuchsia_io_NodeCloseRequest request;
-  memset(&request, 0, sizeof(request));
-  fidl_init_txn_header(&request.hdr, 0, fuchsia_io_NodeCloseOrdinal);
+  fio::Node::CloseRequest::OwnedEncodedMessage request(zx_txid_t(0));
   fidl_incoming_msg_t msg = {
-      .bytes = &request,
-      .handles = NULL,
-      .num_bytes = sizeof(request),
-      .num_handles = 0u,
+      .bytes = request.GetOutgoingMessage().bytes(),
+      .handles = nullptr,
+      .num_bytes = request.GetOutgoingMessage().byte_actual(),
+      .num_handles = 0,
   };
 
   fidl_txn_t txn = {
