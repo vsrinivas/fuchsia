@@ -77,7 +77,7 @@ void Logger::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> l
         if (status == Status::OK) {
           logger_reconnection_backoff_.Reset();
         } else if (status == Status::SHUT_DOWN) {
-          FX_LOGS(INFO) << "Shutting down Cobalt logger";
+          FX_LOGS(INFO) << "Stopping logging Cobalt events";
           logger_.Unbind();
         } else {
           FX_LOGS(WARNING) << "Failed to set up Logger: " << StatusToString(status);
