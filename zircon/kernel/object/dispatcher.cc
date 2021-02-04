@@ -11,6 +11,7 @@
 #include <lib/ktrace.h>
 
 #include <arch/ops.h>
+#include <kernel/koid.h>
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
 
@@ -19,11 +20,6 @@ KCOUNTER(dispatcher_create_count, "dispatcher.create")
 KCOUNTER(dispatcher_destroy_count, "dispatcher.destroy")
 
 namespace {
-ktl::atomic<zx_koid_t> global_koid(ZX_KOID_FIRST);
-
-zx_koid_t GenerateKernelObjectId() {
-  return global_koid.fetch_add(1ULL, ktl::memory_order_relaxed);
-}
 
 // Helper class that safely allows deleting Dispatchers without risk of
 // blowing up the kernel stack.  It uses one pointer in the Thread
@@ -59,7 +55,7 @@ class SafeDeleter {
 }  // namespace
 
 Dispatcher::Dispatcher(zx_signals_t signals)
-    : koid_(GenerateKernelObjectId()), handle_count_(0u), signals_(signals) {
+    : koid_(KernelObjectId::Generate()), handle_count_(0u), signals_(signals) {
   kcounter_add(dispatcher_create_count, 1);
 }
 
