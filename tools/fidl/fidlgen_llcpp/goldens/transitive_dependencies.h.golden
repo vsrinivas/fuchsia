@@ -60,7 +60,7 @@ struct Baz {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::llcpp::middle::Bar g = {};
+  ::llcpp::middle::wire::Bar g = {};
 
   class UnownedEncodedMessage final {
    public:

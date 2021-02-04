@@ -60,8 +60,9 @@ class Top final {
   struct GetFooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::bottom::Foo foo;
-    explicit GetFooResponse(::llcpp::bottom::Foo& foo) : foo(std::move(foo)) {
+    ::llcpp::bottom::wire::Foo foo;
+    explicit GetFooResponse(::llcpp::bottom::wire::Foo& foo)
+        : foo(std::move(foo)) {
       _InitHeader();
     }
     GetFooResponse() { _InitHeader(); }
@@ -79,7 +80,7 @@ class Top final {
     class UnownedEncodedMessage final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
-                            ::llcpp::bottom::Foo& foo)
+                            ::llcpp::bottom::wire::Foo& foo)
           : message_(_bytes, _byte_size, sizeof(GetFooResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL GetFooResponse _response{foo};
@@ -115,7 +116,7 @@ class Top final {
 
     class OwnedEncodedMessage final {
      public:
-      explicit OwnedEncodedMessage(::llcpp::bottom::Foo& foo)
+      explicit OwnedEncodedMessage(::llcpp::bottom::wire::Foo& foo)
           : message_(bytes_, sizeof(bytes_), foo) {}
       explicit OwnedEncodedMessage(GetFooResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -482,9 +483,9 @@ class Top final {
       //
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
-      ::fidl::Result Reply(::llcpp::bottom::Foo foo);
+      ::fidl::Result Reply(::llcpp::bottom::wire::Foo foo);
       ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                           ::llcpp::bottom::Foo foo);
+                           ::llcpp::bottom::wire::Foo foo);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

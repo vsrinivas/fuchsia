@@ -76,8 +76,8 @@ class Example_foo_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static Example_foo_Result WithResponse(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>&&
-          val) {
+      ::fidl::tracking_ptr<
+          ::llcpp::fidl::test::error::wire::Example_foo_Response>&& val) {
     Example_foo_Result result;
     result.set_response(std::move(val));
     return result;
@@ -87,24 +87,24 @@ class Example_foo_Result {
   static Example_foo_Result WithResponse(::fidl::AnyAllocator& allocator,
                                          Args&&... args) {
     Example_foo_Result result;
-    result.set_response(
-        ::fidl::ObjectView<::llcpp::fidl::test::error::Example_foo_Response>(
-            allocator, std::forward<Args>(args)...));
+    result.set_response(::fidl::ObjectView<
+                        ::llcpp::fidl::test::error::wire::Example_foo_Response>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
   template <typename... Args>
   static Example_foo_Result WithResponse(::fidl::Allocator& allocator,
                                          Args&&... args) {
     Example_foo_Result result;
-    result.set_response(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>(
-            allocator, std::forward<Args>(args)...));
+    result.set_response(::fidl::tracking_ptr<
+                        ::llcpp::fidl::test::error::wire::Example_foo_Response>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_response(
-      ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>&&
-          elem) {
+      ::fidl::tracking_ptr<
+          ::llcpp::fidl::test::error::wire::Example_foo_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -112,26 +112,29 @@ class Example_foo_Result {
   template <typename... Args>
   void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kResponse;
-    set_response(
-        ::fidl::ObjectView<::llcpp::fidl::test::error::Example_foo_Response>(
-            allocator, std::forward<Args>(args)...));
+    set_response(::fidl::ObjectView<
+                 ::llcpp::fidl::test::error::wire::Example_foo_Response>(
+        allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_response(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kResponse;
-    set_response(
-        ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>(
-            allocator, std::forward<Args>(args)...));
+    set_response(::fidl::tracking_ptr<
+                 ::llcpp::fidl::test::error::wire::Example_foo_Response>(
+        allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::error::Example_foo_Response& mutable_response() {
+  ::llcpp::fidl::test::error::wire::Example_foo_Response& mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::fidl::test::error::Example_foo_Response*>(
+    return *static_cast<
+        ::llcpp::fidl::test::error::wire::Example_foo_Response*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::error::Example_foo_Response& response() const {
+  const ::llcpp::fidl::test::error::wire::Example_foo_Response& response()
+      const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::fidl::test::error::Example_foo_Response*>(
+    return *static_cast<
+        ::llcpp::fidl::test::error::wire::Example_foo_Response*>(
         envelope_.data.get());
   }
 
@@ -209,9 +212,10 @@ class Example_foo_Result {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
-        ::fidl::tracking_ptr<::llcpp::fidl::test::error::Example_foo_Response>
+        ::fidl::tracking_ptr<
+            ::llcpp::fidl::test::error::wire::Example_foo_Response>
             to_destroy = static_cast<::fidl::tracking_ptr<
-                ::llcpp::fidl::test::error::Example_foo_Response>>(
+                ::llcpp::fidl::test::error::wire::Example_foo_Response>>(
                 std::move(envelope_.data));
         break;
       }
@@ -340,8 +344,9 @@ class Example final {
   struct fooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::error::Example_foo_Result result;
-    explicit fooResponse(::llcpp::fidl::test::error::Example_foo_Result& result)
+    ::llcpp::fidl::test::error::wire::Example_foo_Result result;
+    explicit fooResponse(
+        ::llcpp::fidl::test::error::wire::Example_foo_Result& result)
         : result(std::move(result)) {
       _InitHeader();
     }
@@ -361,7 +366,7 @@ class Example final {
      public:
       UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::fidl::test::error::Example_foo_Result& result)
+          ::llcpp::fidl::test::error::wire::Example_foo_Result& result)
           : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
         FIDL_ALIGNDECL fooResponse _response{result};
         message_.Encode<fooResponse>(&_response);
@@ -397,7 +402,7 @@ class Example final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage(
-          ::llcpp::fidl::test::error::Example_foo_Result& result)
+          ::llcpp::fidl::test::error::wire::Example_foo_Result& result)
           : message_(bytes_, sizeof(bytes_), result) {}
       explicit OwnedEncodedMessage(fooResponse* response)
           : message_(bytes_, sizeof(bytes_), response) {}
@@ -777,12 +782,12 @@ class Example final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(
-          ::llcpp::fidl::test::error::Example_foo_Result result);
+          ::llcpp::fidl::test::error::wire::Example_foo_Result result);
       ::fidl::Result ReplySuccess(int64_t y);
       ::fidl::Result ReplyError(uint32_t error);
       ::fidl::Result Reply(
           ::fidl::BufferSpan _buffer,
-          ::llcpp::fidl::test::error::Example_foo_Result result);
+          ::llcpp::fidl::test::error::wire::Example_foo_Result result);
       ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t y);
 
      protected:

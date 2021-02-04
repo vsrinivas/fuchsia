@@ -84,7 +84,7 @@ struct ExampleOfUseOfAliases {
 
   ::fidl::VectorView<::fidl::StringView> field_of_vec_of_strings_at_most_5 = {};
 
-  ::fidl::VectorView<::llcpp::someotherlibrary::ReferenceMe>
+  ::fidl::VectorView<::llcpp::someotherlibrary::wire::ReferenceMe>
       field_of_vec_of_ref_me_at_most_5 = {};
 
   ::zx::channel field_of_channel = {};

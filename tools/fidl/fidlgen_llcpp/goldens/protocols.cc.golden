@@ -2405,8 +2405,8 @@ namespace entries {
 
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
-        result) {
+    ::llcpp::fidl::test::protocols::wire::
+        WithErrorSyntax_ResponseAsStruct_Result result) {
   ResponseAsStructResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -2430,8 +2430,8 @@ WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
-        result) {
+    ::llcpp::fidl::test::protocols::wire::
+        WithErrorSyntax_ResponseAsStruct_Result result) {
   ResponseAsStructResponse::UnownedEncodedMessage _response(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -2452,8 +2452,8 @@ WithErrorSyntax::TypedChannelInterface::ResponseAsStructCompleterBase::Reply(
 
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
-        result) {
+    ::llcpp::fidl::test::protocols::wire::
+        WithErrorSyntax_ErrorAsPrimitive_Result result) {
   ErrorAsPrimitiveResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -2473,8 +2473,8 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
-        result) {
+    ::llcpp::fidl::test::protocols::wire::
+        WithErrorSyntax_ErrorAsPrimitive_Result result) {
   ErrorAsPrimitiveResponse::UnownedEncodedMessage _response(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -2490,7 +2490,8 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsPrimitiveCompleterBase::Reply(
 
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::Reply(
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) {
+    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result
+        result) {
   ErrorAsEnumResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -2511,7 +2512,8 @@ WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::ReplyError(
 ::fidl::Result
 WithErrorSyntax::TypedChannelInterface::ErrorAsEnumCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
-    ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) {
+    ::llcpp::fidl::test::protocols::wire::WithErrorSyntax_ErrorAsEnum_Result
+        result) {
   ErrorAsEnumResponse::UnownedEncodedMessage _response(
       _buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

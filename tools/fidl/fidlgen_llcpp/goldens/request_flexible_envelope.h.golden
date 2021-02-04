@@ -396,9 +396,9 @@ class Protocol final {
   struct RequestStrictResponseFlexibleResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f;
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f;
     explicit RequestStrictResponseFlexibleResponse(
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& f)
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& f)
         : f(std::move(f)) {
       _InitHeader();
     }
@@ -418,7 +418,7 @@ class Protocol final {
      public:
       UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& f)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& f)
           : message_(_bytes, _byte_size,
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
@@ -458,7 +458,7 @@ class Protocol final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage(
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& f)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& f)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, f) {}
@@ -530,10 +530,10 @@ class Protocol final {
   struct RequestStrictResponseFlexibleRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s;
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s;
     explicit RequestStrictResponseFlexibleRequest(
         zx_txid_t _txid,
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s)
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& s)
         : s(std::move(s)) {
       _InitHeader(_txid);
     }
@@ -558,7 +558,7 @@ class Protocol final {
      public:
       UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& s)
           : message_(_bytes, _byte_size,
                      sizeof(RequestStrictResponseFlexibleRequest), nullptr, 0,
                      0) {
@@ -599,7 +599,7 @@ class Protocol final {
      public:
       explicit OwnedEncodedMessage(
           zx_txid_t _txid,
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& s)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
@@ -671,9 +671,9 @@ class Protocol final {
   struct RequestFlexibleResponseStrictResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f;
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f;
     explicit RequestFlexibleResponseStrictResponse(
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& f)
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& f)
         : f(std::move(f)) {
       _InitHeader();
     }
@@ -693,7 +693,7 @@ class Protocol final {
      public:
       UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size,
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& f)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& f)
           : message_(_bytes, _byte_size,
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
@@ -733,7 +733,7 @@ class Protocol final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage(
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& f)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& f)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, f) {}
@@ -805,10 +805,10 @@ class Protocol final {
   struct RequestFlexibleResponseStrictRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s;
+    ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s;
     explicit RequestFlexibleResponseStrictRequest(
         zx_txid_t _txid,
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s)
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& s)
         : s(std::move(s)) {
       _InitHeader(_txid);
     }
@@ -833,7 +833,7 @@ class Protocol final {
      public:
       UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& s)
           : message_(_bytes, _byte_size,
                      sizeof(RequestFlexibleResponseStrictRequest), nullptr, 0,
                      0) {
@@ -874,7 +874,7 @@ class Protocol final {
      public:
       explicit OwnedEncodedMessage(
           zx_txid_t _txid,
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s)
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& s)
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
@@ -960,12 +960,12 @@ class Protocol final {
           ::fidl::UnownedClientEnd<
               ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
               _client,
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s);
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& s);
       RequestStrictResponseFlexible(
           ::fidl::UnownedClientEnd<
               ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
               _client,
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& s,
           zx_time_t _deadline);
       explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -1014,12 +1014,12 @@ class Protocol final {
           ::fidl::UnownedClientEnd<
               ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
               _client,
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s);
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& s);
       RequestFlexibleResponseStrict(
           ::fidl::UnownedClientEnd<
               ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
               _client,
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& s,
           zx_time_t _deadline);
       explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -1077,7 +1077,7 @@ class Protocol final {
               ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
               _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo& s,
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo& s,
           uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -1125,7 +1125,7 @@ class Protocol final {
               ::llcpp::fidl::test::requestflexibleenvelope::Protocol>
               _client,
           uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo& s,
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo& s,
           uint8_t* _response_bytes, uint32_t _response_byte_capacity);
       explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
           : ::fidl::Result(result) {}
@@ -1180,7 +1180,7 @@ class Protocol final {
     static ResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
         ::fidl::UnownedClientEnd<Protocol> _client_end,
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s) {
       return ResultOf::RequestStrictResponseFlexible(_client_end, s);
     }
 
@@ -1190,7 +1190,7 @@ class Protocol final {
     RequestStrictResponseFlexible(
         ::fidl::UnownedClientEnd<Protocol> _client_end,
         ::fidl::BufferSpan _request_buffer,
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
           _client_end, _request_buffer.data, _request_buffer.capacity, s,
@@ -1201,7 +1201,7 @@ class Protocol final {
     static ResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
         ::fidl::UnownedClientEnd<Protocol> _client_end,
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s) {
       return ResultOf::RequestFlexibleResponseStrict(_client_end, s);
     }
 
@@ -1211,7 +1211,7 @@ class Protocol final {
     RequestFlexibleResponseStrict(
         ::fidl::UnownedClientEnd<Protocol> _client_end,
         ::fidl::BufferSpan _request_buffer,
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
           _client_end, _request_buffer.data, _request_buffer.capacity, s,
@@ -1240,7 +1240,7 @@ class Protocol final {
 
     // Request is heap-allocated. Response is heap-allocated.
     ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s) {
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s) {
       return ResultOf::RequestStrictResponseFlexible(this->client_end(), s);
     }
 
@@ -1249,7 +1249,7 @@ class Protocol final {
     UnownedResultOf::RequestStrictResponseFlexible
     RequestStrictResponseFlexible(
         ::fidl::BufferSpan _request_buffer,
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestStrictResponseFlexible(
           this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
@@ -1258,7 +1258,7 @@ class Protocol final {
 
     // Request is heap-allocated. Response is heap-allocated.
     ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s) {
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s) {
       return ResultOf::RequestFlexibleResponseStrict(this->client_end(), s);
     }
 
@@ -1267,7 +1267,7 @@ class Protocol final {
     UnownedResultOf::RequestFlexibleResponseStrict
     RequestFlexibleResponseStrict(
         ::fidl::BufferSpan _request_buffer,
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s,
         ::fidl::BufferSpan _response_buffer) {
       return UnownedResultOf::RequestFlexibleResponseStrict(
           this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
@@ -1312,10 +1312,10 @@ class Protocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f);
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f);
       ::fidl::Result Reply(
           ::fidl::BufferSpan _buffer,
-          ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f);
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1325,7 +1325,7 @@ class Protocol final {
         ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
 
     virtual void RequestStrictResponseFlexible(
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s,
         RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
 
     class RequestFlexibleResponseStrictCompleterBase
@@ -1342,10 +1342,10 @@ class Protocol final {
       // Because the reply status is identical to the unbinding status, it can
       // be safely ignored.
       ::fidl::Result Reply(
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f);
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f);
       ::fidl::Result Reply(
           ::fidl::BufferSpan _buffer,
-          ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f);
+          ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1355,7 +1355,7 @@ class Protocol final {
         ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
 
     virtual void RequestFlexibleResponseStrict(
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+        ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s,
         RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
 
    private:
@@ -1541,7 +1541,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // The request and callback are allocated on the heap.
   ::fidl::Result RequestStrictResponseFlexible(
-      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s,
       ::fit::callback<void(RequestStrictResponseFlexibleResponse* response)>
           _cb);
 
@@ -1551,13 +1551,13 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // or |OnReply| are called on it.
   ::fidl::Result RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
-      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s,
       RequestStrictResponseFlexibleResponseContext* _context);
 
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // Request is heap-allocated. Response is heap-allocated.
   ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible_Sync(
-      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s);
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s);
 
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // Caller provides the backing storage for FIDL message via request and
@@ -1565,13 +1565,13 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   UnownedResultOf::RequestStrictResponseFlexible
   RequestStrictResponseFlexible_Sync(
       ::fidl::BufferSpan _request_buffer,
-      ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::StrictFoo s,
       ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // The request and callback are allocated on the heap.
   ::fidl::Result RequestFlexibleResponseStrict(
-      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s,
       ::fit::callback<void(RequestFlexibleResponseStrictResponse* response)>
           _cb);
 
@@ -1581,13 +1581,13 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // or |OnReply| are called on it.
   ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
-      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s,
       RequestFlexibleResponseStrictResponseContext* _context);
 
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // Request is heap-allocated. Response is heap-allocated.
   ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict_Sync(
-      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s);
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s);
 
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // Caller provides the backing storage for FIDL message via request and
@@ -1595,7 +1595,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   UnownedResultOf::RequestFlexibleResponseStrict
   RequestFlexibleResponseStrict_Sync(
       ::fidl::BufferSpan _request_buffer,
-      ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      ::llcpp::fidl::test::requestflexibleenvelope::wire::FlexibleFoo s,
       ::fidl::BufferSpan _response_buffer);
 
   AsyncEventHandler* event_handler() const { return event_handler_.get(); }

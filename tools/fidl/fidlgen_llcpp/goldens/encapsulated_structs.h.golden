@@ -82,7 +82,8 @@ struct NonInlineStructTestStruct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl::tracking_ptr<::llcpp::fidl::test::encapsulatedstructs::Int16Int8>
+  ::fidl::tracking_ptr<
+      ::llcpp::fidl::test::encapsulatedstructs::wire::Int16Int8>
       element = {};
 
   ::zx::handle h = {};
@@ -384,8 +385,8 @@ struct ArrayInt16Int8 {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::fidl::Array<::llcpp::fidl::test::encapsulatedstructs::Int16Int8, 3> arr =
-      {};
+  ::fidl::Array<::llcpp::fidl::test::encapsulatedstructs::wire::Int16Int8, 3>
+      arr = {};
 
   class UnownedEncodedMessage final {
    public:
@@ -481,11 +482,11 @@ struct StructPaddingTestStruct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::llcpp::fidl::test::encapsulatedstructs::Int16Int8 trailing = {};
+  ::llcpp::fidl::test::encapsulatedstructs::wire::Int16Int8 trailing = {};
 
-  ::llcpp::fidl::test::encapsulatedstructs::Int8Int32 inner = {};
+  ::llcpp::fidl::test::encapsulatedstructs::wire::Int8Int32 inner = {};
 
-  ::llcpp::fidl::test::encapsulatedstructs::ArrayInt16Int8 array = {};
+  ::llcpp::fidl::test::encapsulatedstructs::wire::ArrayInt16Int8 array = {};
 
   class UnownedEncodedMessage final {
    public:
@@ -582,9 +583,11 @@ struct TopLevelStruct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::llcpp::fidl::test::encapsulatedstructs::StructPaddingTestStruct a = {};
+  ::llcpp::fidl::test::encapsulatedstructs::wire::StructPaddingTestStruct a =
+      {};
 
-  ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct b = {};
+  ::llcpp::fidl::test::encapsulatedstructs::wire::NonInlineStructTestStruct b =
+      {};
 
   void _CloseHandles();
 

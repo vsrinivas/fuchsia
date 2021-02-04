@@ -61,7 +61,7 @@ struct Foo {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
-  ::llcpp::dependent::MyEnum field = {};
+  ::llcpp::dependent::wire::MyEnum field = {};
 
   class UnownedEncodedMessage final {
    public:

@@ -849,7 +849,7 @@ func formatLibrary(library fidl.LibraryIdentifier, sep string, identifierTransfo
 	return changeIfReserved(fidl.Identifier(name), "")
 }
 
-func formatNamespace(library fidl.LibraryIdentifier, appendNamespace string) string {
+func formatNamespace(library fidl.LibraryIdentifier, declType fidl.DeclType, appendNamespace string) string {
 	ns := "::" + formatLibrary(library, "::", changePartIfReserved)
 	if len(appendNamespace) > 0 {
 		ns = ns + "::" + appendNamespace
@@ -857,7 +857,7 @@ func formatNamespace(library fidl.LibraryIdentifier, appendNamespace string) str
 	return ns
 }
 
-func formatLLNamespace(library fidl.LibraryIdentifier, appendNamespace string) string {
+func formatLLNamespace(library fidl.LibraryIdentifier, declType fidl.DeclType, appendNamespace string) string {
 	// Avoid user-defined llcpp library colliding with the llcpp namespace, by appending underscore.
 	if len(library) > 0 && library[0] == "llcpp" {
 		libraryRenamed := make([]fidl.Identifier, len(library))
@@ -865,7 +865,20 @@ func formatLLNamespace(library fidl.LibraryIdentifier, appendNamespace string) s
 		libraryRenamed[0] = "llcpp_"
 		library = libraryRenamed
 	}
-	return "::llcpp" + formatNamespace(library, appendNamespace)
+	switch declType {
+	case fidl.ConstDeclType,
+		fidl.BitsDeclType,
+		fidl.EnumDeclType,
+		fidl.StructDeclType,
+		fidl.TableDeclType,
+		fidl.UnionDeclType:
+		wireNamespace := make([]fidl.Identifier, len(library))
+		copy(wireNamespace, library)
+		wireNamespace = append(wireNamespace, "wire")
+		return "::llcpp" + formatNamespace(wireNamespace, declType, appendNamespace)
+	default:
+		return "::llcpp" + formatNamespace(library, declType, appendNamespace)
+	}
 }
 
 func formatLibraryPrefix(library fidl.LibraryIdentifier) string {
@@ -882,7 +895,7 @@ type compiler struct {
 	decls              fidl.DeclInfoMap
 	library            fidl.LibraryIdentifier
 	handleTypes        map[fidl.HandleSubtype]struct{}
-	namespaceFormatter func(fidl.LibraryIdentifier, string) string
+	namespaceFormatter func(fidl.LibraryIdentifier, fidl.DeclType, string) string
 	resultForStruct    map[fidl.EncodedCompoundIdentifier]*Result
 	resultForUnion     map[fidl.EncodedCompoundIdentifier]*Result
 }
@@ -900,10 +913,15 @@ func (c *compiler) isInExternalLibrary(ci fidl.CompoundIdentifier) bool {
 }
 
 func (c *compiler) compileCompoundIdentifier(eci fidl.EncodedCompoundIdentifier, ext, appendNamespace string, fullName bool) string {
+	declInfo, ok := c.decls[eci.DeclName()]
+	if !ok {
+		panic(fmt.Sprintf("unknown identifier: %v", eci))
+	}
+	declType := declInfo.Type
 	val := fidl.ParseCompoundIdentifier(eci)
 	strs := []string{}
 	if fullName || c.isInExternalLibrary(val) {
-		strs = append(strs, c.namespaceFormatter(val.Library, appendNamespace))
+		strs = append(strs, c.namespaceFormatter(val.Library, declType, appendNamespace))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
 	if len(val.Member) != 0 {
@@ -1518,7 +1536,7 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 	return r
 }
 
-func compile(r fidl.Root, namespaceFormatter func(fidl.LibraryIdentifier, string) string) Root {
+func compile(r fidl.Root, namespaceFormatter func(fidl.LibraryIdentifier, fidl.DeclType, string) string) Root {
 	root := Root{}
 	library := make(fidl.LibraryIdentifier, 0)
 	rawLibrary := make(fidl.LibraryIdentifier, 0)
@@ -1528,7 +1546,7 @@ func compile(r fidl.Root, namespaceFormatter func(fidl.LibraryIdentifier, string
 		rawLibrary = append(rawLibrary, identifier)
 	}
 	c := compiler{
-		namespaceFormatter(library, ""),
+		namespaceFormatter(library, fidl.LibraryDeclType, ""),
 		formatLibraryPrefix(rawLibrary),
 		r.DeclsWithDependencies(),
 		fidl.ParseLibraryName(r.Name),

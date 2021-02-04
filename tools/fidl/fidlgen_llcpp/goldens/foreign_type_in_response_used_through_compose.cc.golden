@@ -159,13 +159,13 @@ namespace entries {
 }
 
 ::fidl::Result Top::TypedChannelInterface::GetFooCompleterBase::Reply(
-    ::llcpp::bottom::Foo foo) {
+    ::llcpp::bottom::wire::Foo foo) {
   GetFooResponse::OwnedEncodedMessage _response{foo};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result Top::TypedChannelInterface::GetFooCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, ::llcpp::bottom::Foo foo) {
+    ::fidl::BufferSpan _buffer, ::llcpp::bottom::wire::Foo foo) {
   GetFooResponse::UnownedEncodedMessage _response(_buffer.data,
                                                   _buffer.capacity, foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

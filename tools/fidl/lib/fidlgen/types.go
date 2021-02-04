@@ -99,6 +99,16 @@ func (eci EncodedCompoundIdentifier) LibraryName() EncodedLibraryIdentifier {
 	return EncodedLibraryIdentifier(raw_library)
 }
 
+func (eci EncodedCompoundIdentifier) DeclName() EncodedCompoundIdentifier {
+	ci := ParseCompoundIdentifier(eci)
+	parts := []string{}
+	for _, l := range ci.Library {
+		parts = append(parts, string(l))
+	}
+	return EncodedCompoundIdentifier(fmt.Sprintf("%s/%s",
+		strings.Join(parts, "."), ci.Name))
+}
+
 func ParseLibraryName(eli EncodedLibraryIdentifier) LibraryIdentifier {
 	raw_parts := strings.Split(string(eli), ".")
 	parts := make([]Identifier, len(raw_parts))
@@ -858,6 +868,8 @@ func (r Resourceness) IsValueType() bool {
 type DeclType string
 
 const (
+	LibraryDeclType DeclType = "library"
+
 	ConstDeclType    DeclType = "const"
 	BitsDeclType     DeclType = "bits"
 	EnumDeclType     DeclType = "enum"

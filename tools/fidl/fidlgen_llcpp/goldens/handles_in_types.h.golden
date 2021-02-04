@@ -498,9 +498,11 @@ struct HandlesInTypes {
   ::fidl::VectorView<::fidl::Array<::zx::vmo, 5>> handle_in_mixed_vec_array =
       {};
 
-  ::llcpp::fidl::test::handlesintypes::TableWithHandle table_with_handle = {};
+  ::llcpp::fidl::test::handlesintypes::wire::TableWithHandle table_with_handle =
+      {};
 
-  ::llcpp::fidl::test::handlesintypes::UnionWithHandle union_with_handle = {};
+  ::llcpp::fidl::test::handlesintypes::wire::UnionWithHandle union_with_handle =
+      {};
 
   void _CloseHandles();
 

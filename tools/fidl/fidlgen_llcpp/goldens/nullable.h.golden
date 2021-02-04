@@ -354,7 +354,7 @@ struct StructWithNullableUnion {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::llcpp::fidl::test::nullable::SimpleUnion val = {};
+  ::llcpp::fidl::test::nullable::wire::SimpleUnion val = {};
 
   class UnownedEncodedMessage final {
    public:
@@ -450,7 +450,8 @@ struct StructWithNullableStruct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl::tracking_ptr<::llcpp::fidl::test::nullable::Int32Wrapper> val = {};
+  ::fidl::tracking_ptr<::llcpp::fidl::test::nullable::wire::Int32Wrapper> val =
+      {};
 
   class UnownedEncodedMessage final {
    public:

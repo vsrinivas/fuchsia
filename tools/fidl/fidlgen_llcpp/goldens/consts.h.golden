@@ -172,9 +172,10 @@ constexpr float MIN_TEMP = -273.15f;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
-constexpr ::llcpp::fidl::test::consts::EnumType enumVal = EnumType::VALUE;
+constexpr ::llcpp::fidl::test::consts::wire::EnumType enumVal = EnumType::VALUE;
 
-constexpr ::llcpp::fidl::test::consts::EnumType enumTrue = EnumType::true_;
+constexpr ::llcpp::fidl::test::consts::wire::EnumType enumTrue =
+    EnumType::true_;
 
 constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
 
@@ -186,9 +187,10 @@ constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
 
-constexpr ::llcpp::fidl::test::consts::BitsType bitsVal = BitsType::VALUE;
+constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsVal = BitsType::VALUE;
 
-constexpr ::llcpp::fidl::test::consts::BitsType bitsTrue = BitsType::true_;
+constexpr ::llcpp::fidl::test::consts::wire::BitsType bitsTrue =
+    BitsType::true_;
 
 constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
 

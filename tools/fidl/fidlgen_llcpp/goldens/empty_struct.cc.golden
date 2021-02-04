@@ -34,7 +34,7 @@ extern "C" const fidl_type_t
 }  // namespace
 EmptyProtocol::ResultOf::Send::Send(
     ::fidl::UnownedClientEnd<EmptyProtocol> _client,
-    ::llcpp::fidl::test::emptystruct::Empty& e) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty& e) {
   SendRequest::OwnedEncodedMessage _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -44,7 +44,7 @@ EmptyProtocol::ResultOf::Send::Send(
 EmptyProtocol::UnownedResultOf::Send::Send(
     ::fidl::UnownedClientEnd<EmptyProtocol> _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity,
-    ::llcpp::fidl::test::emptystruct::Empty& e) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty& e) {
   SendRequest::UnownedEncodedMessage _request(_request_bytes,
                                               _request_byte_capacity, 0, e);
   _request.GetOutgoingMessage().Write(_client);
@@ -54,7 +54,7 @@ EmptyProtocol::UnownedResultOf::Send::Send(
 
 EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
     ::fidl::UnownedClientEnd<EmptyProtocol> _client,
-    ::llcpp::fidl::test::emptystruct::Empty& e) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty& e) {
   SendAndReceiveRequest::OwnedEncodedMessage _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
       _client, bytes_,
@@ -66,7 +66,7 @@ EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
 
 EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
     ::fidl::UnownedClientEnd<EmptyProtocol> _client,
-    ::llcpp::fidl::test::emptystruct::Empty& e, zx_time_t _deadline) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty& e, zx_time_t _deadline) {
   SendAndReceiveRequest::OwnedEncodedMessage _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
       _client, bytes_,
@@ -79,8 +79,9 @@ EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
 
 EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
     ::fidl::UnownedClientEnd<EmptyProtocol> _client, uint8_t* _request_bytes,
-    uint32_t _request_byte_capacity, ::llcpp::fidl::test::emptystruct::Empty& e,
-    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    uint32_t _request_byte_capacity,
+    ::llcpp::fidl::test::emptystruct::wire::Empty& e, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   SendAndReceiveRequest::UnownedEncodedMessage _request(
       _request_bytes, _request_byte_capacity, 0, e);
@@ -91,7 +92,7 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
 }
 
 ::fidl::Result EmptyProtocol::ClientImpl::Send(
-    ::llcpp::fidl::test::emptystruct::Empty e) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty e) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::Send(
         ::fidl::UnownedClientEnd<EmptyProtocol>(_channel->handle()), e);
@@ -102,7 +103,7 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
 
 ::fidl::Result EmptyProtocol::ClientImpl::Send(
     ::fidl::BufferSpan _request_buffer,
-    ::llcpp::fidl::test::emptystruct::Empty e) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty e) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::Send(
         ::fidl::UnownedClientEnd<EmptyProtocol>(_channel->handle()),
@@ -114,7 +115,7 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
 
 EmptyProtocol::ResultOf::SendAndReceive
 EmptyProtocol::ClientImpl::SendAndReceive_Sync(
-    ::llcpp::fidl::test::emptystruct::Empty e) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty e) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::SendAndReceive(
         ::fidl::UnownedClientEnd<EmptyProtocol>(_channel->handle()), e);
@@ -126,7 +127,7 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
 EmptyProtocol::UnownedResultOf::SendAndReceive
 EmptyProtocol::ClientImpl::SendAndReceive_Sync(
     ::fidl::BufferSpan _request_buffer,
-    ::llcpp::fidl::test::emptystruct::Empty e,
+    ::llcpp::fidl::test::emptystruct::wire::Empty e,
     ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::SendAndReceive(
@@ -148,7 +149,7 @@ void EmptyProtocol::SendAndReceiveResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result EmptyProtocol::ClientImpl::SendAndReceive(
-    ::llcpp::fidl::test::emptystruct::Empty e,
+    ::llcpp::fidl::test::emptystruct::wire::Empty e,
     ::fit::callback<void(SendAndReceiveResponse* response)> _cb) {
   class ResponseContext final : public SendAndReceiveResponseContext {
    public:
@@ -175,7 +176,7 @@ void EmptyProtocol::SendAndReceiveResponseContext::OnReply(uint8_t* reply) {
 
 ::fidl::Result EmptyProtocol::ClientImpl::SendAndReceive(
     ::fidl::BufferSpan _request_buffer,
-    ::llcpp::fidl::test::emptystruct::Empty e,
+    ::llcpp::fidl::test::emptystruct::wire::Empty e,
     SendAndReceiveResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
@@ -348,14 +349,15 @@ namespace entries {
 
 ::fidl::Result
 EmptyProtocol::TypedChannelInterface::SendAndReceiveCompleterBase::Reply(
-    ::llcpp::fidl::test::emptystruct::Empty e) {
+    ::llcpp::fidl::test::emptystruct::wire::Empty e) {
   SendAndReceiveResponse::OwnedEncodedMessage _response{e};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result
 EmptyProtocol::TypedChannelInterface::SendAndReceiveCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, ::llcpp::fidl::test::emptystruct::Empty e) {
+    ::fidl::BufferSpan _buffer,
+    ::llcpp::fidl::test::emptystruct::wire::Empty e) {
   SendAndReceiveResponse::UnownedEncodedMessage _response(_buffer.data,
                                                           _buffer.capacity, e);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -378,7 +380,7 @@ void EmptyProtocol::SendAndReceiveResponse::_InitHeader() {
 }
 
 zx_status_t EmptyProtocol::EventSender::Receive(
-    ::llcpp::fidl::test::emptystruct::Empty e) const {
+    ::llcpp::fidl::test::emptystruct::wire::Empty e) const {
   ReceiveResponse::OwnedEncodedMessage _response{e};
   _response.Write(server_end_);
   return _response.status();
@@ -386,7 +388,7 @@ zx_status_t EmptyProtocol::EventSender::Receive(
 
 zx_status_t EmptyProtocol::EventSender::Receive(
     ::fidl::BufferSpan _buffer,
-    ::llcpp::fidl::test::emptystruct::Empty e) const {
+    ::llcpp::fidl::test::emptystruct::wire::Empty e) const {
   ReceiveResponse::UnownedEncodedMessage _response(_buffer.data,
                                                    _buffer.capacity, e);
   _response.Write(server_end_);

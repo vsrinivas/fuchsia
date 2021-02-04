@@ -436,7 +436,8 @@ class UnionSize24Alignment8 {
 
   static UnionSize24Alignment8 WithVariant(
       ::fidl::tracking_ptr<
-          ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>&& val) {
+          ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8>&&
+          val) {
     UnionSize24Alignment8 result;
     result.set_variant(std::move(val));
     return result;
@@ -448,7 +449,7 @@ class UnionSize24Alignment8 {
     UnionSize24Alignment8 result;
     result.set_variant(
         ::fidl::ObjectView<
-            ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>(
+            ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
@@ -458,14 +459,15 @@ class UnionSize24Alignment8 {
     UnionSize24Alignment8 result;
     result.set_variant(
         ::fidl::tracking_ptr<
-            ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>(
+            ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_variant(
       ::fidl::tracking_ptr<
-          ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>&& elem) {
+          ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8>&&
+          elem) {
     ordinal_ = Ordinal::kVariant;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
@@ -473,30 +475,32 @@ class UnionSize24Alignment8 {
   template <typename... Args>
   void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kVariant;
-    set_variant(::fidl::ObjectView<
-                ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>(
-        allocator, std::forward<Args>(args)...));
+    set_variant(
+        ::fidl::ObjectView<
+            ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8>(
+            allocator, std::forward<Args>(args)...));
   }
   template <typename... Args>
   void set_variant(::fidl::Allocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kVariant;
-    set_variant(::fidl::tracking_ptr<
-                ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>(
-        allocator, std::forward<Args>(args)...));
+    set_variant(
+        ::fidl::tracking_ptr<
+            ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8>(
+            allocator, std::forward<Args>(args)...));
   }
 
-  ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8&
+  ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8&
   mutable_variant() {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
     return *static_cast<
-        ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8*>(
+        ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8*>(
         envelope_.data.get());
   }
-  const ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8& variant()
-      const {
+  const ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8&
+  variant() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
     return *static_cast<
-        ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8*>(
+        ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8*>(
         envelope_.data.get());
   }
   Tag which() const {
@@ -522,9 +526,10 @@ class UnionSize24Alignment8 {
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
       case 1: {
         ::fidl::tracking_ptr<
-            ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>
-            to_destroy = static_cast<::fidl::tracking_ptr<
-                ::llcpp::fidl::test::unionsandwich::StructSize16Alignment8>>(
+            ::llcpp::fidl::test::unionsandwich::wire::StructSize16Alignment8>
+            to_destroy = static_cast<
+                ::fidl::tracking_ptr<::llcpp::fidl::test::unionsandwich::wire::
+                                         StructSize16Alignment8>>(
                 std::move(envelope_.data));
         break;
       }
@@ -555,7 +560,7 @@ struct SandwichUnionSize8Alignment4 {
 
   uint32_t before = {};
 
-  ::llcpp::fidl::test::unionsandwich::UnionSize8Alignment4 union_ = {};
+  ::llcpp::fidl::test::unionsandwich::wire::UnionSize8Alignment4 union_ = {};
 
   uint32_t after = {};
 
@@ -656,7 +661,7 @@ struct SandwichUnionSize36Alignment4 {
 
   uint32_t before = {};
 
-  ::llcpp::fidl::test::unionsandwich::UnionSize36Alignment4 union_ = {};
+  ::llcpp::fidl::test::unionsandwich::wire::UnionSize36Alignment4 union_ = {};
 
   uint32_t after = {};
 
@@ -757,7 +762,7 @@ struct SandwichUnionSize12Alignment4 {
 
   uint32_t before = {};
 
-  ::llcpp::fidl::test::unionsandwich::UnionSize12Alignment4 union_ = {};
+  ::llcpp::fidl::test::unionsandwich::wire::UnionSize12Alignment4 union_ = {};
 
   int32_t after = {};
 
@@ -957,7 +962,7 @@ struct SandwichUnionSize24Alignment8 {
 
   uint32_t before = {};
 
-  ::llcpp::fidl::test::unionsandwich::UnionSize24Alignment8 union_ = {};
+  ::llcpp::fidl::test::unionsandwich::wire::UnionSize24Alignment8 union_ = {};
 
   uint32_t after = {};
 

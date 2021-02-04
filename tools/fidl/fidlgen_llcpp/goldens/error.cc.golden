@@ -181,7 +181,7 @@ namespace entries {
 }
 
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::Reply(
-    ::llcpp::fidl::test::error::Example_foo_Result result) {
+    ::llcpp::fidl::test::error::wire::Example_foo_Result result) {
   fooResponse::OwnedEncodedMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -200,7 +200,7 @@ namespace entries {
 
 ::fidl::Result Example::TypedChannelInterface::fooCompleterBase::Reply(
     ::fidl::BufferSpan _buffer,
-    ::llcpp::fidl::test::error::Example_foo_Result result) {
+    ::llcpp::fidl::test::error::wire::Example_foo_Result result) {
   fooResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
                                                result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
