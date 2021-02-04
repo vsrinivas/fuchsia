@@ -107,7 +107,19 @@ func TestGetAddressByName(t *testing.T) {
 }
 
 func compareFuchsiaDevices(f1, f2 *FuchsiaDevice) bool {
-	return cmp.Equal(f1.ipAddr, f2.ipAddr) && cmp.Equal(f1.name, f2.name)
+	return cmp.Equal(f1.IpAddr, f2.IpAddr) && cmp.Equal(f1.Name, f2.Name)
+}
+
+func TestDeviceString(t *testing.T) {
+	device := &FuchsiaDevice{
+		IpAddr: "123-123-123-123",
+		Name:   "test-device",
+	}
+	expectedOutput := "123-123-123-123 test-device"
+	actual := device.String()
+	if actual != expectedOutput {
+		t.Errorf("Expected String [%v] got [%v]", expectedOutput, actual)
+	}
 }
 
 func TestFindDeviceByName(t *testing.T) {
@@ -120,8 +132,8 @@ func TestFindDeviceByName(t *testing.T) {
 	}
 	deviceName := "test-device"
 	expectedFuchsiaDevice := &FuchsiaDevice{
-		ipAddr: "123-123-123-123",
-		name:   "test-device",
+		IpAddr: "123-123-123-123",
+		Name:   "test-device",
 	}
 	output, err := testSDK.FindDeviceByName(deviceName)
 	if err != nil {
@@ -154,8 +166,8 @@ func TestFindDeviceByIP(t *testing.T) {
 	}
 	ipAddr := "456-456-456-456"
 	expectedFuchsiaDevice := &FuchsiaDevice{
-		ipAddr: "456-456-456-456",
-		name:   "another-test-device",
+		IpAddr: "456-456-456-456",
+		Name:   "another-test-device",
 	}
 	output, err := testSDK.FindDeviceByIP(ipAddr)
 	if err != nil {
@@ -184,11 +196,11 @@ func TestListDevices(t *testing.T) {
 	}
 	expectedFuchsiaDevice := []*FuchsiaDevice{
 		{
-			ipAddr: "123-123-123-123",
-			name:   "test-device",
+			IpAddr: "123-123-123-123",
+			Name:   "test-device",
 		}, {
-			ipAddr: "456-456-456-456",
-			name:   "another-test-device",
+			IpAddr: "456-456-456-456",
+			Name:   "another-test-device",
 		},
 	}
 	output, err := testSDK.ListDevices()

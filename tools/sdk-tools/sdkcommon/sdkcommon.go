@@ -34,9 +34,9 @@ var (
 // FuchsiaDevice represent a Fuchsia device.
 type FuchsiaDevice struct {
 	// IPv4 or IPv6 of the Fuchsia device.
-	ipAddr string
+	IpAddr string
 	// Nodename of the Fuchsia device.
-	name string
+	Name string
 }
 
 // Default GCS bucket for prebuilt images and packages.
@@ -333,6 +333,10 @@ func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
+func (f *FuchsiaDevice) String() string {
+	return fmt.Sprintf("%s %s", f.IpAddr, f.Name)
+}
+
 // FindDeviceByName returns a fuchsia device matching a specific device name.
 func (sdk SDKProperties) FindDeviceByName(deviceName string) (*FuchsiaDevice, error) {
 	devices, err := sdk.ListDevices()
@@ -340,7 +344,7 @@ func (sdk SDKProperties) FindDeviceByName(deviceName string) (*FuchsiaDevice, er
 		return nil, err
 	}
 	for _, device := range devices {
-		if device.name == deviceName {
+		if device.Name == deviceName {
 			return device, nil
 		}
 	}
@@ -354,7 +358,7 @@ func (sdk SDKProperties) FindDeviceByIP(ipAddr string) (*FuchsiaDevice, error) {
 		return nil, err
 	}
 	for _, device := range devices {
-		if device.ipAddr == ipAddr {
+		if device.IpAddr == ipAddr {
 			return device, nil
 		}
 	}
@@ -384,8 +388,8 @@ func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
 		parts := strings.Split(line, " ")
 		if len(parts) == 2 {
 			devices = append(devices, &FuchsiaDevice{
-				ipAddr: strings.TrimSpace(parts[0]),
-				name:   strings.TrimSpace(parts[1]),
+				IpAddr: strings.TrimSpace(parts[0]),
+				Name:   strings.TrimSpace(parts[1]),
 			})
 		}
 	}
