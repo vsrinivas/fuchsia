@@ -124,6 +124,19 @@ pub enum RoutingError {
     },
 
     #[error(
+        "A `use` declaration was found at `{}` for {} `{}`, and a corresponding \
+        entry was found in the root environment, which is not allowed.",
+        moniker,
+        capability_type,
+        capability_name
+    )]
+    UseFromRootEnvironmentNotAllowed {
+        moniker: AbsoluteMoniker,
+        capability_type: &'static str,
+        capability_name: CapabilityName,
+    },
+
+    #[error(
         "An `environment` {} registration from `parent` was found at `{}` for `{}`, but no \
         matching `offer` declaration was found in the parent",
         capability_type,

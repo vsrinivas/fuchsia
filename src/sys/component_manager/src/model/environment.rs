@@ -19,6 +19,9 @@ use {
 ///
 /// [`EnvironmentDecl`]: fidl_fuchsia_sys2::EnvironmentDecl
 pub struct Environment {
+    /// Name of this environment as defined by its creator.
+    /// Would be `None` for root environment.
+    name: Option<String>,
     /// The parent that created or inherited the environment.
     parent: Option<WeakComponentInstance>,
     /// The extension mode of this environment.
@@ -57,6 +60,7 @@ impl Environment {
     /// Creates a new empty environment without a parent.
     pub fn empty() -> Environment {
         Environment {
+            name: None,
             parent: None,
             extends: EnvironmentExtends::None,
             runner_registry: RunnerRegistry::default(),
@@ -73,6 +77,7 @@ impl Environment {
         debug_registry: DebugRegistry,
     ) -> Environment {
         Environment {
+            name: None,
             parent: None,
             extends: EnvironmentExtends::None,
             runner_registry,
@@ -85,6 +90,7 @@ impl Environment {
     /// Creates an environment from `env_decl`, using `parent` as the parent realm.
     pub fn from_decl(parent: &Arc<ComponentInstance>, env_decl: &EnvironmentDecl) -> Environment {
         Environment {
+            name: Some(env_decl.name.clone()),
             parent: Some(parent.into()),
             extends: env_decl.extends.into(),
             runner_registry: RunnerRegistry::from_decl(&env_decl.runners),
@@ -105,6 +111,7 @@ impl Environment {
     /// Creates a new environment with `parent` as the parent.
     pub fn new_inheriting(parent: &Arc<ComponentInstance>) -> Environment {
         Environment {
+            name: None,
             parent: Some(parent.into()),
             extends: EnvironmentExtends::Realm,
             runner_registry: RunnerRegistry::default(),
@@ -139,16 +146,19 @@ impl Environment {
         }
     }
 
-    /// Returns the debug capability registered to `name` and the realm that created the environment the
-    /// capability was registered to (`None` for component manager's realm). Returns `None` if there
-    /// was no match.
+    /// Returns the debug capability registered to `name`, the realm that created the environment
+    /// and the capability was registered to (`None` for component manager's realm) and name of the
+    /// environment that registered the capability. Returns `None` if there was no match.
     pub fn get_debug_capability(
         &self,
         name: &CapabilityName,
-    ) -> Result<Option<(Option<Arc<ComponentInstance>>, DebugRegistration)>, ModelError> {
+    ) -> Result<
+        Option<(Option<Arc<ComponentInstance>>, Option<String>, DebugRegistration)>,
+        ModelError,
+    > {
         let parent = self.parent.as_ref().map(|p| p.upgrade()).transpose()?;
         match self.debug_registry.get_capability(name) {
-            Some(reg) => Ok(Some((parent, reg.clone()))),
+            Some(reg) => Ok(Some((parent, self.name.clone(), reg.clone()))),
             None => match self.extends {
                 EnvironmentExtends::Realm => parent.unwrap().environment.get_debug_capability(name),
                 EnvironmentExtends::None => {
@@ -156,6 +166,14 @@ impl Environment {
                 }
             },
         }
+    }
+
+    pub fn name(&self) -> &Option<String> {
+        &self.name
+    }
+
+    pub fn parent(&self) -> &Option<WeakComponentInstance> {
+        &self.parent
     }
 }
 
@@ -397,7 +415,7 @@ mod tests {
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((None, d)) if d == &debug_reg);
+        assert_matches!(debug_capability.as_ref(), Some((None, None, d)) if d == &debug_reg);
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
@@ -486,7 +504,7 @@ mod tests {
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((Some(_), d)) if d == &debug_reg);
+        assert_matches!(debug_capability.as_ref(), Some((Some(_), Some(_), d)) if d == &debug_reg);
         let parent_moniker = &debug_capability.unwrap().0.unwrap().abs_moniker;
         assert_eq!(parent_moniker, &AbsoluteMoniker::root());
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
@@ -588,7 +606,8 @@ mod tests {
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((Some(_), d)) if d == &debug_reg);
+        assert_matches!(debug_capability.as_ref(), Some((Some(_), Some(n), d)) if d == &debug_reg
+            && n == "env_a");
         let parent_moniker = &debug_capability.unwrap().0.unwrap().abs_moniker;
         assert_eq!(parent_moniker, &AbsoluteMoniker::root());
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
@@ -668,7 +687,7 @@ mod tests {
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((None, d)) if d == &debug_reg);
+        assert_matches!(debug_capability.as_ref(), Some((None, None, d)) if d == &debug_reg);
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())

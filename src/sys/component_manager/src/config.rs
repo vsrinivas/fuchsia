@@ -6,6 +6,7 @@ use {
     anyhow::{format_err, Context, Error},
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::Url,
+    component_internal::{CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists},
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinPkgResolver, OutDirContents,
@@ -90,6 +91,13 @@ pub struct SecurityPolicy {
     /// define the set of component paths that are allowed to access this specific
     /// capability.
     pub capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
+
+    /// Debug Capability routing policies. The key contains all the information required
+    /// to uniquely identify any routable capability and the set of (monikers, environment_name)
+    /// define the set of components which were allowed to register it as a debug capability in
+    /// their environment `environment_name`.
+    pub debug_capability_policy:
+        HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
 }
 
 /// Allowlists for Zircon job policy. Part of runtime security policy.
@@ -198,6 +206,12 @@ pub enum PolicyConfigError {
     EmptyCapabilitySourceName,
     #[error("Capability type was empty in a capability policy entry.")]
     EmptyAllowlistedCapability,
+    #[error("Debug registration type was empty in a debug policy entry.")]
+    EmptyAllowlistedDebugRegistration,
+    #[error("Environment name was empty in a debug policy entry.")]
+    EmptyTargetMonikerDebugRegistration,
+    #[error("Target moniker was empty in a debug policy entry.")]
+    EmptyEnvironmentNameDebugRegistration,
     #[error("Capability from type was empty in a capability policy entry.")]
     EmptyFromType,
     #[error("Capability source_moniker was empty in a capability policy entry.")]
@@ -251,6 +265,140 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
     }
 }
 
+fn parse_capability_policy(
+    capability_policy: Option<CapabilityPolicyAllowlists>,
+) -> Result<HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>, Error> {
+    let capability_policy = if let Some(capability_policy) = capability_policy {
+        if let Some(allowlist) = capability_policy.allowlist {
+            let mut policies = HashMap::new();
+            for e in allowlist.into_iter() {
+                let source_moniker = ExtendedMoniker::parse_string_without_instances(
+                    e.source_moniker
+                        .as_ref()
+                        .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
+                )?;
+                let source_name = if let Some(source_name) = e.source_name {
+                    Ok(CapabilityName(source_name))
+                } else {
+                    Err(PolicyConfigError::EmptyCapabilitySourceName)
+                }?;
+                let source = match e.source {
+                    Some(fsys::Ref::Self_(_)) => Ok(CapabilityAllowlistSource::Self_),
+                    Some(fsys::Ref::Framework(_)) => Ok(CapabilityAllowlistSource::Framework),
+                    Some(fsys::Ref::Capability(_)) => Ok(CapabilityAllowlistSource::Capability),
+                    _ => Err(Error::new(PolicyConfigError::InvalidSourceCapability)),
+                }?;
+
+                let capability = if let Some(capability) = e.capability.as_ref() {
+                    match &capability {
+                        component_internal::AllowlistedCapability::Directory(_) => {
+                            Ok(CapabilityTypeName::Directory)
+                        }
+                        component_internal::AllowlistedCapability::Event(_) => {
+                            Ok(CapabilityTypeName::Event)
+                        }
+                        component_internal::AllowlistedCapability::Protocol(_) => {
+                            Ok(CapabilityTypeName::Protocol)
+                        }
+                        component_internal::AllowlistedCapability::Service(_) => {
+                            Ok(CapabilityTypeName::Service)
+                        }
+                        component_internal::AllowlistedCapability::Storage(_) => {
+                            Ok(CapabilityTypeName::Storage)
+                        }
+                        component_internal::AllowlistedCapability::Runner(_) => {
+                            Ok(CapabilityTypeName::Runner)
+                        }
+                        component_internal::AllowlistedCapability::Resolver(_) => {
+                            Ok(CapabilityTypeName::Resolver)
+                        }
+                        _ => Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability)),
+                    }
+                } else {
+                    Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability))
+                }?;
+
+                let target_monikers = HashSet::from_iter(
+                    parse_absolute_monikers_from_strings(&e.target_monikers)?.iter().cloned(),
+                );
+
+                policies.insert(
+                    CapabilityAllowlistKey { source_moniker, source_name, source, capability },
+                    target_monikers,
+                );
+            }
+            policies
+        } else {
+            HashMap::new()
+        }
+    } else {
+        HashMap::new()
+    };
+    Ok(capability_policy)
+}
+
+fn parse_debug_capability_policy(
+    debug_registration_policy: Option<DebugRegistrationPolicyAllowlists>,
+) -> Result<HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>, Error> {
+    let debug_capability_policy = if let Some(debug_capability_policy) = debug_registration_policy {
+        if let Some(allowlist) = debug_capability_policy.allowlist {
+            let mut policies: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>> =
+                HashMap::new();
+            for e in allowlist.into_iter() {
+                let source_moniker = ExtendedMoniker::parse_string_without_instances(
+                    e.source_moniker
+                        .as_ref()
+                        .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
+                )?;
+                let source_name = if let Some(source_name) = e.source_name.as_ref() {
+                    Ok(CapabilityName(source_name.clone()))
+                } else {
+                    Err(PolicyConfigError::EmptyCapabilitySourceName)
+                }?;
+
+                let capability = if let Some(capability) = e.debug.as_ref() {
+                    match &capability {
+                        component_internal::AllowlistedDebugRegistration::Protocol(_) => {
+                            Ok(CapabilityTypeName::Protocol)
+                        }
+                        _ => Err(Error::new(PolicyConfigError::EmptyAllowlistedDebugRegistration)),
+                    }
+                } else {
+                    Err(Error::new(PolicyConfigError::EmptyAllowlistedDebugRegistration))
+                }?;
+
+                let target_moniker = AbsoluteMoniker::parse_string_without_instances(
+                    e.target_moniker
+                        .as_ref()
+                        .ok_or(PolicyConfigError::EmptyTargetMonikerDebugRegistration)?,
+                )?;
+                let environment_name = e
+                    .environment_name
+                    .ok_or(PolicyConfigError::EmptyEnvironmentNameDebugRegistration)?;
+
+                let key = CapabilityAllowlistKey {
+                    source_moniker,
+                    source_name,
+                    source: CapabilityAllowlistSource::Self_,
+                    capability,
+                };
+                let value = (target_moniker, environment_name);
+                if let Some(h) = policies.get_mut(&key) {
+                    h.insert(value);
+                } else {
+                    policies.insert(key, vec![value].into_iter().collect());
+                }
+            }
+            policies
+        } else {
+            HashMap::new()
+        }
+    } else {
+        HashMap::new()
+    };
+    Ok(debug_capability_policy)
+}
+
 impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
     type Error = Error;
 
@@ -265,75 +413,12 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
             JobPolicyAllowlists::default()
         };
 
-        let capability_policy = if let Some(capability_policy) = &security_policy.capability_policy
-        {
-            if let Some(allowlist) = &capability_policy.allowlist {
-                let mut policies = HashMap::new();
-                for e in allowlist.iter() {
-                    let source_moniker = ExtendedMoniker::parse_string_without_instances(
-                        e.source_moniker
-                            .as_ref()
-                            .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
-                    )?;
-                    let source_name = if let Some(source_name) = e.source_name.as_ref() {
-                        Ok(CapabilityName(source_name.clone()))
-                    } else {
-                        Err(PolicyConfigError::EmptyCapabilitySourceName)
-                    }?;
-                    let source = match e.source {
-                        Some(fsys::Ref::Self_(_)) => Ok(CapabilityAllowlistSource::Self_),
-                        Some(fsys::Ref::Framework(_)) => Ok(CapabilityAllowlistSource::Framework),
-                        Some(fsys::Ref::Capability(_)) => Ok(CapabilityAllowlistSource::Capability),
-                        _ => Err(Error::new(PolicyConfigError::InvalidSourceCapability)),
-                    }?;
+        let capability_policy = parse_capability_policy(security_policy.capability_policy)?;
 
-                    let capability = if let Some(capability) = e.capability.as_ref() {
-                        match &capability {
-                            component_internal::AllowlistedCapability::Directory(_) => {
-                                Ok(CapabilityTypeName::Directory)
-                            }
-                            component_internal::AllowlistedCapability::Event(_) => {
-                                Ok(CapabilityTypeName::Event)
-                            }
-                            component_internal::AllowlistedCapability::Protocol(_) => {
-                                Ok(CapabilityTypeName::Protocol)
-                            }
-                            component_internal::AllowlistedCapability::Service(_) => {
-                                Ok(CapabilityTypeName::Service)
-                            }
-                            component_internal::AllowlistedCapability::Storage(_) => {
-                                Ok(CapabilityTypeName::Storage)
-                            }
-                            component_internal::AllowlistedCapability::Runner(_) => {
-                                Ok(CapabilityTypeName::Runner)
-                            }
-                            component_internal::AllowlistedCapability::Resolver(_) => {
-                                Ok(CapabilityTypeName::Resolver)
-                            }
-                            _ => Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability)),
-                        }
-                    } else {
-                        Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability))
-                    }?;
+        let debug_capability_policy =
+            parse_debug_capability_policy(security_policy.debug_registration_policy)?;
 
-                    let target_monikers = HashSet::from_iter(
-                        parse_absolute_monikers_from_strings(&e.target_monikers)?.iter().cloned(),
-                    );
-
-                    policies.insert(
-                        CapabilityAllowlistKey { source_moniker, source_name, source, capability },
-                        target_monikers,
-                    );
-                }
-                policies
-            } else {
-                HashMap::new()
-            }
-        } else {
-            HashMap::new()
-        };
-
-        Ok(SecurityPolicy { job_policy, capability_policy })
+        Ok(SecurityPolicy { job_policy, capability_policy, debug_capability_policy })
     }
 }
 
@@ -457,6 +542,41 @@ mod tests {
                             ..component_internal::CapabilityAllowlistEntry::EMPTY
                         },
                     ]), ..component_internal::CapabilityPolicyAllowlists::EMPTY}),
+                    debug_registration_policy: Some(component_internal::DebugRegistrationPolicyAllowlists{
+                        allowlist: Some(vec![
+                            component_internal::DebugRegistrationAllowlistEntry {
+                                source_moniker: Some("/foo/bar/baz".to_string()),
+                                source_name: Some("fuchsia.foo.bar".to_string()),
+                                debug: Some(component_internal::AllowlistedDebugRegistration::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
+                                target_moniker: Some("/foo/bar".to_string()),
+                                environment_name: Some("bar_env1".to_string()),
+                                ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
+                            },
+                            component_internal::DebugRegistrationAllowlistEntry {
+                                source_moniker: Some("/foo/bar/baz".to_string()),
+                                source_name: Some("fuchsia.foo.bar".to_string()),
+                                debug: Some(component_internal::AllowlistedDebugRegistration::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
+                                target_moniker: Some("/foo".to_string()),
+                                environment_name: Some("foo_env1".to_string()),
+                                ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
+                            },
+                            component_internal::DebugRegistrationAllowlistEntry {
+                                source_moniker: Some("/foo/bar/baz".to_string()),
+                                source_name: Some("fuchsia.foo.bar".to_string()),
+                                debug: Some(component_internal::AllowlistedDebugRegistration::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
+                                target_moniker: Some("/foo".to_string()),
+                                environment_name: Some("foo_env2".to_string()),
+                                ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
+                            },
+                            component_internal::DebugRegistrationAllowlistEntry {
+                                source_moniker: Some("/foo/bar".to_string()),
+                                source_name: Some("fuchsia.foo.baz".to_string()),
+                                debug: Some(component_internal::AllowlistedDebugRegistration::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
+                                target_moniker: Some("/root".to_string()),
+                                environment_name: Some("root_env".to_string()),
+                                ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
+                            },
+                        ]), ..component_internal::DebugRegistrationPolicyAllowlists::EMPTY}),
                     ..component_internal::SecurityPolicy::EMPTY
                 }),
                 num_threads: Some(24),
@@ -515,6 +635,30 @@ mod tests {
                         HashSet::from_iter(vec![
                             AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
                             AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]),
+                        ].iter().cloned())
+                        ),
+                    ].iter().cloned()),
+                    debug_capability_policy: HashMap::from_iter(vec![
+                        (CapabilityAllowlistKey {
+                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"])),
+                            source_name: CapabilityName::from("fuchsia.foo.bar"),
+                            source: CapabilityAllowlistSource::Self_,
+                            capability: CapabilityTypeName::Protocol,
+                        },
+                        HashSet::from_iter(vec![
+                            (AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),"bar_env1".to_string()),
+                            (AbsoluteMoniker::from(vec!["foo:0"]),"foo_env1".to_string()),
+                            (AbsoluteMoniker::from(vec!["foo:0"]),"foo_env2".to_string())
+                        ].iter().cloned())
+                        ),
+                        (CapabilityAllowlistKey {
+                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            source_name: CapabilityName::from("fuchsia.foo.baz"),
+                            source: CapabilityAllowlistSource::Self_,
+                            capability: CapabilityTypeName::Protocol,
+                        },
+                        HashSet::from_iter(vec![
+                            (AbsoluteMoniker::from(vec!["root:0"]),"root_env".to_string()),
                         ].iter().cloned())
                         ),
                     ].iter().cloned()),

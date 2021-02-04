@@ -4353,3 +4353,455 @@ async fn route_protocol_from_expose() {
         ) if protocol_decl == expected_protocol_decl && component.moniker == expected_source_moniker
     );
 }
+
+///   a
+///    \
+///     b
+///    /  \
+///   c    d
+/// b: provides d with the service policy allows denies it.
+/// b: provides c with the service policy allows it.
+/// c: uses service svc_allowed as /svc/hippo.
+/// a: offers services using environment.
+/// Tests component provided caps in the middle of a path
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_protocol_component_provided_debug_capability_policy_at_root_from_self() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("svc_allowed").build())
+                .protocol(ProtocolDeclBuilder::new("svc_not_allowed").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env_a")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_allowed".into(),
+                                target_name: "svc_allowed".into(),
+                                source: RegistrationSource::Self_,
+                            },
+                        ))
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_not_allowed".into(),
+                                target_name: "svc_not_allowed".into(),
+                                source: RegistrationSource::Self_,
+                            },
+                        )),
+                )
+                .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env_a"))
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("c"))
+                .add_child(ChildDeclBuilder::new_lazy_child("d"))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_not_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    let mut allowlist = HashSet::new();
+    allowlist.insert((AbsoluteMoniker::root(), "env_a".to_owned()));
+
+    let test = RoutingTestBuilder::new("a", components)
+        .add_debug_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_name: CapabilityName::from("svc_allowed"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            allowlist,
+        )
+        .build()
+        .await;
+
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+
+    test.check_use(
+        vec!["b:0", "d:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///    /  \
+///   c    d
+/// b: provides d with the service policy allows denies it.
+/// b: provides c with the service policy allows it.
+/// c: uses service svc_allowed as /svc/hippo.
+/// b: offers services using environment.
+/// Tests component provided debug caps in the middle of a path
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_protocol_component_provided_debug_capability_policy_from_self() {
+    let components = vec![
+        ("a", ComponentDeclBuilder::new().add_child(ChildDeclBuilder::new_lazy_child("b")).build()),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("svc_allowed").build())
+                .protocol(ProtocolDeclBuilder::new("svc_not_allowed").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env_b")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_allowed".into(),
+                                target_name: "svc_allowed".into(),
+                                source: RegistrationSource::Self_,
+                            },
+                        ))
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_not_allowed".into(),
+                                target_name: "svc_not_allowed".into(),
+                                source: RegistrationSource::Self_,
+                            },
+                        )),
+                )
+                .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env_b"))
+                .add_child(ChildDeclBuilder::new_lazy_child("d").environment("env_b"))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_not_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    let mut allowlist = HashSet::new();
+    allowlist.insert((AbsoluteMoniker::from(vec!["b:0"]), "env_b".to_owned()));
+
+    let test = RoutingTestBuilder::new("a", components)
+        .add_debug_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "b:0",
+                ])),
+                source_name: CapabilityName::from("svc_allowed"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            allowlist,
+        )
+        .build()
+        .await;
+
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+
+    test.check_use(
+        vec!["b:0", "d:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///   / \ \
+///  c  d  e
+/// b: provides e with the service policy which denies it.
+/// b: provides c with the service policy which allows it.
+/// c: uses service svc_allowed as /svc/hippo.
+/// b: offers services using environment.
+/// d: exposes the service to b
+/// Tests component provided debug caps in the middle of a path
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_protocol_component_provided_debug_capability_policy_from_child() {
+    let expose_decl_svc_allowed = ExposeProtocolDecl {
+        source: ExposeSource::Self_,
+        source_name: "svc_allowed".into(),
+        target_name: "svc_allowed".into(),
+        target: ExposeTarget::Parent,
+    };
+    let expose_decl_svc_not_allowed = ExposeProtocolDecl {
+        source: ExposeSource::Self_,
+        source_name: "svc_not_allowed".into(),
+        target_name: "svc_not_allowed".into(),
+        target: ExposeTarget::Parent,
+    };
+    let components = vec![
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env_b")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_allowed".into(),
+                                target_name: "svc_allowed".into(),
+                                source: RegistrationSource::Child("d".into()),
+                            },
+                        ))
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_not_allowed".into(),
+                                target_name: "svc_not_allowed".into(),
+                                source: RegistrationSource::Child("d".into()),
+                            },
+                        )),
+                )
+                .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env_b"))
+                .add_child(ChildDeclBuilder::new_lazy_child("d").environment("env_b"))
+                .add_child(ChildDeclBuilder::new_lazy_child("e").environment("env_b"))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("svc_allowed").build())
+                .expose(cm_rust::ExposeDecl::Protocol(expose_decl_svc_allowed))
+                .protocol(ProtocolDeclBuilder::new("svc_not_allowed").build())
+                .expose(cm_rust::ExposeDecl::Protocol(expose_decl_svc_not_allowed))
+                .build(),
+        ),
+        (
+            "e",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_not_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    let mut allowlist = HashSet::new();
+    allowlist.insert((AbsoluteMoniker::from(vec!["b:0"]), "env_b".to_owned()));
+
+    let test = RoutingTestBuilder::new("a", components)
+        .add_debug_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "b:0", "d:0",
+                ])),
+                source_name: CapabilityName::from("svc_allowed"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            allowlist,
+        )
+        .build()
+        .await;
+
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+
+    test.check_use(
+        vec!["b:0", "e:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///    /  \
+///   c    d
+///         \
+///          e
+/// b: provides d with the service policy which denies it.
+/// b: provides c with the service policy which allows it.
+/// c: uses service svc_allowed as /svc/hippo.
+/// b: offers services using environment.
+/// e: exposes the service to b
+/// Tests component provided debug caps in the middle of a path
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_protocol_component_provided_debug_capability_policy_from_grandchild() {
+    let expose_decl_svc_allowed = ExposeProtocolDecl {
+        source: ExposeSource::Self_,
+        source_name: "svc_allowed".into(),
+        target_name: "svc_allowed".into(),
+        target: ExposeTarget::Parent,
+    };
+    let expose_decl_svc_not_allowed = ExposeProtocolDecl {
+        source: ExposeSource::Self_,
+        source_name: "svc_not_allowed".into(),
+        target_name: "svc_not_allowed".into(),
+        target: ExposeTarget::Parent,
+    };
+    let components = vec![
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env_b")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_allowed".into(),
+                                target_name: "svc_allowed".into(),
+                                source: RegistrationSource::Child("d".into()),
+                            },
+                        ))
+                        .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                            cm_rust::DebugProtocolRegistration {
+                                source_name: "svc_not_allowed".into(),
+                                target_name: "svc_not_allowed".into(),
+                                source: RegistrationSource::Child("d".into()),
+                            },
+                        )),
+                )
+                .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env_b"))
+                .add_child(ChildDeclBuilder::new_lazy_child("d").environment("env_b"))
+                .add_child(ChildDeclBuilder::new_lazy_child("e").environment("env_b"))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Debug,
+                    source_name: "svc_not_allowed".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .expose(cm_rust::ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Child("e".into()),
+                    source_name: "svc_allowed".into(),
+                    target_name: "svc_allowed".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .expose(cm_rust::ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Child("e".into()),
+                    source_name: "svc_not_allowed".into(),
+                    target_name: "svc_not_allowed".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .add_lazy_child("e".into())
+                .build(),
+        ),
+        (
+            "e",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("svc_allowed").build())
+                .expose(cm_rust::ExposeDecl::Protocol(expose_decl_svc_allowed))
+                .protocol(ProtocolDeclBuilder::new("svc_not_allowed").build())
+                .expose(cm_rust::ExposeDecl::Protocol(expose_decl_svc_not_allowed))
+                .build(),
+        ),
+    ];
+
+    let mut allowlist = HashSet::new();
+    allowlist.insert((AbsoluteMoniker::from(vec!["b:0"]), "env_b".to_owned()));
+
+    let test = RoutingTestBuilder::new("a", components)
+        .add_debug_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "b:0", "d:0", "e:0",
+                ])),
+                source_name: CapabilityName::from("svc_allowed"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            allowlist,
+        )
+        .build()
+        .await;
+
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+
+    test.check_use(
+        vec!["b:0", "d:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
+        },
+    )
+    .await;
+}

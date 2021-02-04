@@ -411,14 +411,19 @@ pub async fn route_protocol(
         .capability();
     if let UseSource::Debug = use_decl.source {
         // Find the component instance in which the debug capability was registered with the environment.
-        let (env_component_instance, registration_decl) =
+        let (env_component_instance, env_name, registration_decl) =
             match target.environment.get_debug_capability(&use_decl.source_name)? {
-                Some((Some(env_component_instance), reg)) => (env_component_instance, reg),
-                Some((None, reg)) => {
+                Some((Some(env_component_instance), env_name, reg)) => {
+                    (env_component_instance, env_name, reg)
+                }
+                Some((None, _, _)) => {
                     // Root environment.
-                    return Ok(CapabilitySource::Builtin {
-                        capability: InternalCapability::Protocol(reg.source_name.clone()),
-                    });
+                    return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
+                        moniker: target.abs_moniker.clone(),
+                        capability_name: use_decl.source_name.clone(),
+                        capability_type: DebugRegistration::TYPE,
+                    }
+                    .into());
                 }
                 None => {
                     return Err(RoutingError::UseFromEnvironmentNotFound {
@@ -429,12 +434,27 @@ pub async fn route_protocol(
                     .into());
                 }
             };
-        Router::new()
+        let env_name = env_name.expect(&format!(
+            "Environment name in component `{}` not found when routing `{}`.",
+            target.abs_moniker, use_decl.source_name
+        ));
+
+        let env_moniker = env_component_instance.abs_moniker.clone();
+
+        let source = Router::new()
             .registration(registration_decl, env_component_instance)
             .offer::<OfferProtocolDecl>()
             .expose::<ExposeProtocolDecl>()
             .route(allowed_sources, &mut ProtocolVisitor)
-            .await
+            .await?;
+
+        target.try_get_context()?.policy().can_route_debug_capability(
+            &source,
+            &env_moniker,
+            &env_name,
+            &target.abs_moniker,
+        )?;
+        return Ok(source);
     } else {
         Router::new()
             .use_(use_decl, target.clone())

@@ -32,6 +32,15 @@ pub enum PolicyError {
         source_moniker: ExtendedMoniker,
         target_moniker: AbsoluteMoniker,
     },
+
+    #[error("debug security policy disallows \"{cap}\" from \"{source_moniker}\" being routed from environment \"{env_moniker}:{env_name}\" to \"{target_moniker}\"")]
+    DebugCapabilityUseDisallowed {
+        cap: String,
+        source_moniker: ExtendedMoniker,
+        env_moniker: AbsoluteMoniker,
+        env_name: String,
+        target_moniker: AbsoluteMoniker,
+    },
 }
 
 impl PolicyError {
@@ -47,6 +56,22 @@ impl PolicyError {
         PolicyError::CapabilityUseDisallowed {
             cap: cap.into(),
             source_moniker: source_moniker.clone(),
+            target_moniker: target_moniker.clone(),
+        }
+    }
+
+    fn debug_capability_use_disallowed(
+        cap: impl Into<String>,
+        source_moniker: &ExtendedMoniker,
+        env_moniker: &AbsoluteMoniker,
+        env_name: impl Into<String>,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Self {
+        PolicyError::DebugCapabilityUseDisallowed {
+            cap: cap.into(),
+            source_moniker: source_moniker.clone(),
+            env_moniker: env_moniker.clone(),
+            env_name: env_name.into(),
             target_moniker: target_moniker.clone(),
         }
     }
@@ -174,6 +199,41 @@ impl GlobalPolicyChecker {
             None => Ok(()),
         }
     }
+
+    /// Returns Ok(()) if the provided debug capability source is allowed to be routed from given
+    /// environment.
+    pub fn can_route_debug_capability<'a>(
+        &self,
+        capability_source: &'a CapabilitySource,
+        env_moniker: &'a AbsoluteMoniker,
+        env_name: &'a str,
+        target_moniker: &'a AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let policy_key = Self::get_policy_key(capability_source).map_err(|e| {
+            error!("Security policy could not generate a policy key for `{}`", capability_source);
+            e
+        })?;
+        if let Some(allowed_envs) =
+            self.config.security_policy.debug_capability_policy.get(&policy_key)
+        {
+            if let Some(_) = allowed_envs.get(&(env_moniker.clone(), env_name.to_string())) {
+                return Ok(());
+            }
+        }
+        warn!(
+            "Debug security policy prevented `{}` from `{}` being routed to `{}`.",
+            policy_key.source_name, policy_key.source_moniker, target_moniker
+        );
+        Err(ModelError::PolicyError {
+            err: PolicyError::debug_capability_use_disallowed(
+                policy_key.source_name.str(),
+                &policy_key.source_moniker,
+                &env_moniker,
+                env_name,
+                target_moniker,
+            ),
+        })
+    }
 }
 
 /// Evaluates security policy relative to a specific Component (based on that Component's
@@ -239,21 +299,34 @@ mod tests {
     /// construction.
     struct CapabilityAllowlistConfigBuilder {
         capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
+        debug_capability_policy:
+            HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
     }
 
     impl CapabilityAllowlistConfigBuilder {
         pub fn new() -> Self {
-            Self { capability_policy: HashMap::new() }
+            Self { capability_policy: HashMap::new(), debug_capability_policy: HashMap::new() }
         }
 
         /// Add a new entry to the configuration.
-        pub fn add<'a>(
+        pub fn add_capability_policy<'a>(
             &'a mut self,
             key: CapabilityAllowlistKey,
             value: Vec<AbsoluteMoniker>,
         ) -> &'a mut Self {
             let value_set = HashSet::from_iter(value.iter().cloned());
             self.capability_policy.insert(key, value_set);
+            self
+        }
+
+        /// Add a new entry to the configuration.
+        pub fn add_debug_capability_policy<'a>(
+            &'a mut self,
+            key: CapabilityAllowlistKey,
+            value: Vec<(AbsoluteMoniker, String)>,
+        ) -> &'a mut Self {
+            let value_set = HashSet::from_iter(value.iter().cloned());
+            self.debug_capability_policy.insert(key, value_set);
             self
         }
 
@@ -266,6 +339,7 @@ mod tests {
                         main_process_critical: vec![],
                     },
                     capability_policy: self.capability_policy.clone(),
+                    debug_capability_policy: self.debug_capability_policy.clone(),
                 },
                 ..Default::default()
             });
@@ -305,6 +379,7 @@ mod tests {
                     main_process_critical: vec![allowed1.clone(), allowed2.clone()],
                 },
                 capability_policy: HashMap::new(),
+                debug_capability_policy: HashMap::new(),
             },
             ..Default::default()
         });
@@ -352,6 +427,7 @@ mod tests {
                     main_process_critical: vec![allowed1.clone(), allowed2.clone()],
                 },
                 capability_policy: HashMap::new(),
+                debug_capability_policy: HashMap::new(),
             },
             ..Default::default()
         });
@@ -370,7 +446,7 @@ mod tests {
     #[test]
     fn global_policy_checker_can_route_capability_framework_cap() {
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
-        config_builder.add(
+        config_builder.add_capability_policy(
             CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
                     "foo:0", "bar:0",
@@ -416,7 +492,7 @@ mod tests {
     #[test]
     fn global_policy_checker_can_route_capability_namespace_cap() {
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
-        config_builder.add(
+        config_builder.add_capability_policy(
             CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
@@ -468,7 +544,7 @@ mod tests {
     #[test]
     fn global_policy_checker_can_route_capability_component_cap() {
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
-        config_builder.add(
+        config_builder.add_capability_policy(
             CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
                     "foo:0",
@@ -535,7 +611,7 @@ mod tests {
     #[test]
     fn global_policy_checker_can_route_capability_capability_cap() {
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
-        config_builder.add(
+        config_builder.add_capability_policy(
             CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
                     "foo:0",
@@ -602,9 +678,98 @@ mod tests {
     }
 
     #[test]
+    fn global_policy_checker_can_route_debug_capability_capability_cap() {
+        let mut config_builder = CapabilityAllowlistConfigBuilder::new();
+        config_builder.add_debug_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "foo:0",
+                ])),
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            vec![
+                (AbsoluteMoniker::from(vec!["foo:0"]), "foo_env".to_string()),
+                (AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]), "bootstrap_env".to_string()),
+            ],
+        );
+        let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
+
+        // Create a fake component instance.
+        let resolver = ResolverRegistry::new();
+        let component = ComponentInstance::new(
+            Arc::new(Environment::new_root(
+                RunnerRegistry::default(),
+                resolver,
+                DebugRegistry::default(),
+            )),
+            vec!["foo:0"].into(),
+            "test:///foo".into(),
+            fsys::StartupMode::Lazy,
+            WeakModelContext::default(),
+            WeakExtendedInstance::Component(WeakComponentInstance::default()),
+            Arc::new(Hooks::new(None)),
+        );
+        let weak_component = component.as_weak();
+
+        let protocol_capability = CapabilitySource::Component {
+            capability: ComponentCapability::Protocol(ProtocolDecl {
+                name: "debug_service1".into(),
+                source_path: "/svc/debug_service1".parse().unwrap(),
+            }),
+            component: weak_component,
+        };
+        let valid_0 =
+            (AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]), "bootstrap_env".to_string());
+        let valid_1 = (AbsoluteMoniker::from(vec!["foo:0"]), "foo_env".to_string());
+        let invalid_0 = (AbsoluteMoniker::from(vec!["foobar:0"]), "foobar_env".to_string());
+        let invalid_1 =
+            (AbsoluteMoniker::from(vec!["foo:0", "bar:0", "foobar:0"]), "foobar_env".to_string());
+        let target_moniker = AbsoluteMoniker::from(vec!["target:0"]);
+
+        assert_matches!(
+            global_policy_checker.can_route_debug_capability(
+                &protocol_capability,
+                &valid_0.0,
+                &valid_0.1,
+                &target_moniker
+            ),
+            Ok(())
+        );
+        assert_matches!(
+            global_policy_checker.can_route_debug_capability(
+                &protocol_capability,
+                &valid_1.0,
+                &valid_1.1,
+                &target_moniker
+            ),
+            Ok(())
+        );
+        assert_matches!(
+            global_policy_checker.can_route_debug_capability(
+                &protocol_capability,
+                &invalid_0.0,
+                &invalid_0.1,
+                &target_moniker
+            ),
+            Err(_)
+        );
+        assert_matches!(
+            global_policy_checker.can_route_debug_capability(
+                &protocol_capability,
+                &invalid_1.0,
+                &invalid_1.1,
+                &target_moniker
+            ),
+            Err(_)
+        );
+    }
+
+    #[test]
     fn global_policy_checker_can_route_capability_builtin_cap() {
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
-        config_builder.add(
+        config_builder.add_capability_policy(
             CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: CapabilityName::from("hub"),
@@ -647,7 +812,7 @@ mod tests {
     #[test]
     fn global_policy_checker_can_route_capability_with_instance_ids_cap() {
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
-        config_builder.add(
+        config_builder.add_capability_policy(
             CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: CapabilityName::from("hub"),
