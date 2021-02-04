@@ -69,3 +69,4 @@ unsequenced with respect to all hooks (including concurrent invocations of thems
 The one exception to this is that they are sequenced before the *release* hook.
 
 [device]: /src/lib/ddk/include/ddk/device.h
+[driver]: /src/lib/ddk/include/ddk/driver.h
