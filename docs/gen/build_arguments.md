@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/478226f6a21940e73248618403341c9890b1f77c/src/intel/vulkan/BUILD.gn#26)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/5dff9f5413fc213faf677983d32d7b6d4a65e88f/src/intel/vulkan/BUILD.gn#26)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/478226f6a21940e73248618403341c9890b1f77c/src/intel/vulkan/BUILD.gn#28)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/5dff9f5413fc213faf677983d32d7b6d4a65e88f/src/intel/vulkan/BUILD.gn#28)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -842,7 +842,7 @@ List of labels for objects to include in the ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:22
+From //build/dev.gni:27
 
 ### dev_build_only_deps
 List of labels for targets that should be built but not included in any
@@ -866,7 +866,16 @@ List of binary labels to include in the recovery ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:28
+From //build/dev.gni:33
+
+### dev_recovery_zbi_kernel_cmdline_golden
+An optional golden file for recovery.zbi kernel cmdline args. If specified,
+this golden file would be compared against recovery.zbi kernel cmdline
+during build time.
+
+**Current value (from the default):** `""`
+
+From //build/dev.gni:24
 
 ### dev_system_image_deps
 List of labels for binaries to include in the system image.
@@ -890,14 +899,14 @@ Default value is 'none', it is preferable to set to 'all' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/dev.gni:41
+From //build/dev.gni:46
 
 ### dev_zedboot_bootfs_labels
 List of binary labels to include in the zedboot ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:25
+From //build/dev.gni:30
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
