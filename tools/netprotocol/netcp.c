@@ -161,7 +161,7 @@ static int transport_recv(void* data, size_t len, bool block, void* transport_co
     memcpy(&transport_info->target_addr, &connection_addr, sizeof(transport_info->target_addr));
     transport_info->connected = true;
   }
-  return recv_result;
+  return (int)(recv_result);
 }
 
 static int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
