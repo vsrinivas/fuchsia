@@ -7,17 +7,12 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 
 #include <iostream>
-
-zx::channel get_svc_directory() {
-  zx::channel server_end, client_end;
-  ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
-  ZX_ASSERT(fdio_service_connect("/svc/.", server_end.release()) == ZX_OK);
-  return client_end;
-}
+#include <memory>
 
 // [START main]
 int main(int argc, const char** argv) {
@@ -25,39 +20,38 @@ int main(int argc, const char** argv) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
   int num_responses = 0;
 
-  auto svc = get_svc_directory();
-
   // Connect to the EchoLauncher protocol
-  zx::channel server_end, client_end;
-  ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
-  ZX_ASSERT(fdio_service_connect_at(svc.get(), "fuchsia.examples.EchoLauncher",
-                                    server_end.release()) == ZX_OK);
-  fidl::Client<llcpp::fuchsia::examples::EchoLauncher> launcher(std::move(client_end), dispatcher);
+  auto launcher_client_end = service::Connect<llcpp::fuchsia::examples::EchoLauncher>();
+  ZX_ASSERT(launcher_client_end.status_value() == ZX_OK);
+  fidl::Client launcher(std::move(*launcher_client_end), dispatcher);
 
-  fidl::Client<llcpp::fuchsia::examples::Echo> echo;
   // Make a non-pipelined request to get an instance of Echo
   auto result = launcher->GetEcho(
       "non pipelined: ", [&](llcpp::fuchsia::examples::EchoLauncher::GetEchoResponse* response) {
         // Take the channel to Echo in the response, bind it to the dispatcher, and
         // make an EchoString request on it.
-        echo.Bind(std::move(response->response), dispatcher);
-        echo->EchoString("hello!",
-                         [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
-                           std::string reply(response->response.data(), response->response.size());
-                           std::cout << "Got echo response " << reply << std::endl;
-                           if (++num_responses == 2) {
-                             loop.Quit();
-                           }
-                         });
+        fidl::Client echo(std::move(response->response), dispatcher);
+        echo->EchoString(
+            "hello!",
+            // Clone |echo| into the callback so that the client
+            // is only destroyed after we receive the response.
+            [&, echo = echo.Clone()](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
+              std::string reply(response->response.data(), response->response.size());
+              std::cout << "Got echo response " << reply << std::endl;
+              if (++num_responses == 2) {
+                loop.Quit();
+              }
+            });
       });
   ZX_ASSERT(result.ok());
 
-  zx::channel se, ce;
-  ZX_ASSERT(zx::channel::create(0, &ce, &se) == ZX_OK);
+  auto endpoints = fidl::CreateEndpoints<llcpp::fuchsia::examples::Echo>();
+  ZX_ASSERT(endpoints.status_value() == ZX_OK);
+  auto [client_end, server_end] = *std::move(endpoints);
   // Make a pipelined request to get an instance of Echo
-  ZX_ASSERT(launcher->GetEchoPipelined("pipelined: ", std::move(se)).ok());
+  ZX_ASSERT(launcher->GetEchoPipelined("pipelined: ", std::move(server_end)).ok());
   // A client can be initialized using the client end without waiting for a response
-  fidl::Client<llcpp::fuchsia::examples::Echo> echo_pipelined(std::move(ce), dispatcher);
+  fidl::Client echo_pipelined(std::move(client_end), dispatcher);
   echo_pipelined->EchoString(
       "hello!", [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
         std::string reply(response->response.data(), response->response.size());

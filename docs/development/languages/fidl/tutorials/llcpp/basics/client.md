@@ -9,8 +9,8 @@ full set of FIDL tutorials, refer to the [overview][overview].
 
 ## Overview
 
-This tutorial implements a client for a FIDL protocol and runs it
-against the server created in the [previous tutorial][server-tut]. The client in this
+This tutorial implements a client for a FIDL protocol and runs it against the
+server created in the [previous tutorial][server-tut]. The client in this
 tutorial is asynchronous. There is an [alternate tutorial][sync-client] for
 synchronous clients.
 
@@ -87,62 +87,68 @@ As in the server, the code first sets up an async loop so that the client can
 listen for incoming responses from the server without blocking.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,17,27,29,30,42" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,20,25,29,40,43,44,58" %}
 ```
 
-The dispatcher is used to run two pieces of async code. It is first used to run the
-`EchoString` method, and quits when the response is received. It is then run after
-calling the `SendString` in order to listen for events, and quits when an `OnString`
-event is received. The call to `ResetQuit()` in between these two instances allows the
-client to reuse the loop.
+The dispatcher is used to run two pieces of async code. It is first used to run
+the `EchoString` method, and quits when the response is received. It is then run
+after calling the `SendString` in order to listen for events, and quits when an
+`OnString` event is received. The call to `ResetQuit()` in between these two
+instances allows the client to reuse the loop.
 
 ### Connect to the server
 
-The client then connects to the service directory `/svc`, and uses it to connect to the
-server.
+The client then connects to the service directory `/svc`, and uses it to connect
+to the server.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="5,6,7,8,9,10" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="5,6,7,8,9,11,12,13,14,15" %}
 ```
 
-In practice, this is done by calling `fdio_service_connect_at`, passing it the service directory,
-the name of the service to connect to, as well as the channel that should get passed to the server.
-In parallel, the component manager will route the requested service name and channel to the
-server component, where the [`connect` function][server-handler] implemented in the server
-tutorial is called with these arguments, binding the channel to the server implementation.
+The `service::OpenServiceRoot` function initializes a channel, then passes the
+server end to `fdio_service_connect` to connect to the `/svc` directory,
+returning the client end wrapped in a `zx::status` result type. We should check
+for the `is_ok()` value on the result to determine if any synchronous error
+occurred.
+
+Connecting to a protocol relative to the service directory is done by calling
+`fdio_service_connect_at`, passing it the service directory, the name of the
+service to connect to, as well as the channel that should get passed to the
+server. The `service::ConnectAt` function wraps the low level `fdio` call,
+providing the user with a typed client channel endpoint to the requested
+protocol.
+
+In parallel, the component manager will route the requested service name and
+channel to the server component, where the [`connect` function][server-handler]
+implemented in the server tutorial is called with these arguments, binding the
+channel to the server implementation.
 
 An important point to note here is that this code assumes that `/svc` already
 contains an instance of the `Echo` protocol. This is not the case by default
-because of the sandboxing provided by the component framework. A workaround will be when
-[running the example](#run) at the end of the tutorial.
+because of the sandboxing provided by the component framework. A workaround will
+be when [running the example](#run) at the end of the tutorial.
 
-The `get_svc_directory()` function is defined as follows:
-
-```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="connect" %}
-```
-
-Similar to the `fdio_service_connect_at` call above, this function initializes a channel,
-and passes the server end to `fdio_service_connect` to connect to the `/svc` directory, returning
-the client end.
-
-Note: This pattern of making a request to connect one end of the channel to a service, then
-immediately using the client end to communicate with the service is known as request pipelining.
-This topic is covered further in a separate [tutorial][pipelining-tut].
+Note: This pattern of making a request to connect the server end of the channel
+to a service, then immediately using the client end to communicate with the
+service is known as request pipelining. This topic is covered further in a
+separate [tutorial][pipelining-tut].
 
 ### Initialize the client {#proxy}
 
-In order to make `Echo` requests to the server, initialize a client using the other end of the
-channel from the previous step, the loop dispatcher, as well as an event handler struct:
+In order to make `Echo` requests to the server, initialize a client using the
+client end of the channel from the previous step, the loop dispatcher, as well
+as an event handler delegate:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="11,12,13,14,15,16,17,18,19,20,21" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="17,18,22" %}
 ```
 
-The event handlers should be a struct with fields corresponding to the events offered by the
-protocol (see [LLCPP event handlers][event-handlers]). In this case, a struct is defined with
-a single field corresponding to the handler for the `OnString` event. The handler prints the
-string and quits the event loop.
+The event handler delegate should be an object that implements the
+`Echo::AsyncEventHandler` virtual interface, which has methods corresponding to
+the events offered by the protocol (see [LLCPP event handlers][event-handlers]).
+In this case, a local class is defined with a single method corresponding to the
+handler for the `OnString` event. The handler prints the string and quits the
+event loop.
 
 ### Send requests to the server
 
@@ -150,31 +156,35 @@ The code makes three requests to the server:
 
 * An asynchronous `EchoString` request.
 * A synchronous `EchoString` request.
-* A `SendString` request (async vs sync is not relevant for this case because it is a fire and
-  forget method).
+* A `SendString` request (async vs sync is not relevant for this case because it
+  is a fire and forget method).
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="23,24,25,26,27,28,32,33,34,39,40,41" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="35,36,37,38,39,40,41,42,46,47,48,49,50,53,54,55,56,57" %}
 ```
 
-The client object works by overriding the dereference operator to return a [protocol specific
-client implementation][client-impl], allowing calls such as `client->EchoString()`.
+The client object works by overriding the dereference operator to return a
+[protocol specific client implementation][client-impl], allowing calls such as
+`client->EchoString()`.
 
-The asynchronous method call requires the request parameters followed by a response handler
-callback, which is called when the response is received.
+The asynchronous method call requires the request parameters followed by a
+response handler callback, which is called when the response is received.
 
-The client object also allows synchronous calls, which will block until the response is received
-and return the response object. These are suffixed with `_Sync` (e.g. `client->EchoString_Sync()`).
+The client object also allows synchronous calls, which will block until the
+response is received and return the response object. These are suffixed with
+`_Sync` (e.g. `client->EchoString_Sync()`).
 
-In the synchronous case, a [result object][resultof] is returned, since the method call can fail.
-In the asynchronous case, the response handler callback takes as arguments the response parameters
-directly, since the handler is only called in the case of a successfull method call.
+In the synchronous case, a [result object][resultof] is returned, since the
+method call can fail. In the asynchronous or fire-and-forget case, a lightweight
+status object is returned which communicates any synchronous errors. The
+response callback takes the response message pointer as argument directly, since
+the handler is only called in the case of a successful method call.
 
 ## Run the client {#run}
 
-If you run the client directly, it will not connect to the server correctly because the
-client does not automatically get the `Echo` protocol provided in its
-sandbox (in `/svc`). To get this to work, a launcher tool is provided
+If you run the client directly, it will not connect to the server correctly
+because the client does not automatically get the `Echo` protocol provided in
+its sandbox (in `/svc`). To get this to work, a launcher tool is provided
 that launches the server, creates a new [`Environment`][environment] for
 the client that provides the server's protocol, then launches the client in it.
 
@@ -209,7 +219,7 @@ You should see the print output in the QEMU console (or using `fx log`).
 
 <!-- xrefs -->
 [bindings-ref]: /docs/reference/fidl/bindings/llcpp-bindings.md
-[event-handlers]: /docs/reference/fidl/bindings/llcpp-bindings.md#event-handlers
+[event-handlers]: /docs/reference/fidl/bindings/llcpp-bindings.md#events
 [resultof]: /docs/reference/fidl/bindings/llcpp-bindings.md#resultof
 [client-impl]: /docs/reference/fidl/bindings/llcpp-bindings.md#async-client
 [server-handler]: /docs/development/languages/fidl/tutorials/llcpp/basics/server.md#server-handler

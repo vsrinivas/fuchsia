@@ -49,7 +49,7 @@ There are two methods that can be used to accomplish this:
 * `GetEchoPipelined`: Takes the server end of a channel as one of the request
   parameters and binds an implementation of `Echo` to it. The client that
   made the request is assumed to already hold the client end, and will
-  start making `Echo` requests on that channel after calling `GetEchoPipeliend`.
+  start making `Echo` requests on that channel after calling `GetEchoPipelined`.
 
 As the name suggests, the latter uses a pattern called protocol request
 pipelining, and is the preferred approach. This tutorial implements both
@@ -70,17 +70,18 @@ The `SendString` handler is empty as the client just uses `EchoString`.
 
 ### Implement the EchoLauncher protocol
 
-This class responds to either method by launching an instance of an `Echo` server, and then stores
-the `EchoImpl` instance in a member variable to ensure that its lifetime matches that of the
-launcher. The code for running an `Echo` server given a specific prefix and channel is abstracted
-into a helper `RunEchoServer` method:
+This class responds to either method by launching an instance of an `Echo`
+server, and then stores the `EchoImpl` instance in a member variable to ensure
+that its lifetime matches that of the launcher. The code for running an `Echo`
+server given a specific prefix and channel is abstracted into a helper
+`RunEchoServer` method:
 
 ```cpp
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" %}
 ```
 
-For `GetEcho`, the code first needs to instantiate both ends of the
-channel. It then launches an `Echo` instance using the server end, and then sends a response
+For `GetEcho`, the code first needs to instantiate both ends of the channel. It
+then launches an `Echo` instance using the server end, and then sends a response
 back with the client end. For `GetEchoPipelined`, the client has already done
 the work of creating both ends of the channel. It keeps one end and has passed
 the other to the server, so all the code needs to do is call `RunEchoServer`.
@@ -111,9 +112,9 @@ Optionally, to check that things are correct, try building the server:
 
 ## Implement the client
 
-Note: Most of the client code in `client/main.cc` should be familiar after having
-followed the [client tutorial][client-tut]. The different parts of the code
-are covered in more detail here.
+Note: Most of the client code in `client/main.cc` should be familiar after
+having followed the [client tutorial][client-tut]. The different parts of the
+code are covered in more detail here.
 
 After connecting to the `EchoLauncher` server, the client
 code connects to one instance of `Echo` using `GetEcho` and another using
@@ -122,7 +123,7 @@ code connects to one instance of `Echo` using `GetEcho` and another using
 This is the non-pipelined code:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="15,16,17,18,19,20,21,22,23,24,25,26,27,28,29" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29" %}
 ```
 
 This code has two layers of callbacks:
@@ -130,21 +131,24 @@ This code has two layers of callbacks:
 * The outer layer handles the launcher request.
 * The inner layer handles the `EchoString` request.
 
-Also, the code instantiates the `fidl::Client<Echo>` in the outer scope then `Bind`s it
-inside of the callback, so that the client's lifetime matches the lifetime of the
-component. This client needs to be in scope when the echo response is received, which
-will most likely be after the top level callback returns.
+Also, the code instantiates the `fidl::Client<Echo>` in the outer scope then
+`Bind`s it inside of the callback, so that the client's lifetime matches the
+lifetime of the component. This client needs to be in scope when the echo
+response is received, which will most likely be after the top level callback
+returns.
 
-Despite having to initialize the channel first, the pipelined code is much simpler:
+Despite having to initialize the channel first, the pipelined code is much
+simpler:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="31,32,33,34,35,36,37,38,39,40,41,42,43" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="31,32,33,34,35,36,37,38,39,40,41,42,43,44,45" %}
 ```
 
-Unlike in the [client tutorial][client-tut], the async loop is run to completion once,
-which runs both non-pipelined and pipelined code concurrently in order to observe the
-order of operations. The client keeps track of the number of responses being received, so that it
-can quit the loop once no more messages from the server are expected.
+Unlike in the [client tutorial][client-tut], the async loop is run to completion
+once, which runs both non-pipelined and pipelined code concurrently in order to
+observe the order of operations. The client keeps track of the number of
+responses being received, so that it can quit the loop once no more messages
+from the server are expected.
 
 ## Build the client
 
