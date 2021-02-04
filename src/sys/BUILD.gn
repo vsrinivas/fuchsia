@@ -40,6 +40,7 @@ group("tests") {
     "time:tests",
     "tools/cs:tests",
     "tools/log:tests",
+    "tools/stash_ctl:tests",
     "universe-resolver:tests",
   ]
 }
