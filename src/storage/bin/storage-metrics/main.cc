@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <fuchsia/storage/metrics/c/fidl.h>
@@ -18,9 +18,9 @@
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
+#include <string>
 #include <utility>
 
-#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
@@ -30,6 +30,7 @@
 namespace {
 
 using MinfsFidlMetrics = ::llcpp::fuchsia::minfs::Metrics;
+namespace fio = ::llcpp::fuchsia::io;
 
 int Usage() {
   fprintf(stdout, "usage: storage-metrics [ <option>* ] [paths]\n");
@@ -166,31 +167,29 @@ void ParseCommandLineArguments(int argc, char** argv, StorageMetricOptions* opti
 }
 
 // Retrieves filesystem metrics for the filesystem at path and prints them.
-void RunFsMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetricOptions options) {
-  fbl::unique_fd fd(open(path.c_str(), O_RDONLY | O_ADMIN));
+void RunFsMetrics(const char* path, const StorageMetricOptions options) {
+  fbl::unique_fd fd(open(path, O_RDONLY | O_ADMIN));
   if (!fd) {
-    fd.reset(open(path.c_str(), O_RDONLY));
+    fd.reset(open(path, O_RDONLY));
     if (!fd) {
-      fprintf(stderr, "storage-metrics could not open target: %s, errno %d (%s)\n", path.c_str(),
-              errno, strerror(errno));
+      fprintf(stderr, "storage-metrics could not open target: %s, errno %d (%s)\n", path, errno,
+              strerror(errno));
       return;
     }
   }
 
-  fuchsia_io_FilesystemInfo info;
-  zx_status_t status;
   fdio_cpp::FdioCaller caller(std::move(fd));
-  zx_status_t io_status =
-      fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "storage-metrics could not open %s, status %d\n", path.c_str(),
-            (io_status != ZX_OK) ? io_status : status);
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem(
+      ::fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+  if (!result.ok()) {
+    fprintf(stderr, "storage-metrics could not open %s, status %d\n", path, result.status());
     return;
   }
 
   // Skip any filesystems that aren't minfs
-  info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
-  const char* name = reinterpret_cast<const char*>(info.name);
+  fio::FilesystemInfo* info = result.value().info.get();
+  info->name[fio::MAX_FS_NAME_BUFFER - 1] = '\0';
+  const char* name = reinterpret_cast<const char*>(info->name.data());
   if (strcmp(name, "minfs") != 0) {
     fprintf(stderr, "storage-metrics does not support filesystem type %s\n", name);
     return;
@@ -200,85 +199,79 @@ void RunFsMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetricOpt
   // The order of these conditionals allows for stats to be output regardless of the
   // value of enable.
   if (options.enable_fs_metrics == BooleanFlagState::kEnable) {
-    rc = EnableFsMetrics(path.c_str(), true);
+    rc = EnableFsMetrics(path, true);
     if (rc != ZX_OK) {
       fprintf(stderr,
               "storage-metrics could not enable filesystem metrics for %s,"
               " status %d\n",
-              path.c_str(), rc);
+              path, rc);
       return;
     }
   }
   MinfsFidlMetrics metrics;
-  rc = GetFsMetrics(path.c_str(), &metrics);
+  rc = GetFsMetrics(path, &metrics);
   if (rc == ZX_OK) {
-    PrintFsMetrics(metrics, path.c_str());
+    PrintFsMetrics(metrics, path);
   } else {
     fprintf(stderr,
             "storage-metrics could not get filesystem metrics for %s,"
             " status %d\n",
-            path.c_str(), rc);
+            path, rc);
     return;
   }
   if (options.enable_fs_metrics == BooleanFlagState::kDisable) {
-    rc = EnableFsMetrics(path.c_str(), false);
+    rc = EnableFsMetrics(path, false);
     if (rc != ZX_OK) {
       fprintf(stderr,
               "storage-metrics could not disable filesystem metrics for %s,"
               " status %d\n",
-              path.c_str(), rc);
+              path, rc);
     }
   }
 }
 
 // Retrieves and prints metrics for the block device associated with the filesystem at path.
-void RunBlockMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetricOptions options) {
-  fbl::unique_fd fd(open(path.c_str(), O_RDONLY | O_ADMIN));
+void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
+  fbl::unique_fd fd(open(path, O_RDONLY | O_ADMIN));
   if (!fd) {
-    fd.reset(open(path.c_str(), O_RDONLY));
+    fd.reset(open(path, O_RDONLY));
     if (!fd) {
-      fprintf(stderr, "storage-metrics could not open target: %s, errno %d (%s)\n", path.c_str(),
-              errno, strerror(errno));
+      fprintf(stderr, "storage-metrics could not open target: %s, errno %d (%s)\n", path, errno,
+              strerror(errno));
       return;
     }
   }
 
-  char device_buffer[1024];
-  size_t path_len;
-  zx_status_t status;
   fdio_cpp::FdioCaller caller(std::move(fd));
-  zx_status_t io_status = fuchsia_io_DirectoryAdminGetDevicePath(
-      caller.borrow_channel(), &status, device_buffer, sizeof(device_buffer) - 1, &path_len);
-  const char* device_path = nullptr;
-  if (io_status == ZX_OK && status == ZX_OK) {
-    device_buffer[path_len] = '\0';
-    device_path = device_buffer;
-  }
+
+  auto result = fio::DirectoryAdmin::Call::GetDevicePath(
+      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
 
   zx_status_t rc;
   fuchsia_hardware_block_BlockStats stats;
-  if (device_path != nullptr) {
-    rc = GetBlockMetrics(device_path, options.clear_block, &stats);
+  if (result.ok()) {
+    std::string device_path(result.value().path.get());
+    rc = GetBlockMetrics(device_path.data(), options.clear_block, &stats);
     if (rc == ZX_OK) {
-      PrintBlockMetrics(device_path, stats);
+      PrintBlockMetrics(device_path.data(), stats);
     } else {
       fprintf(stderr,
               "storage-metrics could not retrieve block metrics for %s,"
               " status %d\n",
-              path.c_str(), rc);
+              path, rc);
     }
   } else {
     // Maybe this is not a filesystem. See if this happens to be a block device.
     // TODO(auradkar): We need better args parsing to consider fs and block
     // device seperately.
-    rc = GetBlockMetrics(path.c_str(), options.clear_block, &stats);
+    rc = GetBlockMetrics(path, options.clear_block, &stats);
     if (rc != ZX_OK) {
       fprintf(stderr,
               "storage-metrics could not retrieve block metrics for %s,"
               " status %d\n",
-              path.c_str(), rc);
+              path, rc);
     }
-    PrintBlockMetrics(path.c_str(), stats);
+    PrintBlockMetrics(path, stats);
   }
 }
 
@@ -289,10 +282,9 @@ int main(int argc, char** argv) {
   ParseCommandLineArguments(argc, argv, &options);
   // Iterate through the remaining arguments, which are all paths
   for (int i = optind; i < argc; i++) {
-    fbl::StringBuffer<PATH_MAX> path;
-    path.Append(argv[i]);
+    char* path = argv[i];
 
-    printf("Metrics for: %s\n", path.c_str());
+    printf("Metrics for: %s\n", path);
     RunFsMetrics(path, options);
     RunBlockMetrics(path, options);
     printf("\n");
