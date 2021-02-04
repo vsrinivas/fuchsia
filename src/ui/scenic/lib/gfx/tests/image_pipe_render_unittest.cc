@@ -232,6 +232,62 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   ASSERT_NE(image1, image2);
 }
 
+// Present two frames on the ImagePipe, using presentation callback of the first one to signal for
+// the second.
+VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFramesWithSignalling) {
+  ResourceId next_id = 1;
+  auto image_pipe_updater = std::make_shared<ImagePipeUpdater>(frame_scheduler());
+  frame_scheduler()->AddSessionUpdater(image_pipe_updater);
+  ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
+      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
+  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  pipe_material->SetTexture(image_pipe);
+
+  uint32_t image1_id = 1;
+  uint32_t image2_id = 2;
+  for (uint32_t i = 1; i <= 2; ++i) {
+    // Create a checkerboard image and copy it into a vmo.
+    size_t image_dim = 100;
+    auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
+    auto image_info = CreateImageInfoForBgra8Image(image_dim, image_dim);
+    // Add the image to the image pipe with AddImage().
+    image_pipe->AddImage(i, std::move(image_info), CopyVmo(checkerboard->vmo()), 0,
+                         GetVmoSize(checkerboard->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
+  }
+
+  zx::event acquire_fence1 = CreateEvent();
+  zx::event acquire_fence2 = CreateEvent();
+  image_pipe->PresentImage(image1_id, zx::time(0), CopyEventIntoFidlArray(acquire_fence1),
+                           /*release_fences=*/{},
+                           /*callback=*/[this, &acquire_fence2](auto) {
+                             acquire_fence2.signal(0u, escher::kFenceSignalled);
+                             QuitLoop();
+                           });
+  image_pipe->PresentImage(image2_id, zx::time(1), CopyEventIntoFidlArray(acquire_fence2),
+                           /*release_fences=*/{},
+                           /*callback=*/[](auto) {});
+
+  // Current presented image should be null, since we haven't signalled acquire fence yet.
+  ASSERT_FALSE(RunLoopFor(zx::sec(1)));
+  Visit(pipe_material.get());
+  ASSERT_FALSE(image_pipe->current_image());
+  ASSERT_FALSE(image_pipe->GetEscherImage());
+
+  // Signal on the acquire fence and run until image1 is presented.
+  acquire_fence1.signal(0u, escher::kFenceSignalled);
+  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
+  Visit(pipe_material.get());
+  escher::ImagePtr image1 = image_pipe->GetEscherImage();
+  ASSERT_TRUE(image1);
+
+  // Run until image2 is presented.
+  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
+  Visit(pipe_material.get());
+  escher::ImagePtr image2 = image_pipe->GetEscherImage();
+  ASSERT_TRUE(image2);
+  ASSERT_NE(image1, image2);
+}
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl
