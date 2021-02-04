@@ -14,6 +14,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 const resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
@@ -102,6 +104,100 @@ func TestGetAddressByName(t *testing.T) {
 		t.Fatal("Expected exception, but did not get one")
 	}
 
+}
+
+func compareFuchsiaDevices(f1, f2 *FuchsiaDevice) bool {
+	return cmp.Equal(f1.ipAddr, f2.ipAddr) && cmp.Equal(f1.name, f2.name)
+}
+
+func TestFindDeviceByName(t *testing.T) {
+	ExecCommand = helperCommandForSDKCommon
+	defer func() {
+		ExecCommand = exec.Command
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+	deviceName := "test-device"
+	expectedFuchsiaDevice := &FuchsiaDevice{
+		ipAddr: "123-123-123-123",
+		name:   "test-device",
+	}
+	output, err := testSDK.FindDeviceByName(deviceName)
+	if err != nil {
+		t.Error(err)
+	}
+	if d := cmp.Diff(expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("findDeviceByName mismatch: (-want +got):\n%s", d)
+	}
+
+	deviceName = "unknown-device"
+	_, err = testSDK.FindDeviceByName(deviceName)
+	if err != nil {
+		expected := "no device with device name unknown-device found"
+		actual := fmt.Sprintf("%v", err)
+		if actual != expected {
+			t.Errorf("Expected exception [%v] got [%v]", expected, actual)
+		}
+	} else {
+		t.Error("Expected exception, but did not get one")
+	}
+}
+
+func TestFindDeviceByIP(t *testing.T) {
+	ExecCommand = helperCommandForSDKCommon
+	defer func() {
+		ExecCommand = exec.Command
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+	ipAddr := "456-456-456-456"
+	expectedFuchsiaDevice := &FuchsiaDevice{
+		ipAddr: "456-456-456-456",
+		name:   "another-test-device",
+	}
+	output, err := testSDK.FindDeviceByIP(ipAddr)
+	if err != nil {
+		t.Error(err)
+	}
+	if d := cmp.Diff(expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("findDeviceByIP mismatch: (-want +got):\n%s", d)
+	}
+
+	ipAddr = "999-999-999-999"
+	_, err = testSDK.FindDeviceByIP(ipAddr)
+	expected := "no device with IP address 999-999-999-999 found"
+	actual := fmt.Sprintf("%v", err)
+	if actual != expected {
+		t.Errorf("Expected exception [%v] got [%v]", expected, actual)
+	}
+}
+
+func TestListDevices(t *testing.T) {
+	ExecCommand = helperCommandForSDKCommon
+	defer func() {
+		ExecCommand = exec.Command
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+	expectedFuchsiaDevice := []*FuchsiaDevice{
+		{
+			ipAddr: "123-123-123-123",
+			name:   "test-device",
+		}, {
+			ipAddr: "456-456-456-456",
+			name:   "another-test-device",
+		},
+	}
+	output, err := testSDK.ListDevices()
+	if err != nil {
+		t.Error(err)
+	}
+	if d := cmp.Diff(expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+	}
 }
 
 func TestRunSSHCommand(t *testing.T) {
@@ -819,6 +915,7 @@ func fakeGSUtil(args []string) {
 func fakeDeviceFinder(args []string) {
 	expected := []string{}
 	expectedResolveArgs := []string{"resolve", "-device-limit", "1", "-ipv4=false", "test-device"}
+	expectedListArgs := []string{"list", "--full", "-ipv4=false"}
 	if args[0] == "resolve" {
 		expected = expectedResolveArgs
 		if args[len(args)-1] == "test-device" {
@@ -827,6 +924,13 @@ func fakeDeviceFinder(args []string) {
 			fmt.Fprintf(os.Stderr, "resolve.go:76: no devices found for domains: [%v]", args[len(args)-1])
 			os.Exit(2)
 		}
+	} else if args[0] == "list" {
+		expected = expectedListArgs
+		fmt.Printf(`123-123-123-123 test-device
+		456-456-456-456 another-test-device`)
+	} else {
+		fmt.Fprintf(os.Stderr, "unexpected argument to device finder: %v", args[0])
+		os.Exit(1)
 	}
 	ok := len(expected) == len(args)
 	for i := range args {

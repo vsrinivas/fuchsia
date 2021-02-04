@@ -31,6 +31,14 @@ var (
 	log      = logger.NewLogger(logLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "sdk ")
 )
 
+// FuchsiaDevice represent a Fuchsia device.
+type FuchsiaDevice struct {
+	// IPv4 or IPv6 of the Fuchsia device.
+	ipAddr string
+	// Nodename of the Fuchsia device.
+	name string
+}
+
 // Default GCS bucket for prebuilt images and packages.
 const defaultGCSbucket string = "fuchsia"
 
@@ -303,7 +311,7 @@ func (sdk SDKProperties) GetPackageSourcePath(version string, bucket string, ima
 	return fmt.Sprintf("gs://%s/development/%s/packages/%s.tar.gz", bucket, version, image)
 }
 
-//GetAddressByName returns the IPv6 address of the device.
+// GetAddressByName returns the IPv6 address of the device.
 func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
@@ -323,6 +331,68 @@ func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 		}
 	}
 	return strings.TrimSpace(string(output)), nil
+}
+
+// FindDeviceByName returns a fuchsia device matching a specific device name.
+func (sdk SDKProperties) FindDeviceByName(deviceName string) (*FuchsiaDevice, error) {
+	devices, err := sdk.ListDevices()
+	if err != nil {
+		return nil, err
+	}
+	for _, device := range devices {
+		if device.name == deviceName {
+			return device, nil
+		}
+	}
+	return nil, fmt.Errorf("no device with device name %s found", deviceName)
+}
+
+// FindDeviceByIP returns a fuchsia device matching a specific ip address.
+func (sdk SDKProperties) FindDeviceByIP(ipAddr string) (*FuchsiaDevice, error) {
+	devices, err := sdk.ListDevices()
+	if err != nil {
+		return nil, err
+	}
+	for _, device := range devices {
+		if device.ipAddr == ipAddr {
+			return device, nil
+		}
+	}
+	return nil, fmt.Errorf("no device with IP address %s found", ipAddr)
+}
+
+// ListDevices returns all available fuchsia devices.
+func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
+	var devices []*FuchsiaDevice
+	toolsDir, err := sdk.GetToolsDir()
+	if err != nil {
+		return nil, fmt.Errorf("Could not determine tools directory %v", err)
+	}
+	cmd := filepath.Join(toolsDir, "device-finder")
+
+	args := []string{"list", "--full", "-ipv4=false"}
+
+	output, err := ExecCommand(cmd, args...).Output()
+	if err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			return nil, fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
+		}
+		return nil, err
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		parts := strings.Split(line, " ")
+		if len(parts) == 2 {
+			devices = append(devices, &FuchsiaDevice{
+				ipAddr: strings.TrimSpace(parts[0]),
+				name:   strings.TrimSpace(parts[1]),
+			})
+		}
+	}
+	if len(devices) < 1 {
+		return nil, fmt.Errorf("no devices found")
+	}
+	return devices, nil
 }
 
 // RunSSHCommand runs the command provided in args on the given target device.
