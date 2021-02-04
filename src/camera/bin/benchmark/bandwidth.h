@@ -7,7 +7,7 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/hardware/ram/metrics/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/fit/source_location.h>
+#include <lib/fit/function.h>
 
 #include <sstream>
 #include <string_view>

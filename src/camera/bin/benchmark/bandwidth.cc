@@ -4,6 +4,7 @@
 #include "src/camera/bin/benchmark/bandwidth.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/stdcompat/source_location.h>
 #include <lib/syslog/cpp/macros.h>
 
 namespace camera::benchmark {
@@ -13,7 +14,7 @@ namespace camera::benchmark {
 constexpr auto kDelayInterval = zx::sec(5);
 
 static fit::function<void(zx_status_t)> MakeErrorHandler(
-    std::string name, fit::source_location source_location = fit::source_location::current()) {
+    std::string name, cpp20::source_location source_location = cpp20::source_location::current()) {
   return [name, source_location](zx_status_t status) {
     FX_PLOGS(FATAL, status) << source_location.file_name() + 5 << "(" << source_location.line()
                             << "): " << name << " server disconnected.";

@@ -11,6 +11,7 @@ source_set("lib") {
   sources = [ "bandwidth.cc" ]
   public = [ "bandwidth.h" ]
   deps = [
+    "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
