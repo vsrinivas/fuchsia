@@ -32,6 +32,7 @@ using fuchsia::lowpan::device::Protocols;
 
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::Internal::DeviceNetworkInfo;
+using nl::Weave::Profiles::NetworkProvisioning::kNetworkType_Thread;
 
 using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
 
@@ -252,6 +253,8 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetThreadProvision(DeviceNetworkInfo
 
   // Start copying provision info.
   netInfo.Reset();
+  netInfo.NetworkType = kNetworkType_Thread;
+
   // Copy network name.
   if (identity.has_raw_name()) {
     std::memcpy(netInfo.ThreadNetworkName, identity.raw_name().data(),

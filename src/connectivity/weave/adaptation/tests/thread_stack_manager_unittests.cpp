@@ -42,6 +42,7 @@ using fuchsia::lowpan::device::ServiceError;
 
 using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
+using nl::Weave::Profiles::NetworkProvisioning::kNetworkType_Thread;
 
 const char kFakeInterfaceName[] = "fake0";
 
@@ -355,6 +356,7 @@ TEST_F(ThreadStackManagerTest, GetProvisionNoCredential) {
   DeviceNetworkInfo net_info;
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, false), WEAVE_NO_ERROR);
 
+  EXPECT_EQ(net_info.NetworkType, kNetworkType_Thread);
   EXPECT_TRUE(net_info.FieldPresent.ThreadExtendedPANId);
   EXPECT_FALSE(net_info.FieldPresent.ThreadNetworkKey);
 
@@ -390,6 +392,7 @@ TEST_F(ThreadStackManagerTest, GetProvisionWithCredential) {
   DeviceNetworkInfo net_info;
   EXPECT_EQ(ThreadStackMgrImpl()._GetThreadProvision(net_info, true), WEAVE_NO_ERROR);
 
+  EXPECT_EQ(net_info.NetworkType, kNetworkType_Thread);
   EXPECT_TRUE(net_info.FieldPresent.ThreadExtendedPANId);
   EXPECT_TRUE(net_info.FieldPresent.ThreadNetworkKey);
 
