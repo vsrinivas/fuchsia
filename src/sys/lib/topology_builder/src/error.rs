@@ -55,21 +55,21 @@ pub enum BuilderError {
     #[error(
         "failed to add storage route because storage {0} cannot be offered from a child: {0:?}"
     )]
-    StorageCannotBeOfferedFromChild(&'static str, builder::CapabilityRoute),
+    StorageCannotBeOfferedFromChild(String, builder::CapabilityRoute),
 
     #[error(
         "failed to add event route because an event {0} cannot be offered from a child: {0:?}"
     )]
-    EventCannotBeOfferedFromChild(&'static str, builder::CapabilityRoute),
+    EventCannotBeOfferedFromChild(String, builder::CapabilityRoute),
 
     #[error("failed to add route because an event ({0}) cannot be exposed")]
-    EventsCannotBeExposed(&'static str),
+    EventsCannotBeExposed(String),
 
     #[error("failed to add route because storage ({0}) cannot be exposed")]
-    StorageCannotBeExposed(&'static str),
+    StorageCannotBeExposed(String),
 
     #[error("storage ({0}) must come from abvoe root")]
-    StorageMustComeFromAboveRoot(&'static str),
+    StorageMustComeFromAboveRoot(String),
 }
 
 #[derive(Debug, Error)]

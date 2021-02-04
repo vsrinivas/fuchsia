@@ -15,12 +15,34 @@ use {
 /// A capability that is routed through the custom topology
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Capability {
-    Protocol(&'static str),
+    Protocol(String),
     // Name, Path, rights
-    Directory(&'static str, &'static str, fio2::Operations),
+    Directory(String, String, fio2::Operations),
     Event(Event, cm_rust::EventMode),
     // Name, path
-    Storage(&'static str, &'static str),
+    Storage(String, String),
+}
+
+impl Capability {
+    pub fn protocol(name: impl Into<String>) -> Self {
+        Self::Protocol(name.into())
+    }
+
+    pub fn directory(
+        name: impl Into<String>,
+        path: impl Into<String>,
+        rights: fio2::Operations,
+    ) -> Self {
+        Self::Directory(name.into(), path.into(), rights)
+    }
+
+    pub fn event(event: Event, mode: cm_rust::EventMode) -> Self {
+        Self::Event(event, mode)
+    }
+
+    pub fn storage(name: impl Into<String>, path: impl Into<String>) -> Self {
+        Self::Storage(name.into(), path.into())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -29,9 +51,30 @@ pub enum Event {
     Stopped,
     Running,
     // Filter.name
-    CapabilityRequested(&'static str),
+    CapabilityRequested(String),
     // Filter.name
-    CapabilityReady(&'static str),
+    CapabilityReady(String),
+}
+
+impl Event {
+    pub fn started() -> Self {
+        Self::Started
+    }
+
+    pub fn stopped() -> Self {
+        Self::Stopped
+    }
+
+    pub fn running() -> Self {
+        Self::Running
+    }
+    pub fn capability_requested(filter_name: impl Into<String>) -> Self {
+        Self::CapabilityRequested(filter_name.into())
+    }
+
+    pub fn capability_ready(filter_name: impl Into<String>) -> Self {
+        Self::CapabilityReady(filter_name.into())
+    }
 }
 
 impl Event {
@@ -62,16 +105,24 @@ impl Event {
 pub enum RouteEndpoint {
     /// One end of this capability route is a component in our custom topology. The value of this
     /// should be a moniker that was used in a prior [`TopologyBuilder::add_component`] call.
-    Component(&'static str),
+    Component(String),
 
     /// One end of this capability route is above the root component in the generated topology
     AboveRoot,
 }
 
 impl RouteEndpoint {
+    pub fn component(path: impl Into<String>) -> Self {
+        Self::Component(path.into())
+    }
+
+    pub fn above_root() -> Self {
+        Self::AboveRoot
+    }
+
     fn unwrap_component_moniker(&self) -> Moniker {
         match self {
-            RouteEndpoint::Component(m) => (*m).into(),
+            RouteEndpoint::Component(m) => m.clone().into(),
             _ => panic!("capability source is not a component"),
         }
     }
@@ -145,9 +196,9 @@ struct Component {
 ///            Box::pin(implementation_for_b(h))
 ///        }))?
 ///        .add_route(CapabilityRoute {
-///            capability: Capability::Protocol("fuchsia.foobar"),
-///            source: RouteEndpoint::Component("b"),
-///            targets: vec![RouteEndpoint::Component("c/d")],
+///            capability: Capability::protocol("fuchsia.foobar"),
+///            source: RouteEndpoint::component("b"),
+///            targets: vec![RouteEndpoint::component("c/d")],
 ///        })?
 ///        .add_route(CapabilityRoute {
 ///            capability: Capability::Directory(
@@ -155,7 +206,7 @@ struct Component {
 ///                "/path-for-artifacts",
 ///                fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap()
 ///            ),
-///            source: RouteEndpoint::Component("c/d"),
+///            source: RouteEndpoint::component("c/d"),
 ///            targets: vec![RouteEndpoint::AboveRoot],
 ///        })?;
 /// let topology = builder.build().await?;
@@ -270,7 +321,7 @@ impl TopologyBuilder {
     /// already exists.
     pub fn add_route(&mut self, route: CapabilityRoute) -> Result<&mut Self, Error> {
         if let RouteEndpoint::Component(moniker) = &route.source {
-            let moniker = (*moniker).into();
+            let moniker = moniker.clone().into();
             if !self.topology.contains(&moniker) {
                 match moniker.parent().and_then(|p| Some(self.topology.get_decl_mut(&p))) {
                     Some(Ok(decl))
@@ -290,7 +341,7 @@ impl TopologyBuilder {
                 return Err(BuilderError::RouteSourceAndTargetMatch(route.clone()).into());
             }
             if let RouteEndpoint::Component(moniker) = target {
-                let moniker = (*moniker).into();
+                let moniker = moniker.clone().into();
                 if !self.topology.contains(&moniker) {
                     return Err(BuilderError::MissingRouteTarget(moniker).into());
                 }
@@ -446,19 +497,19 @@ impl TopologyBuilder {
         let capability_decl = match capability {
             Capability::Protocol(name) => {
                 Some(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
-                    name: (*name).try_into().unwrap(),
+                    name: name.as_str().try_into().unwrap(),
                     source_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
                 }))
             }
             Capability::Directory(name, path, rights) => {
                 Some(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
-                    name: (*name).try_into().unwrap(),
-                    source_path: (*path).try_into().unwrap(),
+                    name: name.as_str().try_into().unwrap(),
+                    source_path: path.as_str().try_into().unwrap(),
                     rights: rights.clone(),
                 }))
             }
             Capability::Storage(name, _) => {
-                return Err(BuilderError::StorageMustComeFromAboveRoot(name))
+                return Err(BuilderError::StorageMustComeFromAboveRoot(name.clone()))
             }
             Capability::Event(_, _) => None,
         };
@@ -474,21 +525,21 @@ impl TopologyBuilder {
         match capability {
             Capability::Protocol(name) => cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
                 source: cm_rust::UseSource::Parent,
-                source_name: (*name).try_into().unwrap(),
+                source_name: name.clone().try_into().unwrap(),
                 target_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
             }),
             Capability::Directory(name, path, rights) => {
                 cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
                     source: cm_rust::UseSource::Parent,
-                    source_name: (*name).try_into().unwrap(),
-                    target_path: (*path).try_into().unwrap(),
+                    source_name: name.as_str().try_into().unwrap(),
+                    target_path: path.as_str().try_into().unwrap(),
                     rights: rights.clone(),
                     subdir: None,
                 })
             }
             Capability::Storage(name, path) => cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
-                source_name: (*name).try_into().unwrap(),
-                target_path: (*path).try_into().unwrap(),
+                source_name: name.as_str().try_into().unwrap(),
+                target_path: path.as_str().try_into().unwrap(),
             }),
             Capability::Event(event, mode) => cm_rust::UseDecl::Event(cm_rust::UseEventDecl {
                 source: cm_rust::UseSource::Parent,
@@ -541,9 +592,9 @@ impl TopologyBuilder {
                 }
                 offers.push(cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                     source: offer_source,
-                    source_name: (*name).into(),
+                    source_name: name.clone().into(),
                     target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: (*name).into(),
+                    target_name: name.clone().into(),
                     dependency_type: cm_rust::DependencyType::Strong,
                 }));
             }
@@ -579,9 +630,9 @@ impl TopologyBuilder {
                 }
                 offers.push(cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                     source: offer_source,
-                    source_name: (*name).into(),
+                    source_name: name.clone().into(),
                     target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: (*name).into(),
+                    target_name: name.clone().into(),
                     rights: None,
                     subdir: None,
                     dependency_type: cm_rust::DependencyType::Strong,
@@ -593,7 +644,7 @@ impl TopologyBuilder {
                     OfferSource::Self_ => cm_rust::OfferSource::Self_,
                     OfferSource::Child(_) => {
                         return Err(BuilderError::StorageCannotBeOfferedFromChild(
-                            name,
+                            name.clone(),
                             route.clone(),
                         )
                         .into());
@@ -625,9 +676,9 @@ impl TopologyBuilder {
                 }
                 offers.push(cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
                     source: offer_source,
-                    source_name: (*name).into(),
+                    source_name: name.clone().into(),
                     target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: (*name).into(),
+                    target_name: name.clone().into(),
                 }));
             }
             Capability::Event(event, mode) => {
@@ -636,7 +687,7 @@ impl TopologyBuilder {
                     OfferSource::Self_ => cm_rust::OfferSource::Framework,
                     OfferSource::Child(_) => {
                         return Err(BuilderError::EventCannotBeOfferedFromChild(
-                            event.name(),
+                            event.name().to_string(),
                             route.clone(),
                         )
                         .into());
@@ -734,26 +785,26 @@ impl TopologyBuilder {
             Capability::Protocol(name) => {
                 exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                     source: expose_source,
-                    source_name: (*name).into(),
+                    source_name: name.clone().into(),
                     target,
-                    target_name: (*name).into(),
+                    target_name: name.clone().into(),
                 }))
             }
             Capability::Directory(name, _, _) => {
                 exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
                     source: expose_source,
-                    source_name: (*name).into(),
+                    source_name: name.as_str().into(),
                     target,
-                    target_name: (*name).into(),
+                    target_name: name.as_str().into(),
                     rights: None,
                     subdir: None,
                 }))
             }
             Capability::Storage(name, _) => {
-                return Err(BuilderError::StorageCannotBeExposed(name).into());
+                return Err(BuilderError::StorageCannotBeExposed(name.clone()).into());
             }
             Capability::Event(event, _) => {
-                return Err(BuilderError::EventsCannotBeExposed(event.name()).into());
+                return Err(BuilderError::EventsCannotBeExposed(event.name().to_string()).into());
             }
         }
         Ok(())
@@ -929,9 +980,9 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("b"),
-                targets: vec![RouteEndpoint::Component("a")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("b"),
+                targets: vec![RouteEndpoint::component("a")],
             });
 
         match res {
@@ -952,8 +1003,8 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("a"),
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("a"),
                 targets: vec![],
             });
 
@@ -982,15 +1033,15 @@ mod tests {
                 .await
                 .unwrap()
                 .add_route(CapabilityRoute {
-                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                    source: RouteEndpoint::Component("1/a"),
-                    targets: vec![RouteEndpoint::Component("2/c")],
+                    capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::component("1/a"),
+                    targets: vec![RouteEndpoint::component("2/c")],
                 })
                 .unwrap()
                 .add_route(CapabilityRoute {
-                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                    source: RouteEndpoint::Component("1/b"),
-                    targets: vec![RouteEndpoint::Component("2/d")],
+                    capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::component("1/b"),
+                    targets: vec![RouteEndpoint::component("2/d")],
                 });
 
             match res {
@@ -1002,9 +1053,9 @@ mod tests {
                     assert_eq!(
                         route,
                         CapabilityRoute {
-                            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                            source: RouteEndpoint::Component("1/b"),
-                            targets: vec![RouteEndpoint::Component("2/d")],
+                            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                            source: RouteEndpoint::component("1/b"),
+                            targets: vec![RouteEndpoint::component("2/d")],
                         }
                     );
                     assert_eq!(moniker, "1".into());
@@ -1032,15 +1083,15 @@ mod tests {
                 .await
                 .unwrap()
                 .add_route(CapabilityRoute {
-                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                    source: RouteEndpoint::Component("1/a"),
-                    targets: vec![RouteEndpoint::Component("1/b")],
+                    capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::component("1/a"),
+                    targets: vec![RouteEndpoint::component("1/b")],
                 })
                 .unwrap()
                 .add_route(CapabilityRoute {
-                    capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                    source: RouteEndpoint::Component("2/c"),
-                    targets: vec![RouteEndpoint::Component("2/d")],
+                    capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                    source: RouteEndpoint::component("2/c"),
+                    targets: vec![RouteEndpoint::component("2/d")],
                 })
                 .unwrap();
         }
@@ -1055,9 +1106,9 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("b")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("b")],
             });
 
         match res {
@@ -1074,7 +1125,7 @@ mod tests {
         let (_mocks_task, mut builder) = mocked_builder();
 
         let res = builder.add_route(CapabilityRoute {
-            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::AboveRoot],
         });
@@ -1098,7 +1149,7 @@ mod tests {
             .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
-                source: RouteEndpoint::Component("a"),
+                source: RouteEndpoint::component("a"),
                 targets: vec![RouteEndpoint::AboveRoot],
             });
 
@@ -1123,8 +1174,8 @@ mod tests {
             .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("b")],
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("b")],
             });
 
         match res {
@@ -1144,8 +1195,8 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Storage("foo", "/foo"),
-                source: RouteEndpoint::Component("a"),
+                capability: Capability::storage("foo", "/foo"),
+                source: RouteEndpoint::component("a"),
                 targets: vec![RouteEndpoint::AboveRoot],
             });
 
@@ -1168,9 +1219,9 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Storage("foo", "/foo"),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("b")],
+                capability: Capability::storage("foo", "/foo"),
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("b")],
             });
 
         match res {
@@ -1204,25 +1255,25 @@ mod tests {
             .add_route(CapabilityRoute {
                 capability: Capability::Event(Event::Started, cm_rust::EventMode::Sync),
                 source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::Component("a")],
+                targets: vec![RouteEndpoint::component("a")],
             })
             .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::Event(
-                    Event::CapabilityReady("diagnostics"),
+                    Event::capability_ready("diagnostics"),
                     cm_rust::EventMode::Async,
                 ),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("a/b")],
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("a/b")],
             })
             .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::Event(
-                    Event::CapabilityRequested("fuchsia.logger.LogSink"),
+                    Event::capability_requested("fuchsia.logger.LogSink"),
                     cm_rust::EventMode::Async,
                 ),
                 source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::Component("a/b")],
+                targets: vec![RouteEndpoint::component("a/b")],
             })
             .unwrap();
 
@@ -1376,9 +1427,9 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Storage("foo", "/bar"),
+                capability: Capability::storage("foo", "/bar"),
                 source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::Component("a")],
+                targets: vec![RouteEndpoint::component("a")],
             })
             .unwrap();
 
@@ -1446,9 +1497,9 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("b")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("b")],
             })
             .unwrap();
 
@@ -1507,9 +1558,9 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("b")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("b")],
             })
             .unwrap();
 
@@ -1617,9 +1668,9 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("a/b")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("a/b")],
             })
             .unwrap();
 
@@ -1700,19 +1751,19 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("a"),
-                targets: vec![RouteEndpoint::Component("b")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("a"),
+                targets: vec![RouteEndpoint::component("b")],
             })
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Directory(
+                capability: Capability::directory(
                     "example-dir",
                     "/example",
                     fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
                 ),
-                source: RouteEndpoint::Component("b"),
-                targets: vec![RouteEndpoint::Component("c")],
+                source: RouteEndpoint::component("b"),
+                targets: vec![RouteEndpoint::component("c")],
             })
             .unwrap();
 
@@ -1823,19 +1874,19 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("b"),
-                targets: vec![RouteEndpoint::Component("a"), RouteEndpoint::Component("c")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("b"),
+                targets: vec![RouteEndpoint::component("a"), RouteEndpoint::component("c")],
             })
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Directory(
+                capability: Capability::directory(
                     "example-dir",
                     "/example",
                     fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
                 ),
-                source: RouteEndpoint::Component("b"),
-                targets: vec![RouteEndpoint::Component("a"), RouteEndpoint::Component("c")],
+                source: RouteEndpoint::component("b"),
+                targets: vec![RouteEndpoint::component("a"), RouteEndpoint::component("c")],
             })
             .unwrap();
 
@@ -1922,19 +1973,19 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Directory(
+                capability: Capability::directory(
                     "example-dir",
                     "/example",
                     fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
                 ),
-                source: RouteEndpoint::Component("a/b"),
-                targets: vec![RouteEndpoint::Component("c/d")],
+                source: RouteEndpoint::component("a/b"),
+                targets: vec![RouteEndpoint::component("c/d")],
             })
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::Component("a/b"),
-                targets: vec![RouteEndpoint::Component("c/d")],
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("a/b"),
+                targets: vec![RouteEndpoint::component("c/d")],
             })
             .unwrap();
 

@@ -31,16 +31,16 @@ async fn protocol_with_uncle_test() -> Result<(), Error> {
         .add_eager_component("parent/echo-client", ComponentSource::url(ECHO_CLIENT_URL))
         .await?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-            source: RouteEndpoint::Component("echo-server"),
-            targets: vec![RouteEndpoint::Component("parent/echo-client")],
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo-server"),
+            targets: vec![RouteEndpoint::component("parent/echo-client")],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.logger.LogSink"),
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![
-                RouteEndpoint::Component("echo-server"),
-                RouteEndpoint::Component("parent/echo-client"),
+                RouteEndpoint::component("echo-server"),
+                RouteEndpoint::component("parent/echo-client"),
             ],
         })?;
     let _child_instance = builder.build().create().await?;
@@ -66,16 +66,16 @@ async fn protocol_with_siblings_test() -> Result<(), Error> {
         )
         .await?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-            source: RouteEndpoint::Component("echo-server"),
-            targets: vec![RouteEndpoint::Component("echo-client")],
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo-server"),
+            targets: vec![RouteEndpoint::component("echo-client")],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.logger.LogSink"),
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![
-                RouteEndpoint::Component("echo-client"),
-                RouteEndpoint::Component("echo-server"),
+                RouteEndpoint::component("echo-client"),
+                RouteEndpoint::component("echo-server"),
             ],
         })?;
     let _child_instance = builder.build().create().await?;
@@ -101,16 +101,16 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
         )
         .await?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-            source: RouteEndpoint::Component("parent-2/echo-server"),
-            targets: vec![RouteEndpoint::Component("parent-1/echo-client")],
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("parent-2/echo-server"),
+            targets: vec![RouteEndpoint::component("parent-1/echo-client")],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.logger.LogSink"),
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![
-                RouteEndpoint::Component("parent-1/echo-client"),
-                RouteEndpoint::Component("parent-2/echo-server"),
+                RouteEndpoint::component("parent-1/echo-client"),
+                RouteEndpoint::component("parent-2/echo-server"),
             ],
         })?;
     let _child_instance = builder.build().create().await?;
@@ -136,16 +136,16 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
         .add_eager_component("echo-server/echo-client", ComponentSource::url(ECHO_CLIENT_URL))
         .await?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fidl.examples.routing.echo.Echo"),
-            source: RouteEndpoint::Component("echo-server"),
-            targets: vec![RouteEndpoint::Component("echo-server/echo-client")],
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo-server"),
+            targets: vec![RouteEndpoint::component("echo-server/echo-client")],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.logger.LogSink"),
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![
-                RouteEndpoint::Component("echo-server"),
-                RouteEndpoint::Component("echo-server/echo-client"),
+                RouteEndpoint::component("echo-server"),
+                RouteEndpoint::component("echo-server/echo-client"),
             ],
         })?;
     let _child_instance = builder.build().create().await?;

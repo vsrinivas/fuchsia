@@ -180,142 +180,142 @@ async fn get_topology(
         .add_component("test_wrapper/archivist", ComponentSource::url(*ARCHIVIST_FOR_EMBEDDING_URL))
         .await?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.process.Launcher"),
+            capability: Capability::protocol("fuchsia.process.Launcher"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.boot.WriteOnlyLog"),
+            capability: Capability::protocol("fuchsia.boot.WriteOnlyLog"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.sys2.EventSource"),
+            capability: Capability::protocol("fuchsia.sys2.EventSource"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![
-                RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH),
-                RouteEndpoint::Component("test_wrapper/archivist"),
+                RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
+                RouteEndpoint::component("test_wrapper/archivist"),
             ],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Storage("temp", "/tmp"),
+            capability: Capability::storage("temp", "/tmp"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.logger.LogSink"),
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![
-                RouteEndpoint::Component("test_wrapper/archivist"),
+                RouteEndpoint::component("test_wrapper/archivist"),
                 // TODO(fxbug.dev/67960): use embedded archivist LogSink)
-                RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH),
+                RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
             ],
         })?
         // TODO(fxbug.dev/67960): uncomment when fetching isolated logs is implemented.
         // .add_route(CapabilityRoute {
-        //     capability: Capability::Protocol("fuchsia.logger.LogSink"),
-        //     source: RouteEndpoint::Component("test_wrapper/archivist"),
-        //     targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        //     capability: Capability::protocol("fuchsia.logger.LogSink"),
+        //     source: RouteEndpoint::component("test_wrapper/archivist"),
+        //     targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         // })?
         // .add_route(CapabilityRoute {
-        //     capability: Capability::Protocol("fuchsia.logger.Log"),
-        //     source: RouteEndpoint::Component("test_wrapper/archivist"),
-        //     targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+        //     capability: Capability::protocol("fuchsia.logger.Log"),
+        //     source: RouteEndpoint::component("test_wrapper/archivist"),
+        //     targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         // })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.diagnostics.ArchiveAccessor"),
-            source: RouteEndpoint::Component("mocks-server"),
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
+            source: RouteEndpoint::component("mocks-server"),
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.diagnostics.ArchiveAccessor"),
-            source: RouteEndpoint::Component("test_wrapper/archivist"),
+            capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
+            source: RouteEndpoint::component("test_wrapper/archivist"),
             targets: vec![RouteEndpoint::AboveRoot],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
-            source: RouteEndpoint::Component("test_wrapper"),
-            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+            source: RouteEndpoint::component("test_wrapper"),
+            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Stopped, cm_rust::EventMode::Async),
-            source: RouteEndpoint::Component("test_wrapper"),
-            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+            source: RouteEndpoint::component("test_wrapper"),
+            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Running, cm_rust::EventMode::Async),
-            source: RouteEndpoint::Component("test_wrapper"),
-            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+            source: RouteEndpoint::component("test_wrapper"),
+            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(
-                Event::CapabilityReady("diagnostics"),
+                Event::capability_ready("diagnostics"),
                 cm_rust::EventMode::Async,
             ),
-            source: RouteEndpoint::Component("test_wrapper"),
-            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+            source: RouteEndpoint::component("test_wrapper"),
+            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(
-                Event::CapabilityRequested("fuchsia.logger.LogSink"),
+                Event::capability_requested("fuchsia.logger.LogSink"),
                 cm_rust::EventMode::Async,
             ),
-            source: RouteEndpoint::Component("test_wrapper"),
-            targets: vec![RouteEndpoint::Component("test_wrapper/archivist")],
+            source: RouteEndpoint::component("test_wrapper"),
+            targets: vec![RouteEndpoint::component("test_wrapper/archivist")],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.test.Suite"),
-            source: RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH),
+            capability: Capability::protocol("fuchsia.test.Suite"),
+            source: RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
             targets: vec![RouteEndpoint::AboveRoot],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.hardware.display.Provider"),
+            capability: Capability::protocol("fuchsia.hardware.display.Provider"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.scheduler.ProfileProvider"),
+            capability: Capability::protocol("fuchsia.scheduler.ProfileProvider"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.sysmem.Allocator"),
+            capability: Capability::protocol("fuchsia.sysmem.Allocator"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.tracing.provider.Registry"),
+            capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Directory("config-ssl", "", *READ_RIGHTS),
+            capability: Capability::directory("config-ssl", "", *READ_RIGHTS),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Directory("config-data", "", *READ_RIGHTS),
+            capability: Capability::directory("config-data", "", *READ_RIGHTS),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Directory(
+            capability: Capability::directory(
                 "deprecated-tmp",
                 "",
                 *ADMIN_RIGHTS | *READ_WRITE_RIGHTS,
             ),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Directory("dev-input-report", "", *READ_WRITE_RIGHTS),
+            capability: Capability::directory("dev-input-report", "", *READ_WRITE_RIGHTS),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Directory("dev-display-controller", "", *READ_WRITE_RIGHTS),
+            capability: Capability::directory("dev-display-controller", "", *READ_WRITE_RIGHTS),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component(WRAPPER_ROOT_REALM_PATH)],
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?;
 
     Ok(builder.build())

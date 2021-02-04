@@ -55,35 +55,35 @@ async fn new_topology(
         .await?
         // Give the shim logging
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.boot.WriteOnlyLog"),
+            capability: Capability::protocol("fuchsia.boot.WriteOnlyLog"),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::Component("shutdown-shim")],
+            targets: vec![RouteEndpoint::component("shutdown-shim")],
         })?
         // Expose the shim's statecontrol.Admin so test cases can access it
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.hardware.power.statecontrol.Admin"),
-            source: RouteEndpoint::Component("shutdown-shim"),
+            capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
+            source: RouteEndpoint::component("shutdown-shim"),
             targets: vec![RouteEndpoint::AboveRoot],
         })?
         // Give the shim the driver_manager and component_manager mocks, as those are always
         // available to the shim in prod
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.device.manager.SystemStateTransition"),
-            source: RouteEndpoint::Component("mocks-server"),
-            targets: vec![RouteEndpoint::Component("shutdown-shim")],
+            capability: Capability::protocol("fuchsia.device.manager.SystemStateTransition"),
+            source: RouteEndpoint::component("mocks-server"),
+            targets: vec![RouteEndpoint::component("shutdown-shim")],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::Protocol("fuchsia.sys2.SystemController"),
-            source: RouteEndpoint::Component("mocks-server"),
-            targets: vec![RouteEndpoint::Component("shutdown-shim")],
+            capability: Capability::protocol("fuchsia.sys2.SystemController"),
+            source: RouteEndpoint::component("mocks-server"),
+            targets: vec![RouteEndpoint::component("shutdown-shim")],
         })?;
 
     match variant {
         TopologyVariant::PowerManagerPresent => {
             builder.add_route(CapabilityRoute {
-                capability: Capability::Protocol("fuchsia.hardware.power.statecontrol.Admin"),
-                source: RouteEndpoint::Component("mocks-server"),
-                targets: vec![RouteEndpoint::Component("shutdown-shim")],
+                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
+                source: RouteEndpoint::component("mocks-server"),
+                targets: vec![RouteEndpoint::component("shutdown-shim")],
             })?;
         }
         TopologyVariant::PowerManagerIsntStartedYet => {
@@ -110,9 +110,9 @@ async fn new_topology(
                 )
                 .await?;
             builder.add_route(CapabilityRoute {
-                capability: Capability::Protocol("fuchsia.hardware.power.statecontrol.Admin"),
-                source: RouteEndpoint::Component("black-hole"),
-                targets: vec![RouteEndpoint::Component("shutdown-shim")],
+                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
+                source: RouteEndpoint::component("black-hole"),
+                targets: vec![RouteEndpoint::component("shutdown-shim")],
             })?;
         }
         TopologyVariant::PowerManagerNotPresent => (),
