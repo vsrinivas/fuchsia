@@ -8,9 +8,9 @@ So the Harvester does not store samples. Instead the samples are moved to
 the Dockyard as soon as reasonable.
 
 ## Running tests
-
-Before running the tests, add `//bundles:tests` to your `fx set` (i.e. args.gn),
-then execute:
+Before running the tests, add
+`//src/developer/system_monitor/bin/harvester:system_monitor_harvester_tests`
+to your `fx set` (i.e. args.gn), then execute:
 ```
 $ fx test system_monitor_harvester_tests
 ```
