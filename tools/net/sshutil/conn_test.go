@@ -266,7 +266,6 @@ func TestRun(t *testing.T) {
 		select {
 		case <-time.After(testTimeout):
 			t.Fatalf("server didn't accept the connection in time")
-			return
 		case err := <-serverErrs:
 			if err != nil {
 				t.Errorf("server failed to accept connection: %v", err)

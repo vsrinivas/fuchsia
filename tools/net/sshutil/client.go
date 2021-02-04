@@ -51,8 +51,10 @@ func (c *Client) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.conn.Close()
-	c.connected = false
+	if c.connected {
+		c.conn.Close()
+		c.connected = false
+	}
 }
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh
@@ -75,21 +77,30 @@ func (c *Client) Reconnect(ctx context.Context) error {
 // then reconnect to the server, with a retry strategy based on the given
 // backoff.
 func (c *Client) ReconnectWithBackoff(ctx context.Context, backoff retry.Backoff) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Only disconnect if we are connected.
-	if c.connected {
-		c.conn.Close()
-		c.connected = false
-	}
+	// Disconnect if we are connected.
+	c.Close()
 
 	conn, err := newConn(ctx, c.addr, c.config, backoff)
 	if err != nil {
 		return err
 	}
-	c.conn = conn
-	c.connected = true
+
+	// We don't hold the lock during the connection attempt, since it could
+	// take an unbounded amount of time due to the reconnection policy.
+	// However this means it's possible for a caller to call
+	// ReconnectWithBackoff, and thus multiple connections. So after we
+	// connect, grab the lock, and make sure we only track one connection.
+	c.mu.Lock()
+	if c.connected {
+		c.mu.Unlock()
+
+		conn.Close()
+	} else {
+		c.conn = conn
+		c.connected = true
+
+		c.mu.Unlock()
+	}
 
 	return nil
 }
