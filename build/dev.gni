@@ -18,6 +18,11 @@ declare_args() {
   # build time.
   dev_fuchsia_zbi_kernel_cmdline_golden = ""
 
+  # An optional golden file for recovery.zbi kernel cmdline args. If specified,
+  # this golden file would be compared against recovery.zbi kernel cmdline
+  # during build time.
+  dev_recovery_zbi_kernel_cmdline_golden = ""
+
   # List of labels for objects to include in the ZBI.
   dev_bootfs_labels = []
 
