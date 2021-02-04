@@ -21,7 +21,7 @@ template("kernel_cmdline_verify") {
   assert(defined(invoker.golden), "kernel_cmdline_verify() must specify golden")
 
   action("${target_name}") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
 
     script = "//build/zbi/verify_zbi_kernel_cmdline.py"
     stamp_file = "$target_gen_dir/$target_name.verified"

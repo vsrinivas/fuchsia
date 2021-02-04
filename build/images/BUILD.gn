@@ -555,6 +555,7 @@ zbi("fuchsia_unverified") {
 
 if (dev_fuchsia_zbi_kernel_cmdline_golden != "") {
   kernel_cmdline_verify("fuchsia_zbi_verify") {
+    testonly = fuchsia_zbi_testonly
     zbi = "$root_out_dir/fuchsia_unverified.zbi"
     golden = dev_fuchsia_zbi_kernel_cmdline_golden
     deps = [ ":fuchsia_unverified" ]
