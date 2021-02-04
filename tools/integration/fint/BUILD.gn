@@ -47,6 +47,7 @@ go_library("fint_lib") {
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/lib/color",
     "//tools/lib/command",
+    "//tools/lib/isatty",
     "//tools/lib/jsonutil",
     "//tools/lib/logger",
     "//tools/lib/osmisc",

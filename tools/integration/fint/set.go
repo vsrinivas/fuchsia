@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"go.fuchsia.dev/fuchsia/tools/lib/isatty"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 )
@@ -41,6 +42,12 @@ func runSteps(
 	contextSpec *fintpb.Context,
 	platform string,
 ) (*fintpb.SetArtifacts, error) {
+	if contextSpec.CheckoutDir == "" {
+		return nil, fmt.Errorf("checkout_dir must be set")
+	}
+	if contextSpec.BuildDir == "" {
+		return nil, fmt.Errorf("build_dir must be set")
+	}
 	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
 	artifacts := &fintpb.SetArtifacts{}
 	genArgs, err := genArgs(staticSpec, contextSpec, platform)
@@ -85,6 +92,9 @@ func runGen(
 		"--fail-on-unused-args",
 	}
 
+	if isatty.IsTerminal() {
+		genCmd = append(genCmd, "--color")
+	}
 	if gnTracePath != "" {
 		genCmd = append(genCmd, fmt.Sprintf("--tracelog=%s", gnTracePath))
 	}
@@ -135,9 +145,14 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 	var imports []string
 
 	if staticSpec.TargetArch == fintpb.Static_ARCH_UNSPECIFIED {
-		return nil, fmt.Errorf("target_arch is unspecified or invalid")
+		// Board files declare `target_cpu` so it's not necessary to set
+		// `target_cpu` as long as we have a board file.
+		if staticSpec.Board == "" {
+			return nil, fmt.Errorf("target_arch must be set if board is not")
+		}
+	} else {
+		vars["target_cpu"] = strings.ToLower(staticSpec.TargetArch.String())
 	}
-	vars["target_cpu"] = strings.ToLower(staticSpec.TargetArch.String())
 
 	if staticSpec.Optimize == fintpb.Static_OPTIMIZE_UNSPECIFIED {
 		return nil, fmt.Errorf("optimize is unspecified or invalid")

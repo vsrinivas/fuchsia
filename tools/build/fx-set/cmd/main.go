@@ -8,13 +8,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	flag "github.com/spf13/pflag"
+	"go.fuchsia.dev/fuchsia/tools/integration/fint"
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 const (
@@ -56,7 +60,20 @@ func mainImpl(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	staticSpec, err := constructStaticSpec(checkoutDir, args)
+	if err != nil {
+		return err
+	}
+
+	contextSpec := &fintpb.Context{
+		CheckoutDir: checkoutDir,
+		// TODO(olivernewman): Implement support for --auto-dir and --build-dir
+		// flags to make this configurable.
+		BuildDir: filepath.Join(checkoutDir, "out", "default"),
+	}
+
+	_, err = fint.Set(ctx, staticSpec, contextSpec)
+	return err
 }
 
 type setArgs struct {
@@ -111,4 +128,57 @@ func parseArgs(args []string) (*setArgs, error) {
 	cmd.product, cmd.board = productAndBoard[0], productAndBoard[1]
 
 	return cmd, nil
+}
+
+func constructStaticSpec(checkoutDir string, args *setArgs) (*fintpb.Static, error) {
+	productPath, err := findGNIFile(checkoutDir, "products", args.product)
+	if err != nil {
+		return nil, fmt.Errorf("no such product %q", args.product)
+	}
+	boardPath, err := findGNIFile(checkoutDir, "boards", args.board)
+	if err != nil {
+		return nil, fmt.Errorf("no such board: %q", args.board)
+	}
+
+	optimize := fintpb.Static_DEBUG
+	if args.isRelease {
+		optimize = fintpb.Static_RELEASE
+	}
+
+	return &fintpb.Static{
+		Board:            boardPath,
+		Product:          productPath,
+		Optimize:         optimize,
+		BasePackages:     args.basePackages,
+		CachePackages:    args.cachePackages,
+		UniversePackages: args.universePackages,
+		HostLabels:       args.hostLabels,
+		Variants:         args.variants,
+		GnArgs:           args.gnArgs,
+	}, nil
+}
+
+// findGNIFile returns the relative path to a board or product file in a
+// checkout, given a basename. It checks the root of the checkout as well as
+// each vendor/* directory for a file matching "<dirname>/<basename>.gni", e.g.
+// "boards/core.gni".
+func findGNIFile(checkoutDir, dirname, basename string) (string, error) {
+	dirs, err := filepath.Glob(filepath.Join(checkoutDir, "vendor", "*", dirname))
+	if err != nil {
+		return "", err
+	}
+	dirs = append(dirs, filepath.Join(checkoutDir, dirname))
+
+	for _, dir := range dirs {
+		path := filepath.Join(dir, fmt.Sprintf("%s.gni", basename))
+		exists, err := osmisc.FileExists(path)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return filepath.Rel(checkoutDir, path)
+		}
+	}
+
+	return "", fmt.Errorf("no such file %s.gni", basename)
 }

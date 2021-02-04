@@ -5,10 +5,14 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 func TestParseArgs(t *testing.T) {
@@ -135,4 +139,99 @@ func TestParseArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConstructStaticSpec(t *testing.T) {
+	checkoutDir := t.TempDir()
+	createFile(t, checkoutDir, "boards", "x64.gni")
+	createFile(t, checkoutDir, "products", "core.gni")
+
+	args := &setArgs{
+		board:            "x64",
+		product:          "core",
+		isRelease:        true,
+		basePackages:     []string{"base"},
+		cachePackages:    []string{"cache"},
+		universePackages: []string{"universe"},
+		hostLabels:       []string{"host"},
+		variants:         []string{"variant"},
+		gnArgs:           []string{"args"},
+	}
+
+	got, err := constructStaticSpec(checkoutDir, args)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &fintpb.Static{
+		Board:            "boards/x64.gni",
+		Product:          "products/core.gni",
+		Optimize:         fintpb.Static_RELEASE,
+		BasePackages:     []string{"base"},
+		CachePackages:    []string{"cache"},
+		UniversePackages: []string{"universe"},
+		HostLabels:       []string{"host"},
+		Variants:         []string{"variant"},
+		GnArgs:           []string{"args"},
+	}
+
+	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(fintpb.Static{})); diff != "" {
+		t.Fatalf("Static spec from args is wrong (-want +got):\n%s", diff)
+	}
+}
+
+func TestFindGNIFile(t *testing.T) {
+	t.Run("finds file in root boards directory", func(t *testing.T) {
+		checkoutDir := t.TempDir()
+		path := filepath.Join("boards", "core.gni")
+		createFile(t, checkoutDir, path)
+
+		wantPath := "boards/core.gni"
+		gotPath, err := findGNIFile(checkoutDir, "boards", "core")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if wantPath != gotPath {
+			t.Errorf("findGNIFile returned wrong path: want %s, got %s", wantPath, gotPath)
+		}
+	})
+
+	t.Run("checks vendor directories first", func(t *testing.T) {
+		checkoutDir := t.TempDir()
+		path := filepath.Join("vendor", "foo", "boards", "core.gni")
+		createFile(t, checkoutDir, path)
+		// Even if a matching file exists in the root "//boards" directory, we
+		// should prefer the file from the vendor directory.
+		createFile(t, checkoutDir, "boards", "core.gni")
+
+		gotPath, err := findGNIFile(checkoutDir, "boards", "core")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if path != gotPath {
+			t.Errorf("findGNIFile returned wrong path: want %s, got %s", path, gotPath)
+		}
+	})
+
+	t.Run("returns an error if file doesn't exist", func(t *testing.T) {
+		checkoutDir := t.TempDir()
+		createFile(t, checkoutDir, "boards", "core.gni")
+
+		if path, err := findGNIFile(checkoutDir, "boards", "doesnotexist"); err == nil {
+			t.Fatalf("Expected findGNIFile to fail given a nonexistent board but got path: %s", path)
+		}
+	})
+}
+
+func createFile(t *testing.T, pathParts ...string) {
+	t.Helper()
+
+	path := filepath.Join(pathParts...)
+	f, err := osmisc.CreateFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	t.Cleanup(func() { os.Remove(path) })
 }
