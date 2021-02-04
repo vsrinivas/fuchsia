@@ -41,7 +41,12 @@ fn a2dp_sink_service_definition() -> ServiceDefinition {
 fn a2dp_source_launch_info() -> LaunchInfo {
     LaunchInfo {
         component_url: Some(A2DP_URL.to_string()),
-        arguments: Some(vec!["--enable-sink".to_string(), "false".to_string()]),
+        arguments: Some(vec![
+            "--enable-sink".to_string(),
+            "false".to_string(),
+            "--enable-avrcp-target".to_string(),
+            "false".to_string(),
+        ]),
         ..LaunchInfo::EMPTY
     }
 }

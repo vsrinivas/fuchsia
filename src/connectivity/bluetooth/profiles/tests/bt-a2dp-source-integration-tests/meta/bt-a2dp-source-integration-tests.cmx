@@ -3,24 +3,31 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx",
-                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
-            }
+                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx"
+            },
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.sysmem.Allocator"
+            ]
         }
     },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
+        "args": [
+            "--test-threads=1"
+        ],
         "binary": "bin/bt_a2dp_source_integration_tests"
     },
     "sandbox": {
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator"
         ]
     }
