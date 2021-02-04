@@ -672,7 +672,7 @@ offer: [
         directory: "fshost-config",
         from: "parent",
         to: [ "#fshost" ],
-        directory: "config",
+        as: "config",
     },
     {
         storage: "cache",
