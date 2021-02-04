@@ -13,14 +13,23 @@ use {
 };
 
 lazy_static! {
-    // Regex to match the only supported video card on Linux. Matches output strings from `lspci` like:
+    // Regex to extract video cards on Linux. Matches output strings from `lspci` like:
     // 18:00.0 VGA compatible controller: NVIDIA Corporation GP107GL [Quadro P1000] (rev a1)
-    static ref NVIDIA_CARD_RE: Regex = Regex::new("(?m)^..:.... VGA compatible controller: (NVIDIA.+Quadro.+)$").unwrap();
+    static ref LINUX_GRAPHICS_CARDS_RE: Regex = Regex::new("(?m)^..:.... VGA compatible controller: (.+)$").unwrap();
 
-    // Regex to find all supported graphics cards on MacOS. Matches output strings from `system_profiler` like:
+    // Regex to match the only supported video card on Linux. Example:
+    // NVIDIA Corporation GP107GL [Quadro P1000] (rev a1)
+    static ref LINUX_SUPPORTED_CARDS_RE: Regex = Regex::new("^NVIDIA.+Quadro.+$").unwrap();
+
+    // Regex to extract graphics cards on MacOS. Matches output strings from `system_profiler` like:
     // Chipset Model: Intel UHD Graphics 630
     // Chipset Model: Radeon Pro 555X
-    static ref MACOS_GRAPHICS_CARDS_RE: Regex = Regex::new(r"(?m)^\s+Chipset Model: ((?:Intel U?HD|Radeon Pro).+)$").unwrap();
+    static ref MACOS_GRAPHICS_CARDS_RE: Regex = Regex::new(r"(?m)^\s+Chipset Model: (.+)$").unwrap();
+
+    // Regex to match supported graphics cards on MacOS. Examples:
+    // Intel UHD Graphics 630
+    // Radeon Pro 555X
+    static ref MACOS_SUPPORTED_CARDS_RE: Regex = Regex::new(r"^(?:Intel U?HD|Radeon Pro).+$").unwrap();
 }
 
 static NVIDIA_REQ_DRIVER_VERSION: (u32, u32) = (440, 100);
@@ -55,9 +64,17 @@ impl<'a> FemuGraphics<'a> {
             ));
         }
 
-        Ok(NVIDIA_CARD_RE
+        Ok(LINUX_GRAPHICS_CARDS_RE
             .captures_iter(stdout.as_str())
             .map(|c| c[1].to_string())
+            .collect::<Vec<_>>())
+    }
+
+    fn linux_find_supported_graphics_cards(&self) -> Result<Vec<String>> {
+        Ok(self
+            .linux_find_graphics_cards()?
+            .into_iter()
+            .filter(|e| LINUX_SUPPORTED_CARDS_RE.is_match(&e))
             .collect::<Vec<_>>())
     }
 
@@ -87,7 +104,7 @@ impl<'a> FemuGraphics<'a> {
     }
 
     async fn run_linux(&self) -> Result<PreflightCheckResult> {
-        let cards = self.linux_find_graphics_cards()?;
+        let cards = self.linux_find_supported_graphics_cards()?;
 
         if cards.is_empty() {
             return Ok(Warning(NO_GRAPHICS_WARNING_LINUX.to_string()));
@@ -120,8 +137,16 @@ impl<'a> FemuGraphics<'a> {
             .collect::<Vec<_>>())
     }
 
+    fn macos_find_supported_graphics_cards(&self) -> Result<Vec<String>> {
+        Ok(self
+            .macos_find_graphics_cards()?
+            .into_iter()
+            .filter(|e| MACOS_SUPPORTED_CARDS_RE.is_match(&e))
+            .collect::<Vec<_>>())
+    }
+
     async fn run_macos(&self) -> Result<PreflightCheckResult, anyhow::Error> {
-        let cards = self.macos_find_graphics_cards()?;
+        let cards = self.macos_find_supported_graphics_cards()?;
 
         Ok(if cards.is_empty() {
             Warning(NO_GRAPHICS_WARNING_MACOS.to_string())
