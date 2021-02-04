@@ -19,5 +19,6 @@ group("tests") {
     "fuzzing:tests",
     "loadbench:tests",
     "sl4f:tests",
+    "system-metrics-logger:tests",
   ]
 }

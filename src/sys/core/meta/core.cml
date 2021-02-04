@@ -58,6 +58,10 @@
             url: "fuchsia-pkg://fuchsia.com/debug-serial#meta/debug-serial.cm",
         },
         {
+            name: "system-metrics-logger",
+            url: "fuchsia-pkg://fuchsia.com/system-metrics-logger#meta/system-metrics-logger-component.cm",
+        },
+        {
             name: "temperature-logger",
             url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
         },
@@ -124,6 +128,11 @@
             from: "#appmgr",
             to: [ "#font_provider" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
+            from: "#system-metrics-logger",
+            to: [ "#appmgr" ],
         },
         {
             protocol: "fuchsia.thermal.test.TemperatureLogger",
@@ -250,6 +259,7 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
+                "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
                 "#test_manager",
@@ -357,6 +367,17 @@
             protocol: "fuchsia.fonts.Provider",
             from: "#font_provider",
             to: [ "#appmgr" ],
+        },
+        {
+            protocol: "fuchsia.kernel.Stats",
+            from: "parent",
+            to: [ "#system-metrics-logger" ],
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#appmgr",
+            to: [ "#system-metrics-logger" ],
+            dependency: "weak_for_migration",
         },
         {
             directory: "dev",
