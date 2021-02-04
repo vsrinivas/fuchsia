@@ -21,12 +21,6 @@ rustc_test("tests_bin") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("test_harness_crate_tests") {
-  testonly = true
-  manifest = "meta/test-harness-crate-tests.cmx"
+fuchsia_unittest_package("test-harness-crate-tests") {
   deps = [ ":tests_bin" ]
-}
-
-fuchsia_test_package("test-harness-crate-tests") {
-  test_components = [ ":test_harness_crate_tests" ]
 }
