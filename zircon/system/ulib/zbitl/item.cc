@@ -39,6 +39,7 @@ bool TypeIsStorage(uint32_t type) {
   switch (type) {
     case ZBI_TYPE_STORAGE_RAMDISK:
     case ZBI_TYPE_STORAGE_BOOTFS:
+    case ZBI_TYPE_STORAGE_KERNEL:
       return true;
   }
   return false;

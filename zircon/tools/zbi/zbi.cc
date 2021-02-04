@@ -2010,8 +2010,8 @@ using ItemList = std::deque<ItemPtr>;
 
 const uint32_t kImageArchUndefined = ZBI_TYPE_DISCARD;
 
-// Returns nullptr if complete, else an explanatory string.
-const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
+// Returns nullptr if bootable, else an explanatory string.
+const char* BootableImage(const ItemList& items, const uint32_t image_arch) {
   if (items.empty()) {
     return "empty ZBI";
   }
@@ -2024,15 +2024,6 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return "kernel arch mismatch";
   }
 
-  auto count = std::count_if(items.begin(), items.end(), [](const ItemPtr& item) {
-    return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
-  });
-  if (count == 0) {
-    return "no /boot BOOTFS item";
-  }
-  if (count > 1) {
-    return "multiple BOOTFS items";
-  }
   return nullptr;
 }
 
@@ -2285,7 +2276,7 @@ enum LongOnlyOpt : int {
 
 constexpr const char kOptString[] = "-B:c::C:d:D:e:Fij:xXRhto:p:T:uv";
 constexpr const option kLongOpts[] = {
-    {"complete", required_argument, nullptr, 'B'},
+    {"bootable", required_argument, nullptr, 'B'},
     {"compressed", optional_argument, nullptr, 'c'},
     {"directory", required_argument, nullptr, 'C'},
     {"depfile", required_argument, nullptr, 'd'},
@@ -2368,7 +2359,7 @@ types well be decompressed (if needed) on input and then freshly compressed\n\
 (or not) according to the preceding `--compressed=...` or `--uncompressed`.\n\
 \n\
 Format control switches (last switch affects all output):\n\
-    --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
+    --bootable=ARCH, -B ARCH       verify result is a bootable image\n\
     --compressed[=HOW], -c [HOW]   compress BOOTFS images (see below)\n\
     --uncompressed, -u             do not compress BOOTFS images\n\
 \n\
@@ -2429,7 +2420,7 @@ int main(int argc, char** argv) {
   FileOpener opener;
   const char* outfile = nullptr;
   const char* depfile = nullptr;
-  uint32_t complete_arch = kImageArchUndefined;
+  uint32_t bootable = kImageArchUndefined;
   bool input_manifest = true;
   uint32_t input_type = ZBI_TYPE_DISCARD;
   const char* json_output = nullptr;
@@ -2507,12 +2498,12 @@ int main(int argc, char** argv) {
 
       case 'B':
         if (!strcmp(optarg, "x64")) {
-          complete_arch = ZBI_TYPE_KERNEL_X64;
+          bootable = ZBI_TYPE_KERNEL_X64;
         } else if (!strcmp(optarg, "arm64")) {
-          complete_arch = ZBI_TYPE_KERNEL_ARM64;
+          bootable = ZBI_TYPE_KERNEL_ARM64;
         } else {
           fprintf(stderr,
-                  "--complete architecture argument must be one"
+                  "--bootable architecture argument must be one"
                   " of: x64, arm64\n");
           exit(1);
         }
@@ -2685,25 +2676,19 @@ int main(int argc, char** argv) {
     items.back()->TakeOwned(std::move(keepalive));
   }
 
-  if (outfile && complete_arch != kImageArchUndefined) {
+  if (outfile && bootable != kImageArchUndefined) {
     // The only hard requirement is that the kernel be first.
-    // But it seems most orderly to put the BOOTFS second,
-    // other storage in the middle, and CMDLINE last.
     std::stable_sort(items.begin(), items.end(), [](const ItemPtr& a, const ItemPtr& b) {
-      auto item_rank = [](uint32_t type) {
-        return (ZBI_IS_KERNEL_BOOTITEM(type)      ? 0
-                : type == ZBI_TYPE_STORAGE_BOOTFS ? 1
-                : type == ZBI_TYPE_CMDLINE        ? 9
-                                                  : 5);
+      constexpr auto item_rank = [](uint32_t type) {
+        return (ZBI_IS_KERNEL_BOOTITEM(type) ? 0 : 1);
       };
       return item_rank(a->type()) < item_rank(b->type());
     });
   }
 
-  if (complete_arch != kImageArchUndefined) {
-    const char* incomplete = IncompleteImage(items, complete_arch);
-    if (incomplete) {
-      fprintf(stderr, "incomplete image: %s\n", incomplete);
+  if (bootable != kImageArchUndefined) {
+    if (const char* unbootable = BootableImage(items, bootable)) {
+      fprintf(stderr, "Not a bootable image: %s\n", unbootable);
       exit(1);
     }
   }
@@ -2734,11 +2719,10 @@ int main(int argc, char** argv) {
     Item::WriteZBI(&writer, "boot.zbi", items);
   } else if (list_contents || verbose || extract) {
     if (list_contents || verbose) {
-      const char* incomplete = IncompleteImage(items, complete_arch);
-      if (incomplete) {
-        printf("INCOMPLETE: %s\n", incomplete);
+      if (const char* unbootable = BootableImage(items, bootable)) {
+        printf("UNBOOTABLE: %s\n", unbootable);
       } else {
-        puts("COMPLETE: bootable image");
+        puts("BOOTABLE: bootable image");
       }
     }
 

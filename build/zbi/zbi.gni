@@ -22,10 +22,10 @@ declare_args() {
 # contents whose path is formed by adding a further ".json" to the ZBI's path.
 #
 #   cpu
-#     Optional: CPU architecture for a complete ZBI.
-#     If this is "", then this target may produce an incomplete ZBI.
-#     Otherwise, it's a CPU name ("arm64" or "x64") and the target will
-#     fail if the ZBI is not complete so it can be booted on that CPU.
+#     Optional: A CPU name ("arm64" or "x64") or "".  If not "", ensure that
+#     the ZBI is bootable on this CPU, failing if not.  If "", then no such
+#     check is performed so this can be used to generate a partial ZBI
+#     which can be converted to a full bootable ZBI by a later action.
 #     Type: string
 #     Default: current_cpu
 #
@@ -153,15 +153,15 @@ template("zbi") {
       rebase_path(outputs[1], root_build_dir),
     ]
 
-    # Require a complete ZBI for the specified $cpu (or $current_cpu).
-    # A value of "" means it need not be a complete ZBI.
+    # Require a bootable ZBI for the specified $cpu (or $current_cpu).
+    # A value of "" means it need not be a bootable ZBI.
     if (defined(invoker.cpu)) {
       cpu = invoker.cpu
     } else {
       cpu = current_cpu
     }
     if (cpu != "") {
-      args += [ "--complete=$cpu" ]
+      args += [ "--bootable=$cpu" ]
     }
 
     # This comes last to affect the output despite any earlier
