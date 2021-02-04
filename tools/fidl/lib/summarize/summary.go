@@ -8,6 +8,7 @@
 package summarize
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -26,6 +27,8 @@ type Element interface {
 	// Name returns the fully-qualified name of this Element.  For example,
 	// "library/protocol.Method".
 	Name() string
+	// Serialize converts an Element into a serializable representation.
+	Serialize() elementStr
 }
 
 // All implementers of Element.
@@ -55,8 +58,8 @@ func (s *summarizer) Elements() []Element {
 }
 
 // addUnions adds the elements corresponding to the FIDL unions.
-func (s *summarizer) addUnions(structs []fidlgen.Union) {
-	for _, st := range structs {
+func (s *summarizer) addUnions(unions []fidlgen.Union) {
+	for _, st := range unions {
 		for _, m := range st.Members {
 			if m.Reserved {
 				// Disregard reserved members.
@@ -71,8 +74,8 @@ func (s *summarizer) addUnions(structs []fidlgen.Union) {
 }
 
 // addTables adds the elements corresponding to the FIDL tables.
-func (s *summarizer) addTables(structs []fidlgen.Table) {
-	for _, st := range structs {
+func (s *summarizer) addTables(tables []fidlgen.Table) {
+	for _, st := range tables {
 		for _, m := range st.Members {
 			if m.Reserved {
 				// Disregard reserved members
@@ -106,6 +109,23 @@ func Write(root fidlgen.Root, out io.Writer) error {
 		fmt.Fprintf(out, "%v\n", e)
 	}
 	return nil
+}
+
+// WriteJSON produces an API summary for the FIDL AST from the root into the
+// supplied writer, and formats the data as JSON.
+func WriteJSON(root fidlgen.Root, out io.Writer) error {
+	e := json.NewEncoder(out)
+	e.SetIndent("", "  ")
+	e.SetEscapeHTML(false)
+	return e.Encode(serialize(Elements(root)))
+}
+
+func serialize(e []Element) []elementStr {
+	var ret []elementStr
+	for _, l := range e {
+		ret = append(ret, l.Serialize())
+	}
+	return ret
 }
 
 // Elements returns the API elements found in the supplied AST root in a
@@ -176,4 +196,19 @@ func fidlTypeString(t fidlgen.Type) string {
 	default:
 		return "<not implemented>"
 	}
+}
+
+// elementStr is a generic stringly-typed view of an Element.
+type elementStr struct {
+	Name string `json:"name"`
+	Kind string `json:"kind"`
+	Decl string `json:"declaration,omitempty"`
+}
+
+func (e elementStr) String() string {
+	p := []string{e.Kind, e.Name}
+	if e.Decl != "" {
+		p = append(p, e.Decl)
+	}
+	return strings.Join(p, " ")
 }

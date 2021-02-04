@@ -5,10 +5,12 @@
 package summarize
 
 import (
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_testing"
 )
 
@@ -30,13 +32,15 @@ resource_definition handle : uint32 {
 	l2Library = `library l2; struct T{};`
 )
 
+type summaryTestCase struct {
+	name     string
+	fidl     string
+	dep      string
+	expected string
+}
+
 func TestWrite(t *testing.T) {
-	tests := []struct {
-		name     string
-		fidl     string
-		dep      string
-		expected string
-	}{
+	tests := []summaryTestCase{
 		{
 			name: "library only",
 			fidl: `library l;`,
@@ -529,6 +533,947 @@ library l
 `,
 		},
 	}
+	runWriteTests(t, tests, Write)
+}
+
+func TestWriteJSON(t *testing.T) {
+	tests := []summaryTestCase{
+		{
+			name: "library only",
+			fidl: `library l;`,
+			expected: `[
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "primitives 1",
+			fidl: `
+library l;
+const int8 OFFSET = -33;
+const bool ENABLED_FLAG = true;
+`,
+			expected: `[
+  {
+    "name": "l/ENABLED_FLAG",
+    "kind": "const bool"
+  },
+  {
+    "name": "l/OFFSET",
+    "kind": "const int8"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "bits",
+			fidl: `
+library l;
+strict bits Bits1 {
+  BIT1 = 0x01;
+  BIT2 = 0x02;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Bits1.BIT1",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits1.BIT2",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits1",
+    "kind": "strict bits",
+    "declaration": "uint32"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "bits 2",
+			fidl: `
+library l;
+strict bits Bits1 {
+  BIT1 = 0x01;
+  BIT2 = 0x02;
+};
+strict bits Bits2 {
+  BIT1 = 0x01;
+  BIT2 = 0x02;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Bits1.BIT1",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits1.BIT2",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits1",
+    "kind": "strict bits",
+    "declaration": "uint32"
+  },
+  {
+    "name": "l/Bits2.BIT1",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits2.BIT2",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits2",
+    "kind": "strict bits",
+    "declaration": "uint32"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "bits 3",
+			fidl: `
+library l;
+flexible bits Bits : uint8 {
+  BIT1 = 0x01;
+  BIT2 = 0x02;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Bits.BIT1",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits.BIT2",
+    "kind": "bits/member"
+  },
+  {
+    "name": "l/Bits",
+    "kind": "flexible bits",
+    "declaration": "uint8"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "enums",
+			fidl: `
+			library l;
+flexible enum Beverage : uint8 {
+    WATER = 0;
+    COFFEE = 1;
+    TEA = 2;
+    WHISKEY = 3;
+};
+
+// Underlying type is assumed to be uint32.
+strict enum Vessel {
+    CUP = 0;
+    BOWL = 1;
+    TUREEN = 2;
+    JUG = 3;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Beverage.COFFEE",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Beverage.TEA",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Beverage.WATER",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Beverage.WHISKEY",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Beverage",
+    "kind": "flexible enum",
+    "declaration": "uint8"
+  },
+  {
+    "name": "l/Vessel.BOWL",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Vessel.CUP",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Vessel.JUG",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Vessel.TUREEN",
+    "kind": "enum/member"
+  },
+  {
+    "name": "l/Vessel",
+    "kind": "strict enum",
+    "declaration": "uint32"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "struct as precondition for arrays",
+			fidl: `
+library l;
+struct S {
+  float32 x;
+};
+`,
+			expected: `[
+  {
+    "name": "l/S.x",
+    "kind": "struct/member",
+    "declaration": "float32"
+  },
+  {
+    "name": "l/S",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "arrays",
+			fidl: `
+library l;
+struct Arrays {
+    array<float32>:16 form;
+    array<array<string>:4>:10 matrix;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Arrays.form",
+    "kind": "struct/member",
+    "declaration": "array<float32>:16"
+  },
+  {
+    "name": "l/Arrays.matrix",
+    "kind": "struct/member",
+    "declaration": "array<array<string>:4>:10"
+  },
+  {
+    "name": "l/Arrays",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "strings",
+			fidl: `
+library l;
+struct Document {
+    string:40 title;
+    string? description;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Document.description",
+    "kind": "struct/member",
+    "declaration": "string?"
+  },
+  {
+    "name": "l/Document.title",
+    "kind": "struct/member",
+    "declaration": "string:40"
+  },
+  {
+    "name": "l/Document",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "vectors",
+			fidl: `
+library l;
+struct Vectors {
+    vector<int32>:10 params;
+    bytes blob;
+    vector<string>:24? nullable_vector_of_strings;
+    vector<string?> vector_of_nullable_strings;
+    vector<vector<array<float32>:16>> complex;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Vectors.blob",
+    "kind": "struct/member",
+    "declaration": "vector<uint8>"
+  },
+  {
+    "name": "l/Vectors.complex",
+    "kind": "struct/member",
+    "declaration": "vector<vector<array<float32>:16>>"
+  },
+  {
+    "name": "l/Vectors.nullable_vector_of_strings",
+    "kind": "struct/member",
+    "declaration": "vector<string>:24?"
+  },
+  {
+    "name": "l/Vectors.params",
+    "kind": "struct/member",
+    "declaration": "vector<int32>:10"
+  },
+  {
+    "name": "l/Vectors.vector_of_nullable_strings",
+    "kind": "struct/member",
+    "declaration": "vector<string?>"
+  },
+  {
+    "name": "l/Vectors",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "handles",
+			dep:  zxLibrary,
+			fidl: `
+library l;
+using zx;
+resource struct Handles {
+    // TODO(fxbug.dev/51001): Remove built-in handles.
+    handle h;
+    zx.handle:CHANNEL? c;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Handles.c",
+    "kind": "struct/member",
+    "declaration": "zx/handle:zx/obj_type.CHANNEL?"
+  },
+  {
+    "name": "l/Handles.h",
+    "kind": "struct/member",
+    "declaration": "handle"
+  },
+  {
+    "name": "l/Handles",
+    "kind": "resource struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "struct local type reference",
+			fidl: `
+library l;
+struct A {};
+struct B {
+	A a;
+};
+`,
+			expected: `[
+  {
+    "name": "l/A",
+    "kind": "struct"
+  },
+  {
+    "name": "l/B.a",
+    "kind": "struct/member",
+    "declaration": "l/A"
+  },
+  {
+    "name": "l/B",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "structs 2",
+			fidl: `
+library l;
+struct CirclePoint {
+    float32 x;
+    float32 y;
+};
+struct Color {
+    float32 r;
+    float32 g;
+    float32 b;
+};
+struct Circle {
+    bool filled;
+    CirclePoint center;
+    float32 radius;
+    Color? color;
+    bool dashed;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Circle.center",
+    "kind": "struct/member",
+    "declaration": "l/CirclePoint"
+  },
+  {
+    "name": "l/Circle.color",
+    "kind": "struct/member",
+    "declaration": "l/Color?"
+  },
+  {
+    "name": "l/Circle.dashed",
+    "kind": "struct/member",
+    "declaration": "bool"
+  },
+  {
+    "name": "l/Circle.filled",
+    "kind": "struct/member",
+    "declaration": "bool"
+  },
+  {
+    "name": "l/Circle.radius",
+    "kind": "struct/member",
+    "declaration": "float32"
+  },
+  {
+    "name": "l/Circle",
+    "kind": "struct"
+  },
+  {
+    "name": "l/CirclePoint.x",
+    "kind": "struct/member",
+    "declaration": "float32"
+  },
+  {
+    "name": "l/CirclePoint.y",
+    "kind": "struct/member",
+    "declaration": "float32"
+  },
+  {
+    "name": "l/CirclePoint",
+    "kind": "struct"
+  },
+  {
+    "name": "l/Color.b",
+    "kind": "struct/member",
+    "declaration": "float32"
+  },
+  {
+    "name": "l/Color.g",
+    "kind": "struct/member",
+    "declaration": "float32"
+  },
+  {
+    "name": "l/Color.r",
+    "kind": "struct/member",
+    "declaration": "float32"
+  },
+  {
+    "name": "l/Color",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "tables",
+			fidl: `
+library l;
+table Profile {
+    1: vector<string> locales;
+    2: vector<string> calendars;
+    3: vector<string> time_zones;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Profile.calendars",
+    "kind": "table/member",
+    "declaration": "vector<string>"
+  },
+  {
+    "name": "l/Profile.locales",
+    "kind": "table/member",
+    "declaration": "vector<string>"
+  },
+  {
+    "name": "l/Profile.time_zones",
+    "kind": "table/member",
+    "declaration": "vector<string>"
+  },
+  {
+    "name": "l/Profile",
+    "kind": "table"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "unions",
+			fidl: `
+library l;
+struct Left {};
+struct Right {};
+union Either {
+    1: Left left;
+    2: Right right;
+};
+`,
+			expected: `[
+  {
+    "name": "l/Either.left",
+    "kind": "union/member",
+    "declaration": "l/Left"
+  },
+  {
+    "name": "l/Either.right",
+    "kind": "union/member",
+    "declaration": "l/Right"
+  },
+  {
+    "name": "l/Either",
+    "kind": "union"
+  },
+  {
+    "name": "l/Left",
+    "kind": "struct"
+  },
+  {
+    "name": "l/Right",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "protocols 1",
+			fidl: `
+library l;
+protocol Calculator {
+    Add(int32 a, int32 b) -> (int32 sum);
+};
+`,
+			expected: `[
+  {
+    "name": "l/Calculator.Add",
+    "kind": "protocol/member",
+    "declaration": "(int32 a,int32 b) -> (int32 sum)"
+  },
+  {
+    "name": "l/Calculator",
+    "kind": ""
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "protocols 2",
+			fidl: `
+library l;
+struct Foo {};
+struct Bar {};
+protocol P {
+    M(Bar? b) -> (Foo c);
+};
+`,
+			expected: `[
+  {
+    "name": "l/Bar",
+    "kind": "struct"
+  },
+  {
+    "name": "l/Foo",
+    "kind": "struct"
+  },
+  {
+    "name": "l/P.M",
+    "kind": "protocol/member",
+    "declaration": "(l/Bar? b) -> (l/Foo c)"
+  },
+  {
+    "name": "l/P",
+    "kind": ""
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "protocols 3",
+			fidl: `
+library l;
+struct Bar {};
+protocol P {};
+protocol P2 {
+    M1(P a);
+    M2(P? a);
+    M3(request<P> a);
+    M4(request<P>? a);
+};
+`,
+			expected: `[
+  {
+    "name": "l/Bar",
+    "kind": "struct"
+  },
+  {
+    "name": "l/P",
+    "kind": ""
+  },
+  {
+    "name": "l/P2.M1",
+    "kind": "protocol/member",
+    "declaration": "(l/P a)"
+  },
+  {
+    "name": "l/P2.M2",
+    "kind": "protocol/member",
+    "declaration": "(l/P? a)"
+  },
+  {
+    "name": "l/P2.M3",
+    "kind": "protocol/member",
+    "declaration": "(request<l/P> a)"
+  },
+  {
+    "name": "l/P2.M4",
+    "kind": "protocol/member",
+    "declaration": "(request<l/P>? a)"
+  },
+  {
+    "name": "l/P2",
+    "kind": ""
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "protocols 4",
+			fidl: `
+library l;
+protocol P {
+    -> F1(int32 a);
+    F2() -> (int32 a);
+	F3() -> () error int32;
+	F4();
+};
+`,
+			expected: `[
+  {
+    "name": "l/P.F1",
+    "kind": "protocol/member",
+    "declaration": " -> (int32 a)"
+  },
+  {
+    "name": "l/P.F2",
+    "kind": "protocol/member",
+    "declaration": "() -> (int32 a)"
+  },
+  {
+    "name": "l/P.F3",
+    "kind": "protocol/member",
+    "declaration": "() -> (l/P_F3_Result result)"
+  },
+  {
+    "name": "l/P.F4",
+    "kind": "protocol/member",
+    "declaration": "()"
+  },
+  {
+    "name": "l/P",
+    "kind": ""
+  },
+  {
+    "name": "l/P_F3_Response",
+    "kind": "struct"
+  },
+  {
+    "name": "l/P_F3_Result.err",
+    "kind": "union/member",
+    "declaration": "int32"
+  },
+  {
+    "name": "l/P_F3_Result.response",
+    "kind": "union/member",
+    "declaration": "l/P_F3_Response"
+  },
+  {
+    "name": "l/P_F3_Result",
+    "kind": "union"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "check types",
+			fidl: `
+library l;
+struct S {
+   string f1;
+   string:4 f2;
+   string:4? f3;
+};
+`,
+			expected: `[
+  {
+    "name": "l/S.f1",
+    "kind": "struct/member",
+    "declaration": "string"
+  },
+  {
+    "name": "l/S.f2",
+    "kind": "struct/member",
+    "declaration": "string:4"
+  },
+  {
+    "name": "l/S.f3",
+    "kind": "struct/member",
+    "declaration": "string:4?"
+  },
+  {
+    "name": "l/S",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "with foreign library",
+			dep:  l2Library,
+			fidl: `
+library l;
+using l2;
+struct A {
+  l2.T a;
+};
+`,
+			expected: `[
+  {
+    "name": "l/A.a",
+    "kind": "struct/member",
+    "declaration": "l2/T"
+  },
+  {
+    "name": "l/A",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "protocol with foreign library",
+			dep:  l2Library,
+			fidl: `
+library l;
+using l2;
+struct Foo {};
+struct Bar {};
+protocol Calculator {
+    Add(l2.T a, Bar b) -> (Foo c);
+};
+`,
+			expected: `[
+  {
+    "name": "l/Bar",
+    "kind": "struct"
+  },
+  {
+    "name": "l/Calculator.Add",
+    "kind": "protocol/member",
+    "declaration": "(l2/T a,l/Bar b) -> (l/Foo c)"
+  },
+  {
+    "name": "l/Calculator",
+    "kind": ""
+  },
+  {
+    "name": "l/Foo",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "protocol with foreign library 2",
+			dep:  l2Library,
+			fidl: `
+library l;
+using l2;
+struct Foo {};
+struct Bar {};
+protocol Calculator {
+    Add(l2.T a, Bar b) -> (Foo c);
+};
+`,
+			expected: `[
+  {
+    "name": "l/Bar",
+    "kind": "struct"
+  },
+  {
+    "name": "l/Calculator.Add",
+    "kind": "protocol/member",
+    "declaration": "(l2/T a,l/Bar b) -> (l/Foo c)"
+  },
+  {
+    "name": "l/Calculator",
+    "kind": ""
+  },
+  {
+    "name": "l/Foo",
+    "kind": "struct"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+		{
+			name: "reserved keyword",
+			fidl: `
+library l;
+union E {
+1: reserved;
+2: int32 e;
+};
+table T {
+1: reserved;
+2: int32 e;
+};
+`,
+			expected: `[
+  {
+    "name": "l/E.e",
+    "kind": "union/member",
+    "declaration": "int32"
+  },
+  {
+    "name": "l/E",
+    "kind": "union"
+  },
+  {
+    "name": "l/T.e",
+    "kind": "table/member",
+    "declaration": "int32"
+  },
+  {
+    "name": "l/T",
+    "kind": "table"
+  },
+  {
+    "name": "l",
+    "kind": "library"
+  }
+]
+`,
+		},
+	}
+	runWriteTests(t, tests, WriteJSON)
+}
+
+func runWriteTests(t *testing.T, tests []summaryTestCase, writeFn func(fidlgen.Root, io.Writer) error) {
+	t.Helper()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := fidl_testing.EndToEndTest{T: t}
@@ -537,7 +1482,7 @@ library l
 			}
 			r := c.Single(test.fidl)
 			var sb strings.Builder
-			if err := Write(r, &sb); err != nil {
+			if err := writeFn(r, &sb); err != nil {
 				t.Fatalf("while summarizing file: %v", err)
 			}
 			actual := strings.Split(sb.String(), "\n")

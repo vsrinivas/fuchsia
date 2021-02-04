@@ -29,9 +29,12 @@ func strictness(strict fidlgen.Strictness) string {
 
 // String implements Element.
 func (b wraparoundType) String() string {
-	return fmt.Sprintf("%v %v %v %v",
-		strictness(b.strictness),
-		b.parentType,
-		b.Name(),
-		b.subtype)
+	return b.Serialize().String()
+}
+
+func (b wraparoundType) Serialize() elementStr {
+	e := b.named.Serialize()
+	e.Kind = fmt.Sprintf("%v %v", strictness(b.strictness), b.parentType)
+	e.Decl = fmt.Sprintf("%v", b.subtype)
+	return e
 }

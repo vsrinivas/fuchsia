@@ -30,6 +30,12 @@ func newNamed(name fidlgen.EncodedCompoundIdentifier) named {
 	return named{name: string(name)}
 }
 
+func (l named) Serialize() elementStr {
+	var e elementStr
+	e.Name = l.Name()
+	return e
+}
+
 func (l named) Name() string {
 	if l.parent != "" {
 		return fmt.Sprintf("%v.%v", l.parent, l.name)
@@ -56,7 +62,13 @@ func newIsMember(
 
 // String implements Element.
 func (i isMember) String() string {
-	return fmt.Sprintf("%v/member %v", i.parentType, i.Name())
+	return i.Serialize().String()
+}
+
+func (i isMember) Serialize() elementStr {
+	e := i.named.Serialize()
+	e.Kind = fmt.Sprintf("%v/member", i.parentType)
+	return e
 }
 
 func (m isMember) Member() bool {
@@ -99,6 +111,17 @@ func (s aggregate) String() string {
 	return strings.Join(ret, " ")
 }
 
+func (s aggregate) Serialize() elementStr {
+	e := s.named.Serialize()
+	var ret []string
+	if s.resourceness {
+		ret = append(ret, "resource")
+	}
+	ret = append(ret, string(s.typeName))
+	e.Kind = strings.Join(ret, " ")
+	return e
+}
+
 // member is an element of an aggregate (e.g. field of a struct).
 type member struct {
 	m          isMember
@@ -119,7 +142,7 @@ func newMember(
 
 // String implements Element.
 func (s member) String() string {
-	return fmt.Sprintf("%v %v", s.m.String(), fidlTypeString(s.memberType))
+	return s.Serialize().String()
 }
 
 // Member implements Element.
@@ -130,4 +153,10 @@ func (s member) Member() bool {
 // Name implements Element.
 func (s member) Name() string {
 	return s.m.Name()
+}
+
+func (s member) Serialize() elementStr {
+	e := s.m.Serialize()
+	e.Decl = fidlTypeString(s.memberType)
+	return e
 }

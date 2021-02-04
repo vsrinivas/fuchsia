@@ -10,6 +10,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -17,8 +18,9 @@ import (
 )
 
 var (
-	fir = flag.String("fidl-ir-file", "", "The FIDL IR input file to produce an API summary for.")
-	out = flag.String("output-file", "", "The output file to write the summary into.")
+	fir    = flag.String("fidl-ir-file", "", "The FIDL IR input file to produce an API summary for.")
+	out    = flag.String("output-file", "", "The output file to write the summary into.")
+	format = flag.String("format", "text", "Specify the output format (text|json)")
 )
 
 // usage prints a user-friendly usage message when the flag --help is provided.
@@ -31,10 +33,28 @@ Usage:
 	flag.PrintDefaults()
 }
 
+// getWriter returns the appropriate function for writing output, based on the
+// format chosen through the --format flag.
+func getWriter() (func(fidlgen.Root, io.Writer) error, error) {
+	switch *format {
+	case "text":
+		return summarize.Write, nil
+	case "json":
+		return summarize.WriteJSON, nil
+	default:
+		return nil, fmt.Errorf("not a recognized flag value: %v", *format)
+	}
+}
+
 func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	writerFn, err := getWriter()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "While parsing --format: %v", err)
+		os.Exit(1)
+	}
 	if *fir == "" {
 		fmt.Fprintf(os.Stderr, "The flag --fidl-ir-file=... is required")
 		os.Exit(1)
@@ -66,7 +86,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Could not parse FIDL IR from: %v: %v", *in, err)
 		os.Exit(1)
 	}
-	if err := summarize.Write(root, w); err != nil {
+	if err := writerFn(root, w); err != nil {
 		fmt.Fprintf(os.Stderr, "While summarizing %v into %v: %v", *in, *out, err)
 		os.Exit(1)
 	}

@@ -5,10 +5,10 @@
 package summarize
 
 import (
-	"fmt"
-
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
+
+const libraryKind = "library"
 
 // library is a library element.
 type library struct {
@@ -18,10 +18,17 @@ type library struct {
 
 // String implements Element.
 func (l library) String() string {
-	return fmt.Sprintf("library %v", l.Name())
+	return l.Serialize().String()
 }
 
 // Name implements Element.
 func (l library) Name() string {
 	return string(l.r.Name)
+}
+
+func (l library) Serialize() elementStr {
+	var e elementStr
+	e.Name = l.Name()
+	e.Kind = libraryKind
+	return e
 }

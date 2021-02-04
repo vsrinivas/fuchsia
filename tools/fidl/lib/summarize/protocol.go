@@ -54,6 +54,19 @@ func (m method) Name() string {
 // String implements Element.  It formats a protocol method using a notation
 // familiar from FIDL.
 func (m method) String() string {
+	e := m.Serialize()
+	// Method serialization is custom because of different spacing.
+	return fmt.Sprintf("%v %v%v", e.Kind, e.Name, e.Decl)
+}
+
+// Member implements Element.
+func (m method) Member() bool {
+	return m.membership.Member()
+}
+
+// getTypeSignature returns a string representation of the type signature of
+// this method.  E.g. "(int32 a) -> (Foo b)"
+func (m method) getTypeSignature() string {
 	var parlist []string
 	request := getParamList(m.method.HasRequest, m.method.Request)
 	if request != "" {
@@ -67,14 +80,14 @@ func (m method) String() string {
 		}
 		parlist = append(parlist, "->", response)
 	}
-	return fmt.Sprintf(
-		"protocol/member %v%v",
-		m.membership.Name(), strings.Join(parlist, " "))
+	return strings.Join(parlist, " ")
 }
 
-// Member implements Element.
-func (m method) Member() bool {
-	return m.membership.Member()
+func (m method) Serialize() elementStr {
+	e := m.membership.Serialize()
+	e.Kind = "protocol/member"
+	e.Decl = m.getTypeSignature()
+	return e
 }
 
 // getParamList formats a parameter list, as in Foo(ty1 a, ty2b)

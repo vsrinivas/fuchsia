@@ -5,8 +5,6 @@
 package summarize
 
 import (
-	"fmt"
-
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
@@ -16,9 +14,17 @@ type alias struct {
 	notMember
 }
 
+const aliasType = "alias"
+
 // String implements Element.
 func (a alias) String() string {
-	return fmt.Sprintf("alias %v", a.Name())
+	return a.Serialize().String()
+}
+
+func (a alias) Serialize() elementStr {
+	e := a.named.Serialize()
+	e.Kind = aliasType
+	return e
 }
 
 // addAliases adds the aliases from the declaration map.
