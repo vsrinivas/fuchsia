@@ -35,13 +35,6 @@ source_set("src") {
   ]
 }
 
-# Gigaboot would be difficult to test on-device, so we run host unittests
-# instead, stubbing out the necessary functions.
-group("tests") {
-  testonly = true
-  deps = [ ":gigaboot_test($host_toolchain)" ]
-}
-
 test("gigaboot_test") {
   # In order to make it easier to add tests incrementally, just add the source
   # files we need here rather than depending on :src in full. This allows us to
@@ -55,7 +48,8 @@ test("gigaboot_test") {
   ]
   include_dirs = [ "." ]
   deps = [
-    "../test/host",
+    "../host",
+    "../test",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/kernel/lib/efi",
   ]

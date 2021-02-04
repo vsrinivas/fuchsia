@@ -93,8 +93,13 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "efi") {
     public_deps = [ ":bootloader(//src/firmware/gigaboot:efi_${current_cpu})" ]
   }
 
+  # Gigaboot would be difficult to test on-device, so we run host unittests
+  # instead, stubbing out the necessary functions.
   group("tests") {
     testonly = true
-    deps = [ "src:tests" ]
+    deps = [
+      "src:gigaboot_test($host_toolchain)",
+      "test:gigaboot_utils_test($host_toolchain)",
+    ]
   }
 }

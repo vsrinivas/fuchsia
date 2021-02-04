@@ -5,9 +5,9 @@
 // This file defines stubs for device-only functionality that we don't
 // need for unittests, but have to define for compilation to succeed.
 
-#ifndef SRC_FIRMWARE_GIGABOOT_TEST_HOST_STUBS_H_
-#define SRC_FIRMWARE_GIGABOOT_TEST_HOST_STUBS_H_
+#ifndef SRC_FIRMWARE_GIGABOOT_HOST_STUBS_H_
+#define SRC_FIRMWARE_GIGABOOT_HOST_STUBS_H_
 
 int puts16(char16_t *str) { return 0; }
 
-#endif  // SRC_FIRMWARE_GIGABOOT_TEST_HOST_STUBS_H_
+#endif  // SRC_FIRMWARE_GIGABOOT_HOST_STUBS_H_

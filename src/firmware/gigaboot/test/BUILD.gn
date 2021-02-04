@@ -1,0 +1,26 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+# Test utilities that aren't replacing part of the Gigaboot codebase, but
+# are just additional classes and functions useful for running tests.
+source_set("test") {
+  sources = [ "fake_disk_io_protocol.cc" ]
+  public_configs = [ ":test_config" ]
+  public_deps = [ "//zircon/kernel/lib/efi" ]
+}
+
+config("test_config") {
+  include_dirs = [ "." ]
+}
+
+# Tests to make sure our utilities are working as expected.
+test("gigaboot_utils_test") {
+  sources = [ "fake_disk_io_protocol_test.cc" ]
+  deps = [
+    ":test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}

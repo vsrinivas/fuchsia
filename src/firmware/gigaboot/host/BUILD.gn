@@ -4,7 +4,7 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-# The host tests files should not be included in the real device-side build.
+# The host stubs should not be included in the real device-side build.
 assert(toolchain.environment != "efi")
 
 config("host_config") {
@@ -14,8 +14,10 @@ config("host_config") {
   cflags = [ "-DGIGABOOT_HOST" ]
 }
 
+# This target provides replacements for device-only functionality, so that we
+# can compile a subset of this code for the host.
 source_set("host") {
   sources = [ "stubs.c" ]
   public_configs = [ ":host_config" ]
-  public_deps = [ "../../lib:shared" ]
+  public_deps = [ "../lib:shared" ]
 }
