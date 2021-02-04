@@ -7,20 +7,16 @@
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/process.h>
 
 zx_status_t log_to_debuglog() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
+  auto local = service::Connect<llcpp::fuchsia::boot::WriteOnlyLog>();
+  if (local.is_error()) {
+    return local.error_value();
   }
-  status = fdio_service_connect("/svc/fuchsia.boot.WriteOnlyLog", remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  llcpp::fuchsia::boot::WriteOnlyLog::SyncClient write_only_log(std::move(local));
+  auto write_only_log = fidl::BindSyncClient(std::move(*local));
   auto result = write_only_log.Get();
   if (result.status() != ZX_OK) {
     return result.status();
@@ -35,7 +31,7 @@ zx_status_t log_to_debuglog() {
       .tags = &tag,
       .num_tags = 1,
   };
-  status = fdio_fd_create(result.Unwrap()->log.release(), &logger_config.console_fd);
+  zx_status_t status = fdio_fd_create(result->log.release(), &logger_config.console_fd);
   if (status != ZX_OK) {
     return status;
   }
