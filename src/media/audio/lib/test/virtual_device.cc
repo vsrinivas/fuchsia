@@ -116,8 +116,8 @@ void VirtualDevice<Iface>::WatchEvents() {
     received_start_ = true;
     start_time_ = zx::time(start_time);
     // Compute a function to translate from ring buffer position to device time.
-    auto ns_per_byte =
-        format_.frames_per_ns().Inverse() * TimelineRate(1, format_.bytes_per_frame());
+    auto ns_per_byte = TimelineRate::Product(format_.frames_per_ns().Inverse(),
+                                             TimelineRate(1, format_.bytes_per_frame()));
     running_pos_to_ref_time_ = TimelineFunction(start_time_.get(), 0, ns_per_byte);
     AUDIO_LOG(DEBUG) << "OnStart callback: " << start_time;
   };

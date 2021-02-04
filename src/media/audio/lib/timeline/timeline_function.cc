@@ -16,7 +16,17 @@ namespace media {
 // corresponding subject value. Returns kOverflow if result can't fit in an int64_t.
 int64_t TimelineFunction::Apply(int64_t subject_time, int64_t reference_time, TimelineRate rate,
                                 int64_t reference_input) {
-  int64_t scaled_value = rate.Scale(reference_input - reference_time);
+  // Round down when scaling. This ensures that we preserve the scaled distance between positive
+  // and negative points on the timeline. For example, suppose we call this twice:
+  //
+  //   1. reference_input - reference_time = 20, ratio = 1/8, scaled_value = 2.5
+  //   2. reference_input - reference_time = -20, ratio = 1/8, scaled_value = -2.5
+  //
+  // If we truncate, the scaled values are 2 and -2, which have a difference of 4, while the true
+  // scaled difference should be 40*1/8 = 5. However, if we round down, the scaled values are
+  // 2 and -3, which have a difference of 5.
+  int64_t scaled_value =
+      rate.Scale(reference_input - reference_time, TimelineRate::RoundingMode::Floor);
   if (scaled_value == TimelineRate::kOverflow) {
     return TimelineRate::kOverflow;
   }

@@ -592,8 +592,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   //
   // Calculate the TimelineRate for step_size. No clock effects are included; any "micro-SRC" is
   // applied separately as a subsequent correction factor.
-  TimelineRate frac_src_frames_per_dest_frame =
-      dest_frames_to_dest_ref.rate() * info.source_ref_clock_to_frac_source_frames.rate();
+  TimelineRate frac_src_frames_per_dest_frame = TimelineRate::Product(
+      dest_frames_to_dest_ref.rate(), info.source_ref_clock_to_frac_source_frames.rate());
   FX_LOGS(TRACE) << clock::TimelineRateToString(frac_src_frames_per_dest_frame,
                                                 "dest-to-frac-src rate (no clock effects)");
 

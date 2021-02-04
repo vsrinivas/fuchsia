@@ -11,6 +11,19 @@
 namespace media {
 namespace {
 
+using RoundingMode = TimelineRate::RoundingMode;
+
+std::string RoundingModeString(RoundingMode rounding_mode) {
+  switch (rounding_mode) {
+    case RoundingMode::Truncate:
+      return "Truncate";
+    case RoundingMode::Floor:
+      return "Floor";
+    case RoundingMode::Ceiling:
+      return "Ceiling";
+  }
+}
+
 uint64_t gcd(uint64_t a, uint64_t b) {
   while (b != 0) {
     uint64_t t = a;
@@ -20,86 +33,68 @@ uint64_t gcd(uint64_t a, uint64_t b) {
   return a;
 }
 
-// Verifies TimelineRate::Reduce and the TimelineRate constructor, ensuring that the ratio
+// Verifies that the TimelineRate constructor reduces correctly, ensuring that the ratio
 // (subject_delta * common_factor) / (reference_delta * common_factor) is reduced to (subject_delta
 // / reference_delta). This requires that subject_delta and reference_delta be relatively prime.
 void VerifyReduce(uint64_t subject_delta, uint64_t reference_delta, uint64_t common_factor) {
   // Ensure subject_delta and reference_delta are relatively prime.
-  ASSERT_EQ(1u, gcd(subject_delta, reference_delta));
+  ASSERT_EQ(1u, gcd(subject_delta, reference_delta)) << subject_delta << "/" << reference_delta;
 
   uint64_t test_subject_delta = subject_delta * common_factor;
   uint64_t test_reference_delta = reference_delta * common_factor;
 
   // Make sure the constructor reduces.
   TimelineRate rate(test_subject_delta, test_reference_delta);
-  EXPECT_EQ(subject_delta, rate.subject_delta());
-  EXPECT_EQ(reference_delta, rate.reference_delta());
 
-  // Test the static Reduce method.
-  TimelineRate::Reduce(&test_subject_delta, &test_reference_delta);
-  EXPECT_EQ(subject_delta, test_subject_delta);
-  EXPECT_EQ(reference_delta, test_reference_delta);
+  EXPECT_EQ(subject_delta, rate.subject_delta())
+      << subject_delta << "/" << reference_delta << ", common_factor = " << common_factor;
+
+  EXPECT_EQ(reference_delta, rate.reference_delta())
+      << subject_delta << "/" << reference_delta << ", common_factor = " << common_factor;
 }
 
-// Verifies TimelineRate::Scale of a given value, by a (subject_delta / reference_delta) rate.
-void VerifyScale(int64_t value, uint64_t subject_delta, uint64_t reference_delta, int64_t result) {
-  // Test the instance method.
-  EXPECT_EQ(result, TimelineRate(subject_delta, reference_delta).Scale(value));
-  if (TimelineRate(subject_delta, reference_delta).invertible()) {
-    EXPECT_EQ(result, TimelineRate(reference_delta, subject_delta).ScaleInverse(value));
-  }
+// Verifies TimelineRate::Scale of a given value by a (subject_delta / reference_delta) rate.
+void VerifyScale(int64_t value, uint64_t subject_delta, uint64_t reference_delta, int64_t result,
+                 RoundingMode rounding_mode) {
+  EXPECT_EQ(result, TimelineRate(subject_delta, reference_delta).Scale(value, rounding_mode))
+      << subject_delta << "/" << reference_delta << " * " << value
+      << ", rounding_mode=" << RoundingModeString(rounding_mode);
+}
 
-  // Test the static method.
-  EXPECT_EQ(result, TimelineRate::Scale(value, subject_delta, reference_delta));
-
-  // Test the three operators.
-  EXPECT_EQ(result, value * TimelineRate(subject_delta, reference_delta));
-  EXPECT_EQ(result, TimelineRate(subject_delta, reference_delta) * value);
-  if (subject_delta != 0) {
-    EXPECT_EQ(result, value / TimelineRate(reference_delta, subject_delta));
-  }
+void VerifyScaleExact(int64_t value, uint64_t subject_delta, uint64_t reference_delta,
+                      int64_t result) {
+  VerifyScale(value, subject_delta, reference_delta, result, RoundingMode::Truncate);
+  VerifyScale(value, subject_delta, reference_delta, result, RoundingMode::Floor);
+  VerifyScale(value, subject_delta, reference_delta, result, RoundingMode::Ceiling);
 }
 
 // Verifies TimelineRate::Product of given a and b timeline rates.
 void VerifyProduct(uint64_t a_subject_delta, uint64_t a_reference_delta, uint64_t b_subject_delta,
                    uint64_t b_reference_delta, uint64_t expected_subject_delta,
                    uint64_t expected_reference_delta, bool exact) {
-  // Test the static TimelineRate::Product that uses out parameters.
-  uint64_t actual_subject_delta;
-  uint64_t actual_reference_delta;
-  TimelineRate::Product(a_subject_delta, a_reference_delta, b_subject_delta, b_reference_delta,
-                        &actual_subject_delta, &actual_reference_delta, exact);
-  EXPECT_EQ(expected_subject_delta, actual_subject_delta);
-  EXPECT_EQ(expected_reference_delta, actual_reference_delta);
+  TimelineRate rate_a(a_subject_delta, a_reference_delta);
+  TimelineRate rate_b(b_subject_delta, b_reference_delta);
+  TimelineRate result = TimelineRate::Product(rate_a, rate_b, exact);
 
-  // Test the static TimelineRate::Product that returns a TimelineRate.
-  EXPECT_EQ(TimelineRate(expected_subject_delta, expected_reference_delta),
-            TimelineRate::Product(TimelineRate(a_subject_delta, a_reference_delta),
-                                  TimelineRate(b_subject_delta, b_reference_delta), exact));
+  EXPECT_EQ(result.subject_delta(), expected_subject_delta)
+      << a_subject_delta << "/" << a_reference_delta << " * " << b_subject_delta << "/"
+      << b_reference_delta << ", exact=" << exact;
 
-  // Test the * operator
-  if (exact) {
-    EXPECT_EQ(TimelineRate(expected_subject_delta, expected_reference_delta),
-              TimelineRate(a_subject_delta, a_reference_delta) *
-                  TimelineRate(b_subject_delta, b_reference_delta));
-  }
+  EXPECT_EQ(result.reference_delta(), expected_reference_delta)
+      << a_subject_delta << "/" << a_reference_delta << " * " << b_subject_delta << "/"
+      << b_reference_delta << ", exact=" << exact;
 }
 
 // Verifies TimelineRate::Inverse with the given rate.
 void VerifyInverse(uint64_t subject_delta, uint64_t reference_delta) {
   TimelineRate rate(subject_delta, reference_delta);
   TimelineRate inverse(rate.Inverse());
-  EXPECT_EQ(rate.reference_delta(), inverse.subject_delta());
-  EXPECT_EQ(rate.subject_delta(), inverse.reference_delta());
-}
 
-// Verifies TimelineRate::ScaleInverse (this relies on ctor, Scale and Inverse working properly)
-void VerifyScaleInverse(int64_t value, uint64_t subject_delta, uint64_t reference_delta) {
-  TimelineRate rate(subject_delta, reference_delta);
-  TimelineRate inverse(reference_delta, subject_delta);
+  EXPECT_EQ(rate.reference_delta(), inverse.subject_delta())
+      << "Inverse(" << subject_delta << "/" << reference_delta << ")";
 
-  EXPECT_EQ(rate.Scale(value), inverse.ScaleInverse(value));
-  EXPECT_EQ(rate.ScaleInverse(value), inverse.Scale(value));
+  EXPECT_EQ(rate.subject_delta(), inverse.reference_delta())
+      << "Inverse(" << subject_delta << "/" << reference_delta << ")";
 }
 
 // Tests ctor(float). Although converted internally to double, incoming floats have limitations.
@@ -175,50 +170,74 @@ TEST(TimelineRateTest, Reduce) {
 
 // Tests TimelineRate::Scale, static, instance and operator versions.
 TEST(TimelineRateTest, Scale) {
-  VerifyScale(0, 0, 1, 0);
-  VerifyScale(1, 0, 1, 0);
-  VerifyScale(0, 1, 1, 0);
-  VerifyScale(1, 1, 1, 1);
-  VerifyScale(1, 2, 1, 2);
-  VerifyScale(1, 1, 2, 0);
-  VerifyScale(-1, 1, 2, -1);
-  VerifyScale(1000, 1, 2, 500);
-  VerifyScale(1001, 1, 2, 500);
-  VerifyScale(-1000, 1, 2, -500);
-  VerifyScale(-1001, 1, 2, -501);
-  VerifyScale(1000, 2, 1, 2000);
-  VerifyScale(1001, 2, 1, 2002);
-  VerifyScale(-1000, 2, 1, -2000);
-  VerifyScale(-1001, 2, 1, -2002);
-  VerifyScale(1ll << 32, 1, 1, 1ll << 32);
-  VerifyScale(1ll << 32, 1, 2, 1ll << 31);
-  VerifyScale(1ll << 32, 2, 1, 1ll << 33);
-  VerifyScale(1234ll << 30, 1, 1, 1234ll << 30);
-  VerifyScale(1234ll << 30, 1, 2, 1234ll << 29);
-  VerifyScale(1234ll << 30, 2, 1, 1234ll << 31);
-  VerifyScale(1234ll << 30, 1 << 31, 1, TimelineRate::kOverflow);
+  VerifyScaleExact(0, 0, 1, 0);
+  VerifyScaleExact(1, 0, 1, 0);
+  VerifyScaleExact(0, 1, 1, 0);
+  VerifyScaleExact(1, 1, 1, 1);
+  VerifyScaleExact(1, 2, 1, 2);
 
-  VerifyScale(1234ll << 30, 1 << 22, 1, 1234ll << 52);
-  VerifyScale(1ll << 30, 1234ll << 32, 1 << 10, 1234ll << 52);
-  VerifyScale(1234ll << 30, 1ll << 31, (1ll << 31) - 2, (1234ll << 30) + 1234ll);
+  VerifyScale(1, 1, 2, 0, RoundingMode::Truncate);
+  VerifyScale(1, 1, 2, 0, RoundingMode::Floor);
+  VerifyScale(1, 1, 2, 1, RoundingMode::Ceiling);
+
+  VerifyScale(-1, 1, 2, 0, RoundingMode::Truncate);
+  VerifyScale(-1, 1, 2, -1, RoundingMode::Floor);
+  VerifyScale(-1, 1, 2, 0, RoundingMode::Ceiling);
+
+  VerifyScaleExact(1000, 1, 2, 500);
+  VerifyScale(1001, 1, 2, 500, RoundingMode::Truncate);
+  VerifyScale(1001, 1, 2, 500, RoundingMode::Floor);
+  VerifyScale(1001, 1, 2, 501, RoundingMode::Ceiling);
+
+  VerifyScaleExact(-1000, 1, 2, -500);
+  VerifyScale(-1001, 1, 2, -500, RoundingMode::Truncate);
+  VerifyScale(-1001, 1, 2, -501, RoundingMode::Floor);
+  VerifyScale(-1001, 1, 2, -500, RoundingMode::Ceiling);
+
+  VerifyScaleExact(1000, 2, 1, 2000);
+  VerifyScaleExact(1001, 2, 1, 2002);
+  VerifyScaleExact(-1000, 2, 1, -2000);
+  VerifyScaleExact(-1001, 2, 1, -2002);
+
+  VerifyScaleExact(1ll << 32, 1, 1, 1ll << 32);
+  VerifyScaleExact(1ll << 32, 1, 2, 1ll << 31);
+  VerifyScaleExact(1ll << 32, 2, 1, 1ll << 33);
+  VerifyScaleExact(1234ll << 30, 1, 1, 1234ll << 30);
+  VerifyScaleExact(1234ll << 30, 1, 2, 1234ll << 29);
+  VerifyScaleExact(1234ll << 30, 2, 1, 1234ll << 31);
+  VerifyScaleExact(1234ll << 30, 1 << 31, 1, TimelineRate::kOverflow);
+
+  VerifyScaleExact(1234ll << 30, 1 << 22, 1, 1234ll << 52);
+  VerifyScaleExact(1ll << 30, 1234ll << 32, 1 << 10, 1234ll << 52);
+
+  VerifyScale(1234ll << 30, 1ll << 31, (1ll << 31) - 2, (1234ll << 30) + 1234ll,
+              RoundingMode::Truncate);
+  VerifyScale(1234ll << 30, 1ll << 31, (1ll << 31) - 2, (1234ll << 30) + 1234ll,
+              RoundingMode::Floor);
+  VerifyScale(1234ll << 30, 1ll << 31, (1ll << 31) - 2, (1234ll << 30) + 1235ll,
+              RoundingMode::Ceiling);
 
   // int64_max is odd so we include -1 or -3 to eliminate modulo. Fractional leftover aside, the
   // absence of overflow or wraparound indicates a successful muldiv using 128 bits internally.
   const int64_t int64_max = std::numeric_limits<int64_t>::max();
-  VerifyScale(int64_max, 1, 1, int64_max);
-  VerifyScale(int64_max - 1, 1, 2, (int64_max - 1) / 2);
-  VerifyScale(int64_max - 3, 3, 4, ((int64_max - 3) / 4) * 3);
-  VerifyScale((int64_max - 1) / 2, 2, 1, int64_max - 1);
-  VerifyScale(int64_max, 1000001, 1000000, TimelineRate::kOverflow);
+  VerifyScaleExact(int64_max, 1, 1, int64_max);
+  VerifyScaleExact(int64_max - 1, 1, 2, (int64_max - 1) / 2);
+  VerifyScaleExact(int64_max - 3, 3, 4, ((int64_max - 3) / 4) * 3);
+  VerifyScaleExact((int64_max - 1) / 2, 2, 1, int64_max - 1);
+  VerifyScaleExact(int64_max, 1000001, 1000000, TimelineRate::kOverflow);
 
   const int64_t int64_min = std::numeric_limits<int64_t>::min();
-  VerifyScale(int64_min, 1, 1, int64_min);
-  VerifyScale(int64_min, 1, 2, int64_min / 2);
-  VerifyScale(int64_min, 3, 4, (int64_min / 4) * 3);
-  VerifyScale(int64_min / 2, 2, 1, int64_min);
-  VerifyScale(int64_min, 1000001, 1000000, TimelineRate::kOverflow);
+  VerifyScaleExact(int64_min, 1, 1, int64_min);
+  VerifyScaleExact(int64_min, 1, 2, int64_min / 2);
+  VerifyScaleExact(int64_min, 3, 4, (int64_min / 4) * 3);
+  VerifyScaleExact(int64_min / 2, 2, 1, int64_min);
+  VerifyScaleExact(int64_min, 1000001, 1000000, TimelineRate::kOverflow);
 
-  VerifyScale(85'681'756'014'041, 95'999'904, 244'140'625, 33'691'403'681'379);
+  VerifyScale(85'681'756'014'041, 95'999'904, 244'140'625, 33'691'403'681'379,
+              RoundingMode::Truncate);
+  VerifyScale(85'681'756'014'041, 95'999'904, 244'140'625, 33'691'403'681'379, RoundingMode::Floor);
+  VerifyScale(85'681'756'014'041, 95'999'904, 244'140'625, 33'691'403'681'380,
+              RoundingMode::Ceiling);
 }
 
 // Tests TimelineRate::Product, static and operator versions.
@@ -240,15 +259,6 @@ TEST(TimelineRateTest, Inverse) {
   VerifyInverse(1, 2);
   VerifyInverse(1000000, 1234);
   VerifyInverse(1234, 1000000);
-}
-
-// Tests TimelineRate::ScaleInverse.
-TEST(TimelineRateTest, ScaleInverse) {
-  VerifyScaleInverse(1, 1, 1);
-  VerifyScaleInverse(4, 2, 1);
-  VerifyScaleInverse(42, 1, 2);
-  VerifyScaleInverse(1234000, 1000, 1234);
-  VerifyScaleInverse(24680000, 1234, 1000);
 }
 
 }  // namespace
