@@ -7,7 +7,6 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fidl/llcpp/allocator.h>
 #include <lib/image-format/image_format.h>
-#include <lib/sysmem-make-tracking/make_tracking.h>
 #include <zircon/assert.h>
 
 #include <list>
@@ -96,14 +95,14 @@ static void AddRgbaPixelFormat(fidl::Allocator& allocator, uint64_t format_modif
   for (auto format : {llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32,
                       llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8}) {
     auto pixel_format = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
-    pixel_format.set_type(sysmem::MakeTracking(allocator, format));
-    pixel_format.set_format_modifier_value(sysmem::MakeTracking(allocator, format_modifier));
+    pixel_format.set_type(allocator, format);
+    pixel_format.set_format_modifier_value(allocator, format_modifier);
     auto buffer_usage = allocator.make_table<llcpp::fuchsia::sysmem2::BufferUsage>();
-    buffer_usage.set_none(sysmem::MakeTracking(allocator, 0u));
-    buffer_usage.set_cpu(sysmem::MakeTracking(allocator, 0u));
-    buffer_usage.set_vulkan(sysmem::MakeTracking(allocator, 0u));
-    buffer_usage.set_display(sysmem::MakeTracking(allocator, 0u));
-    buffer_usage.set_video(sysmem::MakeTracking(allocator, 0u));
+    buffer_usage.set_none(allocator, 0u);
+    buffer_usage.set_cpu(allocator, 0u);
+    buffer_usage.set_vulkan(allocator, 0u);
+    buffer_usage.set_display(allocator, 0u);
+    buffer_usage.set_video(allocator, 0u);
     result.emplace_back(UsagePixelFormatCostEntry{
         // .pixel_format
         std::move(pixel_format),
@@ -183,15 +182,13 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
   std::list<const UsagePixelFormatCostEntry> result;
   // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
   auto pixel_format = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
-  pixel_format.set_type(
-      sysmem::MakeTracking(allocator, llcpp::fuchsia::sysmem2::PixelFormatType::NV12));
+  pixel_format.set_type(allocator, llcpp::fuchsia::sysmem2::PixelFormatType::NV12);
   auto buffer_usage = allocator.make_table<llcpp::fuchsia::sysmem2::BufferUsage>();
-  buffer_usage.set_none(sysmem::MakeTracking(allocator, 0u));
-  buffer_usage.set_cpu(sysmem::MakeTracking(allocator, 0u));
-  buffer_usage.set_vulkan(sysmem::MakeTracking(allocator, 0u));
-  buffer_usage.set_display(sysmem::MakeTracking(allocator, 0u));
-  buffer_usage.set_video(
-      sysmem::MakeTracking(allocator, llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_DECODER));
+  buffer_usage.set_none(allocator, 0u);
+  buffer_usage.set_cpu(allocator, 0u);
+  buffer_usage.set_vulkan(allocator, 0u);
+  buffer_usage.set_display(allocator, 0u);
+  buffer_usage.set_video(allocator, llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_DECODER);
   result.emplace_back(UsagePixelFormatCostEntry{
       // .pixel_format
       std::move(pixel_format),

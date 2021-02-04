@@ -71,7 +71,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
-    "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
   ]
 }
@@ -134,7 +133,6 @@ test("sysmem-unittest-bin") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
-    "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
   ]
 }

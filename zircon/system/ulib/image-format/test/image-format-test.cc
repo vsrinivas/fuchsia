@@ -5,7 +5,6 @@
 #include <lib/fidl/llcpp/heap_allocator.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
-#include <lib/sysmem-make-tracking/make_tracking.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
 #include <fbl/array.h>
@@ -21,17 +20,15 @@ namespace sysmem_v2 = llcpp::fuchsia::sysmem2;
 TEST(ImageFormat, LinearComparison_V2_LLCPP) {
   fidl::HeapAllocator allocator;
   auto plain = allocator.make_table<sysmem_v2::PixelFormat>();
-  plain.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
+  plain.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
 
   auto linear = allocator.make_table<sysmem_v2::PixelFormat>();
-  linear.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
-  linear.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR));
+  linear.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
+  linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
 
   auto x_tiled = allocator.make_table<sysmem_v2::PixelFormat>();
-  x_tiled.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
-  x_tiled.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, sysmem_v2::FORMAT_MODIFIER_INTEL_I915_X_TILED));
+  x_tiled.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
+  x_tiled.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_INTEL_I915_X_TILED);
 
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(plain, plain));
   EXPECT_TRUE(ImageFormatIsPixelFormatEqual(linear, linear));
@@ -102,15 +99,14 @@ TEST(ImageFormat, LinearComparison_V1_C) {
 TEST(ImageFormat, LinearRowBytes_V2_LLCPP) {
   fidl::HeapAllocator allocator;
   auto linear = allocator.make_table<sysmem_v2::PixelFormat>();
-  linear.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
-  linear.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR));
+  linear.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
+  linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
   auto constraints = allocator.make_table<sysmem_v2::ImageFormatConstraints>();
-  constraints.set_pixel_format(sysmem::MakeTracking(allocator, std::move(linear)));
-  constraints.set_min_coded_width(sysmem::MakeTracking(allocator, 12u));
-  constraints.set_max_coded_width(sysmem::MakeTracking(allocator, 100u));
-  constraints.set_bytes_per_row_divisor(sysmem::MakeTracking(allocator, 4u * 8u));
-  constraints.set_max_bytes_per_row(sysmem::MakeTracking(allocator, 100000u));
+  constraints.set_pixel_format(allocator, std::move(linear));
+  constraints.set_min_coded_width(allocator, 12u);
+  constraints.set_max_coded_width(allocator, 100u);
+  constraints.set_bytes_per_row_divisor(allocator, 4u * 8u);
+  constraints.set_max_bytes_per_row(allocator, 100000u);
 
   uint32_t row_bytes;
   EXPECT_TRUE(ImageFormatMinimumRowBytes(constraints, 17, &row_bytes));
@@ -200,9 +196,9 @@ TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
 
     auto color_space = allocator.make_table<sysmem_v2::ColorSpace>();
     if (format == ZX_PIXEL_FORMAT_NV12) {
-      color_space.set_type(sysmem::MakeTracking(allocator, sysmem_v2::ColorSpaceType::REC601_NTSC));
+      color_space.set_type(allocator, sysmem_v2::ColorSpaceType::REC601_NTSC);
     } else {
-      color_space.set_type(sysmem::MakeTracking(allocator, sysmem_v2::ColorSpaceType::SRGB));
+      color_space.set_type(allocator, sysmem_v2::ColorSpaceType::SRGB);
     }
     EXPECT_TRUE(ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, sysmem_format));
 
@@ -212,9 +208,8 @@ TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
   }
 
   auto other_format = allocator.make_table<sysmem_v2::PixelFormat>();
-  other_format.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
-  other_format.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, sysmem_v2::FORMAT_MODIFIER_INTEL_I915_X_TILED));
+  other_format.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
+  other_format.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_INTEL_I915_X_TILED);
 
   zx_pixel_format_t back_format;
   EXPECT_FALSE(ImageFormatConvertSysmemToZx(other_format, &back_format));
@@ -323,17 +318,16 @@ TEST(ImageFormat, ZxPixelFormat_V1_C) {
 TEST(ImageFormat, PlaneByteOffset_V2_LLCPP) {
   fidl::HeapAllocator allocator;
   auto linear = allocator.make_table<sysmem_v2::PixelFormat>();
-  linear.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
-  linear.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR));
+  linear.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
+  linear.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
   auto constraints = allocator.make_table<sysmem_v2::ImageFormatConstraints>();
-  constraints.set_pixel_format(sysmem::MakeTracking(allocator, std::move(linear)));
-  constraints.set_min_coded_width(sysmem::MakeTracking(allocator, 12u));
-  constraints.set_max_coded_width(sysmem::MakeTracking(allocator, 100u));
-  constraints.set_min_coded_height(sysmem::MakeTracking(allocator, 12u));
-  constraints.set_max_coded_height(sysmem::MakeTracking(allocator, 100u));
-  constraints.set_bytes_per_row_divisor(sysmem::MakeTracking(allocator, 4u * 8u));
-  constraints.set_max_bytes_per_row(sysmem::MakeTracking(allocator, 100000u));
+  constraints.set_pixel_format(allocator, std::move(linear));
+  constraints.set_min_coded_width(allocator, 12u);
+  constraints.set_max_coded_width(allocator, 100u);
+  constraints.set_min_coded_height(allocator, 12u);
+  constraints.set_max_coded_height(allocator, 100u);
+  constraints.set_bytes_per_row_divisor(allocator, 4u * 8u);
+  constraints.set_max_bytes_per_row(allocator, 100000u);
 
   auto image_format_result = ImageConstraintsToFormat(allocator, constraints, 18, 17);
   EXPECT_TRUE(image_format_result.is_ok());
@@ -347,8 +341,7 @@ TEST(ImageFormat, PlaneByteOffset_V2_LLCPP) {
   EXPECT_FALSE(ImageFormatPlaneByteOffset(image_format, 1, &byte_offset));
 
   auto constraints2 = sysmem::V2CloneImageFormatConstraints(allocator, constraints);
-  constraints2.pixel_format().set_type(
-      sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::I420));
+  constraints2.pixel_format().set_type(allocator, sysmem_v2::PixelFormatType::I420);
 
   constexpr uint32_t kBytesPerRow = 32;
   image_format_result = ImageConstraintsToFormat(allocator, constraints2, 18, 20);
@@ -477,24 +470,22 @@ TEST(ImageFormat, PlaneByteOffset_V1_C) {
 TEST(ImageFormat, TransactionEliminationFormats_V2_LLCPP) {
   fidl::HeapAllocator allocator;
   auto format = allocator.make_table<sysmem_v2::PixelFormat>();
-  format.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
-  format.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR));
+  format.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
+  format.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_LINEAR);
   EXPECT_TRUE(ImageFormatCompatibleWithProtectedMemory(format));
 
   auto format2 = sysmem::V2ClonePixelFormat(allocator, format);
-  format2.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, sysmem_v2::FORMAT_MODIFIER_ARM_LINEAR_TE));
+  format2.set_format_modifier_value(allocator, sysmem_v2::FORMAT_MODIFIER_ARM_LINEAR_TE);
   EXPECT_FALSE(ImageFormatCompatibleWithProtectedMemory(format2));
 
   auto constraints = allocator.make_table<sysmem_v2::ImageFormatConstraints>();
-  constraints.set_pixel_format(sysmem::MakeTracking(allocator, std::move(format2)));
-  constraints.set_min_coded_width(sysmem::MakeTracking(allocator, 12u));
-  constraints.set_max_coded_width(sysmem::MakeTracking(allocator, 100u));
-  constraints.set_min_coded_height(sysmem::MakeTracking(allocator, 12u));
-  constraints.set_max_coded_height(sysmem::MakeTracking(allocator, 100u));
-  constraints.set_bytes_per_row_divisor(sysmem::MakeTracking(allocator, 4u * 8u));
-  constraints.set_max_bytes_per_row(sysmem::MakeTracking(allocator, 100000u));
+  constraints.set_pixel_format(allocator, std::move(format2));
+  constraints.set_min_coded_width(allocator, 12u);
+  constraints.set_max_coded_width(allocator, 100u);
+  constraints.set_min_coded_height(allocator, 12u);
+  constraints.set_max_coded_height(allocator, 100u);
+  constraints.set_bytes_per_row_divisor(allocator, 4u * 8u);
+  constraints.set_max_bytes_per_row(allocator, 100000u);
 
   auto image_format_result = ImageConstraintsToFormat(allocator, constraints, 18, 17);
   EXPECT_TRUE(image_format_result.is_ok());
@@ -576,12 +567,12 @@ TEST(ImageFormat, BasicSizes_V2_LLCPP) {
   auto image_format_bgra32 = allocator.make_table<sysmem_v2::ImageFormat>();
   {
     auto pixel_format = allocator.make_table<sysmem_v2::PixelFormat>();
-    pixel_format.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::BGRA32));
-    image_format_bgra32.set_pixel_format(sysmem::MakeTracking(allocator, std::move(pixel_format)));
+    pixel_format.set_type(allocator, sysmem_v2::PixelFormatType::BGRA32);
+    image_format_bgra32.set_pixel_format(allocator, std::move(pixel_format));
   }
-  image_format_bgra32.set_coded_width(sysmem::MakeTracking(allocator, kWidth));
-  image_format_bgra32.set_coded_height(sysmem::MakeTracking(allocator, kHeight));
-  image_format_bgra32.set_bytes_per_row(sysmem::MakeTracking(allocator, kStride));
+  image_format_bgra32.set_coded_width(allocator, kWidth);
+  image_format_bgra32.set_coded_height(allocator, kHeight);
+  image_format_bgra32.set_bytes_per_row(allocator, kStride);
   EXPECT_EQ(kHeight * kStride, ImageFormatImageSize(image_format_bgra32));
   EXPECT_EQ(1, ImageFormatCodedWidthMinDivisor(image_format_bgra32.pixel_format()));
   EXPECT_EQ(1, ImageFormatCodedHeightMinDivisor(image_format_bgra32.pixel_format()));
@@ -590,12 +581,12 @@ TEST(ImageFormat, BasicSizes_V2_LLCPP) {
   auto image_format_nv12 = allocator.make_table<sysmem_v2::ImageFormat>();
   {
     auto pixel_format = allocator.make_table<sysmem_v2::PixelFormat>();
-    pixel_format.set_type(sysmem::MakeTracking(allocator, sysmem_v2::PixelFormatType::NV12));
-    image_format_nv12.set_pixel_format(sysmem::MakeTracking(allocator, std::move(pixel_format)));
+    pixel_format.set_type(allocator, sysmem_v2::PixelFormatType::NV12);
+    image_format_nv12.set_pixel_format(allocator, std::move(pixel_format));
   }
-  image_format_nv12.set_coded_width(sysmem::MakeTracking(allocator, kWidth));
-  image_format_nv12.set_coded_height(sysmem::MakeTracking(allocator, kHeight));
-  image_format_nv12.set_bytes_per_row(sysmem::MakeTracking(allocator, kStride));
+  image_format_nv12.set_coded_width(allocator, kWidth);
+  image_format_nv12.set_coded_height(allocator, kHeight);
+  image_format_nv12.set_bytes_per_row(allocator, kStride);
   EXPECT_EQ(kHeight * kStride * 3 / 2, ImageFormatImageSize(image_format_nv12));
   EXPECT_EQ(2, ImageFormatCodedWidthMinDivisor(image_format_nv12.pixel_format()));
   EXPECT_EQ(2, ImageFormatCodedHeightMinDivisor(image_format_nv12.pixel_format()));

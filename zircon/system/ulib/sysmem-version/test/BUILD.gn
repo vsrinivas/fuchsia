@@ -11,7 +11,6 @@ test("sysmem-version-test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
   ]
 }

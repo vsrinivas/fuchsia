@@ -21,7 +21,6 @@ zx_library("image-format") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
   ]
 

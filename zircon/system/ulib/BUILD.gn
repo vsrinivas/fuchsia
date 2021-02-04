@@ -76,7 +76,6 @@ group("tests") {
     "storage/buffer:tests",
     "storage/operation:tests",
     "sysconfig-client:tests",
-    "sysmem-make-tracking:tests",
     "sysmem-version:tests",
     "test-exceptions:tests",
     "tftp:tests",

@@ -9,7 +9,6 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl-async-2/fidl_struct.h>
-#include <lib/sysmem-make-tracking/make_tracking.h>
 #include <zircon/assert.h>
 
 #include <map>
@@ -79,16 +78,16 @@ inline constexpr bool IsCompatibleFidlScalarTypes_v = IsCompatibleFidlScalarType
 //
 // All bool fields are set regardless of false or true.  Other scalar fields are only set if not
 // equal to zero.
-#define PROCESS_SCALAR_FIELD_V1(field_name)                                                   \
-  do {                                                                                        \
-    using V2FieldType = std::remove_reference<decltype(v2b.field_name())>::type;              \
-    /* double parens are significant here */                                                  \
-    using V1FieldType = std::remove_reference<decltype((v1.field_name))>::type;               \
-    static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);                   \
-    if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||                          \
-        static_cast<bool>(v1.field_name)) {                                                   \
-      v2b.set_##field_name(MakeTracking(allocator, static_cast<V2FieldType>(v1.field_name))); \
-    }                                                                                         \
+#define PROCESS_SCALAR_FIELD_V1(field_name)                                      \
+  do {                                                                           \
+    using V2FieldType = std::remove_reference<decltype(v2b.field_name())>::type; \
+    /* double parens are significant here */                                     \
+    using V1FieldType = std::remove_reference<decltype((v1.field_name))>::type;  \
+    static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);      \
+    if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||             \
+        static_cast<bool>(v1.field_name)) {                                      \
+      v2b.set_##field_name(allocator, static_cast<V2FieldType>(v1.field_name));  \
+    }                                                                            \
   } while (false)
 
 #define PROCESS_SCALAR_FIELD_V2(field_name)                                      \
@@ -177,7 +176,7 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsMain(
   {
     auto result = V2CopyFromV1BufferUsage(allocator, v1.usage);
     OK_OR_RET_ERROR(result);
-    v2b.set_usage(sysmem::MakeTracking(allocator, result.take_value()));
+    v2b.set_usage(allocator, result.take_value());
   }
 
   PROCESS_SCALAR_FIELD_V1(min_buffer_count_for_camping);
@@ -188,13 +187,13 @@ fit::result<> V2CopyFromV1BufferCollectionConstraintsMain(
   if (v1.has_buffer_memory_constraints) {
     auto result = V2CopyFromV1BufferMemoryConstraints(allocator, v1.buffer_memory_constraints);
     OK_OR_RET_ERROR(result);
-    v2b.set_buffer_memory_constraints(sysmem::MakeTracking(allocator, result.take_value()));
+    v2b.set_buffer_memory_constraints(allocator, result.take_value());
   }
   if (v1.image_format_constraints_count) {
     auto result = V2CopyFromV1ImageFormatConstraintsArray(allocator, v1.image_format_constraints,
                                                           v1.image_format_constraints_count);
     OK_OR_RET_ERROR(result);
-    v2b.set_image_format_constraints(sysmem::MakeTracking(allocator, result.take_value()));
+    v2b.set_image_format_constraints(allocator, result.take_value());
   }
   return fit::ok();
 }
@@ -216,7 +215,7 @@ llcpp::fuchsia::sysmem2::PixelFormat V2CopyFromV1PixelFormat(
   auto v2b = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
   PROCESS_SCALAR_FIELD_V1(type);
   if (v1.has_format_modifier) {
-    v2b.set_format_modifier_value(sysmem::MakeTracking(allocator, v1.format_modifier.value));
+    v2b.set_format_modifier_value(allocator, v1.format_modifier.value);
   }
   return v2b;
 }
@@ -243,12 +242,11 @@ llcpp::fuchsia::sysmem2::ColorSpace V2CopyFromV1ColorSpace(fidl::Allocator& allo
 fit::result<llcpp::fuchsia::sysmem2::ImageFormatConstraints> V2CopyFromV1ImageFormatConstraints(
     fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::ImageFormatConstraints& v1) {
   auto v2b = allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
-  v2b.set_pixel_format(
-      MakeTracking(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format)));
+  v2b.set_pixel_format(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format));
   if (v1.color_spaces_count) {
     auto result = V2CopyFromV1ColorSpaceArray(allocator, v1.color_space, v1.color_spaces_count);
     OK_OR_RET_ERROR(result);
-    v2b.set_color_spaces(MakeTracking(allocator, result.take_value()));
+    v2b.set_color_spaces(allocator, result.take_value());
   }
   PROCESS_SCALAR_FIELD_V1(min_coded_width);
   PROCESS_SCALAR_FIELD_V1(max_coded_width);
@@ -321,7 +319,7 @@ fit::result<llcpp::fuchsia::sysmem2::BufferMemoryConstraints> V2CopyFromV1Buffer
     auto result =
         V2CopyFromV1HeapPermittedArray(allocator, v1.heap_permitted, v1.heap_permitted_count);
     OK_OR_RET_ERROR(result);
-    v2b.set_heap_permitted(MakeTracking(allocator, result.take_value()));
+    v2b.set_heap_permitted(allocator, result.take_value());
   }
   return fit::ok(std::move(v2b));
 }
@@ -373,8 +371,7 @@ fit::result<llcpp::fuchsia::sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
     fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::ImageFormat_2& v1) {
   llcpp::fuchsia::sysmem2::ImageFormat v2b =
       allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormat>();
-  v2b.set_pixel_format(
-      sysmem::MakeTracking(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format)));
+  v2b.set_pixel_format(allocator, V2CopyFromV1PixelFormat(allocator, v1.pixel_format));
   PROCESS_SCALAR_FIELD_V1(coded_width);
   PROCESS_SCALAR_FIELD_V1(coded_height);
   PROCESS_SCALAR_FIELD_V1(bytes_per_row);
@@ -384,12 +381,10 @@ fit::result<llcpp::fuchsia::sysmem2::ImageFormat> V2CopyFromV1ImageFormat(
     LOG(ERROR, "v1.layers > 1");
     return fit::error();
   }
-  v2b.set_color_space(
-      sysmem::MakeTracking(allocator, V2CopyFromV1ColorSpace(allocator, v1.color_space)));
+  v2b.set_color_space(allocator, V2CopyFromV1ColorSpace(allocator, v1.color_space));
   if (v1.has_pixel_aspect_ratio) {
-    v2b.set_pixel_aspect_ratio_width(sysmem::MakeTracking(allocator, v1.pixel_aspect_ratio_width));
-    v2b.set_pixel_aspect_ratio_height(
-        sysmem::MakeTracking(allocator, v1.pixel_aspect_ratio_height));
+    v2b.set_pixel_aspect_ratio_width(allocator, v1.pixel_aspect_ratio_width);
+    v2b.set_pixel_aspect_ratio_height(allocator, v1.pixel_aspect_ratio_height);
   } else {
     ZX_DEBUG_ASSERT(!v2b.has_pixel_aspect_ratio_width());
     ZX_DEBUG_ASSERT(!v2b.has_pixel_aspect_ratio_height());
@@ -419,8 +414,8 @@ fit::result<llcpp::fuchsia::sysmem2::SingleBufferSettings> V2CopyFromV1SingleBuf
     fidl::Allocator& allocator, const llcpp::fuchsia::sysmem::SingleBufferSettings& v1) {
   llcpp::fuchsia::sysmem2::SingleBufferSettings v2b =
       allocator.make_table<llcpp::fuchsia::sysmem2::SingleBufferSettings>();
-  v2b.set_buffer_settings(sysmem::MakeTracking(
-      allocator, V2CopyFromV1BufferMemorySettings(allocator, v1.buffer_settings)));
+  v2b.set_buffer_settings(allocator,
+                          V2CopyFromV1BufferMemorySettings(allocator, v1.buffer_settings));
   if (v1.has_image_format_constraints) {
     auto image_format_constraints_result =
         V2CopyFromV1ImageFormatConstraints(allocator, v1.image_format_constraints);
@@ -428,8 +423,7 @@ fit::result<llcpp::fuchsia::sysmem2::SingleBufferSettings> V2CopyFromV1SingleBuf
       LOG(ERROR, "!image_format_constraints_result.is_ok()");
       return fit::error();
     }
-    v2b.set_image_format_constraints(
-        sysmem::MakeTracking(allocator, image_format_constraints_result.take_value()));
+    v2b.set_image_format_constraints(allocator, image_format_constraints_result.take_value());
   }
   return fit::ok(std::move(v2b));
 }
@@ -440,7 +434,7 @@ llcpp::fuchsia::sysmem2::VmoBuffer V2MoveFromV1VmoBuffer(
   llcpp::fuchsia::sysmem2::VmoBuffer v2b =
       allocator.make_table<llcpp::fuchsia::sysmem2::VmoBuffer>();
   if (v1.vmo) {
-    v2b.set_vmo(sysmem::MakeTracking(allocator, std::move(v1.vmo)));
+    v2b.set_vmo(allocator, std::move(v1.vmo));
   }
   PROCESS_SCALAR_FIELD_V1(vmo_usable_start);
   ZX_DEBUG_ASSERT(!v2b.has_aux_vmo());
@@ -457,7 +451,7 @@ fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo> V2MoveFromV1BufferCol
     LOG(ERROR, "!settings_result.is_ok()");
     return fit::error();
   }
-  v2b.set_settings(sysmem::MakeTracking(allocator, settings_result.take_value()));
+  v2b.set_settings(allocator, settings_result.take_value());
   if (v1.buffer_count) {
     v2b.set_buffers(allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::VmoBuffer>(v1.buffer_count));
     for (uint32_t i = 0; i < v1.buffer_count; ++i) {
@@ -770,11 +764,10 @@ llcpp::fuchsia::sysmem2::PixelFormat V2ClonePixelFormat(
     fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::PixelFormat& src) {
   auto pixel_format = allocator.make_table<llcpp::fuchsia::sysmem2::PixelFormat>();
   if (src.has_type()) {
-    pixel_format.set_type(sysmem::MakeTracking(allocator, src.type()));
+    pixel_format.set_type(allocator, src.type());
   }
   if (src.has_format_modifier_value()) {
-    pixel_format.set_format_modifier_value(
-        sysmem::MakeTracking(allocator, src.format_modifier_value()));
+    pixel_format.set_format_modifier_value(allocator, src.format_modifier_value());
   }
   return pixel_format;
 }
@@ -783,7 +776,7 @@ llcpp::fuchsia::sysmem2::ColorSpace V2CloneColorSpace(
     fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::ColorSpace& src) {
   auto color_space = allocator.make_table<llcpp::fuchsia::sysmem2::ColorSpace>();
   if (src.has_type()) {
-    color_space.set_type(sysmem::MakeTracking(allocator, src.type()));
+    color_space.set_type(allocator, src.type());
   }
   return color_space;
 }
@@ -793,21 +786,19 @@ llcpp::fuchsia::sysmem2::BufferMemorySettings V2CloneBufferMemorySettings(
   auto buffer_memory_settings =
       allocator.make_table<llcpp::fuchsia::sysmem2::BufferMemorySettings>();
   if (src.has_size_bytes()) {
-    buffer_memory_settings.set_size_bytes(sysmem::MakeTracking(allocator, src.size_bytes()));
+    buffer_memory_settings.set_size_bytes(allocator, src.size_bytes());
   }
   if (src.has_is_physically_contiguous()) {
-    buffer_memory_settings.set_is_physically_contiguous(
-        sysmem::MakeTracking(allocator, src.is_physically_contiguous()));
+    buffer_memory_settings.set_is_physically_contiguous(allocator, src.is_physically_contiguous());
   }
   if (src.has_is_secure()) {
-    buffer_memory_settings.set_is_secure(sysmem::MakeTracking(allocator, src.is_secure()));
+    buffer_memory_settings.set_is_secure(allocator, src.is_secure());
   }
   if (src.has_coherency_domain()) {
-    buffer_memory_settings.set_coherency_domain(
-        sysmem::MakeTracking(allocator, src.coherency_domain()));
+    buffer_memory_settings.set_coherency_domain(allocator, src.coherency_domain());
   }
   if (src.has_heap()) {
-    buffer_memory_settings.set_heap(sysmem::MakeTracking(allocator, src.heap()));
+    buffer_memory_settings.set_heap(allocator, src.heap());
   }
   return buffer_memory_settings;
 }
@@ -817,8 +808,8 @@ llcpp::fuchsia::sysmem2::ImageFormatConstraints V2CloneImageFormatConstraints(
   auto image_format_constraints =
       allocator.make_table<llcpp::fuchsia::sysmem2::ImageFormatConstraints>();
   if (src.has_pixel_format()) {
-    image_format_constraints.set_pixel_format(
-        sysmem::MakeTracking(allocator, V2ClonePixelFormat(allocator, src.pixel_format())));
+    image_format_constraints.set_pixel_format(allocator,
+                                              V2ClonePixelFormat(allocator, src.pixel_format()));
   }
   if (src.has_color_spaces()) {
     image_format_constraints.set_color_spaces(
@@ -829,80 +820,68 @@ llcpp::fuchsia::sysmem2::ImageFormatConstraints V2CloneImageFormatConstraints(
     }
   }
   if (src.has_min_coded_width()) {
-    image_format_constraints.set_min_coded_width(
-        sysmem::MakeTracking(allocator, src.min_coded_width()));
+    image_format_constraints.set_min_coded_width(allocator, src.min_coded_width());
   }
   if (src.has_max_coded_width()) {
-    image_format_constraints.set_max_coded_width(
-        sysmem::MakeTracking(allocator, src.max_coded_width()));
+    image_format_constraints.set_max_coded_width(allocator, src.max_coded_width());
   }
   if (src.has_min_coded_height()) {
-    image_format_constraints.set_min_coded_height(
-        sysmem::MakeTracking(allocator, src.min_coded_height()));
+    image_format_constraints.set_min_coded_height(allocator, src.min_coded_height());
   }
   if (src.has_max_coded_height()) {
-    image_format_constraints.set_max_coded_height(
-        sysmem::MakeTracking(allocator, src.max_coded_height()));
+    image_format_constraints.set_max_coded_height(allocator, src.max_coded_height());
   }
   if (src.has_min_bytes_per_row()) {
-    image_format_constraints.set_min_bytes_per_row(
-        sysmem::MakeTracking(allocator, src.min_bytes_per_row()));
+    image_format_constraints.set_min_bytes_per_row(allocator, src.min_bytes_per_row());
   }
   if (src.has_max_bytes_per_row()) {
-    image_format_constraints.set_max_bytes_per_row(
-        sysmem::MakeTracking(allocator, src.max_bytes_per_row()));
+    image_format_constraints.set_max_bytes_per_row(allocator, src.max_bytes_per_row());
   }
   if (src.has_max_coded_width_times_coded_height()) {
     image_format_constraints.set_max_coded_width_times_coded_height(
-        sysmem::MakeTracking(allocator, src.max_coded_width_times_coded_height()));
+        allocator, src.max_coded_width_times_coded_height());
   }
   if (src.has_coded_width_divisor()) {
-    image_format_constraints.set_coded_width_divisor(
-        sysmem::MakeTracking(allocator, src.coded_width_divisor()));
+    image_format_constraints.set_coded_width_divisor(allocator, src.coded_width_divisor());
   }
   if (src.has_coded_height_divisor()) {
-    image_format_constraints.set_coded_height_divisor(
-        sysmem::MakeTracking(allocator, src.coded_height_divisor()));
+    image_format_constraints.set_coded_height_divisor(allocator, src.coded_height_divisor());
   }
   if (src.has_bytes_per_row_divisor()) {
-    image_format_constraints.set_bytes_per_row_divisor(
-        sysmem::MakeTracking(allocator, src.bytes_per_row_divisor()));
+    image_format_constraints.set_bytes_per_row_divisor(allocator, src.bytes_per_row_divisor());
   }
   if (src.has_start_offset_divisor()) {
-    image_format_constraints.set_start_offset_divisor(
-        sysmem::MakeTracking(allocator, src.start_offset_divisor()));
+    image_format_constraints.set_start_offset_divisor(allocator, src.start_offset_divisor());
   }
   if (src.has_display_width_divisor()) {
-    image_format_constraints.set_display_width_divisor(
-        sysmem::MakeTracking(allocator, src.display_width_divisor()));
+    image_format_constraints.set_display_width_divisor(allocator, src.display_width_divisor());
   }
   if (src.has_display_height_divisor()) {
-    image_format_constraints.set_display_height_divisor(
-        sysmem::MakeTracking(allocator, src.display_height_divisor()));
+    image_format_constraints.set_display_height_divisor(allocator, src.display_height_divisor());
   }
   if (src.has_required_min_coded_width()) {
-    image_format_constraints.set_required_min_coded_width(
-        sysmem::MakeTracking(allocator, src.required_min_coded_width()));
+    image_format_constraints.set_required_min_coded_width(allocator,
+                                                          src.required_min_coded_width());
   }
   if (src.has_required_max_coded_width()) {
-    image_format_constraints.set_required_max_coded_width(
-        sysmem::MakeTracking(allocator, src.required_max_coded_width()));
+    image_format_constraints.set_required_max_coded_width(allocator,
+                                                          src.required_max_coded_width());
   }
   if (src.has_required_min_coded_height()) {
-    image_format_constraints.set_required_min_coded_height(
-        sysmem::MakeTracking(allocator, src.required_min_coded_height()));
+    image_format_constraints.set_required_min_coded_height(allocator,
+                                                           src.required_min_coded_height());
   }
   if (src.has_required_max_coded_height()) {
-    image_format_constraints.set_required_max_coded_height(
-        sysmem::MakeTracking(allocator, src.required_max_coded_height()));
+    image_format_constraints.set_required_max_coded_height(allocator,
+                                                           src.required_max_coded_height());
   }
   if (src.has_required_min_bytes_per_row()) {
-    image_format_constraints.set_required_min_bytes_per_row(
-        sysmem::MakeTracking(allocator, src.required_min_bytes_per_row()));
+    image_format_constraints.set_required_min_bytes_per_row(allocator,
+                                                            src.required_min_bytes_per_row());
   }
   if (src.has_required_max_bytes_per_row()) {
-    image_format_constraints.set_required_max_bytes_per_row(
-        sysmem::MakeTracking(allocator, src.required_max_bytes_per_row()));
+    image_format_constraints.set_required_max_bytes_per_row(allocator,
+                                                            src.required_max_bytes_per_row());
   }
   return image_format_constraints;
 }
@@ -912,12 +891,12 @@ llcpp::fuchsia::sysmem2::SingleBufferSettings V2CloneSingleBufferSettings(
   auto single_buffer_settings =
       allocator.make_table<llcpp::fuchsia::sysmem2::SingleBufferSettings>();
   if (src.has_buffer_settings()) {
-    single_buffer_settings.set_buffer_settings(sysmem::MakeTracking(
-        allocator, V2CloneBufferMemorySettings(allocator, src.buffer_settings())));
+    single_buffer_settings.set_buffer_settings(
+        allocator, V2CloneBufferMemorySettings(allocator, src.buffer_settings()));
   }
   if (src.has_image_format_constraints()) {
-    single_buffer_settings.set_image_format_constraints(sysmem::MakeTracking(
-        allocator, V2CloneImageFormatConstraints(allocator, src.image_format_constraints())));
+    single_buffer_settings.set_image_format_constraints(
+        allocator, V2CloneImageFormatConstraints(allocator, src.image_format_constraints()));
   }
   return single_buffer_settings;
 }
@@ -940,10 +919,10 @@ fit::result<llcpp::fuchsia::sysmem2::VmoBuffer, zx_status_t> V2CloneVmoBuffer(
       LOG(ERROR, "duplicate_status: %d", duplicate_status);
       return fit::error(duplicate_status);
     }
-    vmo_buffer.set_vmo(sysmem::MakeTracking(allocator, std::move(clone_vmo)));
+    vmo_buffer.set_vmo(allocator, std::move(clone_vmo));
   }
   if (src.has_vmo_usable_start()) {
-    vmo_buffer.set_vmo_usable_start(sysmem::MakeTracking(allocator, src.vmo_usable_start()));
+    vmo_buffer.set_vmo_usable_start(allocator, src.vmo_usable_start());
   }
   if (src.has_aux_vmo()) {
     zx_info_handle_basic_t info{};
@@ -960,7 +939,7 @@ fit::result<llcpp::fuchsia::sysmem2::VmoBuffer, zx_status_t> V2CloneVmoBuffer(
       LOG(ERROR, "duplicate_status: %d", duplicate_status);
       return fit::error(duplicate_status);
     }
-    vmo_buffer.set_aux_vmo(sysmem::MakeTracking(allocator, std::move(clone_vmo)));
+    vmo_buffer.set_aux_vmo(allocator, std::move(clone_vmo));
   }
   return fit::ok(std::move(vmo_buffer));
 }
@@ -971,8 +950,8 @@ fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> V2CloneB
   auto buffer_collection_info =
       allocator.make_table<llcpp::fuchsia::sysmem2::BufferCollectionInfo>();
   if (src.has_settings()) {
-    buffer_collection_info.set_settings(
-        sysmem::MakeTracking(allocator, V2CloneSingleBufferSettings(allocator, src.settings())));
+    buffer_collection_info.set_settings(allocator,
+                                        V2CloneSingleBufferSettings(allocator, src.settings()));
   }
   if (src.has_buffers()) {
     buffer_collection_info.set_buffers(
@@ -994,16 +973,13 @@ llcpp::fuchsia::sysmem2::CoherencyDomainSupport V2CloneCoherencyDomainSuppoort(
   auto coherency_domain_support =
       allocator.make_table<llcpp::fuchsia::sysmem2::CoherencyDomainSupport>();
   if (src.has_cpu_supported()) {
-    coherency_domain_support.set_cpu_supported(
-        sysmem::MakeTracking(allocator, src.cpu_supported()));
+    coherency_domain_support.set_cpu_supported(allocator, src.cpu_supported());
   }
   if (src.has_ram_supported()) {
-    coherency_domain_support.set_ram_supported(
-        sysmem::MakeTracking(allocator, src.ram_supported()));
+    coherency_domain_support.set_ram_supported(allocator, src.ram_supported());
   }
   if (src.has_inaccessible_supported()) {
-    coherency_domain_support.set_inaccessible_supported(
-        sysmem::MakeTracking(allocator, src.inaccessible_supported()));
+    coherency_domain_support.set_inaccessible_supported(allocator, src.inaccessible_supported());
   }
   return coherency_domain_support;
 }
@@ -1012,11 +988,11 @@ llcpp::fuchsia::sysmem2::HeapProperties V2CloneHeapProperties(
     fidl::Allocator& allocator, const llcpp::fuchsia::sysmem2::HeapProperties& src) {
   auto heap_properties = allocator.make_table<llcpp::fuchsia::sysmem2::HeapProperties>();
   if (src.has_coherency_domain_support()) {
-    heap_properties.set_coherency_domain_support(sysmem::MakeTracking(
-        allocator, V2CloneCoherencyDomainSuppoort(allocator, src.coherency_domain_support())));
+    heap_properties.set_coherency_domain_support(
+        allocator, V2CloneCoherencyDomainSuppoort(allocator, src.coherency_domain_support()));
   }
   if (src.has_need_clear()) {
-    heap_properties.set_need_clear(sysmem::MakeTracking(allocator, src.need_clear()));
+    heap_properties.set_need_clear(allocator, src.need_clear());
   }
   return heap_properties;
 }

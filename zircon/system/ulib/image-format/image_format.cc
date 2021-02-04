@@ -6,7 +6,6 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
-#include <lib/sysmem-make-tracking/make_tracking.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/assert.h>
 
@@ -1106,8 +1105,7 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
 fit::result<llcpp::fuchsia::sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v2(
     fidl::Allocator& allocator, zx_pixel_format_t zx_pixel_format) {
   PixelFormat v2b = allocator.make_table<PixelFormat>();
-  v2b.set_format_modifier_value(
-      sysmem::MakeTracking(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR));
+  v2b.set_format_modifier_value(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR);
   PixelFormatType out_type;
   switch (zx_pixel_format) {
     case ZX_PIXEL_FORMAT_RGB_565:
@@ -1146,7 +1144,7 @@ fit::result<llcpp::fuchsia::sysmem2::PixelFormat> ImageFormatConvertZxToSysmem_v
     default:
       return fit::error();
   }
-  v2b.set_type(sysmem::MakeTracking(allocator, out_type));
+  v2b.set_type(allocator, out_type);
   return fit::ok(std::move(v2b));
 }
 

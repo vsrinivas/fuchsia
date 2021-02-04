@@ -64,7 +64,6 @@ fuzzer("sysmem_fuzzer") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
-    "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/trace:trace-driver",
   ]
@@ -119,7 +118,6 @@ fuzzer("sysmem_fuzzer_multi") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
-    "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/trace:trace-driver",
   ]

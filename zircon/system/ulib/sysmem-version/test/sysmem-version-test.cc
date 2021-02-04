@@ -5,7 +5,6 @@
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl/llcpp/heap_allocator.h>
 #include <lib/fidl/llcpp/message.h>
-#include <lib/sysmem-make-tracking/make_tracking.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
 #include <iterator>
