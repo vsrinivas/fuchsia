@@ -78,7 +78,7 @@ impl Config {
     // vid(vendor id):pid(product id):did(device id) and are defined in each board file
     //
     // Ethernet Jack for VIM2
-    // "/dev/sys/platform/04:02:7/aml-ethernet/Designware MAC/ethernet"
+    // "/dev/sys/platform/04:02:7/aml-ethernet/Designware-MAC/ethernet"
     // Though it is not a sdio device, it has the vid:pid:did info following "/platform/",
     // it's handled the same way as a sdio device.
     fn generate_name_from_mac(&self, octets: [u8; 6], wlan: bool) -> Result<String, anyhow::Error> {
@@ -317,7 +317,7 @@ mod tests {
             },
             TestCase {
                 topological_path: String::from(
-                    "@/dev/sys/platform/04:02:7/aml-ethernet/Designware MAC/ethernet",
+                    "@/dev/sys/platform/04:02:7/aml-ethernet/Designware-MAC/ethernet",
                 ),
                 mac: [0x07, 0x07, 0x07, 0x07, 0x07, 0x07],
                 wlan: false,

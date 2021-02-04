@@ -7,6 +7,7 @@ import("//boards/arm64.gni")
 board_name = "vim3"
 
 _common_bootfs_deps = [
+  "//boards/kernel_cmdline:vim3",
   "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
   "//src/connectivity/ethernet/drivers/dwmac",
   "//src/connectivity/ethernet/drivers/ethernet",

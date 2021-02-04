@@ -92,7 +92,7 @@ int DWMacDevice::WorkerThread() {
   int ret = thrd_create_with_name(&thread_, thunk, this, "mac-thread");
   ZX_DEBUG_ASSERT(ret == thrd_success);
 
-  zx_status_t status = DdkAdd("Designware MAC");
+  zx_status_t status = DdkAdd("Designware-MAC");
   if (status != ZX_OK) {
     zxlogf(ERROR, "dwmac: Could not create eth device: %d", status);
     return status;
