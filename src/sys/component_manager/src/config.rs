@@ -178,7 +178,7 @@ impl RuntimeConfig {
             return Err(format_err!("Type unsupported for namespace capability: {:?}", c));
         }
         cm_fidl_validator::validate_capabilities(&capabilities)?;
-        Ok(Some(capabilities).fidl_into_native())
+        Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
     }
 }
 

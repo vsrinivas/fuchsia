@@ -14,7 +14,6 @@ use {
         namespace::IncomingNamespace,
         runner::Runner,
     },
-    cm_rust::data,
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
@@ -191,7 +190,7 @@ async fn make_execution_runtime(
     )?;
     let start_info = fcrunner::ComponentStartInfo {
         resolved_url: Some(url),
-        program: decl.program.as_ref().map(|p| data::clone_dictionary(&p.info)),
+        program: decl.program.as_ref().map(|p| p.info.clone()),
         ns: Some(ns),
         outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
         runtime_dir: Some(ServerEnd::new(runtime_dir_server)),

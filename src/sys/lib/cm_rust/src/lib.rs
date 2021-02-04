@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    cm_fidl_validator, cm_types, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_sys2 as fsys,
+    cm_fidl_validator,
+    cm_rust_derive::{
+        CapabilityDeclCommon, ExposeDeclCommon, FidlDecl, OfferDeclCommon, UseDeclCommon,
+    },
+    cm_types, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     from_enum::FromEnum,
     lazy_static::lazy_static,
     std::collections::HashMap,
-    std::convert::{From, TryFrom, TryInto},
+    std::convert::{From, TryFrom},
     std::fmt,
     std::path::PathBuf,
     std::str::FromStr,
@@ -32,23 +35,6 @@ pub trait NativeIntoFidl<T> {
     fn native_into_fidl(self) -> T;
 }
 
-/// Generates `FidlIntoNative` and `NativeIntoFidl` implementations for a basic type from
-/// `Option<type>` that respectively unwraps the Option and wraps the internal value in a `Some()`.
-macro_rules! fidl_translations_opt_type {
-    ($into_type:ty) => {
-        impl FidlIntoNative<$into_type> for Option<$into_type> {
-            fn fidl_into_native(self) -> $into_type {
-                self.unwrap()
-            }
-        }
-        impl NativeIntoFidl<Option<$into_type>> for $into_type {
-            fn native_into_fidl(self) -> Option<$into_type> {
-                Some(self)
-            }
-        }
-    };
-}
-
 /// Generates `FidlIntoNative` and `NativeIntoFidl` implementations that leaves the input unchanged.
 macro_rules! fidl_translations_identical {
     ($into_type:ty) => {
@@ -65,113 +51,7 @@ macro_rules! fidl_translations_identical {
     };
 }
 
-/// Generates a struct with a `FidlIntoNative` implementation that calls `fidl_into_native()` on
-/// each field. The `from_type` must be a FIDL table, not a FIDL struct.
-/// - `into_type` is the name of the struct and the into type for the conversion.
-/// - `into_ident` must be identical to `into_type`.
-/// - `from_type` is the from type for the conversion.
-/// - `from_path` must be identical to `from_type`.
-/// - `field: type` form a list of fields and their types for the generated struct.
-macro_rules! fidl_into_struct {
-    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path,
-     { $( $field:ident: $type:ty, )+ } ) => {
-        #[derive(Debug, Clone, PartialEq, Eq)]
-        pub struct $into_ident {
-            $(
-                pub $field: $type,
-            )+
-        }
-
-        impl FidlIntoNative<$into_type> for $from_type {
-            fn fidl_into_native(self) -> $into_type {
-                $into_ident { $( $field: self.$field.fidl_into_native(), )+ }
-            }
-        }
-
-        impl NativeIntoFidl<$from_type> for $into_type {
-            fn native_into_fidl(self) -> $from_type {
-                use $from_path as from_ident;
-                from_ident {
-                    $( $field: self.$field.native_into_fidl(), )+
-                    ..from_ident::EMPTY
-                }
-            }
-        }
-    }
-}
-
-/// Generates an enum with a `FidlIntoNative` implementation that calls `fidl_into_native()` on each
-/// field.
-/// - `into_type` is the name of the enum and the into type for the conversion.
-/// - `into_ident` must be identical to `into_type`.
-/// - `from_type` is the from type for the conversion.
-/// - `from_path` must be identical to `from_type`.
-/// - `from_unknown` is the from unknown macro, i.e. `from_path` with "Unknown" appended
-/// - `variant(type)` form a list of variants and their types for the generated enum.
-macro_rules! fidl_into_enum {
-    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path, $from_unknown:path,
-     { $( $variant:ident($type:ty), )+ } ) => {
-        #[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
-        pub enum $into_ident {
-            $(
-                $variant($type),
-            )+
-        }
-
-        impl FidlIntoNative<$into_type> for $from_type {
-            fn fidl_into_native(self) -> $into_type {
-                use $from_path as from_ident;
-                match self {
-                    $(
-                    from_ident::$variant(e) => $into_ident::$variant(e.fidl_into_native()),
-                    )+
-                    $from_unknown!() => { panic!("invalid variant") }
-                }
-            }
-        }
-
-        impl NativeIntoFidl<$from_type> for $into_type {
-            fn native_into_fidl(self) -> $from_type {
-                use $from_path as from_ident;
-                match self {
-                    $(
-                        $into_ident::$variant(e) => from_ident::$variant(e.native_into_fidl()),
-                    )+
-                }
-            }
-        }
-    }
-}
-
-/// Generates `FidlIntoNative` and `NativeIntoFidl` implementations between `Vec` and
-/// `Option<Vec>`.
-/// - `into_type` is the name of the struct and the into type for the conversion.
-/// - `from_type` is the from type for the conversion.
-macro_rules! fidl_into_vec {
-    ($into_type:ty, $from_type:ty) => {
-        impl FidlIntoNative<Vec<$into_type>> for Option<Vec<$from_type>> {
-            fn fidl_into_native(self) -> Vec<$into_type> {
-                if let Some(from) = self {
-                    from.into_iter().map(|e: $from_type| e.fidl_into_native()).collect()
-                } else {
-                    vec![]
-                }
-            }
-        }
-
-        impl NativeIntoFidl<Option<Vec<$from_type>>> for Vec<$into_type> {
-            fn native_into_fidl(self) -> Option<Vec<$from_type>> {
-                if self.is_empty() {
-                    None
-                } else {
-                    Some(self.into_iter().map(|e: $into_type| e.native_into_fidl()).collect())
-                }
-            }
-        }
-    };
-}
-
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ComponentDecl {
     pub program: Option<ProgramDecl>,
     pub uses: Vec<UseDecl>,
@@ -194,11 +74,14 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             for expose in e.into_iter() {
                 match expose {
                     fsys::ExposeDecl::Service(s) => services
-                        .entry((s.target.fidl_into_native(), s.target_name.fidl_into_native()))
+                        .entry((
+                            s.target.unwrap().fidl_into_native(),
+                            s.target_name.unwrap().fidl_into_native(),
+                        ))
                         .or_default()
                         .push(ServiceSource::<ExposeSource> {
-                            source: s.source.fidl_into_native(),
-                            source_name: s.source_name.fidl_into_native(),
+                            source: s.source.unwrap().fidl_into_native(),
+                            source_name: s.source_name.unwrap().fidl_into_native(),
                         }),
                     fsys::ExposeDecl::Protocol(ls) => {
                         exposes.push(ExposeDecl::Protocol(ls.fidl_into_native()))
@@ -229,11 +112,14 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             for offer in o.into_iter() {
                 match offer {
                     fsys::OfferDecl::Service(s) => services
-                        .entry((s.target.fidl_into_native(), s.target_name.fidl_into_native()))
+                        .entry((
+                            s.target.unwrap().fidl_into_native(),
+                            s.target_name.unwrap().fidl_into_native(),
+                        ))
                         .or_default()
                         .push(ServiceSource::<OfferSource> {
-                            source: s.source.fidl_into_native(),
-                            source_name: s.source_name.fidl_into_native(),
+                            source: s.source.unwrap().fidl_into_native(),
+                            source_name: s.source_name.unwrap().fidl_into_native(),
                         }),
                     fsys::OfferDecl::Protocol(ls) => {
                         offers.push(OfferDecl::Protocol(ls.fidl_into_native()))
@@ -261,15 +147,45 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             }
         }
         ComponentDecl {
-            program: self.program.fidl_into_native(),
-            uses: self.uses.fidl_into_native(),
+            program: self.program.map(FidlIntoNative::fidl_into_native),
+            uses: self
+                .uses
+                .into_iter()
+                .map(IntoIterator::into_iter)
+                .flatten()
+                .map(FidlIntoNative::fidl_into_native)
+                .collect(),
             exposes,
             offers,
-            capabilities: self.capabilities.fidl_into_native(),
-            children: self.children.fidl_into_native(),
-            collections: self.collections.fidl_into_native(),
-            facets: self.facets.fidl_into_native(),
-            environments: self.environments.fidl_into_native(),
+            capabilities: self
+                .capabilities
+                .into_iter()
+                .map(IntoIterator::into_iter)
+                .flatten()
+                .map(FidlIntoNative::fidl_into_native)
+                .collect(),
+            children: self
+                .children
+                .into_iter()
+                .map(IntoIterator::into_iter)
+                .flatten()
+                .map(FidlIntoNative::fidl_into_native)
+                .collect(),
+            collections: self
+                .collections
+                .into_iter()
+                .map(IntoIterator::into_iter)
+                .flatten()
+                .map(FidlIntoNative::fidl_into_native)
+                .collect(),
+            facets: self.facets.map(FidlIntoNative::fidl_into_native),
+            environments: self
+                .environments
+                .into_iter()
+                .map(IntoIterator::into_iter)
+                .flatten()
+                .map(FidlIntoNative::fidl_into_native)
+                .collect(),
         }
     }
 }
@@ -284,10 +200,10 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                 ExposeDecl::Service(s) => {
                     for es in s.sources.into_iter() {
                         exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                            source: es.source.native_into_fidl(),
-                            source_name: es.source_name.native_into_fidl(),
-                            target: s.target.clone().native_into_fidl(),
-                            target_name: s.target_name.clone().native_into_fidl(),
+                            source: Some(es.source.native_into_fidl()),
+                            source_name: Some(es.source_name.native_into_fidl()),
+                            target: Some(s.target.clone().native_into_fidl()),
+                            target_name: Some(s.target_name.clone().native_into_fidl()),
                             ..fsys::ExposeServiceDecl::EMPTY
                         }))
                     }
@@ -312,10 +228,10 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                 OfferDecl::Service(s) => {
                     for os in s.sources.into_iter() {
                         offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                            source: os.source.native_into_fidl(),
-                            source_name: os.source_name.native_into_fidl(),
-                            target: s.target.clone().native_into_fidl(),
-                            target_name: s.target_name.clone().native_into_fidl(),
+                            source: Some(os.source.native_into_fidl()),
+                            source_name: Some(os.source_name.native_into_fidl()),
+                            target: Some(s.target.clone().native_into_fidl()),
+                            target_name: Some(s.target_name.clone().native_into_fidl()),
                             ..fsys::OfferServiceDecl::EMPTY
                         }))
                     }
@@ -337,33 +253,25 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             }
         }
         fsys::ComponentDecl {
-            program: self.program.native_into_fidl(),
-            uses: self.uses.native_into_fidl(),
+            program: self.program.map(NativeIntoFidl::native_into_fidl),
+            uses: native_into_fidl_vec(self.uses),
             exposes: if exposes.is_empty() { None } else { Some(exposes) },
             offers: if offers.is_empty() { None } else { Some(offers) },
-            capabilities: self.capabilities.native_into_fidl(),
-            children: self.children.native_into_fidl(),
-            collections: self.collections.native_into_fidl(),
-            facets: self.facets.native_into_fidl(),
-            environments: self.environments.native_into_fidl(),
+            capabilities: native_into_fidl_vec(self.capabilities),
+            children: native_into_fidl_vec(self.children),
+            collections: native_into_fidl_vec(self.collections),
+            facets: self.facets.map(NativeIntoFidl::native_into_fidl),
+            environments: native_into_fidl_vec(self.environments),
             ..fsys::ComponentDecl::EMPTY
         }
     }
 }
 
-impl Clone for ComponentDecl {
-    fn clone(&self) -> Self {
-        ComponentDecl {
-            program: self.program.clone(),
-            uses: self.uses.clone(),
-            exposes: self.exposes.clone(),
-            offers: self.offers.clone(),
-            capabilities: self.capabilities.clone(),
-            children: self.children.clone(),
-            collections: self.collections.clone(),
-            facets: data::clone_option_object(&self.facets),
-            environments: self.environments.clone(),
-        }
+fn native_into_fidl_vec<N: NativeIntoFidl<F>, F>(vec: Vec<N>) -> Option<Vec<F>> {
+    if vec.is_empty() {
+        None
+    } else {
+        Some(vec.into_iter().map(NativeIntoFidl::native_into_fidl).collect())
     }
 }
 
@@ -460,6 +368,207 @@ impl ComponentDecl {
     }
 }
 
+#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fsys::UseDecl")]
+pub enum UseDecl {
+    Service(UseServiceDecl),
+    Protocol(UseProtocolDecl),
+    Directory(UseDirectoryDecl),
+    Storage(UseStorageDecl),
+    Runner(UseRunnerDecl),
+    Event(UseEventDecl),
+    EventStream(UseEventStreamDecl),
+}
+
+#[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::UseServiceDecl")]
+pub struct UseServiceDecl {
+    pub source: UseSource,
+    pub source_name: CapabilityName,
+    pub target_path: CapabilityPath,
+}
+
+#[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::UseProtocolDecl")]
+pub struct UseProtocolDecl {
+    pub source: UseSource,
+    pub source_name: CapabilityName,
+    pub target_path: CapabilityPath,
+}
+
+#[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::UseDirectoryDecl")]
+pub struct UseDirectoryDecl {
+    pub source: UseSource,
+    pub source_name: CapabilityName,
+    pub target_path: CapabilityPath,
+    pub rights: fio2::Operations,
+    pub subdir: Option<PathBuf>,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::UseStorageDecl")]
+pub struct UseStorageDecl {
+    pub source_name: CapabilityName,
+    pub target_path: CapabilityPath,
+}
+
+impl SourceName for UseStorageDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl UseDeclCommon for UseStorageDecl {
+    fn source(&self) -> &UseSource {
+        &UseSource::Parent
+    }
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::UseRunnerDecl")]
+pub struct UseRunnerDecl {
+    pub source_name: CapabilityName,
+}
+
+impl SourceName for UseRunnerDecl {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl UseDeclCommon for UseRunnerDecl {
+    fn source(&self) -> &UseSource {
+        &UseSource::Parent
+    }
+}
+
+#[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::UseEventDecl")]
+pub struct UseEventDecl {
+    pub source: UseSource,
+    pub source_name: CapabilityName,
+    pub target_name: CapabilityName,
+    pub filter: Option<HashMap<String, DictionaryValue>>,
+    pub mode: EventMode,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::EventSubscription")]
+pub struct EventSubscription {
+    pub event_name: String,
+    pub mode: EventMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum EventMode {
+    Async,
+    Sync,
+}
+
+impl NativeIntoFidl<fsys::EventMode> for EventMode {
+    fn native_into_fidl(self) -> fsys::EventMode {
+        match self {
+            EventMode::Sync => fsys::EventMode::Sync,
+            EventMode::Async => fsys::EventMode::Async,
+        }
+    }
+}
+
+impl FidlIntoNative<EventMode> for fsys::EventMode {
+    fn fidl_into_native(self) -> EventMode {
+        match self {
+            fsys::EventMode::Sync => EventMode::Sync,
+            fsys::EventMode::Async => EventMode::Async,
+        }
+    }
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::UseEventStreamDecl")]
+pub struct UseEventStreamDecl {
+    pub target_path: CapabilityPath,
+    pub events: Vec<EventSubscription>,
+}
+
+#[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
+pub enum OfferDecl {
+    Service(OfferServiceDecl),
+    Protocol(OfferProtocolDecl),
+    Directory(OfferDirectoryDecl),
+    Storage(OfferStorageDecl),
+    Runner(OfferRunnerDecl),
+    Resolver(OfferResolverDecl),
+    Event(OfferEventDecl),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfferServiceDecl {
+    pub sources: Vec<ServiceSource<OfferSource>>,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
+}
+
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::OfferProtocolDecl")]
+pub struct OfferProtocolDecl {
+    pub source: OfferSource,
+    pub source_name: CapabilityName,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
+    pub dependency_type: DependencyType,
+}
+
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::OfferDirectoryDecl")]
+pub struct OfferDirectoryDecl {
+    pub source: OfferSource,
+    pub source_name: CapabilityName,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
+    pub dependency_type: DependencyType,
+    pub rights: Option<fio2::Operations>,
+    pub subdir: Option<PathBuf>,
+}
+
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::OfferStorageDecl")]
+pub struct OfferStorageDecl {
+    pub source: OfferSource,
+    pub source_name: CapabilityName,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
+}
+
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::OfferRunnerDecl")]
+pub struct OfferRunnerDecl {
+    pub source: OfferSource,
+    pub source_name: CapabilityName,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
+}
+
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::OfferResolverDecl")]
+pub struct OfferResolverDecl {
+    pub source: OfferSource,
+    pub source_name: CapabilityName,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
+}
+
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::OfferEventDecl")]
+pub struct OfferEventDecl {
+    pub source: OfferSource,
+    pub source_name: CapabilityName,
+    pub target: OfferTarget,
+    pub target_name: CapabilityName,
+    pub filter: Option<HashMap<String, DictionaryValue>>,
+    pub mode: EventMode,
+}
+
 #[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
 pub enum ExposeDecl {
     Service(ExposeServiceDecl),
@@ -476,370 +585,230 @@ pub struct ExposeServiceDecl {
     pub target_name: CapabilityName,
 }
 
-#[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
-pub enum OfferDecl {
-    Service(OfferServiceDecl),
-    Protocol(OfferProtocolDecl),
-    Directory(OfferDirectoryDecl),
-    Storage(OfferStorageDecl),
-    Runner(OfferRunnerDecl),
-    Resolver(OfferResolverDecl),
-    Event(OfferEventDecl),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferSource {
-    Framework,
-    Parent,
-    Child(String),
-    Self_,
-    Capability(CapabilityName),
-}
-
-impl FidlIntoNative<OfferSource> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferSource {
-        match self.unwrap() {
-            fsys::Ref::Parent(_) => OfferSource::Parent,
-            fsys::Ref::Self_(_) => OfferSource::Self_,
-            fsys::Ref::Child(c) => OfferSource::Child(c.name),
-            fsys::Ref::Framework(_) => OfferSource::Framework,
-            fsys::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
-            _ => panic!("invalid OfferSource variant"),
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
-            OfferSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            OfferSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            OfferSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
-            OfferSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
-            OfferSource::Capability(name) => {
-                fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
-            }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OfferServiceDecl {
-    pub sources: Vec<ServiceSource<OfferSource>>,
-    pub target: OfferTarget,
+#[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ExposeProtocolDecl")]
+pub struct ExposeProtocolDecl {
+    pub source: ExposeSource,
+    pub source_name: CapabilityName,
+    pub target: ExposeTarget,
     pub target_name: CapabilityName,
 }
 
-fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl, fsys::UseDeclUnknown,
-{
-    Service(UseServiceDecl),
-    Protocol(UseProtocolDecl),
-    Directory(UseDirectoryDecl),
-    Storage(UseStorageDecl),
-    Runner(UseRunnerDecl),
-    Event(UseEventDecl),
-    EventStream(UseEventStreamDecl),
-});
-fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
-{
-    source: UseSource,
-    source_name: CapabilityName,
-    target_path: CapabilityPath,
-});
-fidl_into_struct!(UseProtocolDecl, UseProtocolDecl, fsys::UseProtocolDecl, fsys::UseProtocolDecl,
-{
-    source: UseSource,
-    source_name: CapabilityName,
-    target_path: CapabilityPath,
-});
-fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
-fsys::UseDirectoryDecl,
-{
-    source: UseSource,
-    source_name: CapabilityName,
-    target_path: CapabilityPath,
-    rights: fio2::Operations,
-    subdir: Option<PathBuf>,
-});
-fidl_into_struct!(UseStorageDecl, UseStorageDecl, fsys::UseStorageDecl, fsys::UseStorageDecl,
-{
-    source_name: CapabilityName,
-    target_path: CapabilityPath,
-});
-fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
-fsys::UseRunnerDecl,
-{
-    source_name: CapabilityName,
-});
-fidl_into_struct!(EventSubscription, EventSubscription, fsys::EventSubscription,
-fsys::EventSubscription, {
-    event_name: String,
-    mode: EventMode,
-});
-fidl_into_struct!(UseEventDecl, UseEventDecl, fsys::UseEventDecl,
-fsys::UseEventDecl,
-{
-    source: UseSource,
-    source_name: CapabilityName,
-    target_name: CapabilityName,
-    filter: Option<HashMap<String, DictionaryValue>>,
-    mode: EventMode,
-});
-fidl_into_struct!(UseEventStreamDecl, UseEventStreamDecl, fsys::UseEventStreamDecl,
-fsys::UseEventStreamDecl,
-{
-    target_path: CapabilityPath,
-    events: Vec<EventSubscription>,
-});
+#[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ExposeDirectoryDecl")]
+pub struct ExposeDirectoryDecl {
+    pub source: ExposeSource,
+    pub source_name: CapabilityName,
+    pub target: ExposeTarget,
+    pub target_name: CapabilityName,
+    pub rights: Option<fio2::Operations>,
+    pub subdir: Option<PathBuf>,
+}
 
-fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDecl,
-fsys::ExposeProtocolDecl,
-{
-    source: ExposeSource,
-    source_name: CapabilityName,
-    target: ExposeTarget,
-    target_name: CapabilityName,
-});
-fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
-fsys::ExposeDirectoryDecl,
-{
-    source: ExposeSource,
-    source_name: CapabilityName,
-    target: ExposeTarget,
-    target_name: CapabilityName,
-    rights: Option<fio2::Operations>,
-    subdir: Option<PathBuf>,
-});
-fidl_into_struct!(ExposeResolverDecl, ExposeResolverDecl, fsys::ExposeResolverDecl,
-fsys::ExposeResolverDecl,
-{
-    source: ExposeSource,
-    source_name: CapabilityName,
-    target: ExposeTarget,
-    target_name: CapabilityName,
-});
-fidl_into_struct!(ExposeRunnerDecl, ExposeRunnerDecl, fsys::ExposeRunnerDecl,
-fsys::ExposeRunnerDecl,
-{
-    source: ExposeSource,
-    source_name: CapabilityName,
-    target: ExposeTarget,
-    target_name: CapabilityName,
-});
-fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
-fsys::OfferProtocolDecl,
-{
-    source: OfferSource,
-    source_name: CapabilityName,
-    target: OfferTarget,
-    target_name: CapabilityName,
-    dependency_type: DependencyType,
-});
-fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
-fsys::OfferDirectoryDecl,
-{
-    source: OfferSource,
-    source_name: CapabilityName,
-    target: OfferTarget,
-    target_name: CapabilityName,
-    rights: Option<fio2::Operations>,
-    subdir: Option<PathBuf>,
-    dependency_type: DependencyType,
-});
-fidl_into_struct!(OfferStorageDecl, OfferStorageDecl, fsys::OfferStorageDecl,
-fsys::OfferStorageDecl,
-{
-    source_name: CapabilityName,
-    source: OfferSource,
-    target: OfferTarget,
-    target_name: CapabilityName,
-});
-fidl_into_struct!(OfferResolverDecl, OfferResolverDecl, fsys::OfferResolverDecl,
-fsys::OfferResolverDecl,
-{
-    source: OfferSource,
-    source_name: CapabilityName,
-    target: OfferTarget,
-    target_name: CapabilityName,
-});
-fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
-fsys::OfferRunnerDecl,
-{
-    source: OfferSource,
-    source_name: CapabilityName,
-    target: OfferTarget,
-    target_name: CapabilityName,
-});
-fidl_into_struct!(OfferEventDecl, OfferEventDecl, fsys::OfferEventDecl,
-fsys::OfferEventDecl,
-{
-    source: OfferSource,
-    source_name: CapabilityName,
-    target: OfferTarget,
-    target_name: CapabilityName,
-    filter: Option<HashMap<String, DictionaryValue>>,
-    mode: EventMode,
-});
-fidl_into_enum!(CapabilityDecl, CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDeclUnknown,
-{
+#[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ExposeRunnerDecl")]
+pub struct ExposeRunnerDecl {
+    pub source: ExposeSource,
+    pub source_name: CapabilityName,
+    pub target: ExposeTarget,
+    pub target_name: CapabilityName,
+}
+
+#[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ExposeResolverDecl")]
+pub struct ExposeResolverDecl {
+    pub source: ExposeSource,
+    pub source_name: CapabilityName,
+    pub target: ExposeTarget,
+    pub target_name: CapabilityName,
+}
+
+#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fsys::CapabilityDecl")]
+pub enum CapabilityDecl {
     Service(ServiceDecl),
     Protocol(ProtocolDecl),
     Directory(DirectoryDecl),
     Storage(StorageDecl),
-    Runner(RunnerDecl),    Resolver(ResolverDecl),
-});
-fidl_into_struct!(ServiceDecl, ServiceDecl, fsys::ServiceDecl, fsys::ServiceDecl,
-{
-    name: CapabilityName,
-    source_path: CapabilityPath,
-});
-fidl_into_struct!(ProtocolDecl, ProtocolDecl, fsys::ProtocolDecl, fsys::ProtocolDecl,
-{
-    name: CapabilityName,
-    source_path: CapabilityPath,
-});
-fidl_into_struct!(DirectoryDecl, DirectoryDecl, fsys::DirectoryDecl, fsys::DirectoryDecl,
-{
-    name: CapabilityName,
-    source_path: CapabilityPath,
-    rights: fio2::Operations,
-});
-fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
-fsys::StorageDecl,
-{
-    name: CapabilityName,
-    source: StorageDirectorySource,
-    backing_dir: CapabilityName,
-    subdir: Option<PathBuf>,
-});
-fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
-{
-    name: CapabilityName,
-    source_path: CapabilityPath,
-});
-fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
-{
-    name: CapabilityName,
-    source_path: CapabilityPath,
-});
-fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
-{
-    name: String,
-    url: String,
-    startup: fsys::StartupMode,
-    environment: Option<String>,
-});
+    Runner(RunnerDecl),
+    Resolver(ResolverDecl),
+}
 
-fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::CollectionDecl,
-{
-    name: String,
-    durability: fsys::Durability,
-    environment: Option<String>,
-});
-fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys::EnvironmentDecl,
-{
-    name: String,
-    extends: fsys::EnvironmentExtends,
-    runners: Vec<RunnerRegistration>,
-    resolvers: Vec<ResolverRegistration>,
-    debug_capabilities: Vec<DebugRegistration>,
-    stop_timeout_ms: Option<u32>,
-});
-fidl_into_struct!(RunnerRegistration, RunnerRegistration, fsys::RunnerRegistration,
-fsys::RunnerRegistration,
-{
-    source_name: CapabilityName,
-    source: RegistrationSource,
-    target_name: CapabilityName,
-});
-fidl_into_struct!(ResolverRegistration, ResolverRegistration, fsys::ResolverRegistration,
-fsys::ResolverRegistration,
-{
-    resolver: CapabilityName,
-    source: RegistrationSource,
-    scheme: String,
-});
-fidl_into_enum!(DebugRegistration, DebugRegistration, fsys::DebugRegistration, fsys::DebugRegistration,
-fsys::DebugRegistrationUnknown,
-{
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ServiceDecl")]
+pub struct ServiceDecl {
+    pub name: CapabilityName,
+    pub source_path: CapabilityPath,
+}
+
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ProtocolDecl")]
+pub struct ProtocolDecl {
+    pub name: CapabilityName,
+    pub source_path: CapabilityPath,
+}
+
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::DirectoryDecl")]
+pub struct DirectoryDecl {
+    pub name: CapabilityName,
+    pub source_path: CapabilityPath,
+    pub rights: fio2::Operations,
+}
+
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::StorageDecl")]
+pub struct StorageDecl {
+    pub name: CapabilityName,
+    pub source: StorageDirectorySource,
+    pub backing_dir: CapabilityName,
+    pub subdir: Option<PathBuf>,
+}
+
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::RunnerDecl")]
+pub struct RunnerDecl {
+    pub name: CapabilityName,
+    pub source_path: CapabilityPath,
+}
+
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ResolverDecl")]
+pub struct ResolverDecl {
+    pub name: CapabilityName,
+    pub source_path: CapabilityPath,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ChildDecl")]
+pub struct ChildDecl {
+    pub name: String,
+    pub url: String,
+    pub startup: fsys::StartupMode,
+    pub environment: Option<String>,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::CollectionDecl")]
+pub struct CollectionDecl {
+    pub name: String,
+    pub durability: fsys::Durability,
+    pub environment: Option<String>,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::EnvironmentDecl")]
+pub struct EnvironmentDecl {
+    pub name: String,
+    pub extends: fsys::EnvironmentExtends,
+    pub runners: Vec<RunnerRegistration>,
+    pub resolvers: Vec<ResolverRegistration>,
+    pub debug_capabilities: Vec<DebugRegistration>,
+    pub stop_timeout_ms: Option<u32>,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::RunnerRegistration")]
+pub struct RunnerRegistration {
+    pub source_name: CapabilityName,
+    pub target_name: CapabilityName,
+    pub source: RegistrationSource,
+}
+
+impl SourceName for RunnerRegistration {
+    fn source_name(&self) -> &CapabilityName {
+        &self.source_name
+    }
+}
+
+impl RegistrationDeclCommon for RunnerRegistration {
+    const TYPE: &'static str = "runner";
+
+    fn source(&self) -> &RegistrationSource {
+        &self.source
+    }
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ResolverRegistration")]
+pub struct ResolverRegistration {
+    pub resolver: CapabilityName,
+    pub source: RegistrationSource,
+    pub scheme: String,
+}
+
+impl SourceName for ResolverRegistration {
+    fn source_name(&self) -> &CapabilityName {
+        &self.resolver
+    }
+}
+
+impl RegistrationDeclCommon for ResolverRegistration {
+    const TYPE: &'static str = "resolver";
+
+    fn source(&self) -> &RegistrationSource {
+        &self.source
+    }
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fsys::DebugRegistration")]
+pub enum DebugRegistration {
     Protocol(DebugProtocolRegistration),
-});
-fidl_into_struct!(DebugProtocolRegistration, DebugProtocolRegistration, fsys::DebugProtocolRegistration,
-fsys::DebugProtocolRegistration,
-{
-    source_name: CapabilityName,
-    source: RegistrationSource,
-    target_name: CapabilityName,
-});
+}
 
-fidl_into_vec!(UseDecl, fsys::UseDecl);
-fidl_into_vec!(ChildDecl, fsys::ChildDecl);
-fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
-fidl_into_vec!(CapabilityDecl, fsys::CapabilityDecl);
-fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
-fidl_into_vec!(RunnerRegistration, fsys::RunnerRegistration);
-fidl_into_vec!(ResolverRegistration, fsys::ResolverRegistration);
-fidl_into_vec!(EventSubscription, fsys::EventSubscription);
-fidl_into_vec!(DebugRegistration, fsys::DebugRegistration);
-fidl_translations_opt_type!(Vec<String>);
-fidl_translations_opt_type!(String);
-fidl_translations_opt_type!(fsys::StartupMode);
-fidl_translations_opt_type!(fsys::Durability);
-fidl_translations_opt_type!(fsys::Object);
-fidl_translations_opt_type!(fdata::Dictionary);
-fidl_translations_opt_type!(fio2::Operations);
-fidl_translations_opt_type!(fsys::EnvironmentExtends);
-fidl_translations_identical!(Option<fio2::Operations>);
-fidl_translations_identical!(Option<fsys::Object>);
-fidl_translations_identical!(Option<fdata::Dictionary>);
-fidl_translations_identical!(Option<String>);
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::DebugProtocolRegistration")]
+pub struct DebugProtocolRegistration {
+    pub source_name: CapabilityName,
+    pub source: RegistrationSource,
+    pub target_name: CapabilityName,
+}
 
-// Custom implementation because `fdata::Dictionary` does not support derive Clone or Eq
-#[derive(Debug, PartialEq)]
+#[derive(FidlDecl, Debug, Clone, PartialEq)]
+#[fidl_decl(fidl_table = "fsys::ProgramDecl")]
 pub struct ProgramDecl {
     pub runner: Option<CapabilityName>,
     pub info: fdata::Dictionary,
 }
 
-impl Clone for ProgramDecl {
-    fn clone(&self) -> Self {
-        Self { runner: self.runner.clone(), info: data::clone_dictionary(&self.info) }
-    }
-}
-
 impl Default for ProgramDecl {
     fn default() -> Self {
-        Self { runner: None, info: fdata::Dictionary { ..fdata::Dictionary::EMPTY } }
+        Self { runner: None, info: fdata::Dictionary::EMPTY.clone() }
     }
 }
 
-impl FidlIntoNative<ProgramDecl> for fsys::ProgramDecl {
-    fn fidl_into_native(self) -> ProgramDecl {
-        ProgramDecl { runner: self.runner.fidl_into_native(), info: self.info.fidl_into_native() }
-    }
+fidl_translations_identical!(u32);
+fidl_translations_identical!(bool);
+fidl_translations_identical!(String);
+fidl_translations_identical!(fsys::StartupMode);
+fidl_translations_identical!(fsys::Durability);
+fidl_translations_identical!(fsys::Object);
+fidl_translations_identical!(fdata::Dictionary);
+fidl_translations_identical!(fio2::Operations);
+fidl_translations_identical!(fsys::EnvironmentExtends);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DependencyType {
+    Strong,
+    WeakForMigration,
 }
 
-impl NativeIntoFidl<fsys::ProgramDecl> for ProgramDecl {
-    fn native_into_fidl(self) -> fsys::ProgramDecl {
-        fsys::ProgramDecl {
-            runner: self.runner.native_into_fidl(),
-            info: self.info.native_into_fidl(),
-            ..fsys::ProgramDecl::EMPTY
+impl FidlIntoNative<DependencyType> for fsys::DependencyType {
+    fn fidl_into_native(self) -> DependencyType {
+        match self {
+            fsys::DependencyType::Strong => DependencyType::Strong,
+            fsys::DependencyType::WeakForMigration => DependencyType::WeakForMigration,
         }
     }
 }
 
-impl FidlIntoNative<Option<ProgramDecl>> for Option<fsys::ProgramDecl> {
-    fn fidl_into_native(self) -> Option<ProgramDecl> {
-        self.map(|d| d.fidl_into_native())
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::ProgramDecl>> for Option<ProgramDecl> {
-    fn native_into_fidl(self) -> Option<fsys::ProgramDecl> {
-        self.map(|d| d.native_into_fidl())
+impl NativeIntoFidl<fsys::DependencyType> for DependencyType {
+    fn native_into_fidl(self) -> fsys::DependencyType {
+        match self {
+            DependencyType::Strong => fsys::DependencyType::Strong,
+            DependencyType::WeakForMigration => fsys::DependencyType::WeakForMigration,
+        }
     }
 }
 
@@ -993,312 +962,6 @@ pub trait CapabilityDeclCommon {
     fn name(&self) -> &CapabilityName;
 }
 
-impl UseDeclCommon for UseProtocolDecl {
-    fn source(&self) -> &UseSource {
-        &self.source
-    }
-}
-
-impl SourceName for UseProtocolDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl OfferDeclCommon for OfferProtocolDecl {
-    fn source(&self) -> &OfferSource {
-        &self.source
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-
-    fn target(&self) -> &OfferTarget {
-        &self.target
-    }
-}
-
-impl SourceName for OfferProtocolDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl ExposeDeclCommon for ExposeProtocolDecl {
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-
-    fn target(&self) -> &ExposeTarget {
-        &self.target
-    }
-
-    fn source(&self) -> &ExposeSource {
-        &self.source
-    }
-}
-
-impl SourceName for ExposeProtocolDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl CapabilityDeclCommon for ProtocolDecl {
-    fn name(&self) -> &CapabilityName {
-        &self.name
-    }
-}
-
-impl UseDeclCommon for UseDirectoryDecl {
-    fn source(&self) -> &UseSource {
-        &self.source
-    }
-}
-
-impl SourceName for UseDirectoryDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl OfferDeclCommon for OfferDirectoryDecl {
-    fn source(&self) -> &OfferSource {
-        &self.source
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-
-    fn target(&self) -> &OfferTarget {
-        &self.target
-    }
-}
-
-impl SourceName for OfferDirectoryDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl ExposeDeclCommon for ExposeDirectoryDecl {
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-
-    fn target(&self) -> &ExposeTarget {
-        &self.target
-    }
-
-    fn source(&self) -> &ExposeSource {
-        &self.source
-    }
-}
-
-impl SourceName for ExposeDirectoryDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl CapabilityDeclCommon for DirectoryDecl {
-    fn name(&self) -> &CapabilityName {
-        &self.name
-    }
-}
-
-impl SourceName for UseStorageDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl UseDeclCommon for UseStorageDecl {
-    fn source(&self) -> &UseSource {
-        &UseSource::Parent
-    }
-}
-
-impl OfferDeclCommon for OfferStorageDecl {
-    fn source(&self) -> &OfferSource {
-        &self.source
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-
-    fn target(&self) -> &OfferTarget {
-        &self.target
-    }
-}
-
-impl SourceName for OfferStorageDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl CapabilityDeclCommon for StorageDecl {
-    fn name(&self) -> &CapabilityName {
-        &self.name
-    }
-}
-
-impl OfferDeclCommon for OfferRunnerDecl {
-    fn source(&self) -> &OfferSource {
-        &self.source
-    }
-
-    fn target(&self) -> &OfferTarget {
-        &self.target
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-}
-
-impl SourceName for OfferRunnerDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl ExposeDeclCommon for ExposeRunnerDecl {
-    fn source(&self) -> &ExposeSource {
-        &self.source
-    }
-
-    fn target(&self) -> &ExposeTarget {
-        &self.target
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-}
-
-impl SourceName for ExposeRunnerDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl CapabilityDeclCommon for RunnerDecl {
-    fn name(&self) -> &CapabilityName {
-        &self.name
-    }
-}
-
-impl RegistrationDeclCommon for RunnerRegistration {
-    const TYPE: &'static str = "runner";
-
-    fn source(&self) -> &RegistrationSource {
-        &self.source
-    }
-}
-
-impl SourceName for RunnerRegistration {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl OfferDeclCommon for OfferResolverDecl {
-    fn source(&self) -> &OfferSource {
-        &self.source
-    }
-
-    fn target(&self) -> &OfferTarget {
-        &self.target
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-}
-
-impl SourceName for OfferResolverDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl ExposeDeclCommon for ExposeResolverDecl {
-    fn source(&self) -> &ExposeSource {
-        &self.source
-    }
-
-    fn target(&self) -> &ExposeTarget {
-        &self.target
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-}
-
-impl SourceName for ExposeResolverDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl CapabilityDeclCommon for ResolverDecl {
-    fn name(&self) -> &CapabilityName {
-        &self.name
-    }
-}
-
-impl RegistrationDeclCommon for ResolverRegistration {
-    const TYPE: &'static str = "resolver";
-
-    fn source(&self) -> &RegistrationSource {
-        &self.source
-    }
-}
-
-impl SourceName for ResolverRegistration {
-    fn source_name(&self) -> &CapabilityName {
-        &self.resolver
-    }
-}
-
-impl UseDeclCommon for UseEventDecl {
-    fn source(&self) -> &UseSource {
-        &self.source
-    }
-}
-
-impl SourceName for UseEventDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
-impl OfferDeclCommon for OfferEventDecl {
-    fn source(&self) -> &OfferSource {
-        &self.source
-    }
-
-    fn target(&self) -> &OfferTarget {
-        &self.target
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
-}
-
-impl SourceName for OfferEventDecl {
-    fn source_name(&self) -> &CapabilityName {
-        &self.source_name
-    }
-}
-
 /// A named capability type.
 ///
 /// `CapabilityTypeName` provides a user friendly type encoding for a capability.
@@ -1331,85 +994,57 @@ impl fmt::Display for CapabilityTypeName {
 }
 
 // TODO: Runners and third parties can use this to parse `facets`.
-impl FidlIntoNative<Option<HashMap<String, Value>>> for Option<fsys::Object> {
-    fn fidl_into_native(self) -> Option<HashMap<String, Value>> {
-        self.map(|o| from_fidl_obj(o))
+impl FidlIntoNative<HashMap<String, Value>> for fsys::Object {
+    fn fidl_into_native(self) -> HashMap<String, Value> {
+        from_fidl_obj(self)
     }
 }
 
-impl FidlIntoNative<Option<HashMap<String, DictionaryValue>>> for Option<fdata::Dictionary> {
-    fn fidl_into_native(self) -> Option<HashMap<String, DictionaryValue>> {
-        self.map(|d| from_fidl_dict(d))
+impl FidlIntoNative<HashMap<String, DictionaryValue>> for fdata::Dictionary {
+    fn fidl_into_native(self) -> HashMap<String, DictionaryValue> {
+        from_fidl_dict(self)
     }
 }
 
-impl NativeIntoFidl<Option<fdata::Dictionary>> for Option<HashMap<String, DictionaryValue>> {
-    fn native_into_fidl(self) -> Option<fdata::Dictionary> {
-        self.map(|d| to_fidl_dict(d))
+impl NativeIntoFidl<fdata::Dictionary> for HashMap<String, DictionaryValue> {
+    fn native_into_fidl(self) -> fdata::Dictionary {
+        to_fidl_dict(self)
     }
 }
 
-fidl_translations_identical!(Option<u32>);
-
-impl FidlIntoNative<CapabilityPath> for Option<String> {
+impl FidlIntoNative<CapabilityPath> for String {
     fn fidl_into_native(self) -> CapabilityPath {
-        let s: &str = &self.unwrap();
-        s.try_into().expect("invalid capability path")
+        self.as_str().parse().expect("invalid capability path")
     }
 }
 
-impl NativeIntoFidl<Option<String>> for CapabilityPath {
-    fn native_into_fidl(self) -> Option<String> {
-        Some(self.to_string())
+impl NativeIntoFidl<String> for CapabilityPath {
+    fn native_into_fidl(self) -> String {
+        self.to_string()
     }
 }
 
-impl FidlIntoNative<Option<PathBuf>> for Option<String> {
-    fn fidl_into_native(self) -> Option<PathBuf> {
-        self.map(|p| PathBuf::from(p))
+impl FidlIntoNative<PathBuf> for String {
+    fn fidl_into_native(self) -> PathBuf {
+        PathBuf::from(self)
     }
 }
 
-impl NativeIntoFidl<Option<String>> for Option<PathBuf> {
-    fn native_into_fidl(self) -> Option<String> {
-        self.map(|p| p.to_str().expect("invalid utf8").to_string())
+impl NativeIntoFidl<String> for PathBuf {
+    fn native_into_fidl(self) -> String {
+        self.into_os_string().into_string().expect("invalid utf8")
     }
 }
 
-impl FidlIntoNative<Option<CapabilityName>> for Option<String> {
-    fn fidl_into_native(self) -> Option<CapabilityName> {
-        self.map(|s| s.into())
-    }
-}
-
-impl NativeIntoFidl<Option<String>> for Option<CapabilityName> {
-    fn native_into_fidl(self) -> Option<String> {
-        self.map(|s| s.to_string())
-    }
-}
-
-impl FidlIntoNative<CapabilityName> for Option<String> {
+impl FidlIntoNative<CapabilityName> for String {
     fn fidl_into_native(self) -> CapabilityName {
-        let s: &str = &self.unwrap();
-        s.into()
+        self.into()
     }
 }
 
-impl NativeIntoFidl<Option<String>> for CapabilityName {
-    fn native_into_fidl(self) -> Option<String> {
-        Some(self.to_string())
-    }
-}
-
-impl FidlIntoNative<bool> for Option<bool> {
-    fn fidl_into_native(self) -> bool {
-        self.unwrap()
-    }
-}
-
-impl NativeIntoFidl<Option<bool>> for bool {
-    fn native_into_fidl(self) -> Option<bool> {
-        Some(self)
+impl NativeIntoFidl<String> for CapabilityName {
+    fn native_into_fidl(self) -> String {
+        self.to_string()
     }
 }
 
@@ -1503,9 +1138,9 @@ pub enum UseSource {
     Capability(CapabilityName),
 }
 
-impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
+impl FidlIntoNative<UseSource> for fsys::Ref {
     fn fidl_into_native(self) -> UseSource {
-        match self.unwrap() {
+        match self {
             fsys::Ref::Parent(_) => UseSource::Parent,
             fsys::Ref::Framework(_) => UseSource::Framework,
             fsys::Ref::Debug(_) => UseSource::Debug,
@@ -1515,16 +1150,54 @@ impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
     }
 }
 
-impl NativeIntoFidl<Option<fsys::Ref>> for UseSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
+impl NativeIntoFidl<fsys::Ref> for UseSource {
+    fn native_into_fidl(self) -> fsys::Ref {
+        match self {
             UseSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             UseSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             UseSource::Debug => fsys::Ref::Debug(fsys::DebugRef {}),
             UseSource::Capability(name) => {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
             }
-        })
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OfferSource {
+    Framework,
+    Parent,
+    Child(String),
+    Self_,
+    Capability(CapabilityName),
+}
+
+impl FidlIntoNative<OfferSource> for fsys::Ref {
+    fn fidl_into_native(self) -> OfferSource {
+        match self {
+            fsys::Ref::Parent(_) => OfferSource::Parent,
+            fsys::Ref::Self_(_) => OfferSource::Self_,
+            fsys::Ref::Child(c) => OfferSource::Child(c.name),
+            fsys::Ref::Framework(_) => OfferSource::Framework,
+            fsys::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
+            _ => panic!("invalid OfferSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fsys::Ref> for OfferSource {
+    fn native_into_fidl(self) -> fsys::Ref {
+        match self {
+            OfferSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
+            OfferSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            OfferSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+            OfferSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+            OfferSource::Capability(name) => {
+                fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
+            }
+        }
     }
 }
 
@@ -1536,9 +1209,9 @@ pub enum ExposeSource {
     Capability(CapabilityName),
 }
 
-impl FidlIntoNative<ExposeSource> for Option<fsys::Ref> {
+impl FidlIntoNative<ExposeSource> for fsys::Ref {
     fn fidl_into_native(self) -> ExposeSource {
-        match self.unwrap() {
+        match self {
             fsys::Ref::Self_(_) => ExposeSource::Self_,
             fsys::Ref::Child(c) => ExposeSource::Child(c.name),
             fsys::Ref::Framework(_) => ExposeSource::Framework,
@@ -1548,9 +1221,9 @@ impl FidlIntoNative<ExposeSource> for Option<fsys::Ref> {
     }
 }
 
-impl NativeIntoFidl<Option<fsys::Ref>> for ExposeSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
+impl NativeIntoFidl<fsys::Ref> for ExposeSource {
+    fn native_into_fidl(self) -> fsys::Ref {
+        match self {
             ExposeSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             ExposeSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
@@ -1559,7 +1232,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeSource {
             ExposeSource::Capability(name) => {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
             }
-        })
+        }
     }
 }
 
@@ -1569,25 +1242,22 @@ pub enum ExposeTarget {
     Framework,
 }
 
-impl FidlIntoNative<ExposeTarget> for Option<fsys::Ref> {
+impl FidlIntoNative<ExposeTarget> for fsys::Ref {
     fn fidl_into_native(self) -> ExposeTarget {
         match self {
-            Some(dest) => match dest {
-                fsys::Ref::Parent(_) => ExposeTarget::Parent,
-                fsys::Ref::Framework(_) => ExposeTarget::Framework,
-                _ => panic!("invalid ExposeTarget variant"),
-            },
-            None => ExposeTarget::Parent,
+            fsys::Ref::Parent(_) => ExposeTarget::Parent,
+            fsys::Ref::Framework(_) => ExposeTarget::Framework,
+            _ => panic!("invalid ExposeTarget variant"),
         }
     }
 }
 
-impl NativeIntoFidl<Option<fsys::Ref>> for ExposeTarget {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
+impl NativeIntoFidl<fsys::Ref> for ExposeTarget {
+    fn native_into_fidl(self) -> fsys::Ref {
+        match self {
             ExposeTarget::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             ExposeTarget::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
-        })
+        }
     }
 }
 
@@ -1601,39 +1271,15 @@ pub struct ServiceSource<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DependencyType {
-    Strong,
-    WeakForMigration,
-}
-
-impl FidlIntoNative<DependencyType> for Option<fsys::DependencyType> {
-    fn fidl_into_native(self) -> DependencyType {
-        match self.unwrap() {
-            fsys::DependencyType::Strong => DependencyType::Strong,
-            fsys::DependencyType::WeakForMigration => DependencyType::WeakForMigration,
-        }
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::DependencyType>> for DependencyType {
-    fn native_into_fidl(self) -> Option<fsys::DependencyType> {
-        Some(match self {
-            DependencyType::Strong => fsys::DependencyType::Strong,
-            DependencyType::WeakForMigration => fsys::DependencyType::WeakForMigration,
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StorageDirectorySource {
     Parent,
     Self_,
     Child(String),
 }
 
-impl FidlIntoNative<StorageDirectorySource> for Option<fsys::Ref> {
+impl FidlIntoNative<StorageDirectorySource> for fsys::Ref {
     fn fidl_into_native(self) -> StorageDirectorySource {
-        match self.unwrap() {
+        match self {
             fsys::Ref::Parent(_) => StorageDirectorySource::Parent,
             fsys::Ref::Self_(_) => StorageDirectorySource::Self_,
             fsys::Ref::Child(c) => StorageDirectorySource::Child(c.name),
@@ -1642,15 +1288,15 @@ impl FidlIntoNative<StorageDirectorySource> for Option<fsys::Ref> {
     }
 }
 
-impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
+impl NativeIntoFidl<fsys::Ref> for StorageDirectorySource {
+    fn native_into_fidl(self) -> fsys::Ref {
+        match self {
             StorageDirectorySource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             StorageDirectorySource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             StorageDirectorySource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
-        })
+        }
     }
 }
 
@@ -1661,9 +1307,9 @@ pub enum RegistrationSource {
     Child(String),
 }
 
-impl FidlIntoNative<RegistrationSource> for Option<fsys::Ref> {
+impl FidlIntoNative<RegistrationSource> for fsys::Ref {
     fn fidl_into_native(self) -> RegistrationSource {
-        match self.unwrap() {
+        match self {
             fsys::Ref::Parent(_) => RegistrationSource::Parent,
             fsys::Ref::Self_(_) => RegistrationSource::Self_,
             fsys::Ref::Child(c) => RegistrationSource::Child(c.name),
@@ -1672,39 +1318,14 @@ impl FidlIntoNative<RegistrationSource> for Option<fsys::Ref> {
     }
 }
 
-impl NativeIntoFidl<Option<fsys::Ref>> for RegistrationSource {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(match self {
+impl NativeIntoFidl<fsys::Ref> for RegistrationSource {
+    fn native_into_fidl(self) -> fsys::Ref {
+        match self {
             RegistrationSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             RegistrationSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             RegistrationSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum EventMode {
-    Sync,
-    Async,
-}
-
-impl NativeIntoFidl<Option<fsys::EventMode>> for EventMode {
-    fn native_into_fidl(self) -> Option<fsys::EventMode> {
-        match self {
-            EventMode::Sync => Some(fsys::EventMode::Sync),
-            EventMode::Async => Some(fsys::EventMode::Async),
-        }
-    }
-}
-
-impl FidlIntoNative<EventMode> for Option<fsys::EventMode> {
-    fn fidl_into_native(self) -> EventMode {
-        match self {
-            Some(fsys::EventMode::Sync) => EventMode::Sync,
-            Some(fsys::EventMode::Async) => EventMode::Async,
-            None => panic!("invalid EventMode variant"),
         }
     }
 }
@@ -1735,18 +1356,6 @@ impl NativeIntoFidl<fsys::Ref> for OfferTarget {
                 fsys::Ref::Collection(fsys::CollectionRef { name: collection_name })
             }
         }
-    }
-}
-
-impl FidlIntoNative<OfferTarget> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferTarget {
-        self.unwrap().fidl_into_native()
-    }
-}
-
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferTarget {
-    fn native_into_fidl(self) -> Option<fsys::Ref> {
-        Some(self.native_into_fidl())
     }
 }
 
@@ -1784,7 +1393,7 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, maplit::hashmap};
+    use {super::*, maplit::hashmap, std::convert::TryInto};
 
     macro_rules! test_try_from_decl {
         (
@@ -2575,14 +2184,14 @@ mod tests {
     test_fidl_into_and_from! {
         fidl_into_and_from_expose_source => {
             input = vec![
-                Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                Some(fsys::Ref::Child(fsys::ChildRef {
+                fsys::Ref::Self_(fsys::SelfRef {}),
+                fsys::Ref::Child(fsys::ChildRef {
                     name: "foo".to_string(),
                     collection: None,
-                })),
-                Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                }),
+                fsys::Ref::Framework(fsys::FrameworkRef {}),
             ],
-            input_type = Option<fsys::Ref>,
+            input_type = fsys::Ref,
             result = vec![
                 ExposeSource::Self_,
                 ExposeSource::Child("foo".to_string()),
@@ -2592,16 +2201,16 @@ mod tests {
         },
         fidl_into_and_from_offer_source => {
             input = vec![
-                Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                Some(fsys::Ref::Child(fsys::ChildRef {
+                fsys::Ref::Self_(fsys::SelfRef {}),
+                fsys::Ref::Child(fsys::ChildRef {
                     name: "foo".to_string(),
                     collection: None,
-                })),
-                Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                Some(fsys::Ref::Capability(fsys::CapabilityRef { name: "foo".to_string() })),
-                Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                }),
+                fsys::Ref::Framework(fsys::FrameworkRef {}),
+                fsys::Ref::Capability(fsys::CapabilityRef { name: "foo".to_string() }),
+                fsys::Ref::Parent(fsys::ParentRef {}),
             ],
-            input_type = Option<fsys::Ref>,
+            input_type = fsys::Ref,
             result = vec![
                 OfferSource::Self_,
                 OfferSource::Child("foo".to_string()),
@@ -2682,7 +2291,7 @@ mod tests {
                         value: Some(Box::new(fsys::Value::Str("bar".to_string()))),
                     },
                 ]};
-                Some(obj)
+                obj
             },
             result = {
                 let mut obj_inner = HashMap::new();
@@ -2698,7 +2307,7 @@ mod tests {
                 obj.insert("string".to_string(), Value::Str("bar".to_string()));
                 obj.insert("obj".to_string(), Value::Obj(obj_outer));
                 obj.insert("null".to_string(), Value::Null);
-                Some(obj)
+                obj
             },
         },
     }
