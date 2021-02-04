@@ -12,10 +12,11 @@
             url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm",
             startup: "eager",
         },
+    ],
+    collections: [
         {
-            name: "test-fshost",
-            url: "fuchsia-pkg://fuchsia.com/fshost-tests#meta/test-fshost.cm",
-            startup: "eager",
+            name: "fshost-collection",
+            durability: "transient",
         },
     ],
     use: [
@@ -36,14 +37,14 @@
             ],
             from: "parent",
             to: [
+                "#fshost-collection",
                 "#isolated-devmgr",
-                "#test-fshost",
             ],
         },
         {
             directory: "dev",
             from: "#isolated-devmgr",
-            to: [ "#test-fshost" ],
+            to: [ "#fshost-collection" ],
         },
     ],
 }

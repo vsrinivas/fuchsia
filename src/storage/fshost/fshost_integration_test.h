@@ -17,6 +17,7 @@ namespace devmgr {
 class FshostIntegrationTest : public testing::Test {
  public:
   void SetUp() override;
+  void TearDown() override;
 
   const fidl::SynchronousInterfacePtr<fuchsia::io::Directory>& exposed_dir() const {
     return exposed_dir_;
@@ -35,6 +36,7 @@ class FshostIntegrationTest : public testing::Test {
 
  private:
   fidl::SynchronousInterfacePtr<fuchsia::io::Directory> exposed_dir_;
+  fidl::SynchronousInterfacePtr<fuchsia::sys2::Realm> realm_;
   zx::channel watcher_channel_;
 };
 
