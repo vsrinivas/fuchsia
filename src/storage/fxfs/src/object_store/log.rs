@@ -318,8 +318,8 @@ impl Log {
             None,
             ROOT_PARENT_STORE_OBJECT_ID,
             device,
-            allocator.clone(),
-            self.clone(),
+            &allocator,
+            &self,
             StoreOptions::default(),
         ));
         // Skip to the end of the block; super-block always occupies whole block.
@@ -418,22 +418,15 @@ impl Log {
         writer.reset = !end_block;
         writer.last_check_sum = reader.last_read_check_sum;
         let root_store = stores.root_store();
-        allocator.open(
-            root_store.clone(),
-            Box::new(
-                root_store
-                    .clone()
-                    .open_object(super_block.allocator_object_id, HandleOptions::default())?,
-            ),
-        )?;
+        allocator.open(&root_store, super_block.allocator_object_id)?;
         println!("replay done");
         Ok(())
     }
 
     pub fn init_empty(
         &self,
-        stores: Arc<StoreManager>,
-        allocator: Arc<dyn Allocator>,
+        stores: &Arc<StoreManager>,
+        allocator: &Arc<dyn Allocator>,
     ) -> Result<(), Error> {
         let mut rng = rand::thread_rng();
         let starting_check_sum: u64 = rng.gen();
@@ -451,12 +444,7 @@ impl Log {
         )?);
         let root_store = stores.root_store();
         println!("root store object id {:?}", root_store.store_object_id());
-        let mut transaction = Transaction::new();
-        let allocator_object =
-            Box::new(root_store.create_object(&mut transaction, HandleOptions::default())?);
-        let allocator_object_id = allocator_object.object_id();
-        allocator.init(root_store.clone(), allocator_object);
-        self.commit(transaction);
+        allocator.init(&root_store)?;
         allocator.set_next_block(MIN_SUPER_BLOCK_SIZE / 512); // TODO: stop using blocks.
         let mut transaction = Transaction::new();
         // TODO: Fix this hack; move to object_store code.
@@ -502,7 +490,7 @@ impl Log {
         let mut log = self.log();
         let super_block = &mut log.as_mut().unwrap().super_block;
         super_block.root_store_object_id = stores.root_store().store_object_id();
-        super_block.allocator_object_id = allocator_object_id;
+        super_block.allocator_object_id = allocator.object_id();
         super_block.log_object_id = log_handle.object_id();
         super_block.log_checkpoint = LogCheckpoint::new(0, starting_check_sum);
         log.as_mut().unwrap().writer.handle = Some(log_handle);

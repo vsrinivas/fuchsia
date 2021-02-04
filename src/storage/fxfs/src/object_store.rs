@@ -29,7 +29,7 @@ use {
         cmp::min,
         io::{BufWriter, ErrorKind, Write},
         ops::{Bound, Range},
-        sync::{Arc, Mutex},
+        sync::{Arc, Mutex, Weak},
     },
 };
 
@@ -71,6 +71,7 @@ impl StoreObjectHandle {
             let mut align_buf = vec![0; self.block_size as usize];
             self.read(start_offset, align_buf.as_mut_slice())?;
             &mut align_buf[start_align..(start_align + head.len())].copy_from_slice(head);
+            device_offset -= start_align as u64;
             self.store.device.write(device_offset, &align_buf)?;
             device_offset += self.block_size;
             remainder
@@ -117,7 +118,7 @@ impl StoreObjectHandle {
                 break;
             }
             if let Some(overlap) = key.overlap(extent_key) {
-                self.store.allocator.deallocate(
+                self.store.allocator.upgrade().unwrap().deallocate(
                     transaction,
                     self.object_id,
                     key.attribute_id,
@@ -306,13 +307,19 @@ impl ObjectHandle for StoreObjectHandle {
                 let device_range = self
                     .store
                     .allocator
+                    .upgrade()
+                    .unwrap()
                     .allocate(self.object_id, 0, aligned.clone())
                     .map_err(map_to_io_error)?;
                 let extent_len = device_range.end - device_range.start;
                 let end = aligned.start + extent_len;
-                let len = min(buf.len() - buf_offset, (aligned.end - offset) as usize);
+                let len = min(buf.len() - buf_offset, (end - offset) as usize);
                 assert!(len > 0);
-                self.write_at(offset, &buf[buf_offset..buf_offset + len], device_range.start)?;
+                self.write_at(
+                    offset,
+                    &buf[buf_offset..buf_offset + len],
+                    device_range.start + offset % self.block_size,
+                )?;
                 transaction.add(
                     self.store.store_object_id,
                     Mutation::ReplaceExtent {
@@ -329,7 +336,7 @@ impl ObjectHandle for StoreObjectHandle {
                 buf_offset += len;
                 offset += len as u64;
             }
-            self.store.log.commit(transaction);
+            self.store.log.upgrade().unwrap().commit(transaction);
         }
         Ok(())
     }
@@ -346,6 +353,8 @@ impl ObjectHandle for StoreObjectHandle {
             let device_range = self
                 .store
                 .allocator
+                .upgrade()
+                .unwrap()
                 .allocate(self.object_id, 0, file_range.clone())
                 .map_err(map_to_io_error)?;
             let this_file_range =
@@ -410,8 +419,8 @@ pub struct ObjectStore {
     store_object_id: u64,
     device: Arc<dyn Device>,
     block_size: u64,
-    allocator: Arc<dyn Allocator>,
-    log: Arc<Log>,
+    allocator: Weak<dyn Allocator>,
+    log: Weak<Log>,
     options: StoreOptions,
     store_info: Mutex<StoreInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
@@ -422,8 +431,8 @@ impl ObjectStore {
         parent_store: Option<Arc<ObjectStore>>,
         store_object_id: u64,
         device: Arc<dyn Device>,
-        allocator: Arc<dyn Allocator>,
-        log: Arc<Log>,
+        allocator: &Arc<dyn Allocator>,
+        log: &Arc<Log>,
         store_info: StoreInfo,
         tree: LSMTree<ObjectKey, ObjectValue>,
         options: StoreOptions,
@@ -433,8 +442,8 @@ impl ObjectStore {
             store_object_id,
             device: device.clone(),
             block_size: device.block_size(),
-            allocator,
-            log,
+            allocator: Arc::downgrade(allocator),
+            log: Arc::downgrade(log),
             options,
             store_info: Mutex::new(store_info),
             tree,
@@ -445,8 +454,8 @@ impl ObjectStore {
         parent_store: Option<Arc<ObjectStore>>,
         store_object_id: u64,
         device: Arc<dyn Device>,
-        allocator: Arc<dyn Allocator>,
-        log: Arc<Log>,
+        allocator: &Arc<dyn Allocator>,
+        log: &Arc<Log>,
         options: StoreOptions,
     ) -> Arc<Self> {
         Self::new(
@@ -461,8 +470,8 @@ impl ObjectStore {
         )
     }
 
-    pub fn log(&self) -> &Log {
-        &self.log
+    pub fn log(&self) -> Arc<Log> {
+        self.log.upgrade().unwrap()
     }
 
     pub fn create_child_store(
@@ -474,13 +483,13 @@ impl ObjectStore {
         let mut transaction = Transaction::new();
         let handle =
             parent_store.clone().create_object(&mut transaction, HandleOptions::default())?;
-        parent_store.log.commit(transaction);
+        parent_store.log.upgrade().unwrap().commit(transaction);
         Ok(Self::new_empty(
             Some(parent_store.clone()),
             handle.object_id(),
             parent_store.device.clone(),
-            parent_store.allocator.clone(),
-            parent_store.log.clone(),
+            &parent_store.allocator.upgrade().unwrap(),
+            &parent_store.log.upgrade().unwrap(),
             options,
         ))
     }
@@ -509,8 +518,8 @@ impl ObjectStore {
             Some(self.clone()),
             store_object_id,
             self.device.clone(),
-            self.allocator.clone(),
-            self.log.clone(),
+            &self.allocator.upgrade().unwrap(),
+            &self.log.upgrade().unwrap(),
             store_info,
             LSMTree::open(merge::merge, handles.into_boxed_slice()),
             StoreOptions::default(),
@@ -591,7 +600,7 @@ impl ObjectStore {
                 },
             },
         );
-        self.log.commit(transaction);
+        self.log.upgrade().unwrap().commit(transaction);
         Ok(directory::Directory::new(self.clone(), object_id))
     }
 
@@ -641,7 +650,8 @@ impl ObjectStore {
     // Push all in-memory structures to the device. This is not necessary for sync since the log
     // will take care of it. This will panic if called on the root parent store.
     pub fn flush(&self, force: bool) -> Result<(), Error> {
-        let mut object_sync = self.log.begin_object_sync(self.store_object_id);
+        let log = self.log();
+        let mut object_sync = log.begin_object_sync(self.store_object_id);
         if !force && !object_sync.needs_sync() {
             return Ok(());
         }
@@ -649,7 +659,7 @@ impl ObjectStore {
         let mut transaction = Transaction::new();
         let object_handle =
             parent_store.clone().create_object(&mut transaction, HandleOptions::default())?;
-        self.log.commit(transaction); // This needs to encompass all the following.
+        self.log.upgrade().unwrap().commit(transaction); // This needs to encompass all the following.
         let object_id = object_handle.object_id();
         let handle =
             parent_store.clone().open_object(self.store_object_id, HandleOptions::default())?;

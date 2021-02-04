@@ -33,7 +33,7 @@ impl<'a> Directory {
                 },
             },
         );
-        self.store.log.commit(transaction);
+        self.store.log.upgrade().unwrap().commit(transaction);
         Ok(handle)
     }
 

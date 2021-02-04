@@ -19,11 +19,10 @@ use {
     merge::merge,
     serde::{Deserialize, Serialize},
     std::{
-        borrow::Borrow,
         cmp::min,
         sync::{
             atomic::{AtomicU64, Ordering::Relaxed},
-            Arc, Mutex,
+            Arc, Mutex, Weak,
         },
     },
 };
@@ -38,7 +37,7 @@ pub struct AllocatorReservation<'allocator> {
 */
 
 pub trait Allocator: Send + Sync {
-    fn init(&self, store: Arc<ObjectStore>, handle: Box<dyn ObjectHandle>);
+    fn init(&self, store: &Arc<ObjectStore>) -> Result<(), Error>;
 
     fn object_id(&self) -> u64;
 
@@ -74,7 +73,7 @@ pub trait Allocator: Send + Sync {
 
     fn commit_deallocation(&self, item: AllocatorItem);
 
-    fn open(&self, store: Arc<ObjectStore>, handle: Box<dyn ObjectHandle>) -> Result<(), Error>;
+    fn open(&self, store: &Arc<ObjectStore>, object_id: u64) -> Result<(), Error>;
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -138,7 +137,7 @@ struct AllocatorInfo {
 }
 
 pub struct SimpleAllocator {
-    log: Arc<Log>,
+    log: Weak<Log>,
     object_id: AtomicU64,
     tree: LSMTree<AllocatorKey, AllocatorValue>,
     reserved_allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
@@ -148,15 +147,14 @@ pub struct SimpleAllocator {
 struct Inner {
     store: Option<Arc<ObjectStore>>,
     info: Option<AllocatorInfo>,
-    object_handle: Option<Box<dyn ObjectHandle>>,
     next_block: u64,
     //    reserved_deallocations: RefCell<Rc<SkipListLayer<AllocatorKey, AllocatorValue>>>,
 }
 
 impl SimpleAllocator {
-    pub fn new(log: Arc<Log>) -> SimpleAllocator {
+    pub fn new(log: &Arc<Log>) -> SimpleAllocator {
         SimpleAllocator {
-            log,
+            log: Arc::downgrade(log),
             // TODO: maybe make tree optional or put all data in separate structure.
             object_id: AtomicU64::new(0),
             tree: LSMTree::new(merge),
@@ -164,7 +162,6 @@ impl SimpleAllocator {
             inner: Mutex::new(Inner {
                 store: None,
                 info: None,
-                object_handle: None,
                 next_block: 0,
                 //            reserved_deallocations: RefCell::new(Rc::new(SkipListLayer::new(1024))),
             }),
@@ -173,29 +170,30 @@ impl SimpleAllocator {
 }
 
 impl Allocator for SimpleAllocator {
-    fn init(&self, store: Arc<ObjectStore>, handle: Box<dyn ObjectHandle>) {
-        println!("allocator object id {:?}", handle.object_id());
+    fn init(&self, store: &Arc<ObjectStore>) -> Result<(), Error> {
         let mut inner = self.inner.lock().unwrap();
-        inner.store = Some(store);
-        self.object_id.store(handle.object_id(), Relaxed);
-        inner.object_handle = Some(handle);
+        let mut transaction = Transaction::new();
+        let allocator_object = store.create_object(&mut transaction, HandleOptions::default())?;
+        self.log.upgrade().unwrap().commit(transaction);
+        inner.store = Some(store.clone());
+        self.object_id.store(allocator_object.object_id(), Relaxed);
         inner.info = Some(AllocatorInfo { layers: Vec::new() });
+        Ok(())
     }
 
-    fn open(&self, store: Arc<ObjectStore>, handle: Box<dyn ObjectHandle>) -> Result<(), Error> {
-        println!("allocator open object id {:?}", handle.object_id());
+    fn open(&self, store: &Arc<ObjectStore>, object_id: u64) -> Result<(), Error> {
         let mut inner = self.inner.lock().unwrap();
-        self.object_id.store(handle.object_id(), Relaxed);
-        let info: AllocatorInfo = deserialize_from(ObjectHandleCursor::new(handle.borrow(), 0))?;
-        println!("done reading allocator file");
+        self.object_id.store(object_id, Relaxed);
+        let handle = store.open_object(object_id, HandleOptions::default())?;
+        let info: AllocatorInfo =
+            deserialize_from(ObjectHandleCursor::new(&handle as &dyn ObjectHandle, 0))?;
         let mut handles = Vec::new();
         for object_id in &info.layers {
             handles.push(store.open_object(*object_id, HandleOptions::default())?);
         }
         inner.info = Some(info);
         self.tree.set_layers(handles.into_boxed_slice());
-        inner.store = Some(store);
-        inner.object_handle = Some(handle);
+        inner.store = Some(store.clone());
         Ok(())
     }
 
@@ -279,32 +277,29 @@ impl Allocator for SimpleAllocator {
     fn flush(&self, force: bool) -> Result<(), Error> {
         println!("flushing allocator");
         let mut inner = self.inner.lock().unwrap();
-        let mut object_sync = self.log.begin_object_sync(self.object_id());
+        let log = self.log.upgrade().unwrap();
+        let mut object_sync = log.begin_object_sync(self.object_id());
         if !force && !object_sync.needs_sync() {
             println!("not forced");
             return Ok(());
         }
         // TODO: what if there have been no allocations.
         let mut transaction = Transaction::new();
-        let object_handle = inner
-            .store
-            .as_ref()
-            .unwrap()
-            .create_object(&mut transaction, HandleOptions::default())?;
-        self.log.commit(transaction); // TODO: Move to encompass all of this.
-        let object_id = object_handle.object_id();
+        let store = inner.store.as_ref().unwrap();
+        let layer_object_handle =
+            store.create_object(&mut transaction, HandleOptions::default())?;
+        let object_handle = store.open_object(self.object_id(), HandleOptions::default())?;
+        log.commit(transaction); // TODO: Move to encompass all of this.
+        let object_id = layer_object_handle.object_id();
         // TODO: clean up objects if there's an error.
         inner.info.as_mut().unwrap().layers.push(object_id);
         println!("serializing");
         // let handle = &mut inner.object_handle;
         serialize_into(
-            ObjectHandleCursor::new(
-                &**inner.object_handle.as_ref().unwrap() as &dyn ObjectHandle,
-                0,
-            ),
+            ObjectHandleCursor::new(&object_handle as &dyn ObjectHandle, 0),
             inner.info.as_ref().unwrap(),
         )?;
-        self.tree.commit(object_handle)?;
+        self.tree.commit(layer_object_handle)?;
         object_sync.done();
         println!("allocator flushed");
         Ok(())

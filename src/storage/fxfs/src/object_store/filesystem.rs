@@ -1,7 +1,9 @@
 use {
     crate::object_store::{
-        allocator::SimpleAllocator, constants::ROOT_PARENT_STORE_OBJECT_ID, log::Log, Device,
-        ObjectStore, StoreOptions,
+        allocator::{Allocator, SimpleAllocator},
+        constants::ROOT_PARENT_STORE_OBJECT_ID,
+        log::Log,
+        Device, ObjectStore, StoreOptions,
     },
     anyhow::Error,
     std::{
@@ -64,23 +66,23 @@ pub struct Filesystem {
 impl Filesystem {
     pub fn new_empty(device: Arc<dyn Device>) -> Result<Filesystem, Error> {
         let log = Arc::new(Log::new());
-        let allocator = Arc::new(SimpleAllocator::new(log.clone()));
+        let allocator = Arc::new(SimpleAllocator::new(&log));
         let stores = Arc::new(StoreManager::new());
         stores.new_store(ObjectStore::new_empty(
             None,
             ROOT_PARENT_STORE_OBJECT_ID,
             device.clone(),
-            allocator.clone(),
-            log.clone(),
+            &(allocator.clone() as Arc<dyn Allocator>),
+            &log,
             StoreOptions::default(),
         ));
-        log.init_empty(stores.clone(), allocator.clone())?;
+        log.init_empty(&stores, &(allocator as Arc<dyn Allocator>))?;
         Ok(Filesystem { device, log, stores })
     }
 
     pub fn open(device: Arc<dyn Device>) -> Result<Filesystem, Error> {
         let log = Arc::new(Log::new());
-        let allocator = Arc::new(SimpleAllocator::new(log.clone()));
+        let allocator = Arc::new(SimpleAllocator::new(&log));
         let stores = Arc::new(StoreManager::new());
         log.replay(device.clone(), stores.clone(), allocator.clone())?;
         Ok(Filesystem { device, log, stores })
