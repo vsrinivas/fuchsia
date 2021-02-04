@@ -7,7 +7,10 @@ import("//build/test.gni")
 # Test utilities that aren't replacing part of the Gigaboot codebase, but
 # are just additional classes and functions useful for running tests.
 source_set("test") {
-  sources = [ "fake_disk_io_protocol.cc" ]
+  sources = [
+    "fake_disk_io_protocol.cc",
+    "stub_boot_services.cc",
+  ]
   public_configs = [ ":test_config" ]
   public_deps = [ "//zircon/kernel/lib/efi" ]
 }
@@ -18,9 +21,13 @@ config("test_config") {
 
 # Tests to make sure our utilities are working as expected.
 test("gigaboot_utils_test") {
-  sources = [ "fake_disk_io_protocol_test.cc" ]
+  sources = [
+    "fake_disk_io_protocol_test.cc",
+    "stub_boot_services_test.cc",
+  ]
   deps = [
     ":test",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }

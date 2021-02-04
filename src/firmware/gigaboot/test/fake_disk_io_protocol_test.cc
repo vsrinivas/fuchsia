@@ -6,12 +6,9 @@
 
 #include <gtest/gtest.h>
 
-namespace {
+#include "test_helpers.h"
 
-// efi_status is defined as size_t, whereas EFI_SUCCESS is literal 0, which
-// causes googletest ASSERT/EXPECT macros to complain about sign mismatch.
-// Re-define here to use the proper type.
-constexpr efi_status kEfiSuccess = EFI_SUCCESS;
+namespace {
 
 TEST(FakeDiskIoProtocol, Read) {
   FakeDiskIoProtocol fake;
