@@ -31,7 +31,13 @@ func setUpClient(
 	}
 	t.Cleanup(server.stop)
 
-	client, err := NewClient(ctx, server.addr, server.clientConfig, retry.NoRetries())
+	client, err := NewClient(
+		ctx,
+		ConstantAddrResolver{
+			Addr: server.addr,
+		},
+		server.clientConfig,
+		retry.NoRetries())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -173,7 +179,14 @@ func TestCloseDuringConnection(t *testing.T) {
 	clientChan := make(chan clientResult)
 
 	go func() {
-		client, err := NewClient(ctx, listener.Addr(), clientConfig, retry.NoRetries())
+		client, err := NewClient(
+			ctx,
+			ConstantAddrResolver{
+				Addr: listener.Addr(),
+			},
+			clientConfig,
+			retry.NoRetries(),
+		)
 		clientChan <- clientResult{
 			client: client,
 			err:    err,

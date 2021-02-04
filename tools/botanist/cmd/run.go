@@ -352,7 +352,14 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 			return fmt.Errorf("%s for %s", constants.FailedToResolveIPErrorMsg, t.Nodename())
 		}
 
-		client, err := sshutil.NewClient(ctx, &sshAddr, config, sshutil.DefaultConnectBackoff())
+		client, err := sshutil.NewClient(
+			ctx,
+			sshutil.ConstantAddrResolver{
+				Addr: &sshAddr,
+			},
+			config,
+			sshutil.DefaultConnectBackoff(),
+		)
 		if err != nil {
 			return err
 		}

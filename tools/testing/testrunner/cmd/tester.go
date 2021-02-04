@@ -249,11 +249,18 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 		return nil, fmt.Errorf("failed to create an SSH client config: %w", err)
 	}
 
-	client, err := sshutil.NewClient(ctx, &net.TCPAddr{
-		IP:   addr.IP,
-		Port: sshutil.SSHPort,
-		Zone: addr.Zone,
-	}, config, sshutil.DefaultConnectBackoff())
+	client, err := sshutil.NewClient(
+		ctx,
+		sshutil.ConstantAddrResolver{
+			Addr: &net.TCPAddr{
+				IP:   addr.IP,
+				Port: sshutil.SSHPort,
+				Zone: addr.Zone,
+			},
+		},
+		config,
+		sshutil.DefaultConnectBackoff(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish an SSH connection: %w", err)
 	}
