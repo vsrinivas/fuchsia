@@ -40,10 +40,10 @@ vk::ImageCreateInfo GetDefaultImageCreateInfo(bool use_protected_memory, VkForma
       .setArrayLayers(1)
       .setSamples(vk::SampleCountFlagBits::e1)
       .setTiling(linear ? vk::ImageTiling::eLinear : vk::ImageTiling::eOptimal)
-      // Only use sampled, because on Mali some other usages (like color attachment) aren't
+      // Only use TransferDst, because on Mali some other usages (like color attachment) aren't
       // supported for NV12, and some others (implementation-dependent) aren't supported with
-      // AFBC.
-      .setUsage(vk::ImageUsageFlagBits::eSampled)
+      // AFBC, and sampled aren't supported with SwiftShader (linear images).
+      .setUsage(vk::ImageUsageFlagBits::eTransferDst)
       .setSharingMode(vk::SharingMode::eExclusive)
       .setInitialLayout(vk::ImageLayout::eUndefined);
 }
@@ -76,6 +76,11 @@ class VulkanExtensionTest : public testing::Test {
   void set_use_protected_memory(bool use) { use_protected_memory_ = use; }
   bool device_supports_protected_memory() const { return device_supports_protected_memory_; }
 
+  bool UseVirtualGpu() {
+    auto properties = ctx_->physical_device().getProperties();
+    return properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu;
+  }
+
   bool SupportsMultiImageBufferCollection() {
     vk::PhysicalDeviceProperties physical_device_properties;
     ctx_->physical_device().getProperties(&physical_device_properties);
@@ -83,6 +88,9 @@ class VulkanExtensionTest : public testing::Test {
     if (deviceName.find("Mali") != std::string::npos)
       return true;
     if (deviceName.find("Intel") != std::string::npos)
+      return true;
+    // Emulated GPU
+    if (physical_device_properties.deviceType == vk::PhysicalDeviceType::eVirtualGpu)
       return true;
     return false;
   }
@@ -574,6 +582,11 @@ class VulkanImageExtensionTest : public VulkanExtensionTest,
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1025) {
   ASSERT_TRUE(Initialize());
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
+
   ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, 64, GetParam(), false));
 }
 
@@ -589,16 +602,31 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA_1025) {
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12) {
   ASSERT_TRUE(Initialize());
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
+
   ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionI420) {
   ASSERT_TRUE(Initialize());
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
+
   ASSERT_TRUE(Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1280_546) {
   ASSERT_TRUE(Initialize());
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
+
   ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 8192, 546, GetParam(), false));
 }
 
@@ -637,7 +665,10 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
   std::vector<fuchsia::sysmem::ImageFormatConstraints> all_constraints{
       nv12_image_constraints, bgra_image_constraints, bgra_tiled_image_constraints};
 
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, GetParam(), false, all_constraints));
+  if (!UseVirtualGpu()) {
+    ASSERT_TRUE(
+        Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, 64, GetParam(), false, all_constraints));
+  }
   vk_device_memory_ = {};
   ASSERT_TRUE(Exec(VK_FORMAT_B8G8R8A8_UNORM, 64, 64, GetParam(), false, all_constraints));
 }
@@ -645,14 +676,18 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
 TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
   set_use_protected_memory(true);
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(device_supports_protected_memory());
+  if (!device_supports_protected_memory()) {
+    GTEST_SKIP();
+  }
   ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, ProtectedAndNonprotectedConstraints) {
   set_use_protected_memory(true);
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(device_supports_protected_memory());
+  if (!device_supports_protected_memory()) {
+    GTEST_SKIP();
+  }
   ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), true));
 }
 
@@ -684,6 +719,11 @@ TEST_P(VulkanImageExtensionTest, R8) {
   auto [vulkan_token, sysmem_token] = MakeSharedCollection<2>();
 
   bool linear = GetParam();
+  // TODO(fxbug.dev/59804): Enable the test on emulators when goldfish host-visible heap
+  // supports R8 linear images.
+  if (linear && UseVirtualGpu())
+    GTEST_SKIP();
+
   auto image_create_info = GetDefaultImageCreateInfo(use_protected_memory_, VK_FORMAT_R8_UNORM,
                                                      kDefaultWidth, kDefaultHeight, linear);
   UniqueBufferCollection collection =
@@ -714,6 +754,11 @@ TEST_P(VulkanImageExtensionTest, R8G8) {
   auto [vulkan_token] = MakeSharedCollection<1>();
 
   bool linear = GetParam();
+  // TODO(fxbug.dev/59804): Enable the test on emulators when goldfish host-visible heap
+  // supports R8G8 linear images.
+  if (linear && UseVirtualGpu())
+    GTEST_SKIP();
+
   auto image_create_info = GetDefaultImageCreateInfo(use_protected_memory_, VK_FORMAT_R8G8_UNORM,
                                                      kDefaultWidth, kDefaultHeight, linear);
   UniqueBufferCollection collection =
@@ -735,6 +780,11 @@ TEST_P(VulkanImageExtensionTest, R8ToL8) {
   auto [vulkan_token, sysmem_token] = MakeSharedCollection<2>();
 
   bool linear = GetParam();
+  // TODO(fxbug.dev/59804): Enable the test on emulators when goldfish host-visible heap
+  // supports R8/L8 linear images.
+  if (linear && UseVirtualGpu())
+    GTEST_SKIP();
+
   auto image_create_info = GetDefaultImageCreateInfo(use_protected_memory_, VK_FORMAT_R8_UNORM,
                                                      kDefaultWidth, kDefaultHeight, linear);
   vk::ImageFormatConstraintsInfoFUCHSIA format_constraints;
@@ -821,7 +871,9 @@ TEST_P(VulkanImageExtensionTest, ProtectedCpuAccessible) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
     GTEST_SKIP();
-  ASSERT_TRUE(device_supports_protected_memory());
+  if (!device_supports_protected_memory()) {
+    GTEST_SKIP();
+  }
   auto [vulkan_token] = MakeSharedCollection<1>();
 
   bool linear = GetParam();
@@ -851,7 +903,9 @@ TEST_P(VulkanImageExtensionTest, ProtectedOptionalCompatible) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
     GTEST_SKIP();
-  ASSERT_TRUE(device_supports_protected_memory());
+  if (!device_supports_protected_memory()) {
+    GTEST_SKIP();
+  }
   for (uint32_t i = 0; i < 2; i++) {
     auto tokens = MakeSharedCollection(2u);
 
@@ -902,7 +956,9 @@ TEST_P(VulkanImageExtensionTest, ProtectedUnprotectedIncompatible) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
     GTEST_SKIP();
-  ASSERT_TRUE(device_supports_protected_memory());
+  if (!device_supports_protected_memory()) {
+    GTEST_SKIP();
+  }
   auto tokens = MakeSharedCollection(2u);
 
   bool linear = GetParam();
@@ -990,13 +1046,21 @@ TEST_P(VulkanImageExtensionTest, CompatibleDefaultColorspaces) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
     GTEST_SKIP();
-  std::vector<fuchsia::sysmem::ColorSpaceType> color_spaces = {
-      fuchsia::sysmem::ColorSpaceType::REC601_NTSC,
-      fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE,
-      fuchsia::sysmem::ColorSpaceType::REC601_PAL,
-      fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE,
-      fuchsia::sysmem::ColorSpaceType::REC709,
-      fuchsia::sysmem::ColorSpaceType::SRGB};
+  std::vector<fuchsia::sysmem::ColorSpaceType> color_spaces;
+  // TODO(fxbug.dev/59804): Add other color spaces when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu()) {
+    color_spaces = {
+        fuchsia::sysmem::ColorSpaceType::SRGB,
+    };
+  } else {
+    color_spaces = {fuchsia::sysmem::ColorSpaceType::REC601_NTSC,
+                    fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE,
+                    fuchsia::sysmem::ColorSpaceType::REC601_PAL,
+                    fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE,
+                    fuchsia::sysmem::ColorSpaceType::REC709,
+                    fuchsia::sysmem::ColorSpaceType::SRGB};
+  }
   for (auto color_space : color_spaces) {
     auto tokens = MakeSharedCollection(2u);
     bool linear = GetParam();
@@ -1028,6 +1092,10 @@ TEST_P(VulkanImageExtensionTest, CompatibleDefaultColorspaces) {
 TEST_P(VulkanImageExtensionTest, YUVProperties) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
+    GTEST_SKIP();
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
     GTEST_SKIP();
   auto [vulkan_token] = MakeSharedCollection<1>();
 
@@ -1074,6 +1142,10 @@ TEST_P(VulkanImageExtensionTest, YUVProperties) {
 TEST_P(VulkanImageExtensionTest, MultiFormat) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
+    GTEST_SKIP();
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
     GTEST_SKIP();
   auto tokens = MakeSharedCollection(2u);
 
@@ -1138,6 +1210,10 @@ TEST_P(VulkanImageExtensionTest, MaxBufferCountCheck) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
     GTEST_SKIP();
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
   auto tokens = MakeSharedCollection(2u);
 
   bool linear = GetParam();
@@ -1178,6 +1254,10 @@ TEST_P(VulkanImageExtensionTest, ManyIdenticalFormats) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
     GTEST_SKIP();
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
   auto [token] = MakeSharedCollection<1>();
 
   bool linear = GetParam();
@@ -1213,6 +1293,10 @@ TEST_P(VulkanImageExtensionTest, ManyIdenticalFormats) {
 // Check that createInfoIndex keeps track of multiple colorspaces properly.
 TEST_P(VulkanImageExtensionTest, ColorSpaceSubset) {
   ASSERT_TRUE(Initialize());
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
   if (!SupportsMultiImageBufferCollection())
     GTEST_SKIP();
   auto tokens = MakeSharedCollection(2u);
@@ -1272,6 +1356,10 @@ TEST_P(VulkanImageExtensionTest, ColorSpaceSubset) {
 TEST_P(VulkanImageExtensionTest, WeirdFormat) {
   ASSERT_TRUE(Initialize());
   if (!SupportsMultiImageBufferCollection())
+    GTEST_SKIP();
+  // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
+  // supported on emulators.
+  if (UseVirtualGpu())
     GTEST_SKIP();
   auto [token] = MakeSharedCollection<1>();
 
@@ -1435,7 +1523,8 @@ TEST_F(VulkanExtensionTest, BadRequiredFormatFeatures2) {
 
   auto [vulkan_token] = MakeSharedCollection<1>();
 
-  constexpr VkFormat kFormat = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
+  const VkFormat kFormat =
+      UseVirtualGpu() ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
   constexpr bool kLinear = false;
   auto image_create_info =
       GetDefaultImageCreateInfo(false, kFormat, kDefaultWidth, kDefaultHeight, kLinear);
