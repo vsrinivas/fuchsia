@@ -8,9 +8,9 @@
 
 #include "src/ui/a11y/lib/gesture_manager/recognizers/any_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/directional_swipe_recognizers.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
-#include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_n_tap_recognizer.h"
 
 namespace a11y {
 
@@ -277,11 +277,12 @@ bool GestureHandler::BindTwoFingerSingleTapAction(OnGestureCallback callback) {
   }
   gesture_handlers_[kTwoFingerSingleTap].on_complete = std::move(callback);
 
-  gesture_recognizers_[kTwoFingerSingleTap] = std::make_unique<TwoFingerNTapRecognizer>(
+  gesture_recognizers_[kTwoFingerSingleTap] = std::make_unique<MFingerNTapRecognizer>(
       [this](GestureContext context) {
         OnGesture(kTwoFingerSingleTap, GestureEvent::kComplete,
                   {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
       },
+      2,  // number of fingers
       1 /* number of taps */);
   add_recognizer_callback_(gesture_recognizers_[kTwoFingerSingleTap].get());
 

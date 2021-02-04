@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_recognizer.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -15,29 +15,31 @@
 
 namespace a11y {
 
-struct TwoFingerNTapRecognizer::Contest {
+struct MFingerNTapRecognizer::Contest {
   Contest(std::unique_ptr<ContestMember> contest_member)
       : member(std::move(contest_member)), reject_task(member.get()) {}
 
   std::unique_ptr<ContestMember> member;
-  // Indicates whether two fingers have been on the screen at the same time
+  // Indicates whether m fingers have been on the screen at the same time
   // during the current tap.
   bool tap_in_progress = false;
   // Indicates how many fingers a down event has been detected for.
   std::set<uint32_t> fingers_on_screen = {};
   // Keeps the count of the number of taps detected so far, for the gesture.
-  int number_of_taps_detected = 0;
+  uint32_t number_of_taps_detected = 0;
   // Async task used to schedule long-press timeout.
   async::TaskClosureMethod<ContestMember, &ContestMember::Reject> reject_task;
 };
 
-TwoFingerNTapRecognizer::TwoFingerNTapRecognizer(OnTwoFingerTapGesture callback, int number_of_taps)
-    : on_two_finger_tap_callback_(std::move(callback)),
+MFingerNTapRecognizer::MFingerNTapRecognizer(OnMFingerNTapCallback callback,
+                                             uint32_t number_of_fingers, uint32_t number_of_taps)
+    : on_m_finger_n_tap_callback_(std::move(callback)),
+      number_of_fingers_in_gesture_(number_of_fingers),
       number_of_taps_in_gesture_(number_of_taps) {}
 
-TwoFingerNTapRecognizer::~TwoFingerNTapRecognizer() = default;
+MFingerNTapRecognizer::~MFingerNTapRecognizer() = default;
 
-void TwoFingerNTapRecognizer::HandleEvent(
+void MFingerNTapRecognizer::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   FX_DCHECK(contest_);
   FX_DCHECK(pointer_event.has_pointer_id())
@@ -47,11 +49,11 @@ void TwoFingerNTapRecognizer::HandleEvent(
       << DebugName() << ": Pointer event is missing phase information.";
   switch (pointer_event.phase()) {
     case fuchsia::ui::input::PointerEventPhase::DOWN:
-      // If we receive a DOWN event when there are already two fingers on the
+      // If we receive a DOWN event when there are already m fingers on the
       // screen, then either we've received a second DOWN event for one of the fingers that's
-      // already on the screen, or we've received a DOWN event for a third
+      // already on the screen, or we've received a DOWN event for an (m+1)th
       // finger. In either case, we should abandon the current gesture.
-      if (contest_->fingers_on_screen.size() >= 2) {
+      if (contest_->fingers_on_screen.size() >= number_of_fingers_in_gesture_) {
         ResetGesture("More than two fingers present on the screen. Dropping current event.");
         break;
       }
@@ -93,8 +95,8 @@ void TwoFingerNTapRecognizer::HandleEvent(
 
       // Check if pointer event has all the required fields and initialize gesture_start_info and
       // gesture_context.
-      // NOTE: We will update gesture_context_ for both fingers, so it will reflect the location of
-      // the second finger to touch the screen during the first tap of the gesture.
+      // NOTE: We will update gesture_context_ for all m fingers, so it will reflect the location of
+      // the last finger to touch the screen during the first tap of the gesture.
       if (!InitGestureInfo(pointer_event, &start_info_by_finger_[pointer_id], &gesture_context_)) {
         ResetGesture("Pointer Event is missing required fields. Dropping current event.");
         break;
@@ -112,8 +114,9 @@ void TwoFingerNTapRecognizer::HandleEvent(
 
       // Schedule a task with kTapTimeout for the current tap to complete.
       contest_->fingers_on_screen.insert(pointer_id);
-      contest_->tap_in_progress = (contest_->fingers_on_screen.size() == 2);
-      // Only start the timeout once two fingers are on the screen together.
+      contest_->tap_in_progress =
+          (contest_->fingers_on_screen.size() == number_of_fingers_in_gesture_);
+      // Only start the timeout once all m fingers are on the screen together.
       if (contest_->tap_in_progress) {
         contest_->reject_task.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
       }
@@ -142,7 +145,7 @@ void TwoFingerNTapRecognizer::HandleEvent(
       contest_->fingers_on_screen.erase(pointer_id);
 
       // The number of fingers on screen during a multi-finger tap should
-      // monotonically increase from 0 to 2, and
+      // monotonically increase from 0 to m, and
       // then monotonically decrease back to 0. If a finger is removed before
       // number_of_fingers_in_gesture_ fingers are on the screen simultaneously,
       // then we should reject this gesture.
@@ -159,10 +162,10 @@ void TwoFingerNTapRecognizer::HandleEvent(
         break;
       }
 
-      // If we've made it this far, we know that (1) Two fingers were on screen
-      // simultaneously during the current gesture, and (2) The two fingers have
+      // If we've made it this far, we know that (1) m fingers were on screen
+      // simultaneously during the current gesture, and (2) The m fingers have
       // now been removed, without any interceding finger DOWN events.
-      // Therefore, we can conclude that a complete two-finger tap has occurred.
+      // Therefore, we can conclude that a complete m-finger tap has occurred.
       contest_->number_of_taps_detected++;
 
       // Check if this is not the last tap of the gesture.
@@ -185,17 +188,17 @@ void TwoFingerNTapRecognizer::HandleEvent(
   }
 }
 
-void TwoFingerNTapRecognizer::ResetGesture(const std::string& reason) {
+void MFingerNTapRecognizer::ResetGesture(const std::string& reason) {
   FX_LOGS(INFO) << DebugName() << ": " << reason;
   start_info_by_finger_.clear();
   contest_.reset();
 }
 
-void TwoFingerNTapRecognizer::OnWin() { on_two_finger_tap_callback_(gesture_context_); }
+void MFingerNTapRecognizer::OnWin() { on_m_finger_n_tap_callback_(gesture_context_); }
 
-void TwoFingerNTapRecognizer::OnDefeat() { contest_.reset(); }
+void MFingerNTapRecognizer::OnDefeat() { contest_.reset(); }
 
-bool TwoFingerNTapRecognizer::EventIsValid(
+bool MFingerNTapRecognizer::EventIsValid(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
   if (!StartInfoExist(pointer_event)) {
     return false;
@@ -206,21 +209,21 @@ bool TwoFingerNTapRecognizer::EventIsValid(
   return ValidatePointerEvent(gesture_start_info_for_finger, pointer_event) &&
          PointerEventIsValidTap(gesture_start_info_for_finger, pointer_event);
 }
-bool TwoFingerNTapRecognizer::StartInfoExist(
+bool MFingerNTapRecognizer::StartInfoExist(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
   FX_DCHECK(pointer_event.has_pointer_id()) << DebugName() << ": Pointer event missing pointer id.";
   const auto pointer_id = pointer_event.pointer_id();
   return start_info_by_finger_.find(pointer_id) != start_info_by_finger_.end();
 }
 
-void TwoFingerNTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
+void MFingerNTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
   start_info_by_finger_.clear();
   ResetGestureContext(&gesture_context_);
   contest_ = std::make_unique<Contest>(std::move(contest_member));
 }
 
-std::string TwoFingerNTapRecognizer::DebugName() const {
-  return fxl::StringPrintf("TwoFingerNTapRecognizer(n=%d)", number_of_taps_in_gesture_);
+std::string MFingerNTapRecognizer::DebugName() const {
+  return fxl::StringPrintf("MFingerNTapRecognizer(n=%d)", number_of_taps_in_gesture_);
 }
 
 }  // namespace a11y

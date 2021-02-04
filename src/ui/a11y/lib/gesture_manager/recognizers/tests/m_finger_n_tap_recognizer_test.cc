@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_recognizer.h"
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 
@@ -20,13 +20,14 @@ namespace accessibility_test {
 namespace {
 
 constexpr int kNumberOfDoubleTaps = 2;
-constexpr int kDefaultTaps = 1;
+constexpr uint32_t kDefaultFingers = 2;
+constexpr uint32_t kDefaultTaps = 1;
 
 using Phase = fuchsia::ui::input::PointerEventPhase;
 
-class TwoFingerNTapRecognizerTest : public gtest::TestLoopFixture {
+class MFingerNTapRecognizerTest : public gtest::TestLoopFixture {
  public:
-  TwoFingerNTapRecognizerTest() = default;
+  MFingerNTapRecognizerTest() = default;
 
   void SendPointerEvents(const std::vector<PointerParams>& events) const {
     for (const auto& event : events) {
@@ -42,24 +43,24 @@ class TwoFingerNTapRecognizerTest : public gtest::TestLoopFixture {
     }
   }
 
-  void CreateGestureRecognizer(int number_of_taps) {
-    recognizer_ = std::make_unique<a11y::TwoFingerNTapRecognizer>(
+  void CreateGestureRecognizer(uint32_t number_of_fingers, uint32_t number_of_taps) {
+    recognizer_ = std::make_unique<a11y::MFingerNTapRecognizer>(
         [this](a11y::GestureContext context) {
           gesture_won_ = true;
           gesture_context_ = context;
         },
-        number_of_taps);
+        number_of_fingers, number_of_taps);
   }
 
   MockContestMember member_;
-  std::unique_ptr<a11y::TwoFingerNTapRecognizer> recognizer_;
+  std::unique_ptr<a11y::MFingerNTapRecognizer> recognizer_;
   bool gesture_won_ = false;
   a11y::GestureContext gesture_context_;
 };
 
 // Tests Single tap Gesture Detection case.
-TEST_F(TwoFingerNTapRecognizerTest, SingleTapWonAfterGestureDetected) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, SingleTapWonAfterGestureDetected) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
 
   recognizer_->OnContestStarted(member_.TakeInterface());
 
@@ -71,8 +72,8 @@ TEST_F(TwoFingerNTapRecognizerTest, SingleTapWonAfterGestureDetected) {
 }
 
 // Tests Double tap Gesture Detection case.
-TEST_F(TwoFingerNTapRecognizerTest, DoubleTapWonAfterGestureDetected) {
-  CreateGestureRecognizer(kNumberOfDoubleTaps);
+TEST_F(MFingerNTapRecognizerTest, DoubleTapWonAfterGestureDetected) {
+  CreateGestureRecognizer(kDefaultFingers, kNumberOfDoubleTaps);
 
   recognizer_->OnContestStarted(member_.TakeInterface());
 
@@ -87,8 +88,8 @@ TEST_F(TwoFingerNTapRecognizerTest, DoubleTapWonAfterGestureDetected) {
 }
 
 // Tests Single tap gesture detection case where gesture is declared a winner.
-TEST_F(TwoFingerNTapRecognizerTest, SingleTapGestureDetectedWin) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, SingleTapGestureDetectedWin) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}) + UpEvents(1, {}) + UpEvents(2, {}));
@@ -97,12 +98,12 @@ TEST_F(TwoFingerNTapRecognizerTest, SingleTapGestureDetectedWin) {
   EXPECT_TRUE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::TwoFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapRecognizer::kTapTimeout);
 }
 
 // Tests Double tap gesture detection case where gesture is declared a winner.
-TEST_F(TwoFingerNTapRecognizerTest, DoubleTapGestureDetectedWin) {
-  CreateGestureRecognizer(kNumberOfDoubleTaps);
+TEST_F(MFingerNTapRecognizerTest, DoubleTapGestureDetectedWin) {
+  CreateGestureRecognizer(kDefaultFingers, kNumberOfDoubleTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for first tap.
@@ -116,12 +117,12 @@ TEST_F(TwoFingerNTapRecognizerTest, DoubleTapGestureDetectedWin) {
   EXPECT_TRUE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::TwoFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapRecognizer::kTapTimeout);
 }
 
 // Tests Single tap gesture detection case where gesture is declared defeated.
-TEST_F(TwoFingerNTapRecognizerTest, SingleTapGestureDetectedLoss) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, SingleTapGestureDetectedLoss) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for first tap.
@@ -132,12 +133,12 @@ TEST_F(TwoFingerNTapRecognizerTest, SingleTapGestureDetectedLoss) {
   EXPECT_FALSE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::TwoFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapRecognizer::kTapTimeout);
 }
 
 // Tests Double tap gesture detection case where gesture is declared defeated.
-TEST_F(TwoFingerNTapRecognizerTest, DoubleTapGestureDetectedLoss) {
-  CreateGestureRecognizer(kNumberOfDoubleTaps);
+TEST_F(MFingerNTapRecognizerTest, DoubleTapGestureDetectedLoss) {
+  CreateGestureRecognizer(kDefaultFingers, 2);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for first tap.
@@ -151,41 +152,41 @@ TEST_F(TwoFingerNTapRecognizerTest, DoubleTapGestureDetectedLoss) {
   EXPECT_FALSE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::TwoFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapRecognizer::kTapTimeout);
 }
 
 // Tests Single tap gesture detection failure, where gesture detection times out because of long
 // press.
-TEST_F(TwoFingerNTapRecognizerTest, SingleTapGestureTimeout) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, SingleTapGestureTimeout) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {})));
 
   // Wait until the timeout, after which the gesture should abandon.
-  RunLoopFor(a11y::TwoFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapRecognizer::kTapTimeout);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests Double tap gesture detection failure, where gesture detection times out because second tap
 // doesn't start under timeout_between_taps_.
-TEST_F(TwoFingerNTapRecognizerTest, DoubleTapGestureTimeoutBetweenTaps) {
-  CreateGestureRecognizer(kNumberOfDoubleTaps);
+TEST_F(MFingerNTapRecognizerTest, DoubleTapGestureTimeoutBetweenTaps) {
+  CreateGestureRecognizer(kDefaultFingers, kNumberOfDoubleTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for first tap.
   SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {}) + UpEvents(1, {}) + UpEvents(2, {})));
 
   // Wait until the timeout, after which the gesture should abandon.
-  RunLoopFor(a11y::TwoFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapRecognizer::kTapTimeout);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests Single tap gesture detection failure when multiple fingers are detected.
-TEST_F(TwoFingerNTapRecognizerTest, SingleTapThirdFingerDetected) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, SingleTapThirdFingerDetected) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}));
@@ -202,8 +203,8 @@ TEST_F(TwoFingerNTapRecognizerTest, SingleTapThirdFingerDetected) {
 }
 
 // Tests Double tap gesture detection failure when multiple fingers are detected.
-TEST_F(TwoFingerNTapRecognizerTest, DoubleTapThirdFingerDetected) {
-  CreateGestureRecognizer(kNumberOfDoubleTaps);
+TEST_F(MFingerNTapRecognizerTest, DoubleTapThirdFingerDetected) {
+  CreateGestureRecognizer(kDefaultFingers, kNumberOfDoubleTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for first tap.
@@ -221,8 +222,8 @@ TEST_F(TwoFingerNTapRecognizerTest, DoubleTapThirdFingerDetected) {
 }
 
 // Tests Single tap gesture detection when gesture is preformed with move under the allowed limit.
-TEST_F(TwoFingerNTapRecognizerTest, SingleTapGestureWithMoveUnderThreshold) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, SingleTapGestureWithMoveUnderThreshold) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}) + DragEvents(2, {}, {a11y::kGestureMoveThreshold - .1f, 0}) +
@@ -234,8 +235,8 @@ TEST_F(TwoFingerNTapRecognizerTest, SingleTapGestureWithMoveUnderThreshold) {
 
 // Tests Single tap gesture detection failure when gesture is performed over a larger area(something
 // like swipe).
-TEST_F(TwoFingerNTapRecognizerTest, SingleTapGesturePerformedOverLargerArea) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, SingleTapGesturePerformedOverLargerArea) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}) + DragEvents(2, {}, {a11y::kGestureMoveThreshold + .1f, 0}));
@@ -245,8 +246,8 @@ TEST_F(TwoFingerNTapRecognizerTest, SingleTapGesturePerformedOverLargerArea) {
 
 // Tests Double tap gesture detection case where individual taps are performed at significant
 // distance from each other.
-TEST_F(TwoFingerNTapRecognizerTest, DoubleTapPerformedWithDistantTapsFromEachOther) {
-  CreateGestureRecognizer(kNumberOfDoubleTaps);
+TEST_F(MFingerNTapRecognizerTest, DoubleTapPerformedWithDistantTapsFromEachOther) {
+  CreateGestureRecognizer(kDefaultFingers, kNumberOfDoubleTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for first tap.
@@ -263,8 +264,8 @@ TEST_F(TwoFingerNTapRecognizerTest, DoubleTapPerformedWithDistantTapsFromEachOth
 
 // This test makes sure that local coordinates are passed correctly through the gesture context to
 // the callback.
-TEST_F(TwoFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send first finger down event with location specified.
@@ -299,8 +300,8 @@ TEST_F(TwoFingerNTapRecognizerTest, RecognizersPassesLocalCoordinatesToCallback)
   EXPECT_EQ(gesture_context_.local_point->y, 2);
 }
 
-TEST_F(TwoFingerNTapRecognizerTest, LiftAndReplaceSecondFingerIsNotRecognized) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, LiftAndReplaceSecondFingerIsNotRecognized) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send events for holding one finger down, and double-tapping with the
@@ -311,14 +312,42 @@ TEST_F(TwoFingerNTapRecognizerTest, LiftAndReplaceSecondFingerIsNotRecognized) {
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
 
-TEST_F(TwoFingerNTapRecognizerTest, LiftFingerBeforePlacingSecondFingerOnScreen) {
-  CreateGestureRecognizer(kDefaultTaps);
+TEST_F(MFingerNTapRecognizerTest, LiftFingerBeforePlacingSecondFingerOnScreen) {
+  CreateGestureRecognizer(kDefaultFingers, kDefaultTaps);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   // Send one-finger double tap.
   SendPointerEvents(2 * TapEvents(1, {}));
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
+}
+
+// Tests successful one-finger triple tap gesture detection.
+TEST_F(MFingerNTapRecognizerTest, OneFingerTripleTapDetected) {
+  CreateGestureRecognizer(1 /*number of fingers*/, 3 /*number of taps*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  // Send events for first tap.
+  SendPointerEvents((DownEvents(1, {}) + UpEvents(1, {}) + DownEvents(1, {}) + UpEvents(1, {}) +
+                     DownEvents(1, {}) + UpEvents(1, {})));
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
+}
+
+// Tests successfulthree-finger double tap gesture detection.
+TEST_F(MFingerNTapRecognizerTest, ThreeFingerDoubleTapDetected) {
+  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of taps*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  // Send events for first tap.
+  SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + UpEvents(1, {}) +
+                     UpEvents(2, {}) + UpEvents(3, {})));
+
+  // Send events for second tap.
+  SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + UpEvents(1, {}) +
+                     UpEvents(2, {}) + UpEvents(3, {})));
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
 }
 
 }  // namespace
