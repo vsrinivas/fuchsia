@@ -79,12 +79,11 @@ class FsManager {
   bool IsShutdown();
   void WaitForShutdown();
 
-  // Creates a RemoteDir sub-directory in the fshost diagnostics directory.
-  // This allows a filesystem to expose its Inspect API to Archivist alongside fshost.
-  // |diagnostics_dir_name| is the name of the diagnostics subdirectory created for
-  // this filesystem.
-  zx_status_t AddFsDiagnosticsDirectory(const char* diagnostics_dir_name,
-                                        zx::channel fs_diagnostics_dir_client);
+  // Creates a new subdirectory in the fshost diagnostics directory by the name of
+  // |diagnostics_dir_name|, which forwards the diagnostics directory exposed in the given
+  // filesystem |export_root|.
+  zx_status_t ForwardFsDiagnosticsDirectory(const char* diagnostics_dir_name,
+                                            zx::channel fs_export_root);
 
  private:
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,

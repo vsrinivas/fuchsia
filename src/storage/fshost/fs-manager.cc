@@ -11,6 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -264,14 +265,24 @@ bool FsManager::IsShutdown() { return sync_completion_signaled(&shutdown_); }
 
 void FsManager::WaitForShutdown() { sync_completion_wait(&shutdown_, ZX_TIME_INFINITE); }
 
-zx_status_t FsManager::AddFsDiagnosticsDirectory(const char* diagnostics_dir_name,
-                                                 zx::channel fs_diagnostics_dir_client) {
+zx_status_t FsManager::ForwardFsDiagnosticsDirectory(const char* diagnostics_dir_name,
+                                                     zx::channel fs_export_root) {
   // The diagnostics directory may not be initialized in tests.
   if (diagnostics_dir_ == nullptr) {
     return ZX_ERR_INTERNAL;
   }
-  auto fs_diagnostics_dir =
-      fbl::MakeRefCounted<fs::RemoteDir>(std::move(fs_diagnostics_dir_client));
+
+  auto inspect_node = fbl::MakeRefCounted<fs::Service>(
+      [fs_export_root = std::move(fs_export_root)](zx::channel request) {
+        std::string name = std::string("diagnostics/") + fuchsia::inspect::Tree::Name_;
+        return fdio_service_connect_at(fs_export_root.get(), name.c_str(), request.release());
+      });
+
+  auto fs_diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  zx_status_t status = fs_diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_node);
+  if (status != ZX_OK) {
+    return status;
+  }
   return diagnostics_dir_->AddEntry(diagnostics_dir_name, fs_diagnostics_dir);
 }
 

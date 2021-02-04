@@ -5,6 +5,7 @@
 #include "filesystem-mounter.h"
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
@@ -173,12 +174,6 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
     return status;
   }
 
-  status = fshost_.AddFsDiagnosticsDirectory("blobfs", std::move(fs_diagnostics_dir_client));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
-                   << zx_status_get_string(status);
-  }
-
   zx::status ret = MountFilesystem(PATH_BLOB, "/pkg/bin/blobfs", options, std::move(block_device),
                                    FS_SVC | FS_SVC_BLOBFS);
   if (ret.is_error()) {
@@ -186,14 +181,10 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
   }
   zx::channel export_root = std::move(ret.value());
 
-  uint32_t flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DIRECTORY;
-  uint32_t mode = fio::MODE_TYPE_DIRECTORY;
-  std::string name_str = std::string("diagnostics/") + fuchsia::inspect::Tree::Name_;
-  auto name = fidl::StringView(fidl::unowned_ptr(name_str.c_str()), name_str.length());
-  auto resp = fio::Directory::Call::Open(zx::unowned_channel(export_root), flags, mode,
-                                         std::move(name), std::move(fs_diagnostics_dir_server));
-  if (!resp.ok()) {
-    return resp.status();
+  status = fshost_.ForwardFsDiagnosticsDirectory("blobfs", std::move(export_root));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
+                   << zx_status_get_string(status);
   }
 
   blob_mounted_ = true;

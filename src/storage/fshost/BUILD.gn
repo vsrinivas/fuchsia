@@ -325,6 +325,7 @@ test("fshost_integration_test") {
     "block-device-test.cc",
     "block-watcher-test.cc",
     "filesystem-mounter-test.cc",
+    "fshost-exposed-dir-test.cc",
     "fshost_integration_test.cc",
     "fshost_integration_test.h",
     "mock-block-device.h",
