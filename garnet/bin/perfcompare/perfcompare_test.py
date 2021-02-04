@@ -44,7 +44,8 @@ def WriteJsonFile(filename, json_data):
 
 
 def ReadGoldenFile(filename):
-    data = open(filename, 'r').read()
+    with open(filename, 'r') as fh:
+        data = fh.read()
     matches = list(re.finditer('\n\n### (.*)\n', data, re.M))
     starts = [m.end() for m in matches]
     ends = [m.start() for m in matches[1:]] + [len(data)]
