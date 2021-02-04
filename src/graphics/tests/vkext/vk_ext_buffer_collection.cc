@@ -109,7 +109,8 @@ class VulkanExtensionTest : public testing::Test {
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token, vk::ImageCreateInfo image_create_info);
   UniqueBufferCollection CreateVkBufferCollectionForMultiImage(
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token, vk::ImageCreateInfo image_create_info,
-      const vk::ImageFormatConstraintsInfoFUCHSIA *constraints);
+      const vk::ImageFormatConstraintsInfoFUCHSIA *constraints,
+      vk::ImageConstraintsInfoFlagsFUCHSIA flags = {});
   fuchsia::sysmem::BufferCollectionInfo_2 AllocateSysmemCollection(
       std::optional<fuchsia::sysmem::BufferCollectionConstraints> constraints,
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
@@ -415,7 +416,8 @@ VulkanExtensionTest::UniqueBufferCollection VulkanExtensionTest::CreateVkBufferC
 VulkanExtensionTest::UniqueBufferCollection
 VulkanExtensionTest::CreateVkBufferCollectionForMultiImage(
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, vk::ImageCreateInfo image_create_info,
-    const vk::ImageFormatConstraintsInfoFUCHSIA *constraints) {
+    const vk::ImageFormatConstraintsInfoFUCHSIA *constraints,
+    vk::ImageConstraintsInfoFlagsFUCHSIA flags) {
   vk::BufferCollectionCreateInfoFUCHSIA import_info(token.Unbind().TakeChannel().release());
   auto [result, collection] =
       ctx_->device()->createBufferCollectionFUCHSIAUnique(import_info, nullptr, loader_);
@@ -428,6 +430,7 @@ VulkanExtensionTest::CreateVkBufferCollectionForMultiImage(
   constraints_info.minBufferCount = 1;
   constraints_info.minBufferCountForCamping = 0;
   constraints_info.minBufferCountForSharedSlack = 0;
+  constraints_info.flags = flags;
 
   result = ctx_->device()->setBufferCollectionImageConstraintsFUCHSIA(*collection, constraints_info,
                                                                       loader_);
@@ -821,11 +824,11 @@ TEST_P(VulkanImageExtensionTest, ImageCpuAccessible) {
   auto image_create_info = GetDefaultImageCreateInfo(use_protected_memory_, kDefaultFormat,
                                                      kDefaultWidth, kDefaultHeight, linear);
   vk::ImageFormatConstraintsInfoFUCHSIA format_constraints;
-  format_constraints.flags = vk::ImageFormatConstraintsFlagBitsFUCHSIA::eCpuReadOften |
-                             vk::ImageFormatConstraintsFlagBitsFUCHSIA::eCpuWriteOften;
 
   UniqueBufferCollection collection = CreateVkBufferCollectionForMultiImage(
-      std::move(vulkan_token), image_create_info, &format_constraints);
+      std::move(vulkan_token), image_create_info, &format_constraints,
+      vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
+          vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften);
 
   InitializeDirectImage(*collection, image_create_info);
 
@@ -880,8 +883,6 @@ TEST_P(VulkanImageExtensionTest, ProtectedCpuAccessible) {
   auto image_create_info =
       GetDefaultImageCreateInfo(true, kDefaultFormat, kDefaultWidth, kDefaultHeight, linear);
   vk::ImageFormatConstraintsInfoFUCHSIA format_constraints;
-  format_constraints.flags = vk::ImageFormatConstraintsFlagBitsFUCHSIA::eCpuReadOften |
-                             vk::ImageFormatConstraintsFlagBitsFUCHSIA::eCpuWriteOften;
 
   vk::BufferCollectionCreateInfoFUCHSIA import_info(vulkan_token.Unbind().TakeChannel().release());
   auto [result, collection] =
@@ -893,6 +894,8 @@ TEST_P(VulkanImageExtensionTest, ProtectedCpuAccessible) {
   constraints_info.pFormatConstraints = &format_constraints;
   constraints_info.createInfoCount = 1;
   constraints_info.minBufferCount = 1;
+  constraints_info.flags = vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
+                           vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften;
 
   // This function should fail because protected images can't be CPU accessible.
   EXPECT_NE(vk::Result::eSuccess, ctx_->device()->setBufferCollectionImageConstraintsFUCHSIA(
@@ -916,13 +919,13 @@ TEST_P(VulkanImageExtensionTest, ProtectedOptionalCompatible) {
     auto image_create_info2 =
         GetDefaultImageCreateInfo(false, kDefaultFormat, kDefaultWidth, kDefaultHeight, linear);
     vk::ImageFormatConstraintsInfoFUCHSIA format_constraints;
-    format_constraints.flags = vk::ImageFormatConstraintsFlagBitsFUCHSIA::eProtectedOptional;
 
     UniqueBufferCollection collection1 =
         CreateVkBufferCollectionForMultiImage(std::move(tokens[0]), image_create_info, nullptr);
 
     UniqueBufferCollection collection2 = CreateVkBufferCollectionForMultiImage(
-        std::move(tokens[1]), image_create_info2, &format_constraints);
+        std::move(tokens[1]), image_create_info2, &format_constraints,
+        vk::ImageConstraintsInfoFlagBitsFUCHSIA::eProtectedOptional);
 
     vk::BufferCollectionProperties2FUCHSIA properties;
     EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->getBufferCollectionProperties2FUCHSIA(

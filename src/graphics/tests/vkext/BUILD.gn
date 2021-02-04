@@ -7,10 +7,7 @@ executable("vkext") {
 
   sources = [
     "main.cc",
-
-    # Temporarily disabled since we're changing around some struct members.
-    # TODO(fxbug.dev/68833): Re-enable.
-    # "vk_ext_buffer_collection.cc",
+    "vk_ext_buffer_collection.cc",
     "vk_fuchsia_external_memory.cc",
     "vk_fuchsia_external_semaphore.cc",
     "vk_fuchsia_memory_control.cc",
