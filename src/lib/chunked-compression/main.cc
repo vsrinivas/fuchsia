@@ -200,8 +200,13 @@ int Compress(const uint8_t* src, size_t sz, const char* dst_file, int level, boo
     return 1;
   }
 
-  progress.Final("Wrote %lu bytes (%2.0f%% compression)\n", compressed_size,
-                 static_cast<double>(compressed_size) / static_cast<double>(sz) * 100);
+  double compression_percent = static_cast<double>(sz) - static_cast<double>(compressed_size);
+  if (sz) {
+    compression_percent = compression_percent / static_cast<double>(sz) * 100;
+  } else {
+    compression_percent = 0;
+  }
+  progress.Final("Wrote %lu bytes (%2.0f%% compression)\n", compressed_size, compression_percent);
 
   ftruncate(dst_fd.get(), compressed_size);
   return 0;
@@ -267,8 +272,13 @@ int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int l
     return 1;
   }
 
-  progress.Final("Wrote %lu bytes (%2.0f%% compression)\n", compressed_size,
-                 static_cast<double>(compressed_size) / static_cast<double>(sz) * 100);
+  double compression_percent = static_cast<double>(sz) - static_cast<double>(compressed_size);
+  if (sz) {
+    compression_percent = compression_percent / static_cast<double>(sz) * 100;
+  } else {
+    compression_percent = 0;
+  }
+  progress.Final("Wrote %lu bytes (%2.0f%% compression)\n", compressed_size, compression_percent);
 
   ftruncate(dst_fd.get(), compressed_size);
   return 0;
