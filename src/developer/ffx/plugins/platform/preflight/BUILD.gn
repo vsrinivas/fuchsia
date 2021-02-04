@@ -20,6 +20,7 @@ ffx_plugin("ffx_preflight") {
   ]
 
   sources = [
+    "src/analytics.rs",
     "src/args.rs",
     "src/check.rs",
     "src/check/build_prereqs.rs",
