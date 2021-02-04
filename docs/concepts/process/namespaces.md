@@ -67,7 +67,7 @@ including:
 To access an object within a namespace, you must already have another object
 in your possession.  A component typically receives channel handles for
 objects in the scope of its namespace during
-[Namespace Transfer](#namespace-transfer).
+[Namespace Transfer](#namespace_transfer).
 
 You can also create new objects out of thin air by implementing the
 appropriate FIDL protocols.
@@ -105,7 +105,7 @@ of bytes) subject to the following constraints:
 - Always compared using byte-for-byte equality (implies case-sensitive).
 
 Object names are valid arguments to a container's `Open()` method.
-See [FIDL Protocols](#fidl-protocols).
+See [FIDL Protocols](/docs/concepts/fidl/overview.md).
 
 It is intended that object names be encoded and interpreted as human-readable
 sequences of UTF-8 graphic characters, however this property is not enforced
@@ -142,7 +142,7 @@ Object relative path expressions have the following additional constraints:
 - Always compared using byte-for-byte equality (implies case-sensitive).
 
 Object relative path expressions are valid arguments to a container's `Open()`
-method.  See [FIDL Protocols](#fidl-protocols).
+method.  See [FIDL Protocols](/docs/concepts/fidl/overview.md).
 
 ### Client Interpreted Path Expressions
 
@@ -170,7 +170,7 @@ container.
 Client interpreted path expressions that contain these optional features
 are not valid arguments to a container's `Open()` method; they must be
 translated by the client prior to communicating with the namespace.
-See [FIDL Protocols](#fidl-protocols).
+See [FIDL Protocols](/docs/concepts/fidl/overview.md).
 
 For example, `fdio` implements client-side interpretation of `..` paths
 in file manipulation APIs such as `open()`, `stat()`, `unlink()`, etc.
