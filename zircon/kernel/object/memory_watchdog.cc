@@ -69,7 +69,7 @@ void MemoryWatchdog::EvictionTrigger() {
 
 // Helper called by the memory pressure thread when OOM state is entered.
 void MemoryWatchdog::OnOom() {
-  const char* oom_behavior_str = gCmdline.GetString("kernel.oom.behavior");
+  const char* oom_behavior_str = gCmdline.GetString(kernel_option::kOomBehavior);
 
   // Default to reboot if not set or set to an unexpected value. See fxbug.dev/33429 for the product
   // details on when this path vs. the reboot should be used.
@@ -250,7 +250,7 @@ void MemoryWatchdog::Init(Executor* executor) {
     mem_pressure_events_[i] = event.release();
   }
 
-  if (gCmdline.GetBool("kernel.oom.enable", true)) {
+  if (gCmdline.GetBool(kernel_option::kOomEnable, true)) {
     constexpr auto kNumWatermarks = PressureLevel::kNumLevels - 1;
     ktl::array<uint64_t, kNumWatermarks> mem_watermarks;
 
@@ -258,13 +258,14 @@ void MemoryWatchdog::Init(Executor* executor) {
     // patterns. Consider moving to percentages of total memory instead of absolute numbers - will
     // be easier to maintain across platforms.
     mem_watermarks[PressureLevel::kOutOfMemory] =
-        gCmdline.GetUInt64("kernel.oom.outofmemory-mb", 50) * MB;
+        gCmdline.GetUInt64(kernel_option::kOomOutOfMemoryMb, 50) * MB;
     mem_watermarks[PressureLevel::kCritical] =
-        gCmdline.GetUInt64("kernel.oom.critical-mb", 150) * MB;
-    mem_watermarks[PressureLevel::kWarning] = gCmdline.GetUInt64("kernel.oom.warning-mb", 300) * MB;
-    uint64_t watermark_debounce = gCmdline.GetUInt64("kernel.oom.debounce-mb", 1) * MB;
+        gCmdline.GetUInt64(kernel_option::kOomCriticalMb, 150) * MB;
+    mem_watermarks[PressureLevel::kWarning] =
+        gCmdline.GetUInt64(kernel_option::kOomWarningMb, 300) * MB;
+    uint64_t watermark_debounce = gCmdline.GetUInt64(kernel_option::kOomDebounceMb, 1) * MB;
 
-    if (gCmdline.GetBool("kernel.oom.evict-at-warning", false)) {
+    if (gCmdline.GetBool(kernel_option::kOomEvictAtWarning, false)) {
       max_eviction_level_ = PressureLevel::kWarning;
     }
     // Set our eviction target to be such that we try to get completely out of the max eviction

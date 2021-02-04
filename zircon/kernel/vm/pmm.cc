@@ -150,25 +150,23 @@ static bool pmm_checker_is_enabled() { return pmm_node.Checker()->IsArmed(); }
 static void pmm_checker_print_status() { pmm_node.Checker()->PrintStatus(stdout); }
 
 void pmm_checker_init_from_cmdline() {
-  bool enabled = gCmdline.GetBool("kernel.pmm-checker.enable", false);
+  bool enabled = gCmdline.GetBool(kernel_option::kPmmCheckerEnable, false);
   if (enabled) {
-    static constexpr char kFillSizeFlag[] = "kernel.pmm-checker.fill-size";
-    size_t fill_size = gCmdline.GetUInt64(kFillSizeFlag, PAGE_SIZE);
+    size_t fill_size = gCmdline.GetUInt64(kernel_option::kPmmCheckerFillSize, PAGE_SIZE);
     if (!PmmChecker::IsValidFillSize(fill_size)) {
-      printf("PMM: value from %s is invalid (%lu), using PAGE_SIZE instead\n", kFillSizeFlag,
-             fill_size);
+      printf("PMM: value from %s is invalid (%lu), using PAGE_SIZE instead\n",
+             kernel_option::kPmmCheckerFillSize, fill_size);
       fill_size = PAGE_SIZE;
     }
 
-    static constexpr char kActionFlag[] = "kernel.pmm-checker.action";
     PmmChecker::Action action = PmmChecker::DefaultAction;
-    const char* const action_string = gCmdline.GetString(kActionFlag);
+    const char* const action_string = gCmdline.GetString(kernel_option::kPmmCheckerAction);
     if (action_string != nullptr) {
       if (auto opt_action = PmmChecker::ActionFromString(action_string)) {
         action = opt_action.value();
       } else {
-        printf("PMM: value from %s is invalid (\"%s\"), using \"%s\" instead\n", kActionFlag,
-               action_string, PmmChecker::ActionToString(action));
+        printf("PMM: value from %s is invalid (\"%s\"), using \"%s\" instead\n",
+               kernel_option::kPmmCheckerAction, action_string, PmmChecker::ActionToString(action));
       }
     }
 

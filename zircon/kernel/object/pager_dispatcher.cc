@@ -337,10 +337,10 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
 }
 
 static void pager_init_func(uint level) {
-  pager_overtime_wait_seconds = gCmdline.GetUInt64("kernel.userpager.overtime_wait_seconds",
+  pager_overtime_wait_seconds = gCmdline.GetUInt64(kernel_option::kUserpagerOverTimeWaitSeconds,
                                                    kDefaultPagerOvertimeWaitSeconds);
-  pager_overtime_timeout_seconds = gCmdline.GetUInt64("kernel.userpager.overtime_timeout_seconds",
-                                                      kDefaultPagerOvertimeTimeoutSeconds);
+  pager_overtime_timeout_seconds = gCmdline.GetUInt64(
+      kernel_option::kUserpagerOverTimeTimeoutSeconds, kDefaultPagerOvertimeTimeoutSeconds);
 }
 
 LK_INIT_HOOK(pager_init, &pager_init_func, LK_INIT_LEVEL_LAST)

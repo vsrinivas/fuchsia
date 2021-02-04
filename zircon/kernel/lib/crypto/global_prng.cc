@@ -51,7 +51,7 @@ PRNG* GetInstance() {
 // TODO(security): Remove this in favor of virtio-rng once it is available and
 // we decide we don't need it for getting entropy from elsewhere.
 static bool IntegrateCmdlineEntropy() {
-  const char* entropy = gCmdline.GetString("kernel.entropy-mixin");
+  const char* entropy = gCmdline.GetString(kernel_option::kEntropyMixin);
   if (!entropy) {
     return false;
   }
@@ -136,18 +136,18 @@ static void EarlyBootSeed(uint level) {
   entropy::Collector* collector = nullptr;
   if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
-  } else if (gCmdline.GetBool("kernel.cprng-seed-require.hw-rng", false)) {
+  } else if (gCmdline.GetBool(kernel_option::kCprngSeedRequireHwRng, false)) {
     panic("Failed to seed PRNG from required entropy source: hw-rng\n");
   }
   if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
-  } else if (gCmdline.GetBool("kernel.cprng-seed-require.jitterentropy", false)) {
+  } else if (gCmdline.GetBool(kernel_option::kCprngSeedRequireJitterEntropy, false)) {
     panic("Failed to seed PRNG from required entropy source: jitterentropy\n");
   }
 
   if (IntegrateCmdlineEntropy()) {
     successful++;
-  } else if (gCmdline.GetBool("kernel.cprng-seed-require.cmdline", false)) {
+  } else if (gCmdline.GetBool(kernel_option::kCprngSeedRequireCmdline, false)) {
     panic("Failed to seed PRNG from required entropy source: cmdline\n");
   }
 
@@ -181,12 +181,12 @@ static int ReseedPRNG(void* arg) {
     // Reseed using HW RNG and jitterentropy;
     if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
-    } else if (gCmdline.GetBool("kernel.cprng-reseed-require.hw-rng", false)) {
+    } else if (gCmdline.GetBool(kernel_option::kCprngReseedRequireHwRng, false)) {
       panic("Failed to reseed PRNG from required entropy source: hw-rng\n");
     }
     if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
-    } else if (gCmdline.GetBool("kernel.cprng-reseed-require.jitterentropy", false)) {
+    } else if (gCmdline.GetBool(kernel_option::kCprngReseedRequireJitterEntropy, false)) {
       panic("Failed to reseed PRNG from required entropy source: jitterentropy\n");
     }
 

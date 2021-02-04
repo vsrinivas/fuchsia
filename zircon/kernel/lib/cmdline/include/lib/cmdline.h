@@ -122,4 +122,89 @@ class Cmdline {
 
 extern Cmdline gCmdline;
 
+// Kernel command line options, sorted alphabetically.
+namespace kernel_option {
+static constexpr const char kArm64DisableSpecMitigations[] =
+    "kernel.arm64.disable_spec_mitigations";
+static constexpr const char kArm64EventStreamEnable[] = "kernel.arm64.event-stream.enable";
+static constexpr const char kArm64EventStreamFreqHz[] = "kernel.arm64.event-stream.freq-hz";
+static constexpr const char kAslrDisable[] = "aslr.disable";
+static constexpr const char kAslrEntropyBits[] = "aslr.entropy_bits";
+static constexpr const char kBufferchainReservePages[] = "kernel.bufferchain.reserve-pages";
+static constexpr const char kBypassDebuglog[] = "kernel.bypass-debuglog";
+static constexpr const char kCprngReseedRequireHwRng[] = "kernel.cprng-reseed-require.hw-rng";
+static constexpr const char kCprngReseedRequireJitterEntropy[] =
+    "kernel.cprng-reseed-require.jitterentropy";
+static constexpr const char kCprngSeedRequireCmdline[] = "kernel.cprng-seed-require.cmdline";
+static constexpr const char kCprngSeedRequireHwRng[] = "kernel.cprng-seed-require.hw-rng";
+static constexpr const char kCprngSeedRequireJitterEntropy[] =
+    "kernel.cprng-seed-require.jitterentropy";
+static constexpr const char kDebugUartPoll[] = "kernel.debug_uart_poll";
+static constexpr const char kEnableDebuggingSyscalls[] = "kernel.enable-debugging-syscalls";
+static constexpr const char kEnableSerialSysaclls[] = "kernel.enable-serial-syscalls";
+static constexpr const char kEntropyMixin[] = "kernel.entropy-mixin";
+static constexpr const char kEntropyTestLen[] = "kernel.entropy-test.len";
+static constexpr const char kEntropyTestSrc[] = "kernel.entropy-test.src";
+static constexpr const char kForceWatchdogDisabled[] = "kernel.force-watchdog-disabled";
+static constexpr const char kGfxConsoleEarly[] = "gfxconsole.early";
+static constexpr const char kGfxConsoleFont[] = "gfxconsole.font";
+static constexpr const char kHaltOnPanic[] = "kernel.halt-on-panic";
+static constexpr const char kJitterEntropyBc[] = "kernel.jitterentropy.bc";
+static constexpr const char kJitterEntropyBs[] = "kernel.jitterentropy.bs";
+static constexpr const char kJitterEntropyLl[] = "kernel.jitterentropy.ll";
+static constexpr const char kJitterEntropyMl[] = "kernel.jitterentropy.ml";
+static constexpr const char kJitterEntropyRaw[] = "kernel.jitterentropy.raw";
+static constexpr const char kKtraceBufSize[] = "ktrace.bufsize";
+static constexpr const char kKtraceGrpMask[] = "ktrace.grpmask";
+static constexpr const char kLockupDetectorCriticalSectionThresholdMs[] =
+    "kernel.lockup-detector.critical-section-threshold-ms";
+static constexpr const char kLockupDetectorHeartbeatAgeThresholdMs[] =
+    "kernel.lockup-detector.heartbeat-age-threshold-ms";
+static constexpr const char kLockupDetectorHeartbeatPeriodMs[] =
+    "kernel.lockup-detector.heartbeat-period-ms";
+static constexpr const char kMemoryLimitDbg[] = "kernel.memory-limit-dbg";
+static constexpr const char kMemoryLimitMb[] = "kernel.memory-limit-mb";
+static constexpr const char kMexecForceHighRamdisk[] = "kernel.mexec-force-high-ramdisk";
+static constexpr const char kMexecPciShutdown[] = "kernel.mexec-pci-shutdown";
+static constexpr const char kOomBehavior[] = "kernel.oom.behavior";
+static constexpr const char kOomCriticalMb[] = "kernel.oom.critical-mb";
+static constexpr const char kOomDebounceMb[] = "kernel.oom.debounce-mb";
+static constexpr const char kOomEnable[] = "kernel.oom.enable";
+static constexpr const char kOomEvictAtWarning[] = "kernel.oom.evict-at-warning";
+static constexpr const char kOomOutOfMemoryMb[] = "kernel.oom.outofmemory-mb";
+static constexpr const char kOomWarningMb[] = "kernel.oom.warning-mb";
+static constexpr const char kPageScannerEnableUserPagerEviction[] =
+    "kernel.page-scanner.enable-user-pager-eviction";
+static constexpr const char kPageScannerPromoteNoClones[] = "kernel.page-scanner.promote-no-clones";
+static constexpr const char kPageScannerStartAtBoot[] = "kernel.page-scanner.start-at-boot";
+static constexpr const char kPageScannerZeroPageScansPerSecond[] =
+    "kernel.page-scanner.zero-page-scans-per-second";
+static constexpr const char kPmmCheckerAction[] = "kernel.pmm-checker.action";
+static constexpr const char kPmmCheckerEnable[] = "kernel.pmm-checker.enable";
+static constexpr const char kPmmCheckerFillSize[] = "kernel.pmm-checker.fill-size";
+static constexpr const char kPortobserverReservePages[] = "kernel.portobserver.reserve-pages";
+static constexpr const char kRootJobBehavior[] = "kernel.root-job.behavior";
+static constexpr const char kRootJobNotice[] = "kernel.root-job.notice";
+static constexpr const char kSerial[] = "kernel.serial";
+static constexpr const char kShell[] = "kernel.shell";
+static constexpr const char kSmpHt[] = "kernel.smp.ht";
+static constexpr const char kSmpMaxCpus[] = "kernel.smp.maxcpus";
+static constexpr const char kUserpagerOverTimeTimeoutSeconds[] =
+    "kernel.userpager.overtime_timeout_seconds";
+static constexpr const char kUserpagerOverTimeWaitSeconds[] =
+    "kernel.userpager.overtime_wait_seconds";
+static constexpr const char kVdsoClockGetMonotonicForceSyscall[] =
+    "vdso.clock_get_monotonic_force_syscall";
+static constexpr const char kVdsoTicksGetForceSyscall[] = "vdso.ticks_get_force_syscall";
+static constexpr const char kWallclock[] = "kernel.wallclock";
+static constexpr const char kX86DisableSpecMitigations[] = "kernel.x86.disable_spec_mitigations";
+static constexpr const char kX86DisableSpecStoreBypassDisable[] =
+    "kernel.x86.spec_store_bypass_disable";
+static constexpr const char kX86Hwp[] = "kernel.x86.hwp";
+static constexpr const char kX86HwpPolicy[] = "kernel.x86.hwp_policy";
+static constexpr const char kX86MdClearOnUserReturn[] = "kernel.x86.md_clear_on_user_return";
+static constexpr const char kX86PtiEnable[] = "kernel.x86.pti.enable";
+static constexpr const char kX86Turbo[] = "kernel.x86.turbo";
+}  // namespace kernel_option
+
 #endif  // ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_

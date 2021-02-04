@@ -157,7 +157,7 @@ void lockup_primary_init() {
   // virtualized environments and scripts that start qemu.
   constexpr uint64_t kDefaultThresholdMsec = 0;
   const zx_duration_t lockup_duration = ZX_MSEC(gCmdline.GetUInt64(
-      "kernel.lockup-detector.critical-section-threshold-ms", kDefaultThresholdMsec));
+      kernel_option::kLockupDetectorCriticalSectionThresholdMs, kDefaultThresholdMsec));
   const zx_ticks_t ticks = DurationToTicks(lockup_duration);
   cs_threshold_ticks.store(ticks);
 
@@ -172,11 +172,11 @@ void lockup_primary_init() {
   }
 
   constexpr uint64_t kDefaultHeartbeatPeriodMsec = 1000;
-  heartbeat_period.store(ZX_MSEC(gCmdline.GetUInt64("kernel.lockup-detector.heartbeat-period-ms",
+  heartbeat_period.store(ZX_MSEC(gCmdline.GetUInt64(kernel_option::kLockupDetectorHeartbeatPeriodMs,
                                                     kDefaultHeartbeatPeriodMsec)));
   constexpr uint64_t kDefaultHeartbeatAgeThresholdMsec = 3000;
   heartbeat_threshold.store(ZX_MSEC(gCmdline.GetUInt64(
-      "kernel.lockup-detector.heartbeat-age-threshold-ms", kDefaultHeartbeatAgeThresholdMsec)));
+      kernel_option::kLockupDetectorHeartbeatAgeThresholdMs, kDefaultHeartbeatAgeThresholdMsec)));
   const bool enabled = heartbeats_enabled();
   dprintf(INFO,
           "lockup_detector: heartbeats %s, period is %" PRId64 " ms, threshold is %" PRId64 " ms\n",

@@ -285,9 +285,9 @@ void ktrace_init(unsigned level) {
   // it. See zircon/kernel/syscalls/debug.cc for the corresponding syscalls.
   // Note that because KTRACE_STATE grpmask starts at 0 and will not be changed,
   // the other functions in this file need not check for enabled-ness manually.
-  bool syscalls_enabled = gCmdline.GetBool("kernel.enable-debugging-syscalls", false);
-  ktrace_bufsize_mb = gCmdline.GetUInt32("ktrace.bufsize", KTRACE_DEFAULT_BUFSIZE);
-  uint32_t grpmask = gCmdline.GetUInt32("ktrace.grpmask", KTRACE_DEFAULT_GRPMASK);
+  bool syscalls_enabled = gCmdline.GetBool(kernel_option::kEnableDebuggingSyscalls, false);
+  ktrace_bufsize_mb = gCmdline.GetUInt32(kernel_option::kKtraceBufSize, KTRACE_DEFAULT_BUFSIZE);
+  uint32_t grpmask = gCmdline.GetUInt32(kernel_option::kKtraceGrpMask, KTRACE_DEFAULT_GRPMASK);
 
   if (ktrace_bufsize_mb == 0 || !syscalls_enabled) {
     dprintf(INFO, "ktrace: disabled\n");

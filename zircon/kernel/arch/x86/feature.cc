@@ -203,7 +203,7 @@ void x86_cpu_feature_init() {
   }
 
   // Evaluate speculative execution mitigation settings.
-  g_disable_spec_mitigations = gCmdline.GetBool("kernel.x86.disable_spec_mitigations",
+  g_disable_spec_mitigations = gCmdline.GetBool(kernel_option::kX86DisableSpecMitigations,
                                                 /*default_value=*/false);
   if (x86_vendor == X86_VENDOR_INTEL) {
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
@@ -224,7 +224,7 @@ void x86_cpu_feature_init() {
     g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
     g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) && g_has_mds_taa &&
                                 g_has_md_clear &&
-                                gCmdline.GetBool("kernel.x86.md_clear_on_user_return",
+                                gCmdline.GetBool(kernel_option::kX86MdClearOnUserReturn,
                                                  /*default_value=*/true);
     g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
@@ -258,7 +258,7 @@ void x86_cpu_feature_init() {
   // specification - Enhanced IBRS processors may not be retpoline-safe.
   g_enhanced_ibrs_enabled = (x86_get_disable_spec_mitigations() == false) && g_has_enhanced_ibrs;
   g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
-                    gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
+                    gCmdline.GetBool(kernel_option::kX86DisableSpecStoreBypassDisable,
                                      /*default_value=*/false);
 }
 
@@ -297,17 +297,17 @@ void x86_cpu_feature_late_init_percpu(void) {
   }
 
   // Set up hardware-controlled performance states.
-  if (gCmdline.GetBool("kernel.x86.hwp", /*default_value=*/true)) {
+  if (gCmdline.GetBool(kernel_option::kX86Hwp, /*default_value=*/true)) {
     // Read the policy from the command line, falling back to kBiosSpecified.
     x86::IntelHwpPolicy policy =
-        x86::IntelHwpParsePolicy(gCmdline.GetString("kernel.x86.hwp_policy"))
+        x86::IntelHwpParsePolicy(gCmdline.GetString(kernel_option::kX86HwpPolicy))
             .value_or(x86::IntelHwpPolicy::kBiosSpecified);
     x86::IntelHwpInit(&cpuid, &msr, policy);
   }
 
   // Enable/disable Turbo on the processor.
   x86_cpu_set_turbo(&cpuid, &msr,
-                    gCmdline.GetBool("kernel.x86.turbo", /*default_value=*/true)
+                    gCmdline.GetBool(kernel_option::kX86Turbo, /*default_value=*/true)
                         ? Turbostate::ENABLED
                         : Turbostate::DISABLED);
 

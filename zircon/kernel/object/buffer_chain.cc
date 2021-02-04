@@ -43,7 +43,7 @@ void BufferChain::InitializePageCache(uint32_t /*level*/) {
   // TODO(fxbug.dev/68456): Determin an upper bound for this value to prevent
   // consuming too much memory.
   const size_t reserve_pages =
-      gCmdline.GetUInt64("kernel.bufferchain.reserve-pages", default_reserve_pages);
+      gCmdline.GetUInt64(kernel_option::kBufferchainReservePages, default_reserve_pages);
 
   zx::status<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
   ASSERT(result.is_ok());

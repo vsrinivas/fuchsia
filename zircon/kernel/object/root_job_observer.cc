@@ -15,12 +15,12 @@
 namespace {
 
 __NO_RETURN void Halt() {
-  const char* notice = gCmdline.GetString("kernel.root-job.notice");
+  const char* notice = gCmdline.GetString(kernel_option::kRootJobNotice);
   if (notice != nullptr) {
     printf("root-job: notice: %s\n", notice);
   }
 
-  const char* behavior = gCmdline.GetString("kernel.root-job.behavior");
+  const char* behavior = gCmdline.GetString(kernel_option::kRootJobBehavior);
   if (behavior == nullptr) {
     behavior = "reboot";
   }

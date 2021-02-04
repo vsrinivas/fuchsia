@@ -821,7 +821,7 @@ static int cmd_test(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 static void kernel_shell_init(uint level) {
-  if (gCmdline.GetBool("kernel.shell", false)) {
+  if (gCmdline.GetBool(kernel_option::kShell, false)) {
     console_start();
   }
 }

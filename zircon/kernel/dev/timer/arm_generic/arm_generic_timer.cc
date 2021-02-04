@@ -304,13 +304,13 @@ static inline affine::Ratio arm_generic_timer_compute_conversion_factors(uint32_
 // cpu and at what rate.
 static void event_stream_init(uint32_t cntfrq) {
   // Check to see if it's enabled in the command line
-  event_stream_enable = gCmdline.GetBool("kernel.arm64.event-stream.enable", false);
+  event_stream_enable = gCmdline.GetBool(kernel_option::kArm64EventStreamEnable, false);
   if (!event_stream_enable) {
     return;
   }
 
   // Default target frequency is 10khz
-  uint32_t target_event_freq = gCmdline.GetUInt32("kernel.arm64.event-stream.freq-hz", 10000);
+  uint32_t target_event_freq = gCmdline.GetUInt32(kernel_option::kArm64EventStreamFreqHz, 10000);
 
   // Compute the closest power of two from the timer frequency to get to the target.
   //

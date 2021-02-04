@@ -20,10 +20,6 @@
 #include <pdev/watchdog.h>
 #include <vm/physmap.h>
 
-namespace {
-constexpr const char* kForceDisableWatchdogCmdLineFlag = "kernel.force-watchdog-disabled";
-}
-
 class GenericWatchdog32 {
  public:
   constexpr GenericWatchdog32() {}
@@ -178,7 +174,7 @@ void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
   // stuff like set timers.  In addition, if the cmd-line flag was passed to
   // force disable the watchdog, do so if possible just after we have pet it.
   PetLocked();
-  if (gCmdline.GetBool(kForceDisableWatchdogCmdLineFlag, false) && is_enabled_ &&
+  if (gCmdline.GetBool(kernel_option::kForceWatchdogDisabled, false) && is_enabled_ &&
       cfg_.disable_action.addr) {
     TakeAction(cfg_.disable_action);
     is_enabled_ = false;
@@ -216,13 +212,13 @@ void GenericWatchdog32::Init(const void*, uint32_t) {
           is_enabled_ ? "yes" : "no");
 
   // If the force disable cmd line flag was passed, report that here.
-  if (gCmdline.GetBool(kForceDisableWatchdogCmdLineFlag, false)) {
+  if (gCmdline.GetBool(kernel_option::kForceWatchdogDisabled, false)) {
     if (cfg_.disable_action.addr) {
       dprintf(INFO, "WDT: %s was set, watchdog was force-disabled\n",
-              kForceDisableWatchdogCmdLineFlag);
+              kernel_option::kForceWatchdogDisabled);
     } else {
       dprintf(INFO, "WDT: %s was set, but the watchdog cannot be disabled.  It is currently %s.\n",
-              kForceDisableWatchdogCmdLineFlag, is_enabled_ ? "enabled" : "disabled");
+              kernel_option::kForceWatchdogDisabled, is_enabled_ ? "enabled" : "disabled");
     }
   }
 

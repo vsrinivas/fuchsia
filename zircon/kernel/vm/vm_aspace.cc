@@ -640,12 +640,12 @@ size_t VmAspace::AllocatedPages() const {
 }
 
 void VmAspace::InitializeAslr() {
-  aslr_enabled_ = is_user() && !gCmdline.GetBool("aslr.disable", false);
+  aslr_enabled_ = is_user() && !gCmdline.GetBool(kernel_option::kAslrDisable, false);
 
   if (aslr_enabled_) {
-    aslr_entropy_bits_ =
-        ktl::min(static_cast<uint8_t>(gCmdline.GetUInt32("aslr.entropy_bits", kDefaultASLREntropy)),
-                 (uint8_t)36);
+    aslr_entropy_bits_ = ktl::min(static_cast<uint8_t>(gCmdline.GetUInt32(
+                                      kernel_option::kAslrEntropyBits, kDefaultASLREntropy)),
+                                  (uint8_t)36);
     aslr_compact_entropy_bits_ = 8;
   }
 

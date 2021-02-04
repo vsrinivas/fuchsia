@@ -375,7 +375,7 @@ static void update_zbi_uart(const DebugPort& port) {
 // uninitialised.
 static bool handle_serial_cmdline(SerialConfig* config) {
   // Fetch the command line.
-  const char* serial_mode = gCmdline.GetString("kernel.serial");
+  const char* serial_mode = gCmdline.GetString(kernel_option::kSerial);
   if (serial_mode == nullptr) {
     // Nothing provided.
     config->type = SerialConfig::Type::kUnspecified;
@@ -550,7 +550,7 @@ void pc_init_debug() {
   }
 
   // If we don't support interrupts, set up a polling timer.
-  if ((debug_port.irq == 0) || gCmdline.GetBool("kernel.debug_uart_poll", false)) {
+  if ((debug_port.irq == 0) || gCmdline.GetBool(kernel_option::kDebugUartPoll, false)) {
     printf("debug-uart: polling enabled\n");
     platform_debug_start_uart_timer();
     return;

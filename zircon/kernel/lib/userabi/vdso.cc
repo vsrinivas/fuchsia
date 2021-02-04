@@ -220,10 +220,11 @@ void PatchTimeSyscalls(VDsoMutator mutator) {
   //
   // Since this can effect how clock monotonic is calculated as well, we may
   // need to redirect zx_clock_get_monotonic as well.
-  const bool need_syscall_for_ticks = !platform_usermode_can_access_tick_registers() ||
-                                      gCmdline.GetBool("vdso.ticks_get_force_syscall", false);
+  const bool need_syscall_for_ticks =
+      !platform_usermode_can_access_tick_registers() ||
+      gCmdline.GetBool(kernel_option::kVdsoTicksGetForceSyscall, false);
   const bool need_syscall_for_mono =
-      gCmdline.GetBool("vdso.clock_get_monotonic_force_syscall", false);
+      gCmdline.GetBool(kernel_option::kVdsoClockGetMonotonicForceSyscall, false);
 
   if (need_syscall_for_ticks) {
     REDIRECT_SYSCALL(mutator, zx_ticks_get, SYSCALL_zx_ticks_get_via_kernel);

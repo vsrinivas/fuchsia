@@ -317,7 +317,7 @@ static void platform_early_display_init(void) {
     return;
   }
 
-  if (gCmdline.GetBool("gfxconsole.early", false) == false) {
+  if (gCmdline.GetBool(kernel_option::kGfxConsoleEarly, false) == false) {
     early_console_disabled = true;
     return;
   }
@@ -608,7 +608,7 @@ void platform_mexec_prep(uintptr_t final_bootimage_addr, size_t final_bootimage_
   // corruption after boot.
   // Disabling PCI may cause devices to fail to enumerate after boot.
 #ifdef WITH_KERNEL_PCIE
-  if (gCmdline.GetBool("kernel.mexec-pci-shutdown", true)) {
+  if (gCmdline.GetBool(kernel_option::kMexecPciShutdown, true)) {
     PcieBusDriver::GetDriver()->DisableBus();
   }
 #endif
@@ -724,7 +724,7 @@ static size_t bsp_apic_id_index;
 
 static void traverse_topology(uint32_t) {
   // Filter out hyperthreads if we've been told not to init them
-  const bool use_ht = gCmdline.GetBool("kernel.smp.ht", true);
+  const bool use_ht = gCmdline.GetBool(kernel_option::kSmpHt, true);
 
   // We're implicitly running on the BSP
   const uint32_t bsp_apic_id = apic_local_id();
@@ -768,7 +768,7 @@ static void traverse_topology(uint32_t) {
   }
 
   // Find the CPU count limit
-  uint32_t max_cpus = gCmdline.GetUInt32("kernel.smp.maxcpus", SMP_MAX_CPUS);
+  uint32_t max_cpus = gCmdline.GetUInt32(kernel_option::kSmpMaxCpus, SMP_MAX_CPUS);
   if (max_cpus > SMP_MAX_CPUS || max_cpus <= 0) {
     printf("invalid kernel.smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
     max_cpus = SMP_MAX_CPUS;

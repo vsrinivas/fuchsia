@@ -495,7 +495,7 @@ void PortDispatcher::InitializePortObserverCache(uint32_t /*level*/) {
   const size_t default_reserve_pages = 8;
 
   const size_t reserve_pages =
-      gCmdline.GetUInt64("kernel.portobserver.reserve-pages", default_reserve_pages);
+      gCmdline.GetUInt64(kernel_option::kPortobserverReservePages, default_reserve_pages);
   auto result =
       object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>::Create(reserve_pages);
   ASSERT(result.is_ok());

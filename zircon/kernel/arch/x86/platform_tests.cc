@@ -113,7 +113,7 @@ static bool test_x64_hwp_k_commands() {
   BEGIN_TEST;
 
   // Don't test at all if HWP disabled on the command line.
-  if (!gCmdline.GetBool("kernel.x86.hwp", /*default_value=*/true)) {
+  if (!gCmdline.GetBool(kernel_option::kX86Hwp, /*default_value=*/true)) {
     return true;
   }
 
@@ -147,8 +147,9 @@ static bool test_x64_hwp_k_commands() {
 
   // Restore the policy to default.
   MsrAccess msr;
-  x86::IntelHwpPolicy policy = x86::IntelHwpParsePolicy(gCmdline.GetString("kernel.x86.hwp_policy"))
-                                   .value_or(x86::IntelHwpPolicy::kBiosSpecified);
+  x86::IntelHwpPolicy policy =
+      x86::IntelHwpParsePolicy(gCmdline.GetString(kernel_option::kX86HwpPolicy))
+          .value_or(x86::IntelHwpPolicy::kBiosSpecified);
   x86::IntelHwpInit(&cpuid, &msr, policy);
 
   END_TEST;

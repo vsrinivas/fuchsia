@@ -218,7 +218,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   arm64_feature_debug(true);
 
   uint32_t max_cpus = arch_max_num_cpus();
-  uint32_t cmdline_max_cpus = gCmdline.GetUInt32("kernel.smp.maxcpus", max_cpus);
+  uint32_t cmdline_max_cpus = gCmdline.GetUInt32(kernel_option::kSmpMaxCpus, max_cpus);
   if (cmdline_max_cpus > max_cpus || cmdline_max_cpus <= 0) {
     printf("invalid kernel.smp.maxcpus value, defaulting to %u\n", max_cpus);
     cmdline_max_cpus = max_cpus;
@@ -236,7 +236,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void arch_late_init_percpu(void) {
-  bool disable_spec_mitigations = gCmdline.GetBool("kernel.arm64.disable_spec_mitigations",
+  bool disable_spec_mitigations = gCmdline.GetBool(kernel_option::kArm64DisableSpecMitigations,
                                                    /*default_value=*/false);
 
   arm64_read_percpu_ptr()->should_invalidate_bp_on_context_switch =

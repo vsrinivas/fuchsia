@@ -167,7 +167,7 @@ static void gfxconsole_print_callback(PrintCallback* cb, ktl::string_view str) {
 static PrintCallback cb{gfxconsole_print_callback};
 
 static void gfxconsole_setup(gfx_surface* surface, gfx_surface* hw_surface) {
-  const char* fname = gCmdline.GetString("gfxconsole.font");
+  const char* fname = gCmdline.GetString(kernel_option::kGfxConsoleFont);
   if (fname != NULL) {
     if (!strcmp(fname, "18x32")) {
       font = &gfx_font_18x32;

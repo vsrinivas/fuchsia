@@ -35,8 +35,6 @@ constexpr uint32_t kScannerOpHarvestAccessed = 1u << 7;
 // Amount of time between pager queue rotations.
 constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 
-const char *kEvictionCmdLineFlag = "kernel.page-scanner.enable-user-pager-eviction";
-
 // If not set on the cmdline this becomes the default zero page scans per second to target. This
 // value was chosen to consume, in the worst case, 5% CPU on a lower-end arm device. Individual
 // configurations may wish to tune this higher (or lower) as needed.
@@ -341,16 +339,16 @@ static void scanner_init_func(uint level) {
   Thread *thread =
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
-  eviction_enabled = gCmdline.GetBool(kEvictionCmdLineFlag, true);
-  zero_page_scans_per_second = gCmdline.GetUInt64("kernel.page-scanner.zero-page-scans-per-second",
+  eviction_enabled = gCmdline.GetBool(kernel_option::kPageScannerEnableUserPagerEviction, true);
+  zero_page_scans_per_second = gCmdline.GetUInt64(kernel_option::kPageScannerZeroPageScansPerSecond,
                                                   kDefaultZeroPageScansPerSecond);
-  if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", true)) {
+  if (!gCmdline.GetBool(kernel_option::kPageScannerStartAtBoot, true)) {
     Guard<Mutex> guard{scanner_disabled_lock::Get()};
     scanner_disable_count++;
     scanner_operation.fetch_or(kScannerOpDisable);
     scanner_request_event.Signal();
   }
-  if (gCmdline.GetBool("kernel.page-scanner.promote-no-clones", false)) {
+  if (gCmdline.GetBool(kernel_option::kPageScannerPromoteNoClones, false)) {
     VmObject::EnableEvictionPromoteNoClones();
   }
   thread->Resume();
@@ -393,7 +391,8 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
       goto usage;
     }
     if (!eviction_enabled) {
-      printf("%s is false, reclamation request will have no effect\n", kEvictionCmdLineFlag);
+      printf("%s is false, reclamation request will have no effect\n",
+             kernel_option::kPageScannerEnableUserPagerEviction);
     }
     scanner::EvictionLevel eviction_level = scanner::EvictionLevel::IncludeNewest;
     if (argc >= 4 && !strcmp(argv[3].str, "only_old")) {

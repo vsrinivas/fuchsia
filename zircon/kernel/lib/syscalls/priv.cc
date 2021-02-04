@@ -9,13 +9,13 @@
 #include <lib/cmdline.h>
 
 bool DebuggingSyscallsEnabled() {
-  static bool enabled = gCmdline.GetBool("kernel.enable-debugging-syscalls", false);
+  static bool enabled = gCmdline.GetBool(kernel_option::kEnableDebuggingSyscalls, false);
   return enabled;
 }
 
 SerialState SerialSyscallsEnabled() {
   static const char* serial = []() {
-    return gCmdline.GetString("kernel.enable-serial-syscalls");
+    return gCmdline.GetString(kernel_option::kEnableSerialSysaclls);
   }();
 
   if (serial == nullptr) {

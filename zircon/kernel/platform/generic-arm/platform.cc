@@ -513,7 +513,7 @@ void platform_early_init(void) {
   // Serial port should be active now
 
   // Check if serial should be enabled
-  const char* serial_mode = gCmdline.GetString("kernel.serial");
+  const char* serial_mode = gCmdline.GetString(kernel_option::kSerial);
   uart_disabled = (serial_mode != NULL && !strcmp(serial_mode, "none"));
 
   // Initialize the PmmChecker now that the cmdline has been parsed.

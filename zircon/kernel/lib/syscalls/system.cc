@@ -329,7 +329,7 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
   if (result != ZX_OK)
     return result;
 
-  const bool force_high_mem = gCmdline.GetBool("kernel.mexec-force-high-ramdisk", false);
+  const bool force_high_mem = gCmdline.GetBool(kernel_option::kMexecForceHighRamdisk, false);
 
   paddr_t new_kernel_addr;
   size_t new_kernel_len;

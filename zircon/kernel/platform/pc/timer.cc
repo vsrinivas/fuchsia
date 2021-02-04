@@ -521,7 +521,7 @@ static void pc_init_timer(uint level) {
     calibration_clock = CLOCK_PIT;
   }
 
-  const char* force_wallclock = gCmdline.GetString("kernel.wallclock");
+  const char* force_wallclock = gCmdline.GetString(kernel_option::kWallclock);
   bool use_invariant_tsc = invariant_tsc && (!force_wallclock || !strcmp(force_wallclock, "tsc"));
 
   use_tsc_deadline = use_invariant_tsc && x86_feature_test(X86_FEATURE_TSC_DEADLINE);
