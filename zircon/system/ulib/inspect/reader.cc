@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/optional.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/scanner.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
+#include <lib/stdcompat/optional.h>
 
 #include <iterator>
 #include <set>
@@ -149,7 +149,7 @@ class Reader {
 
   // Helper to interpret the given block as a NAME block and return a
   // copy of the name contents.
-  fit::optional<std::string> GetAndValidateName(BlockIndex index);
+  cpp17::optional<std::string> GetAndValidateName(BlockIndex index);
 
   // Contents of the read VMO.
   Snapshot snapshot_;
@@ -158,7 +158,7 @@ class Reader {
   std::unordered_map<BlockIndex, ParsedNode> parsed_nodes_;
 };
 
-fit::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
+cpp17::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
   const Block* block = internal::GetBlock(&snapshot_, index);
   if (!block) {
     return {};

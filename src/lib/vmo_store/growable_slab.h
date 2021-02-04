@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_VMO_STORE_GROWABLE_SLAB_H_
 #define SRC_LIB_VMO_STORE_GROWABLE_SLAB_H_
 
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #include <zircon/status.h>
 
 #include <limits>
@@ -73,10 +73,10 @@ class GrowableSlab {
 
   // Inserts `value` on the slab, using a key from the available pool.
   // Returns a valid `KeyType` if there was an available slot to put `value` in.
-  [[nodiscard]] fit::optional<KeyType> Push(T&& value) {
+  [[nodiscard]] cpp17::optional<KeyType> Push(T&& value) {
     KeyType key = free_list_.head;
     if (Insert(key, std::move(value)) != ZX_OK) {
-      return fit::optional<KeyType>();
+      return cpp17::optional<KeyType>();
     }
     return key;
   }
@@ -113,12 +113,12 @@ class GrowableSlab {
 
   // Erases the value at `key`, freeing the slot and returning the stored value.
   // `Erase` returns a valid `T` if `key` pointed to an occupied slot.
-  fit::optional<T> Erase(KeyType key) {
+  cpp17::optional<T> Erase(KeyType key) {
     auto* slot = GetOccupiedSlot(key);
     if (!slot) {
-      return fit::optional<T>();
+      return cpp17::optional<T>();
     }
-    fit::optional<T> ret(std::move(slot->value.value()));
+    cpp17::optional<T> ret(std::move(slot->value.value()));
     slot->value.reset();
 
     ListRemove(&used_list_, key);
@@ -146,7 +146,7 @@ class GrowableSlab {
     Slot(const Slot& other) = delete;
     KeyType next;
     KeyType prev;
-    fit::optional<T> value;
+    cpp17::optional<T> value;
   };
 
   class Iterator {

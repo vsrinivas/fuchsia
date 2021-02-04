@@ -8,6 +8,7 @@
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/stdcompat/optional.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -54,7 +55,7 @@ class LogConnectorImpl : public fuchsia::sys::internal::LogConnector,
   // weak_factory_ must be the last member variable.
   fxl::WeakPtrFactory<LogConnectorImpl> weak_factory_;
 
-  fit::optional<fit::function<void()>> on_ready_;
+  cpp17::optional<fit::function<void()>> on_ready_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogConnectorImpl);
 };

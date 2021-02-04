@@ -8,8 +8,8 @@
 
 #include <fbl/algorithm.h>
 
-zx_status_t FakeMapRange::Create(size_t size, fit::optional<FakeMapRange>* result_param) {
-  fit::optional<FakeMapRange>& result = *result_param;
+zx_status_t FakeMapRange::Create(size_t size, cpp17::optional<FakeMapRange>* result_param) {
+  cpp17::optional<FakeMapRange>& result = *result_param;
   // We can't emplace without making more constructors public or adding brittle friending of
   // optional implementation details, so instead we create one locally and move it in, since it's
   // fine if the move constructor is public. This also avoids putting anything in *result_param
@@ -32,11 +32,11 @@ FakeMapRange::~FakeMapRange() {
 }
 
 FakeMapRange::FakeMapRange(FakeMapRange&& other)
-  : raw_size_(other.raw_size_),
-    vmar_size_(other.vmar_size_),
-    vmar_(std::move(other.vmar_)),
-    vmar_addr_(other.vmar_addr_),
-    is_ready_(other.is_ready_) {
+    : raw_size_(other.raw_size_),
+      vmar_size_(other.vmar_size_),
+      vmar_(std::move(other.vmar_)),
+      vmar_addr_(other.vmar_addr_),
+      is_ready_(other.is_ready_) {
   // Helps detect usage after moving out.
   other.is_ready_ = false;
 }

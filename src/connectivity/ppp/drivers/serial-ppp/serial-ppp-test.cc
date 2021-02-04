@@ -5,6 +5,7 @@
 #include "serial-ppp.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
 #include <zircon/errors.h>
@@ -153,10 +154,10 @@ class SerialPppHarness : public zxtest::Test {
   zx::event& Event() { return event_; }
   zx::socket& Socket() { return socket_; }
 
-  fit::optional<rx_buffer_t> PopRx() {
+  cpp17::optional<rx_buffer_t> PopRx() {
     fbl::AutoLock lock(&lock_);
     if (rx_completed_.empty()) {
-      return fit::nullopt;
+      return cpp17::nullopt;
     }
     rx_buffer_t ret = rx_completed_.front();
     rx_completed_.pop();
@@ -176,10 +177,10 @@ class SerialPppHarness : public zxtest::Test {
     }
   }
 
-  fit::optional<tx_result_t> PopTx() {
+  cpp17::optional<tx_result_t> PopTx() {
     fbl::AutoLock lock(&lock_);
     if (tx_completed_.empty()) {
-      return fit::nullopt;
+      return cpp17::nullopt;
     }
     tx_result_t ret = tx_completed_.front();
     tx_completed_.pop();
@@ -202,7 +203,7 @@ class SerialPppHarness : public zxtest::Test {
     return ret;
   }
 
-  fit::optional<status_t> TakeStatus() {
+  cpp17::optional<status_t> TakeStatus() {
     fbl::AutoLock lock(&lock_);
     auto ret = status_;
     status_.reset();
@@ -217,7 +218,7 @@ class SerialPppHarness : public zxtest::Test {
   zx::event event_;
 
   fbl::Mutex lock_;
-  fit::optional<status_t> status_ __TA_GUARDED(lock_);
+  cpp17::optional<status_t> status_ __TA_GUARDED(lock_);
   std::queue<rx_buffer_t> rx_completed_ __TA_GUARDED(lock_);
   std::queue<tx_result_t> tx_completed_ __TA_GUARDED(lock_);
   fzl::VmoMapper vmo_;
@@ -540,7 +541,7 @@ TEST_F(SerialPppHarness, CycleTraffic) {
   size_t rx_serial_count = 0;
   size_t tx_serial_count = 0;
 
-  fit::optional<std::pair<std::vector<uint8_t>, size_t>> pending_write;
+  cpp17::optional<std::pair<std::vector<uint8_t>, size_t>> pending_write;
   std::array<uint8_t, kDefaultBufferReservation> socket_read_buffer;
   auto socket_read_offset = socket_read_buffer.begin();
 

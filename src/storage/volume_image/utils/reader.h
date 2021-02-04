@@ -5,9 +5,6 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_READER_H_
 
-#include <lib/fit/optional.h>
-#include <lib/fit/result.h>
-
 #include <limits>
 #include <string>
 

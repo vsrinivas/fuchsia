@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #include <zircon/limits.h>
 
 #include <fbl/algorithm.h>
@@ -32,7 +32,7 @@ class FakeMapRangeTest : public ::testing::Test {
 
  protected:
   // We store the ranges this way in the test because this is how codec_impl has them stored.
-  fit::optional<FakeMapRange> fake_ranges_[kFakeRangeCount];
+  cpp17::optional<FakeMapRange> fake_ranges_[kFakeRangeCount];
   uint32_t first_vmar_byte_offset_ = 0;
   uint32_t last_vmar_byte_offset_ = 0;
 };
@@ -55,6 +55,4 @@ TEST_F(FakeMapRangeTest, WriteLastByteFaults) {
                "");
 }
 
-TEST_F(FakeMapRangeTest, SizeWorks) {
-  ASSERT_EQ(kBufferSize, fake_ranges_[0]->size());
-}
+TEST_F(FakeMapRangeTest, SizeWorks) { ASSERT_EQ(kBufferSize, fake_ranges_[0]->size()); }

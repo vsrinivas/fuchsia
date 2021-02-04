@@ -6,7 +6,6 @@
 #define LIB_INSPECT_CPP_HIERARCHY_H_
 
 #include <lib/fit/function.h>
-#include <lib/fit/optional.h>
 #include <lib/fit/variant.h>
 
 #include <limits>

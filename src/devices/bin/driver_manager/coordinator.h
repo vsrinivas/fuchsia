@@ -11,6 +11,7 @@
 #include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -389,7 +390,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
   // driver is used for binding against fragments of composite devices
   const Driver* fragment_driver_ = nullptr;
 
-  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::registrar::DriverRegistrar>>
+  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::driver::registrar::DriverRegistrar>>
       driver_registrar_binding_;
   internal::PackageResolver package_resolver_;
 

@@ -47,6 +47,7 @@ source_set("codec_impl") {
     ":fourcc",
     "//sdk/fidl/fuchsia.media.drm",
     "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/cpp",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/cobalt/cpp:cobalt_logger",

@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <fuchsia/net/tun/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/optional.h>
 
 #include <array>
 
@@ -33,7 +34,7 @@ class VmoStore {
       : store_(vmo_store::Options{
             vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                                   nullptr},
-            fit::nullopt}) {}
+            cpp17::nullopt}) {}
 
   ~VmoStore() = default;
 
@@ -142,7 +143,7 @@ class Buffer {
   std::array<buffer_region_t, MAX_BUFFER_PARTS> parts_{};
   const size_t parts_count_{};
   std::unique_ptr<fuchsia::net::tun::FrameMetadata> meta_;
-  const fit::optional<fuchsia::hardware::network::FrameType> frame_type_;
+  const cpp17::optional<fuchsia::hardware::network::FrameType> frame_type_;
 };
 
 }  // namespace tun

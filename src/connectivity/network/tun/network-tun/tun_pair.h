@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/stdcompat/optional.h>
 
 #include <fbl/intrusive_double_list.h>
 
@@ -62,7 +63,7 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
   fit::callback<void(TunPair*)> teardown_callback_;
   fuchsia::net::tun::DevicePairConfig config_;
   async::Loop loop_;
-  fit::optional<thrd_t> loop_thread_;
+  cpp17::optional<thrd_t> loop_thread_;
   fidl::Binding<fuchsia::net::tun::DevicePair> binding_;
   std::unique_ptr<DeviceAdapter> left_;
   std::unique_ptr<DeviceAdapter> right_;

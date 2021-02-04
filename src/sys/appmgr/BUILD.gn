@@ -76,6 +76,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/cmx",

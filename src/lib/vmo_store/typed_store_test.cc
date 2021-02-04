@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/optional.h>
 #include <zircon/status.h>
 
 #include <unordered_map>
@@ -96,7 +97,7 @@ class UnorderedMapStorage : public AbstractStorage<std::string, int32_t> {
     return ZX_OK;
   }
 
-  fit::optional<std::string> Push(StoredVmo<int32_t>&& vmo) override {
+  cpp17::optional<std::string> Push(StoredVmo<int32_t>&& vmo) override {
     while (map_.find(auto_keys_) != map_.end()) {
       auto_keys_ += "a";
     }
@@ -112,10 +113,10 @@ class UnorderedMapStorage : public AbstractStorage<std::string, int32_t> {
     return &srch->second;
   }
 
-  fit::optional<StoredVmo<int32_t>> Extract(std::string key) override {
+  cpp17::optional<StoredVmo<int32_t>> Extract(std::string key) override {
     auto result = map_.extract(key);
     if (!result) {
-      return fit::optional<StoredVmo<int32_t>>();
+      return cpp17::optional<StoredVmo<int32_t>>();
     }
 
     return std::move(result.mapped());

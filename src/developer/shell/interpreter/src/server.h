@@ -7,7 +7,7 @@
 
 #include <fuchsia/shell/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #include <zircon/status.h>
 
 #include <map>
@@ -265,7 +265,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   Server* server_;
   // The binding reference which allows controlling the message dispatching
   // of this connection and sending events.
-  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell>> binding_;
+  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell>> binding_;
   // The interpreter associated with this service. An interpreter can only be associated to one
   // service.
   std::unique_ptr<ServerInterpreter> interpreter_;

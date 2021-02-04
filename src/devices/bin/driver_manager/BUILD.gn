@@ -84,6 +84,7 @@ source_set("lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/fdio:fdio-spawn-actions",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//src/devices/lib/log",
     "//src/lib/ddk",

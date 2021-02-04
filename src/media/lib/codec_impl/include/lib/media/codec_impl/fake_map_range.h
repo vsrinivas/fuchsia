@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_FAKE_MAP_RANGE_H_
 #define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_FAKE_MAP_RANGE_H_
 
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/vmar.h>
 #include <stddef.h>
 #include <zircon/types.h>
@@ -35,7 +35,7 @@ class FakeMapRange {
   // aligned with respect to ZX_PAGE_SIZE.  This class provides that extra space automatically.
   //
   // Create() will assert if result isn't empty.
-  static zx_status_t Create(size_t size, fit::optional<FakeMapRange>* result);
+  static zx_status_t Create(size_t size, cpp17::optional<FakeMapRange>* result);
   ~FakeMapRange();
 
   // move only; no copy ("delete" here just to make it explicit)

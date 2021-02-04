@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/stdcompat/optional.h>
 
 #include "data_structs.h"
 #include "definitions.h"
@@ -121,7 +122,7 @@ class DeviceInterface : public netdev::Device::Interface,
 
    private:
     Binding() = default;
-    fit::optional<fidl::ServerBindingRef<netdev::Device>> binding_;
+    cpp17::optional<fidl::ServerBindingRef<netdev::Device>> binding_;
   };
   using BindingList = fbl::DoublyLinkedList<std::unique_ptr<Binding>>;
 
@@ -134,7 +135,7 @@ class DeviceInterface : public netdev::Device::Interface,
         vmo_store_(vmo_store::Options{
             vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                                   nullptr},
-            fit::nullopt}) {}
+            cpp17::nullopt}) {}
   zx_status_t Init(const char* parent_name);
 
   // Starts the data path with the device implementation.

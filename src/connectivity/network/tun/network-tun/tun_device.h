@@ -8,6 +8,7 @@
 #include <fuchsia/net/tun/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/stdcompat/optional.h>
 
 #include <queue>
 
@@ -77,7 +78,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
 
   async::Loop loop_;
   fit::callback<void(TunDevice*)> teardown_callback_;
-  fit::optional<thrd_t> loop_thread_;
+  cpp17::optional<thrd_t> loop_thread_;
   fuchsia::net::tun::DeviceConfig config_;
   fidl::Binding<fuchsia::net::tun::Device> binding_;
   std::unique_ptr<DeviceAdapter> device_;
@@ -97,7 +98,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   std::queue<ReadFrameCallback> pending_read_frame_;
   std::queue<PendingWriteRequest> pending_write_frame_;
   WatchStateCallback pending_watch_state_;
-  fit::optional<fuchsia::net::tun::InternalState> last_state_;
+  cpp17::optional<fuchsia::net::tun::InternalState> last_state_;
 
   zx::eventpair signals_self_;
   zx::eventpair signals_peer_;

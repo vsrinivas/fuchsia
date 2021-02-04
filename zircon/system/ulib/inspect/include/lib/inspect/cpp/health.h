@@ -5,8 +5,8 @@
 #ifndef LIB_INSPECT_CPP_HEALTH_H_
 #define LIB_INSPECT_CPP_HEALTH_H_
 
-#include <lib/fit/optional.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/time.h>
 
 namespace inspect {
@@ -73,7 +73,7 @@ class NodeHealth final {
 
   ::inspect::Node health_node_;
   ::inspect::StringProperty health_status_;
-  fit::optional<::inspect::StringProperty> health_message_;
+  cpp17::optional<::inspect::StringProperty> health_message_;
   ::inspect::IntProperty timestamp_nanos_;
 };
 

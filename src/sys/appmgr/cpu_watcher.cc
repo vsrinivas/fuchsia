@@ -4,7 +4,7 @@
 
 #include "cpu_watcher.h"
 
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
@@ -134,7 +134,7 @@ void CpuWatcher::Measure() {
   process_times_.Insert((zx::clock::get_monotonic() - start).get());
 }
 
-fit::optional<CpuWatcher::Measurement> CpuWatcher::Task::Measure(const zx::time& timestamp) {
+cpp17::optional<CpuWatcher::Measurement> CpuWatcher::Task::Measure(const zx::time& timestamp) {
   if (job().is_valid()) {
     TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure");
     zx_info_task_runtime_t info;
@@ -142,12 +142,12 @@ fit::optional<CpuWatcher::Measurement> CpuWatcher::Task::Measure(const zx::time&
       TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure::AddMeasurement");
       add_measurement(timestamp.get(), info.cpu_time, info.queue_time);
     }
-    return fit::make_optional(Measurement{
+    return cpp17::make_optional(Measurement{
         .timestamp = timestamp.get(), .cpu_time = info.cpu_time, .queue_time = info.queue_time});
   } else {
     TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure:Rotate");
     rotate();
-    return fit::nullopt;
+    return cpp17::nullopt;
   }
 }
 

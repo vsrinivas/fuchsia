@@ -5,7 +5,6 @@
 #ifndef LIB_INSPECT_CPP_INSPECTOR_H_
 #define LIB_INSPECT_CPP_INSPECTOR_H_
 
-#include <lib/fit/optional.h>
 #include <lib/fit/result.h>
 #include <lib/inspect/cpp/value_list.h>
 #include <lib/zx/vmo.h>

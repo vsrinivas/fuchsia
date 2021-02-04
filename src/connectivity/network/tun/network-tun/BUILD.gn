@@ -27,6 +27,7 @@ source_set("src") {
     "//sdk/banjo/fuchsia.hardware.network.device",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//sdk/fidl/fuchsia.net.tun",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/drivers/network-device/device",
     "//src/connectivity/network/drivers/network-device/mac",

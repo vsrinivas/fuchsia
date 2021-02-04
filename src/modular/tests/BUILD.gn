@@ -119,6 +119,7 @@ executable("basemgr_test") {
   deps = [
     ":fuchsia.testing.modular",
     "//sdk/lib/modular/testing/cpp",
+    "//sdk/lib/stdcompat",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",

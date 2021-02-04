@@ -8,6 +8,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/value_list.h>
 #include <lib/inspect/cpp/vmo/types.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/job.h>
 #include <lib/zx/vmo.h>
 #include <zircon/threads.h>
@@ -106,7 +107,7 @@ class CpuWatcher {
 
     // Takes and records a new measurement for this task. A copy of the measurement is returned if
     // one was taken.
-    fit::optional<Measurement> Measure(const zx::time& timestamp);
+    cpp17::optional<Measurement> Measure(const zx::time& timestamp);
 
    private:
     // The job to sample.

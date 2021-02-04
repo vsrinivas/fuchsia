@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/svc/outgoing.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -46,7 +47,7 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
 
   // A reference back to the Binding that this class is bound to, which is used
   // to send events to the client.
-  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::examples::Echo>> binding_;
+  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::examples::Echo>> binding_;
 };
 // [END impl]
 

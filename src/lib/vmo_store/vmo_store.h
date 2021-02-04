@@ -6,6 +6,7 @@
 #define SRC_LIB_VMO_STORE_VMO_STORE_H_
 
 #include <lib/fit/result.h>
+#include <lib/stdcompat/optional.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -38,9 +39,9 @@ struct MapOptions {
 // `VmoStore` options controlling mapping and pinning behavior.
 struct Options {
   // If provided, `VmoStore` will attempt to map stored VMOs.
-  fit::optional<MapOptions> map;
+  cpp17::optional<MapOptions> map;
   // If provided, `VmoStore` will attempt to pin stored VMOs.
-  fit::optional<PinOptions> pin;
+  cpp17::optional<PinOptions> pin;
 };
 
 // A base class used to compose `VmoStore`s.
@@ -129,9 +130,7 @@ class VmoStore : public VmoStoreBase<Backing> {
   template <typename... StoreArgs>
   explicit VmoStore(Options options, StoreArgs... store_args)
       : VmoStoreBase<Backing>(std::forward<StoreArgs>(store_args)...),
-        options_(std::move(options)){
-
-        }
+        options_(std::move(options)) {}
 
   // Registers a VMO with this store, returning the key used to access that VMO on success.
   template <typename... MetaArgs>
@@ -171,7 +170,7 @@ class VmoStore : public VmoStoreBase<Backing> {
   // returned to the caller.
   // Returns `ZX_ERR_NOT_FOUND` if `key` does not point to a registered VMO.
   fit::result<zx::vmo, zx_status_t> Unregister(Key key) {
-    fit::optional<StoredVmo> vmo = this->impl_.Extract(key);
+    cpp17::optional<StoredVmo> vmo = this->impl_.Extract(key);
     if (vmo) {
       return fit::ok(std::move(vmo->take_vmo()));
     }

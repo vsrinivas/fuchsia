@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/event.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -146,11 +147,11 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Set by Session::Create.
   DataVmoStore::StoredVmo* data_vmo_ = nullptr;
   zx::port tx_port_;
-  fit::optional<fidl::ServerBindingRef<netdev::Session>> binding_;
+  cpp17::optional<fidl::ServerBindingRef<netdev::Session>> binding_;
   // The control channel is only set by the session teardown process if an epitaph must be sent when
   // all the buffers are properly reclaimed. It is set to the channel that was previously bound in
   // the `binding_` Server.
-  fit::optional<fidl::ServerEnd<netdev::Session>> control_channel_;
+  cpp17::optional<fidl::ServerEnd<netdev::Session>> control_channel_;
   zx::vmo vmo_descriptors_;
   fzl::VmoMapper descriptors_;
   fbl::RefPtr<RefCountedFifo> fifo_rx_;
@@ -163,7 +164,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   uint32_t frame_type_count_;
   // Pointer to parent network device, not owned.
   DeviceInterface* parent_;
-  fit::optional<thrd_t> thread_;
+  cpp17::optional<thrd_t> thread_;
   std::unique_ptr<uint16_t[]> rx_return_queue_;
   size_t rx_return_queue_count_ = 0;
   std::unique_ptr<uint16_t[]> rx_avail_queue_;

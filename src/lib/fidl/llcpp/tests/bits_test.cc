@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/optional.h>
+
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
@@ -83,10 +85,10 @@ TYPED_TEST_P(Bits, TruncatingUnknown) {
 TYPED_TEST_P(Bits, TryFrom) {
   // The bits type only has 2, 4, and 8 defined.
   auto result = TypeParam::TryFrom(1);
-  EXPECT_EQ(result, fit::nullopt);
+  EXPECT_EQ(result, cpp17::nullopt);
 
   auto result_ok = TypeParam::TryFrom(2);
-  EXPECT_EQ(result_ok, fit::optional<TypeParam>(TypeParam::B));
+  EXPECT_EQ(result_ok, cpp17::optional<TypeParam>(TypeParam::B));
 }
 
 TYPED_TEST_P(Bits, AllowingUnknownThroughStaticCast) {

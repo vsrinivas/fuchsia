@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_RX_QUEUE_H_
 
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/port.h>
 
 #include <fbl/alloc_checker.h>
@@ -101,7 +102,7 @@ class RxQueue {
   std::unique_ptr<BufferParts[]> buffer_parts_;
 
   zx::port rx_watch_port_;
-  fit::optional<thrd_t> rx_watch_thread_{};
+  cpp17::optional<thrd_t> rx_watch_thread_{};
   std::atomic<bool> running_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RxQueue);

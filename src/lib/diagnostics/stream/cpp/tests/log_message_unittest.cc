@@ -4,7 +4,7 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
-#include <lib/fit/optional.h>
+#include <lib/stdcompat/optional.h>
 
 #include <gtest/gtest.h>
 #include <src/lib/diagnostics/stream/cpp/log_message.h>
@@ -37,22 +37,22 @@ struct ValidationTestCase {
   std::string input;
 
   // If set, check that the conversion function returned this error instead of a vector.
-  fit::optional<std::string> expected_overall_error = fit::nullopt;
+  cpp17::optional<std::string> expected_overall_error = cpp17::nullopt;
 
   // If set, assert on the exact number of messages returned.
-  fit::optional<int> expected_count = fit::nullopt;
+  cpp17::optional<int> expected_count = cpp17::nullopt;
 
   // If set, assert that message has the given error.
-  fit::optional<std::string> expected_error = fit::nullopt;
+  cpp17::optional<std::string> expected_error = cpp17::nullopt;
 
   // If set, assert that message is OK and matches the given value.
-  fit::optional<std::string> expected_message = fit::nullopt;
+  cpp17::optional<std::string> expected_message = cpp17::nullopt;
 
   // If set, assert that message is OK and tags match the given value.
-  fit::optional<std::vector<std::string>> expected_tags = fit::nullopt;
+  cpp17::optional<std::vector<std::string>> expected_tags = cpp17::nullopt;
 
   // If set, assert that message is OK and dropped logs match the given value.
-  fit::optional<uint32_t> dropped_logs = fit::nullopt;
+  cpp17::optional<uint32_t> dropped_logs = cpp17::nullopt;
 };
 
 void RunValidationCases(std::vector<ValidationTestCase> cases) {

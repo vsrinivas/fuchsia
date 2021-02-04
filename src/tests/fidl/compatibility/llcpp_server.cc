@@ -9,6 +9,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 
@@ -351,7 +352,7 @@ class EchoConnection final : public Echo::Interface {
   }
 
  private:
-  fit::optional<::fidl::ServerBindingRef<Echo>> server_binding_;
+  cpp17::optional<::fidl::ServerBindingRef<Echo>> server_binding_;
 };
 
 }  // namespace compatibility

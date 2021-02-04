@@ -45,6 +45,7 @@ group("common") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/svc",
     "//src/lib/fsl",
     "//src/lib/listnode",

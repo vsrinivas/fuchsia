@@ -10,6 +10,7 @@
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/profile.h>
 #include <zircon/status.h>
@@ -197,7 +198,7 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
 
   // The binding will be valid after a successful |fidl::BindServer| operation,
   // and back to invalid after this class is unbound from the FIDL dispatcher.
-  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::gpu::magma::Primary>> server_binding_;
+  cpp17::optional<fidl::ServerBindingRef<llcpp::fuchsia::gpu::magma::Primary>> server_binding_;
 
   std::unique_ptr<Delegate> delegate_;
   zx::channel client_endpoint_;

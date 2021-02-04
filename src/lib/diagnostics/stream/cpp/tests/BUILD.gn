@@ -10,6 +10,7 @@ test("stream_cpp_unittests") {
   sources = [ "log_message_unittest.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/lib/stdcompat",
     "//src/lib/diagnostics/stream/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

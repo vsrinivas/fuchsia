@@ -270,11 +270,6 @@ void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
       std::make_unique<PrettyStruct>(GetterList{{"ref_count_", "ref_count_.__a_.__a_value"}}));
 
   // fit
-  cpp_.emplace_back(
-      InternalGlob("fit::optional<*>"),
-      std::make_unique<PrettyOptional>(
-          "fit::optional", "storage_.index_ == 0", "storage_.base_.value", "fit::nullopt",
-          GetterList{{"value", "storage_.base_.value"}, {"has_value", "storage_.index_ == 0"}}));
   cpp_.emplace_back(InternalGlob("fit::variant<*>"),
                     std::make_unique<PrettyRecursiveVariant>(
                         "fit::variant", "storage_.base_", "storage_.index_", "rest", "value",
@@ -286,6 +281,13 @@ void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
   cpp_.emplace_back(
       InternalGlob("fxl::RefCountedThreadSafe<*>"),
       std::make_unique<PrettyStruct>(GetterList{{"ref_count_", "ref_count_.__a_.__a_value"}}));
+
+  // stdcompat
+  cpp_.emplace_back(
+      InternalGlob("cpp17::optional<*>"),
+      std::make_unique<PrettyOptional>(
+          "cpp17::optional", "storage_.index_ == 0", "storage_.base_.value", "cpp17::nullopt",
+          GetterList{{"value", "storage_.base_.value"}, {"has_value", "storage_.index_ == 0"}}));
 }
 
 }  // namespace zxdb

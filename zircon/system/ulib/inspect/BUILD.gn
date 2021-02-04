@@ -35,6 +35,7 @@ zx_library("inspect") {
   ]
 
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]

@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/fit/variant.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/thread-safe-deleter/thread_safe_deleter.h>
 #include <zircon/compiler.h>
 
@@ -806,7 +807,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // constantly calling CoreCodecBti().
   zx::unowned_bti core_codec_bti_;
 
-  fit::optional<FakeMapRange> fake_map_range_[kPortCount];
+  cpp17::optional<FakeMapRange> fake_map_range_[kPortCount];
 
   // These are 1:1 with logical CodecBuffer(s).
   std::vector<std::unique_ptr<CodecBuffer>> all_buffers_[kPortCount];

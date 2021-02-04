@@ -7,6 +7,7 @@
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/stdcompat/optional.h>
 
 #include <memory>
 #include <queue>
@@ -46,7 +47,7 @@ class FakeEndpoint : public fuchsia::netemul::network::FakeEndpoint, public data
   fidl::Binding<FFakeEndpoint> binding_;
   fxl::WeakPtrFactory<data::Consumer> weak_ptr_factory_;
   std::queue<std::vector<uint8_t>> pending_frames_;
-  fit::optional<ReadCallback> pending_callback_;
+  cpp17::optional<ReadCallback> pending_callback_;
   uint64_t dropped_;
 };
 

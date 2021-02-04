@@ -4,6 +4,7 @@
 
 #include <fuchsia/testing/modular/cpp/fidl.h>
 #include <lib/modular/testing/cpp/fake_component.h>
+#include <lib/stdcompat/optional.h>
 
 #include <sdk/lib/modular/testing/cpp/fake_agent.h>
 
@@ -71,7 +72,7 @@ TEST_F(BasemgrTest, StartsSessionComponentWithArgs) {
                              fuchsia::sys::StartupInfo startup_info,
                              fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
                              /* unused */) { startup_args = startup_info.launch_info.arguments; }},
-      /*args=*/fit::make_optional<std::vector<std::string>>({kTestArg}));
+      /*args=*/cpp17::make_optional<std::vector<std::string>>({kTestArg}));
   builder.BuildAndRun(test_harness());
 
   // Run until the session launcher component is started.

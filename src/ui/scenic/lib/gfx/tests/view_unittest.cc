@@ -6,6 +6,7 @@
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
@@ -89,9 +90,9 @@ TEST_F(ViewTest, NullableDebugName) {
 
   constexpr ResourceId kViewHolderId = 1u;
   EXPECT_TRUE(Apply(
-      scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), fit::nullopt)));
+      scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), cpp17::nullopt)));
   constexpr ResourceId kViewId = 2u;
-  EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), fit::nullopt)));
+  EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), cpp17::nullopt)));
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 

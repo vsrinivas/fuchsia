@@ -49,10 +49,10 @@ source_set("codec_impl_tests") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/lib/stdcompat",
     "//src/media/lib/codec_impl",
     "//src/media/lib/codec_impl/test_utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

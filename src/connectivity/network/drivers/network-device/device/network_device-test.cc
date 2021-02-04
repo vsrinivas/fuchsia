@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 
@@ -1045,7 +1046,7 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
 
   struct {
     fbl::Mutex lock;
-    fit::optional<uint64_t> key __TA_GUARDED(lock);
+    cpp17::optional<uint64_t> key __TA_GUARDED(lock);
   } observed_key;
 
   sync_completion_t completion;

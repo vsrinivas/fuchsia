@@ -50,7 +50,7 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
           return;
 
         auto* self = static_cast<ZirconPlatformConnection*>(interface);
-        self->server_binding_ = fit::nullopt;
+        self->server_binding_ = cpp17::nullopt;
         self->async_loop()->Quit();
       };
 

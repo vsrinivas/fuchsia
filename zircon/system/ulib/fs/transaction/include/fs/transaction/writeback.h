@@ -5,7 +5,6 @@
 #ifndef FS_TRANSACTION_WRITEBACK_H_
 #define FS_TRANSACTION_WRITEBACK_H_
 
-#include <lib/fit/optional.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/vmo.h>
 

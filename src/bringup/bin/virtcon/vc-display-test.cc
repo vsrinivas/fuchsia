@@ -14,6 +14,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
@@ -360,7 +361,7 @@ class VcDisplayTest : public zxtest::Test {
   std::unique_ptr<async::Loop> loop_;
 
   // Server binding reference used to send events.
-  fit::optional<fidl::ServerBindingRef<fhd::Controller>> server_binding_;
+  cpp17::optional<fidl::ServerBindingRef<fhd::Controller>> server_binding_;
 };
 
 TEST_F(VcDisplayTest, EmptyRebind) { ASSERT_EQ(rebind_display(true), ZX_ERR_NO_RESOURCES); }

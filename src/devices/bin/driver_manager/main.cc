@@ -11,7 +11,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <lib/fit/optional.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>

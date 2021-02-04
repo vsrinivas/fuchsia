@@ -27,6 +27,7 @@ static_library("shell_interpreter") {
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
+  public_deps = [ "//sdk/lib/stdcompat" ]
 }
 
 static_library("shell_server_lib") {

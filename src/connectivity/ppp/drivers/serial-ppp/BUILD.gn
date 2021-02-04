@@ -59,6 +59,7 @@ test("driver-test") {
 
   deps = [
     ":driver",
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

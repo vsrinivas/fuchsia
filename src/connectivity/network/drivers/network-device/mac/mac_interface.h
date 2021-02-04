@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/stdcompat/optional.h>
 
 #include <unordered_set>
 
@@ -134,7 +135,7 @@ class MacClientInstance : public netdev::MacAddressing::Interface,
   // Pointer to parent MacInterface, not owned.
   MacInterface* const parent_;
   ClientState state_ __TA_GUARDED(parent_->lock_);
-  fit::optional<fidl::ServerBindingRef<netdev::MacAddressing>> binding_;
+  cpp17::optional<fidl::ServerBindingRef<netdev::MacAddressing>> binding_;
 };
 
 }  // namespace internal

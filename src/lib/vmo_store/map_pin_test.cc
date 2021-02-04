@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fake-bti/bti.h>
+#include <lib/stdcompat/optional.h>
 
 #include <gtest/gtest.h>
 
@@ -20,12 +21,12 @@ class MapPinTest : public ::testing::Test {
 
   static ::vmo_store::Options DefaultMapOptions() {
     return ::vmo_store::Options{
-        ::vmo_store::MapOptions{ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, nullptr}, fit::nullopt};
+        ::vmo_store::MapOptions{ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, nullptr}, cpp17::nullopt};
   }
 
   ::vmo_store::Options DefaultPinOptions() {
     return ::vmo_store::Options{
-        fit::nullopt,
+        cpp17::nullopt,
         ::vmo_store::PinOptions{GetBti(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, true}};
   }
 
@@ -176,7 +177,7 @@ TEST_F(MapPinTest, PinSingleRegion) {
 }
 
 TEST_F(MapPinTest, NoMapOrPin) {
-  VmoStore store(Options{fit::nullopt, fit::nullopt});
+  VmoStore store(Options{cpp17::nullopt, cpp17::nullopt});
   size_t key;
   ASSERT_OK(CreateAndRegister(&store, &key));
   auto* vmo = store.GetVmo(key);
