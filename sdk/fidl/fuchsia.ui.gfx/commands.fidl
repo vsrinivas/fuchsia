@@ -219,6 +219,12 @@ struct SetScaleCmd {
 ///
 /// Constraints:
 /// - `id` refs a Resource with the has_transform characteristic.
+///
+/// Discussion:
+/// Quaternions represent any rotation in a 3D coordinate system. Consisting of
+/// [a,b,c,d], [a] represents the amount of rotation that should be applied and
+/// [b,c,d] represents the vector around which the rotation is applied. This
+/// conforms to the semantics of glm::quat.
 struct SetRotationCmd {
     uint32 id;
     QuaternionValue value;
