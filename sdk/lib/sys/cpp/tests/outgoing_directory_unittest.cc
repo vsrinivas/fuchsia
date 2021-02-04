@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
-#include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/gtest/real_loop_fixture.h>
