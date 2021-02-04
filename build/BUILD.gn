@@ -211,7 +211,6 @@ group("deprecated_package") {
     "//sdk/lib/vfs/cpp/*",
     "//sdk/lib/virtualization/*",
     "//src/bringup/bin/pwrbtn-monitor/test/*",
-    "//src/camera/*",
     "//src/camera/drivers/bus/aml_mipicsi/*",
     "//src/camera/drivers/controller/luis/*",
     "//src/camera/drivers/controller/sherlock/*",

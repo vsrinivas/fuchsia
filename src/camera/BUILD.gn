@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//src/camera/tests.gni")
-
 group("camera") {
   testonly = true
   deps = [
@@ -13,6 +10,15 @@ group("camera") {
     "drivers",
     "lib",
     "testing",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "bin:tests",
+    "drivers:tests",
+    "lib:tests",
   ]
 }
 
@@ -37,24 +43,4 @@ group("service") {
 group("tools") {
   testonly = true
   public_deps = [ "//src/camera/bin/benchmark" ]
-}
-
-group("tests") {
-  testonly = true
-
-  # Build dependencies should be captured in the "camera_tests.deps" list referenced below.
-  # Cross-package dependencies must be included in this target due to transitively included
-  # packages being ignored. See fxbug.dev/44251 for details.
-  deps = [
-    ":camera_tests",
-    "bin",
-    "bin:tests",
-    "drivers:tests",
-    "lib:tests",
-  ]
-}
-
-test_package("camera_tests") {
-  deps = camera_tests.deps
-  tests = camera_tests.tests
 }

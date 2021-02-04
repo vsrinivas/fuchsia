@@ -8,9 +8,9 @@ All camera tests should be run on all current targets before submitting code!
 2. You may have to re-flash zedboot if you flashed with a different fx set command
 3. `fx serve`
 4. Restart the target device in the netboot cable configuration
-5. Run `fx run-test camera_tests`
+5. Run `fx test //src/camera`
 
-Note: most on-device tests require the camera to be physically enabled (i.e. the device must not be
+Note: some on-device tests require the camera to be physically enabled (i.e. the device must not be
 muted). If a test determines that the device may be muted, a warning will be displayed and the test
 will be skipped.
 
@@ -18,13 +18,16 @@ will be skipped.
 ## To test camera functionality manually:
 
 1. Follow steps 1 through 4 above for on-device test setup
-2. Run `fx shell sessionctl add_mod fuchsia-pkg://fuchsia.com/camera-gym#meta/camera-gym.cmx`
+2. Run `fx camera-gym`
 
 
 ## To run single tests:
-Single components can be tested by following the instructions above, and
-adding a ```-t test_name``` to the end.  For example:
+Single packages can be tested by using the test package's name.  For example:
+```
+fx test ge2d_task_unittest
+```
 
-    fx run-test camera_tests -t gdc-test
-
-
+Alternatively, the absolute path to the test package can be used.  For example:
+```
+fx test //src/camera/drivers/hw_accel/ge2d
+```

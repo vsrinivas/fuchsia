@@ -10,14 +10,9 @@ import("//src/sys/build/components.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":bind_test",
+    ":usb_video_bind_test",
     ":uvc_format_unittest",
   ]
-}
-
-group("bind_test") {
-  testonly = true
-  deps = [ ":usb_video_bind_test" ]
 }
 
 bind_rules("usb_video_bind") {
