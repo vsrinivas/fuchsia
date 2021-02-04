@@ -7,13 +7,14 @@ use {
     crate::daemon_manager::{DaemonManager, DefaultDaemonManager},
     anyhow::{Error, Result},
     async_std::future::timeout,
+    async_trait::async_trait,
     ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
+    itertools::{Either, Itertools},
     std::collections::HashSet,
-    std::io::{stdout, Write},
     std::time::Duration,
     termion::{color, style},
 };
@@ -21,26 +22,196 @@ use {
 mod constants;
 mod daemon_manager;
 
-fn format_err(e: Error) -> String {
-    format!("{}\n\t{:?}", FAILED_WITH_ERROR, e)
+macro_rules! success_or_continue {
+    ($fut:expr, $handler:ident, $v:ident, $e:expr) => {
+        match $fut.await {
+            Ok(Ok(s)) => {
+                $handler.result(StepResult::Success).await?;
+                let $v = s;
+                $e
+            }
+
+            Ok(Err(e)) => {
+                $handler.result(StepResult::Error(e.into())).await?;
+                continue;
+            }
+            Err(_) => {
+                $handler.result(StepResult::Timeout).await?;
+                continue;
+            }
+        }
+    };
 }
 
-fn print_status_line(writer: &mut impl Write, s: &str) {
-    write!(writer, "{}", s).unwrap();
-    writer.flush().unwrap();
+#[derive(Debug, PartialEq)]
+enum StepType {
+    Started,
+    AttemptStarted(usize, usize),
+    DaemonForceRestart,
+    DaemonRunning,
+    KillingZombieDaemons,
+    SpawningDaemon,
+    ConnectingToDaemon,
+    CommunicatingWithDaemon,
+    ListingTargets(String),
+    DaemonChecksFailed,
+    NoTargetsFound,
+    TerminalNoTargetsFound,
+    CheckingTarget(Option<String>),
+    RcsAttemptStarted(usize, usize),
+    ConnectingToRcs,
+    CommunicatingWithRcs,
+    TargetSummary(Vec<String>, Vec<String>),
+    RcsTerminalFailure,
+}
+
+#[derive(Debug)]
+enum StepResult {
+    Success,
+    Timeout,
+    Error(Error),
+    Other(String),
+}
+
+impl std::fmt::Display for StepResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            StepResult::Success => SUCCESS.to_string(),
+            StepResult::Timeout => FAILED_TIMEOUT.to_string(),
+            StepResult::Error(e) => format_err(e.into()),
+            StepResult::Other(s) => s.to_string(),
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+impl StepType {
+    fn with_bug_link(&self, s: &str) -> String {
+        let mut s = String::from(s);
+        s.push_str(&format!("\nFile a bug at: {}", BUG_URL));
+        s
+    }
+}
+
+impl std::fmt::Display for StepType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            StepType::Started => format!("{}{}{}", style::Bold, DAEMON_CHECK_INTRO, style::Reset),
+            StepType::AttemptStarted(i, total) => format!("\n\nAttempt {} of {}", i + 1, total),
+            StepType::KillingZombieDaemons => KILLING_ZOMBIE_DAEMONS.to_string(),
+            StepType::DaemonForceRestart => FORCE_DAEMON_RESTART_MESSAGE.to_string(),
+            StepType::DaemonRunning => DAEMON_RUNNING_CHECK.to_string(),
+            StepType::SpawningDaemon => SPAWNING_DAEMON.to_string(),
+            StepType::ConnectingToDaemon => CONNECTING_TO_DAEMON.to_string(),
+            StepType::CommunicatingWithDaemon => COMMUNICATING_WITH_DAEMON.to_string(),
+            StepType::ListingTargets(filter) => {
+                if filter.is_empty() {
+                    String::from(LISTING_TARGETS_NO_FILTER)
+                } else {
+                    format!("Attempting to list targets with filter '{}'...", filter)
+                }
+            }
+            StepType::NoTargetsFound => NO_TARGETS_FOUND_SHORT.to_string(),
+            StepType::DaemonChecksFailed => self.with_bug_link(&format!(
+                "\n{}{}{}{}",
+                style::Bold,
+                color::Fg(color::Red),
+                DAEMON_CHECKS_FAILED,
+                style::Reset
+            )),
+            StepType::TerminalNoTargetsFound => {
+                self.with_bug_link(&format!("\n{}", NO_TARGETS_FOUND_EXTENDED))
+            }
+            StepType::CheckingTarget(nodename) => format!(
+                "{}\nChecking target: '{}'. {}{}",
+                style::Bold,
+                nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
+                TARGET_CHOICE_HELP,
+                style::Reset
+            ),
+            StepType::RcsAttemptStarted(attempt_num, retry_count) => {
+                format!("\n\nAttempt {} of {}", attempt_num + 1, retry_count)
+            }
+            StepType::ConnectingToRcs => CONNECTING_TO_RCS.to_string(),
+            StepType::CommunicatingWithRcs => COMMUNICATING_WITH_RCS.to_string(),
+            StepType::TargetSummary(successes, failures) => {
+                let mut s = format!("\n\n{}{}\n", style::Bold, TARGET_SUMMARY);
+                for nodename in successes.iter() {
+                    s.push_str(&format!("{}✓ {}\n", color::Fg(color::Green), nodename));
+                }
+                for nodename in failures.iter() {
+                    s.push_str(&format!("{}✗ {}\n", color::Fg(color::Red), nodename));
+                }
+                s.push_str(&format!("{}", style::Reset));
+                s
+            }
+            StepType::RcsTerminalFailure => self.with_bug_link(&format!(
+                "{}\n{}",
+                RCS_TERMINAL_FAILURE, RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS
+            )),
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+#[async_trait]
+trait DoctorStepHandler {
+    async fn step(&self, step: StepType) -> Result<()>;
+    async fn output_step(&self, step: StepType) -> Result<()>;
+    async fn result(&self, result: StepResult) -> Result<()>;
+}
+
+struct DefaultDoctorStepHandler {}
+
+#[async_trait]
+// The StepHandler interface exists to provide a clean separation between the
+// imperative implementation logic and the output of each step. It has the added
+// benefit of clearly indicating what each block of `doctor` is attempting to do.
+impl DoctorStepHandler for DefaultDoctorStepHandler {
+    // This is a logical step which will have a result. Right now the only difference
+    // between it and an output_step is the addition of a newline after the step content.
+    async fn step(&self, step: StepType) -> Result<()> {
+        print!("{}", step);
+        Ok(())
+    }
+
+    // This is step which exists merely to provide output (such as an introduction or
+    // result summary).
+    async fn output_step(&self, step: StepType) -> Result<()> {
+        println!("{}", step);
+        Ok(())
+    }
+
+    // This represents the result of a `step`.
+    async fn result(&self, result: StepResult) -> Result<()> {
+        println!("{}", result);
+        Ok(())
+    }
+}
+
+impl DefaultDoctorStepHandler {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+fn format_err(e: &Error) -> String {
+    format!("{}\n\t{:?}", FAILED_WITH_ERROR, e)
 }
 
 #[ffx_plugin()]
 pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
-    let mut writer = Box::new(stdout());
     let daemon_manager = DefaultDaemonManager {};
     let delay = Duration::from_millis(cmd.retry_delay);
 
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     let target_str = ffx.target.unwrap_or(String::default());
+    let mut handler = DefaultDoctorStepHandler::new();
 
     doctor(
-        &mut writer,
+        &mut handler,
         &daemon_manager,
         &target_str,
         cmd.retry_count,
@@ -50,8 +221,8 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
     .await
 }
 
-async fn doctor<W: Write>(
-    writer: &mut W,
+async fn doctor(
+    step_handler: &mut impl DoctorStepHandler,
     daemon_manager: &impl DaemonManager,
     target_str: &str,
     retry_count: usize,
@@ -60,117 +231,77 @@ async fn doctor<W: Write>(
 ) -> Result<()> {
     let mut proxy_opt: Option<DaemonProxy> = None;
     let mut targets_opt: Option<Vec<Target>> = None;
-    writeln!(writer, "{}{}{}", style::Bold, DAEMON_CHECK_INTRO, style::Reset).unwrap();
+    step_handler.output_step(StepType::Started).await?;
+
     for i in 0..retry_count {
         proxy_opt = None;
         if i > 0 {
             daemon_manager.kill_all().await?;
-            writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
+            step_handler.output_step(StepType::AttemptStarted(i, retry_count)).await?;
         } else if force_daemon_restart {
-            writeln!(writer, "{}", FORCE_DAEMON_RESTART_MESSAGE).unwrap();
+            step_handler.output_step(StepType::DaemonForceRestart).await?;
             daemon_manager.kill_all().await?;
         }
 
-        print_status_line(writer, DAEMON_RUNNING_CHECK);
+        step_handler.step(StepType::DaemonRunning).await?;
         if !daemon_manager.is_running().await {
-            writeln!(writer, "{}", NONE_RUNNING).unwrap();
-            print_status_line(writer, KILLING_ZOMBIE_DAEMONS);
+            step_handler.result(StepResult::Other(NONE_RUNNING.to_string())).await?;
+            step_handler.step(StepType::KillingZombieDaemons).await?;
 
             if daemon_manager.kill_all().await? {
-                writeln!(writer, "{}", ZOMBIE_KILLED).unwrap();
+                step_handler.result(StepResult::Other(ZOMBIE_KILLED.to_string())).await?;
             } else {
-                writeln!(writer, "{}", NONE_RUNNING).unwrap();
+                step_handler.result(StepResult::Other(NONE_RUNNING.to_string())).await?;
             }
 
-            print_status_line(writer, SPAWNING_DAEMON);
+            step_handler.step(StepType::SpawningDaemon).await?;
 
             // HACK: Wait a few seconds before spawning a new daemon. Attempting
             // to spawn one too quickly after killing one will lead to timeouts
             // when attempting to communicate with the spawned daemon.
             // Temporary fix for fxbug.dev/66958. Remove when that bug is resolved.
             async_std::task::sleep(Duration::from_millis(5000)).await;
-            match timeout(retry_delay, daemon_manager.spawn()).await {
-                Ok(Ok(_)) => {
-                    writeln!(writer, "{}", SUCCESS).unwrap();
-                }
-
-                Ok(Err(e)) => {
-                    writeln!(writer, "{}", format_err(e.into())).unwrap();
-                    continue;
-                }
-                Err(_) => {
-                    writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                    continue;
-                }
-            }
+            success_or_continue!(timeout(retry_delay, daemon_manager.spawn()), step_handler, _p, {
+            });
         } else {
-            writeln!(writer, "{}", FOUND).unwrap();
+            step_handler.result(StepResult::Other(FOUND.to_string())).await?;
         }
 
-        print_status_line(writer, CONNECTING_TO_DAEMON);
-        match timeout(retry_delay, daemon_manager.find_and_connect()).await {
-            Ok(Ok(p)) => {
-                proxy_opt = Some(p);
-            }
+        step_handler.step(StepType::ConnectingToDaemon).await?;
+        proxy_opt = success_or_continue!(
+            timeout(retry_delay, daemon_manager.find_and_connect()),
+            step_handler,
+            p,
+            Some(p)
+        );
 
-            Ok(Err(e)) => {
-                writeln!(writer, "{}", format_err(e.into())).unwrap();
-                continue;
-            }
-            Err(_) => {
-                writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                continue;
-            }
-        }
-
-        writeln!(writer, "{}", SUCCESS).unwrap();
-        print_status_line(writer, COMMUNICATING_WITH_DAEMON);
+        step_handler.step(StepType::CommunicatingWithDaemon).await?;
         match timeout(retry_delay, proxy_opt.as_ref().unwrap().echo_string("test")).await {
             Err(_) => {
-                writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
+                step_handler.result(StepResult::Timeout).await?;
                 proxy_opt = None;
                 continue;
             }
             Ok(Err(e)) => {
-                writeln!(writer, "{}", format_err(e.into())).unwrap();
+                step_handler.result(StepResult::Error(e.into())).await?;
                 proxy_opt = None;
                 continue;
             }
             Ok(_) => {
-                writeln!(writer, "{}", SUCCESS).unwrap();
-            }
-        }
-
-        let status_str;
-        if target_str.is_empty() {
-            status_str = String::from(LISTING_TARGETS_NO_FILTER);
-        } else {
-            status_str = format!("Attempting to list targets with filter '{}'...", target_str);
-        }
-
-        print_status_line(writer, &status_str);
-        targets_opt = match timeout(
-            retry_delay,
-            proxy_opt.as_ref().unwrap().list_targets(target_str),
-        )
-        .await
-        {
-            Err(_) => {
-                writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                continue;
-            }
-            Ok(Err(e)) => {
-                writeln!(writer, "{}", format_err(e.into())).unwrap();
-                continue;
-            }
-            Ok(t) => {
-                writeln!(writer, "{}", SUCCESS).unwrap();
-                Some(t.unwrap())
+                step_handler.result(StepResult::Success).await?;
             }
         };
 
+        step_handler.step(StepType::ListingTargets(target_str.to_string())).await?;
+        targets_opt = success_or_continue!(
+            timeout(retry_delay, proxy_opt.as_ref().unwrap().list_targets(target_str),),
+            step_handler,
+            t,
+            Some(t)
+        );
+
         if targets_opt.is_some() && targets_opt.as_ref().unwrap().len() == 0 {
-            writeln!(writer, "{}", NO_TARGETS_FOUND_SHORT).unwrap();
+            step_handler.output_step(StepType::NoTargetsFound).await?;
             continue;
         }
 
@@ -178,22 +309,12 @@ async fn doctor<W: Write>(
     }
 
     if proxy_opt.is_none() {
-        writeln!(
-            writer,
-            "\n{}{}{}{}",
-            style::Bold,
-            color::Fg(color::Red),
-            DAEMON_CHECKS_FAILED,
-            style::Reset
-        )
-        .unwrap();
-        writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
+        step_handler.output_step(StepType::DaemonChecksFailed).await?;
         return Ok(());
     }
 
     if targets_opt.is_none() || targets_opt.as_ref().unwrap().len() == 0 {
-        writeln!(writer, "\n{}", NO_TARGETS_FOUND_EXTENDED).unwrap();
-        writeln!(writer, "Bug link: {}", BUG_URL).unwrap();
+        step_handler.output_step(StepType::TerminalNoTargetsFound).await?;
         return Ok(());
     }
 
@@ -202,80 +323,55 @@ async fn doctor<W: Write>(
     let mut successful_targets = HashSet::new();
 
     for target in targets.iter() {
-        writeln!(
-            writer,
-            "{}\nChecking target: '{}'. {}{}",
-            style::Bold,
-            target.nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
-            TARGET_CHOICE_HELP,
-            style::Reset
-        )
-        .unwrap();
+        step_handler.output_step(StepType::CheckingTarget(target.nodename.clone())).await?;
         for i in 0..retry_count {
             if i > 0 {
-                writeln!(writer, "\n\nAttempt {} of {}", i + 1, retry_count).unwrap();
+                step_handler.output_step(StepType::RcsAttemptStarted(i, retry_count)).await?;
             }
 
             // TODO(jwing): SSH into the device and kill Overnet+RCS if anything below this fails
-            print_status_line(writer, CONNECTING_TO_RCS);
+            step_handler.step(StepType::ConnectingToRcs).await?;
             let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-            match timeout(
-                retry_delay,
-                daemon.get_remote_control(
-                    target.nodename.as_ref().map(|s| s.as_str()),
-                    remote_server_end,
+            success_or_continue!(
+                timeout(
+                    retry_delay,
+                    daemon.get_remote_control(
+                        target.nodename.as_ref().map(|s| s.as_str()),
+                        remote_server_end,
+                    )
                 ),
-            )
-            .await
-            {
-                Err(_) => {
-                    writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                    continue;
-                }
-                Ok(Err(e)) => {
-                    writeln!(writer, "{}", format_err(e.into())).unwrap();
-                    continue;
-                }
-                Ok(Ok(_)) => {
-                    writeln!(writer, "{}", SUCCESS).unwrap();
-                }
-            };
+                step_handler,
+                _p,
+                {}
+            );
 
-            print_status_line(writer, COMMUNICATING_WITH_RCS);
-            match timeout(retry_delay, remote_proxy.identify_host()).await {
-                Err(_) => {
-                    writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                    continue;
-                }
-                Ok(Err(e)) => {
-                    writeln!(writer, "{}", format_err(e.into())).unwrap();
-                    continue;
-                }
-                Ok(Ok(_)) => {
-                    writeln!(writer, "{}", SUCCESS).unwrap();
+            step_handler.step(StepType::CommunicatingWithRcs).await?;
+
+            success_or_continue!(
+                timeout(retry_delay, remote_proxy.identify_host()),
+                step_handler,
+                _t,
+                {
                     successful_targets.insert(target.nodename.as_ref().unwrap()).to_string();
-                    break;
                 }
-            };
+            );
+            break;
         }
     }
 
-    writeln!(writer, "{}", style::Bold).unwrap();
-    writeln!(writer, "{}", TARGET_SUMMARY).unwrap();
-    for target in targets.iter() {
-        let nodename = target.nodename.as_ref().unwrap();
-        if successful_targets.contains(&nodename.clone()) {
-            writeln!(writer, "{}✓ {}", color::Fg(color::Green), nodename).unwrap();
-        } else {
-            writeln!(writer, "{}✗ {}", color::Fg(color::Red), nodename).unwrap();
-        }
-    }
-    writeln!(writer, "{}", style::Reset).unwrap();
+    let (successes, failures): (Vec<_>, Vec<_>) =
+        targets.iter().map(|t| t.nodename.as_ref().unwrap()).partition_map(|n| {
+            if successful_targets.contains(&n) {
+                Either::Left(n.to_string())
+            } else {
+                Either::Right(n.to_string())
+            }
+        });
+
+    step_handler.output_step(StepType::TargetSummary(successes, failures)).await?;
 
     if targets.len() != successful_targets.len() {
-        writeln!(writer, "{}", RCS_TERMINAL_FAILURE).unwrap();
-        writeln!(writer, "{}", RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS).unwrap();
-        writeln!(writer, "{}", BUG_URL).unwrap();
+        step_handler.output_step(StepType::RcsTerminalFailure).await?;
     }
 
     Ok(())
@@ -285,6 +381,7 @@ async fn doctor<W: Write>(
 mod test {
     use {
         super::*,
+        anyhow::anyhow,
         async_std::sync::{Arc, Mutex},
         async_trait::async_trait,
         fidl::endpoints::{spawn_local_stream_handler, Request, ServerEnd, ServiceMarker},
@@ -298,21 +395,121 @@ mod test {
         futures::channel::oneshot::{self, Receiver},
         futures::future::Shared,
         futures::{Future, FutureExt, TryFutureExt, TryStreamExt},
-        std::io::BufWriter,
     };
 
     const NODENAME: &str = "fake-nodename";
     const UNRESPONSIVE_NODENAME: &str = "fake-nodename-unresponsive";
     const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
-    const LISTING_TARGETS_WITH_FILTER: &str =
-        "Attempting to list targets with filter 'fake-nodename'...";
-    const LISTING_TARGETS_WITH_FAKE_FILTER: &str =
-        "Attempting to list targets with filter 'extra-fake-nodename'...";
-    const CHOSE_TARGET: &str = "Checking target: 'fake-nodename'. ";
-    const CHOSE_UNRESPONSIVE_TARGET: &str = "Checking target: 'fake-nodename-unresponsive'. ";
-    const SUCCESSFUL_TARGET: &str = "✓ fake-nodename";
-    const FAILED_TARGET: &str = "✗ fake-nodename-unresponsive";
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
+
+    #[derive(PartialEq)]
+    struct TestStep {
+        step_type: StepType,
+        output_only: bool,
+    }
+
+    impl std::fmt::Debug for TestStep {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let output_str = if self.output_only { " (output)" } else { "" };
+
+            write!(f, "{:?}{}", self.step_type, output_str)
+        }
+    }
+
+    struct TestStepEntry {
+        step: Option<TestStep>,
+        result: Option<StepResult>,
+    }
+
+    impl TestStepEntry {
+        fn step(step_type: StepType) -> Self {
+            Self { step: Some(TestStep { step_type, output_only: false }), result: None }
+        }
+
+        fn output_step(step_type: StepType) -> Self {
+            Self { step: Some(TestStep { step_type, output_only: true }), result: None }
+        }
+
+        fn result(result: StepResult) -> Self {
+            Self { result: Some(result), step: None }
+        }
+    }
+
+    impl std::fmt::Debug for TestStepEntry {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            if self.step.is_some() {
+                write!(f, "{:?}", self.step.as_ref().unwrap())
+            } else if self.result.is_some() {
+                write!(f, "{:?}", self.result.as_ref().unwrap())
+            } else {
+                panic!("attempted to debug TestStepEntry with empty step and result")
+            }
+        }
+    }
+
+    impl PartialEq for TestStepEntry {
+        fn eq(&self, other: &Self) -> bool {
+            if self.step != other.step {
+                return false;
+            }
+
+            match (self.result.as_ref(), other.result.as_ref()) {
+                (Some(r), Some(r2)) => match (r, r2) {
+                    (StepResult::Error(_), StepResult::Error(_)) => true,
+                    (StepResult::Other(s), StepResult::Other(s2)) => s == s2,
+                    (StepResult::Success, StepResult::Success) => true,
+                    (StepResult::Timeout, StepResult::Timeout) => true,
+                    _ => false,
+                },
+                (None, None) => true,
+                _ => false,
+            }
+        }
+    }
+
+    struct FakeStepHandler {
+        steps: Arc<Mutex<Vec<TestStepEntry>>>,
+    }
+    impl FakeStepHandler {
+        fn new() -> Self {
+            Self { steps: Arc::new(Mutex::new(Vec::new())) }
+        }
+
+        async fn assert_matches_steps(&self, expected_steps: Vec<TestStepEntry>) {
+            let steps = self.steps.lock().await;
+            if *steps != expected_steps {
+                println!("got: {:#?}\nexpected: {:#?}", steps, expected_steps);
+
+                for (step, expected) in steps.iter().zip(expected_steps) {
+                    if *step != expected {
+                        println!("different step: got: {:?}, expected: {:?}", step, expected)
+                    }
+                }
+                panic!("steps didn't match. differences are listed above.");
+            }
+        }
+    }
+
+    #[async_trait]
+    impl DoctorStepHandler for FakeStepHandler {
+        async fn step(&self, step: StepType) -> Result<()> {
+            let mut v = self.steps.lock().await;
+            v.push(TestStepEntry::step(step));
+            Ok(())
+        }
+
+        async fn output_step(&self, step: StepType) -> Result<()> {
+            let mut v = self.steps.lock().await;
+            v.push(TestStepEntry::output_step(step));
+            Ok(())
+        }
+
+        async fn result(&self, result: StepResult) -> Result<()> {
+            let mut v = self.steps.lock().await;
+            v.push(TestStepEntry::result(result));
+            Ok(())
+        }
+    }
 
     struct FakeStateManager {
         kill_results: Vec<Result<bool>>,
@@ -397,12 +594,6 @@ mod test {
             );
             state.find_and_connect_results.remove(0)
         }
-    }
-
-    fn print_full_output(output: &str) {
-        println!("BEGIN DOCTOR OUTPUT");
-        println!("{}", &output);
-        println!("END DOCTOR OUTPUT");
     }
 
     fn serve_stream<T, F, Fut>(stream: T::RequestStream, mut f: F)
@@ -593,19 +784,8 @@ mod test {
         .unwrap()
     }
 
-    fn verify_lines(output: &str, line_substrings: Vec<String>) {
-        for (line, expected) in output.lines().zip(line_substrings.iter()) {
-            if !expected.is_empty() {
-                assert!(
-                    line.contains(expected),
-                    format!("'{}' does not contain expected string '{}'", line, expected)
-                );
-            }
-        }
-
-        // Verify that there aren't any additional lines in the actual output that didn't get
-        // compared in the previous loop.
-        assert!(output.lines().collect::<Vec<_>>().len() <= line_substrings.len());
+    fn empty_error() -> Error {
+        anyhow!("")
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -617,31 +797,28 @@ mod test {
             vec![Ok(setup_responsive_daemon_server())],
         );
 
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
-        }
+        let mut handler = FakeStepHandler::new();
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
 
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}", DAEMON_CHECK_INTRO),
-                format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
-                format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
-                format!("{}{}", SPAWNING_DAEMON, SUCCESS),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
-                String::from("No targets found"),
-                String::default(),
-                String::from("No targets found"),
-                String::default(),
-                BUG_URL.to_string(),
-            ],
-        );
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::KillingZombieDaemons),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::SpawningDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::NoTargetsFound),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+            ])
+            .await;
 
         fake.assert_no_leftover_calls().await;
     }
@@ -654,31 +831,25 @@ mod test {
             vec![],
             vec![Ok(setup_responsive_daemon_server())],
         );
+        let mut handler = FakeStepHandler::new();
 
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
-        }
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
 
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}", DAEMON_CHECK_INTRO),
-                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
-                String::from("No targets found"),
-                String::default(),
-                String::from("No targets found"),
-                String::default(),
-                BUG_URL.to_string(),
-            ],
-        );
-
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::NoTargetsFound),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+            ])
+            .await;
         fake.assert_no_leftover_calls().await;
     }
 
@@ -690,46 +861,37 @@ mod test {
             vec![Ok(())],
             vec![Ok(setup_daemon_server_list_fails()), Ok(setup_daemon_server_list_fails())],
         );
+        let mut handler = FakeStepHandler::new();
 
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
-        }
+        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
 
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}", DAEMON_CHECK_INTRO),
-                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, FAILED_WITH_ERROR),
-                String::from("PEER_CLOSED"),
-                String::default(),
-                String::default(),
-                String::from("PEER_CLOSED"),
-                String::default(),
-                String::default(),
-                String::from("Attempt 2 of 2"),
-                format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
-                format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
-                format!("{}{}", SPAWNING_DAEMON, SUCCESS),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, FAILED_WITH_ERROR),
-                String::from("PEER_CLOSED"),
-                String::default(),
-                String::default(),
-                String::from("PEER_CLOSED"),
-                String::default(),
-                String::from("No targets found"),
-                String::default(),
-                BUG_URL.to_string(),
-            ],
-        );
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Error(empty_error())),
+                TestStepEntry::output_step(StepType::AttemptStarted(1, 2)),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::KillingZombieDaemons),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::SpawningDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Error(empty_error())),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+            ])
+            .await;
 
         fake.assert_no_leftover_calls().await;
     }
@@ -747,39 +909,35 @@ mod test {
                 Ok(setup_responsive_daemon_server()),
             ],
         );
-
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
-            tx.send(()).unwrap();
-        }
-
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}", DAEMON_CHECK_INTRO),
-                format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
-                format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
-                format!("{}{}", SPAWNING_DAEMON, SUCCESS),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, FAILED_TIMEOUT),
-                String::default(),
-                String::default(),
-                String::from("Attempt 2 of 2"),
-                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
-                String::from("No targets found"),
-                String::default(),
-                String::from("No targets found"),
-                String::default(),
-                BUG_URL.to_string(),
-            ],
-        );
+        let mut handler = FakeStepHandler::new();
+        doctor(&mut handler, &fake, "", 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        tx.send(()).unwrap();
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::KillingZombieDaemons),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::SpawningDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Timeout),
+                TestStepEntry::output_step(StepType::AttemptStarted(1, 2)),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::NoTargetsFound),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+            ])
+            .await;
 
         fake.assert_no_leftover_calls().await;
     }
@@ -794,42 +952,40 @@ mod test {
             vec![],
             vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
         );
+        let mut handler = FakeStepHandler::new();
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        tx.send(()).unwrap();
 
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, false).await.unwrap();
-            tx.send(()).unwrap();
-        }
-
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}", DAEMON_CHECK_INTRO),
-                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
-                String::default(),
-                format!("{}{}", CHOSE_TARGET, TARGET_CHOICE_HELP),
-                format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_RCS, SUCCESS),
-                String::default(),
-                format!("{}{}", CHOSE_UNRESPONSIVE_TARGET, TARGET_CHOICE_HELP),
-                format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_RCS, FAILED_TIMEOUT),
-                String::default(),
-                String::from(TARGET_SUMMARY),
-                String::from(SUCCESSFUL_TARGET),
-                String::from(FAILED_TARGET),
-                String::default(),
-                String::from(RCS_TERMINAL_FAILURE),
-                String::from(RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS),
-                String::from(BUG_URL),
-            ],
-        );
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
+                TestStepEntry::step(StepType::ConnectingToRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::CheckingTarget(Some(
+                    UNRESPONSIVE_NODENAME.to_string(),
+                ))),
+                TestStepEntry::step(StepType::ConnectingToRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithRcs),
+                TestStepEntry::result(StepResult::Timeout),
+                TestStepEntry::output_step(StepType::TargetSummary(
+                    vec![NODENAME.to_string()],
+                    vec![UNRESPONSIVE_NODENAME.to_string()],
+                )),
+                TestStepEntry::output_step(StepType::RcsTerminalFailure),
+            ])
+            .await;
 
         fake.assert_no_leftover_calls().await;
     }
@@ -844,34 +1000,32 @@ mod test {
             vec![],
             vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
         );
+        let mut handler = FakeStepHandler::new();
+        doctor(&mut handler, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
+        tx.send(()).unwrap();
 
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, &NODENAME, 2, DEFAULT_RETRY_DELAY, false).await.unwrap();
-            tx.send(()).unwrap();
-        }
-
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                String::from(DAEMON_CHECK_INTRO),
-                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_WITH_FILTER, SUCCESS),
-                String::default(),
-                format!("{}{}", CHOSE_TARGET, TARGET_CHOICE_HELP),
-                format!("{}{}", CONNECTING_TO_RCS, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_RCS, SUCCESS),
-                String::default(),
-                String::from(TARGET_SUMMARY),
-                String::from(SUCCESSFUL_TARGET),
-                String::default(),
-            ],
-        );
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(NODENAME.to_string())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
+                TestStepEntry::step(StepType::ConnectingToRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithRcs),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::TargetSummary(
+                    vec![NODENAME.to_string()],
+                    vec![],
+                )),
+            ])
+            .await;
 
         fake.assert_no_leftover_calls().await;
     }
@@ -887,32 +1041,27 @@ mod test {
             vec![Ok(setup_responsive_daemon_server_with_targets(rx.shared()))],
         );
 
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, &NON_EXISTENT_NODENAME, 1, DEFAULT_RETRY_DELAY, false)
-                .await
-                .unwrap();
-            tx.send(()).unwrap();
-        }
+        let mut handler = FakeStepHandler::new();
+        doctor(&mut handler, &fake, &NON_EXISTENT_NODENAME, 1, DEFAULT_RETRY_DELAY, false)
+            .await
+            .unwrap();
+        tx.send(()).unwrap();
 
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}", DAEMON_CHECK_INTRO),
-                format!("{}{}", DAEMON_RUNNING_CHECK, FOUND),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_WITH_FAKE_FILTER, SUCCESS),
-                String::from("No targets found"),
-                String::default(),
-                String::from("No targets found"),
-                String::default(),
-                String::from(BUG_URL),
-            ],
-        );
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(NON_EXISTENT_NODENAME.to_string())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::NoTargetsFound),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+            ])
+            .await;
 
         fake.assert_no_leftover_calls().await;
     }
@@ -925,34 +1074,29 @@ mod test {
             vec![Ok(())],
             vec![Ok(setup_responsive_daemon_server())],
         );
+        let mut handler = FakeStepHandler::new();
+        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, true).await.unwrap();
 
-        let mut output = String::new();
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            doctor(&mut writer, &fake, "", 1, DEFAULT_RETRY_DELAY, true).await.unwrap();
-        }
-
-        print_full_output(&output);
-
-        verify_lines(
-            &output,
-            vec![
-                format!("{}", DAEMON_CHECK_INTRO),
-                String::from(FORCE_DAEMON_RESTART_MESSAGE),
-                format!("{}{}", DAEMON_RUNNING_CHECK, NONE_RUNNING),
-                format!("{}{}", KILLING_ZOMBIE_DAEMONS, NONE_RUNNING),
-                format!("{}{}", SPAWNING_DAEMON, SUCCESS),
-                format!("{}{}", CONNECTING_TO_DAEMON, SUCCESS),
-                format!("{}{}", COMMUNICATING_WITH_DAEMON, SUCCESS),
-                format!("{}{}", LISTING_TARGETS_NO_FILTER, SUCCESS),
-                String::from("No targets found"),
-                String::default(),
-                String::from("No targets found"),
-                String::default(),
-                BUG_URL.to_string(),
-            ],
-        );
-
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started),
+                TestStepEntry::output_step(StepType::DaemonForceRestart),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::KillingZombieDaemons),
+                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
+                TestStepEntry::step(StepType::SpawningDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::NoTargetsFound),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+            ])
+            .await;
         fake.assert_no_leftover_calls().await;
     }
 }
