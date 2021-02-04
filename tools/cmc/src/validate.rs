@@ -962,31 +962,32 @@ impl<'a> ValidationContext<'a> {
     }
 
     /// Ensure we don't have a component with a "program" block which fails
-    /// to specify exactly one runner.
+    /// to specify exactly one runner either as a `use` or in the `program` block itself.
     fn validate_runner_specified(
         &self,
-        program: Option<&serde_json::map::Map<String, serde_json::value::Value>>,
+        program: Option<&cml::Program>,
         use_: Option<&Vec<cml::Use>>,
     ) -> Result<(), Error> {
-        // Components that have no "program" don't need a runner.
-        if program.is_none() {
-            return Ok(());
-        }
-
-        // Otherwise, ensure a runner is being used.
         let mut runners_used = 0;
         if let Some(use_) = use_ {
             runners_used = use_.iter().filter(|u| u.runner.is_some()).count();
         }
-        match runners_used {
-            0 => Err(Error::validate(concat!(
-                "Component has a 'program' block defined, but doesn't 'use' ",
-                "a runner capability. Components need to 'use' a runner ",
-                "to actually execute code."
-            ))),
-            1 => Ok(()),
-            _ => {
-                Err(Error::validate("Component `use`s multiple runners! Must specify exactly one."))
+        if let Some(_) = program.and_then(|p| p.runner.as_ref()) {
+            runners_used += 1;
+        }
+        match (runners_used, program.is_some()) {
+            (0, false) => Ok(()),
+            (_, false) => {
+                Err(Error::validate("Component is missing `program` block but uses a runner."))
+            }
+            (0, true) => Err(Error::validate(
+                "Component has a `program` block defined, but doesn't `use` \
+                a runner capability or specify a runner in `program`. Components need to use \
+                a runner to actually execute code.",
+            )),
+            (1, true) => Ok(()),
+            (_, true) => {
+                Err(Error::validate("Component uses multiple runners! Must specify exactly one."))
             }
         }
     }
@@ -1299,10 +1300,62 @@ mod tests {
             ),
             Ok(())
         ),
+        test_cml_program_runner(
+            json!(
+                {
+                    "program": {
+                        "runner": "elf",
+                        "binary": "bin/app",
+                    },
+                }
+            ),
+            Ok(())
+        ),
+        test_cml_program_no_runner(
+            json!({"program": { "binary": "bin/app" }}),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
+                "Component has a `program` block defined, but doesn't `use` \
+                a runner capability or specify a runner in `program`. Components need to use \
+                a runner to actually execute code."
+        ),
+        test_cml_program_two_use_runners(
+            json!({
+                "program": { "binary": "bin/app" },
+                "use": [
+                    { "runner": "elf" },
+                    { "runner": "elf2" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
+                "Component uses multiple runners! Must specify exactly one."
+        ),
+        test_cml_runner_without_program(
+            json!({
+                "use": [
+                    { "runner": "elf" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
+                "Component is missing `program` block but uses a runner."
+        ),
+        test_cml_program_runner_in_use_and_program(
+            json!({
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/app",
+                },
+                "use": [
+                    { "runner": "elf2" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
+                "Component uses multiple runners! Must specify exactly one."
+        ),
 
         // use
         test_cml_use(
             json!({
+                "program": {},
                 "use": [
                   { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                   { "service": "fuchsia.sys2.Realm", "from": "framework" },
@@ -1413,7 +1466,8 @@ mod tests {
         ),
         test_cml_use_as_with_runner(
             json!({
-                "use": [ { "runner": "elf", "as": "xxx" } ]
+                "program": {},
+                "use": [ { "runner": "elf", "as": "xxx" } ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"runner\""
         ),
@@ -4252,20 +4306,6 @@ mod tests {
                  ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"logger\" is defined twice, once in \"environments\" and once in \"children\""
-        ),
-        test_cml_program_no_runner(
-            json!({"program": { "binary": "bin/app" }}),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Component has a \'program\' block defined, but doesn\'t \'use\' a runner capability. Components need to \'use\' a runner to actually execute code."
-        ),
-        test_cml_program_two_runners(
-            json!({
-                "program": { "binary": "bin/app" },
-                "use": [
-                { "runner": "elf" },
-                { "runner": "elf2" },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Component `use`s multiple runners! Must specify exactly one."
         ),
 
         // deny unknown fields

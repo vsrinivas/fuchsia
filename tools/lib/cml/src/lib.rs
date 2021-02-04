@@ -653,7 +653,7 @@ impl Right {
 #[serde(deny_unknown_fields)]
 pub struct Document {
     pub include: Option<Vec<String>>,
-    pub program: Option<Map<String, Value>>,
+    pub program: Option<Program>,
     pub r#use: Option<Vec<Use>>,
     pub expose: Option<Vec<Expose>>,
     pub offer: Option<Vec<Offer>>,
@@ -897,6 +897,77 @@ impl Deref for EventSubscriptions {
 
     fn deref(&self) -> &Vec<EventSubscription> {
         &self.0
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Program {
+    pub runner: Option<Name>,
+    pub info: Map<String, Value>,
+}
+
+impl<'de> de::Deserialize<'de> for Program {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        const EXPECTED_PROGRAM: &'static str =
+            "a JSON object that includes a `runner` string property";
+        const EXPECTED_RUNNER: &'static str =
+            "a non-empty `runner` string property no more than 100 characters in length, \
+            containing only alpha-numeric characters or [_-.]";
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Program;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(EXPECTED_PROGRAM)
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::MapAccess<'de>,
+            {
+                let mut info = Map::new();
+                let mut runner = None;
+                while let Some(e) = map.next_entry::<String, Value>()? {
+                    let (k, v) = e;
+                    if &k == "runner" {
+                        if let Value::String(s) = v {
+                            runner = Some(s);
+                        } else {
+                            return Err(de::Error::invalid_value(
+                                de::Unexpected::Map,
+                                &EXPECTED_RUNNER,
+                            ));
+                        }
+                    } else {
+                        info.insert(k, v);
+                    }
+                }
+                let runner = runner
+                    .map(|r| {
+                        Name::new(r.clone()).map_err(|e| match e {
+                            ParseError::InvalidValue => de::Error::invalid_value(
+                                serde::de::Unexpected::Str(&r),
+                                &EXPECTED_RUNNER,
+                            ),
+                            ParseError::InvalidLength => {
+                                de::Error::invalid_length(r.len(), &EXPECTED_RUNNER)
+                            }
+                            _ => {
+                                panic!("unexpected parse error: {:?}", e);
+                            }
+                        })
+                    })
+                    .transpose()?;
+                Ok(Program { runner, info })
+            }
+        }
+
+        deserializer.deserialize_map(Visitor)
     }
 }
 
@@ -1487,13 +1558,15 @@ pub fn alias_or_path(alias: Option<&Path>, path: &Path) -> Path {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cm_json::{self, Error as JsonError};
-    use error::Error;
-    use matches::assert_matches;
-    use serde_json::{self, json};
-    use serde_json5;
-    use std::path::Path;
-    use std::str::FromStr;
+    use {
+        cm_json::{self, Error as JsonError},
+        error::Error,
+        matches::assert_matches,
+        serde_json::{self, json},
+        serde_json5,
+        std::path::Path,
+        std::str::FromStr,
+    };
 
     // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
     // subtype.

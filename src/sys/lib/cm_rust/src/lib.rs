@@ -368,12 +368,14 @@ impl Clone for ComponentDecl {
 }
 
 impl ComponentDecl {
-    /// Returns the `UseRunnerDecl` for this component, or `None` if this is a non-executable
-    /// component.
-    pub fn get_used_runner(&self) -> Option<&UseRunnerDecl> {
+    /// Returns the runner used by this component, or `None` if this is a non-executable component.
+    pub fn get_used_runner(&self) -> Option<&CapabilityName> {
+        if let Some(runner) = self.program.as_ref().and_then(|p| p.runner.as_ref()) {
+            return Some(runner);
+        }
         self.uses.iter().find_map(|u| match u {
-            UseDecl::Runner(runner) => Some(runner),
-            _ => return None,
+            UseDecl::Runner(runner) => Some(&runner.source_name),
+            _ => None,
         })
     }
 

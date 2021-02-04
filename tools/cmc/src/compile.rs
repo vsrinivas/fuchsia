@@ -65,14 +65,7 @@ pub fn compile(
 fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
     let all_capability_names = document.all_capability_names();
     Ok(fsys::ComponentDecl {
-        program: document
-            .program
-            .as_ref()
-            .map(|p| -> Result<fsys::ProgramDecl, Error> {
-                let info = Some(translate_program(p)?);
-                Ok(fsys::ProgramDecl { info, ..fsys::ProgramDecl::EMPTY })
-            })
-            .transpose()?,
+        program: document.program.as_ref().map(|p| translate_program(p)).transpose()?,
         uses: document.r#use.as_ref().map(translate_use).transpose()?,
         exposes: document
             .expose
@@ -173,11 +166,11 @@ fn value_to_dictionary_value(value: Value) -> Result<Option<Box<fdata::Dictionar
     }
 }
 
-// 'program' rules denote a set of dictionary entries that may specify lifestyle events with a "lifecycle" prefix key.
-// All other entries are copied as is.
-pub fn translate_program(program: &Map<String, Value>) -> Result<fdata::Dictionary, Error> {
+// 'program' rules denote a set of dictionary entries that may specify lifestyle events with a
+// "lifecycle" prefix key.  All other entries are copied as is.
+fn translate_program(program: &cml::Program) -> Result<fsys::ProgramDecl, Error> {
     let mut entries = Vec::new();
-    for (k, v) in program {
+    for (k, v) in &program.info {
         match (&k[..], v) {
             ("lifecycle", Value::Object(events)) => {
                 for (event, subscription) in events {
@@ -202,7 +195,11 @@ pub fn translate_program(program: &Map<String, Value>) -> Result<fdata::Dictiona
         }
     }
 
-    Ok(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::EMPTY })
+    Ok(fsys::ProgramDecl {
+        runner: program.runner.as_ref().map(|r| r.to_string()),
+        info: Some(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::EMPTY }),
+        ..fsys::ProgramDecl::EMPTY
+    })
 }
 
 /// `use` rules consume a single capability from one source (parent|framework).
@@ -1110,7 +1107,7 @@ mod tests {
         test_compile_program => {
             input = json!({
                 "program": {
-                    "binary": "bin/app"
+                    "binary": "bin/app",
                 },
                 "use": [
                     { "runner": "elf" }
@@ -1133,6 +1130,28 @@ mod tests {
                         ..fsys::UseRunnerDecl::EMPTY
                     }
                 )]),
+                ..default_component_decl()
+            },
+        },
+        test_compile_program_with_runner => {
+            input = json!({
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/app",
+                },
+            }),
+            output = fsys::ComponentDecl {
+                program: Some(fsys::ProgramDecl {
+                    runner: Some("elf".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
+                }),
                 ..default_component_decl()
             },
         },
@@ -1178,6 +1197,7 @@ mod tests {
 
         test_compile_use => {
             input = json!({
+                "program": {},
                 "use": [
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "service": "fuchsia.sys2.Realm", "from": "framework" },
@@ -1196,7 +1216,6 @@ mod tests {
                     { "storage": "hippos", "path": "/hippos" },
                     { "storage": "cache", "path": "/tmp" },
                     { "runner": "elf" },
-                    { "runner": "web" },
                     { "event": "destroyed", "from": "parent" },
                     { "event": ["started", "stopped"], "from": "framework" },
                     {
@@ -1215,6 +1234,13 @@ mod tests {
                 ]
             }),
             output = fsys::ComponentDecl {
+                program: Some(fsys::ProgramDecl {
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
+                }),
                 uses: Some(vec![
                     fsys::UseDecl::Service (
                         fsys::UseServiceDecl {
@@ -1301,12 +1327,6 @@ mod tests {
                     fsys::UseDecl::Runner (
                         fsys::UseRunnerDecl {
                             source_name: Some("elf".to_string()),
-                            ..fsys::UseRunnerDecl::EMPTY
-                        }
-                    ),
-                    fsys::UseDecl::Runner (
-                        fsys::UseRunnerDecl {
-                            source_name: Some("web".to_string()),
                             ..fsys::UseRunnerDecl::EMPTY
                         }
                     ),

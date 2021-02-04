@@ -35,7 +35,7 @@ pub fn validate(
     gn_label: Option<&String>,
 ) -> Result<(), Error> {
     let component_manifest = read_component_manifest(component_manifest_path)?;
-    match get_component_runner(&component_manifest) {
+    match get_component_runner(&component_manifest, component_manifest_path, gn_label)? {
         Some(component_runner) => {
             for runner in RUNNER_IGNORE_LIST.iter() {
                 if &component_runner == runner {
@@ -68,7 +68,7 @@ pub fn validate(
         return Ok(());
     }
 
-    Err(generate_error_message(component_manifest_path, program_binary, package_targets, gn_label))
+    Err(missing_binary_error(component_manifest_path, program_binary, package_targets, gn_label))
 }
 
 fn read_package_manifest(path: &PathBuf) -> Result<String, Error> {
@@ -105,7 +105,7 @@ fn get_package_targets(package_manifest: &str) -> Vec<String> {
 fn get_program_binary(component_manifest: &ComponentManifest) -> Option<String> {
     let program = match component_manifest {
         ComponentManifest::Cml(document) => match &document.program {
-            Some(program) => program,
+            Some(program) => &program.info,
             None => {
                 return None;
             }
@@ -132,44 +132,46 @@ fn get_program_binary(component_manifest: &ComponentManifest) -> Option<String> 
     }
 }
 
-fn get_component_runner(component_manifest: &ComponentManifest) -> Option<String> {
+fn get_component_runner(
+    component_manifest: &ComponentManifest,
+    component_manifest_path: &PathBuf,
+    gn_label: Option<&String>,
+) -> Result<Option<String>, Error> {
     match component_manifest {
         ComponentManifest::Cml(document) => {
-            let runners = document
+            let mut runners = document
                 .r#use
                 .as_ref()
                 .map(|c| c.iter().filter_map(|c| c.runner.as_ref()).collect())
                 .unwrap_or_else(|| vec![]);
-
+            if let Some(runner) = document.program.as_ref().and_then(|p| p.runner.as_ref()) {
+                runners.push(runner);
+            }
+            if runners.len() > 1 {
+                return Err(multiple_runners_error(component_manifest_path, gn_label));
+            }
             match runners.is_empty() {
-                true => None,
-                false => Some(runners[0].as_str().to_owned()),
+                true => Ok(None),
+                false => Ok(Some(runners[0].as_str().to_owned())),
             }
         }
         ComponentManifest::Cmx(payload) => match payload.get("runner") {
             Some(runner) => match runner.as_str() {
-                Some(value) => Some(value.to_owned()),
-                None => None,
+                Some(value) => Ok(Some(value.to_owned())),
+                None => Ok(None),
             },
-            None => None,
+            None => Ok(None),
         },
     }
 }
 
-fn generate_error_message(
+fn missing_binary_error(
     component_manifest_path: &PathBuf,
     program_binary: String,
     package_targets: Vec<String>,
     gn_label: Option<&String>,
 ) -> Error {
-    let header = match gn_label {
-        Some(label) => format!(
-            "Error found in: {}\n\tFailed to validate manifest: {:#?}",
-            label, component_manifest_path
-        ),
-        None => format!("Failed to validate manifest: {:#?}", component_manifest_path),
-    };
-
+    let header = gen_header(component_manifest_path, gn_label);
     if package_targets.is_empty() {
         return Error::validate(format!("{}\n\tPackage deps is empty!", header));
     }
@@ -187,6 +189,31 @@ fn generate_error_message(
     {:?}",
         header, program_binary, program_binary, nearest_match, package_targets
     ))
+}
+
+fn multiple_runners_error(component_manifest_path: &PathBuf, gn_label: Option<&String>) -> Error {
+    let header = match gn_label {
+        Some(label) => format!(
+            "Error found in: {}\n\tFailed to validate manifest: {:#?}",
+            label, component_manifest_path
+        ),
+        None => format!("Failed to validate manifest: {:#?}", component_manifest_path),
+    };
+    Error::validate(format!(
+        r"{}
+    Multiple runners were defined in the manifest. This is not expected.",
+        header
+    ))
+}
+
+fn gen_header(component_manifest_path: &PathBuf, gn_label: Option<&String>) -> String {
+    match gn_label {
+        Some(label) => format!(
+            "Error found in: {}\n\tFailed to validate manifest: {:#?}",
+            label, component_manifest_path
+        ),
+        None => format!("Failed to validate manifest: {:#?}", component_manifest_path),
+    }
 }
 
 fn get_nearest_match<'a>(reference: &'a str, candidates: &'a Vec<String>) -> &'a str {
@@ -474,6 +501,33 @@ mod tests {
                 program: {
                     binary: "bin/hello_world",
                 }
+            "#,
+        );
+        let package_manifest = tmp_file(
+            &tmp_dir,
+            "test.fini",
+            fini_file!("bin/hello_world=hello_world", "lib/foo=foo"),
+        );
+
+        assert_matches!(validate(&component_manifest, &package_manifest, None), Err(_));
+    }
+
+    #[test]
+    fn validate_returns_err_if_cml_has_multiple_runners() {
+        let tmp_dir = TempDir::new().unwrap();
+        let component_manifest = tmp_file(
+            &tmp_dir,
+            "test.cml",
+            r#"
+            {
+                program: {
+                    runner: "elf",
+                    binary: "bin/hello_world",
+                },
+                use: [
+                    { runner: "elf" },
+                ],
+            }
             "#,
         );
         let package_manifest = tmp_file(

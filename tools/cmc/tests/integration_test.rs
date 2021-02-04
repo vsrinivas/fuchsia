@@ -18,6 +18,7 @@ fn main() {
 
     let expected_decl = {
         let program = ProgramDecl {
+            runner: Some("elf".to_string()),
             info: Some(fdata::Dictionary {
                 entries: Some(vec![
                     fdata::DictionaryEntry {
@@ -36,10 +37,6 @@ fn main() {
             ..ProgramDecl::EMPTY
         };
         let uses = vec![
-            UseDecl::Runner(UseRunnerDecl {
-                source_name: Some("elf".to_string()),
-                ..UseRunnerDecl::EMPTY
-            }),
             UseDecl::Service(UseServiceDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.Provider".to_string()),

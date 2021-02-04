@@ -400,13 +400,13 @@ impl ComponentInstance {
             };
 
             // Find any explicit "use" runner declaration, resolve that.
-            if let Some(runner_decl) = decl.get_used_runner() {
+            if let Some(runner) = decl.get_used_runner() {
                 // Open up a channel to the runner.
                 let (client_channel, server_channel) =
                     create_endpoints::<fcrunner::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
-                let capability_source = routing::route_runner(runner_decl.clone(), self).await?;
+                let capability_source = routing::route_runner(runner, self).await?;
                 routing::open_capability_at_source(
                     OPEN_RIGHT_READABLE,
                     MODE_TYPE_SERVICE,

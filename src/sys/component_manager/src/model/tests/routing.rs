@@ -2001,6 +2001,64 @@ async fn use_runner_from_parent_environment() {
 
 ///  a
 ///   \
+///    b
+///
+/// a: declares runner "elf" with service "/svc/runner" from "self".
+/// a: registers runner "elf" from self in environment as "hobbit".
+/// b: uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_parent_environment_with_program() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "elf".into(),
+                            source: RegistrationSource::Self_,
+                            target_name: "hobbit".into(),
+                        })
+                        .build(),
+                )
+                .runner(RunnerDecl {
+                    name: "elf".into(),
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .build(),
+        ),
+        ("b", ComponentDeclBuilder::new_empty_component().add_program("hobbit").build()),
+    ];
+
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "b" exposes a runner service.
+        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    join!(
+        // Bind "b:0". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///b_resolved".to_string())
+            );
+        }
+    );
+}
+
+///  a
+///   \
 ///   [b]
 ///
 /// a: declares runner "elf" with service "/svc/runner" from "self".

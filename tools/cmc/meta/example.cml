@@ -2,6 +2,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/example",
         lifecycle: { stop_event: "notify" },
     },
@@ -47,7 +48,6 @@
         },
     ],
     use: [
-        { runner: "elf" },
         { service: "fuchsia.fonts.Provider" },
         {
             protocol: "fuchsia.fonts.LegacyProvider",

@@ -39,7 +39,7 @@ use {
         OfferStorageDecl, ProtocolDecl, RegistrationDeclCommon, RegistrationSource, ResolverDecl,
         ResolverRegistration, RunnerDecl, RunnerRegistration, SourceName, StorageDecl,
         StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
-        UseRunnerDecl, UseSource, UseStorageDecl,
+        UseSource, UseStorageDecl,
     },
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
@@ -779,15 +779,15 @@ make_noop_visitor!(RunnerVisitor, {
     CapabilityDecl => RunnerDecl,
 });
 
-/// Finds a Runner capability that matches `use_decl` in the `target`'s environment, and then routes the
-/// Runner capability from the environment's component instance to its source.
+/// Finds a Runner capability that matches `runner` in the `target`'s environment, and then
+/// routes the Runner capability from the environment's component instance to its source.
 pub async fn route_runner(
-    use_decl: UseRunnerDecl,
+    runner: &CapabilityName,
     target: &Arc<ComponentInstance>,
 ) -> Result<CapabilitySource, ModelError> {
     // Find the component instance in which the runner was registered with the environment.
     let (env_component_instance, registration_decl) =
-        match target.environment.get_registered_runner(&use_decl.source_name)? {
+        match target.environment.get_registered_runner(&runner)? {
             Some((Some(env_component_instance), registration_decl)) => {
                 (env_component_instance, registration_decl)
             }
@@ -800,7 +800,7 @@ pub async fn route_runner(
             None => {
                 return Err(RoutingError::UseFromEnvironmentNotFound {
                     moniker: target.abs_moniker.clone(),
-                    capability_name: use_decl.source_name.clone(),
+                    capability_name: runner.clone(),
                     capability_type: "runner",
                 }
                 .into());

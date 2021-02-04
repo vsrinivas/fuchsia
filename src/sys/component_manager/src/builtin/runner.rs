@@ -133,8 +133,6 @@ mod tests {
             },
         },
         anyhow::Error,
-        cm_rust::{self, CapabilityName, ChildDecl, ComponentDecl, UseDecl, UseRunnerDecl},
-        fidl_fuchsia_sys2 as fsys,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
         moniker::AbsoluteMoniker,
@@ -253,7 +251,8 @@ mod tests {
                 .unwrap()
                 .err()
                 .unwrap();
-            assert_matches!(actual,
+            assert_matches!(
+                actual,
                 fidl::Error::ClientChannelClosed { status: zx::Status::UNAVAILABLE, .. }
             );
         }
@@ -272,12 +271,7 @@ mod tests {
 
         let components = vec![(
             "a",
-            ComponentDecl {
-                uses: vec![UseDecl::Runner(UseRunnerDecl {
-                    source_name: CapabilityName("my_runner".to_string()),
-                })],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new_empty_component().use_runner("my_runner").build(),
         )];
 
         // Set up the system.
@@ -308,28 +302,12 @@ mod tests {
         let components = vec![
             (
                 "a",
-                ComponentDecl {
-                    uses: vec![UseDecl::Runner(UseRunnerDecl {
-                        source_name: CapabilityName("elf".to_string()),
-                    })],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                        environment: None,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new_empty_component()
+                    .add_lazy_child("b")
+                    .use_runner("elf")
+                    .build(),
             ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![UseDecl::Runner(UseRunnerDecl {
-                        source_name: CapabilityName("elf".to_string()),
-                    })],
-                    ..default_component_decl()
-                },
-            ),
+            ("b", ComponentDeclBuilder::new_empty_component().use_runner("elf").build()),
         ];
 
         // Set up the system.

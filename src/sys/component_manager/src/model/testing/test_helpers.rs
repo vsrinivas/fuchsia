@@ -156,9 +156,7 @@ pub async fn get_live_child<'a>(
 
 /// Returns an empty component decl for an executable component.
 pub fn default_component_decl() -> ComponentDecl {
-    ComponentDecl {
-        ..Default::default()
-    }
+    ComponentDecl { ..Default::default() }
 }
 
 /// Name of the test runner.
@@ -233,9 +231,24 @@ impl ComponentDeclBuilder {
 
     /// Add a "use" clause, using the given runner.
     pub fn use_runner(mut self, name: &str) -> Self {
+        assert!(self.result.program.is_none(), "tried to use runner twice");
+        self.result.program = Some(cm_rust::ProgramDecl {
+            runner: None,
+            info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
+        });
         self.result
             .uses
             .push(cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl { source_name: name.into() }));
+        self
+    }
+
+    /// Add a "program" clause, using the given runner.
+    pub fn add_program(mut self, runner: &str) -> Self {
+        assert!(self.result.program.is_none(), "tried to add program twice");
+        self.result.program = Some(cm_rust::ProgramDecl {
+            runner: Some(runner.into()),
+            info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
+        });
         self
     }
 
