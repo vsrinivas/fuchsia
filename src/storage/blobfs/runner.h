@@ -15,7 +15,9 @@
 #include <fs/vnode.h>
 
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/health_check_service.h"
 #include "src/storage/blobfs/mount.h"
+#include "src/storage/blobfs/query.h"
 
 namespace blobfs {
 
@@ -56,6 +58,7 @@ class Runner : public fs::ManagedVfs {
   async::Loop* loop_;
   std::unique_ptr<Blobfs> blobfs_;
   fbl::RefPtr<QueryService> query_svc_;
+  fbl::RefPtr<HealthCheckService> health_check_svc_;
 };
 
 }  // namespace blobfs

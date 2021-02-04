@@ -5,6 +5,7 @@
 #include "src/storage/blobfs/runner.h"
 
 #include <fuchsia/fs/llcpp/fidl.h>
+#include <fuchsia/update/verify/llcpp/fidl.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -91,8 +92,12 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
 
       auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
       outgoing->AddEntry("svc", svc_dir);
+
       query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), blobfs_.get(), this);
-      svc_dir->AddEntry(::llcpp::fuchsia::fs::Query::Name, query_svc_);
+      svc_dir->AddEntry(llcpp::fuchsia::fs::Query::Name, query_svc_);
+
+      health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher());
+      svc_dir->AddEntry(llcpp::fuchsia::update::verify::BlobfsVerifier::Name, health_check_svc_);
 
       export_root = std::move(outgoing);
       break;

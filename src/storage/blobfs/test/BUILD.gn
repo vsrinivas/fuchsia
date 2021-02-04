@@ -177,6 +177,7 @@ test("blobfs-integration") {
     "integration/blobfs_integration_test.cc",
     "integration/fdio_test.cc",
     "integration/fdio_test.h",
+    "integration/health_check_test.cc",
     "integration/mount_test.cc",
     "integration/query_service_test.cc",
     "integration/superblock-test.cc",
