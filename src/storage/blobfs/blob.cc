@@ -354,7 +354,7 @@ zx_status_t Blob::WriteNullBlob() {
 
 zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
   if (size_data > 0 && fbl::round_up(size_data, kBlobfsBlockSize) == 0) {
-    // Fail early if |len| would overflow when rounded up to block size.
+    // Fail early if |size_data| would overflow when rounded up to block size.
     return ZX_ERR_OUT_OF_RANGE;
   }
 
