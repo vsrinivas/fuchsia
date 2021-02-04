@@ -14,5 +14,5 @@ group("core") {
 
 group("tests") {
   testonly = true
-  deps = [ "bt-host:bt-host-tests" ]
+  deps = [ "bt-host:unittest-packages" ]
 }
