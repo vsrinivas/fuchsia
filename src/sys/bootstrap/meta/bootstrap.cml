@@ -691,6 +691,11 @@
             // TODO(fxbug.dev/64587): Make this strong once power_manager is in ZBI.
             dependency: "weak_for_migration",
         },
+        {
+            resolver: "base_resolver",
+            from: "#base_resolver",
+            to: [ "#driver_manager" ],
+        },
     ],
     expose: [
         // This handle is used by component manager to resolve packages from the

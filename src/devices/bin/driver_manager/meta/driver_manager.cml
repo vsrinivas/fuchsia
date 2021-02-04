@@ -138,6 +138,13 @@
                     from: "self",
                 },
             ],
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "parent",
+                },
+            ],
             __stop_timeout_ms: 1000,
         },
         {
