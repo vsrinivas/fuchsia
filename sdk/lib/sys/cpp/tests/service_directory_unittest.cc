@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 
 #include <gtest/gtest.h>
 #include <test/placeholders/cpp/fidl.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 TEST(ServiceDirectoryTest, Control) {
   zx::channel svc_client, svc_server;
@@ -23,7 +25,8 @@ TEST(ServiceDirectoryTest, Control) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
+  fio::Directory::OpenRequest for_ordinal(zx_txid_t(0));
+  EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, CreateWithRequest) {
@@ -38,7 +41,8 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
+  fio::Directory::OpenRequest for_ordinal(zx_txid_t(0));
+  EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, Clone) {
@@ -53,7 +57,8 @@ TEST(ServiceDirectoryTest, Clone) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  EXPECT_EQ(fuchsia_io_DirectoryCloneOrdinal, message.ordinal());
+  fio::Directory::CloneRequest for_ordinal(zx_txid_t(0));
+  EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, Invalid) {

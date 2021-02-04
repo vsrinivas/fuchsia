@@ -16,7 +16,7 @@ test("component_cpp_unittests") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
