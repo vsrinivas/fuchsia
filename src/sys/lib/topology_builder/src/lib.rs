@@ -138,18 +138,12 @@ impl TopologyNode {
 /// A running instance of a created [`Topology`]. When this struct is dropped the child components
 /// are destroyed.
 pub struct TopologyInstance {
-    root_component: fclient::ScopedInstance,
+    /// The root component of this topology instance, which can be used to access exposed
+    /// capabilities from the topology.
+    pub root: fclient::ScopedInstance,
     // We want to ensure that the mocks runner remains alive for as long as the topology exists, so
     // the ScopedInstance is bundled up into a struct along with the mocks runner.
     _mocks_runner: mock::MocksRunner,
-}
-
-impl TopologyInstance {
-    /// Returns a reference to the root component of this topology instance, which can be used to
-    /// access exposed capabilities from the topology.
-    pub fn root(&mut self) -> &mut fclient::ScopedInstance {
-        &mut self.root_component
-    }
 }
 
 /// A custom built topology, which can be created at runtime in a component collection
@@ -354,7 +348,7 @@ impl Topology {
         let root = fclient::ScopedInstance::new(self.collection_name, root_url)
             .await
             .map_err(TopologyError::FailedToCreateChild)?;
-        Ok(TopologyInstance { root_component: root, _mocks_runner: self.mocks_runner })
+        Ok(TopologyInstance { root, _mocks_runner: self.mocks_runner })
     }
 
     /// Walks a topology, registering each node with the component resolver.

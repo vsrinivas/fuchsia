@@ -124,9 +124,9 @@ async fn new_topology(
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
     let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let reason = fstatecontrol::RebootReason::SystemUpdate;
@@ -139,9 +139,9 @@ async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
     let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let reason = fstatecontrol::RebootReason::SessionFailure;
@@ -154,9 +154,9 @@ async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
     let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.reboot_to_bootloader().await?.unwrap();
@@ -168,9 +168,9 @@ async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
     let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.reboot_to_recovery().await?.unwrap();
@@ -182,9 +182,9 @@ async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_poweroff() -> Result<(), Error> {
     let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.poweroff().await?.unwrap();
@@ -196,9 +196,9 @@ async fn power_manager_present_poweroff() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
     let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.suspend_to_ram().await?.unwrap();
@@ -211,9 +211,9 @@ async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
 async fn power_manager_missing_poweroff() -> Result<(), Error> {
     let (topology, mut recv_signals) =
         new_topology(TopologyVariant::PowerManagerIsntStartedYet).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     // We don't expect this task to ever complete, as the shutdown shim isn't actually killed (the
@@ -237,9 +237,9 @@ async fn power_manager_missing_poweroff() -> Result<(), Error> {
 async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
     let (topology, mut recv_signals) =
         new_topology(TopologyVariant::PowerManagerIsntStartedYet).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     // We don't expect this task to ever complete, as the shutdown shim isn't actually killed (the
@@ -260,9 +260,9 @@ async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
 async fn power_manager_missing_mexec() -> Result<(), Error> {
     let (topology, mut recv_signals) =
         new_topology(TopologyVariant::PowerManagerIsntStartedYet).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let mexec_task = fasync::Task::spawn(async move { shim_statecontrol.mexec().await });
@@ -284,9 +284,9 @@ async fn power_manager_missing_mexec() -> Result<(), Error> {
 async fn power_manager_not_present_poweroff() -> Result<(), Error> {
     let (topology, mut recv_signals) =
         new_topology(TopologyVariant::PowerManagerNotPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     fasync::Task::spawn(async move {
@@ -309,9 +309,9 @@ async fn power_manager_not_present_poweroff() -> Result<(), Error> {
 async fn power_manager_not_present_reboot() -> Result<(), Error> {
     let (topology, mut recv_signals) =
         new_topology(TopologyVariant::PowerManagerNotPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     fasync::Task::spawn(async move {
@@ -331,9 +331,9 @@ async fn power_manager_not_present_reboot() -> Result<(), Error> {
 async fn power_manager_not_present_mexec() -> Result<(), Error> {
     let (topology, mut recv_signals) =
         new_topology(TopologyVariant::PowerManagerNotPresent).await?;
-    let mut topology_instance = topology.create().await?;
+    let topology_instance = topology.create().await?;
     let shim_statecontrol = topology_instance
-        .root()
+        .root
         .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let mexec_task = fasync::Task::spawn(shim_statecontrol.mexec());

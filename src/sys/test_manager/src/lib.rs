@@ -106,7 +106,7 @@ struct RunningTest {
 
 impl RunningTest {
     async fn destroy(mut self) {
-        let destroy_waiter = self.instance.root().take_destroy_waiter();
+        let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self);
         destroy_waiter.await;
     }
@@ -145,16 +145,15 @@ async fn launch_test(
         .await
         .map_err(LaunchTestError::InitializeTestTopology)?;
     topology.set_collection_name("tests");
-    let mut topology_instance =
-        topology.create().await.map_err(LaunchTestError::CreateTestTopology)?;
+    let topology_instance = topology.create().await.map_err(LaunchTestError::CreateTestTopology)?;
     topology_instance
-        .root()
+        .root
         .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
             archive_accessor_server_end,
         )
         .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
     topology_instance
-        .root()
+        .root
         .connect_request_to_protocol_at_exposed_dir(suite_request)
         .map_err(LaunchTestError::ConnectToTestSuite)?;
 
