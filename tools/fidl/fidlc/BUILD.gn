@@ -32,6 +32,8 @@ zx_library("fidl") {
     "lib/c_generator.cc",
     "lib/check.cc",
     "lib/coded_types_generator.cc",
+    "lib/conversion.cc",
+    "lib/converter.cc",
     "lib/diagnostic_types.cc",
     "lib/diagnostics_json.cc",
     "lib/experimental_flags.cc",

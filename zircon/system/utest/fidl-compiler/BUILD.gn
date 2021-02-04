@@ -44,6 +44,7 @@ if (current_toolchain == default_toolchain) {
       "canonical_names_tests.cc",
       "coded_types_generator_tests.cc",
       "consts_tests.cc",
+      "converter_tests.cc",
       "declaration_order_tests.cc",
       "enums_tests.cc",
       "errors_tests.cc",

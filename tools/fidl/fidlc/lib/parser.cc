@@ -1168,8 +1168,9 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStruct));
   if (!Ok())
     return Fail();
+  auto decl_start_token = decl_token.value();
 
-  ValidateModifiers<types::Resourceness>(modifiers, decl_token.value());
+  ValidateModifiers<types::Resourceness>(modifiers, decl_start_token);
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -1203,7 +1204,11 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
     Fail();
 
   const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
-  return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(), std::move(attributes),
+  if (resourceness == types::Resourceness::kResource) {
+    decl_start_token = modifiers.resourceness_token.value();
+  }
+
+  return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
                                                   std::move(identifier), std::move(members),
                                                   resourceness);
 }

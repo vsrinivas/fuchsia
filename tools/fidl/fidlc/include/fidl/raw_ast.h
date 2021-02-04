@@ -74,6 +74,12 @@ class SourceElement {
                       start_.span().source_file());
   }
 
+  std::string copy_to_str() const {
+    const char* start_pos = start_.span().data().data();
+    const char* end_pos = end_.span().data().data() + end_.span().data().length();
+    return std::string(start_pos, end_pos);
+  }
+
   void update_span(SourceElement const& element) {
     start_ = element.start_;
     end_ = element.end_;
@@ -583,11 +589,14 @@ class StructMember final : public SourceElement {
 class StructDeclaration final : public SourceElement {
  public:
   // Note: A nullptr passed to attributes means an empty attribute list.
-  StructDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+  StructDeclaration(SourceElement const& element,
+                    std::unique_ptr<Token> decl_start_token,
+                    std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<Identifier> identifier,
                     std::vector<std::unique_ptr<StructMember>> members,
                     types::Resourceness resourceness)
       : SourceElement(element),
+        decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         members(std::move(members)),
@@ -595,6 +604,7 @@ class StructDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
+  std::unique_ptr<Token> decl_start_token;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<StructMember>> members;
