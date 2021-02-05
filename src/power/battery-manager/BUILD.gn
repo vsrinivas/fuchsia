@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "battery-manager"
@@ -40,30 +39,24 @@ rustc_binary("bin") {
   ]
 }
 
-package("battery-manager") {
+fuchsia_component("battery_manager") {
+  component_name = "battery_manager"
+  manifest = "meta/battery_manager.cml"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "battery_manager"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/battery_manager.cmx")
-      dest = "battery_manager.cmx"
-    },
-  ]
 }
 
-test_package("battery-manager-tests") {
-  deps = [ ":bin_test" ]
+fuchsia_package("battery-manager") {
+  deps = [ ":battery_manager" ]
+}
 
-  tests = [
-    {
-      name = "battery_manager_bin_test"
-    },
-  ]
+fuchsia_component("battery_manager_bin_test") {
+  testonly = true
+  manifest = "meta/battery_manager_bin_test.cml"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("battery-manager-tests") {
+  test_components = [ ":battery_manager_bin_test" ]
 }
 
 group("tests") {

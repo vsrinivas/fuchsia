@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("battery_cli_bin") {
   name = "battery_cli"
@@ -30,32 +29,30 @@ rustc_binary("battery_cli_bin") {
   ]
 }
 
-package("battery-cli") {
+# Shell components
+fuchsia_shell_package("battery-cli") {
   deps = [ ":battery_cli_bin" ]
-
-  binaries = [
-    {
-      name = "battery_cli"
-      shell = true
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/battery_cli.cmx")
-      dest = "battery_cli.cmx"
-    },
-  ]
 }
 
-test_package("tests") {
-  package_name = "battery-cli-tests"
-
+# Test components
+fuchsia_component("battery_cli_test_driver") {
+  testonly = true
+  manifest = "meta/battery_cli_test_driver.cml"
   deps = [ ":battery_cli_bin_test" ]
+}
 
-  tests = [
-    {
-      name = "battery_cli_bin_test"
-      dest = "battery_cli_tests"
-    },
-  ]
+fuchsia_component("battery_cli_tests") {
+  testonly = true
+  component_name = "battery_cli_tests"
+  manifest = "meta/battery_cli_tests.cml"
+}
+
+fuchsia_test_package("battery-cli-tests") {
+  test_components = [ ":battery_cli_tests" ]
+  deps = [ ":battery_cli_test_driver" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":battery-cli-tests" ]
 }
