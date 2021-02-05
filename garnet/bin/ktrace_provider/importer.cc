@@ -242,11 +242,12 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
     case KTRACE_EVENT(TAG_CONTEXT_SWITCH): {
       trace_cpu_number_t cpu = record->b & 0xff;
       trace_thread_state_t outgoing_thread_state = ToTraceThreadState((record->b >> 8) & 0xff);
-      trace_thread_priority_t outgoing_thread_priority = (record->b >> 16) & 0xff;
-      trace_thread_priority_t incoming_thread_priority = record->b >> 24;
+      trace_thread_priority_t outgoing_thread_priority =
+          record->c == 0 ? (record->b >> 16) & 0xff : record->c;
+      trace_thread_priority_t incoming_thread_priority =
+          record->d == 0 ? record->b >> 24 : record->d;
       return HandleContextSwitch(record->ts, cpu, outgoing_thread_state, outgoing_thread_priority,
-                                 incoming_thread_priority, record->tid, record->c, record->a,
-                                 record->d);
+                                 incoming_thread_priority, record->tid, record->a);
     }
 
     case KTRACE_EVENT(TAG_INHERIT_PRIORITY_START):
@@ -366,8 +367,6 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& 
               << "'";
 
   switch (KTRACE_EVENT(record->tag)) {
-    case KTRACE_EVENT(TAG_KTHREAD_NAME):
-      return HandleKernelThreadName(record->id, name);
     case KTRACE_EVENT(TAG_THREAD_NAME):
       return HandleThreadName(record->id, record->arg, name);
     case KTRACE_EVENT(TAG_PROC_NAME):
@@ -505,16 +504,6 @@ bool Importer::ImportUnknownRecord(const ktrace_header_t* record, size_t record_
   return false;
 }
 
-bool Importer::HandleKernelThreadName(KernelThread kernel_thread, const fbl::StringPiece& name) {
-  trace_string_ref name_ref = trace_make_inline_string_ref(name.data(), name.length());
-  trace_context_write_thread_info_record(context_, kNoProcess, kKernelThreadFlag | kernel_thread,
-                                         &name_ref);
-  kernel_thread_refs_.emplace(
-      kernel_thread, trace_context_make_registered_thread(context_, kNoProcess,
-                                                          kKernelThreadFlag | kernel_thread));
-  return true;
-}
-
 bool Importer::HandleThreadName(zx_koid_t thread, zx_koid_t process, const fbl::StringPiece& name) {
   trace_string_ref name_ref = trace_make_inline_string_ref(name.data(), name.length());
   trace_context_write_thread_info_record(context_, process, thread, &name_ref);
@@ -649,12 +638,9 @@ bool Importer::HandleContextSwitch(trace_ticks_t event_time, trace_cpu_number_t 
                                    trace_thread_state_t outgoing_thread_state,
                                    trace_thread_priority_t outgoing_thread_priority,
                                    trace_thread_priority_t incoming_thread_priority,
-                                   zx_koid_t outgoing_thread, KernelThread outgoing_kernel_thread,
-                                   zx_koid_t incoming_thread, KernelThread incoming_kernel_thread) {
+                                   zx_koid_t outgoing_thread, zx_koid_t incoming_thread) {
   trace_thread_ref_t outgoing_thread_ref = GetCpuCurrentThreadRef(cpu_number);
-  trace_thread_ref_t incoming_thread_ref =
-      incoming_thread ? SwitchCpuToThread(cpu_number, incoming_thread)
-                      : SwitchCpuToKernelThread(cpu_number, incoming_kernel_thread);
+  trace_thread_ref_t incoming_thread_ref = SwitchCpuToThread(cpu_number, incoming_thread);
   if (!trace_is_unknown_thread_ref(&outgoing_thread_ref) ||
       !trace_is_unknown_thread_ref(&incoming_thread_ref)) {
     trace_context_write_context_switch_record(
@@ -686,9 +672,7 @@ bool Importer::HandleInheritPriorityStart(trace_ticks_t event_time, uint32_t id,
 bool Importer::HandleInheritPriority(trace_ticks_t event_time, uint32_t id, uint32_t tid,
                                      uint32_t flags, int old_inherited_prio, int new_inherited_prio,
                                      int old_effective_prio, int new_effective_prio) {
-  trace_thread_ref_t thread_ref = ((flags & KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID) != 0)
-                                      ? GetKernelThreadRef(tid)
-                                      : GetThreadRef(tid);
+  trace_thread_ref_t thread_ref = GetThreadRef(tid);
 
   trace_arg_t args[] = {
       trace_make_arg(inherit_prio_old_ip_name_ref_, trace_make_int32_arg_value(old_inherited_prio)),
@@ -1141,14 +1125,6 @@ trace_thread_ref_t Importer::SwitchCpuToThread(trace_cpu_number_t cpu_number, zx
   return cpu_infos_[cpu_number].current_thread_ref = GetThreadRef(thread);
 }
 
-trace_thread_ref_t Importer::SwitchCpuToKernelThread(trace_cpu_number_t cpu_number,
-                                                     KernelThread kernel_thread) {
-  if (cpu_number >= cpu_infos_.size())
-    cpu_infos_.resize(cpu_number + 1u);
-  cpu_infos_[cpu_number].current_thread = kernel_thread;
-  return cpu_infos_[cpu_number].current_thread_ref = GetKernelThreadRef(kernel_thread);
-}
-
 const trace_string_ref_t& Importer::GetNameRef(
     std::unordered_map<uint32_t, trace_string_ref_t>& table, const char* kind, uint32_t id) {
   auto it = table.find(id);
@@ -1186,15 +1162,6 @@ const trace_thread_ref_t& Importer::GetCpuPseudoThreadRef(trace_cpu_number_t cpu
     trace_context_write_thread_info_record(context_, kNoProcess, thread, &name_ref);
     std::tie(it, std::ignore) = thread_refs_.emplace(
         thread, trace_context_make_registered_thread(context_, kNoProcess, thread));
-  }
-  return it->second;
-}
-
-const trace_thread_ref_t& Importer::GetKernelThreadRef(KernelThread kernel_thread) {
-  auto it = kernel_thread_refs_.find(kernel_thread);
-  if (it == kernel_thread_refs_.end()) {
-    std::tie(it, std::ignore) = kernel_thread_refs_.emplace(
-        kernel_thread, trace_make_inline_thread_ref(kNoProcess, kKernelThreadFlag | kernel_thread));
   }
   return it->second;
 }

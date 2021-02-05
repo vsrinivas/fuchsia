@@ -225,7 +225,7 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
     uint32_t tid;
     uint32_t flags;
     if (thread_->user_thread() != nullptr) {
-      tid = static_cast<uint32_t>(thread_->user_tid());
+      tid = static_cast<uint32_t>(thread_->tid());
       flags = static_cast<uint32_t>(arch_curr_cpu_num());
     } else {
       tid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(thread_));

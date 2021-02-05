@@ -1243,8 +1243,8 @@ void Thread::SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread) {
   DEBUG_ASSERT(!user_thread_);
 
   user_thread_ = ktl::move(user_thread);
-  user_tid_ = user_thread_->get_koid();
-  user_pid_ = user_thread_->process()->get_koid();
+  tid_ = user_thread_->get_koid();
+  pid_ = user_thread_->process()->get_koid();
 
   // All user mode threads are detached since they are responsible for cleaning themselves up.
   // We can set this directly because we've checked that we are in the initial state.
@@ -1437,13 +1437,13 @@ void dump_thread_locked(Thread* t, bool full_dump) {
 
     dprintf(INFO, "\taspace %p\n", t->aspace_);
     dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n", t->user_thread_.get(),
-            t->user_pid_, t->user_tid_);
+            t->pid(), t->tid());
     arch_dump_thread(t);
   } else {
     printf("thr %p st %4s owq %d pri %2d [%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
            thread_state_to_str(t->state()), !t->wait_queue_state().owned_wait_queues_.is_empty(),
            t->scheduler_state().effective_priority_, t->scheduler_state().base_priority_,
-           t->scheduler_state().inherited_priority_, t->user_pid_, t->user_tid_, oname, t->name());
+           t->scheduler_state().inherited_priority_, t->pid(), t->tid(), oname, t->name());
   }
 }
 
@@ -1471,14 +1471,14 @@ void dump_all_threads(bool full) {
   dump_all_threads_locked(full);
 }
 
-void dump_thread_user_tid(zx_koid_t tid, bool full) {
+void dump_thread_tid(zx_koid_t tid, bool full) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-  dump_thread_user_tid_locked(tid, full);
+  dump_thread_tid_locked(tid, full);
 }
 
-void dump_thread_user_tid_locked(zx_koid_t tid, bool full) {
+void dump_thread_tid_locked(zx_koid_t tid, bool full) {
   for (Thread& t : thread_list.Get()) {
-    if (t.user_tid() != tid) {
+    if (t.tid() != tid) {
       continue;
     }
 
@@ -1494,7 +1494,7 @@ void dump_thread_user_tid_locked(zx_koid_t tid, bool full) {
 Thread* thread_id_to_thread_slow(zx_koid_t tid) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   for (Thread& t : thread_list.Get()) {
-    if (t.user_tid() == tid) {
+    if (t.tid() == tid) {
       return &t;
     }
   }
@@ -1510,13 +1510,8 @@ void ktrace_report_live_threads() {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   for (Thread& t : thread_list.Get()) {
     t.canary().Assert();
-    if (t.user_tid()) {
-      ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.user_tid()),
-                  static_cast<uint32_t>(t.user_pid()), t.name(), /*always*/ true);
-    } else {
-      ktrace_name(TAG_KTHREAD_NAME, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(&t)), 0,
-                  t.name(), /*always*/ true);
-    }
+    ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t.tid()), static_cast<uint32_t>(t.pid()),
+                t.name(), /*always*/ true);
   }
 }
 

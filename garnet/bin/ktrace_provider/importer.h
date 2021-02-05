@@ -27,7 +27,6 @@ class Reader;
 class Importer {
  public:
   static constexpr zx_koid_t kNoProcess = 0u;
-  static constexpr zx_koid_t kKernelThreadFlag = 0x100000000;
 
   static constexpr zx_koid_t kKernelPseudoKoidBase = 0x00000000'70000000u;
   static constexpr zx_koid_t kKernelPseudoCpuBase = kKernelPseudoKoidBase + 0x00000000'01000000u;
@@ -38,8 +37,6 @@ class Importer {
   bool Import(Reader& reader);
 
  private:
-  using KernelThread = uint32_t;
-
   bool ImportRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportBasicRecord(const ktrace_header_t* record, const TagInfo& tag_info);
   bool ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& tag_info);
@@ -50,7 +47,6 @@ class Importer {
   bool ImportCounterRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
 
-  bool HandleKernelThreadName(KernelThread kernel_thread, const fbl::StringPiece& name);
   bool HandleThreadName(zx_koid_t thread, zx_koid_t process, const fbl::StringPiece& name);
   bool HandleProcessName(zx_koid_t process, const fbl::StringPiece& name);
   bool HandleSyscallName(uint32_t syscall, const fbl::StringPiece& name);
@@ -72,8 +68,7 @@ class Importer {
                            trace_thread_state_t outgoing_thread_state,
                            trace_thread_priority_t outgoing_thread_priority,
                            trace_thread_priority_t incoming_thread_priority,
-                           zx_koid_t outgoing_thread, KernelThread outgoing_kernel_thread,
-                           zx_koid_t incoming_thread, KernelThread incoming_kernel_thread);
+                           zx_koid_t outgoing_thread, zx_koid_t incoming_thread);
   bool HandleInheritPriorityStart(trace_ticks_t event_time, uint32_t id,
                                   trace_cpu_number_t cpu_number);
   bool HandleInheritPriority(trace_ticks_t event_time, uint32_t id, uint32_t tid, uint32_t flags,
@@ -151,13 +146,10 @@ class Importer {
   trace_thread_ref_t GetCpuCurrentThreadRef(trace_cpu_number_t cpu_number);
   zx_koid_t GetCpuCurrentThread(trace_cpu_number_t cpu_number);
   trace_thread_ref_t SwitchCpuToThread(trace_cpu_number_t cpu_number, zx_koid_t thread);
-  trace_thread_ref_t SwitchCpuToKernelThread(trace_cpu_number_t cpu_number,
-                                             KernelThread kernel_thread);
 
   const trace_string_ref_t& GetNameRef(std::unordered_map<uint32_t, trace_string_ref_t>& table,
                                        const char* kind, uint32_t id);
   const trace_thread_ref_t& GetThreadRef(zx_koid_t thread);
-  const trace_thread_ref_t& GetKernelThreadRef(KernelThread kernel_thread);
   const trace_thread_ref_t& GetCpuPseudoThreadRef(trace_cpu_number_t cpu);
 
   const trace_string_ref_t& GetCategoryForGroup(uint32_t group);
@@ -220,7 +212,6 @@ class Importer {
 
   std::vector<CpuInfo> cpu_infos_;
 
-  std::unordered_map<KernelThread, trace_thread_ref_t> kernel_thread_refs_;
   std::unordered_map<zx_koid_t, trace_thread_ref_t> thread_refs_;
 
   const trace_thread_ref_t kUnknownThreadRef;

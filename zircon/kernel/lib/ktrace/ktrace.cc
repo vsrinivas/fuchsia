@@ -117,7 +117,7 @@ void* ktrace_open(uint32_t tag, uint64_t ts) {
   hdr->tag = tag;
   hdr->tid = KTRACE_FLAGS(tag) & KTRACE_FLAGS_CPU
                  ? arch_curr_cpu_num()
-                 : static_cast<uint32_t>(Thread::Current::Get()->user_tid());
+                 : static_cast<uint32_t>(Thread::Current::Get()->tid());
   return hdr + 1;
 }
 

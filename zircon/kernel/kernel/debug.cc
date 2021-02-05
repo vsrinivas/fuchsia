@@ -82,9 +82,9 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
       dump_thread(t, true);
     } else {
       if (flags & CMD_FLAG_PANIC) {
-        dump_thread_user_tid_during_panic(argv[2].u, true);
+        dump_thread_tid_during_panic(argv[2].u, true);
       } else {
-        dump_thread_user_tid(argv[2].u, true);
+        dump_thread_tid(argv[2].u, true);
       }
     }
   } else if (!strcmp(argv[1].str, "list")) {

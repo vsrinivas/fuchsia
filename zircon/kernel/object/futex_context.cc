@@ -61,7 +61,7 @@ class KTrace<true> : public KTraceBase {
 
   void FutexWait(uintptr_t futex_id, Thread* new_owner) {
     ktrace(TAG_FUTEX_WAIT, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
-           static_cast<uint32_t>(new_owner ? new_owner->user_tid() : 0),
+           static_cast<uint32_t>(new_owner ? new_owner->tid() : 0),
            static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF), ts_);
   }
 
@@ -82,7 +82,7 @@ class KTrace<true> : public KTraceBase {
                      ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
 
     ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
-           static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid() : 0), flags, ts_);
+           static_cast<uint32_t>(assigned_owner ? assigned_owner->tid() : 0), flags, ts_);
   }
 
   void FutexRequeue(uintptr_t futex_id, FutexActive active, uint32_t count,
@@ -97,7 +97,7 @@ class KTrace<true> : public KTraceBase {
                      ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
 
     ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
-           static_cast<uint32_t>(assigned_owner ? assigned_owner->user_tid() : 0), flags, ts_);
+           static_cast<uint32_t>(assigned_owner ? assigned_owner->tid() : 0), flags, ts_);
   }
 
  private:

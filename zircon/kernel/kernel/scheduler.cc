@@ -139,16 +139,22 @@ __NO_SAFESTACK void FinalContextSwitch(Thread* oldthread, Thread* newthread) TA_
 // so that user mode tracing can track which threads are running.
 inline void TraceContextSwitch(const Thread* current_thread, const Thread* next_thread,
                                cpu_num_t current_cpu) {
-  const auto raw_current = reinterpret_cast<uintptr_t>(current_thread);
-  const auto raw_next = reinterpret_cast<uintptr_t>(next_thread);
-  const auto current = static_cast<uint32_t>(raw_current);
-  const auto next = static_cast<uint32_t>(raw_next);
-  const auto user_tid = static_cast<uint32_t>(next_thread->user_tid());
+  const auto next_tid = static_cast<uint32_t>(next_thread->tid());
+  const SchedulerState& current_state = current_thread->scheduler_state();
+  const SchedulerState& next_state = next_thread->scheduler_state();
   const uint32_t context = current_cpu | (current_thread->state() << 8) |
-                           (current_thread->scheduler_state().base_priority() << 16) |
-                           (next_thread->scheduler_state().base_priority() << 24);
+                           (current_state.base_priority() << 16) |
+                           (next_state.base_priority() << 24);
+  const uint32_t current_relative_deadline =
+      current_state.discipline() == SchedDiscipline::Deadline
+          ? static_cast<uint32_t>(current_state.deadline().deadline_ns.raw_value())
+          : 0u;
+  const uint32_t next_relative_deadline =
+      next_state.discipline() == SchedDiscipline::Deadline
+          ? static_cast<uint32_t>(next_state.deadline().deadline_ns.raw_value())
+          : 0u;
 
-  ktrace(TAG_CONTEXT_SWITCH, user_tid, context, current, next);
+  ktrace(TAG_CONTEXT_SWITCH, next_tid, context, current_relative_deadline, next_relative_deadline);
 }
 
 // Returns true if the given thread is fair scheduled.
@@ -232,7 +238,7 @@ inline void Scheduler::TraceThreadQueueEvent(StringRef* name, Thread* thread) {
     const uint64_t tid =
         thread->IsIdle()
             ? 0
-            : (thread->user_thread() ? thread->user_tid() : reinterpret_cast<uint64_t>(thread));
+            : (thread->user_thread() ? thread->tid() : reinterpret_cast<uint64_t>(thread));
     const size_t cnt = fair_run_queue_.size() + deadline_run_queue_.size() +
                        ((active_thread_ && !active_thread_->IsIdle()) ? 1 : 0);
     const uint64_t arg0 = (tid & 0xFFFFFFFFFFFF) |
@@ -1115,8 +1121,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     // Emit a flow end event to match the flow begin event emitted when the
     // thread was enqueued. Emitting in this scope ensures that thread just
     // came from the run queue (and is not the idle thread).
-    LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", next_state->flow_id(),
-                          next_thread->user_tid());
+    LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", next_state->flow_id(), next_thread->tid());
   } else {
     LocalTraceDuration<KTRACE_DETAILED> trace_continue{"continue: preempt,abs"_stringref};
     // The current thread should continue to run. A throttled deadline thread
@@ -1370,14 +1375,14 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
   if (placement != Placement::Adjustment) {
     if (placement == Placement::Migration) {
       // Connect the flow into the previous queue to the new queue.
-      LOCAL_KTRACE_FLOW_STEP(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->user_tid());
+      LOCAL_KTRACE_FLOW_STEP(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->tid());
     } else {
       // Reuse this member to track the time the thread enters the run queue. It
       // is not read outside of the scheduler unless the thread state is
       // THREAD_RUNNING.
       state->last_started_running_ = now;
       state->flow_id_ = NextFlowId();
-      LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->user_tid());
+      LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->tid());
     }
 
     // The generation count must always be updated when changing between CPUs,
@@ -1432,7 +1437,7 @@ void Scheduler::Insert(SchedTime now, Thread* thread, Placement placement) {
       QueueThread(thread, placement, now);
     } else {
       // Connect the flow into the previous queue to the new queue.
-      LOCAL_KTRACE_FLOW_STEP(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->user_tid());
+      LOCAL_KTRACE_FLOW_STEP(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->tid());
     }
   }
 }

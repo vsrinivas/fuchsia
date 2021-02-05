@@ -90,9 +90,7 @@ class TestImporter : public ::testing::Test {
     return true;
   }
 
-  void CompareRecord(const trace::Record& rec, const char* expected) {
-    EXPECT_STREQ(rec.ToString().c_str(), expected);
-  }
+#define COMPARE_RECORD(rec, expected) EXPECT_STREQ((rec).ToString().c_str(), (expected))
 
   void EmitKtraceRecord(const void* record, size_t record_size) {
     ASSERT_LE(record_size, KtraceAvailableBytes());
@@ -129,13 +127,11 @@ class TestImporter : public ::testing::Test {
 
   void EmitContextSwitchRecord(uint64_t ts, uint32_t old_thread_tid, uint32_t new_thread_tid,
                                uint8_t cpu, KernelThreadState old_thread_state,
-                               uint8_t old_thread_prio, uint8_t new_thread_prio,
-                               uint32_t new_kernel_thread) {
-    uint32_t old_kernel_thread = 0;  // importer ignores this
+                               uint8_t old_thread_prio, uint8_t new_thread_prio) {
     EmitKtrace32Record(TAG_CONTEXT_SWITCH, old_thread_tid, ts, new_thread_tid,
                        (cpu | (static_cast<uint8_t>(old_thread_state) << 8) |
                         (old_thread_prio << 16) | (new_thread_prio << 24)),
-                       old_kernel_thread, new_kernel_thread);
+                       0, 0);
   }
 
   void EmitInheritPriorityStartRecord(uint64_t ts, uint32_t event_id, uint8_t cpu_id) {
@@ -144,12 +140,11 @@ class TestImporter : public ::testing::Test {
 
   void EmitInheritPriorityRecord(uint64_t ts, uint32_t event_id, uint32_t tid, int8_t old_effective,
                                  int8_t new_effective, int8_t old_inherited, int8_t new_inherited,
-                                 uint8_t cpu_id, bool is_kernel_tid, bool final_event) {
+                                 uint8_t cpu_id, bool final_event) {
     const uint32_t prios =
         (static_cast<uint32_t>(old_effective) << 0) | (static_cast<uint32_t>(new_effective) << 8) |
         (static_cast<uint32_t>(old_inherited) << 16) | (static_cast<uint32_t>(new_inherited) << 24);
-    const uint32_t flags = cpu_id | (is_kernel_tid ? KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID : 0) |
-                           (final_event ? KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT : 0);
+    const uint32_t flags = cpu_id | (final_event ? KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT : 0);
 
     EmitKtrace32Record(TAG_INHERIT_PRIORITY, 0, ts, event_id, tid, prios, flags);
   }
@@ -237,8 +232,8 @@ TEST_F(TestImporter, ContextSwitch) {
                           1,                                  // cpu
                           KernelThreadState::THREAD_RUNNING,  // old_thread_state
                           3,                                  // old_thread_prio
-                          4,                                  // new_thread_prio
-                          0);
+                          4                                   // new_thread_prio
+  );
   // Test switching to user thread.
   EmitContextSwitchRecord(100,                                // ts
                           42,                                 // old_thread_tid
@@ -246,32 +241,28 @@ TEST_F(TestImporter, ContextSwitch) {
                           1,                                  // cpu
                           KernelThreadState::THREAD_RUNNING,  // old_thread_state
                           5,                                  // old_thread_prio
-                          6,                                  // new_thread_prio
-                          0);
+                          6                                   // new_thread_prio
+  );
   // Test switching to kernel thread.
   EmitContextSwitchRecord(101,                                // ts
                           43,                                 // old_thread_tid
-                          0,                                  // 0 --> kernel thread
+                          10,                                 // new_thread_id
                           1,                                  // cpu
                           KernelThreadState::THREAD_RUNNING,  // old_thread_state
                           7,                                  // old_thread_prio
-                          8,                                  // new_thread_prio
-                          12345678);
+                          8                                   // new_thread_prio
+  );
   static const char* const expected[] = {
-      "ContextSwitch(ts: 99, cpu: 1, os: running, opt: 0/0, ipt: 0/42, oprio: "
-      "3, iprio: 4)",
-      "ContextSwitch(ts: 100, cpu: 1, os: running, opt: 0/42, ipt: 0/43, "
-      "oprio: 5, iprio: 6)",
-      // 4307312974 = 12345678 | kKernelThreadFlag
-      "ContextSwitch(ts: 101, cpu: 1, os: running, opt: 0/43, ipt: "
-      "0/4307312974, oprio: 7, iprio: 8)",
+      "ContextSwitch(ts: 99, cpu: 1, os: running, opt: 0/0, ipt: 0/42, oprio: 3, iprio: 4)",
+      "ContextSwitch(ts: 100, cpu: 1, os: running, opt: 0/42, ipt: 0/43, oprio: 5, iprio: 6)",
+      "ContextSwitch(ts: 101, cpu: 1, os: running, opt: 0/43, ipt: 0/10, oprio: 7, iprio: 8)",
   };
 
   fbl::Vector<trace::Record> records;
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
   ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
-    CompareRecord(records[i], expected[i]);
+    COMPARE_RECORD(records[i], expected[i]);
   }
 }
 
@@ -291,7 +282,6 @@ TEST_F(TestImporter, InheritPriority) {
                             -1,      // old inherited
                             20,      // new inherited
                             1,       // cpu
-                            true,    // is_kernel_tid,
                             false);  // final_event
   // Emit another record linked by the event id.  Indicate that the target
   // thread is a user-mode thread and that this is the last event in the flow.
@@ -303,32 +293,29 @@ TEST_F(TestImporter, InheritPriority) {
                             18,       // old inherited
                             20,       // new inherited
                             1,        // cpu
-                            false,    // is_kernel_tid,
                             true);    // final_event
   static const char* const expected[] = {
-      "Event(ts: 50, pt: 0/0, category: \"kernel:sched\", name: "
-      "\"inherit_prio\", DurationComplete(end_ts: 100), {})",
-      "Event(ts: 90, pt: 0/0, category: \"kernel:sched\", name: "
-      "\"inherit_prio\", FlowBegin(id: 12345), {})",
-      "Event(ts: 200, pt: 0/4294977297, category: \"kernel:sched\", name: "
-      "\"inherit_prio\", DurationComplete(end_ts: 250), {old_inherited_prio: "
-      "int32(-1), new_inherited_prio: int32(-1), old_effective_prio: "
-      "int32(16), new_effective_prio: int32(20)})",
-      "Event(ts: 210, pt: 0/4294977297, category: \"kernel:sched\", name: "
-      "\"inherit_prio\", FlowStep(id: 12345), {})",
-      "Event(ts: 300, pt: 0/8765432, category: \"kernel:sched\", name: "
-      "\"inherit_prio\", DurationComplete(end_ts: 350), {old_inherited_prio: "
-      "int32(18), new_inherited_prio: int32(20), old_effective_prio: "
-      "int32(18), new_effective_prio: int32(20)})",
-      "Event(ts: 310, pt: 0/8765432, category: \"kernel:sched\", name: "
-      "\"inherit_prio\", FlowEnd(id: 12345), {})",
+      "Event(ts: 50, pt: 0/0, category: \"kernel:sched\", name: \"inherit_prio\", "
+      "DurationComplete(end_ts: 100), {})",
+      "Event(ts: 90, pt: 0/0, category: \"kernel:sched\", name: \"inherit_prio\", FlowBegin(id: "
+      "12345), {})",
+      "Event(ts: 200, pt: 0/10001, category: \"kernel:sched\", name: \"inherit_prio\", "
+      "DurationComplete(end_ts: 250), {old_inherited_prio: int32(-1), new_inherited_prio: "
+      "int32(-1), old_effective_prio: int32(16), new_effective_prio: int32(20)})",
+      "Event(ts: 210, pt: 0/10001, category: \"kernel:sched\", name: \"inherit_prio\", "
+      "FlowStep(id: 12345), {})",
+      "Event(ts: 300, pt: 0/8765432, category: \"kernel:sched\", name: \"inherit_prio\", "
+      "DurationComplete(end_ts: 350), {old_inherited_prio: int32(18), new_inherited_prio: "
+      "int32(20), old_effective_prio: int32(18), new_effective_prio: int32(20)})",
+      "Event(ts: 310, pt: 0/8765432, category: \"kernel:sched\", name: \"inherit_prio\", "
+      "FlowEnd(id: 12345), {})",
   };
 
   fbl::Vector<trace::Record> records;
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
   ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
-    CompareRecord(records[i], expected[i]);
+    COMPARE_RECORD(records[i], expected[i]);
   }
 }
 
@@ -480,7 +467,7 @@ TEST_F(TestImporter, FutexRecords) {
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
   ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
-    CompareRecord(records[i], expected[i]);
+    COMPARE_RECORD(records[i], expected[i]);
   }
 }
 
@@ -544,7 +531,7 @@ TEST_F(TestImporter, KernelMutexRecords) {
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
   ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
-    CompareRecord(records[i], expected[i]);
+    COMPARE_RECORD(records[i], expected[i]);
   }
 }
 
@@ -593,7 +580,7 @@ TEST_F(TestImporter, Counter) {
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
   ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
-    CompareRecord(records[i], expected[i]);
+    COMPARE_RECORD(records[i], expected[i]);
   }
 }
 

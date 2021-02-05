@@ -28,6 +28,7 @@
 #include <fbl/macros.h>
 #include <kernel/cpu.h>
 #include <kernel/deadline.h>
+#include <kernel/koid.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/spinlock.h>
 #include <kernel/task_runtime_stats.h>
@@ -373,8 +374,8 @@ void dump_thread(Thread* t, bool full) TA_EXCL(thread_lock);
 void arch_dump_thread(Thread* t);
 void dump_all_threads_locked(bool full) TA_REQ(thread_lock);
 void dump_all_threads(bool full) TA_EXCL(thread_lock);
-void dump_thread_user_tid(zx_koid_t tid, bool full) TA_EXCL(thread_lock);
-void dump_thread_user_tid_locked(zx_koid_t tid, bool full) TA_REQ(thread_lock);
+void dump_thread_tid(zx_koid_t tid, bool full) TA_EXCL(thread_lock);
+void dump_thread_tid_locked(zx_koid_t tid, bool full) TA_REQ(thread_lock);
 
 static inline void dump_thread_during_panic(Thread* t, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
   // Skip grabbing the lock if we are panic'ing
@@ -386,10 +387,10 @@ static inline void dump_all_threads_during_panic(bool full) TA_NO_THREAD_SAFETY_
   dump_all_threads_locked(full);
 }
 
-static inline void dump_thread_user_tid_during_panic(zx_koid_t tid,
-                                                     bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+static inline void dump_thread_tid_during_panic(zx_koid_t tid,
+                                                bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
   // Skip grabbing the lock if we are panic'ing
-  dump_thread_user_tid_locked(tid, full);
+  dump_thread_tid_locked(tid, full);
 }
 
 class PreemptionState {
@@ -646,9 +647,13 @@ struct Thread {
   ThreadDispatcher* user_thread() { return user_thread_.get(); }
   const ThreadDispatcher* user_thread() const { return user_thread_.get(); }
 
-  // Get the koid of the associated ThreadDisptacher or its containing ProcessDispatcher.
-  zx_koid_t user_pid() const { return user_pid_; }
-  zx_koid_t user_tid() const { return user_tid_; }
+  // Returns the koid of the associated ProcessDispatcher for user threads or
+  // ZX_KOID_INVLID for kernel threads.
+  zx_koid_t pid() const { return pid_; }
+
+  // Returns the koid of the associated ThreadDispatcher for user threads or an
+  // independent koid for kernel threads.
+  zx_koid_t tid() const { return tid_; }
 
   // Called to mark a thread as schedulable.
   void Resume();
@@ -810,7 +815,7 @@ struct Thread {
       dump_all_threads_during_panic(full);
     }
     static void DumpUserTidDuringPanic(zx_koid_t tid, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
-      dump_thread_user_tid_during_panic(tid, full);
+      dump_thread_tid_during_panic(tid, full);
     }
   };
 
@@ -1042,12 +1047,10 @@ struct Thread {
   // reference is dropped.
   fbl::RefPtr<ThreadDispatcher> user_thread_;
 
-  // When user_thread_ is set, these are the koids of the
-  // ThreadDispatcher and its parent ProcessDispatcher. We cache them
-  // here since their values may be used even after those Dispatchers
-  // are torn down.
-  zx_koid_t user_tid_;
-  zx_koid_t user_pid_;
+  // When user_thread_ is set, these values are copied from ThreadDispatcher and
+  // its parent ProcessDispatcher. Kernel threads maintain an independent tid.
+  zx_koid_t tid_ = KernelObjectId::Generate();
+  zx_koid_t pid_ = ZX_KOID_INVALID;
 
   // Architecture-specific stuff.
   struct arch_thread arch_;

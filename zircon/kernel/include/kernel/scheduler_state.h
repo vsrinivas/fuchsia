@@ -171,6 +171,8 @@ class SchedulerState {
   zx_duration_t runtime_ns() const { return runtime_ns_.raw_value(); }
   zx_duration_t expected_runtime_ns() const { return expected_runtime_ns_.raw_value(); }
 
+  SchedDeadlineParams deadline() const { return deadline_; }
+
   cpu_mask_t hard_affinity() const { return hard_affinity_; }
   cpu_mask_t soft_affinity() const { return soft_affinity_; }
 

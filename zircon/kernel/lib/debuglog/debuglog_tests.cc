@@ -6,6 +6,7 @@
 
 #include <lib/debuglog.h>
 #include <lib/unittest/unittest.h>
+#include <zircon/types.h>
 
 #include <ktl/unique_ptr.h>
 
@@ -28,8 +29,8 @@ bool log_format() {
 
   EXPECT_EQ(DEBUGLOG_WARNING, header->severity);
   EXPECT_EQ(0, header->flags);
-  EXPECT_EQ(0u, header->pid);
-  EXPECT_EQ(0u, header->tid);
+  EXPECT_EQ(ZX_KOID_INVALID, header->pid);
+  EXPECT_NE(ZX_KOID_INVALID, header->tid);
   ASSERT_EQ(12, header->datalen);
 
   uint8_t* msg_bytes = log->data + sizeof(dlog_header);
@@ -70,8 +71,8 @@ bool log_wrap() {
 
   EXPECT_EQ(DEBUGLOG_WARNING, header->severity);
   EXPECT_EQ(0, header->flags);
-  EXPECT_EQ(0u, header->pid);
-  EXPECT_EQ(0u, header->tid);
+  EXPECT_EQ(ZX_KOID_INVALID, header->pid);
+  EXPECT_NE(ZX_KOID_INVALID, header->tid);
   ASSERT_EQ(sizeof(msg), header->datalen);
 
   uint8_t* msg_bytes = log->data + pad + sizeof(dlog_header);
@@ -112,8 +113,8 @@ bool log_reader_rollout() {
   EXPECT_EQ(0u, header->header);
 
   EXPECT_EQ(0, header->flags);
-  EXPECT_EQ(0u, header->pid);
-  EXPECT_EQ(0u, header->tid);
+  EXPECT_EQ(ZX_KOID_INVALID, header->pid);
+  EXPECT_NE(ZX_KOID_INVALID, header->tid);
   ASSERT_EQ(sizeof(msg), header->datalen);
 
   uint8_t* msg_bytes = &read_buf[sizeof(dlog_header)];
@@ -135,8 +136,8 @@ bool log_reader_rollout() {
   EXPECT_EQ(sizeof(dlog_header) + sizeof(msg), header->header);
 
   EXPECT_EQ(0, header->flags);
-  EXPECT_EQ(0u, header->pid);
-  EXPECT_EQ(0u, header->tid);
+  EXPECT_EQ(ZX_KOID_INVALID, header->pid);
+  EXPECT_NE(ZX_KOID_INVALID, header->tid);
   ASSERT_EQ(sizeof(msg), header->datalen);
 
   msg_bytes = &read_buf[sizeof(dlog_header)];
