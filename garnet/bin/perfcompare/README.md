@@ -31,16 +31,20 @@ As an example, suppose you want to compare the results from
 `rust_inspect_benchmarks_test` on two Git commits,
 `BEFORE_VERSION` and `AFTER_VERSION`.
 
+This test case is tested in the `terminal` product and may not work in
+a different product.
+
 The following commands would gather a dataset of perf test results for
 `BEFORE_VERSION` and save them in the directory `perf_results_before`:
 
 ```sh
 git checkout BEFORE_VERSION
+fx set terminal.x64  # covers dependencies of rust_inspect_benchmarks_test
 fx build
 fx update
 python garnet/bin/perfcompare/perfcompare.py run_local \
   --boots=5 \
-  --iter_cmd='fx run-e2e-tests rust_inspect_benchmarks_test' \
+  --iter_cmd='fx test --e2e rust_inspect_benchmarks_test' \
   --iter_file='out/test_out/*/*.fuchsiaperf.json' \
   --dest=perf_results_before
 ```
@@ -54,7 +58,7 @@ fx build
 fx update
 python garnet/bin/perfcompare/perfcompare.py run_local \
   --boots=5 \
-  --iter_cmd='fx run-e2e-tests rust_inspect_benchmarks_test' \
+  --iter_cmd='fx test --e2e rust_inspect_benchmarks_test' \
   --iter_file='out/test_out/*/*.fuchsiaperf.json' \
   --dest=perf_results_after
 ```
