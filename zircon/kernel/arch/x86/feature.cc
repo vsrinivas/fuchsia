@@ -352,47 +352,53 @@ bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num num, uint32_t subleaf, struct
 
 const struct x86_model_info* x86_get_model(void) { return &model_info; }
 
+// Printable registers can take up quite a bit of unsafe stack space. By
+// constructing them as temporary variables within in a separate,
+// non-inline-able function, we ensure that only one such register lives on the
+// stack at a given time across consecutive calls to print their fields.
+template <typename RegisterType, typename PrintCallback>
+[[gnu::noinline]] void PrintFields(PrintCallback& print_cb) {
+  arch::BootCpuid<RegisterType>().ForEachField(print_cb);
+}
+
 void x86_feature_debug(void) {
-  printf("\n");
+  // Allows us to take advantage of custom print format specifiers, which the
+  // compiler would otherwise complain about.
+  auto Printf = [](const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+  };
+
+  Printf("\n");
 
   arch::BootCpuidIo io;
 
   {
     arch::CpuCacheInfo caches(io);
-    printf("==== X86 CACHE INFO ====\n");
-    printf("%-5s | %-11s | %-10s | %-5s | %-6s |\n", "Level", "Type", "Size (KiB)", "Sets",
+    Printf("==== X86 CACHE INFO ====\n");
+    Printf("%-5s | %-11s | %-10s | %-5s | %-6s |\n", "Level", "Type", "Size (KiB)", "Sets",
            "Assoc.");
     for (const auto& cache : caches) {
-      auto type_str = arch::ToString(cache.type);
-      printf("L%-4zu | %-11.*s | %-10zu | %-5zu | %-6zu |\n", cache.level,
-             static_cast<int>(type_str.size()), type_str.data(), cache.size_kb,
-             cache.number_of_sets, cache.ways_of_associativity);
+      Printf("L%-4zu | %-11V | %-10zu | %-5zu | %-6zu |\n", cache.level, arch::ToString(cache.type),
+             cache.size_kb, cache.number_of_sets, cache.ways_of_associativity);
     }
-    printf("\n");
+    Printf("\n");
   }
 
-  auto vendor = arch::ToString(arch::GetVendor(io));
-  printf("Vendor: %.*s\n", static_cast<int>(vendor.size()), vendor.data());
-
-  auto microarch = arch::ToString(arch::GetMicroarchitecture(io));
-  printf("Microarchitecture: %.*s\n", static_cast<int>(microarch.size()), microarch.data());
-
+  Printf("Vendor: %V\n", arch::ToString(arch::GetVendor(io)));
+  Printf("Microarchitecture: %V\n", arch::ToString(arch::GetMicroarchitecture(io)));
+  Printf("Processor: %V\n", arch::ProcessorName(io).name());
   {
-    arch::ProcessorName processor(io);
-    std::string_view name = processor.name();
-    printf("Processor: %.*s\n", static_cast<int>(name.size()), name.data());
-  }
-  {
-    arch::HypervisorName hypervisor(io);
-    std::string_view name = hypervisor.name();
-    name = name.empty() ? "None" : name;
-    printf("Hypervisor: %.*s\n", static_cast<int>(name.size()), name.data());
+    ktl::string_view hypervisor = arch::HypervisorName(io).name();
+    Printf("Hypervisor: %V\n", hypervisor.empty() ? "None" : hypervisor);
   }
 
-  auto version = io.Read<arch::CpuidVersionInfo>();
-  printf("Family/Model/Stepping: %#x/%#x/%#x\n", version.family(), version.model(),
+  const auto version = io.Read<arch::CpuidVersionInfo>();
+  Printf("Family/Model/Stepping: %#x/%#x/%#x\n", version.family(), version.model(),
          version.stepping());
-  printf("Patch level: %x\n", model_info.patch_level);
+  Printf("Patch level: %x\n", model_info.patch_level);
 
   auto print_feature = [col = size_t{0}](const char* name, auto value, auto, auto) mutable {
     if (name && value) {
@@ -403,13 +409,14 @@ void x86_feature_debug(void) {
       }
     }
   };
-  printf("\nFeatures:\n");
-  io.Read<arch::CpuidFeatureFlagsC>().ForEachField(print_feature);
-  io.Read<arch::CpuidFeatureFlagsD>().ForEachField(print_feature);
-  io.Read<arch::CpuidExtendedFeatureFlagsB>().ForEachField(print_feature);
+
+  Printf("\nFeatures:\n");
+  PrintFields<arch::CpuidFeatureFlagsC>(print_feature);
+  PrintFields<arch::CpuidFeatureFlagsD>(print_feature);
+  PrintFields<arch::CpuidExtendedFeatureFlagsB>(print_feature);
   // TODO(fxbug.dev/68404): Print when we can afford to.
   // io.Read<arch::CpuidAmdFeatureFlagsC>().ForEachField(print_feature);
-  printf("\n");
+  Printf("\n");
 
   // Print synthetic 'features'/properties.
   auto print_property = [col = size_t{0}](const char* property, bool print = true) mutable {
@@ -421,7 +428,7 @@ void x86_feature_debug(void) {
       }
     }
   };
-  printf("\nProperties:\n");
+  Printf("\nProperties:\n");
   print_property("meltdown", g_has_meltdown);
   print_property("l1tf", g_has_l1tf);
   print_property("mds/taa", g_has_mds_taa);
@@ -448,7 +455,7 @@ void x86_feature_debug(void) {
 #ifdef X64_KERNEL_JCC_WORKAROUND
   print_property("jcc_fix");
 #endif
-  printf("\n\n");
+  Printf("\n\n");
 }
 
 static uint64_t default_apic_freq() {

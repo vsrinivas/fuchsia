@@ -177,7 +177,7 @@ class RegisterBase {
   }
 
   template <typename FieldCallback>
-  constexpr void ForEachField(FieldCallback callback) const {
+  constexpr void ForEachField(FieldCallback&& callback) const {
     static_assert(PrinterEnabled::value, "Pass hwreg::EnablePrinter to RegisterBase to enable");
     static_assert(std::is_invocable_v<FieldCallback, const char*, ValueType, uint32_t, uint32_t>);
     for (unsigned i = 0; i < params_.printer.num_fields; ++i) {
