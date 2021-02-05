@@ -14,7 +14,9 @@ namespace struct_ {
 extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
 const fidl_type_t* Simple::FidlType = &fidl_test_struct_SimpleTable;
 
-void Simple::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void Simple::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Simple>::value) {
     memcpy(_encoder->template GetPtr<Simple>(_offset), this, sizeof(Simple));
   } else {
@@ -42,7 +44,9 @@ zx_status_t Simple::Clone(Simple* _result) const {
 extern "C" const fidl_type_t fidl_test_struct_BasicStructTable;
 const fidl_type_t* BasicStruct::FidlType = &fidl_test_struct_BasicStructTable;
 
-void BasicStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void BasicStruct::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<BasicStruct>::value) {
     memcpy(_encoder->template GetPtr<BasicStruct>(_offset), this,
            sizeof(BasicStruct));

@@ -40,7 +40,9 @@ class UnionSmallArray final {
     return ::std::make_unique<UnionSmallArray>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, UnionSmallArray* value,
                      size_t offset);
   zx_status_t Clone(UnionSmallArray* result) const;
@@ -107,7 +109,9 @@ class UnionLargeArray final {
     return ::std::make_unique<UnionLargeArray>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, UnionLargeArray* value,
                      size_t offset);
   zx_status_t Clone(UnionLargeArray* result) const;
@@ -207,7 +211,9 @@ class TableSmallArray final {
     return ::std::make_unique<TableSmallArray>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, TableSmallArray* _value,
                      size_t _offset);
   zx_status_t Clone(TableSmallArray* _result) const;
@@ -311,7 +317,9 @@ class TableLargeArray final {
     return ::std::make_unique<TableLargeArray>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, TableLargeArray* _value,
                      size_t _offset);
   zx_status_t Clone(TableLargeArray* _result) const;
@@ -370,7 +378,9 @@ class StructSmallArray final {
     return ::std::make_unique<StructSmallArray>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructSmallArray* value,
                      size_t _offset);
   zx_status_t Clone(StructSmallArray* result) const;
@@ -393,7 +403,9 @@ class StructLargeArray final {
     return ::std::make_unique<StructLargeArray>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructLargeArray* value,
                      size_t _offset);
   zx_status_t Clone(StructLargeArray* result) const;
@@ -426,7 +438,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::arrays::UnionSmallArray>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::arrays::UnionSmallArray>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -491,7 +504,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::arrays::UnionLargeArray>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::arrays::UnionLargeArray>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

@@ -174,7 +174,10 @@ cts_source_set("test_util") {
 
   sources = [ "test/test_util.h" ]
 
-  public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//zircon/system/public",
+  ]
 }
 
 cts_source_set("handle_util") {

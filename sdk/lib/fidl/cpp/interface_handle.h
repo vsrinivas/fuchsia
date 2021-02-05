@@ -150,7 +150,11 @@ class InterfaceHandle final {
   const zx::channel& channel() const { return channel_; }
   void set_channel(zx::channel channel) { channel_ = std::move(channel); }
 
-  void Encode(Encoder* encoder, size_t offset) { encoder->EncodeHandle(&channel_, offset); }
+  void Encode(Encoder* encoder, size_t offset,
+              fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
+    encoder->EncodeHandle(&channel_, ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, offset);
+  }
 
   static void Decode(Decoder* decoder, InterfaceHandle<Interface>* value, size_t offset) {
     decoder->DecodeHandle(&value->channel_, offset);

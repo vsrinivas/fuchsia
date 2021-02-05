@@ -85,7 +85,9 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
     return ::std::make_unique<WithErrorSyntax_ResponseAsStruct_Response>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ResponseAsStruct_Response* value,
                      size_t _offset);
@@ -131,7 +133,9 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
     return ::std::make_unique<WithErrorSyntax_ResponseAsStruct_Result>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder,
                      WithErrorSyntax_ResponseAsStruct_Result* value,
                      size_t offset);
@@ -242,7 +246,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
     return ::std::make_unique<WithErrorSyntax_ErrorAsPrimitive_Response>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ErrorAsPrimitive_Response* value,
                      size_t _offset);
@@ -288,7 +294,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
     return ::std::make_unique<WithErrorSyntax_ErrorAsPrimitive_Result>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder,
                      WithErrorSyntax_ErrorAsPrimitive_Result* value,
                      size_t offset);
@@ -393,7 +401,9 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
     return ::std::make_unique<WithErrorSyntax_ErrorAsEnum_Response>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ErrorAsEnum_Response* value,
                      size_t _offset);
@@ -501,6 +511,7 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
+
     ::fidl::Encode(_encoder, b, 24);
 
     fidl_trace(
@@ -516,6 +527,7 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
+
     ::fidl::Encode(_encoder, b, 24);
 
     fidl_trace(
@@ -530,7 +542,11 @@ class ChannelProtocol_RequestEncoder {
                                                  ::zx::handle* h) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, h, 16);
+    ::fidl::Encode(_encoder, h, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
 
     fidl_trace(
         DidHLCPPEncode,
@@ -544,7 +560,11 @@ class ChannelProtocol_RequestEncoder {
                                                    ::zx::socket* a) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, a, 16);
+    ::fidl::Encode(_encoder, a, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
 
     fidl_trace(
         DidHLCPPEncode,
@@ -574,6 +594,7 @@ class ChannelProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
+
     ::fidl::Encode(_encoder, b, 24);
 
     fidl_trace(DidHLCPPEncode,
@@ -610,7 +631,11 @@ class ChannelProtocol_ResponseEncoder {
                                                    ::zx::socket* b) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, b, 16);
+    ::fidl::Encode(_encoder, b, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &_internal::
@@ -859,7 +884,9 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
     return ::std::make_unique<WithErrorSyntax_ErrorAsEnum_Result>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder,
                      WithErrorSyntax_ErrorAsEnum_Result* value, size_t offset);
   zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Result* result) const;
@@ -1069,8 +1096,10 @@ struct CodingTraits<::fidl::test::protocols::obj_type> {
       sizeof(::fidl::test::protocols::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::protocols::obj_type);
-  static void Encode(Encoder* encoder, ::fidl::test::protocols::obj_type* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::protocols::obj_type* value, size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
@@ -1159,7 +1188,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>*
           value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -1281,7 +1311,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>*
           value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -1382,8 +1413,11 @@ struct CodingTraits<::fidl::test::protocols::ErrorEnun> {
       sizeof(::fidl::test::protocols::ErrorEnun);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::protocols::ErrorEnun);
-  static void Encode(Encoder* encoder,
-                     ::fidl::test::protocols::ErrorEnun* value, size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::protocols::ErrorEnun* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
@@ -1425,7 +1459,8 @@ struct CodingTraits<std::unique_ptr<
       Encoder* encoder,
       std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

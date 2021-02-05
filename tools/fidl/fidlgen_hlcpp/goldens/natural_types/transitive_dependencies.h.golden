@@ -25,7 +25,9 @@ class Baz final {
     return ::std::make_unique<Baz>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Baz* value, size_t _offset);
   zx_status_t Clone(Baz* result) const;
 };

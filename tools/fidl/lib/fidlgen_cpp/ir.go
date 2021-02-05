@@ -119,6 +119,11 @@ func (t *Type) IsPrimitiveType() bool {
 	return t.Kind == TypeKinds.Primitive || t.Kind == TypeKinds.Bits || t.Kind == TypeKinds.Enum
 }
 
+type HandleInformation struct {
+	ObjectType string
+	Rights     string
+}
+
 type Const struct {
 	fidl.Attributes
 	Extern    bool
@@ -185,12 +190,13 @@ type Union struct {
 
 type UnionMember struct {
 	fidl.Attributes
-	Ordinal     uint64
-	Type        Type
-	Name        string
-	StorageName string
-	TagName     string
-	Offset      int
+	Ordinal           uint64
+	Type              Type
+	Name              string
+	StorageName       string
+	TagName           string
+	Offset            int
+	HandleInformation *HandleInformation
 }
 
 func (um UnionMember) UpperCamelCaseName() string {
@@ -232,6 +238,7 @@ type TableMember struct {
 	MethodHasName      string
 	MethodClearName    string
 	ValueUnionName     string
+	HandleInformation  *HandleInformation
 }
 
 type Struct struct {
@@ -260,10 +267,11 @@ type Struct struct {
 
 type StructMember struct {
 	fidl.Attributes
-	Type         Type
-	Name         string
-	DefaultValue string
-	Offset       int
+	Type              Type
+	Name              string
+	DefaultValue      string
+	Offset            int
+	HandleInformation *HandleInformation
 }
 
 // protocolInner contains information about a Protocol that should be
@@ -512,9 +520,10 @@ type LLProps struct {
 }
 
 type Parameter struct {
-	Type   Type
-	Name   string
-	Offset int
+	Type              Type
+	Name              string
+	Offset            int
+	HandleInformation *HandleInformation
 }
 
 type Root struct {
@@ -816,6 +825,37 @@ var primitiveTypes = map[fidl.PrimitiveSubtype]string{
 	fidl.Float64: "double",
 }
 
+var handleSubtypeConsts = map[fidl.HandleSubtype]string{
+	fidl.Bti:          "BTI",
+	fidl.Channel:      "CHANNEL",
+	fidl.Clock:        "CLOCK",
+	fidl.DebugLog:     "LOG",
+	fidl.Event:        "EVENT",
+	fidl.Eventpair:    "EVENTPAIR",
+	fidl.Exception:    "EXCEPTION",
+	fidl.Fifo:         "FIFO",
+	fidl.Guest:        "GUEST",
+	fidl.Handle:       "NONE",
+	fidl.Interrupt:    "INTERRUPT",
+	fidl.Iommu:        "IOMMU",
+	fidl.Job:          "JOB",
+	fidl.Pager:        "PAGER",
+	fidl.PciDevice:    "PCI_DEVICE",
+	fidl.Pmt:          "PMT",
+	fidl.Port:         "PORT",
+	fidl.Process:      "PROCESS",
+	fidl.Profile:      "PROFILE",
+	fidl.Resource:     "RESOURCE",
+	fidl.Socket:       "SOCKET",
+	fidl.Stream:       "STREAM",
+	fidl.SuspendToken: "SUSPEND_TOKEN",
+	fidl.Thread:       "THREAD",
+	fidl.Time:         "TIMER",
+	fidl.Vcpu:         "VCPU",
+	fidl.Vmar:         "VMAR",
+	fidl.Vmo:          "VMO",
+}
+
 func isReservedWord(str string) bool {
 	_, ok := reservedWords[str]
 	return ok
@@ -995,6 +1035,32 @@ func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) string {
 		return t
 	}
 	panic(fmt.Sprintf("unknown primitive type: %v", val))
+}
+
+func (c *compiler) fieldHandleInformation(val *fidl.Type) *HandleInformation {
+	if val.ElementType != nil {
+		return c.fieldHandleInformation(val.ElementType)
+	}
+	if val.Kind == fidl.RequestType || val.Kind != fidl.HandleType {
+		return nil
+	}
+	if val.Kind == fidl.IdentifierType {
+		declInfo, ok := c.decls[val.Identifier]
+		if !ok {
+			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
+		}
+		if declInfo.Type == fidl.ProtocolDeclType {
+			return nil
+		}
+	}
+	subtype, ok := handleSubtypeConsts[val.HandleSubtype]
+	if !ok {
+		panic(fmt.Sprintf("unknown handle type for const: %v", val))
+	}
+	return &HandleInformation{
+		ObjectType: fmt.Sprintf("ZX_OBJ_TYPE_%s", subtype),
+		Rights:     fmt.Sprintf("0x%x", val.HandleRights),
+	}
 }
 
 func (c *compiler) compileType(val fidl.Type) Type {
@@ -1210,9 +1276,10 @@ func (c *compiler) compileParameterArray(val []fidl.Parameter) []Parameter {
 	var params []Parameter = []Parameter{}
 	for _, v := range val {
 		params = append(params, Parameter{
-			Type:   c.compileType(v.Type),
-			Name:   changeIfReserved(v.Name, ""),
-			Offset: v.FieldShapeV1.Offset,
+			Type:              c.compileType(v.Type),
+			Name:              changeIfReserved(v.Name, ""),
+			Offset:            v.FieldShapeV1.Offset,
+			HandleInformation: c.fieldHandleInformation(&v.Type),
 		})
 	}
 	return params
@@ -1341,11 +1408,12 @@ func (c *compiler) compileStructMember(val fidl.StructMember, appendNamespace st
 	}
 
 	return StructMember{
-		Attributes:   val.Attributes,
-		Type:         t,
-		Name:         changeIfReserved(val.Name, ""),
-		DefaultValue: defaultValue,
-		Offset:       val.FieldShapeV1.Offset,
+		Attributes:        val.Attributes,
+		Type:              t,
+		Name:              changeIfReserved(val.Name, ""),
+		DefaultValue:      defaultValue,
+		Offset:            val.FieldShapeV1.Offset,
+		HandleInformation: c.fieldHandleInformation(&val.Type),
 	}
 }
 
@@ -1439,6 +1507,7 @@ func (c *compiler) compileTableMember(val fidl.TableMember, appendNamespace stri
 		MethodHasName:      fmt.Sprintf("has_%s", val.Name),
 		MethodClearName:    fmt.Sprintf("clear_%s", val.Name),
 		ValueUnionName:     fmt.Sprintf("ValueUnion_%s", val.Name),
+		HandleInformation:  c.fieldHandleInformation(&val.Type),
 	}
 }
 
@@ -1478,13 +1547,14 @@ func (c *compiler) compileTable(val fidl.Table, appendNamespace string) Table {
 func (c *compiler) compileUnionMember(val fidl.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name, "")
 	return UnionMember{
-		Attributes:  val.Attributes,
-		Ordinal:     uint64(val.Ordinal),
-		Type:        c.compileType(val.Type),
-		Name:        n,
-		StorageName: changeIfReserved(val.Name, "_"),
-		TagName:     fmt.Sprintf("k%s", fidl.ToUpperCamelCase(n)),
-		Offset:      val.Offset,
+		Attributes:        val.Attributes,
+		Ordinal:           uint64(val.Ordinal),
+		Type:              c.compileType(val.Type),
+		Name:              n,
+		StorageName:       changeIfReserved(val.Name, "_"),
+		TagName:           fmt.Sprintf("k%s", fidl.ToUpperCamelCase(n)),
+		Offset:            val.Offset,
+		HandleInformation: c.fieldHandleInformation(&val.Type),
 	}
 }
 

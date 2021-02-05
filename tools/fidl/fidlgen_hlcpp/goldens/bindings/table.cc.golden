@@ -67,7 +67,9 @@ bool SimpleTable::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void SimpleTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -293,7 +295,9 @@ bool ReverseOrdinalTable::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void ReverseOrdinalTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -532,7 +536,9 @@ bool OlderSimpleTable::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void OlderSimpleTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -709,7 +715,9 @@ bool NewerSimpleTable::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void NewerSimpleTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -929,7 +937,9 @@ bool EmptyTable::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void EmptyTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;

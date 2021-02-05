@@ -15,7 +15,9 @@ extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
 const fidl_type_t* Example_foo_Response::FidlType =
     &fidl_test_error_Example_foo_ResponseTable;
 
-void Example_foo_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void Example_foo_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Example_foo_Response>::value) {
     memcpy(_encoder->template GetPtr<Example_foo_Response>(_offset), this,
            sizeof(Example_foo_Response));
@@ -94,7 +96,9 @@ Example_foo_Result Example_foo_Result::WithErr(uint32_t&& val) {
   return result;
 }
 
-void Example_foo_Result::Encode(::fidl::Encoder* encoder, size_t offset) {
+void Example_foo_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 

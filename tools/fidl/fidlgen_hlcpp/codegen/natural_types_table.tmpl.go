@@ -79,7 +79,8 @@ class {{ .Name }} final {
 
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info = fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
   zx_status_t Clone({{ .Name }}* _result) const;
  private:
@@ -191,7 +192,8 @@ bool {{ .Name }}::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                         fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -215,7 +217,14 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &{{ .FieldDataName }}.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.NatDecl }}, ::fidl::Encoder>(_encoder)));
+        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.NatDecl }}, ::fidl::Encoder>(_encoder))
+    {{- if .HandleInformation -}}
+        , ::fidl::HandleInformation{
+          .object_type = {{ .HandleInformation.ObjectType }},
+          .rights = {{ .HandleInformation.Rights }}
+        }
+    {{- end -}}
+        );
     size_t envelope_base = base + ({{ .Ordinal }} - 1) * sizeof(fidl_envelope_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |

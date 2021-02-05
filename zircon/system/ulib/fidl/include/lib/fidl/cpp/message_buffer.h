@@ -32,7 +32,7 @@ class OutgoingMessageBuffer {
   uint32_t bytes_capacity() const { return bytes_capacity_; }
 
   // The memory in which handles can be stored in this buffer.
-  zx_handle_t* handles() const;
+  zx_handle_disposition_t* handles() const;
 
   // The total number of handles that can be stored in this buffer.
   uint32_t handles_capacity() const { return handles_capacity_; }

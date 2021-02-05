@@ -42,7 +42,14 @@ class {{ .RequestEncoderName }} {
     _encoder->Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
 
     {{- range .Request }}
+    {{- if .HandleInformation }}
+    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }}, ::fidl::HandleInformation {
+      .object_type = {{ .HandleInformation.ObjectType }},
+      .rights = {{ .HandleInformation.Rights }},
+    });
+    {{ else }}
     ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
+    {{ end -}}
     {{- end }}
 
     fidl_trace(DidHLCPPEncode, &_internal::{{ .RequestTypeName }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
@@ -72,7 +79,14 @@ class {{ .ResponseEncoderName }} {
     _encoder->Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
 
     {{- range .Response }}
+    {{- if .HandleInformation }}
+    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }}, ::fidl::HandleInformation {
+      .object_type = {{ .HandleInformation.ObjectType }},
+      .rights = {{ .HandleInformation.Rights }},
+    });
+    {{ else }}
     ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
+    {{ end -}}
     {{- end }}
 
     fidl_trace(DidHLCPPEncode, &_internal::{{ .ResponseTypeName }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());

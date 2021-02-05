@@ -19,6 +19,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   std::vector<uint8_t> buffer;
   std::vector<zx_handle_t> handles;
+  std::vector<zx_handle_disposition_t> handle_dispositions;
   while (state->KeepRunning()) {
     // construct a new object each iteration so that the handle close cost is included in the
     // decode time.
@@ -30,10 +31,15 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     fidl::HLCPPOutgoingMessage encode_msg = enc.GetMessage();
 
     buffer.resize(encode_msg.bytes().actual());
-    handles.resize(encode_msg.handles().actual());
+    handle_dispositions.resize(encode_msg.handles().actual());
     memcpy(buffer.data(), encode_msg.bytes().data(), encode_msg.bytes().actual());
-    memcpy(handles.data(), encode_msg.handles().data(),
-           encode_msg.handles().actual() * sizeof(zx_handle_t));
+    memcpy(handle_dispositions.data(), encode_msg.handles().data(),
+           encode_msg.handles().actual() * sizeof(zx_handle_disposition_t));
+
+    handles.resize(encode_msg.handles().actual());
+    for (uint32_t i = 0; i < handles.size(); i++) {
+      handles[i] = handle_dispositions[i].handle;
+    }
 
     state->NextStep();  // End: Setup. Begin: Decode.
 

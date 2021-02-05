@@ -87,7 +87,9 @@ template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
   static constexpr size_t inline_size_old = sizeof({{ .Namespace }}::{{ .Name }});
   static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Namespace }}::{{ .Name }});
-  static void Encode(Encoder* encoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
+  static void Encode(Encoder* encoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset,
+                     fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }

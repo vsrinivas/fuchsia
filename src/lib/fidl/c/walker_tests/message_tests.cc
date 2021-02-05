@@ -19,6 +19,7 @@ namespace {
 TEST(Message, BasicTests) {
   uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handle_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_disposition_t handle_disposition_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl::Builder builder(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES);
 
@@ -37,7 +38,8 @@ TEST(Message, BasicTests) {
   data[2] = 'c';
 
   fidl::HLCPPOutgoingMessage outgoing_message(
-      builder.Finalize(), fidl::HandlePart(handle_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
+      builder.Finalize(),
+      fidl::HandleDispositionPart(handle_disposition_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
 
   EXPECT_EQ(outgoing_message.txid(), 5u);
   EXPECT_EQ(outgoing_message.ordinal(), 42u);
@@ -124,7 +126,7 @@ TEST(MessageBuilder, BasicTests) {
   EXPECT_EQ(message.ordinal(), 42u);
   EXPECT_EQ(message.handles().actual(), 1u);
   EXPECT_EQ(message.handles().size(), 1u);
-  EXPECT_EQ(message.handles().data()[0], handle_value);
+  EXPECT_EQ(message.handles().data()[0].handle, handle_value);
 }
 
 TEST(MessagePart, IsStlContainerTest) {

@@ -48,5 +48,9 @@ void FrobinatorImpl::FailHardest(bool fail, FailHardestCallback callback) {
   }
 }
 
+void FrobinatorImpl::SendEventHandle(zx::event event) {}
+void FrobinatorImpl::SendProtocol(fidl::InterfaceHandle<fidl::test::frobinator::EmptyProtocol> ep) {
+}
+
 }  // namespace test
 }  // namespace fidl

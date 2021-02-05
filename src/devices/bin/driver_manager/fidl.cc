@@ -7,7 +7,9 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/txn_header.h>
+#include <zircon/rights.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include "coordinator.h"
 #include "src/devices/lib/log/log.h"
@@ -48,16 +50,44 @@ zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<DriverHost>& dh
 
   req->local_device_id = dev->local_id();
 
-  zx_handle_t handles[4] = {coordinator_rpc.release(), device_controller_rpc.release(),
-                            driver.release()};
+  // TODO(fxbug.dev/41920) Specify more specific rights.
+  zx_handle_disposition_t handles[4] = {
+      zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = coordinator_rpc.release(),
+          .type = ZX_OBJ_TYPE_CHANNEL,
+          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+          .result = ZX_OK,
+      },
+      zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = device_controller_rpc.release(),
+          .type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+          .result = ZX_OK,
+      },
+      zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = driver.release(),
+          .type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+          .result = ZX_OK,
+      },
+  };
   uint32_t num_handles = 3;
 
   if (rpc_proxy.is_valid()) {
-    handles[num_handles++] = rpc_proxy.release();
+    handles[num_handles++] = zx_handle_disposition_t{
+        .operation = ZX_HANDLE_OP_MOVE,
+        .handle = rpc_proxy.release(),
+        .type = ZX_OBJ_TYPE_NONE,
+        .rights = ZX_RIGHT_SAME_RIGHTS,
+        .result = ZX_OK,
+    };
   }
 
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(),
-                                 fidl::HandlePart(handles, num_handles, num_handles));
+                                 fidl::HandleDispositionPart(handles, num_handles, num_handles));
   return msg.Write(dh->hrpc().get(), 0);
 }
 
@@ -80,9 +110,26 @@ zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<DriverHost
   req->protocol_id = protocol_id;
   req->local_device_id = dev->local_id();
 
-  zx_handle_t handles[] = {coordinator_rpc.release(), device_controller_rpc.release()};
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(),
-                                 fidl::HandlePart(handles, std::size(handles), std::size(handles)));
+  // TODO(fxbug.dev/41920) Specify more specific rights.
+  zx_handle_disposition_t handles[] = {
+      zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = coordinator_rpc.release(),
+          .type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+          .result = ZX_OK,
+      },
+      zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = device_controller_rpc.release(),
+          .type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+          .result = ZX_OK,
+      },
+  };
+  fidl::HLCPPOutgoingMessage msg(
+      builder.Finalize(),
+      fidl::HandleDispositionPart(handles, std::size(handles), std::size(handles)));
   return msg.Write(dh->hrpc().get(), 0);
 }
 
@@ -206,10 +253,25 @@ zx_status_t dh_send_create_composite_device(const fbl::RefPtr<DriverHost>& dh,
 
   req->local_device_id = composite_dev->local_id();
 
-  zx_handle_t handles[2] = {coordinator_rpc.release(), device_controller_rpc.release()};
+  zx_handle_disposition_t handles[2] = {
+      zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = coordinator_rpc.release(),
+          .type = ZX_OBJ_TYPE_CHANNEL,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+          .result = ZX_OK,
+      },
+      zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = device_controller_rpc.release(),
+          .type = ZX_OBJ_TYPE_CHANNEL,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+          .result = ZX_OK,
+      },
+  };
   uint32_t num_handles = 2;
 
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(),
-                                 fidl::HandlePart(handles, num_handles, num_handles));
+                                 fidl::HandleDispositionPart(handles, num_handles, num_handles));
   return msg.Write(dh->hrpc().get(), 0);
 }

@@ -87,7 +87,7 @@ void WriteTestLog(const zx::channel& output) {
   req->msg.size = strlen(kLogMessage);
   memcpy(data, kLogMessage, strlen(kLogMessage));
 
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandlePart());
+  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
   const char* err = nullptr;
   zx_status_t status = msg.Encode(&fuchsia_driver_test_LoggerLogMessageRequestTable, &err);
   ASSERT_OK(status);
@@ -114,7 +114,7 @@ void WriteTestCase(const zx::channel& output) {
   req->result.failed = 2;
   req->result.skipped = 3;
 
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandlePart());
+  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
   const char* err = nullptr;
   zx_status_t status = msg.Encode(&fuchsia_driver_test_LoggerLogTestCaseRequestTable, &err);
   ASSERT_OK(status);

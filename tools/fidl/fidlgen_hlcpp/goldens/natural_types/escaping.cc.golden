@@ -15,7 +15,9 @@ extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
 const fidl_type_t* DocCommentWithQuotes::FidlType =
     &fidl_test_escaping_DocCommentWithQuotesTable;
 
-void DocCommentWithQuotes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void DocCommentWithQuotes::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<DocCommentWithQuotes>::value) {
     memcpy(_encoder->template GetPtr<DocCommentWithQuotes>(_offset), this,
            sizeof(DocCommentWithQuotes));

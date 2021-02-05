@@ -359,7 +359,9 @@ class Table final {
     return ::std::make_unique<Table>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset);
   zx_status_t Clone(Table* _result) const;
 
@@ -423,7 +425,9 @@ class Struct final {
     return ::std::make_unique<Struct>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
   zx_status_t Clone(Struct* result) const;
 };
@@ -460,7 +464,9 @@ class StrictUnion final {
     return ::std::make_unique<StrictUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, StrictUnion* value,
                      size_t offset);
   zx_status_t Clone(StrictUnion* result) const;
@@ -578,7 +584,9 @@ class FlexibleUnion final {
     return ::std::make_unique<FlexibleUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, FlexibleUnion* value,
                      size_t offset);
   zx_status_t Clone(FlexibleUnion* result) const;
@@ -721,7 +729,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::StrictUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::doccomments::StrictUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -776,9 +785,11 @@ struct CodingTraits<::fidl::test::doccomments::MyStrictEnum> {
       sizeof(::fidl::test::doccomments::MyStrictEnum);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::doccomments::MyStrictEnum);
-  static void Encode(Encoder* encoder,
-                     ::fidl::test::doccomments::MyStrictEnum* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::doccomments::MyStrictEnum* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
@@ -809,9 +820,11 @@ struct CodingTraits<::fidl::test::doccomments::MyStrictBits> {
       sizeof(::fidl::test::doccomments::MyStrictBits);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::doccomments::MyStrictBits);
-  static void Encode(Encoder* encoder,
-                     ::fidl::test::doccomments::MyStrictBits* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::doccomments::MyStrictBits* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
@@ -844,9 +857,11 @@ struct CodingTraits<::fidl::test::doccomments::MyFlexibleEnum> {
       sizeof(::fidl::test::doccomments::MyFlexibleEnum);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::doccomments::MyFlexibleEnum);
-  static void Encode(Encoder* encoder,
-                     ::fidl::test::doccomments::MyFlexibleEnum* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::doccomments::MyFlexibleEnum* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
@@ -877,9 +892,11 @@ struct CodingTraits<::fidl::test::doccomments::MyFlexibleBits> {
       sizeof(::fidl::test::doccomments::MyFlexibleBits);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::doccomments::MyFlexibleBits);
-  static void Encode(Encoder* encoder,
-                     ::fidl::test::doccomments::MyFlexibleBits* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::doccomments::MyFlexibleBits* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
@@ -922,7 +939,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::FlexibleUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::doccomments::FlexibleUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

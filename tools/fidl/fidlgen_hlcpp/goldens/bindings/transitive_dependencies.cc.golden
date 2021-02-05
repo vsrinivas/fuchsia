@@ -14,7 +14,8 @@ namespace transitivedependencies {
 extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
 const fidl_type_t* Baz::FidlType = &fidl_test_transitivedependencies_BazTable;
 
-void Baz::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void Baz::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                 fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<Baz>::value) {
     memcpy(_encoder->template GetPtr<Baz>(_offset), this, sizeof(Baz));
   } else {

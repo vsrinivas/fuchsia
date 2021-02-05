@@ -283,7 +283,9 @@ struct CodingTraits<::std::string> {
   static constexpr size_t inline_size_old = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, std::string* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, std::string* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     const size_t size = value->size();
     fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
     string->size = size;
@@ -305,9 +307,11 @@ struct CodingTraits<StringPtr> {
   static constexpr size_t inline_size_old = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, StringPtr* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, StringPtr* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     if (value->has_value()) {
-      ::fidl::CodingTraits<std::string>::Encode(encoder, &value->value(), offset);
+      ::fidl::CodingTraits<std::string>::Encode(encoder, &value->value(), offset, fit::nullopt);
     } else {
       fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
       string->size = 0u;

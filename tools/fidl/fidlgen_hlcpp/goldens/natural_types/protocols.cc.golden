@@ -17,7 +17,8 @@ const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlType =
     &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 void WithErrorSyntax_ResponseAsStruct_Response::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset) {
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<
           WithErrorSyntax_ResponseAsStruct_Response>::value) {
     memcpy(_encoder->template GetPtr<WithErrorSyntax_ResponseAsStruct_Response>(
@@ -123,8 +124,9 @@ WithErrorSyntax_ResponseAsStruct_Result::WithErr(uint32_t&& val) {
   return result;
 }
 
-void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* encoder,
-                                                     size_t offset) {
+void WithErrorSyntax_ResponseAsStruct_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -265,7 +267,8 @@ const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlType =
     &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(
-    ::fidl::Encoder* _encoder, size_t _offset) {
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<
           WithErrorSyntax_ErrorAsPrimitive_Response>::value) {
     memcpy(_encoder->template GetPtr<WithErrorSyntax_ErrorAsPrimitive_Response>(
@@ -363,8 +366,9 @@ WithErrorSyntax_ErrorAsPrimitive_Result::WithErr(uint32_t&& val) {
   return result;
 }
 
-void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* encoder,
-                                                     size_t offset) {
+void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -504,8 +508,9 @@ extern "C" const fidl_type_t
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlType =
     &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
-void WithErrorSyntax_ErrorAsEnum_Response::Encode(::fidl::Encoder* _encoder,
-                                                  size_t _offset) {
+void WithErrorSyntax_ErrorAsEnum_Response::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<WithErrorSyntax_ErrorAsEnum_Response>::value) {
     memcpy(_encoder->template GetPtr<WithErrorSyntax_ErrorAsEnum_Response>(
                _offset),
@@ -600,8 +605,9 @@ WithErrorSyntax_ErrorAsEnum_Result WithErrorSyntax_ErrorAsEnum_Result::WithErr(
   return result;
 }
 
-void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* encoder,
-                                                size_t offset) {
+void WithErrorSyntax_ErrorAsEnum_Result::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 

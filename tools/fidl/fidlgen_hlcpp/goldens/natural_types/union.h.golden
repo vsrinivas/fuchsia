@@ -68,7 +68,9 @@ class Union final {
     return ::std::make_unique<Union>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
   zx_status_t Clone(Union* result) const;
 
@@ -155,7 +157,9 @@ class StructWithNullableXUnion final {
     return ::std::make_unique<StructWithNullableXUnion>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructWithNullableXUnion* value,
                      size_t _offset);
   zx_status_t Clone(StructWithNullableXUnion* result) const;
@@ -196,7 +200,9 @@ class StrictUnion final {
     return ::std::make_unique<StrictUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, StrictUnion* value,
                      size_t offset);
   zx_status_t Clone(StrictUnion* result) const;
@@ -300,7 +306,9 @@ class StrictSimpleXUnion final {
     return ::std::make_unique<StrictSimpleXUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, StrictSimpleXUnion* value,
                      size_t offset);
   zx_status_t Clone(StrictSimpleXUnion* result) const;
@@ -397,7 +405,9 @@ class StrictFoo final {
     return ::std::make_unique<StrictFoo>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, StrictFoo* value, size_t offset);
   zx_status_t Clone(StrictFoo* result) const;
 
@@ -477,7 +487,9 @@ class StrictBoundedXUnion final {
     return ::std::make_unique<StrictBoundedXUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, StrictBoundedXUnion* value,
                      size_t offset);
   zx_status_t Clone(StrictBoundedXUnion* result) const;
@@ -546,7 +558,9 @@ class ReverseOrdinalUnion final {
     return ::std::make_unique<ReverseOrdinalUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ReverseOrdinalUnion* value,
                      size_t offset);
   zx_status_t Clone(ReverseOrdinalUnion* result) const;
@@ -615,7 +629,9 @@ class Pizza final {
     return ::std::make_unique<Pizza>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Pizza* value, size_t _offset);
   zx_status_t Clone(Pizza* result) const;
 };
@@ -637,7 +653,9 @@ class Pasta final {
     return ::std::make_unique<Pasta>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Pasta* value, size_t _offset);
   zx_status_t Clone(Pasta* result) const;
 };
@@ -673,7 +691,9 @@ class StrictPizzaOrPasta final {
     return ::std::make_unique<StrictPizzaOrPasta>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, StrictPizzaOrPasta* value,
                      size_t offset);
   zx_status_t Clone(StrictPizzaOrPasta* result) const;
@@ -756,7 +776,9 @@ class PizzaOrPasta final {
     return ::std::make_unique<PizzaOrPasta>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, PizzaOrPasta* value,
                      size_t offset);
   zx_status_t Clone(PizzaOrPasta* result) const;
@@ -841,7 +863,9 @@ class FlexiblePizzaOrPasta final {
     return ::std::make_unique<FlexiblePizzaOrPasta>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, FlexiblePizzaOrPasta* value,
                      size_t offset);
   zx_status_t Clone(FlexiblePizzaOrPasta* result) const;
@@ -943,7 +967,9 @@ class ExplicitPizzaOrPasta final {
     return ::std::make_unique<ExplicitPizzaOrPasta>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ExplicitPizzaOrPasta* value,
                      size_t offset);
   zx_status_t Clone(ExplicitPizzaOrPasta* result) const;
@@ -1029,7 +1055,9 @@ class OlderSimpleUnion final {
     return ::std::make_unique<OlderSimpleUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value,
                      size_t offset);
   zx_status_t Clone(OlderSimpleUnion* result) const;
@@ -1200,7 +1228,9 @@ class NullableUnionStruct final {
     return ::std::make_unique<NullableUnionStruct>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, NullableUnionStruct* value,
                      size_t _offset);
   zx_status_t Clone(NullableUnionStruct* result) const;
@@ -1242,7 +1272,9 @@ class NewerSimpleUnion final {
     return ::std::make_unique<NewerSimpleUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
                      size_t offset);
   zx_status_t Clone(NewerSimpleUnion* result) const;
@@ -1363,7 +1395,9 @@ class FlexibleUnion final {
     return ::std::make_unique<FlexibleUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, FlexibleUnion* value,
                      size_t offset);
   zx_status_t Clone(FlexibleUnion* result) const;
@@ -1486,7 +1520,9 @@ class FlexibleFoo final {
     return ::std::make_unique<FlexibleFoo>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, FlexibleFoo* value,
                      size_t offset);
   zx_status_t Clone(FlexibleFoo* result) const;
@@ -1585,7 +1621,9 @@ class FieldCollision final {
     return ::std::make_unique<FieldCollision>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, FieldCollision* value,
                      size_t offset);
   zx_status_t Clone(FieldCollision* result) const;
@@ -1658,7 +1696,9 @@ class ExplicitXUnion final {
     return ::std::make_unique<ExplicitXUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ExplicitXUnion* value,
                      size_t offset);
   zx_status_t Clone(ExplicitXUnion* result) const;
@@ -1759,7 +1799,9 @@ class ExplicitUnion final {
     return ::std::make_unique<ExplicitUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ExplicitUnion* value,
                      size_t offset);
   zx_status_t Clone(ExplicitUnion* result) const;
@@ -1844,7 +1886,9 @@ class ExplicitStrictFoo final {
     return ::std::make_unique<ExplicitStrictFoo>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ExplicitStrictFoo* value,
                      size_t offset);
   zx_status_t Clone(ExplicitStrictFoo* result) const;
@@ -1929,7 +1973,9 @@ class ExplicitFoo final {
     return ::std::make_unique<ExplicitFoo>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ExplicitFoo* value,
                      size_t offset);
   zx_status_t Clone(ExplicitFoo* result) const;
@@ -2016,7 +2062,9 @@ class Empty final {
     return ::std::make_unique<Empty>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset);
   zx_status_t Clone(Empty* result) const;
 };
@@ -2052,7 +2100,9 @@ class XUnionContainingEmptyStruct final {
     return ::std::make_unique<XUnionContainingEmptyStruct>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder,
                      XUnionContainingEmptyStruct* value, size_t offset);
   zx_status_t Clone(XUnionContainingEmptyStruct* result) const;
@@ -2131,9 +2181,10 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::Union>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::fidl::test::union_::Union>* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, std::unique_ptr<::fidl::test::union_::Union>* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2231,9 +2282,10 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::fidl::test::union_::StrictUnion>* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<::fidl::test::union_::StrictUnion>* value, size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2303,7 +2355,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictSimpleXUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::StrictSimpleXUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2367,9 +2420,10 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::fidl::test::union_::StrictFoo>* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, std::unique_ptr<::fidl::test::union_::StrictFoo>* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2435,7 +2489,8 @@ struct CodingTraits<
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::StrictBoundedXUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2501,7 +2556,8 @@ struct CodingTraits<
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::ReverseOrdinalUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2624,7 +2680,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictPizzaOrPasta>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::StrictPizzaOrPasta>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2687,9 +2744,10 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::PizzaOrPasta>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::fidl::test::union_::PizzaOrPasta>* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<::fidl::test::union_::PizzaOrPasta>* value, size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2755,7 +2813,8 @@ struct CodingTraits<
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::FlexiblePizzaOrPasta>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2824,7 +2883,8 @@ struct CodingTraits<
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::ExplicitPizzaOrPasta>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2893,7 +2953,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::OlderSimpleUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::OlderSimpleUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2990,7 +3051,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::NewerSimpleUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::NewerSimpleUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3057,7 +3119,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::FlexibleUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::FlexibleUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3123,9 +3186,10 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::FlexibleFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::fidl::test::union_::FlexibleFoo>* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<::fidl::test::union_::FlexibleFoo>* value, size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3188,7 +3252,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::FieldCollision>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::FieldCollision>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3252,7 +3317,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitXUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::ExplicitXUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3316,7 +3382,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::ExplicitUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3383,7 +3450,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitStrictFoo>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::ExplicitStrictFoo>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3446,9 +3514,10 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::fidl::test::union_::ExplicitFoo>* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<::fidl::test::union_::ExplicitFoo>* value, size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3538,7 +3607,8 @@ struct CodingTraits<
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::union_::XUnionContainingEmptyStruct>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

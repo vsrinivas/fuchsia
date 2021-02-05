@@ -29,6 +29,8 @@ class FrobinatorImpl : public fidl::test::frobinator::Frobinator {
   void Fail(bool fail, FailCallback callback) override;
   void FailHard(bool fail, FailHardCallback callback) override;
   void FailHardest(bool fail, FailHardestCallback callback) override;
+  void SendEventHandle(zx::event event) override;
+  void SendProtocol(fidl::InterfaceHandle<fidl::test::frobinator::EmptyProtocol> ep) override;
 };
 
 }  // namespace test

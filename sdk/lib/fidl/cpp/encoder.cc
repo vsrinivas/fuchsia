@@ -42,10 +42,17 @@ size_t Encoder::Alloc(size_t size) {
 }
 
 #ifdef __Fuchsia__
-void Encoder::EncodeHandle(zx::object_base* value, size_t offset) {
+void Encoder::EncodeHandle(zx::object_base* value, zx_obj_type_t obj_type, zx_rights_t rights,
+                           size_t offset) {
   if (value->is_valid()) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_PRESENT;
-    handles_.push_back(value->release());
+    handles_.push_back(zx_handle_disposition_t{
+        .operation = ZX_HANDLE_OP_MOVE,
+        .handle = value->release(),
+        .type = obj_type,
+        .rights = rights,
+        .result = ZX_OK,
+    });
   } else {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_ABSENT;
   }
@@ -53,16 +60,23 @@ void Encoder::EncodeHandle(zx::object_base* value, size_t offset) {
 
 void Encoder::EncodeUnknownHandle(zx::object_base* value) {
   if (value->is_valid()) {
-    handles_.push_back(value->release());
+    handles_.push_back(zx_handle_disposition_t{
+        .operation = ZX_HANDLE_OP_MOVE,
+        .handle = value->release(),
+        .type = ZX_OBJ_TYPE_NONE,
+        .rights = ZX_RIGHT_SAME_RIGHTS,
+        .result = ZX_OK,
+    });
   }
 }
 #endif
 
 HLCPPOutgoingMessage Encoder::GetMessage() {
-  return HLCPPOutgoingMessage(BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-                                       static_cast<uint32_t>(bytes_.size())),
-                              HandlePart(handles_.data(), static_cast<uint32_t>(handles_.size()),
-                                         static_cast<uint32_t>(handles_.size())));
+  return HLCPPOutgoingMessage(
+      BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+               static_cast<uint32_t>(bytes_.size())),
+      HandleDispositionPart(handles_.data(), static_cast<uint32_t>(handles_.size()),
+                            static_cast<uint32_t>(handles_.size())));
 }
 
 void Encoder::Reset(uint64_t ordinal) {

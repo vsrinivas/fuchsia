@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_TEST_TEST_UTIL_H_
-#define LIB_FIDL_CPP_TEST_TEST_UTIL_H_
+#ifndef CTS_TESTS_PKG_FIDL_CPP_TEST_TEST_UTIL_H_
+#define CTS_TESTS_PKG_FIDL_CPP_TEST_TEST_UTIL_H_
 
 #include <lib/fidl/internal.h>
 
@@ -48,8 +48,12 @@ Output RoundTrip(const Input& input) {
   const char* err_msg = nullptr;
   EXPECT_EQ(ZX_OK, outgoing_msg.Validate(Output::FidlType, &err_msg), "%s", err_msg);
 
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  for (uint32_t i = 0; i < outgoing_msg.handles().actual(); i++) {
+    handles[i] = outgoing_msg.handles().data()[i].handle;
+  }
   fidl::HLCPPIncomingMessage incoming_message(std::move(outgoing_msg.bytes()),
-                                              std::move(outgoing_msg.handles()));
+                                              HandlePart(handles, outgoing_msg.handles().actual()));
   outgoing_msg.ClearHandlesUnsafe();
   EXPECT_EQ(ZX_OK, incoming_message.Decode(Output::FidlType, &err_msg), "%s", err_msg);
   fidl::Decoder decoder(std::move(incoming_message));
@@ -118,8 +122,12 @@ bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
   auto msg = enc.GetMessage();
   auto bytes_match =
       cmp_payload(msg.bytes().data(), msg.bytes().actual(), bytes.data(), bytes.size());
+  zx_handle_t msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  for (uint32_t i = 0; i < msg.handles().actual(); i++) {
+    msg_handles[i] = msg.handles().data()[i].handle;
+  }
   auto handles_match =
-      cmp_payload(msg.handles().data(), msg.handles().actual(), handles.data(), handles.size());
+      cmp_payload(msg_handles, msg.handles().actual(), handles.data(), handles.size());
   return bytes_match && handles_match;
 }
 
@@ -149,4 +157,4 @@ void CheckEncodeFailure(const Input& input, const zx_status_t expected_failure_c
 }  // namespace test
 }  // namespace fidl
 
-#endif  // LIB_FIDL_CPP_TEST_TEST_UTIL_H_
+#endif  // CTS_TESTS_PKG_FIDL_CPP_TEST_TEST_UTIL_H_

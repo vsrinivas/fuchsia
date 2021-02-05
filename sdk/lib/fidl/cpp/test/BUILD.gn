@@ -26,6 +26,8 @@ cts_source_set("test") {
 }
 
 cts_fidl("frobinator") {
+  testonly = true
+
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "event-names-must-start-with-on",
@@ -34,7 +36,9 @@ cts_fidl("frobinator") {
 
   name = "fidl.test.frobinator"
 
+  experimental_flags = [ "enable_handle_rights" ]
   sources = [ "frobinator.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 cts_fidl("fidl_test") {

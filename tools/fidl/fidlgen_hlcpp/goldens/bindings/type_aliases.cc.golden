@@ -16,7 +16,9 @@ extern "C" const fidl_type_t fidl_test_typealiases_ExampleOfUseOfAliasesTable;
 const fidl_type_t* ExampleOfUseOfAliases::FidlType =
     &fidl_test_typealiases_ExampleOfUseOfAliasesTable;
 
-void ExampleOfUseOfAliases::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void ExampleOfUseOfAliases::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleOfUseOfAliases>::value) {
     memcpy(_encoder->template GetPtr<ExampleOfUseOfAliases>(_offset), this,
            sizeof(ExampleOfUseOfAliases));
@@ -27,9 +29,24 @@ void ExampleOfUseOfAliases::Encode(::fidl::Encoder* _encoder, size_t _offset) {
                    _offset + 24);
     ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_5, _offset + 40);
     ::fidl::Encode(_encoder, &field_of_vec_of_ref_me_at_most_5, _offset + 56);
-    ::fidl::Encode(_encoder, &field_of_channel, _offset + 72);
-    ::fidl::Encode(_encoder, &field_of_client_end, _offset + 76);
-    ::fidl::Encode(_encoder, &field_of_nullable_client_end, _offset + 80);
+
+    ::fidl::Encode(_encoder, &field_of_channel, _offset + 72,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = 0x80000000,
+                   });
+
+    ::fidl::Encode(_encoder, &field_of_client_end, _offset + 76,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = 0x80000000,
+                   });
+
+    ::fidl::Encode(_encoder, &field_of_nullable_client_end, _offset + 80,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = 0x80000000,
+                   });
   }
 }
 

@@ -64,6 +64,80 @@ TEST(InterfacePtr, BindToSpecificDispatcher) {
   EXPECT_EQ(1u, impl.frobs.size());
 }
 
+TEST(InterfacePtr, SendWrongHandleType) {
+  zx::port port;
+  zx::port::create(0, &port);
+
+  fidl::test::AsyncLoopForTest loop;
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  ptr.NewRequest();
+  bool errored = false;
+  ptr.set_error_handler([&errored](zx_status_t status) {
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, status);
+    errored = true;
+  });
+  ptr->SendEventHandle(::zx::event(port.release()));
+  loop.RunUntilIdle();
+  EXPECT_TRUE(errored);
+}
+
+TEST(InterfacePtr, SendWrongHandleRights) {
+  zx::event event;
+  zx::event::create(0, &event);
+  zx::event reduced_right_event;
+  ASSERT_EQ(ZX_OK, event.replace(ZX_DEFAULT_EVENT_RIGHTS & ~ZX_RIGHT_SIGNAL, &reduced_right_event));
+
+  fidl::test::AsyncLoopForTest loop;
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  ptr.NewRequest();
+  bool errored = false;
+  ptr.set_error_handler([&errored](zx_status_t status) {
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
+    errored = true;
+  });
+  ptr->SendEventHandle(::zx::event(reduced_right_event.release()));
+  loop.RunUntilIdle();
+  EXPECT_TRUE(errored);
+}
+
+TEST(InterfacePtr, SendWrongHandleTypeForProtocol) {
+  zx::event event;
+  zx::event::create(0, &event);
+
+  fidl::test::AsyncLoopForTest loop;
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  ptr.NewRequest();
+  bool errored = false;
+  ptr.set_error_handler([&errored](zx_status_t status) {
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, status);
+    errored = true;
+  });
+  ptr->SendProtocol(
+      fidl::InterfaceHandle<fidl::test::frobinator::EmptyProtocol>(zx::channel(event.release())));
+  loop.RunUntilIdle();
+  EXPECT_TRUE(errored);
+}
+
+TEST(InterfacePtr, SendWrongHandleRightsForProtocol) {
+  zx::channel ch1, ch2;
+  zx::channel::create(0, &ch1, &ch2);
+  zx::channel reduced_right_ch;
+  ASSERT_EQ(ZX_OK, ch1.replace(ZX_DEFAULT_CHANNEL_RIGHTS & ~ZX_RIGHT_READ, &reduced_right_ch));
+
+  fidl::test::AsyncLoopForTest loop;
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  ptr.NewRequest();
+  bool errored = false;
+  ptr.set_error_handler([&errored](zx_status_t status) {
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
+    errored = true;
+  });
+  ptr->SendProtocol(
+      fidl::InterfaceHandle<fidl::test::frobinator::EmptyProtocol>(std::move(reduced_right_ch)));
+  loop.RunUntilIdle();
+  EXPECT_TRUE(errored);
+}
+
 TEST(InterfacePtr, Events) {
   fidl::test::AsyncLoopForTest loop;
 

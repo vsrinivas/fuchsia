@@ -120,7 +120,9 @@ class ExampleXUnion final {
     return ::std::make_unique<ExampleXUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ExampleXUnion* value,
                      size_t offset);
   zx_status_t Clone(ExampleXUnion* result) const;
@@ -205,7 +207,9 @@ class ExampleUnion final {
     return ::std::make_unique<ExampleUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, ExampleUnion* value,
                      size_t offset);
   zx_status_t Clone(ExampleUnion* result) const;
@@ -306,7 +310,9 @@ class ExampleTable final {
     return ::std::make_unique<ExampleTable>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, ExampleTable* _value,
                      size_t _offset);
   zx_status_t Clone(ExampleTable* _result) const;
@@ -365,7 +371,9 @@ class ExampleStruct final {
     return ::std::make_unique<ExampleStruct>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, ExampleStruct* value,
                      size_t _offset);
   zx_status_t Clone(ExampleStruct* result) const;
@@ -436,7 +444,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::fidl::test::placementofattributes::ExampleXUnion>*
           value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -504,7 +513,8 @@ struct CodingTraits<
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::placementofattributes::ExampleUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -618,9 +628,11 @@ struct CodingTraits<::fidl::test::placementofattributes::ExampleEnum> {
       sizeof(::fidl::test::placementofattributes::ExampleEnum);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::placementofattributes::ExampleEnum);
-  static void Encode(Encoder* encoder,
-                     ::fidl::test::placementofattributes::ExampleEnum* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::placementofattributes::ExampleEnum* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
@@ -654,9 +666,11 @@ struct CodingTraits<::fidl::test::placementofattributes::ExampleBits> {
       sizeof(::fidl::test::placementofattributes::ExampleBits);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::placementofattributes::ExampleBits);
-  static void Encode(Encoder* encoder,
-                     ::fidl::test::placementofattributes::ExampleBits* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::placementofattributes::ExampleBits* value,
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }

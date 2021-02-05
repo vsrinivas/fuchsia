@@ -136,7 +136,7 @@ class HLCPPOutgoingMessage {
   // The constructed |Message| object does not take ownership of the given
   // storage, although does take ownership of zircon handles contained withing
   // handles.
-  HLCPPOutgoingMessage(BytePart bytes, HandlePart handles);
+  HLCPPOutgoingMessage(BytePart bytes, HandleDispositionPart handles);
 
   ~HLCPPOutgoingMessage();
 
@@ -177,8 +177,8 @@ class HLCPPOutgoingMessage {
   // When the message is encoded, the handle values are stored in this part of
   // the message. When the message is decoded, this part of the message is
   // empty and the handle values are stored in the bytes().
-  HandlePart& handles() { return handles_; }
-  const HandlePart& handles() const { return handles_; }
+  HandleDispositionPart& handles() { return handles_; }
+  const HandleDispositionPart& handles() const { return handles_; }
 
   // Encodes the message in-place.
   //
@@ -226,7 +226,7 @@ class HLCPPOutgoingMessage {
 
  private:
   BytePart bytes_;
-  HandlePart handles_;
+  HandleDispositionPart handles_;
 };
 
 }  // namespace fidl

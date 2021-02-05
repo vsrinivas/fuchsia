@@ -40,7 +40,9 @@ class Padding7ByteMiddle final {
     return ::std::make_unique<Padding7ByteMiddle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding7ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding7ByteMiddle* result) const;
@@ -66,7 +68,9 @@ class Padding7ByteEnd final {
     return ::std::make_unique<Padding7ByteEnd>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding7ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding7ByteEnd* result) const;
@@ -91,7 +95,9 @@ class Padding6ByteMiddle final {
     return ::std::make_unique<Padding6ByteMiddle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding6ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding6ByteMiddle* result) const;
@@ -117,7 +123,9 @@ class Padding6ByteEnd final {
     return ::std::make_unique<Padding6ByteEnd>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding6ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding6ByteEnd* result) const;
@@ -144,7 +152,9 @@ class Padding5ByteMiddle final {
     return ::std::make_unique<Padding5ByteMiddle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding5ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding5ByteMiddle* result) const;
@@ -172,7 +182,9 @@ class Padding5ByteEnd final {
     return ::std::make_unique<Padding5ByteEnd>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding5ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding5ByteEnd* result) const;
@@ -197,7 +209,9 @@ class Padding4ByteMiddle final {
     return ::std::make_unique<Padding4ByteMiddle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding4ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding4ByteMiddle* result) const;
@@ -223,7 +237,9 @@ class Padding4ByteEnd final {
     return ::std::make_unique<Padding4ByteEnd>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding4ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding4ByteEnd* result) const;
@@ -252,7 +268,9 @@ class Padding4ByteAlignmentLength12 final {
     return ::std::make_unique<Padding4ByteAlignmentLength12>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      Padding4ByteAlignmentLength12* value, size_t _offset);
   zx_status_t Clone(Padding4ByteAlignmentLength12* result) const;
@@ -279,7 +297,9 @@ class Padding3ByteMiddle final {
     return ::std::make_unique<Padding3ByteMiddle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding3ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding3ByteMiddle* result) const;
@@ -305,7 +325,9 @@ class Padding3ByteEnd final {
     return ::std::make_unique<Padding3ByteEnd>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding3ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding3ByteEnd* result) const;
@@ -330,7 +352,9 @@ class Padding2ByteMiddle final {
     return ::std::make_unique<Padding2ByteMiddle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding2ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding2ByteMiddle* result) const;
@@ -356,7 +380,9 @@ class Padding2ByteEnd final {
     return ::std::make_unique<Padding2ByteEnd>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding2ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding2ByteEnd* result) const;
@@ -383,7 +409,9 @@ class Padding2ByteAlignmentLength6 final {
     return ::std::make_unique<Padding2ByteAlignmentLength6>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      Padding2ByteAlignmentLength6* value, size_t _offset);
   zx_status_t Clone(Padding2ByteAlignmentLength6* result) const;
@@ -410,7 +438,9 @@ class Padding1ByteMiddle final {
     return ::std::make_unique<Padding1ByteMiddle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding1ByteMiddle* value,
                      size_t _offset);
   zx_status_t Clone(Padding1ByteMiddle* result) const;
@@ -436,7 +466,9 @@ class Padding1ByteEnd final {
     return ::std::make_unique<Padding1ByteEnd>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Padding1ByteEnd* value,
                      size_t _offset);
   zx_status_t Clone(Padding1ByteEnd* result) const;

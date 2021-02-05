@@ -52,7 +52,9 @@ UnionSmallArray UnionSmallArray::WithA(::std::array<uint32_t, 2>&& val) {
   return result;
 }
 
-void UnionSmallArray::Encode(::fidl::Encoder* encoder, size_t offset) {
+void UnionSmallArray::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -195,7 +197,9 @@ UnionLargeArray UnionLargeArray::WithA(::std::array<uint32_t, 100>&& val) {
   return result;
 }
 
-void UnionLargeArray::Encode(::fidl::Encoder* encoder, size_t offset) {
+void UnionLargeArray::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -337,7 +341,9 @@ bool TableSmallArray::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void TableSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void TableSmallArray::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -480,7 +486,9 @@ bool TableLargeArray::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void TableLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void TableLargeArray::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -587,7 +595,9 @@ extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
 const fidl_type_t* StructSmallArray::FidlType =
     &fidl_test_arrays_StructSmallArrayTable;
 
-void StructSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void StructSmallArray::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructSmallArray>::value) {
     memcpy(_encoder->template GetPtr<StructSmallArray>(_offset), this,
            sizeof(StructSmallArray));
@@ -615,7 +625,9 @@ extern "C" const fidl_type_t fidl_test_arrays_StructLargeArrayTable;
 const fidl_type_t* StructLargeArray::FidlType =
     &fidl_test_arrays_StructLargeArrayTable;
 
-void StructLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void StructLargeArray::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<StructLargeArray>::value) {
     memcpy(_encoder->template GetPtr<StructLargeArray>(_offset), this,
            sizeof(StructLargeArray));

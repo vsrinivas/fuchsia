@@ -101,13 +101,13 @@ void SetNodeInfoAsDirectory(fidl_xunion_t* node_info) {
   node_info->envelope.presence = FIDL_ALLOC_PRESENT;
 }
 
-zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_t* handles,
+zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_disposition_t* handles,
                             uint32_t num_handles) {
   const bool contains_nodeinfo = msg.primary.node_info.tag != fidl_xunion_tag_t(0);
   uint32_t msg_size = contains_nodeinfo ? sizeof(msg) : sizeof(msg.primary);
   fidl::HLCPPOutgoingMessage fidl_msg(
       fidl::BytePart(reinterpret_cast<uint8_t*>(&msg), msg_size, msg_size),
-      fidl::HandlePart(handles, num_handles, num_handles));
+      fidl::HandleDispositionPart(handles, num_handles, num_handles));
   return fidl_msg.Write(ch, 0);
 }
 

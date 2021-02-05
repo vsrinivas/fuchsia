@@ -29,7 +29,9 @@ class ByteAndBytes final {
     return ::std::make_unique<ByteAndBytes>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, ByteAndBytes* value,
                      size_t _offset);
   zx_status_t Clone(ByteAndBytes* result) const;

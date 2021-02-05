@@ -35,7 +35,9 @@ class Example_foo_Response final {
     return ::std::make_unique<Example_foo_Response>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Example_foo_Response* value,
                      size_t _offset);
   zx_status_t Clone(Example_foo_Response* result) const;
@@ -74,7 +76,9 @@ class Example_foo_Result final {
     return ::std::make_unique<Example_foo_Result>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, Example_foo_Result* value,
                      size_t offset);
   zx_status_t Clone(Example_foo_Result* result) const;
@@ -244,7 +248,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::error::Example_foo_Result>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::error::Example_foo_Result>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

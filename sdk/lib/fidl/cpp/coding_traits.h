@@ -16,6 +16,12 @@
 
 namespace fidl {
 
+// Used for handle rights and type checking during write and decode.
+struct HandleInformation {
+  zx_obj_type_t object_type;
+  zx_rights_t rights;
+};
+
 template <typename T, class Enable = void>
 struct CodingTraits;
 
@@ -23,7 +29,9 @@ template <typename T>
 struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(T);
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, T* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, T* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
+    ZX_DEBUG_ASSERT(maybe_handle_info == fit::nullopt);
     *encoder->template GetPtr<T>(offset) = *value;
   }
   template <class DecoderImpl>
@@ -36,11 +44,13 @@ template <>
 struct CodingTraits<bool> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(bool);
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, bool* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, bool* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
     *encoder->template GetPtr<bool>(offset) = *value;
   }
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, std::vector<bool>::iterator value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, std::vector<bool>::iterator value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
     *encoder->template GetPtr<bool>(offset) = *value;
   }
   template <class DecoderImpl>
@@ -57,8 +67,10 @@ struct CodingTraits<bool> {
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
-  static void Encode(Encoder* encoder, zx::object_base* value, size_t offset) {
-    encoder->EncodeHandle(value, offset);
+  static void Encode(Encoder* encoder, zx::object_base* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
+    ZX_ASSERT(maybe_handle_info);
+    encoder->EncodeHandle(value, maybe_handle_info->object_type, maybe_handle_info->rights, offset);
   }
   static void Decode(Decoder* decoder, zx::object_base* value, size_t offset) {
     decoder->DecodeHandle(value, offset);
@@ -70,11 +82,13 @@ template <typename T>
 struct CodingTraits<std::unique_ptr<T>, typename std::enable_if<!IsFidlXUnion<T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uintptr_t);
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, std::unique_ptr<T>* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, std::unique_ptr<T>* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
     if (value->get()) {
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_PRESENT;
       CodingTraits<T>::Encode(encoder, value->get(),
-                              encoder->Alloc(CodingTraits<T>::inline_size_v1_no_ee));
+                              encoder->Alloc(CodingTraits<T>::inline_size_v1_no_ee),
+                              maybe_handle_info);
     } else {
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
     }
@@ -107,11 +121,12 @@ template <typename T>
 struct CodingTraits<VectorPtr<T>> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, VectorPtr<T>* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, VectorPtr<T>* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
     if (!value->has_value())
       return EncodeNullVector(encoder, offset);
     std::vector<T>& vector = **value;
-    CodingTraits<::std::vector<T>>::Encode(encoder, &vector, offset);
+    CodingTraits<::std::vector<T>>::Encode(encoder, &vector, offset, maybe_handle_info);
   }
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, VectorPtr<T>* value, size_t offset) {
@@ -134,7 +149,8 @@ class UseStdCopy {};
 template <typename T, typename EncoderImpl>
 void EncodeVectorBody(UseStdCopy<true>, EncoderImpl* encoder,
                       typename std::vector<T>::iterator in_begin,
-                      typename std::vector<T>::iterator in_end, size_t out_offset) {
+                      typename std::vector<T>::iterator in_end, size_t out_offset,
+                      fit::optional<HandleInformation> maybe_handle_info) {
   static_assert(CodingTraits<T>::inline_size_v1_no_ee == sizeof(T),
                 "stride doesn't match object size");
   std::copy(in_begin, in_end, encoder->template GetPtr<T>(out_offset));
@@ -143,11 +159,12 @@ void EncodeVectorBody(UseStdCopy<true>, EncoderImpl* encoder,
 template <typename T, typename EncoderImpl>
 void EncodeVectorBody(UseStdCopy<false>, EncoderImpl* encoder,
                       typename std::vector<T>::iterator in_begin,
-                      typename std::vector<T>::iterator in_end, size_t out_offset) {
+                      typename std::vector<T>::iterator in_end, size_t out_offset,
+                      fit::optional<HandleInformation> maybe_handle_info) {
   constexpr size_t stride = CodingTraits<T>::inline_size_v1_no_ee;
   for (typename std::vector<T>::iterator in_it = in_begin; in_it != in_end;
        in_it++, out_offset += stride) {
-    CodingTraits<T>::Encode(encoder, &*in_it, out_offset);
+    CodingTraits<T>::Encode(encoder, &*in_it, out_offset, maybe_handle_info);
   }
 }
 
@@ -178,13 +195,14 @@ template <typename T>
 struct CodingTraits<::std::vector<T>> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, ::std::vector<T>* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, ::std::vector<T>* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
     size_t count = value->size();
     EncodeVectorPointer(encoder, count, offset);
     constexpr size_t stride = CodingTraits<T>::inline_size_v1_no_ee;
     size_t base = encoder->Alloc(count * stride);
     internal::EncodeVectorBody<T>(internal::UseStdCopy<IsMemcpyCompatible<T>::value>(), encoder,
-                                  value->begin(), value->end(), base);
+                                  value->begin(), value->end(), base, maybe_handle_info);
   }
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::std::vector<T>* value, size_t offset) {
@@ -201,7 +219,8 @@ template <typename T, size_t N>
 struct CodingTraits<::std::array<T, N>> {
   static constexpr size_t inline_size_v1_no_ee = CodingTraits<T>::inline_size_v1_no_ee * N;
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, std::array<T, N>* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, std::array<T, N>* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
     size_t stride;
     stride = CodingTraits<T>::inline_size_v1_no_ee;
     if (IsMemcpyCompatible<T>::value) {
@@ -209,7 +228,7 @@ struct CodingTraits<::std::array<T, N>> {
       return;
     }
     for (size_t i = 0; i < N; ++i) {
-      CodingTraits<T>::Encode(encoder, &value->at(i), offset + i * stride);
+      CodingTraits<T>::Encode(encoder, &value->at(i), offset + i * stride, maybe_handle_info);
     }
   }
   template <class DecoderImpl>
@@ -279,8 +298,9 @@ template <typename T, size_t InlineSizeV1NoEE>
 struct EncodableCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = InlineSizeV1NoEE;
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, T* value, size_t offset) {
-    value->Encode(encoder, offset);
+  static void Encode(EncoderImpl* encoder, T* value, size_t offset,
+                     fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
+    value->Encode(encoder, offset, maybe_handle_info);
   }
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, T* value, size_t offset) {
@@ -299,8 +319,9 @@ size_t DecodingInlineSize(DecoderImpl* decoder) {
 }
 
 template <typename T, class EncoderImpl>
-void Encode(EncoderImpl* encoder, T* value, size_t offset) {
-  CodingTraits<T>::Encode(encoder, value, offset);
+void Encode(EncoderImpl* encoder, T* value, size_t offset,
+            fit::optional<HandleInformation> maybe_handle_info = fit::nullopt) {
+  CodingTraits<T>::Encode(encoder, value, offset, maybe_handle_info);
 }
 
 template <typename T, class DecoderImpl>

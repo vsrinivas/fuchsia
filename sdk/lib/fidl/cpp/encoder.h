@@ -39,7 +39,8 @@ class Encoder final {
   }
 
 #ifdef __Fuchsia__
-  void EncodeHandle(zx::object_base* value, size_t offset);
+  void EncodeHandle(zx::object_base* value, zx_obj_type_t obj_type, zx_rights_t rights,
+                    size_t offset);
 
   // Add a handle to the encoder's handles without encoding it into the bytes.
   // This is used to re-encode unknown handles, since their "encoded form" is
@@ -61,7 +62,7 @@ class Encoder final {
   void EncodeMessageHeader(uint64_t ordinal);
 
   std::vector<uint8_t> bytes_;
-  std::vector<zx_handle_t> handles_;
+  std::vector<zx_handle_disposition_t> handles_;
 };
 
 }  // namespace fidl

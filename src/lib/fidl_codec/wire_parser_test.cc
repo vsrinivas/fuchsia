@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/test/frobinator_impl.h>
+#include <zircon/rights.h>
 
 #include <iostream>
 #include <sstream>

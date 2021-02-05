@@ -37,7 +37,9 @@ class StructWithNullableVector final {
     return ::std::make_unique<StructWithNullableVector>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructWithNullableVector* value,
                      size_t _offset);
   zx_status_t Clone(StructWithNullableVector* result) const;
@@ -61,7 +63,9 @@ class StructWithNullableUnion final {
     return ::std::make_unique<StructWithNullableUnion>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructWithNullableUnion* value,
                      size_t _offset);
   zx_status_t Clone(StructWithNullableUnion* result) const;
@@ -85,7 +89,9 @@ class StructWithNullableStruct final {
     return ::std::make_unique<StructWithNullableStruct>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructWithNullableStruct* value,
                      size_t _offset);
   zx_status_t Clone(StructWithNullableStruct* result) const;
@@ -109,7 +115,9 @@ class StructWithNullableString final {
     return ::std::make_unique<StructWithNullableString>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructWithNullableString* value,
                      size_t _offset);
   zx_status_t Clone(StructWithNullableString* result) const;
@@ -134,7 +142,9 @@ class StructWithNullableRequest final {
     return ::std::make_unique<StructWithNullableRequest>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      StructWithNullableRequest* value, size_t _offset);
   zx_status_t Clone(StructWithNullableRequest* result) const;
@@ -161,7 +171,9 @@ class StructWithNullableProtocol final {
     return ::std::make_unique<StructWithNullableProtocol>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder,
                      StructWithNullableProtocol* value, size_t _offset);
   zx_status_t Clone(StructWithNullableProtocol* result) const;
@@ -188,7 +200,9 @@ class StructWithNullableHandle final {
     return ::std::make_unique<StructWithNullableHandle>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, StructWithNullableHandle* value,
                      size_t _offset);
   zx_status_t Clone(StructWithNullableHandle* result) const;
@@ -216,6 +230,7 @@ class SimpleProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
+
     ::fidl::Encode(_encoder, b, 20);
 
     fidl_trace(DidHLCPPEncode,
@@ -273,7 +288,9 @@ class SimpleUnion final {
     return ::std::make_unique<SimpleUnion>();
   }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* decoder, SimpleUnion* value,
                      size_t offset);
   zx_status_t Clone(SimpleUnion* result) const;
@@ -342,7 +359,9 @@ class Int32Wrapper final {
     return ::std::make_unique<Int32Wrapper>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Int32Wrapper* value,
                      size_t _offset);
   zx_status_t Clone(Int32Wrapper* result) const;
@@ -607,7 +626,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::nullable::SimpleUnion>> {
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<::fidl::test::nullable::SimpleUnion>* value,
-      size_t offset) {
+      size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

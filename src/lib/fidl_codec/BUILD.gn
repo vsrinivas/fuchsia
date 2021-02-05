@@ -114,6 +114,7 @@ group("tests") {
 }
 
 action("json_for_test") {
+  testonly = true
   deps = [
     ":fidl($fidl_toolchain)",
     ":fidl-composed($fidl_toolchain)",

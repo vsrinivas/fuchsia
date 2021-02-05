@@ -161,7 +161,9 @@ class Handles final {
     return ::std::make_unique<Handles>();
   }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              fit::optional<::fidl::HandleInformation> maybe_handle_info =
+                  fit::nullopt);
   static void Decode(::fidl::Decoder* _decoder, Handles* value, size_t _offset);
   zx_status_t Clone(Handles* result) const;
 };
@@ -200,8 +202,10 @@ struct CodingTraits<::fidl::test::handles::obj_type> {
       sizeof(::fidl::test::handles::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::handles::obj_type);
-  static void Encode(Encoder* encoder, ::fidl::test::handles::obj_type* value,
-                     size_t offset) {
+  static void Encode(
+      Encoder* encoder, ::fidl::test::handles::obj_type* value, size_t offset,
+      fit::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }

@@ -63,7 +63,9 @@ StrictFoo StrictFoo::WithI(int32_t&& val) {
   return result;
 }
 
-void StrictFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
+void StrictFoo::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -246,7 +248,9 @@ FlexibleFoo FlexibleFoo::WithI(int32_t&& val) {
   return result;
 }
 
-void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
+void FlexibleFoo::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 

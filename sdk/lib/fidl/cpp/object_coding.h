@@ -41,7 +41,7 @@ zx_status_t ValidateObject(uint8_t* bytes, size_t bytes_length, T* object,
                            const char** error_msg_out) {
   return HLCPPOutgoingMessage(BytePart(bytes, static_cast<uint32_t>(bytes_length),
                                        static_cast<uint32_t>(bytes_length)),
-                              HandlePart())
+                              HandleDispositionPart())
       .Validate(T::FidlType, error_msg_out);
 }
 

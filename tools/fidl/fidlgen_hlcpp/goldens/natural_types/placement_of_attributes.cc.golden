@@ -58,7 +58,9 @@ ExampleXUnion ExampleXUnion::WithVariant(uint32_t&& val) {
   return result;
 }
 
-void ExampleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+void ExampleXUnion::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -216,7 +218,9 @@ ExampleUnion ExampleUnion::WithVariant(uint32_t&& val) {
   return result;
 }
 
-void ExampleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+void ExampleUnion::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
@@ -354,7 +358,9 @@ bool ExampleTable::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void ExampleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void ExampleTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -462,7 +468,9 @@ extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
 const fidl_type_t* ExampleStruct::FidlType =
     &fidl_test_placementofattributes_ExampleStructTable;
 
-void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+void ExampleStruct::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    fit::optional<::fidl::HandleInformation> maybe_handle_info) {
   if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
     memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this,
            sizeof(ExampleStruct));
