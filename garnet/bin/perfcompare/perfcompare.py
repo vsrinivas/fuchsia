@@ -161,7 +161,12 @@ class Stats(object):
         if self._offset is None:
             # Point estimate only: We cannot calculate a confidence
             # interval because the sample only contained a single value.
-            return '%s %s' % (self._mean, self._unit)
+            #
+            # Explicitly use 12 significant figures to match what str()
+            # does on floats in Python 2.  This gives plenty of precision
+            # for practical use while suppressing rounding noise created by
+            # various operations.
+            return '%.12g %s' % (self._mean, self._unit)
         return '%s %s' % (FormatConfidenceInterval(self._mean, self._offset),
                           self._unit)
 
