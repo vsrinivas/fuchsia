@@ -1,0 +1,38 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
+
+source_set("fake-pdev") {
+  testonly = true
+  sources = [ "fake-pdev.cc" ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.platform.device",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/system/ulib/fbl",
+  ]
+  deps = [
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-resource",
+  ]
+}
+
+test("fake-pdev-test") {
+  sources = [ "fake-pdev-test.cc" ]
+  deps = [
+    ":fake-pdev",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fake-pdev-test-pkg") {
+  package_name = "fake-pdev-test"
+  deps = [ ":fake-pdev-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fake-pdev-test-pkg" ]
+}
