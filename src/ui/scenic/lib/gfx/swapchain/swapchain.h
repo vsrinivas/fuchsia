@@ -13,7 +13,7 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/scenic/lib/display/color_transform.h"
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
+#include "src/ui/scenic/lib/gfx/swapchain/frame_timings.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -39,15 +39,14 @@ class Swapchain {
   // Callbacks are allowed to return before the wait semaphore has been observed, e.g. they may
   // queue GPU work and return immediately.
   using DrawCallback =
-      fit::function<void(zx::time target_presentation_time, const escher::ImagePtr&,
-                         const HardwareLayerAssignment::Item&, const escher::SemaphorePtr&,
-                         const escher::SemaphorePtr&)>;
+      fit::function<void(const escher::ImagePtr&, const HardwareLayerAssignment::Item&,
+                         const escher::SemaphorePtr&, const escher::SemaphorePtr&)>;
 
   // Returns false if the frame could not be drawn.  Otherwise,
   //   1. Invokes |draw_callback| to draw the frame.
   //   2. Eventually invokes FrameTimings::OnFrameFinishedRendering() and
   //      FrameTimings::OnFramePresented() on |frame_timings|.
-  virtual bool DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame,
+  virtual bool DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& frame,
                                    size_t swapchain_index, const HardwareLayerAssignment& hla,
                                    DrawCallback draw_callback) = 0;
 

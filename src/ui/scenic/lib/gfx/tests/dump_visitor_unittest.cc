@@ -37,7 +37,7 @@ TEST_F(DumpVisitorTest, NullImage) {
   DumpVisitor::VisitorContext context(ostream, &visited);
   DumpVisitor visitor(std::move(context));
 
-  MaterialPtr null_image_material = fxl::MakeRefCounted<Material>(session(), 1u);
+  MaterialPtr null_image_material = fxl::MakeRefCounted<Material>(session(), session()->id(), 1u);
 
   visitor.Visit(null_image_material.get());
 
@@ -51,8 +51,8 @@ TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
   DumpVisitor visitor(std::move(context));
 
   ResourceId next_id = 1;
-  MaterialPtr image_material = fxl::MakeRefCounted<Material>(session(), next_id++);
-  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr image_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
+  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   ImagePtr image = CreateImage(next_id++);
   ImagePipePtr pipe = fxl::MakeRefCounted<ImagePipe>(session(), next_id++, nullptr,
                                                      session()->shared_error_reporter());

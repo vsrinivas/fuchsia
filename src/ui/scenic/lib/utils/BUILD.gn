@@ -9,43 +9,11 @@ source_set("utils") {
   sources = [
     "helpers.cc",
     "helpers.h",
-    "sequential_fence_signaller.cc",
-    "sequential_fence_signaller.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
-  ]
-}
-
-unittest_package("tests") {
-  package_name = "scenic_utils_tests"
-  deps = [ ":sequential_fence_signaller_unittest" ]
-  tests = [
-    {
-      name = "sequential_fence_signaller_unittest"
-      environments = basic_envs
-    },
-  ]
-}
-
-executable("sequential_fence_signaller_unittest") {
-  testonly = true
-  sources = [
-    "test/sequential_fence_signaller_unittest.cc",
-    "test/util.cc",
-    "test/util.h",
-  ]
-  deps = [
-    ":utils",
-    "//sdk/lib/fidl/cpp:cpp_base",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
   ]
 }

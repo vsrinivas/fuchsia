@@ -198,6 +198,8 @@ source_set("gfx") {
     "swapchain/buffer_pool.h",
     "swapchain/display_swapchain.cc",
     "swapchain/display_swapchain.h",
+    "swapchain/frame_timings.cc",
+    "swapchain/frame_timings.h",
     "swapchain/swapchain.h",
     "swapchain/swapchain_factory.cc",
     "swapchain/swapchain_factory.h",
@@ -247,20 +249,17 @@ source_set("gfx") {
     ":ids",
     ":object_linker",
     ":view_focuser_registry",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/ui/scenic/cpp",
     "//src/graphics/display/drivers/display:preferred-scanout-image-type",
     "//src/lib/fsl",
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/utils",
-    "//zircon/system/ulib/inspect",
-
-    # TODO(fxbug.dev/24590) Remove timings dependency when display_swapchain is pulled out.
-    "//sdk/fidl/fuchsia.sysmem",
-    "//src/ui/scenic/lib/scheduling:timings",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
   ]
 }

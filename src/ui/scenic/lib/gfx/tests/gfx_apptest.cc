@@ -9,7 +9,6 @@
 
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
-#include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"

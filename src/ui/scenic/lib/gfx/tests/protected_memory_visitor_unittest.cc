@@ -83,14 +83,15 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForProtectedImage) {
   ProtectedMemoryVisitor visitor;
 
   ResourceId next_id = 1;
-  MaterialPtr image_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr image_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   ImageBasePtr image = fxl::AdoptRef(new DummyImage(session(), next_id++, false));
   image_material->SetTexture(image);
 
   visitor.Visit(image_material.get());
   ASSERT_FALSE(visitor.HasProtectedMemoryUse());
 
-  MaterialPtr protected_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr protected_material =
+      fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));
   protected_material->SetTexture(protected_image);
 
@@ -102,7 +103,8 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForChildProtectedImage) {
   ProtectedMemoryVisitor visitor;
 
   ResourceId next_id = 1;
-  MaterialPtr protected_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr protected_material =
+      fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));
   protected_material->SetTexture(protected_image);
 
@@ -137,7 +139,8 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForProtectedImageInAView) {
   EXPECT_TRUE(Apply(scenic::NewAddChildCmd(view_id, node_id)));
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
-  MaterialPtr protected_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr protected_material =
+      fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));
   protected_material->SetTexture(protected_image);
   shape_node->SetMaterial(protected_material);

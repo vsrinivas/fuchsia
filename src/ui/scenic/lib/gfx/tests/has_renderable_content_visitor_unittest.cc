@@ -41,7 +41,7 @@ TEST_F(HasRenderableContentUnittest, ReturnsTrueForShapeNodeWithMaterial) {
   visitor.Visit(layer.get());
   EXPECT_FALSE(visitor.HasRenderableContent());
 
-  auto material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  auto material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   shape_node->SetMaterial(material);
 
   visitor.Visit(layer.get());

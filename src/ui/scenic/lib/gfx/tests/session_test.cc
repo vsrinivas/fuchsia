@@ -38,7 +38,6 @@ SessionContext SessionTest::CreateSessionContext() {
                                  .escher = nullptr,
                                  .escher_resource_recycler = nullptr,
                                  .escher_image_factory = nullptr,
-                                 .release_fence_signaller = nullptr,
                                  .frame_scheduler = frame_scheduler_,
                                  .scene_graph = nullptr,
                                  .view_linker = nullptr};

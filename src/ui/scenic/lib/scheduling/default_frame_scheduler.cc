@@ -12,9 +12,9 @@
 
 #include <functional>
 
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
-
 namespace {
+
+static const uint64_t kNumDebugFrames = 3;
 
 template <class T>
 static void RemoveSessionIdFromMap(scheduling::SessionId session_id,
@@ -41,8 +41,6 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
   FX_DCHECK(vsync_timing_);
   FX_DCHECK(frame_predictor_);
 
-  outstanding_frames_.reserve(kMaxOutstandingFrames);
-
   inspect_frame_number_ = inspect_node_.CreateUint("most_recent_frame_number", frame_number_);
   inspect_last_successful_update_start_time_ =
       inspect_node_.CreateUint("last_successful_update_start_time", 0);
@@ -59,26 +57,6 @@ void DefaultFrameScheduler::SetFrameRenderer(std::weak_ptr<FrameRenderer> frame_
 
 void DefaultFrameScheduler::AddSessionUpdater(std::weak_ptr<SessionUpdater> session_updater) {
   new_session_updaters_.push_back(std::move(session_updater));
-}
-
-void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
-  TRACE_INSTANT("gfx", "DefaultFrameScheduler::OnFrameRendered", TRACE_SCOPE_PROCESS, "Timestamp",
-                timings.GetTimestamps().render_done_time.get(), "frame_number",
-                timings.frame_number());
-
-  release_fence_signaller_.SignalFencesUpToAndIncluding(timings.frame_number());
-
-  auto current_timestamps = timings.GetTimestamps();
-
-  if (current_timestamps.render_done_time == FrameTimings::kTimeDropped) {
-    return;
-  }
-
-  zx::duration duration =
-      current_timestamps.render_done_time - current_timestamps.render_start_time;
-  FX_DCHECK(duration.get() > 0);
-
-  frame_predictor_->ReportRenderDuration(zx::duration(duration));
 }
 
 void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
@@ -128,11 +106,11 @@ std::pair<zx::time, zx::time> DefaultFrameScheduler::ComputePresentationAndWakeu
 }
 
 void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
-  FX_DCHECK(HaveUpdatableSessions() || render_continuously_ || render_pending_);
+  FX_DCHECK(HaveUpdatableSessions() || render_continuously_ || !last_frame_is_presented_);
 
   // Output requested presentation time in milliseconds.
   // Logging the first few frames to find common startup bugs.
-  if (frame_number_ < 3) {
+  if (frame_number_ <= kNumDebugFrames) {
     FX_VLOGS(1) << "RequestFrame";
   }
 
@@ -152,7 +130,7 @@ void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
 
     wakeup_time_ = new_wakeup_time;
     next_target_presentation_time_ = new_target_presentation_time;
-    frame_render_task_.PostForTime(dispatcher_, zx::time(wakeup_time_));
+    frame_render_task_.PostForTime(dispatcher_, wakeup_time_);
   }
 }
 
@@ -166,7 +144,7 @@ void DefaultFrameScheduler::HandleNextFrameRequest() {
                            return leftPresentationTime < rightPresentationTime;
                          });
 
-    RequestFrame(zx::time(min_it->second.first));
+    RequestFrame(min_it->second.first);
   }
 }
 
@@ -189,7 +167,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
                  target_presentation_time.get() / 1'000'000);
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number < 3) {
+  if (frame_number < kNumDebugFrames) {
     FX_VLOGS(1) << "MaybeRenderFrame target_presentation_time=" << target_presentation_time.get()
                 << " wakeup_time=" << wakeup_time_.get() << " frame_number=" << frame_number;
   }
@@ -207,94 +185,54 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   // TODO(fxbug.dev/24669) Revisit how we do this.
   const zx::time update_end_time = zx::time(async_now(dispatcher_));
+  const zx::time render_start_time = update_end_time;
   frame_predictor_->ReportUpdateDuration(zx::duration(update_end_time - update_start_time));
 
-  if (!needs_render && !render_pending_ && !render_continuously_) {
+  if (!needs_render && last_frame_is_presented_ && !render_continuously_) {
     // Nothing to render. Continue with next request in the queue.
     HandleNextFrameRequest();
     return;
   }
 
-  // TODO(fxbug.dev/24531) Remove the render_pending_ check, and pipeline frames within a VSYNC
+  // TODO(fxbug.dev/24531) Remove the presentation check, and pipeline frames within a VSYNC
   // interval.
-  if (currently_rendering_) {
-    render_pending_ = true;
+  FX_DCHECK(last_presented_frame_number_ <= frame_number);
+  // Only one frame is allowed "in flight" at any given. Don't start rendering another frame until
+  // the previous frame is on the display.
+  if (last_presented_frame_number_ < (frame_number - 1)) {
+    last_frame_is_presented_ = false;
     return;
   }
 
-  FX_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
+  last_frame_is_presented_ = true;
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number < 3) {
+  if (frame_number < kNumDebugFrames) {
     FX_LOGS(INFO) << "Calling RenderFrame target_presentation_time="
                   << target_presentation_time.get() << " frame_number=" << frame_number;
   }
 
   TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS, "Expected presentation time",
                 target_presentation_time.get(), "frame_number", frame_number);
-  const zx::time frame_render_start_time = zx::time(async_now(dispatcher_));
-
-  // Create a FrameTimings instance for this frame to track the render and presentation times.
-  auto timings_rendered_callback = [weak =
-                                        weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
-    if (weak) {
-      weak->OnFrameRendered(timings);
-    } else {
-      FX_LOGS(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
-    }
-  };
 
   const trace_flow_id_t frame_render_trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("gfx", "render_to_presented", frame_render_trace_id);
-  auto timings_presented_callback = [weak = weak_factory_.GetWeakPtr(),
-                                     frame_render_trace_id](const FrameTimings& timings) {
+  auto on_presented_callback = [=, weak = weak_factory_.GetWeakPtr()](
+                                   const FrameRenderer::Timestamps& timestamps) {
     TRACE_FLOW_END("gfx", "render_to_presented", frame_render_trace_id);
     if (weak) {
-      weak->OnFramePresented(timings);
+      weak->OnFramePresented(frame_number, render_start_time, target_presentation_time, timestamps);
     } else {
       FX_LOGS(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
     }
   };
-  auto frame_timings = std::make_unique<FrameTimings>(
-      frame_number, target_presentation_time, wakeup_time_, frame_render_start_time,
-      std::move(timings_rendered_callback), std::move(timings_presented_callback));
-  // TODO(fxbug.dev/24669) Revisit how we do this.
-  frame_timings->OnFrameUpdated(update_end_time);
+  outstanding_latch_points_.push_back(update_end_time);
 
   inspect_frame_number_.Set(frame_number);
 
   // Render the frame.
-  RenderFrameResult render_frame_result = kRenderFailed;
   if (auto renderer = frame_renderer_.lock()) {
-    render_frame_result =
-        renderer->RenderFrame(frame_timings->GetWeakPtr(), target_presentation_time);
-  }
-  currently_rendering_ = render_frame_result == kRenderSuccess;
-
-  // See fxbug.dev/24688 for details of measuring render time.
-  const zx::time frame_render_end_cpu_time = zx::time(async_now(dispatcher_));
-  frame_timings->OnFrameCpuRendered(frame_render_end_cpu_time);
-
-  switch (render_frame_result) {
-    case kRenderSuccess:
-      currently_rendering_ = true;
-      outstanding_frames_.push_back(std::move(frame_timings));
-      render_pending_ = false;
-
-      inspect_last_successful_render_start_time_.Set(target_presentation_time.get());
-      break;
-    case kRenderFailed:
-      // TODO(fxbug.dev/24538): Handle failed rendering somehow.
-      FX_LOGS(WARNING) << "RenderFrame failed. "
-                       << "There may not be any calls to OnFrameRendered or OnFramePresented, and "
-                          "no callbacks may be invoked.";
-      break;
-    case kNoContentToRender:
-      // Immediately invoke presentation callbacks.
-      FX_DCHECK(!frame_timings->finalized());
-      outstanding_frames_.push_back(std::move(frame_timings));
-      outstanding_frames_.back()->OnFrameSkipped();
-      break;
+    renderer->RenderFrame(std::move(on_presented_callback), frame_number, target_presentation_time);
   }
 
   ++frame_number_;
@@ -309,7 +247,7 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
                  "requested_presentation_time", requested_presentation_time.get() / 1'000'000);
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number_ < 3) {
+  if (frame_number_ < kNumDebugFrames) {
     FX_VLOGS(1) << "ScheduleUpdateForSession session_id: " << id_pair.session_id
                 << " requested_presentation_time: " << requested_presentation_time.get();
   }
@@ -377,41 +315,43 @@ void DefaultFrameScheduler::GetFuturePresentationInfos(
   presentation_infos_callback(std::move(infos));
 }
 
-void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
-  const uint64_t frame_number = timings.frame_number();
+void DefaultFrameScheduler::OnFramePresented(uint64_t frame_number, zx::time render_start_time,
+                                             zx::time target_presentation_time,
+                                             const FrameRenderer::Timestamps& timestamps) {
+  FX_DCHECK(frame_number == last_presented_frame_number_ + 1);
+  FX_DCHECK(vsync_timing_->vsync_interval().get() >= 0);
 
-  if (frame_number_ < 3) {
+  if (frame_number < kNumDebugFrames) {
     FX_LOGS(INFO) << "DefaultFrameScheduler::OnFramePresented"
                   << " frame_number=" << frame_number;
   }
 
-  FX_DCHECK(!outstanding_frames_.empty());
+  last_presented_frame_number_ = frame_number;
 
-  // TODO(fxbug.dev/23637): how should we handle this case?  It is theoretically possible, but if it
-  // happens then it means that the EventTimestamper is receiving signals out-of-order and is
-  // therefore generating bogus data.
-  FX_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
+  FrameStats::Timestamps frame_stats = {
+      .latch_point_time = outstanding_latch_points_.front(),
+      .render_start_time = render_start_time,
+      .render_done_time = timestamps.render_done_time,
+      .target_presentation_time = target_presentation_time,
+      .actual_presentation_time = timestamps.actual_presentation_time,
+  };
 
-  FX_DCHECK(timings.finalized());
-  FX_DCHECK(vsync_timing_->vsync_interval().get() >= 0);
-  const FrameTimings::Timestamps timestamps = timings.GetTimestamps();
-  stats_.RecordFrame(timestamps, vsync_timing_->vsync_interval());
+  stats_.RecordFrame(frame_stats, vsync_timing_->vsync_interval());
 
-  if (timings.FrameWasDropped()) {
+  if (timestamps.render_done_time != FrameRenderer::kTimeDropped) {
+    zx::duration duration =
+        std::max(timestamps.render_done_time - render_start_time, zx::duration(0));
+    frame_predictor_->ReportRenderDuration(zx::duration(duration));
+    inspect_last_successful_render_start_time_.Set(target_presentation_time.get());
+  }
+
+  if (timestamps.actual_presentation_time == FrameRenderer::kTimeDropped) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number", frame_number);
-  } else if (timings.FrameWasSkipped()) {
-    TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number", frame_number);
-
-    auto presentation_info = fuchsia::images::PresentationInfo();
-    presentation_info.presentation_time = timestamps.actual_presentation_time.get();
-    presentation_info.presentation_interval = vsync_timing_->vsync_interval().get();
-
-    SignalPresentCallbacksUpTo(frame_number, presentation_info);
   } else {
     if (TRACE_CATEGORY_ENABLED("gfx")) {
       // Log trace data..
       zx::duration target_vs_actual =
-          timestamps.actual_presentation_time - timestamps.target_presentation_time;
+          timestamps.actual_presentation_time - target_presentation_time;
 
       zx::time now = zx::time(async_now(dispatcher_));
       zx::duration elapsed_since_presentation = now - timestamps.actual_presentation_time;
@@ -429,15 +369,9 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
     SignalPresentCallbacksUpTo(frame_number, presentation_info);
   }
+  outstanding_latch_points_.pop_front();
 
-  // Pop the front Frame off the queue.
-  for (size_t i = 1; i < outstanding_frames_.size(); ++i) {
-    outstanding_frames_[i - 1] = std::move(outstanding_frames_[i]);
-  }
-  outstanding_frames_.resize(outstanding_frames_.size() - 1);
-
-  currently_rendering_ = false;
-  if (render_continuously_ || render_pending_) {
+  if (!last_frame_is_presented_) {
     RequestFrame(zx::time(0));
   }
 }
@@ -482,10 +416,27 @@ std::unordered_map<SessionId, PresentId> DefaultFrameScheduler::CollectUpdatesFo
 void DefaultFrameScheduler::PrepareUpdates(const std::unordered_map<SessionId, PresentId>& updates,
                                            zx::time latched_time, uint64_t frame_number) {
   latched_updates_.push({.frame_number = frame_number, .updated_sessions = updates});
+
+  std::vector<zx::event> fences;
+
   for (const auto& [session_id, present_id] : updates) {
     SetLatchedTimeForPresentsUpTo({session_id, present_id}, latched_time);
     SetLatchedTimeForPresent2Infos({session_id, present_id}, latched_time);
-    MoveReleaseFencesToSignaller({session_id, present_id}, frame_number);
+
+    const auto begin_it = release_fences_.lower_bound({session_id, 0});
+    const auto end_it = release_fences_.lower_bound({session_id, present_id});
+    FX_DCHECK(std::distance(begin_it, end_it) >= 0);
+    std::for_each(
+        begin_it, end_it,
+        [&fences](std::pair<const SchedulingIdPair, std::vector<zx::event>>& release_fences) {
+          std::move(std::begin(release_fences.second), std::end(release_fences.second),
+                    std::back_inserter(fences));
+        });
+    release_fences_.erase(begin_it, end_it);
+  }
+
+  if (auto renderer = frame_renderer_.lock()) {
+    renderer->SignalFencesWhenPreviousRendersAreDone(std::move(fences));
   }
 }
 
@@ -554,26 +505,12 @@ void DefaultFrameScheduler::SetLatchedTimeForPresent2Infos(SchedulingIdPair id_p
                 });
 }
 
-void DefaultFrameScheduler::MoveReleaseFencesToSignaller(SchedulingIdPair id_pair,
-                                                         uint64_t frame_number) {
-  const auto begin_it = release_fences_.lower_bound({id_pair.session_id, 0});
-  const auto end_it = release_fences_.lower_bound(id_pair);
-  FX_DCHECK(std::distance(begin_it, end_it) >= 0);
-  std::for_each(
-      begin_it, end_it,
-      [this,
-       frame_number](std::pair<const SchedulingIdPair, std::vector<zx::event>>& release_fences) {
-        release_fence_signaller_.AddFences(std::move(release_fences.second), frame_number);
-      });
-  release_fences_.erase(begin_it, end_it);
-}
-
 bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::time latched_time,
                                          uint64_t frame_number) {
   FX_DCHECK(latched_time <= target_presentation_time);
 
   // Logging the first few frames to find common startup bugs.
-  if (frame_number < 3) {
+  if (frame_number < kNumDebugFrames) {
     FX_VLOGS(1) << "ApplyScheduledSessionUpdates target_presentation_time="
                 << target_presentation_time.get() << " frame_number=" << frame_number;
   }

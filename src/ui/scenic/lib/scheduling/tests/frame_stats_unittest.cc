@@ -24,7 +24,6 @@
 #include "lib/inspect/testing/cpp/inspect.h"
 #include "src/lib/cobalt/cpp/testing/mock_cobalt_logger.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
 namespace scheduling {
 namespace test {
@@ -182,13 +181,12 @@ TEST_F(FrameStatsTest, SmokeTest_TriggerLazyStringProperties) {
   EXPECT_EQ(pointers.recent_delayed_frames->node().properties().size(), 4U);
 }
 
-TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
+TEST_F(FrameStatsTest, SmokeTest_DummyTimestamps) {
   FrameStats stats(inspector_.GetRoot().CreateChild(kFrameStatsNodeName), nullptr);
 
   const zx::duration vsync_interval = zx::msec(16);
-  FrameTimings::Timestamps frame_times = {
+  FrameStats::Timestamps frame_times = {
       .latch_point_time = zx::time(0) + zx::msec(4),
-      .update_done_time = zx::time(0) + zx::msec(6),
       .render_start_time = zx::time(0) + zx::msec(6),
       .render_done_time = zx::time(0) + zx::msec(12),
       .target_presentation_time = zx::time(0) + zx::msec(16),
@@ -198,40 +196,35 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
     stats.RecordFrame(frame_times, vsync_interval);
 
     frame_times.latch_point_time += zx::msec(16);
-    frame_times.update_done_time += zx::msec(16);
     frame_times.render_start_time += zx::msec(16);
     frame_times.render_done_time += zx::msec(16);
     frame_times.target_presentation_time += zx::msec(16);
     frame_times.actual_presentation_time += zx::msec(16);
   }
 
-  FrameTimings::Timestamps dropped_times = {.latch_point_time = zx::time(0) + zx::msec(4),
-                                            .update_done_time = zx::time(0) + zx::msec(6),
-                                            .render_start_time = zx::time(0) + zx::msec(6),
-                                            .render_done_time = zx::time(0) + zx::msec(12),
-                                            .target_presentation_time = zx::time(0) + zx::msec(16),
-                                            .actual_presentation_time = FrameTimings::kTimeDropped};
+  FrameStats::Timestamps dropped_times = {.latch_point_time = zx::time(0) + zx::msec(4),
+                                          .render_start_time = zx::time(0) + zx::msec(6),
+                                          .render_done_time = zx::time(0) + zx::msec(12),
+                                          .target_presentation_time = zx::time(0) + zx::msec(16),
+                                          .actual_presentation_time = FrameRenderer::kTimeDropped};
   for (int i = 0; i < 30; i++) {
     stats.RecordFrame(dropped_times, vsync_interval);
 
     dropped_times.latch_point_time += zx::msec(16);
-    dropped_times.update_done_time += zx::msec(16);
     dropped_times.render_start_time += zx::msec(16);
     dropped_times.render_done_time += zx::msec(16);
     dropped_times.target_presentation_time += zx::msec(16);
   }
 
-  FrameTimings::Timestamps delayed_times = {.latch_point_time = zx::time(0) + zx::msec(1),
-                                            .update_done_time = zx::time(0) + zx::msec(6),
-                                            .render_start_time = zx::time(0) + zx::msec(6),
-                                            .render_done_time = zx::time(0) + zx::msec(22),
-                                            .target_presentation_time = zx::time(0) + zx::msec(16),
-                                            .actual_presentation_time = zx::time(0) + zx::msec(32)};
+  FrameStats::Timestamps delayed_times = {.latch_point_time = zx::time(0) + zx::msec(1),
+                                          .render_start_time = zx::time(0) + zx::msec(6),
+                                          .render_done_time = zx::time(0) + zx::msec(22),
+                                          .target_presentation_time = zx::time(0) + zx::msec(16),
+                                          .actual_presentation_time = zx::time(0) + zx::msec(32)};
   for (int i = 0; i < 20; i++) {
     stats.RecordFrame(delayed_times, vsync_interval);
 
     delayed_times.latch_point_time = delayed_times.actual_presentation_time + zx::msec(1);
-    delayed_times.update_done_time = delayed_times.actual_presentation_time + zx::msec(6);
     delayed_times.render_start_time = delayed_times.actual_presentation_time + zx::msec(6);
     delayed_times.render_done_time = delayed_times.actual_presentation_time + zx::msec(22);
     delayed_times.target_presentation_time = delayed_times.actual_presentation_time + zx::msec(16);
@@ -275,9 +268,8 @@ TEST_F(FrameStatsTest, HistoryPopulatedOverTime) {
   FrameStats stats(inspector_.GetRoot().CreateChild(kFrameStatsNodeName), nullptr);
 
   const zx::duration vsync_interval = zx::msec(16);
-  FrameTimings::Timestamps timestamps = {
+  FrameStats::Timestamps timestamps = {
       .latch_point_time = zx::time(0) + zx::msec(0),
-      .update_done_time = zx::time(0) + zx::msec(1),
       .render_start_time = zx::time(0) + zx::msec(2),
       .render_done_time = zx::time(0) + zx::msec(3),
       .target_presentation_time = zx::time(0) + zx::msec(16),
@@ -286,7 +278,6 @@ TEST_F(FrameStatsTest, HistoryPopulatedOverTime) {
 
   auto add_time = [&](zx::duration duration) {
     timestamps.latch_point_time += duration;
-    timestamps.update_done_time += duration;
     timestamps.render_start_time += duration;
     timestamps.render_done_time += duration;
     timestamps.target_presentation_time += duration;
@@ -402,28 +393,27 @@ TEST_F(FrameStatsCobaltTest, LogFrameTimes) {
   FrameStats stats(Node(), std::make_unique<cobalt::MockCobaltLogger>(&cobalt_call_counts));
 
   const zx::duration vsync_interval = zx::msec(16);
-  FrameTimings::Timestamps ontime_frame_times = {
+  FrameStats::Timestamps ontime_frame_times = {
       .latch_point_time = zx::time(0) + zx::msec(4),
-      .update_done_time = zx::time(0) + zx::msec(6),
       .render_start_time = zx::time(0) + zx::msec(6),
       .render_done_time = zx::time(0) + zx::msec(12),
       .target_presentation_time = zx::time(0) + zx::msec(16),
       .actual_presentation_time = zx::time(0) + zx::msec(16),
   };
-  FrameTimings::Timestamps dropped_frame_times = {
+  FrameStats::Timestamps dropped_frame_times = {
       .latch_point_time = zx::time(10) + zx::msec(4),
-      .update_done_time = zx::time(10) + zx::msec(6),
       .render_start_time = zx::time(10) + zx::msec(6),
       .render_done_time = zx::time(10) + zx::msec(12),
       .target_presentation_time = zx::time(10) + zx::msec(16),
-      .actual_presentation_time = FrameTimings::kTimeDropped};
-  FrameTimings::Timestamps delayed_frame_times = {
+      .actual_presentation_time = FrameRenderer::kTimeDropped,
+  };
+  FrameStats::Timestamps delayed_frame_times = {
       .latch_point_time = zx::time(20) + zx::msec(4),
-      .update_done_time = zx::time(20) + zx::msec(6),
       .render_start_time = zx::time(20) + zx::msec(6),
       .render_done_time = zx::time(20) + zx::msec(22),
       .target_presentation_time = zx::time(20) + zx::msec(16),
-      .actual_presentation_time = zx::time(20) + zx::msec(32)};
+      .actual_presentation_time = zx::time(20) + zx::msec(32),
+  };
 
   // No frame recorded. No logging needed.
   EXPECT_TRUE(RunLoopFor(FrameStats::kCobaltDataCollectionInterval));

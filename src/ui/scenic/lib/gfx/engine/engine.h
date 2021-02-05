@@ -16,7 +16,6 @@
 
 #include "lib/inspect/cpp/inspect.h"
 #include "src/ui/lib/escher/escher.h"
-#include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
@@ -102,7 +101,6 @@ class Engine : public scheduling::FrameRenderer {
   // Only used for testing.
   Engine(sys::ComponentContext* app_context,
          const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-         std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          escher::EscherWeakPtr escher);
 
   ~Engine() override = default;
@@ -129,7 +127,6 @@ class Engine : public scheduling::FrameRenderer {
                           escher(),
                           escher_resource_recycler(),
                           escher_image_factory(),
-                          release_fence_signaller(),
                           delegating_frame_scheduler_,
                           scene_graph(),
                           &view_linker_};
@@ -145,10 +142,11 @@ class Engine : public scheduling::FrameRenderer {
                   std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources) const;
 
   // |scheduling::FrameRenderer|
-  //
-  // Renders a new frame. Returns true if successful, false otherwise.
-  scheduling::RenderFrameResult RenderFrame(fxl::WeakPtr<scheduling::FrameTimings> frame,
-                                            zx::time presentation_time) override;
+  void RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
+                   zx::time presentation_time) override;
+
+  // |scheduling::FrameRenderer|
+  void SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> events) override;
 
  private:
   // Initialize annotation session and annotation manager.
@@ -157,18 +155,11 @@ class Engine : public scheduling::FrameRenderer {
   // Initialize all inspect::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
 
-  // Takes care of cleanup between frames.
-  void EndCurrentFrame(uint64_t frame_number);
-
   escher::ResourceRecycler* escher_resource_recycler() {
     return escher_ ? escher_->resource_recycler() : nullptr;
   }
 
   escher::ImageFactory* escher_image_factory() { return image_factory_.get(); }
-
-  escher::ReleaseFenceSignaller* release_fence_signaller() {
-    return release_fence_signaller_.get();
-  }
 
   void InitializeShaderFs();
 
@@ -194,7 +185,6 @@ class Engine : public scheduling::FrameRenderer {
   ViewLinker view_linker_;
 
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
-  std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
 
   // TODO(fxbug.dev/24686): This is a temporary solution until we can remove frame_scheduler from
   // ResourceContext. Do not add any additional dependencies on this object/pointer.
@@ -210,6 +200,8 @@ class Engine : public scheduling::FrameRenderer {
 
   bool last_frame_uses_protected_memory_ = false;
 
+  bool is_rendering_ = false;
+
   std::unique_ptr<AnnotationManager> annotation_manager_;
 
   inspect::Node inspect_node_;
@@ -217,7 +209,9 @@ class Engine : public scheduling::FrameRenderer {
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Engine);
+  // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
+  // move it. Disable all copy and move operations.
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Engine);
 };
 
 }  // namespace gfx

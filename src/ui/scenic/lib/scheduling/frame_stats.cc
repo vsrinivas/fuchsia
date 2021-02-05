@@ -28,7 +28,7 @@ using cobalt_registry::kScenicRenderTimeIntBucketsStepSize;
 namespace scheduling {
 
 namespace {
-uint64_t TimestampsToMinuteKey(const FrameTimings::Timestamps& timestamps) {
+uint64_t TimestampsToMinuteKey(const FrameStats::Timestamps& timestamps) {
   return timestamps.latch_point_time.get() / zx::min(1).get();
 }
 }  // anonymous namespace
@@ -54,12 +54,11 @@ void FrameStats::InitializeFrameTimeBucketConfig() {
   frame_times_bucket_config_ = cobalt::config::IntegerBucketConfig::CreateFromProto(bucket_proto);
 }
 
-void FrameStats::RecordFrame(FrameTimings::Timestamps timestamps,
-                             zx::duration display_vsync_interval) {
+void FrameStats::RecordFrame(Timestamps timestamps, zx::duration display_vsync_interval) {
   ++frame_count_;
   uint32_t latch_to_actual_presentation_bucket_index =
       GetCobaltBucketIndex(timestamps.actual_presentation_time - timestamps.latch_point_time);
-  if (timestamps.actual_presentation_time == FrameTimings::kTimeDropped) {
+  if (timestamps.actual_presentation_time == FrameRenderer::kTimeDropped) {
     RecordDroppedFrame(timestamps);
     cobalt_dropped_frame_times_histogram_[latch_to_actual_presentation_bucket_index]++;
   } else if (timestamps.actual_presentation_time - (display_vsync_interval / 2) >=
@@ -82,7 +81,7 @@ uint32_t FrameStats::GetCobaltBucketIndex(zx::duration duration) {
   return frame_times_bucket_config_->BucketIndex(duration.to_usecs() / 100);
 }
 
-void FrameStats::RecordDroppedFrame(const FrameTimings::Timestamps timestamps) {
+void FrameStats::RecordDroppedFrame(const Timestamps& timestamps) {
   ++dropped_frame_count_;
   dropped_frames_.push_front(timestamps);
   if (dropped_frames_.size() > kNumDroppedFramesToReport) {
@@ -95,7 +94,7 @@ void FrameStats::RecordDroppedFrame(const FrameTimings::Timestamps timestamps) {
   });
 }
 
-void FrameStats::RecordDelayedFrame(const FrameTimings::Timestamps timestamps) {
+void FrameStats::RecordDelayedFrame(const Timestamps& timestamps) {
   ++delayed_frame_count_;
   delayed_frames_.push_front(timestamps);
   if (delayed_frames_.size() > kNumDelayedFramesToReport) {
@@ -112,7 +111,7 @@ void FrameStats::RecordDelayedFrame(const FrameTimings::Timestamps timestamps) {
   });
 }
 
-void FrameStats::RecordOnTimeFrame(const FrameTimings::Timestamps timestamps) {
+void FrameStats::RecordOnTimeFrame(const Timestamps& timestamps) {
   AddHistory(HistoryStats{
       .key = TimestampsToMinuteKey(timestamps),
       .total_frames = 1,
@@ -188,9 +187,8 @@ std::vector<fuchsia::cobalt::HistogramBucket> FrameStats::CreateCobaltBucketsFro
 
 /* static */
 zx::duration FrameStats::CalculateMeanDuration(
-    const std::deque<const FrameTimings::Timestamps>& timestamps,
-    std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
-    uint32_t percentile) {
+    const std::deque<Timestamps>& timestamps,
+    std::function<zx::duration(const Timestamps&)> duration_func, uint32_t percentile) {
   FX_DCHECK(percentile <= 100);
 
   const size_t num_frames = timestamps.size();
@@ -242,13 +240,13 @@ void FrameStats::ReportStats(inspect::Inspector* insp) const {
     insp->emplace(std::move(node));
   }
 
-  auto prediction_accuracy = [](const FrameTimings::Timestamps& times) -> zx::duration {
+  auto prediction_accuracy = [](const Timestamps& times) -> zx::duration {
     return times.actual_presentation_time - times.target_presentation_time;
   };
-  auto total_frame_time = [](const FrameTimings::Timestamps& times) -> zx::duration {
+  auto total_frame_time = [](const Timestamps& times) -> zx::duration {
     return times.actual_presentation_time - times.latch_point_time;
   };
-  auto latency = [](const FrameTimings::Timestamps& times) -> zx::duration {
+  auto latency = [](const Timestamps& times) -> zx::duration {
     return times.actual_presentation_time - times.render_done_time;
   };
 
@@ -322,19 +320,6 @@ void FrameStats::ReportStats(inspect::Inspector* insp) const {
 
     insp->emplace(std::move(minutes_ago_node));
     insp->emplace(std::move(node));
-  }
-}
-
-/* static */
-void FrameStats::FrameTimingsOutputToCsv(
-    const std::deque<const FrameTimings::Timestamps>& timestamps, std::ostream* output) {
-  for (auto& times : timestamps) {
-    *output << times.latch_point_time.get() << ",";
-    *output << times.update_done_time.get() << ",";
-    *output << times.render_start_time.get() << ",";
-    *output << times.render_done_time.get() << ",";
-    *output << times.target_presentation_time.get() << ",";
-    *output << times.actual_presentation_time.get() << "\n";
   }
 }
 

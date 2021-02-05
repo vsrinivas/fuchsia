@@ -55,7 +55,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   test_loop.RunUntilIdle();
 
   EXPECT_EQ(1u, updater->update_sessions_call_count());
-  EXPECT_EQ(1u, renderer->render_frame_call_count());
+  EXPECT_EQ(1u, renderer->GetNumPendingFrames());
   return 0;
 }
 

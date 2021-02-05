@@ -49,7 +49,7 @@ class DisplaySwapchain : public Swapchain {
   using OnVsyncCallback = fit::function<void(zx::time vsync_timestamp)>;
 
   // |Swapchain|
-  bool DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+  bool DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& frame_timings,
                            size_t swapchain_index, const HardwareLayerAssignment& hla,
                            DrawCallback draw_callback) override;
 
@@ -81,23 +81,22 @@ class DisplaySwapchain : public Swapchain {
   friend class test::DisplaySwapchainMockTest;
 
   struct FrameRecord {
-    // clang-format off
-    fxl::WeakPtr<scheduling::FrameTimings> frame_timings;
-    size_t                                 swapchain_index;
+    std::shared_ptr<FrameTimings> frame_timings;
+    size_t swapchain_index;
 
-    escher::SemaphorePtr                   render_finished_escher_semaphore;
-    zx::event                              render_finished_event;
-    uint64_t                               render_finished_event_id;
+    escher::SemaphorePtr render_finished_escher_semaphore;
+    zx::event render_finished_event;
+    uint64_t render_finished_event_id;
 
     // Event is signaled when the display is done using a frame.
-    zx::event                              retired_event;
-    uint64_t                               retired_event_id;
+    zx::event retired_event;
+    uint64_t retired_event_id;
 
-    std::unique_ptr<async::Wait>           render_finished_wait;
+    std::unique_ptr<async::Wait> render_finished_wait;
 
-    bool                                   presented            = false;
-    BufferPool::Framebuffer*               buffer               = nullptr;
-    bool                                   use_protected_memory = false;
+    bool presented = false;
+    BufferPool::Framebuffer* buffer = nullptr;
+    bool use_protected_memory = false;
     // clang-format on
   };
 
@@ -112,7 +111,7 @@ class DisplaySwapchain : public Swapchain {
 
   // Updates the previously retired frame record
   void UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_record,
-                         fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+                         const std::shared_ptr<FrameTimings>& frame_timings,
                          size_t swapchain_index);
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,

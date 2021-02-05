@@ -48,7 +48,7 @@ VK_TEST_F(ImagePipeRenderTest, TransparentUntilFirstUpdate) {
   frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
-  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
   // Material is transparent before present.
@@ -80,7 +80,7 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
   frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
-  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
   constexpr uint32_t kImage1Id = 1;
@@ -153,7 +153,7 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
-  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
   uint32_t image1_id = 1;
@@ -240,7 +240,7 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFramesWithSignalling) {
   frame_scheduler()->AddSessionUpdater(image_pipe_updater);
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
-  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
   uint32_t image1_id = 1;

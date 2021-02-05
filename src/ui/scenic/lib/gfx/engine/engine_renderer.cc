@@ -26,7 +26,6 @@
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/stereo_camera.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
 // TODO(fxbug.dev/24320): Move this someplace.  PoseBufferLatchingShader assumes this,
 // but we can't put it there because it lives in a Zircon-ignorant part of
@@ -222,6 +221,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
   auto camera = renderer->camera();
   auto& scene = camera->scene();
 
+  FX_DCHECK(paper_renderer_);
   paper_renderer_->SetConfig(escher::PaperRendererConfig {
     .shadow_type = shadow_type, .debug = renderer->enable_debugging(),
 #if SCENIC_DISPLAY_FRAME_NUMBER

@@ -7,7 +7,6 @@ import("//build/package.gni")
 source_set("util") {
   testonly = true
   sources = [
-    "mocks.cc",
     "mocks.h",
     "util.cc",
     "util.h",

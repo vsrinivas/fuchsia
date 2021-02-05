@@ -1676,7 +1676,7 @@ ResourcePtr GfxCommandApplier::CreateMesh(Session* session, ResourceId id) {
 }
 
 ResourcePtr GfxCommandApplier::CreateMaterial(Session* session, ResourceId id) {
-  return fxl::MakeRefCounted<Material>(session, id);
+  return fxl::MakeRefCounted<Material>(session, session->id(), id);
 }
 
 }  // namespace gfx

@@ -44,7 +44,6 @@ class VkSessionTest : public SessionTest {
   std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
-  std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
 
   escher::test::impl::VkDebugReportCallbackRegistry vk_debug_report_callback_registry_;
   escher::test::impl::VkDebugReportCollector vk_debug_report_collector_;

@@ -402,8 +402,6 @@ template("escher_library") {
         "flib/fence_queue.h",
         "flib/fence_set_listener.cc",
         "flib/fence_set_listener.h",
-        "flib/release_fence_signaller.cc",
-        "flib/release_fence_signaller.h",
         "fs/fuchsia_data_source.cc",
         "fs/fuchsia_data_source.h",
         "util/fuchsia_utils.cc",

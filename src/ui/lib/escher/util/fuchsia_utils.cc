@@ -25,20 +25,7 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(escher::Escher*
   }
 
   auto device = escher->device();
-  auto sema = escher::Semaphore::New(device->vk_device());
-
-  vk::ImportSemaphoreZirconHandleInfoFUCHSIA info;
-  info.semaphore = sema->vk_semaphore();
-  info.handle = event_copy.release();
-  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA;
-
-  if (vk::Result::eSuccess != device->vk_device().importSemaphoreZirconHandleFUCHSIA(
-                                  info, escher->device()->dispatch_loader())) {
-    FX_LOGS(ERROR) << "Failed to import event as VkSemaphore.";
-    // Don't leak handle.
-    zx_handle_close(info.handle);
-    return std::make_pair(escher::SemaphorePtr(), zx::event());
-  }
+  auto sema = GetSemaphoreForEvent(device, std::move(event_copy));
 
   return std::make_pair(std::move(sema), std::move(event));
 }
@@ -55,6 +42,24 @@ zx::event GetEventForSemaphore(VulkanDeviceQueues* device, const escher::Semapho
     return zx::event();
   }
   return zx::event(result.value);
+}
+
+escher::SemaphorePtr GetSemaphoreForEvent(VulkanDeviceQueues* device, zx::event event) {
+  auto sema = escher::Semaphore::New(device->vk_device());
+
+  vk::ImportSemaphoreZirconHandleInfoFUCHSIA info;
+  info.semaphore = sema->vk_semaphore();
+  info.handle = event.release();
+  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA;
+
+  if (vk::Result::eSuccess !=
+      device->vk_device().importSemaphoreZirconHandleFUCHSIA(info, device->dispatch_loader())) {
+    FX_LOGS(ERROR) << "Failed to import event as VkSemaphore.";
+    // Don't leak handle.
+    zx_handle_close(info.handle);
+    return escher::SemaphorePtr();
+  }
+  return sema;
 }
 
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem) {

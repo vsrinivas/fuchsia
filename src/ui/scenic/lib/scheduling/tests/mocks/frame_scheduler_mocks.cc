@@ -4,7 +4,19 @@
 
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
+#include <lib/async/cpp/time.h>
+#include <lib/async/default.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+namespace {
+void SignalAll(const std::vector<zx::event>& events) {
+  for (auto& e : events) {
+    e.signal(0u, ZX_EVENT_SIGNALED);
+  }
+}
+
+zx::time Now() { return async::Now(async_get_default_dispatcher()); }
+}  // namespace
 
 namespace scheduling {
 namespace test {
@@ -56,91 +68,62 @@ void MockFrameScheduler::RemoveSession(SessionId session_id) {
   }
 }
 
-RenderFrameResult MockFrameRenderer::RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
-                                                 zx::time presentation_time) {
-  FX_CHECK(frame_timings);
+void MockFrameRenderer::RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
+                                    zx::time presentation_time) {
+  FX_CHECK(frame_number);
+  FX_CHECK(callback);
 
-  const uint64_t frame_number = frame_timings->frame_number();
-  FX_CHECK(frames_.find(frame_number) == frames_.end());
   // Check that no frame numbers were skipped.
   FX_CHECK(frame_number == last_frame_number_ + 1);
   last_frame_number_ = frame_number;
 
-  ++render_frame_call_count_;
-  if (render_frame_return_value_ != kRenderSuccess) {
-    return render_frame_return_value_;
+  frames_.emplace_back(
+      PendingFrame({.start = Now(), .callback = std::move(callback), .fences = {}}));
+}
+
+void MockFrameRenderer::SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> fences) {
+  if (frames_.empty()) {
+    SignalAll(std::move(fences));
+  } else {
+    FX_CHECK(!frames_.back().fences.size());
+    frames_.back().fences = std::move(fences);
   }
-  frame_timings->RegisterSwapchains(1);
-  frames_[frame_number] = {.frame_timings = std::move(frame_timings), .swapchain_index = 0};
-
-  return render_frame_return_value_;
 }
 
-void MockFrameRenderer::EndFrame(uint64_t frame_number, zx::time time_done) {
-  SignalFrameRendered(frame_number, time_done);
-  SignalFrameCpuRendered(frame_number, time_done);
-  SignalFramePresented(frame_number, time_done);
+void MockFrameRenderer::EndFrame(const Timestamps& timestamps) {
+  FX_CHECK(!frames_.empty());
+  auto& next_frame = frames_.front();
+
+  next_frame.callback(timestamps);
+  SignalAll(pending_fences_);
+  pending_fences_.clear();
+  SignalAll(next_frame.fences);
+  frames_.pop_front();
 }
 
-void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number, zx::time time_done) {
-  auto find_it = frames_.find(frame_number);
-  FX_CHECK(find_it != frames_.end()) << "Couldn't find frame_number " << frame_number;
+void MockFrameRenderer::EndFrame() {
+  FX_CHECK(!frames_.empty());
+  auto& next_frame = frames_.front();
 
-  auto& frame = find_it->second;
-  // Frame can't be rendered twice.
-  FX_CHECK(!frame.frame_rendered);
-  frame.frame_rendered = true;
-  frame.frame_timings->OnFrameRendered(frame.swapchain_index, time_done);
+  FrameRenderer::Timestamps timestamps;
+  timestamps.render_done_time = Now();
+  timestamps.actual_presentation_time = Now();
 
-  CleanUpFrame(frame_number);
+  EndFrame(timestamps);
 }
 
-void MockFrameRenderer::SignalFrameCpuRendered(uint64_t frame_number, zx::time time_done) {
-  auto find_it = frames_.find(frame_number);
-  FX_CHECK(find_it != frames_.end());
+void MockFrameRenderer::DropFrame() {
+  FX_CHECK(!frames_.empty());
+  auto& next_frame = frames_.front();
 
-  auto& frame = find_it->second;
-  frame.frame_cpu_rendered = true;
-  frame.frame_timings->OnFrameCpuRendered(time_done);
+  FrameRenderer::Timestamps timestamps;
+  timestamps.render_done_time = Now();
+  timestamps.actual_presentation_time = kTimeDropped;
 
-  CleanUpFrame(frame_number);
-}
-
-void MockFrameRenderer::SignalFramePresented(uint64_t frame_number, zx::time time_done) {
-  auto find_it = frames_.find(frame_number);
-  FX_CHECK(find_it != frames_.end());
-
-  auto& frame = find_it->second;
-  // Frame can't be dropped/presented twice.
-  FX_CHECK(!frame.frame_presented);
-  frame.frame_presented = true;
-  frame.frame_timings->OnFramePresented(frame.swapchain_index, time_done);
-
-  CleanUpFrame(frame_number);
-}
-
-void MockFrameRenderer::SignalFrameDropped(uint64_t frame_number) {
-  auto find_it = frames_.find(frame_number);
-  FX_CHECK(find_it != frames_.end());
-
-  auto& frame = find_it->second;
-  // Frame can't be dropped/presented twice.
-  FX_CHECK(!frame.frame_presented);
-  frame.frame_presented = true;
-  frame.frame_timings->OnFrameDropped(frame.swapchain_index);
-
-  CleanUpFrame(frame_number);
-}
-
-void MockFrameRenderer::CleanUpFrame(uint64_t frame_number) {
-  auto find_it = frames_.find(frame_number);
-  FX_CHECK(find_it != frames_.end());
-
-  auto& frame = find_it->second;
-  if (!frame.frame_rendered || !frame.frame_presented || !frame.frame_cpu_rendered) {
-    return;
-  }
-  frames_.erase(frame_number);
+  next_frame.callback(timestamps);
+  std::move(std::begin(next_frame.fences), std::end(next_frame.fences),
+            std::back_inserter(pending_fences_));
+  frames_.pop_front();
 }
 
 }  // namespace test

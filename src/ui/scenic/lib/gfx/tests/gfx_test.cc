@@ -19,7 +19,6 @@ void GfxSystemTest::TearDown() {
 }
 
 void GfxSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
-  auto signaller = std::make_unique<ReleaseFenceSignallerForTest>();
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::WindowedFramePredictor>(
@@ -27,7 +26,7 @@ void GfxSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ = std::make_shared<Engine>(context_provider_.context(), frame_scheduler_,
-                                     std::move(signaller), escher::EscherWeakPtr());
+                                     escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_);
   gfx_system_ = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                   /* sysmem */ nullptr,

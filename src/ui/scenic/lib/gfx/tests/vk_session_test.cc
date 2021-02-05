@@ -52,7 +52,6 @@ void VkSessionTest::TearDown() {
   SessionTest::TearDown();
 
   image_factory_.reset();
-  release_fence_signaller_.reset();
   sysmem_.reset();
   display_manager_.reset();
 }
@@ -70,11 +69,7 @@ VkSessionTest::VkSessionTest()
 SessionContext VkSessionTest::CreateSessionContext() {
   auto session_context = SessionTest::CreateSessionContext();
 
-  FX_DCHECK(!release_fence_signaller_);
   FX_DCHECK(!image_factory_);
-
-  release_fence_signaller_ =
-      std::make_unique<ReleaseFenceSignaller>(escher()->command_buffer_sequencer());
   image_factory_ = std::make_unique<ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                          escher()->resource_recycler());
 
@@ -82,7 +77,6 @@ SessionContext VkSessionTest::CreateSessionContext() {
   session_context.escher = escher();
   session_context.escher_resource_recycler = escher()->resource_recycler();
   session_context.escher_image_factory = image_factory_.get();
-  session_context.release_fence_signaller = release_fence_signaller_.get();
 
   return session_context;
 }

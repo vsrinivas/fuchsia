@@ -2,24 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
+#include "src/ui/scenic/lib/gfx/swapchain/frame_timings.h"
 
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 
-namespace scheduling {
+using scheduling::FrameRenderer;
 
-FrameTimings::FrameTimings(uint64_t frame_number, zx::time target_presentation_time,
-                           zx::time latch_time, zx::time rendering_started_time,
-                           OnTimingsRenderedCallback timings_rendered_callback,
+namespace scenic_impl {
+namespace gfx {
+
+FrameTimings::FrameTimings(uint64_t frame_number,
                            OnTimingsPresentedCallback timings_presented_callback)
     : frame_number_(frame_number),
-      target_presentation_time_(target_presentation_time),
-      latch_point_time_(latch_time),
-      rendering_started_time_(rendering_started_time),
-      timings_rendered_callback_(std::move(timings_rendered_callback)),
-      timings_presented_callback_(std::move(timings_presented_callback)),
-      weak_factory_(this) {}
+      timings_presented_callback_(std::move(timings_presented_callback)) {}
 
 void FrameTimings::RegisterSwapchains(size_t count) {
   // All swapchains that we are timing must be added before any of them finish.
@@ -31,19 +27,9 @@ void FrameTimings::RegisterSwapchains(size_t count) {
   swapchain_records_.resize(count);
 }
 
-void FrameTimings::OnFrameUpdated(zx::time time) {
-  FX_DCHECK(!finalized()) << "Frame was finalized, cannot record update time";
-  FX_DCHECK(updates_finished_time_ == kTimeUninitialized) << "Error, update time already recorded.";
-  updates_finished_time_ = time;
-
-  FX_DCHECK(updates_finished_time_ >= latch_point_time_)
-      << "Error, updates took negative time: latch_point_time_ = " << latch_point_time_.get()
-      << ", updates_finished_time_ = " << updates_finished_time_.get();
-}
-
 void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
   FX_DCHECK(swapchain_index < swapchain_records_.size());
-  FX_DCHECK(time.get() > 0);
+  FX_DCHECK(time.get() >= 0);
 
   auto& record = swapchain_records_[swapchain_index];
   FX_DCHECK(record.frame_rendered_time == kTimeUninitialized)
@@ -67,17 +53,6 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
       rendering_finished_time_ = rec.frame_rendered_time;
     }
   }
-  FX_DCHECK(rendering_finished_time_ >= rendering_started_time_)
-      << "Error, rendering took negative time";
-
-  // Note: Because there is a delay between when rendering is actually completed
-  // and when EventTimestamper generates the timestamp, it's possible that the
-  // rendering timestamp is adjusted when the present timestamp is applied. So,
-  // the render_done_time might change between the call to the
-  // |FrameScheduler::OnFrameRendered| and |finalized()|.
-  if (timings_rendered_callback_) {
-    timings_rendered_callback_(*this);
-  }
 
   if (received_all_callbacks()) {
     Finalize();
@@ -87,7 +62,7 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
 void FrameTimings::OnFramePresented(size_t swapchain_index, zx::time time) {
   FX_DCHECK(swapchain_index < swapchain_records_.size());
   FX_DCHECK(frame_presented_count_ < swapchain_records_.size());
-  FX_DCHECK(time.get() > 0);
+  FX_DCHECK(time.get() >= 0);
 
   auto& record = swapchain_records_[swapchain_index];
   FX_DCHECK(record.frame_presented_time == kTimeUninitialized)
@@ -116,15 +91,15 @@ void FrameTimings::OnFramePresented(size_t swapchain_index, zx::time time) {
 
 void FrameTimings::OnFrameDropped(size_t swapchain_index) {
   // Indicates that "frame was dropped".
-  actual_presentation_time_ = kTimeDropped;
+  actual_presentation_time_ = FrameRenderer::kTimeDropped;
   frame_was_dropped_ = true;
 
   // The record should also reflect that "frame was dropped". Additionally,
   // update counts to simulate calls to OnFrameRendered/OnFramePresented; this
   // maintains count-related invariants.
   auto& record = swapchain_records_[swapchain_index];
-  record.frame_presented_time = kTimeDropped;
-  actual_presentation_time_ = kTimeDropped;
+  record.frame_presented_time = FrameRenderer::kTimeDropped;
+  actual_presentation_time_ = FrameRenderer::kTimeDropped;
   ++frame_presented_count_;
 
   // Do scheduler-related cleanup.
@@ -152,19 +127,15 @@ void FrameTimings::OnFrameCpuRendered(zx::time time) {
   rendering_cpu_finished_time_ = std::max(rendering_cpu_finished_time_, time);
 }
 
-FrameTimings::Timestamps FrameTimings::GetTimestamps() const {
+FrameRenderer::Timestamps FrameTimings::GetTimestamps() const {
   // Copy the current time values to a Timestamps struct. Some callers may call
   // this before all times are finalized - it is the caller's responsibility to
   // check if this is |finalized()| if it wants timestamps that are guaranteed
   // not to change. Additionally, some callers will maintain this struct beyond
   // the lifetime of the FrameTimings object (ie for collecting FrameStats), and
   // so the values are copied to allow the FrameTiming object to be destroyed.
-  FrameTimings::Timestamps timestamps = {
-      .latch_point_time = latch_point_time_,
-      .update_done_time = updates_finished_time_,
-      .render_start_time = rendering_started_time_,
+  FrameRenderer::Timestamps timestamps = {
       .render_done_time = std::max(rendering_finished_time_, rendering_cpu_finished_time_),
-      .target_presentation_time = target_presentation_time_,
       .actual_presentation_time = actual_presentation_time_,
   };
   return timestamps;
@@ -207,4 +178,5 @@ void FrameTimings::Finalize() {
   }
 }
 
-}  // namespace scheduling
+}  // namespace gfx
+}  // namespace scenic_impl

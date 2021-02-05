@@ -35,17 +35,15 @@ CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
 
 SceneGraph::SceneGraph(sys::ComponentContext* app_context)
     : focus_chain_listener_registry_(this), weak_factory_(this) {
-  FX_DCHECK(app_context);
   if (app_context) {
     app_context->outgoing()->AddPublicService<FocusChainListenerRegistry>(
         [this](fidl::InterfaceRequest<FocusChainListenerRegistry> request) {
           focus_chain_listener_registry_.Bind(std::move(request));
         });
+    view_tree_.PublishViewRefInstalledService(app_context);
   } else {
     FX_LOGS(ERROR) << "SceneGraph failed to register fuchsia.ui.focus.FocusChainListenerRegistry.";
   }
-
-  view_tree_.PublishViewRefInstalledService(app_context);
 }
 
 void SceneGraph::AddCompositor(const CompositorWeakPtr& compositor) {

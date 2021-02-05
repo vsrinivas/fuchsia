@@ -20,10 +20,10 @@
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
+#include "src/ui/scenic/lib/gfx/swapchain/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
 namespace scenic_impl {
@@ -31,11 +31,9 @@ namespace gfx {
 namespace test {
 
 using escher::ImageFactoryAdapter;
-using escher::ReleaseFenceSignaller;
 using escher::VulkanDeviceQueues;
 using escher::VulkanDeviceQueuesPtr;
 using escher::VulkanInstance;
-using scheduling::FrameTimings;
 using scheduling::test::MockFrameScheduler;
 
 using Fixture = gtest::RealLoopFixture;
@@ -62,8 +60,6 @@ class DisplaySwapchainTest : public Fixture {
 
     auto vulkan_device = CreateVulkanDeviceQueues(/*use_protected_memory*/ false);
     escher_ = std::make_unique<escher::Escher>(vulkan_device);
-    release_fence_signaller_ =
-        std::make_unique<ReleaseFenceSignaller>(escher_->command_buffer_sequencer());
     image_factory_ = std::make_unique<ImageFactoryAdapter>(escher_->gpu_allocator(),
                                                            escher_->resource_recycler());
     frame_scheduler_ = std::make_shared<MockFrameScheduler>();
@@ -71,7 +67,6 @@ class DisplaySwapchainTest : public Fixture {
                                           escher_.get(),
                                           escher_->resource_recycler(),
                                           image_factory_.get(),
-                                          release_fence_signaller_.get(),
                                           frame_scheduler_,
                                           SceneGraphWeakPtr(),
                                           nullptr};
@@ -95,7 +90,6 @@ class DisplaySwapchainTest : public Fixture {
       return;
     }
     image_factory_.reset();
-    release_fence_signaller_.reset();
     escher_.reset();
     sysmem_.reset();
     executor_.reset();
@@ -127,13 +121,12 @@ class DisplaySwapchainTest : public Fixture {
     return queues;
   }
 
-  void DrawAndPresentFrame(DisplaySwapchain* swapchain, fxl::WeakPtr<FrameTimings> timing,
+  void DrawAndPresentFrame(DisplaySwapchain* swapchain, const std::shared_ptr<FrameTimings>& timing,
                            size_t swapchain_index, const HardwareLayerAssignment& hla) {
     swapchain->DrawAndPresentFrame(
         timing, swapchain_index, hla,
-        [this, timing](zx::time present_time, const escher::ImagePtr& out,
-                       const HardwareLayerAssignment::Item& hla, const escher::SemaphorePtr& wait,
-                       const escher::SemaphorePtr& signal) {
+        [this, timing](const escher::ImagePtr& out, const HardwareLayerAssignment::Item& hla,
+                       const escher::SemaphorePtr& wait, const escher::SemaphorePtr& signal) {
           auto device = escher()->device();
           zx_signals_t tmp;
           if (wait) {
@@ -147,13 +140,10 @@ class DisplaySwapchainTest : public Fixture {
         });
   }
 
-  std::unique_ptr<FrameTimings> MakeTimings(uint64_t frame_number, zx::time present_time,
-                                            zx::time latch_time, zx::time started_time) {
+  std::shared_ptr<FrameTimings> MakeTimings(uint64_t frame_number) {
     FX_CHECK(frame_scheduler_);
-    return std::make_unique<FrameTimings>(
-        frame_number, present_time, latch_time, started_time,
-        [this](const FrameTimings& timings) { ++frame_presented_call_count_; },
-        [this](const FrameTimings& timings) { ++frame_rendered_call_count_; });
+    return std::make_shared<FrameTimings>(
+        frame_number, [this](const FrameTimings& timings) { ++frame_presented_call_count_; });
   }
 
   BufferPool* Framebuffers(DisplaySwapchain* swapchain) const {
@@ -168,11 +158,9 @@ class DisplaySwapchainTest : public Fixture {
   display::Display* display() { return display_manager()->default_display(); }
   std::shared_ptr<MockFrameScheduler> scheduler() { return frame_scheduler_; }
   uint32_t frame_presented_call_count() { return frame_presented_call_count_; }
-  uint32_t frame_rendered_call_count() { return frame_rendered_call_count_; }
 
  private:
   uint32_t frame_presented_call_count_ = 0;
-  uint32_t frame_rendered_call_count_ = 0;
 
   std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
@@ -180,7 +168,6 @@ class DisplaySwapchainTest : public Fixture {
   std::shared_ptr<MockFrameScheduler> frame_scheduler_;
   std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
-  std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
   std::shared_ptr<TestErrorReporter> error_reporter_;
   std::shared_ptr<TestEventReporter> event_reporter_;
 };
@@ -192,17 +179,16 @@ VK_TEST_F(DisplaySwapchainTest, RenderStress) {
   HardwareLayerAssignment hla({{{0, {layer.get()}}}, swapchain.get()});
 
   constexpr size_t kNumFrames = 100;
-  std::array<std::unique_ptr<FrameTimings>, kNumFrames> timings;
+  std::array<std::shared_ptr<FrameTimings>, kNumFrames> timings;
   for (size_t i = 0; i < kNumFrames; ++i) {
     zx::time now(async_now(dispatcher()));
-    timings[i] = MakeTimings(i, now + zx::msec(15), now + zx::msec(10), now);
+    timings[i] = MakeTimings(i);
     timings[i]->RegisterSwapchains(1);
-    DrawAndPresentFrame(swapchain.get(), timings[i]->GetWeakPtr(), 0, hla);
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i].get()]() { return t->finalized(); },
+    DrawAndPresentFrame(swapchain.get(), timings[i], 0, hla);
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); },
                                           /*timeout=*/zx::msec(50)));
   }
   RunLoopUntilIdle();
-  EXPECT_EQ(frame_rendered_call_count(), kNumFrames);
   // Last frame is left up on the display, so look for presentation.
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return frame_presented_call_count() == kNumFrames; },
@@ -220,17 +206,16 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
   HardwareLayerAssignment hla({{{0, {layer.get()}}}, swapchain.get()});
 
   constexpr size_t kNumFrames = 100;
-  std::array<std::unique_ptr<FrameTimings>, kNumFrames> timings;
+  std::array<std::shared_ptr<FrameTimings>, kNumFrames> timings;
   for (size_t i = 0; i < kNumFrames; ++i) {
     zx::time now(async_now(dispatcher()));
-    timings[i] = MakeTimings(i, now + zx::msec(15), now + zx::msec(10), now);
+    timings[i] = MakeTimings(i);
     timings[i]->RegisterSwapchains(1);
-    DrawAndPresentFrame(swapchain.get(), timings[i]->GetWeakPtr(), 0, hla);
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i].get()]() { return t->finalized(); },
+    DrawAndPresentFrame(swapchain.get(), timings[i], 0, hla);
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); },
                                           /*timeout=*/zx::msec(50)));
   }
   RunLoopUntilIdle();
-  EXPECT_EQ(frame_rendered_call_count(), kNumFrames);
   // Last frame is left up on the display, so look for presentation.
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return frame_presented_call_count() == kNumFrames; },

@@ -21,7 +21,6 @@
 #include "src/ui/scenic/lib/scheduling/frame_stats.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
-#include "src/ui/scenic/lib/utils/sequential_fence_signaller.h"
 
 namespace scheduling {
 
@@ -81,15 +80,11 @@ class DefaultFrameScheduler final : public FrameScheduler {
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
   constexpr static zx::duration kInitialUpdateDuration = zx::msec(1);
 
-  // Public for testing.
-  constexpr static size_t kMaxOutstandingFrames = 2;
-
- protected:
-  void OnFramePresented(const FrameTimings& timings);
-
-  void OnFrameRendered(const FrameTimings& timings);
-
  private:
+  void OnFramePresented(uint64_t frame_number, zx::time render_start_time,
+                        zx::time target_presentation_time,
+                        const FrameRenderer::Timestamps& timestamps);
+
   // Requests a new frame to be drawn, which schedules the next wake up time for rendering. If we've
   // already scheduled a wake up time, it checks if it needs rescheduling and deals with it
   // appropriately.
@@ -142,9 +137,6 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // |present_id|.
   void SetLatchedTimeForPresent2Infos(SchedulingIdPair id_pair, zx::time latched_time);
 
-  // Move all fences before |present_id| to the signaller to be signalled at next OnFrameRendered.
-  void MoveReleaseFencesToSignaller(SchedulingIdPair id_pair, uint64_t frame_number);
-
   // Extracts all presents that should be updated this frame and returns them as a map of SessionIds
   // to the last PresentId that should be updated for that session.
   std::unordered_map<SessionId, PresentId> CollectUpdatesForThisFrame(
@@ -192,9 +184,7 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // Map of registered callbacks for Present2 sessions.
   std::unordered_map<SessionId, OnFramePresentedCallback> present2_callback_map_;
 
-  utils::SequentialFenceSignaller release_fence_signaller_;
-
-  // Set of SessionUpdaters to update. Stored as a weak_ptr: when the updaters become
+  // Set of SessionUpdaters to update. Stored as a weak_ptr. When the updaters become
   // invalid, the weak_ptr is removed from this list.
   std::vector<std::weak_ptr<SessionUpdater>> session_updaters_;
 
@@ -211,11 +201,12 @@ class DefaultFrameScheduler final : public FrameScheduler {
   std::weak_ptr<FrameRenderer> frame_renderer_;
 
   // State.
-  uint64_t frame_number_ = 0;
-  std::vector<std::unique_ptr<FrameTimings>> outstanding_frames_;
+  // Frame number is 1-based so that |last_presented_frame_number_| can remain unsigned.
+  uint64_t frame_number_ = 1;
+  uint64_t last_presented_frame_number_ = 0;
+  bool last_frame_is_presented_ = false;
+  std::deque<zx::time> outstanding_latch_points_;
   bool render_continuously_ = false;
-  bool currently_rendering_ = false;
-  bool render_pending_ = false;
   zx::time wakeup_time_;
   zx::time next_target_presentation_time_;
   std::unique_ptr<FramePredictor> frame_predictor_;

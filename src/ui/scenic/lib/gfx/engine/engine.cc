@@ -5,9 +5,9 @@
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
 #include <lib/trace/event.h>
-#include <lib/zx/time.h>
 
 #include <set>
 #include <string>
@@ -17,6 +17,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
+#include "src/ui/lib/escher/vk/command_buffer.h"
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
@@ -24,8 +25,8 @@
 #include "src/ui/scenic/lib/gfx/resources/has_renderable_content_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
 #include "src/ui/scenic/lib/gfx/resources/protected_memory_visitor.h"
+#include "src/ui/scenic/lib/gfx/swapchain/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
@@ -41,8 +42,6 @@ Engine::Engine(sys::ComponentContext* app_context,
               {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint})))),
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                                    escher()->resource_recycler())),
-      release_fence_signaller_(
-          std::make_unique<escher::ReleaseFenceSignaller>(escher()->command_buffer_sequencer())),
       delegating_frame_scheduler_(
           std::make_shared<scheduling::DelegatingFrameScheduler>(frame_scheduler)),
       scene_graph_(app_context),
@@ -56,13 +55,11 @@ Engine::Engine(sys::ComponentContext* app_context,
 
 Engine::Engine(sys::ComponentContext* app_context,
                const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
-               std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
                escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       image_factory_(escher() ? std::make_unique<escher::ImageFactoryAdapter>(
                                     escher()->gpu_allocator(), escher()->resource_recycler())
                               : nullptr),
-      release_fence_signaller_(std::move(release_fence_signaller)),
       delegating_frame_scheduler_(
           std::make_shared<scheduling::DelegatingFrameScheduler>(frame_scheduler)),
       scene_graph_(app_context),
@@ -140,9 +137,20 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Composit
   };
 }
 
-scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::FrameTimings> timings,
-                                                  zx::time presentation_time) {
-  uint64_t frame_number = timings->frame_number();
+void Engine::RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
+                         zx::time presentation_time) {
+  is_rendering_ = true;
+  // Because this timings object is passed to the compositor, it may outlive this object. So we
+  // capture this weakly, just in case.
+  auto timings = std::make_shared<FrameTimings>(
+      frame_number,
+      /*presented_callback=*/[weak = weak_factory_.GetWeakPtr(),
+                              callback = std::move(callback)](const FrameTimings& timings) {
+        if (weak) {
+          weak->is_rendering_ = false;
+        }
+        callback(timings.GetTimestamps());
+      });
 
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
@@ -178,7 +186,8 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
   }
   if (hlas.empty()) {
     // No compositor has any renderable content.
-    return scheduling::RenderFrameResult::kNoContentToRender;
+    timings->OnFrameSkipped();
+    return;
   }
 
   // Don't render any initial frames if there is no shapenode with a material
@@ -190,7 +199,8 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
       first_frame_ = false;
     } else {
       // No layer has any renderable content.
-      return scheduling::RenderFrameResult::kNoContentToRender;
+      timings->OnFrameSkipped();
+      return;
     }
   }
 
@@ -213,6 +223,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number, false,
                                               escher::CommandBuffer::Type::kGraphics,
                                               uses_protected_memory ? true : false);
+
   frame->DisableLazyPipelineCreation();
 
   bool success = true;
@@ -224,13 +235,13 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
     success &= hla.swapchain->DrawAndPresentFrame(
         timings, i, hla,
         [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()},
-         semaphore_chain{escher_->semaphore_chain()}](
-            zx::time target_presentation_time, const escher::ImagePtr& output_image,
-            const HardwareLayerAssignment::Item hla_item,
+         semaphore_chain{escher_->semaphore_chain()}, presentation_time](
+            const escher::ImagePtr& output_image, const HardwareLayerAssignment::Item hla_item,
             const escher::SemaphorePtr& acquire_semaphore,
             const escher::SemaphorePtr& frame_done_semaphore) {
+          FX_DCHECK(engine_renderer);
           engine_renderer->RenderLayers(
-              frame, target_presentation_time,
+              frame, presentation_time,
               {.output_image = output_image, .output_image_acquire_semaphore = acquire_semaphore},
               hla_item.layers);
 
@@ -256,16 +267,48 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
           }
         });
   }
-  if (!success) {
-    // TODO(fxbug.dev/24297): what is the proper behavior when some swapchains
-    // are displayed and others aren't?  This isn't currently an issue because
-    // there is only one Compositor; see above.
-    FX_DCHECK(hlas.size() == 1);
-    return scheduling::RenderFrameResult::kRenderFailed;
+
+  timings->OnFrameCpuRendered(async::Now(async_get_default_dispatcher()));
+  CleanupEscher();
+}
+
+void Engine::SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> fences) {
+  if (fences.empty()) {
+    return;
   }
 
-  CleanupEscher();
-  return scheduling::RenderFrameResult::kRenderSuccess;
+  // TODO(fxbug.dev/24531): Until this bug is fixed, and we perform pipelining in the default frame
+  // scheduler, we should never hit this case in production. The code is optimized for when
+  // is_rendering_ is false.
+  if (is_rendering_) {
+    auto cmds =
+        escher::CommandBuffer::NewForType(escher_.get(), escher::CommandBuffer::Type::kTransfer,
+                                          /* use_protected_memory */ false);
+    auto semaphore_pair = escher_->semaphore_chain()->TakeLastAndCreateNextSemaphore();
+    cmds->AddWaitSemaphore(std::move(semaphore_pair.semaphore_to_wait),
+                           vk::PipelineStageFlagBits::eVertexInput |
+                               vk::PipelineStageFlagBits::eFragmentShader |
+                               vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                               vk::PipelineStageFlagBits::eTransfer);
+    cmds->AddSignalSemaphore(std::move(semaphore_pair.semaphore_to_signal));
+    for (auto& f : fences) {
+      auto semaphore = escher::Semaphore::New(escher_->vk_device());
+      vk::ImportSemaphoreZirconHandleInfoFUCHSIA info;
+      info.semaphore = semaphore->vk_semaphore();
+      info.handle = f.release();
+      info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA;
+
+      auto result = escher_->vk_device().importSemaphoreZirconHandleFUCHSIA(
+          info, escher_->device()->dispatch_loader());
+      FX_DCHECK(result == vk::Result::eSuccess);
+      cmds->AddSignalSemaphore(std::move(semaphore));
+    }
+    cmds->Submit(/*callback*/ nullptr);
+  } else {
+    for (auto& f : fences) {
+      f.signal(0u, ZX_EVENT_SIGNALED);
+    }
+  }
 }
 
 bool Engine::CheckForRenderableContent(const std::vector<HardwareLayerAssignment>& hlas) {

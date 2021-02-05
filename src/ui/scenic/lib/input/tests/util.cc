@@ -40,7 +40,6 @@ using scenic_impl::Scenic;
 using scenic_impl::display::Display;
 using scenic_impl::gfx::Engine;
 using scenic_impl::gfx::GfxSystem;
-using scenic_impl::gfx::test::ReleaseFenceSignallerForTest;
 using scenic_impl::input::InputSystem;
 using scenic_impl::test::ScenicTest;
 using scheduling::ConstantFramePredictor;
@@ -152,7 +151,6 @@ SessionWrapper InputSystemTest::CreateClient(const std::string& name,
 }
 
 void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
-  auto signaller = std::make_unique<ReleaseFenceSignallerForTest>();
   display_ = std::make_unique<Display>(
       /*id*/ 0, test_display_width_px(), test_display_height_px());
   auto frame_scheduler = std::make_shared<DefaultFrameScheduler>(
@@ -160,7 +158,7 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
       std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   engine_ = std::make_shared<Engine>(context_provider_.context(), frame_scheduler,
-                                     std::move(signaller), escher::EscherWeakPtr());
+                                     escher::EscherWeakPtr());
   frame_scheduler->SetFrameRenderer(engine_);
   auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                /* sysmem */ nullptr,

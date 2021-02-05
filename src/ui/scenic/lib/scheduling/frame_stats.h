@@ -9,21 +9,30 @@
 #include <lib/zx/time.h>
 
 #include <deque>
+#include <functional>
 
 #include "lib/inspect/cpp/inspect.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "third_party/cobalt/src/registry/buckets_config.h"
 
 namespace scheduling {
 
-// Class for managing and reporting frame stats from reported
-// FrameTiming::Timestamps. Used for debug data, i.e. inspect.
+// Class for managing and reporting frame stats from FrameScheduler. Used for debug data, i.e.
+// inspect.
 class FrameStats {
  public:
   FrameStats(inspect::Node inspect_node, std::shared_ptr<cobalt::CobaltLogger> cobalt_logger);
 
-  void RecordFrame(FrameTimings::Timestamps timestamps, zx::duration display_vsync_interval);
+  struct Timestamps {
+    zx::time latch_point_time;
+    zx::time render_start_time;
+    zx::time render_done_time;
+    zx::time target_presentation_time;
+    zx::time actual_presentation_time;
+  };
+
+  void RecordFrame(Timestamps timestamps, zx::duration display_vsync_interval);
 
   // Time interval between each flush is 10 minutes.
   static constexpr zx::duration kCobaltDataCollectionInterval = zx::min(10);
@@ -94,19 +103,14 @@ class FrameStats {
     }
   };
 
-  // TODO(fxbug.dev/24685) Record all frame times to VMO, separate from Inspect.
-  static void FrameTimingsOutputToCsv(const std::deque<const FrameTimings::Timestamps>& timestamps,
-                                      std::ostream* output);
-
   static zx::duration CalculateMeanDuration(
-      const std::deque<const FrameTimings::Timestamps>& timestamps,
-      std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
-      uint32_t percentile);
+      const std::deque<Timestamps>& timestamps,
+      std::function<zx::duration(const Timestamps&)> duration_func, uint32_t percentile);
 
   void AddHistory(const HistoryStats& stats);
-  void RecordDroppedFrame(const FrameTimings::Timestamps timestamps);
-  void RecordDelayedFrame(const FrameTimings::Timestamps timestamps);
-  void RecordOnTimeFrame(const FrameTimings::Timestamps timestamps);
+  void RecordDroppedFrame(const Timestamps& timestamps);
+  void RecordDelayedFrame(const Timestamps& timestamps);
+  void RecordOnTimeFrame(const Timestamps& timestamps);
 
   void ReportStats(inspect::Inspector* insp) const;
 
@@ -130,9 +134,9 @@ class FrameStats {
   uint64_t delayed_frame_count_ = 0;
 
   // Ring buffer of the last kNum*FramesToReport.
-  std::deque<const FrameTimings::Timestamps> frame_times_;
-  std::deque<const FrameTimings::Timestamps> dropped_frames_;
-  std::deque<const FrameTimings::Timestamps> delayed_frames_;
+  std::deque<Timestamps> frame_times_;
+  std::deque<Timestamps> dropped_frames_;
+  std::deque<Timestamps> delayed_frames_;
 
   // Ring buffer of stats for the last kNumMinutesHistory minutes of frame timings.
   std::deque<HistoryStats> history_stats_;

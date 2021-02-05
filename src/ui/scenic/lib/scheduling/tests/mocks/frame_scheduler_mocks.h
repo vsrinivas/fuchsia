@@ -10,7 +10,6 @@
 #include <variant>
 
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
 namespace scheduling {
@@ -160,49 +159,35 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() {}
 
   // |FrameRenderer|
-  RenderFrameResult RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
-                                zx::time presentation_time) override;
+  void RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
+                   zx::time presentation_time) override;
 
-  // Need to call this in order to trigger the OnFramePresented() callback in
-  // FrameScheduler, but is not valid to do until after RenderFrame has returned
-  // to FrameScheduler. Hence this separate method.
-  void EndFrame(size_t frame_index, zx::time time_done);
+  // |FrameRenderer|
+  void SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> events) override;
 
-  // Signal frame |frame_index| that it has been rendered.
-  void SignalFrameRendered(uint64_t frame_number, zx::time time_done);
+  // Signal the next pending frame has been presented (with default timestamp data)
+  void EndFrame();
 
-  // Signal frame |frame_index| that the CPU portion of rendering is done.
-  void SignalFrameCpuRendered(uint64_t frame_number, zx::time time_done);
+  // Signal the next pending frame has been presented (with custom timestamp data)
+  void EndFrame(const Timestamps& timestamps);
 
-  // Signal frame |frame_index| that it has been presented.
-  void SignalFramePresented(uint64_t frame_number, zx::time time_done);
+  // Signal the next pending frame has been dropped.
+  void DropFrame();
 
-  // Signal frame |frame_index| that it has been dropped.
-  void SignalFrameDropped(uint64_t frame_number);
-
-  // Manually set value returned from RenderFrame.
-  void SetRenderFrameReturnValue(RenderFrameResult new_value) {
-    render_frame_return_value_ = new_value;
-  }
-  uint32_t render_frame_call_count() { return render_frame_call_count_; }
-  size_t pending_frames() { return frames_.size(); }
+  size_t GetNumPendingFrames() { return frames_.size(); }
 
  private:
   void CleanUpFrame(uint64_t frame_number);
 
-  RenderFrameResult render_frame_return_value_ = RenderFrameResult::kRenderSuccess;
-  uint32_t render_frame_call_count_ = 0;
-
-  struct Timings {
-    fxl::WeakPtr<FrameTimings> frame_timings;
-    size_t swapchain_index = -1;
-    uint32_t frame_rendered = false;
-    uint32_t frame_cpu_rendered = false;
-    uint32_t frame_presented = false;
+  struct PendingFrame {
+    zx::time start;
+    FramePresentedCallback callback;
+    std::vector<zx::event> fences;
   };
-  std::unordered_map<uint64_t, Timings> frames_;
+  std::deque<PendingFrame> frames_;
+  std::vector<zx::event> pending_fences_;
 
-  uint64_t last_frame_number_ = -1;
+  uint64_t last_frame_number_ = 0;
 };
 
 }  // namespace test

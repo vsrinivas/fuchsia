@@ -15,8 +15,6 @@
 #include <unordered_set>
 #include <variant>
 
-#include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/present2_info.h"
 
@@ -63,19 +61,32 @@ enum RenderFrameResult { kRenderSuccess, kRenderFailed, kNoContentToRender };
 // Interface for rendering frames.
 class FrameRenderer {
  public:
+  // Time value used to signal the time measurement was dropped.
+  static constexpr zx::time kTimeDropped = zx::time(ZX_TIME_INFINITE);
+
+  // The timestamp data that is expected to be delivered after rendering and presenting a frame.
+  // TODO(fxbug.dev/24669): If there are multiple render passes, |render_done_time| is the time
+  // furthest forward in time. Solving 24669 may involve expanding this struct to support multiple
+  // passes in data.
+  struct Timestamps {
+    zx::time render_done_time;
+    zx::time actual_presentation_time;
+  };
+
   virtual ~FrameRenderer() = default;
 
-  // Called when it's time to render a new frame.  The FrameTimings object is used to accumulate
-  // timing for all swapchains that are used as render targets in that frame.
+  // Called when it's time to render a new frame.  It is the responsibility of the renderer to
+  // trigger the callback once all timestamp data is available. The callback must be triggered at
+  // some point, though multiple callbacks can be pending at any point in time.
   //
-  // If RenderFrame() returns true, the delegate is responsible for calling
-  // FrameTimings::OnFrameRendered/Presented/Dropped(). Otherwise, rendering did not occur for some
-  // reason, and the FrameScheduler should not expect to receive any timing information for that
-  // frame.
-  // TODO(fxbug.dev/24297): these return value semantics are not ideal.  See comments in
-  // Engine::RenderFrame() regarding this same issue.
-  virtual RenderFrameResult RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
-                                        zx::time presentation_time) = 0;
+  // Frames must be rendered in the order they are requested, and callbacks must be triggered in the
+  // same order.
+  using FramePresentedCallback = std::function<void(const Timestamps&)>;
+  virtual void RenderFrame(FramePresentedCallback callback, uint64_t frame_number,
+                           zx::time presentation_time) = 0;
+
+  // The FrameRenderer should signal these events when all pending rendering is complete.
+  virtual void SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> events) = 0;
 };
 
 // The FrameScheduler is responsible for scheduling frames to be drawn in response to requests from

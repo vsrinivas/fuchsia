@@ -117,12 +117,10 @@ DisplaySwapchain::~DisplaySwapchain() {
     FrameRecord* record = frame_records_[idx].get();
     if (record && record->frame_timings && !record->frame_timings->finalized()) {
       if (record->render_finished_wait->is_pending()) {
-        // There has not been an OnFrameRendered signal. The wait will be
-        // destroyed when this function returns, and will never trigger the
-        // OnFrameRendered callback. Trigger it here to make the state consistent
-        // in FrameTimings. Record infinite time to signal unknown render time.
+        // There has not been an OnFrameRendered signal. The wait will be destroyed when this
+        // function returns. Record infinite time to signal unknown render time.
         record->frame_timings->OnFrameRendered(record->swapchain_index,
-                                               scheduling::FrameTimings::kTimeDropped);
+                                               scheduling::FrameRenderer::kTimeDropped);
       }
       record->frame_timings->OnFrameDropped(record->swapchain_index);
     }
@@ -226,7 +224,7 @@ void DisplaySwapchain::ResetFrameRecord(std::unique_ptr<FrameRecord>& frame_reco
 }
 
 void DisplaySwapchain::UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_record,
-                                         fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+                                         const std::shared_ptr<FrameTimings>& frame_timings,
                                          size_t swapchain_index) {
   FX_DCHECK(frame_timings);
   FX_CHECK(escher_);
@@ -246,7 +244,7 @@ void DisplaySwapchain::UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_rec
   frame_record->render_finished_wait->Begin(async_get_default_dispatcher());
 }
 
-bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& frame_timings,
                                            size_t swapchain_index,
                                            const HardwareLayerAssignment& hla,
                                            DrawCallback draw_callback) {
@@ -300,8 +298,8 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
                                        : escher::SemaphorePtr();
     // TODO(fxbug.dev/24296): handle more hardware layers: the single image from
     // buffer.escher_image is not enough; we need one for each layer.
-    draw_callback(frame_timings->target_presentation_time(), frame_record->buffer->escher_image,
-                  hla.items[i], escher::SemaphorePtr(), render_finished_escher_semaphore);
+    draw_callback(frame_record->buffer->escher_image, hla.items[i], escher::SemaphorePtr(),
+                  render_finished_escher_semaphore);
   }
 
   // When the image is completely rendered, present it.

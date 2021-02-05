@@ -10,10 +10,6 @@
 
 namespace escher {
 
-namespace test {
-class ReleaseFenceSignallerTest;
-}
-
 namespace impl {
 
 // Listener that can be registered with CommandBufferSequencer.
@@ -46,7 +42,6 @@ class CommandBufferSequencer {
   // Only CommandBufferPool, and unit tests, are allowed to generate and finish
   // sequences.
   friend class CommandBufferPool;
-  friend class ::escher::test::ReleaseFenceSignallerTest;
 
   // Obtain a monotonically-increasing sequence number for a CommandBuffer that
   // is about to be obtained from a CommandBufferPool.

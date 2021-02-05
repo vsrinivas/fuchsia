@@ -17,6 +17,10 @@
 namespace scenic_impl {
 namespace gfx {
 
+namespace test {
+class EngineTest;
+}  // namespace test
+
 class Compositor;
 class SceneGraph;
 class Layer;
@@ -70,13 +74,16 @@ class Compositor : public Resource {
   const uint32_t& layout_rotation() const { return layout_rotation_; }
 
  protected:
+  FRIEND_MAKE_REF_COUNTED(Compositor);
+  friend class scenic_impl::gfx::test::EngineTest;
+
   Compositor(Session* session, SessionId session_id, ResourceId id,
              const ResourceTypeInfo& type_info, SceneGraphWeakPtr scene_graph,
              std::unique_ptr<Swapchain> swapchain);
 
  private:
-  SceneGraphWeakPtr scene_graph_;
-  std::unique_ptr<Swapchain> swapchain_;
+  const SceneGraphWeakPtr scene_graph_;
+  const std::unique_ptr<Swapchain> swapchain_;
   LayerStackPtr layer_stack_;
 
   // Rotation in degrees used for screenshotting.

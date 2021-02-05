@@ -46,7 +46,6 @@ source_set("frame_scheduler") {
   public_deps = [
     ":id",
     ":present2_info",
-    ":timings",
     ":vsync_timing",
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//third_party/cobalt/src/registry:buckets_config",
@@ -65,19 +64,6 @@ source_set("vsync_timing") {
   deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("timings") {
-  sources = [
-    "frame_timings.cc",
-    "frame_timings.h",
-  ]
-  public_deps = [
-    "//src/lib/fxl",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

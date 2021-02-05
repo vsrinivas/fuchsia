@@ -115,7 +115,6 @@ class HitTestTest : public gtest::TestLoopFixture {
     gtest::TestLoopFixture::SetUp();
     engine_ = std::make_unique<Engine>(context_provider_.context(),
                                        /* frame_scheduler */ nullptr,
-                                       /* release_fence_signaller */ nullptr,
                                        /* escher */ nullptr);
   }
 
