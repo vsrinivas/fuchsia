@@ -13,6 +13,8 @@
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/media/codec_impl/codec_vmo_range.h>
 #include <lib/media/codec_impl/log.h>
+#include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/variant.h>
 #include <lib/syslog/cpp/macros.h>
 #include <threads.h>
 
@@ -3111,17 +3113,17 @@ bool CodecImpl::IsDecryptor() const { return params_.index() == 2; }
 
 const fuchsia::mediacodec::CreateDecoder_Params& CodecImpl::decoder_params() const {
   ZX_DEBUG_ASSERT(IsDecoder());
-  return fit::get<fuchsia::mediacodec::CreateDecoder_Params>(params_);
+  return cpp17::get<fuchsia::mediacodec::CreateDecoder_Params>(params_);
 }
 
 const fuchsia::mediacodec::CreateEncoder_Params& CodecImpl::encoder_params() const {
   ZX_DEBUG_ASSERT(IsEncoder());
-  return fit::get<fuchsia::mediacodec::CreateEncoder_Params>(params_);
+  return cpp17::get<fuchsia::mediacodec::CreateEncoder_Params>(params_);
 }
 
 const fuchsia::media::drm::DecryptorParams& CodecImpl::decryptor_params() const {
   ZX_DEBUG_ASSERT(IsDecryptor());
-  return fit::get<fuchsia::media::drm::DecryptorParams>(params_);
+  return cpp17::get<fuchsia::media::drm::DecryptorParams>(params_);
 }
 
 void CodecImpl::LogEvent(
