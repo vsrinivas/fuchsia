@@ -18,7 +18,7 @@ func TestAdvertFrequency(t *testing.T) {
 	_ = bootservertest.StartQemu(t, []string{"netsvc.all-features=true", "netsvc.netboot=true"}, "full")
 
 	// Get the node ipv6 address
-	out := bootservertest.CmdWithOutput(t, bootservertest.ToolPath("netls"))
+	out := bootservertest.CmdWithOutput(t, bootservertest.ToolPath(t, "netls"))
 	// Extract the ipv6 from the netls output
 	regexString := bootservertest.DefaultNodename + ` \((.*)/(.*)\)`
 	match := regexp.MustCompile(regexString).FindSubmatch(out)

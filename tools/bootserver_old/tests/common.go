@@ -46,22 +46,12 @@ var TestDataDir = flag.String("test_data_dir", testDataDir(), "Path to test_data
 const DefaultNodename = "swarm-donut-petri-acre"
 
 // ToolPath returns the full path to a tool.
-func ToolPath(name string) string {
+func ToolPath(t *testing.T, name string) string {
 	p, err := filepath.Abs(filepath.Join(*TestDataDir, "bootserver_tools", name))
 	if err != nil {
-		// Can't happen.
-		panic(err)
+		t.Fatal(err)
 	}
 	return p
-}
-
-// FirmwarePath returns the full path to a valid firmware.
-//
-// QEMU doesn't know how to write firmware so the contents don't matter, it
-// just has to be a real file. It does get sent over the network though so use
-// a small file to avoid long transfers.
-func FirmwarePath() string {
-	return ToolPath("fake_firmware")
 }
 
 // CmdWithOutput returns a command and returns stdout.
@@ -145,7 +135,7 @@ func CmdSearchLog(t *testing.T, logPatterns []LogMatch, name string, arg ...stri
 // AttemptPaveNoBind attempts to initiate a pave.
 func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 	// Get the node ipv6 address.
-	out := CmdWithOutput(t, ToolPath("netls"))
+	out := CmdWithOutput(t, ToolPath(t, "netls"))
 	// Extract the ipv6 from the netls output
 	regexString := DefaultNodename + ` \((?P<ipv6>.*)\)`
 	match := regexp.MustCompile(regexString).FindStringSubmatch(string(out))
@@ -175,7 +165,7 @@ func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 
 	CmdSearchLog(
 		t, logPattern,
-		ToolPath("bootserver"), "--fvm", "\"dummy.blk\"",
+		ToolPath(t, "bootserver"), "--fvm", "\"dummy.blk\"",
 		"--no-bind", "-a", match[1], "-1", "--fail-fast")
 }
 

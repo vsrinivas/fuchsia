@@ -23,8 +23,11 @@ func TestWriteFirmwareWithType(t *testing.T) {
 
 	bootservertest.CmdSearchLog(
 		t, logPattern,
-		bootservertest.ToolPath("bootserver"), "-n", bootservertest.DefaultNodename,
-		"--firmware-foo", bootservertest.FirmwarePath(), "-1", "--fail-fast")
+		bootservertest.ToolPath(t, "bootserver"),
+		"-n", bootservertest.DefaultNodename,
+		"--firmware-foo", bootservertest.ToolPath(t, "fake_firmware"),
+		"-1",
+		"--fail-fast")
 
 	instance.WaitForLogMessage("netsvc: Running FIRMWARE Paver (firmware type 'foo')")
 }

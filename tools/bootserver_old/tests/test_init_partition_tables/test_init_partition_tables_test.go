@@ -23,6 +23,9 @@ func TestInitPartitionTables(t *testing.T) {
 
 	bootservertest.CmdSearchLog(
 		t, logPattern,
-		bootservertest.ToolPath("bootserver"), "-n", bootservertest.DefaultNodename,
-		"--init-partition-tables", "/dev/class/block/000", "-1", "--fail-fast")
+		bootservertest.ToolPath(t, "bootserver"),
+		"-n", bootservertest.DefaultNodename,
+		"--init-partition-tables", "/dev/class/block/000",
+		"-1",
+		"--fail-fast")
 }
