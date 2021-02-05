@@ -1,0 +1,9 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "driver/packaged_driver.so",
+    },
+    use: [
+        { runner: "driver" },
+    ],
+}
