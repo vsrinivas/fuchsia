@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1418
+From //build/config/BUILDCONFIG.gn:1419
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -569,7 +569,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:496
+From //build/config/BUILDCONFIG.gn:497
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -732,13 +732,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1f28ee77ef27e462864a19bd899853cc54f9dcbf/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/57c336371cc001020633e178651c8b8a97992075/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1f28ee77ef27e462864a19bd899853cc54f9dcbf/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/57c336371cc001020633e178651c8b8a97992075/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1077,7 +1077,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1197
+From //build/config/BUILDCONFIG.gn:1198
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1771,7 +1771,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1065
+From //build/config/BUILDCONFIG.gn:1066
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2109,13 +2109,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/1f28ee77ef27e462864a19bd899853cc54f9dcbf/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/57c336371cc001020633e178651c8b8a97992075/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/1f28ee77ef27e462864a19bd899853cc54f9dcbf/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/57c336371cc001020633e178651c8b8a97992075/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2754,6 +2754,14 @@ ignore warnings.
 
 From //build/rust/config.gni:54
 
+### rust_incremental
+Enable incremental rust compilation. Takes a path to the directory to use
+as the cache.
+
+**Current value (from the default):** `""`
+
+From //build/config/BUILD.gn:41
+
 ### rust_lto
 Sets the default LTO type for rustc bulids.
 
@@ -2854,7 +2862,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `false`
 
-From //src/ui/scenic/BUILD.gn:157
+From //src/ui/scenic/BUILD.gn:156
 
 ### scenic_ignore_vsync
 
@@ -2990,7 +2998,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1408
+From //build/config/BUILDCONFIG.gn:1409
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2999,7 +3007,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1413
+From //build/config/BUILDCONFIG.gn:1414
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3031,7 +3039,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1243
+From //build/config/BUILDCONFIG.gn:1244
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3301,7 +3309,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1227
+From //build/config/BUILDCONFIG.gn:1228
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
