@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include <lib/stdcompat/variant.h>
 #include <map>
 #include <memory>
 #include <vector>
@@ -74,10 +75,10 @@ struct MEDIA_EXPORT H264NALU {
   int nal_ref_idc;
   int nal_unit_type;
 
-  using NaluHeaderVariant = fit::variant<fit::monostate,
-                                         std::unique_ptr<H264SPS>,
-                                         std::unique_ptr<H264PPS>,
-                                         std::unique_ptr<H264SliceHeader>>;
+  using NaluHeaderVariant = cpp17::variant<cpp17::monostate,
+                                           std::unique_ptr<H264SPS>,
+                                           std::unique_ptr<H264PPS>,
+                                           std::unique_ptr<H264SliceHeader>>;
   // If using QueuePreparsedNalu(), this field carries the pre-parsed header.
   // Only SPS, PPS, and SliceHeader are supported.
   NaluHeaderVariant preparsed_header;
