@@ -13,6 +13,7 @@ use crate::{
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, DurationExt, Timer};
+use fuchsia_component::{self as component};
 use fuchsia_framebuffer::FrameBuffer;
 use fuchsia_zircon::{self as zx, Duration, DurationNum, Time};
 use futures::{
@@ -370,8 +371,32 @@ impl App {
     }
 
     fn start_services(self: &mut App) -> Result<(), Error> {
+        let mut fs = component::server::ServiceFs::new_local();
+
+        fuchsia_inspect::component::inspector()
+            .serve(&mut fs)
+            .unwrap_or_else(|e| println!("Unable to start inspect support: {}", e));
+
+        self.strategy.start_services(self.sender.clone(), &mut fs)?;
+
         let outgoing_services_names = self.assistant.outgoing_services_names();
-        self.strategy.start_services(outgoing_services_names, self.sender.clone())?;
+        let mut public = fs.dir("svc");
+        for name in outgoing_services_names {
+            let sender = self.sender.clone();
+            public.add_service_at(name, move |channel| {
+                sender
+                    .unbounded_send(MessageInternal::ServiceConnection(channel, name))
+                    .expect("unbounded_send");
+                None
+            });
+        }
+
+        match fs.take_and_serve_directory_handle() {
+            Err(e) => eprintln!("Error publishing services: {:#}", e),
+            Ok(_) => (),
+        }
+
+        fasync::Task::local(fs.collect()).detach();
         Ok(())
     }
 

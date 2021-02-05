@@ -21,9 +21,9 @@ use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_scenic::{ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync};
-use fuchsia_component::{self as component};
+use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_scenic::{Session, SessionPtr, ViewRefPair, ViewTokenPair};
-use futures::{channel::mpsc::UnboundedSender, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{channel::mpsc::UnboundedSender, TryFutureExt, TryStreamExt};
 
 pub(crate) struct ScenicAppStrategy {
     pub(crate) scenic: ScenicProxy,
@@ -146,12 +146,11 @@ impl AppStrategy for ScenicAppStrategy {
         return true;
     }
 
-    fn start_services(
+    fn start_services<'a, 'b>(
         &self,
-        outgoing_services_names: Vec<&'static str>,
         app_sender: UnboundedSender<MessageInternal>,
+        fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Result<(), Error> {
-        let mut fs = component::server::ServiceFs::new_local();
         let mut public = fs.dir("svc");
 
         let sender = app_sender.clone();
@@ -191,23 +190,6 @@ impl AppStrategy for ScenicAppStrategy {
             .detach()
         };
         public.add_fidl_service(f);
-
-        for name in outgoing_services_names {
-            let sender = app_sender.clone();
-            public.add_service_at(name, move |channel| {
-                sender
-                    .unbounded_send(MessageInternal::ServiceConnection(channel, name))
-                    .expect("unbounded_send");
-                None
-            });
-        }
-
-        match fs.take_and_serve_directory_handle() {
-            Err(e) => eprintln!("Error publishing services: {:#}", e),
-            Ok(_) => (),
-        }
-
-        fasync::Task::local(fs.collect()).detach();
 
         Ok(())
     }

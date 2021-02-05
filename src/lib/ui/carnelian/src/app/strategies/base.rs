@@ -21,7 +21,10 @@ use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_scenic::ScenicMarker;
 use fidl_fuchsia_ui_scenic::ScenicProxy;
 use fuchsia_async::{self as fasync};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::{
+    client::connect_to_service,
+    server::{ServiceFs, ServiceObjLocal},
+};
 use fuchsia_framebuffer::{FrameBuffer, FrameUsage, VSyncMessage};
 use fuchsia_zircon::{Duration, Time};
 use futures::{
@@ -47,10 +50,10 @@ pub(crate) trait AppStrategy {
     fn create_view_for_testing(&self, _: &UnboundedSender<MessageInternal>) -> Result<(), Error> {
         Ok(())
     }
-    fn start_services(
+    fn start_services<'a, 'b>(
         &self,
-        _outgoing_services_names: Vec<&'static str>,
         _app_sender: UnboundedSender<MessageInternal>,
+        _fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Result<(), Error> {
         Ok(())
     }
