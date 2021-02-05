@@ -468,7 +468,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 
 	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing_sl4f".
 	repoName := "host_target_testing_sl4f"
-	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, false)
+	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, true)
 	if err != nil {
 		return nil, fmt.Errorf("error serving repo to device: %w", err)
 	}
@@ -479,7 +479,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 		return nil, fmt.Errorf("error resolving device host: %w", err)
 	}
 
-	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(deviceHostname, "80"), repoName)
+	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(deviceHostname, "80"), "fuchsia.com")
 	if err != nil {
 		return nil, fmt.Errorf("error creating sl4f client: %w", err)
 	}
