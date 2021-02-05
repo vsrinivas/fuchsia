@@ -205,6 +205,18 @@ constexpr std::enable_if_t<is_bit_type<T>::value, T> bit_floor(T value) {
   return static_cast<T>(1) << (bit_width(value) - 1);
 }
 
+template <unsigned little, unsigned big>
+constexpr unsigned native_endianess() {
+  auto curr = __BYTE_ORDER__;
+  if (curr == __ORDER_LITTLE_ENDIAN__) {
+    return little;
+  }
+  if (curr == __ORDER_BIG_ENDIAN__) {
+    return big;
+  }
+  return 0x404;
+}
+
 }  // namespace internal
 }  // namespace cpp20
 

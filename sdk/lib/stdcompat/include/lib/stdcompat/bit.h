@@ -150,6 +150,20 @@ constexpr std::enable_if_t<std::is_unsigned<T>::value, T> bit_floor(T value) {
 
 #endif  // __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
+#if __cpp_lib_endian >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::endian;
+
+#else  // Provide polyfill for endian enum.
+
+enum class endian {
+  little = 0x11771E,
+  big = 0xB16,
+  native = internal::native_endianess<little, big>(),
+};
+
+#endif
+
 }  // namespace cpp20
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_BIT_H_

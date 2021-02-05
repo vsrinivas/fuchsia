@@ -651,6 +651,7 @@ constexpr void CheckIntPow2Alias() {
   static_assert(&std::has_single_bit<T> == &cpp20::has_single_bit<T>);
   static_assert(&std::width<T> == &cpp20::width<T>);
   static_assert(&std::bit_ceil<T> == &cpp20::bit_ceil<T>);
+  static_assert(&std::bit_floor<T> == &cpp20::bit_floor<T>);
 }
 
 TEST(IntPow2Test, IsAliasForStdIntPow2IfAvailable) {
@@ -677,5 +678,29 @@ TEST(IntPow2Test, IsAliasForStdIntPow2IfAvailable) {
 }
 
 #endif  // __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+TEST(EndianTest, CheckDefined) {
+  static_assert(cpp20::endian::little != cpp20::endian::big,
+                "endian::little and endian::big must have different value.");
+  static_assert(
+      cpp20::endian::native == cpp20::endian::little || cpp20::endian::native == cpp20::endian::big,
+      "Native platform should have a known endianess.");
+}
+
+#if defined(__Fuchsia__)
+TEST(EndianTest, FuchsiaIsLittleEndian) {
+  static_assert(cpp20::endian::native == cpp20::endian::little,
+                "endian::native should be endian::little in Fuchsia.");
+}
+#endif
+
+#if __cpp_lib_endian >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+TEST(EndianTest, IsAliasOfStdWhenAvailable) {
+  static_assert(std::is_same<cpp20::endian, std::endian>::value,
+                "cpp20::endian should be an alias of std::endian when provided.");
+}
+
+#endif
 
 }  // namespace
