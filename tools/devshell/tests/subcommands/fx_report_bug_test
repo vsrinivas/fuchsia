@@ -1,0 +1,156 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of `fx report-bug`.
+
+BT_LINKED_DEPS=(
+)
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/report-bug"
+  "tools/devshell/contrib/lint"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
+)
+
+BT_MOCKED_TOOLS=(
+)
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+
+  # source "${BT_TEMP_DIR}/tools/devshell/report-bug"
+  # Needed?
+  # if [[ "${FUCHSIA_DIR}" == "" ]]; then
+  #   FUCHSIA_DIR="${BT_TEMP_DIR}"
+  #   source "${FUCHSIA_DIR}/tools/devshell/report-bug"
+  # fi
+}
+
+# Ensure that "fx report-bug --help" and friends run and emit help.
+TEST_report_bug_help() {
+  BT_EXPECT "${fx}" report-bug --help &>_out1
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING _out1 "Report an issue on an fx <command>."
+  BT_EXPECT "${fx}" report-bug -h &>_out2
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING _out2 "Report an issue on an fx <command>."
+  BT_EXPECT "${fx}" report-bug &>_out3
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING _out3 "Report an issue on an fx <command>."
+}
+
+TEST_nothing_in_devshell_owners() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+# nothing here
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "Tools%3efx"  # Default component.
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc=" # no per-file, so empty.
+}
+
+TEST_per_file_component_in_devshell_owners() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+# per-file-COMPONENT report-bug=foo
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=foo"
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc="
+}
+
+TEST_per_file_owners_in_devshell_owners() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=foo
+# per-file-COMPONENT report-bug=bar
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=foo"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=bar"
+}
+
+TEST_both_in_devshell_owners() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=foo
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=foo"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=Tools%3efx" # Default component.
+}
+
+TEST_contrib_commands() {
+  local out="_fx_report_bug_output"
+  cat >"${BT_TEMP_DIR}/tools/devshell/contrib/OWNERS" <<EOF
+# nothing here
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+# per-file-COMPONENT lint=foo3
+EOF
+  BT_EXPECT "${fx}" report-bug lint &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=foo3" # Picked from parent dir.
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc="     # no per-file, so empty.
+}
+
+TEST_contrib_commands2() {
+  local out="_fx_report_bug_output"
+  cat >"${BT_TEMP_DIR}/tools/devshell/contrib/OWNERS" <<EOF
+# nothing here
+EOF
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file lint=bar
+# per-file-COMPONENT lint=foo3
+EOF
+  BT_EXPECT "${fx}" report-bug lint &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=foo3" # Picked from parent dir.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=bar"          # Picked from parent dir.
+}
+
+TEST_multiple_lines() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file report-bug=foo
+per-file report-bug=bar                     # An additional comment.
+# per-file-COMPONENT report-bug=baz         # An additional comment.
+# per-file-COMPONENT report-bug=bop         # An additional comment.
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=bar%2cfoo" # Note: alphabetized.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=baz%2cbop"
+}
+
+TEST_multiple_lines_and_spacings() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+per-file    report-bug=a
+per-file report-bug=b
+per-file report-bug =c ,e,d
+per-file report-bug =  h , g , f ,  # comma and comment to be stripped
+#per-file-COMPONENT report-bug=z,y
+#    per-file-COMPONENT report-bug=u , w, v,   x
+#  per-file-COMPONENT report-bug   =  s,s,t   ,t ,t  # duplicates on same line.
+#  per-file-COMPONENT report-bug   =  s,s,t   ,t ,t  # duplicate line, mostly.
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "cc=a%2cb%2cc%2cd%2ce%2cf%2cg%2ch"         # a,b,c,d,e,f,g,h
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=s%2ct%2cu%2cv%2cw%2cx%2cy%2cz" # s,t,u,v,w,x,y,z
+}
+
+TEST_OWNERS_component() {
+  cat >"${BT_TEMP_DIR}/tools/devshell/OWNERS" <<EOF
+#COMPONENT: s,s,t   ,t ,t  # duplicates on same line.
+# COMPONENT: s,z,v,x
+#   COMPONENT :      w, u, y, z
+EOF
+  local out="_fx_report_bug_output"
+  BT_EXPECT "${fx}" report-bug report-bug &>${out}
+  BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING "${out}" "cc="                              # no per-file, so empty.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "components=s%2ct%2cu%2cv%2cw%2cx%2cy%2cz" # s,t,u,v,w,x,y,z
+}
+
+BT_RUN_TESTS "$@"

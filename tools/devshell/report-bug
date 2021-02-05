@@ -1,0 +1,247 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software delivery
+### report a bug for an fx command
+## usage:
+##        fx report-bug <command> [<args>]
+##          Report an issue on an fx <command>.
+##          Optionally, <args> are the arguments passed to the fx <command> that
+##          caused the issue being reported.
+##
+##        fx report-bug [-h | --help]
+##          Provide this help.
+##
+## This tool will help file a bug on bugs.fuchsia.dev for the given command. It
+## parses the COMPONENT and OWNERS lines of the command's metadata or, if those
+## aren't present, the `per-file` and `# COMPONENT:` lines of their OWNERS
+## files. This parsing allows `report-bug` to specify which bugs.fuchsia.dev
+## component the bug should be filed in and who should be added to the "Cc:"
+## field.
+##
+## `fx report-bug` will print out a URL that can be pasted into a browser to
+## create a bug with the appropriate fields pre-filled. Just add the details
+## and submit it.
+##
+## Be sure to include the <args> so the the bug report can show the exact
+## command invocation that exhibited the reported issue.
+
+set -e
+
+# Globals
+readonly DEFAULT_COMPONENT="Tools>fx"
+
+# shellcheck source=/dev/null
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+# Look for "<token> <command> = <address> [, <address>]*" lines in OWNERS files
+# and return the addresses. The token is a regular expression expected at the
+# start of a line. Example tokens include "per-file" and
+# "#[[:space:]]*per-file-COMPONENT".
+function parse_owners_file_for_per_file() {
+  local file=$1
+  local token=$2
+  local cmd_name=$3
+
+  # Note that there can be multiple per-file entries for a command. The sequence
+  # below will include and combine them.
+  grep -E "^${token}[ \:]+" "${file}" | # Find lines with the token followed by a space or colon.
+    grep -E "[, ]+${cmd_name}[, =]+" |  # Find the command as a whole word only.
+    grep -E "${cmd_name}.*=" |          # Only lines with the cmd *followed* by =.
+    cut -d"=" -f2 |                     # Use only the part after the =.
+    cut -d"#" -f1 |                     # Strip any additional comments.
+    tr -d ' ' |                         # Remove spaces.
+    tr ',' '\n' |                       # Split into separate lines.
+    xargs -n 1 |                        # Trim whitespace at beginning and end.
+    sort | uniq |                       # Remove duplicates.
+    paste -sd "," -                     # Recombine into a comma-separated list.
+}
+
+# Look for "# COMPONENT: <component> [, <component>]*" lines in OWNERS files and
+# return the components.
+function parse_owners_file_for_COMPONENTS() {
+  local file=$1
+
+  # Note that there could be multiple entries. The sequence below will include
+  # and combine them.
+  grep -E "^#[[:space:]]*COMPONENT[ \:]+" "${file}" | # Find lines with the token followed by a space or colon.
+    cut -d":" -f2 |                                   # Use only the part after the :.
+    cut -d"#" -f1 |                                   # Strip any additional comments.
+    tr -d ' ' |                                       # Remove spaces.
+    tr ',' '\n' |                                     # Split into separate lines.
+    xargs -n 1 |                                      # Trim whitespace at beginning and end.
+    sort | uniq |                                     # Remove duplicates.
+    paste -sd "," -                                   # Recombine into a comma-separated list.
+}
+
+rawurlencode() {
+  local string=$1
+  local strlen=${#string}
+  local encoded=""
+  local pos c o
+
+  for ((pos = 0; pos < strlen; pos++)); do
+    c=${string:$pos:1}
+    case "$c" in [-_.~a-zA-Z0-9]) o="${c}" ;;
+    *) printf -v o '%%%02x' "'$c" ;;
+    esac
+    encoded+="${o}"
+  done
+  echo "${encoded}"
+}
+
+function file_bug() {
+  local cmd_name=$1
+  local cmd_args=$2
+  local component=$3
+  local owners=$4 # comma-separated string
+
+  local base_url="https://bugs.fuchsia.dev/p/fuchsia/issues/entry"
+
+  local summary_escd
+  summary_escd=$(rawurlencode "[fx ${cmd_name}] one-line summary")
+
+  local description="The following issue was found with the \`fx ${cmd_name}\` command"
+
+  if [[ -n "${cmd_args}" ]]; then
+    description="${description} when run as follows:
+
+    $ fx ${cmd_name} ${cmd_args}"
+  else
+    description="${description}."
+  fi
+
+  description="${description}
+
+Steps to complete this bug report:
+  1. Correct the one-line summary above.
+  2. Describe the issue.
+  3. Provide the steps to reproduce the issue.
+
+[This bug report was generated using \`fx report-bug <cmd> <args>\` and
+modified by the reporter. If you are listed in the initial Cc: list,
+please add or update the \`per-file-COMPONENT\` line in the OWNERS file
+to ensure bugs are filed to the correct component.]
+"
+  description_escd=$(rawurlencode "${description}")
+
+  local url
+  url="${base_url}?summary=${summary_escd}&description=${description_escd}"
+
+  if [[ -n "$component" ]]; then
+    url="${url}&components=$(rawurlencode "$component")"
+  fi
+
+  # Put the file owners in the "Cc:" field.
+  if [[ -n "$owners" ]]; then
+    url="${url}&cc=$(rawurlencode "$owners")"
+  fi
+
+  fx-info "Use the following URL to report your issue. [Hint: Try control-clicking or command-clicking to make the URL clickable.]"
+  fx-info "${url}"
+}
+
+# Find a bugs.fuchsia.dev component or command owners in a given OWNERS file.
+# Return 0 if found else 1 if the search should continue.
+function check_an_owners_file() {
+  local cmd_name=$1
+  local cmd_args=$2
+  local cmd_path=$3
+
+  local f
+  f="${parent}/OWNERS"
+
+  if [[ ! -f "${f}" ]]; then
+    return 1
+  fi
+
+  echo "looking for a component and owners in ${f}"
+
+  # Look for a `# COMPONENT: <string>` line in the OWNERS file.
+  local component_in_owners_file
+  component_in_owners_file=$(parse_owners_file_for_COMPONENTS "${f}")
+  [[ -n "${component_in_owners_file}" ]] && echo "found a component line: ${component_in_owners_file}"
+
+  # Look for a per-file components line.
+  per_file_component=$(parse_owners_file_for_per_file "${f}" "#[[:space:]]*per-file-COMPONENT" "${cmd_name}")
+  [[ -n "${per_file_component}" ]] && echo "found a per_file components: ${per_file_component}"
+
+  # Look for a `per-file` owners line.
+  owners=$(parse_owners_file_for_per_file "${f}" "per-file" "${cmd_name}")
+  [[ -n "${owners}" ]] && echo "found a per-file owners: ${owners}"
+
+  # If nothing here, then keep searching.
+  if [[ -z "${component_in_owners_file}" ]] && [[ -z "${per_file_component}" ]] && [[ -z "${owners}" ]]; then
+    return 1
+  fi
+
+  # Found enough to file a bug. As the component may have come from several
+  # sources, the preferred order is:
+  # per_file_component > component_in_owners_file > DEFAULT_COMPONENT.
+  local component="${per_file_component:-${component_in_owners_file}}"
+  component="${component:-${DEFAULT_COMPONENT}}"
+
+  file_bug "${cmd_name}" "${cmd_args}" "${component}" "${owners}"
+
+  return 0
+}
+
+# Climb the command's filepath, checking OWNERS files, looking for "per-file"
+# owners or COMPONENT lines. File a bug when either is found.
+function parse_owners_files() {
+  local cmd_name=$1
+  local cmd_args=$2
+  local cmd_path=$3
+
+  local parent
+  parent="${cmd_path%/*}"
+  while [[ -n "${parent}" ]] && [[ "${parent}" != "${FUCHSIA_DIR}" ]]; do
+    if check_an_owners_file "${cmd_name}" "${cmd_args}" "${cmd_path}" "${component}"; then
+      return # Success.
+    fi
+    parent="${parent%/*}"
+  done
+
+  # Nothing found; file against the default component.
+  file_bug "${cmd_name}" "${cmd_args}" "${DEFAULT_COMPONENT}"
+}
+
+function analyze_command_and_report_issue() {
+  local cmd_name=$1
+  local cmd_args=$2
+
+  local cmd_path
+  cmd_path="$(commands "${cmd_name}")"
+  if [[ -z "${cmd_path}" ]]; then
+    fx-error "cannot find command: ${cmd_name}"
+    exit 1
+  fi
+
+  parse_owners_files "${cmd_name}" "${cmd_args}" "${cmd_path}"
+}
+
+function main() {
+  case $1 in
+  -h | --help | "")
+    fx-command-help
+    exit 0
+    ;;
+  *)
+    local cmd_name=$1
+    shift
+    local cmd_args="$*"
+    ;;
+  esac
+
+  if [[ -z "${cmd_name}" ]]; then
+    fx-error "error parsing command name"
+    exit 1
+  fi
+
+  analyze_command_and_report_issue "${cmd_name}" "${cmd_args}"
+}
+
+main "$@"

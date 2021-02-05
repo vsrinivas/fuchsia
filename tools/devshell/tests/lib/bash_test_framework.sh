@@ -232,7 +232,7 @@
 #   BT_RUN_TESTS "$@"
 #---------------------------------------------------------------------------------------------------
 
-declare -r -i MAX_ERROR_STATUS=255  # 0-255 is the range of values available for exit codes
+declare -r -i MAX_ERROR_STATUS=255 # 0-255 is the range of values available for exit codes
 
 # PRIVATE FUNCTIONS AND VARIABLES
 #
@@ -319,15 +319,17 @@ btf::function_exists BT_TEAR_DOWN || BT_TEAR_DOWN() { :; }
 btf::stderr() {
   local newline=true
   if [[ "$1" == "-n" ]]; then
-    newline=false; shift
+    newline=false
+    shift
   fi
-  local format_string="$1"; shift
-  >&2 printf "${format_string}" "$@"
+  local format_string="$1"
+  shift
+  printf >&2 "${format_string}" "$@"
   if ! [[ "${format_string}" =~ % ]]; then
-    >&2 printf " %s" "$@"
+    printf >&2 " %s" "$@"
   fi
   if ${newline}; then
-    >&2 printf "\n"
+    printf >&2 "\n"
   fi
 }
 
@@ -348,11 +350,15 @@ btf::stderr() {
 btf::_print_with_style() {
   local flags=()
   while [[ "$1" == -* ]]; do
-    flags+=( "$1" ); shift
+    flags+=("$1")
+    shift
   done
-  local ansi_style="$1"; shift
-  local prefix="$1"; shift
-  local format_string="$1"; shift
+  local ansi_style="$1"
+  shift
+  local prefix="$1"
+  shift
+  local format_string="$1"
+  shift
   btf::stderr "${flags[@]}" "${ansi_style}${prefix}${format_string}${_ANSI_CLEAR}" "$@"
 }
 
@@ -372,14 +378,15 @@ btf::_print_with_style() {
 btf::error() {
   local flags=()
   while [[ "$1" == -* ]]; do
-    flags+=( "$1" ); shift
+    flags+=("$1")
+    shift
   done
   local offset=0
-  while [[ "${FUNCNAME[$((offset+1))]}" == "btf::"* ]]; do
+  while [[ "${FUNCNAME[$((offset + 1))]}" == "btf::"* ]]; do
     : $((offset++))
   done
-  local source_file="${BASH_SOURCE[$((1+offset))]#$_BTF_DEFAULT_ROOT_DIR/}"
-  local source_line=${BASH_LINENO[$((0+offset))]}
+  local source_file="${BASH_SOURCE[$((1 + offset))]#$_BTF_DEFAULT_ROOT_DIR/}"
+  local source_line=${BASH_LINENO[$((0 + offset))]}
   btf::_print_with_style "${flags[@]}" "${_ANSI_BRIGHT_RED}" \
     "ERROR: ${source_file}:${source_line}: " "$@"
 }
@@ -395,8 +402,9 @@ btf::error() {
 #   Writes the formatted message to stderr, possibly with ANSI terminal escapes.
 #######################################
 btf::abort() {
-  local -i status=$1; shift
-  if (( ${status} == 0 )); then
+  local -i status=$1
+  shift
+  if ((${status} == 0)); then
     btf::stderr "$@"
   else
     btf::error "$@"
@@ -419,7 +427,8 @@ btf::abort() {
 btf::failed() {
   local flags=()
   while [[ "$1" == -* ]]; do
-    flags+=( "$1" ); shift
+    flags+=("$1")
+    shift
   done
   btf::_print_with_style "${flags[@]}" "${_ANSI_BRIGHT_RED}" "FAILED: " "$@"
 }
@@ -439,7 +448,8 @@ btf::failed() {
 btf::success() {
   local flags=()
   while [[ "$1" == -* ]]; do
-    flags+=( "$1" ); shift
+    flags+=("$1")
+    shift
   done
   btf::_print_with_style "${flags[@]}" "${_ANSI_BRIGHT_GREEN}" "" "$@"
 }
@@ -493,9 +503,12 @@ btf::_assert_failed() {
 #   The given status parameter value.
 #######################################
 btf::_fail() {
-  local -i status=$1; shift
-  local default_message="$1"; shift
-  local format_string="$1"; shift
+  local -i status=$1
+  shift
+  local default_message="$1"
+  shift
+  local format_string="$1"
+  shift
 
   if [[ "${format_string}" == "" ]]; then
     format_string="${default_message}"
@@ -503,14 +516,14 @@ btf::_fail() {
 
   local func_offset=0
   local source_offset=0
-  if [[ "${FUNCNAME[$((3+_BTF_EVAL_OFFSET))]}" != "btf::_run_isolated_test" ]]; then
-    : $(( func_offset++ ))
+  if [[ "${FUNCNAME[$((3 + _BTF_EVAL_OFFSET))]}" != "btf::_run_isolated_test" ]]; then
+    : $((func_offset++))
   fi
-  source_offset=$(( func_offset + _BTF_EVAL_OFFSET ))
-  local called_function="${FUNCNAME[$((1+func_offset))]}"
-  local test_file_loc="${BASH_SOURCE[$((2+source_offset))]#$BT_TEMP_DIR/}:${BASH_LINENO[$((1+source_offset))]}"
+  source_offset=$((func_offset + _BTF_EVAL_OFFSET))
+  local called_function="${FUNCNAME[$((1 + func_offset))]}"
+  local test_file_loc="${BASH_SOURCE[$((2 + source_offset))]#$BT_TEMP_DIR/}:${BASH_LINENO[$((1 + source_offset))]}"
   printf "${_BTF_FAIL} ${test_file_loc}: (${called_function}) ${format_string}\n" "$@"
-  : $(( _btf_test_error_count++ ))
+  : $((_btf_test_error_count++))
   return ${status}
 }
 
@@ -529,8 +542,8 @@ btf::_fail() {
 #######################################
 btf::realpath() {
   local path="$1"
-  [[ "${path}" != "" ]] \
-      || btf::abort 1 "btf::realpath: input path cannot be blank"
+  [[ "${path}" != "" ]] ||
+    btf::abort 1 "btf::realpath: input path cannot be blank"
   local rp
   local -i status
   if hash realpath >/dev/null 2>&1; then
@@ -540,8 +553,8 @@ btf::realpath() {
   if [[ -z "${rp}" || ${status} -ne 0 ]]; then
     rp="$(python -c "import os; print(os.path.realpath('${path}'))")"
   fi
-  [[ -n "${rp}" ]] \
-      || btf::abort 1 "btf::realpath: result for '${path}' was unexpectedly blank, status=${status}"
+  [[ -n "${rp}" ]] ||
+    btf::abort 1 "btf::realpath: result for '${path}' was unexpectedly blank, status=${status}"
   printf "%s" "${rp}"
   return ${status}
 }
@@ -556,12 +569,12 @@ btf::realpath() {
 #######################################
 BT_EXPECT() {
   local -i status
-  : $(( _BTF_EVAL_OFFSET++ ))
+  : $((_BTF_EVAL_OFFSET++))
   # Do not run in a subshell. The command may set variables in the current shell.
   eval "$@"
   status=$?
-  : $(( _BTF_EVAL_OFFSET-- ))
-  if (( $status == 0 )); then
+  : $((_BTF_EVAL_OFFSET--))
+  if (($status == 0)); then
     return 0
   fi
   btf::_fail ${status} "Exit code: ${status}; expected 0 status from: $*"
@@ -591,7 +604,6 @@ BT_FAIL() {
   btf::_fail 1 "$@"
 }
 
-
 #######################################
 # Evaluates the arguments (interprets the arguments as a command string, using the
 # 'eval' built-in), generates a non-fatal failure if the return status is zero (0).
@@ -602,15 +614,15 @@ BT_FAIL() {
 #######################################
 BT_EXPECT_FAIL() {
   local -i status
-  : $(( _BTF_EVAL_OFFSET++ ))
+  : $((_BTF_EVAL_OFFSET++))
   # Do not run in a subshell. The command may set variables in the current shell.
   # (Even though the command is expected to return an error status code, it may still
   # be expected to complete some changes and/or cause side effects. And for consistency
   # with BT_EXPECT(), both scripts should be run without a subshell.)
   eval "$@"
   status=$?
-  : $(( _BTF_EVAL_OFFSET-- ))
-  if (( $status != 0 )); then
+  : $((_BTF_EVAL_OFFSET--))
+  if (($status != 0)); then
     return 0
   fi
   btf::_fail 1 "Exit code: 0; expected non-zero status from: $*"
@@ -639,8 +651,10 @@ BT_ASSERT_FAIL() {
 #   0 if the arguments are equal, or 1 otherwise
 #######################################
 BT_EXPECT_EQ() {
-  local lhs="$1"; shift
-  local rhs="$1"; shift
+  local lhs="$1"
+  shift
+  local rhs="$1"
+  shift
   if [[ "${lhs}" == "${rhs}" ]]; then
     return 0
   fi
@@ -671,7 +685,8 @@ BT_ASSERT_EQ() {
 #   0 if the given status is 0, or returns the given status otherwise
 #######################################
 BT_EXPECT_GOOD_STATUS() {
-  local -i status="$1"; shift
+  local -i status="$1"
+  shift
   if [[ ${status} == 0 ]]; then
     return 0
   fi
@@ -702,7 +717,8 @@ BT_ASSERT_GOOD_STATUS() {
 #   0 if the given status is not 0, 1 otherwise
 #######################################
 BT_EXPECT_BAD_STATUS() {
-  local -i status="$1"; shift
+  local -i status="$1"
+  shift
   if [[ ${status} != 0 ]]; then
     return 0
   fi
@@ -733,7 +749,8 @@ BT_ASSERT_BAD_STATUS() {
 #   0 if the string is empty, non-zero otherwise
 #######################################
 BT_EXPECT_EMPTY() {
-  local string="$1"; shift
+  local string="$1"
+  shift
   if [[ "${string}" == "" ]]; then
     return 0
   fi
@@ -763,7 +780,8 @@ BT_ASSERT_EMPTY() {
 #   0 if the string is not empty, non-zero otherwise
 #######################################
 BT_EXPECT_NOT_EMPTY() {
-  local string="$1"; shift
+  local string="$1"
+  shift
   if [[ "${string}" != "" ]]; then
     return 0
   fi
@@ -793,7 +811,8 @@ BT_ASSERT_NOT_EMPTY() {
 #   0 if the file exists, non-zero otherwise
 #######################################
 BT_EXPECT_FILE_EXISTS() {
-  local filename="$1"; shift
+  local filename="$1"
+  shift
   if [[ -e "${filename}" ]]; then
     return 0
   fi
@@ -823,7 +842,8 @@ BT_ASSERT_FILE_EXISTS() {
 #   0 if the file does not exist, non-zero otherwise
 #######################################
 BT_EXPECT_FILE_DOES_NOT_EXIST() {
-  local filename="$1"; shift
+  local filename="$1"
+  shift
   if [[ ! -e "${filename}" ]]; then
     return 0
   fi
@@ -854,8 +874,10 @@ BT_ASSERT_FILE_DOES_NOT_EXIST() {
 #   0 if the substring was found, non-zero otherwise
 #######################################
 BT_EXPECT_FILE_CONTAINS() {
-  local filename="$1"; shift
-  local expected_content="$1"; shift
+  local filename="$1"
+  shift
+  local expected_content="$1"
+  shift
   if [[ -e "${filename}" ]]; then
     if [[ "$(cat "${filename}")" == "${expected_content}" ]]; then
       return 0
@@ -894,14 +916,42 @@ BT_ASSERT_FILE_CONTAINS() {
 #   0 if the substring was found, non-zero otherwise
 #######################################
 BT_EXPECT_FILE_CONTAINS_SUBSTRING() {
-  local filename="$1"; shift
-  local substring="$1"; shift
+  local filename="$1"
+  shift
+  local substring="$1"
+  shift
   if [[ -e "${filename}" ]]; then
     if grep -q "${substring}" "${filename}"; then
       return 0
     fi
     btf::_fail 1 "Substring '${substring}' not found in file '${filename}'" "$@"
     echo "actual file content: '$(cat "${filename}")'"
+  else
+    btf::_fail 1 "File '${filename}' not found" "$@"
+  fi
+  return 1
+}
+#######################################
+# Generates a non-fatal failure if the file
+# does containS the substring.
+# Arguments:
+#   $1 - filename
+#   $2 - substring to look for in the file
+#   remaining arg(s) - custom error message (optional)
+# Returns:
+#   1 if the substring was found, 0 otherwise
+#######################################
+BT_EXPECT_FILE_DOES_NOT_CONTAIN_SUBSTRING() {
+  local filename="$1"
+  shift
+  local substring="$1"
+  shift
+  if [[ -e "${filename}" ]]; then
+    if grep -q "${substring}" "${filename}"; then
+      btf::_fail 1  "Substring '${substring}' found in file '${filename}'" "$@"
+      echo "actual file content: '$(cat "${filename}")'"
+    fi
+      return 0
   else
     btf::_fail 1 "File '${filename}' not found" "$@"
   fi
@@ -933,8 +983,10 @@ BT_ASSERT_FILE_CONTAINS_SUBSTRING() {
 #   0 if the substring was found, non-zero otherwise
 #######################################
 BT_EXPECT_DIRECTORY_CONTAINS_SUBSTRING() {
-  local directory="$1"; shift
-  local substring="$1"; shift
+  local directory="$1"
+  shift
+  local substring="$1"
+  shift
   if [[ -d "${directory}" ]]; then
     if grep -Rq "${substring}" "${directory}"; then
       return 0
@@ -975,8 +1027,10 @@ BT_ASSERT_DIRECTORY_CONTAINS_SUBSTRING() {
 #   0 if the substring was found, non-zero otherwise
 #######################################
 BT_EXPECT_STRING_CONTAINS_SUBSTRING() {
-  local string="$1"; shift
-  local substring="$1"; shift
+  local string="$1"
+  shift
+  local substring="$1"
+  shift
   if [[ "${string#*$substring}" != "${string}" ]]; then
     return 0
   fi
@@ -1010,7 +1064,8 @@ BT_ASSERT_STRING_CONTAINS_SUBSTRING() {
 #   0 if the function exists, non-zero otherwise
 #######################################
 BT_EXPECT_FUNCTION_EXISTS() {
-  local function="$1"; shift
+  local function="$1"
+  shift
   if btf::function_exists "${function}"; then
     return 0
   fi
@@ -1042,12 +1097,13 @@ BT_ASSERT_FUNCTION_EXISTS() {
 #   non-zero otherwise
 #######################################
 btf::is_bt_temp_dir() {
-  local root_dir="$(btf::realpath "$1")"; shift
+  local root_dir="$(btf::realpath "$1")"
+  shift
   # As an additional safety measure, check the path name string length
   # in addition to checking for the marker file.
   local -r temp_dir_string_length=${#root_dir}
-  (( ${temp_dir_string_length} > 10 )) && \
-  [[ -f "${root_dir}/${_BTF_TEMP_DIR_MARKER}" ]]
+  ((${temp_dir_string_length} > 10)) &&
+    [[ -f "${root_dir}/${_BTF_TEMP_DIR_MARKER}" ]]
 }
 
 #######################################
@@ -1102,7 +1158,7 @@ btf::_simplify_mock_extension() {
 
 btf::_sanity_check_mocks() {
   local linked_mock_script="${BT_TEMP_DIR}/${_BTF_FRAMEWORK_SCRIPT_SUBDIR}/mock.sh"
-  local mocks=( $( find "${BT_TEMP_DIR}" -samefile "${linked_mock_script}" ) )
+  local mocks=($(find "${BT_TEMP_DIR}" -samefile "${linked_mock_script}"))
   local simplify
   local suggestion
   local valid_extensions="mock_stdout|mock_stderr|mock_status|mock_side_effects|mock_state"
@@ -1112,7 +1168,7 @@ btf::_sanity_check_mocks() {
       if ! [[ "${extension}" =~ ${valid_extensions} ]]; then
         local suggestion=". Valid mock extensions are: ${valid_extensions//|/, }"
         extension_simplified="$(btf::_simplify_mock_extension ${extension})"
-        local valid_extensions_array=( ${valid_extensions//|/ } )
+        local valid_extensions_array=(${valid_extensions//|/ })
         for valid_extension in "${valid_extensions_array[@]}"; do
           valid_simplified="$(btf::_simplify_mock_extension ${valid_extension})"
           if [[ "${extension_simplified}" == "${valid_simplified}" ]]; then
@@ -1145,7 +1201,8 @@ btf::_sanity_check_mocks() {
 #   1 on any failure, 0 if everything completed successfully
 #######################################
 btf::_init_temp_dir() {
-  local host_script_subdir="$1"; shift
+  local host_script_subdir="$1"
+  shift
   # If the _BTF_TEMP_DIR_MARKER exists in the current working directory, the test
   # is running from a temp directory.
   if [[ -f "${BT_DEPS_ROOT}/${_BTF_TEMP_DIR_MARKER}" ]]; then
@@ -1159,11 +1216,11 @@ btf::_init_temp_dir() {
   # Copy the host script and the test framework.
   mkdir -p "${BT_TEMP_DIR}/${host_script_subdir}" || return $?
   cp "${BT_DEPS_ROOT}/${host_script_subdir}/${_BTF_HOST_SCRIPT_NAME}" \
-     "${BT_TEMP_DIR}/${host_script_subdir}/${_BTF_HOST_SCRIPT_NAME}" || return $?
+    "${BT_TEMP_DIR}/${host_script_subdir}/${_BTF_HOST_SCRIPT_NAME}" || return $?
 
   mkdir -p "${BT_TEMP_DIR}/${_BTF_FRAMEWORK_SCRIPT_SUBDIR}" || return $?
   cp -r "${BT_DEPS_ROOT}/${_BTF_FRAMEWORK_SCRIPT_SUBDIR}/"* \
-     "${BT_TEMP_DIR}/${_BTF_FRAMEWORK_SCRIPT_SUBDIR}/" || return $?
+    "${BT_TEMP_DIR}/${_BTF_FRAMEWORK_SCRIPT_SUBDIR}/" || return $?
   # mock.sh will be hard linked to MOCKED_FILES. Prevent writing, but make it executable.
   chmod a-w,u+x "${BT_TEMP_DIR}/${_BTF_FRAMEWORK_SCRIPT_SUBDIR}/mock.sh" || return $?
 
@@ -1237,20 +1294,24 @@ which is outside the root directory '${bt_temp_dir_realpath}'."
 #   otherwise, the count of test failures.
 #######################################
 btf::_launch_isolated_test_script() {
-  local -i test_counter=$1; shift
-  local host_script_subdir="$1"; shift
-  local host_script_name="$1"; shift
-  local test_function_name="$1"; shift
+  local -i test_counter=$1
+  shift
+  local host_script_subdir="$1"
+  shift
+  local host_script_name="$1"
+  shift
+  local test_function_name="$1"
+  shift
 
   local test_args=()
-  if (( $# > 0 )); then
-    test_args=( -- "$@" )
+  if (($# > 0)); then
+    test_args=(-- "$@")
   fi
 
   # propagate certain bash flags if present
   shell_flags=()
   if [[ $- == *x* ]]; then
-    shell_flags+=( -x )
+    shell_flags+=(-x)
   fi
 
   local host_script_dir="${BT_TEMP_DIR}/${host_script_subdir}"
@@ -1259,25 +1320,26 @@ btf::_launch_isolated_test_script() {
   # Start a clean environment, cd to the BT_TEMP_DIR subdirectory containing
   # the test script, load the bash_test_framework.sh, then re-start the test
   # script for the specific test.
-  local launch_script="$(cat << EOF
+  local launch_script="$(
+    cat <<EOF
 cd '${host_script_dir}'
 source '${BT_TEMP_DIR}/${_BTF_FRAMEWORK_SCRIPT_SUBDIR}/bash_test_framework.sh' \
-    || exit 1
-source '${host_script_path}' $( (( ${#test_args[@]} > 0 )) && printf "'%s' " "${test_args[@]}") \
-    || exit \$?
+        || exit 1
+source '${host_script_path}' $(((${#test_args[@]} > 0)) && printf "'%s' " "${test_args[@]}")  \
+        || exit \$?
 EOF
-)"
+  )"
 
   /usr/bin/env -i \
-      USER="${USER}" \
-      HOME="${HOME}" \
-      BT_TEMP_DIR="${BT_TEMP_DIR}" \
-      _BTF_FRAMEWORK_SCRIPT_SUBDIR="${_BTF_FRAMEWORK_SCRIPT_SUBDIR}" \
-      _BTF_SUBSHELL_TEST_FUNCTION="${test_function_name}" \
-      _BTF_SUBSHELL_TEST_NUMBER="${test_counter}" \
-      bash "${shell_flags[@]}" \
-      -c "${launch_script}" "${host_script_path}" \
-      || return $?
+    USER="${USER}" \
+    HOME="${HOME}" \
+    BT_TEMP_DIR="${BT_TEMP_DIR}" \
+    _BTF_FRAMEWORK_SCRIPT_SUBDIR="${_BTF_FRAMEWORK_SCRIPT_SUBDIR}" \
+    _BTF_SUBSHELL_TEST_FUNCTION="${test_function_name}" \
+    _BTF_SUBSHELL_TEST_NUMBER="${test_counter}" \
+    bash "${shell_flags[@]}" \
+    -c "${launch_script}" "${host_script_path}" ||
+    return $?
 }
 
 #######################################
@@ -1312,15 +1374,17 @@ btf::_clean_up_temp_dir() {
 #   0 if successful, otherwise, exits the script with a non-zero status.
 #######################################
 btf::_get_options() {
-  while (( $# > 0 )); do
-    local opt="$1"; shift
+  while (($# > 0)); do
+    local opt="$1"
+    shift
     case "${opt}" in
-      --test)
-        (( $# > 0 )) || btf::abort 1 "Test option '--test TEST_name' is missing the test name"
-        _BTF_TEST_NAME_FILTER="$1"; shift
-        ;;
-      --help)
-        btf::stderr "
+    --test)
+      (($# > 0)) || btf::abort 1 "Test option '--test TEST_name' is missing the test name"
+      _BTF_TEST_NAME_FILTER="$1"
+      shift
+      ;;
+    --help)
+      btf::stderr "
 Test options include:
   --test <TEST_name>
         Run only the test matching the given name.
@@ -1331,18 +1395,18 @@ Example:
 Tests found in ${_BTF_HOST_SCRIPT}:
 $(btf::_get_test_functions)
 "
-        exit 0
-        ;;
-      --)
-        break
-        ;;
-      *)
-        btf::abort 1 "Invalid test option: $opt. Try '--help' instead."
-        ;;
+      exit 0
+      ;;
+    --)
+      break
+      ;;
+    *)
+      btf::abort 1 "Invalid test option: $opt. Try '--help' instead."
+      ;;
     esac
   done
   # save any arguments after "--"
-  BT_TEST_ARGS=( "$@" )
+  BT_TEST_ARGS=("$@")
 }
 
 #######################################
@@ -1362,20 +1426,20 @@ btf::_run_isolated_test() {
   local test_function_name="$1"
 
   # Safety checks
-  btf::is_bt_temp_dir "${BT_TEMP_DIR}" \
-      || btf::abort ${MAX_ERROR_STATUS} "BT_TEMP_DIR is not a valid temp dir path: ${BT_TEMP_DIR}"
-  [[ "$(pwd)" == "${_BTF_HOST_SCRIPT_DIR}" ]] \
-      || btf::abort ${MAX_ERROR_STATUS} "Current directory '$(pwd)' should be '${_BTF_HOST_SCRIPT_DIR}'"
-  [[ "${_BTF_HOST_SCRIPT_DIR}" == "${BT_TEMP_DIR}"* ]] \
-      || btf::abort ${MAX_ERROR_STATUS} "Test script dir '${_BTF_HOST_SCRIPT_DIR}' not in BT_TEMP_DIR='${BT_TEMP_DIR}'"
+  btf::is_bt_temp_dir "${BT_TEMP_DIR}" ||
+    btf::abort ${MAX_ERROR_STATUS} "BT_TEMP_DIR is not a valid temp dir path: ${BT_TEMP_DIR}"
+  [[ "$(pwd)" == "${_BTF_HOST_SCRIPT_DIR}" ]] ||
+    btf::abort ${MAX_ERROR_STATUS} "Current directory '$(pwd)' should be '${_BTF_HOST_SCRIPT_DIR}'"
+  [[ "${_BTF_HOST_SCRIPT_DIR}" == "${BT_TEMP_DIR}"* ]] ||
+    btf::abort ${MAX_ERROR_STATUS} "Test script dir '${_BTF_HOST_SCRIPT_DIR}' not in BT_TEMP_DIR='${BT_TEMP_DIR}'"
 
-  BT_SET_UP \
-      || btf::abort ${MAX_ERROR_STATUS} "BT_SET_UP function returned error status $?"
+  BT_SET_UP ||
+    btf::abort ${MAX_ERROR_STATUS} "BT_SET_UP function returned error status $?"
 
   if [[ $_BTF_SUBSHELL_TEST_NUMBER == 1 ]]; then
     local error_message=
-    error_message="$(btf::_sanity_check_mocks)" \
-        || btf::abort ${MAX_ERROR_STATUS} "${error_message} (error status $?)"
+    error_message="$(btf::_sanity_check_mocks)" ||
+      btf::abort ${MAX_ERROR_STATUS} "${error_message} (error status $?)"
   fi
 
   # Call the test function.
@@ -1392,24 +1456,25 @@ btf::_run_isolated_test() {
     # it should only be because a test failed.
     if [[ $status != 0 && $_btf_test_error_count == 0 ]]; then
       btf::abort ${MAX_ERROR_STATUS} \
-          "Unexpected error status ${status} without incrementing _btf_test_error_count"
+        "Unexpected error status ${status} without incrementing _btf_test_error_count"
     fi
     # mark a controlled end of test, and return the error count from the subshell to main process
     btf::_end_of_test ${_btf_test_error_count}
   )
   status=$?
   local test_output="${stdout%$_BTF_END_OF_TEST_MARKER}"
-  if (( ${#test_output} > 0 )); then
+  if ((${#test_output} > 0)); then
     printf "\n%s" "${test_output}"
   fi
   if [[ "${test_output}" == "${stdout}" ]]; then
-    echo  # start error message on a new line
-    btf::error "$(cat <<EOF
+    echo # start error message on a new line
+    btf::error "$(
+      cat <<EOF
 Test exited prematurely, with status ${status}.
 If the test calls a function that invokes 'exit', use a subshell; for example:
   BT_EXPECT "( function_that_may_exit )"
 EOF
-)"
+    )"
   fi
   if [[ ${status} == 0 ]]; then
     echo "[${_ANSI_BRIGHT_GREEN}PASSED${_ANSI_CLEAR}]"
@@ -1419,8 +1484,8 @@ EOF
     echo "[${_ANSI_BRIGHT_RED}FAILED${_ANSI_CLEAR}]"
   fi
 
-  BT_TEAR_DOWN \
-      || btf::abort ${MAX_ERROR_STATUS} "BT_TEAR_DOWN function returned error status $?"
+  BT_TEAR_DOWN ||
+    btf::abort ${MAX_ERROR_STATUS} "BT_TEAR_DOWN function returned error status $?"
 
   return ${status}
 }
@@ -1481,20 +1546,20 @@ btf::_run_tests_in_isolation() {
         found_filtered_test=true
       fi
     fi
-    : $(( test_counter++ ))
-    BT_TEMP_DIR=$(btf::_make_temp_dir) \
-        || return $?
+    : $((test_counter++))
+    BT_TEMP_DIR=$(btf::_make_temp_dir) ||
+      return $?
     export BT_TEMP_DIR
-    btf::_init_temp_dir "${host_script_subdir}" \
-        || return $?
+    btf::_init_temp_dir "${host_script_subdir}" ||
+      return $?
 
     # Launch the test in a subshell with clean environment
     echo -n "[${test_counter}] ${next_test}()  "
     local test_error_count=0
     btf::_launch_isolated_test_script \
-        "${test_counter}" \
-        "${host_script_subdir}" \
-        "${_BTF_HOST_SCRIPT_NAME}" "${next_test}" "${BT_TEST_ARGS[@]}"
+      "${test_counter}" \
+      "${host_script_subdir}" \
+      "${_BTF_HOST_SCRIPT_NAME}" "${next_test}" "${BT_TEST_ARGS[@]}"
     test_error_count=$?
 
     if [[ test_error_count == ${MAX_ERROR_STATUS} ]]; then
@@ -1508,9 +1573,9 @@ btf::_run_tests_in_isolation() {
       echo "Preserving the temp directory: ${BT_TEMP_DIR}"
     fi
 
-    if (( ${test_error_count} > 0 )); then
-      : $(( test_failure_count++ ))
-      : $(( total_error_count += test_error_count ))
+    if ((${test_error_count} > 0)); then
+      : $((test_failure_count++))
+      : $((total_error_count += test_error_count))
     fi
   done
 
@@ -1520,7 +1585,7 @@ btf::_run_tests_in_isolation() {
   fi
 
   if [[ ${test_failure_count} == 0 ]]; then
-    if (( ${test_counter} == 1 )); then
+    if ((${test_counter} == 1)); then
       btf::success "1 test passed."
     else
       btf::success "All ${test_counter} tests passed."
@@ -1529,7 +1594,7 @@ btf::_run_tests_in_isolation() {
   fi
 
   local error_count_str
-  if (( ${total_error_count} > 1 )); then
+  if ((${total_error_count} > 1)); then
     error_count_str="(${total_error_count} errors)"
   else
     error_count_str="(1 error)"
@@ -1569,11 +1634,11 @@ BT_RUN_TESTS() {
 
   local -i status=0
   if [[ "${_BTF_SUBSHELL_TEST_FUNCTION}" != "" ]]; then
-    btf::_run_isolated_test "${_BTF_SUBSHELL_TEST_FUNCTION}" \
-        || status=$?
+    btf::_run_isolated_test "${_BTF_SUBSHELL_TEST_FUNCTION}" ||
+      status=$?
   else
-    btf::_run_tests_in_isolation "$@" \
-        || status=$?
+    btf::_run_tests_in_isolation "$@" ||
+      status=$?
   fi
 
   # "exit" the script (do not "return"), with the error count, (error count is

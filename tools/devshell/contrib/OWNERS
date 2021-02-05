@@ -53,4 +53,4 @@ per-file unarchive-package=dangyi@google.com
 per-file update-rustc-third-party=tmandry@google.com
 per-file zedmon=claridge@google.com
 
-# COMPONENT: DeveloperExperience>fx
+# COMPONENT: Tools>fx

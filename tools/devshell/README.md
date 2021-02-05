@@ -151,11 +151,19 @@ environmental variable. If `FUCHSIA_DISABLED_<FEATURE>` is set to "1",
 
 ## Documenting subcommands
 
+### Command line help
 As many `fx` subcommands delegate to sub-programs passing on flags directly
 to them, it is prohibitive to always be able to respond to the `-h` or
 `--help` flags. As such `fx` subcommands SHOULD implement `-h` and `--help`
 if possible, but this is not required.
 
+### OWNERS files
+When you add a new tool, please be sure to edit the OWNERS file and add
+`per-file` lines for the owners and `per-file-COMPONENT` lines for
+bugs.fuchsia.dev components. These indicate the correct contact information for
+your command and are used by `fx report-bug` users to file issues.
+
+### Command metadata
 It is required that all subcommands implement help documentation lines, which
 are defined as follows:
 
