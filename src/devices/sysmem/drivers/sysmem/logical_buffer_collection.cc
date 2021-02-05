@@ -663,7 +663,8 @@ void LogicalBufferCollection::TryAllocate() {
   }
   ZX_DEBUG_ASSERT(!!constraints_);
 
-  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> result = Allocate();
+  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> result =
+      Allocate(allocator_);
   if (!result.is_ok()) {
     ZX_DEBUG_ASSERT(result.error() != ZX_OK);
     SetFailedAllocationResult(result.error());
@@ -671,8 +672,23 @@ void LogicalBufferCollection::TryAllocate() {
   }
   ZX_DEBUG_ASSERT(result.is_ok());
 
-  SetAllocationResult(result.take_value());
-  return;
+  llcpp::fuchsia::sysmem2::BufferCollectionInfo info = result.take_value();
+  // Setting empty constraints as the success case isn't allowed.  That's
+  // considered a failure.  At least one participant must specify non-empty
+  // constraints.
+  ZX_DEBUG_ASSERT(!info.IsEmpty());
+
+  // Only set result once.
+  ZX_DEBUG_ASSERT(!has_allocation_result_);
+  // allocation_result_status_ is initialized to ZX_OK, so should still be set
+  // that way.
+  ZX_DEBUG_ASSERT(allocation_result_status_ == ZX_OK);
+
+  creation_timer_.Cancel();
+  allocation_result_status_ = ZX_OK;
+  allocation_result_info_ = std::move(info);
+  has_allocation_result_ = true;
+  SendAllocationResult();
 }
 
 void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
@@ -688,27 +704,6 @@ void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
   allocation_result_status_ = status;
   // Was initialized to nullptr.
   ZX_DEBUG_ASSERT(!allocation_result_info_);
-  has_allocation_result_ = true;
-  SendAllocationResult();
-  return;
-}
-
-void LogicalBufferCollection::SetAllocationResult(
-    llcpp::fuchsia::sysmem2::BufferCollectionInfo&& info) {
-  // Setting empty constraints as the success case isn't allowed.  That's
-  // considered a failure.  At least one participant must specify non-empty
-  // constraints.
-  ZX_DEBUG_ASSERT(!info.IsEmpty());
-
-  // Only set result once.
-  ZX_DEBUG_ASSERT(!has_allocation_result_);
-  // allocation_result_status_ is initialized to ZX_OK, so should still be set
-  // that way.
-  ZX_DEBUG_ASSERT(allocation_result_status_ == ZX_OK);
-
-  creation_timer_.Cancel();
-  allocation_result_status_ = ZX_OK;
-  allocation_result_info_ = std::move(info);
   has_allocation_result_ = true;
   SendAllocationResult();
   return;
@@ -1704,12 +1699,11 @@ static fit::result<llcpp::fuchsia::sysmem2::CoherencyDomain> GetCoherencyDomain(
 }
 
 fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t>
-LogicalBufferCollection::Allocate() {
+LogicalBufferCollection::Allocate(fidl::Allocator& result_allocator) {
   TRACE_DURATION("gfx", "LogicalBufferCollection:Allocate", "this", this);
   ZX_DEBUG_ASSERT(constraints_);
 
-  llcpp::fuchsia::sysmem2::BufferCollectionInfo result =
-      allocator_.make_table<llcpp::fuchsia::sysmem2::BufferCollectionInfo>();
+  llcpp::fuchsia::sysmem2::BufferCollectionInfo result(result_allocator);
 
   uint32_t min_buffer_count = constraints_->min_buffer_count_for_camping() +
                               constraints_->min_buffer_count_for_dedicated_slack() +
@@ -1730,26 +1724,26 @@ LogicalBufferCollection::Allocate() {
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  result.set_buffers(allocator_.make_vec_ptr<llcpp::fuchsia::sysmem2::VmoBuffer>(min_buffer_count));
+  result.set_buffers(result_allocator, result_allocator, min_buffer_count);
   ZX_DEBUG_ASSERT(result.buffers().count() == min_buffer_count);
   ZX_DEBUG_ASSERT(result.buffers().count() <= max_buffer_count);
 
   uint64_t min_size_bytes = 0;
   uint64_t max_size_bytes = std::numeric_limits<uint64_t>::max();
 
-  result.set_settings(allocator_, allocator_);
+  result.set_settings(result_allocator, result_allocator);
   llcpp::fuchsia::sysmem2::SingleBufferSettings& settings = result.settings();
-  settings.set_buffer_settings(allocator_, allocator_);
+  settings.set_buffer_settings(result_allocator, result_allocator);
   llcpp::fuchsia::sysmem2::BufferMemorySettings& buffer_settings = settings.buffer_settings();
 
   ZX_DEBUG_ASSERT(constraints_->has_buffer_memory_constraints());
   const llcpp::fuchsia::sysmem2::BufferMemoryConstraints& buffer_constraints =
       constraints_->buffer_memory_constraints();
-  buffer_settings.set_is_physically_contiguous(allocator_,
+  buffer_settings.set_is_physically_contiguous(result_allocator,
                                                buffer_constraints.physically_contiguous_required());
   // checked previously
   ZX_DEBUG_ASSERT(IsSecurePermitted(buffer_constraints) || !buffer_constraints.secure_required());
-  buffer_settings.set_is_secure(allocator_, buffer_constraints.secure_required());
+  buffer_settings.set_is_secure(result_allocator, buffer_constraints.secure_required());
   if (buffer_settings.is_secure()) {
     if (constraints_->need_clear_aux_buffers_for_secure() &&
         !constraints_->allow_clear_aux_buffers_for_secure()) {
@@ -1766,7 +1760,7 @@ LogicalBufferCollection::Allocate() {
              result_get_heap.error());
     return fit::error(result_get_heap.error());
   }
-  buffer_settings.set_heap(allocator_, result_get_heap.value());
+  buffer_settings.set_heap(result_allocator, result_get_heap.value());
 
   // We can't fill out buffer_settings yet because that also depends on
   // ImageFormatConstraints.  We do need the min and max from here though.
@@ -1785,7 +1779,7 @@ LogicalBufferCollection::Allocate() {
     LogError(FROM_HERE, "No coherency domain found for buffer constraints");
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
-  buffer_settings.set_coherency_domain(allocator_, coherency_domain_result.value());
+  buffer_settings.set_coherency_domain(result_allocator, coherency_domain_result.value());
 
   // It's allowed for zero participants to have any ImageFormatConstraint(s),
   // in which case the combined constraints_ will have zero (and that's fine,
@@ -1820,7 +1814,7 @@ LogicalBufferCollection::Allocate() {
     }
     // move from constraints_ to settings.
     settings.set_image_format_constraints(
-        allocator_, std::move(constraints_->image_format_constraints()[best_index]));
+        result_allocator, std::move(constraints_->image_format_constraints()[best_index]));
   }
 
   // Compute the min buffer size implied by image_format_constraints, so we ensure the buffers can
@@ -1828,14 +1822,13 @@ LogicalBufferCollection::Allocate() {
   if (settings.has_image_format_constraints()) {
     const llcpp::fuchsia::sysmem2::ImageFormatConstraints& image_format_constraints =
         settings.image_format_constraints();
-    llcpp::fuchsia::sysmem2::ImageFormat min_image =
-        allocator_.make_table<llcpp::fuchsia::sysmem2::ImageFormat>();
+    llcpp::fuchsia::sysmem2::ImageFormat min_image(result_allocator);
     min_image.set_pixel_format(
-        allocator_,
-        sysmem::V2ClonePixelFormat(allocator_, image_format_constraints.pixel_format()));
+        result_allocator,
+        sysmem::V2ClonePixelFormat(result_allocator, image_format_constraints.pixel_format()));
     // We use required_max_coded_width because that's the max width that the producer (or
     // initiator) wants these buffers to be able to hold.
-    min_image.set_coded_width(allocator_,
+    min_image.set_coded_width(result_allocator,
                               AlignUp(std::max(image_format_constraints.min_coded_width(),
                                                image_format_constraints.required_max_coded_width()),
                                       image_format_constraints.coded_width_divisor()));
@@ -1846,15 +1839,15 @@ LogicalBufferCollection::Allocate() {
     // We use required_max_coded_height because that's the max height that the producer (or
     // initiator) wants these buffers to be able to hold.
     min_image.set_coded_height(
-        allocator_, AlignUp(std::max(image_format_constraints.min_coded_height(),
-                                     image_format_constraints.required_max_coded_height()),
-                            image_format_constraints.coded_height_divisor()));
+        result_allocator, AlignUp(std::max(image_format_constraints.min_coded_height(),
+                                           image_format_constraints.required_max_coded_height()),
+                                  image_format_constraints.coded_height_divisor()));
     if (min_image.coded_height() > image_format_constraints.max_coded_height()) {
       LogError(FROM_HERE, "coded_height_divisor caused coded_height > max_coded_height");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
     min_image.set_bytes_per_row(
-        allocator_,
+        result_allocator,
         AlignUp(
             std::max(image_format_constraints.min_bytes_per_row(),
                      ImageFormatStrideBytesPerWidthPixel(image_format_constraints.pixel_format()) *
@@ -1885,8 +1878,8 @@ LogicalBufferCollection::Allocate() {
     // specify the image size.  But set it to the first ColorSpace anyway, just so the
     // color_space.type is a valid value.
     min_image.set_color_space(
-        allocator_,
-        sysmem::V2CloneColorSpace(allocator_, image_format_constraints.color_spaces()[0]));
+        result_allocator,
+        sysmem::V2CloneColorSpace(result_allocator, image_format_constraints.color_spaces()[0]));
 
     uint64_t image_min_size_bytes = ImageFormatImageSize(min_image);
 
@@ -1961,23 +1954,21 @@ LogicalBufferCollection::Allocate() {
   // If an initiator (or a participant) wants to force buffers to be larger than the size implied by
   // minimum image dimensions, the initiator can use BufferMemorySettings.min_size_bytes to force
   // allocated buffers to be large enough.
-  buffer_settings.set_size_bytes(allocator_, static_cast<uint32_t>(min_size_bytes));
+  buffer_settings.set_size_bytes(result_allocator, static_cast<uint32_t>(min_size_bytes));
 
   // Get memory allocator for aux buffers, if needed.
   MemoryAllocator* maybe_aux_allocator = nullptr;
   std::optional<llcpp::fuchsia::sysmem2::SingleBufferSettings> maybe_aux_settings;
   if (buffer_settings.is_secure() && constraints_->need_clear_aux_buffers_for_secure()) {
-    maybe_aux_settings.emplace(
-        allocator_.make_table<llcpp::fuchsia::sysmem2::SingleBufferSettings>());
-    maybe_aux_settings->set_buffer_settings(
-        allocator_, allocator_.make_table<llcpp::fuchsia::sysmem2::BufferMemorySettings>());
+    maybe_aux_settings.emplace(llcpp::fuchsia::sysmem2::SingleBufferSettings(result_allocator));
+    maybe_aux_settings->set_buffer_settings(result_allocator, result_allocator);
     auto& aux_buffer_settings = maybe_aux_settings->buffer_settings();
-    aux_buffer_settings.set_size_bytes(allocator_, buffer_settings.size_bytes());
-    aux_buffer_settings.set_is_physically_contiguous(allocator_, false);
-    aux_buffer_settings.set_is_secure(allocator_, false);
-    aux_buffer_settings.set_coherency_domain(allocator_,
+    aux_buffer_settings.set_size_bytes(result_allocator, buffer_settings.size_bytes());
+    aux_buffer_settings.set_is_physically_contiguous(result_allocator, false);
+    aux_buffer_settings.set_is_secure(result_allocator, false);
+    aux_buffer_settings.set_coherency_domain(result_allocator,
                                              llcpp::fuchsia::sysmem2::CoherencyDomain::CPU);
-    aux_buffer_settings.set_heap(allocator_, llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM);
+    aux_buffer_settings.set_heap(result_allocator, llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM);
     maybe_aux_allocator = parent_device_->GetAllocator(aux_buffer_settings);
     ZX_DEBUG_ASSERT(maybe_aux_allocator);
   }
@@ -1999,9 +1990,9 @@ LogicalBufferCollection::Allocate() {
       return fit::error(ZX_ERR_NO_MEMORY);
     }
     zx::vmo vmo = allocate_result.take_value();
-    auto vmo_buffer = allocator_.make_table<llcpp::fuchsia::sysmem2::VmoBuffer>();
-    vmo_buffer.set_vmo(allocator_, std::move(vmo));
-    vmo_buffer.set_vmo_usable_start(allocator_, 0ul);
+    llcpp::fuchsia::sysmem2::VmoBuffer vmo_buffer(result_allocator);
+    vmo_buffer.set_vmo(result_allocator, std::move(vmo));
+    vmo_buffer.set_vmo_usable_start(result_allocator, 0ul);
     if (maybe_aux_allocator) {
       ZX_DEBUG_ASSERT(maybe_aux_settings);
       auto aux_allocate_result = AllocateVmo(maybe_aux_allocator, maybe_aux_settings.value(), i);
@@ -2010,7 +2001,7 @@ LogicalBufferCollection::Allocate() {
         return fit::error(ZX_ERR_NO_MEMORY);
       }
       zx::vmo aux_vmo = aux_allocate_result.take_value();
-      vmo_buffer.set_aux_vmo(allocator_, std::move(aux_vmo));
+      vmo_buffer.set_aux_vmo(result_allocator, std::move(aux_vmo));
     }
     result.buffers()[i] = std::move(vmo_buffer);
   }

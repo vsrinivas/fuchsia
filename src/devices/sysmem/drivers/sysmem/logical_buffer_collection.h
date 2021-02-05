@@ -165,8 +165,6 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   void SetFailedAllocationResult(zx_status_t status);
 
-  void SetAllocationResult(llcpp::fuchsia::sysmem2::BufferCollectionInfo&& info);
-
   void SendAllocationResult();
 
   void BindSharedCollectionInternal(BufferCollectionToken* token,
@@ -218,7 +216,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   bool IsColorSpaceEqual(const llcpp::fuchsia::sysmem2::ColorSpace& a,
                          const llcpp::fuchsia::sysmem2::ColorSpace& b);
 
-  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> Allocate();
+  fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo, zx_status_t> Allocate(
+      fidl::Allocator& result_allocator);
 
   fit::result<zx::vmo> AllocateVmo(MemoryAllocator* allocator,
                                    const llcpp::fuchsia::sysmem2::SingleBufferSettings& settings,
