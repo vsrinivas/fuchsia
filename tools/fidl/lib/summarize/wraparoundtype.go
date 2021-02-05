@@ -19,12 +19,11 @@ type wraparoundType struct {
 	parentType fidlgen.DeclType
 }
 
-func strictness(strict fidlgen.Strictness) string {
+func strictness(strict fidlgen.Strictness) Strictness {
 	if strict {
-		return "strict"
-	} else {
-		return "flexible"
+		return isStrict
 	}
+	return isFlexible
 }
 
 // String implements Element.
@@ -34,7 +33,8 @@ func (b wraparoundType) String() string {
 
 func (b wraparoundType) Serialize() elementStr {
 	e := b.named.Serialize()
-	e.Kind = fmt.Sprintf("%v %v", strictness(b.strictness), b.parentType)
+	e.Kind = string(b.parentType)
+	e.Strictness = strictness(b.strictness)
 	e.Decl = fmt.Sprintf("%v", b.subtype)
 	return e
 }

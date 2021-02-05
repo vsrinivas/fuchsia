@@ -198,15 +198,43 @@ func fidlTypeString(t fidlgen.Type) string {
 	}
 }
 
-// elementStr is a generic stringly-typed view of an Element.
+// Strictness is whether an aggregate is strict or flexible.
+type Strictness string
+
+var (
+	// isStrict strictness value.
+	isStrict Strictness = "strict"
+	// isFlexible strictness value.
+	isFlexible Strictness = "flexible"
+)
+
+// Resourceness is whether the aggregate has resources or not.
+type Resourceness string
+
+var (
+	// isValue resourceness is the "default", so we omit it altogether.
+	isValue Resourceness = ""
+	// isResource is an aggregate that contains e.g. handles.
+	isResource Resourceness = "resource"
+)
+
+// elementStr is a generic stringly-typed view of an Element. The aim is to
+// keep the structure as flat as possible, and omit fields which have no
+// bearing to the Kind of element represented.
 type elementStr struct {
-	Name string `json:"name"`
-	Kind string `json:"kind"`
-	Decl string `json:"declaration,omitempty"`
+	Name         string `json:"name"`
+	Kind         string `json:"kind"`
+	Decl         string `json:"declaration,omitempty"`
+	Strictness   `json:"strictness,omitempty"`
+	Resourceness `json:"resourceness,omitempty"`
 }
 
 func (e elementStr) String() string {
-	p := []string{e.Kind, e.Name}
+	var p []string
+	if e.Strictness != "" {
+		p = append(p, string(e.Strictness))
+	}
+	p = append(p, e.Kind, e.Name)
 	if e.Decl != "" {
 		p = append(p, e.Decl)
 	}

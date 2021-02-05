@@ -5,8 +5,6 @@
 package summarize
 
 import (
-	"fmt"
-
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
@@ -37,6 +35,7 @@ func (c aConst) String() string {
 
 func (c aConst) Serialize() elementStr {
 	e := c.named.Serialize()
-	e.Kind = fmt.Sprintf("%v %v", aConstType, fidlTypeString(c.aType))
+	e.Kind = aConstType
+	e.Decl = fidlTypeString(c.aType)
 	return e
 }

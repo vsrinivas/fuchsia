@@ -111,14 +111,17 @@ func (s aggregate) String() string {
 	return strings.Join(ret, " ")
 }
 
+func resourceness(resourceness fidlgen.Resourceness) Resourceness {
+	if resourceness {
+		return isResource
+	}
+	return isValue
+}
+
 func (s aggregate) Serialize() elementStr {
 	e := s.named.Serialize()
-	var ret []string
-	if s.resourceness {
-		ret = append(ret, "resource")
-	}
-	ret = append(ret, string(s.typeName))
-	e.Kind = strings.Join(ret, " ")
+	e.Resourceness = resourceness(s.resourceness)
+	e.Kind = string(s.typeName)
 	return e
 }
 

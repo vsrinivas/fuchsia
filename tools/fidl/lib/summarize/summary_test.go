@@ -54,8 +54,8 @@ library l;
 const int8 OFFSET = -33;
 const bool ENABLED_FLAG = true;
 `,
-			expected: `const bool l/ENABLED_FLAG
-const int8 l/OFFSET
+			expected: `const l/ENABLED_FLAG bool
+const l/OFFSET int8
 library l
 `,
 		},
@@ -67,8 +67,8 @@ library l;
 const bool ENABLED_FLAG = true;
 const int8 OFFSET = -33;
 `,
-			expected: `const bool l/ENABLED_FLAG
-const int8 l/OFFSET
+			expected: `const l/ENABLED_FLAG bool
+const l/OFFSET int8
 library l
 `,
 		},
@@ -79,8 +79,8 @@ library l;
 const uint16 ANSWER = 42;
 const uint16 ANSWER_IN_BINARY = 0b101010;
 `,
-			expected: `const uint16 l/ANSWER
-const uint16 l/ANSWER_IN_BINARY
+			expected: `const l/ANSWER uint16
+const l/ANSWER_IN_BINARY uint16
 library l
 `,
 		},
@@ -99,16 +99,16 @@ const string USERNAME = "squeenze";
 const float32 MIN_TEMP = -273.15;
 const float64 CONVERSION_FACTOR = 1.41421358;
 `,
-			expected: `const uint16 l/ANSWER
-const uint16 l/ANSWER_IN_BINARY
-const float64 l/CONVERSION_FACTOR
-const uint64 l/DIAMOND
-const bool l/ENABLED_FLAG
-const uint64 l/FUCHSIA
-const float32 l/MIN_TEMP
-const int8 l/OFFSET
-const uint32 l/POPULATION_USA_2018
-const string l/USERNAME
+			expected: `const l/ANSWER uint16
+const l/ANSWER_IN_BINARY uint16
+const l/CONVERSION_FACTOR float64
+const l/DIAMOND uint64
+const l/ENABLED_FLAG bool
+const l/FUCHSIA uint64
+const l/MIN_TEMP float32
+const l/OFFSET int8
+const l/POPULATION_USA_2018 uint32
+const l/USERNAME string
 library l
 `,
 		},
@@ -559,11 +559,13 @@ const bool ENABLED_FLAG = true;
 			expected: `[
   {
     "name": "l/ENABLED_FLAG",
-    "kind": "const bool"
+    "kind": "const",
+    "declaration": "bool"
   },
   {
     "name": "l/OFFSET",
-    "kind": "const int8"
+    "kind": "const",
+    "declaration": "int8"
   },
   {
     "name": "l",
@@ -592,8 +594,9 @@ strict bits Bits1 {
   },
   {
     "name": "l/Bits1",
-    "kind": "strict bits",
-    "declaration": "uint32"
+    "kind": "bits",
+    "declaration": "uint32",
+    "strictness": "strict"
   },
   {
     "name": "l",
@@ -626,8 +629,9 @@ strict bits Bits2 {
   },
   {
     "name": "l/Bits1",
-    "kind": "strict bits",
-    "declaration": "uint32"
+    "kind": "bits",
+    "declaration": "uint32",
+    "strictness": "strict"
   },
   {
     "name": "l/Bits2.BIT1",
@@ -639,8 +643,9 @@ strict bits Bits2 {
   },
   {
     "name": "l/Bits2",
-    "kind": "strict bits",
-    "declaration": "uint32"
+    "kind": "bits",
+    "declaration": "uint32",
+    "strictness": "strict"
   },
   {
     "name": "l",
@@ -669,8 +674,9 @@ flexible bits Bits : uint8 {
   },
   {
     "name": "l/Bits",
-    "kind": "flexible bits",
-    "declaration": "uint8"
+    "kind": "bits",
+    "declaration": "uint8",
+    "strictness": "flexible"
   },
   {
     "name": "l",
@@ -717,8 +723,9 @@ strict enum Vessel {
   },
   {
     "name": "l/Beverage",
-    "kind": "flexible enum",
-    "declaration": "uint8"
+    "kind": "enum",
+    "declaration": "uint8",
+    "strictness": "flexible"
   },
   {
     "name": "l/Vessel.BOWL",
@@ -738,8 +745,9 @@ strict enum Vessel {
   },
   {
     "name": "l/Vessel",
-    "kind": "strict enum",
-    "declaration": "uint32"
+    "kind": "enum",
+    "declaration": "uint32",
+    "strictness": "strict"
   },
   {
     "name": "l",
@@ -909,7 +917,8 @@ resource struct Handles {
   },
   {
     "name": "l/Handles",
-    "kind": "resource struct"
+    "kind": "struct",
+    "resourceness": "resource"
   },
   {
     "name": "l",
