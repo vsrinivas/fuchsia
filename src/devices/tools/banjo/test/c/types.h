@@ -14,7 +14,6 @@
 __BEGIN_CDECLS
 
 // Forward declarations
-typedef struct this_is_an_interface_protocol this_is_an_interface_protocol_t;
 #define vectors_size UINT32_C(32)
 typedef struct vectors vectors_t;
 typedef uint8_t u8_enum_t;
@@ -33,7 +32,6 @@ typedef struct structs structs_t;
 #define strings_size UINT32_C(32)
 typedef struct strings strings_t;
 typedef struct primitive_types primitive_types_t;
-typedef struct interfaces interfaces_t;
 typedef int8_t i8_enum_t;
 #define I8_ENUM_X INT8_C(23)
 typedef int64_t i64_enum_t;
@@ -48,23 +46,10 @@ typedef uint32_t default_enum_t;
 #define DEFAULT_ENUM_X UINT32_C(23)
 #define arrays_size UINT32_C(32)
 typedef struct arrays arrays_t;
+typedef struct this_is_an_interface_protocol this_is_an_interface_protocol_t;
+typedef struct interfaces interfaces_t;
 
 // Declarations
-typedef struct this_is_an_interface_protocol_ops {
-    void (*copy)(void* ctx, const char* s, uint32_t count, char* out_s, size_t s_capacity);
-} this_is_an_interface_protocol_ops_t;
-
-
-struct this_is_an_interface_protocol {
-    this_is_an_interface_protocol_ops_t* ops;
-    void* ctx;
-};
-
-static inline void this_is_an_interface_copy(const this_is_an_interface_protocol_t* proto, const char* s, uint32_t count, char* out_s, size_t s_capacity) {
-    proto->ops->copy(proto->ctx, s, count, out_s, s_capacity);
-}
-
-
 struct vectors {
     const bool* b_0_list;
     size_t b_0_count;
@@ -378,11 +363,6 @@ struct primitive_types {
     double f64;
 };
 
-struct interfaces {
-    this_is_an_interface_protocol_t i;
-    this_is_an_interface_protocol_t nullable_i;
-};
-
 struct handles {
     zx_handle_t handle_handle;
     zx_handle_t process_handle;
@@ -485,6 +465,26 @@ struct arrays {
     float f32_2[arrays_size][4];
     double f64_2[arrays_size][4];
     zx_handle_t handle_2[arrays_size][4];
+};
+
+typedef struct this_is_an_interface_protocol_ops {
+    void (*copy)(void* ctx, const char* s, uint32_t count, char* out_s, size_t s_capacity);
+} this_is_an_interface_protocol_ops_t;
+
+
+struct this_is_an_interface_protocol {
+    this_is_an_interface_protocol_ops_t* ops;
+    void* ctx;
+};
+
+static inline void this_is_an_interface_copy(const this_is_an_interface_protocol_t* proto, const char* s, uint32_t count, char* out_s, size_t s_capacity) {
+    proto->ops->copy(proto->ctx, s, count, out_s, s_capacity);
+}
+
+
+struct interfaces {
+    this_is_an_interface_protocol_t i;
+    this_is_an_interface_protocol_t nullable_i;
 };
 
 

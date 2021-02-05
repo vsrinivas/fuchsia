@@ -2,6 +2,114 @@ BanjoAst {
     primary_namespace: "banjo.examples.protocol.base",
     namespaces: {
         "banjo.examples.protocol.base": [
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix2",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix3",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix4",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix5",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix6",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix7",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix8",
+                },
+                fields: [],
+            },
             Protocol {
                 attributes: Attrs(
                     [
@@ -516,6 +624,197 @@ BanjoAst {
                         ],
                     },
                 ],
+                placeholders: [
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix0",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix1",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix2",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix3",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix4",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix5",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix6",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix7",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix8",
+                        },
+                        reference: false,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix9",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix10",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix11",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix12",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix13",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix14",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix15",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix16",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix17",
+                },
+                fields: [],
             },
             Protocol {
                 attributes: Attrs(
@@ -1074,6 +1373,89 @@ BanjoAst {
                                 ),
                             ),
                         ],
+                    },
+                ],
+                placeholders: [
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix9",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix10",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix11",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix12",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix13",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix14",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix15",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix16",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix17",
+                        },
+                        reference: false,
                     },
                 ],
             },

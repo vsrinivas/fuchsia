@@ -896,7 +896,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Constant { attributes, name, ty, value } => {
                     Some(self.codegen_constant_decl(attributes, name, ty, value, &ast))
                 }
-                Decl::Protocol { attributes, name, methods } => {
+                Decl::Protocol { attributes, name, methods, .. } => {
                     Some(self.codegen_protocol_decl(attributes, name, methods, &ast))
                 }
                 Decl::Alias(to, from) => Some(self.codegen_alias_decl(to, from, &ast)),
@@ -916,7 +916,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 }
                 Decl::Enum { .. } => None,
                 Decl::Constant { .. } => None,
-                Decl::Protocol { attributes, name, methods } => {
+                Decl::Protocol { attributes, name, methods, .. } => {
                     Some(self.codegen_protocol_def(attributes, name, methods, &ast))
                 }
                 Decl::Alias(_to, _from) => None,

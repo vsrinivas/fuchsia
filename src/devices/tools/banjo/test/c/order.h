@@ -14,7 +14,9 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+#define yy_constant INT8_C(17)
 typedef struct zz_struct zz_struct_t;
+typedef struct ii_interface_protocol ii_interface_protocol_t;
 typedef uint32_t mm_enum_t;
 #define MM_ENUM_ONE UINT32_C(1)
 #define MM_ENUM_TWO UINT32_C(2)
@@ -26,6 +28,21 @@ typedef struct xx_struct xx_struct_t;
 struct zz_struct {
     int8_t something;
 };
+
+typedef struct ii_interface_protocol_ops {
+    void (*do_something)(void* ctx);
+} ii_interface_protocol_ops_t;
+
+
+struct ii_interface_protocol {
+    ii_interface_protocol_ops_t* ops;
+    void* ctx;
+};
+
+static inline void ii_interface_do_something(const ii_interface_protocol_t* proto) {
+    proto->ops->do_something(proto->ctx);
+}
+
 
 struct xx_struct {
     zz_struct_t field;

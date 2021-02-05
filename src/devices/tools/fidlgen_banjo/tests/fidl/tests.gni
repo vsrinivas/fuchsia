@@ -38,6 +38,18 @@ _simple_libraries = [
     backends = [ "c" ]
   },
   {
+    name = "example6"
+    backends = [ "c" ]
+  },
+  {
+    name = "example7"
+    backends = [ "c" ]
+  },
+  {
+    name = "example8"
+    backends = [ "c" ]
+  },
+  {
     name = "order"
     backends = [ "c" ]
   },

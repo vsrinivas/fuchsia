@@ -5,6 +5,7 @@
 library banjo.examples.order;
 
 const uint32 LL_CONSTANT = 12345;
+const int8 yy_constant = 17;
 
 struct ZzStruct {
     int8 something;
@@ -19,4 +20,8 @@ enum MmEnum : uint32 {
 struct XxStruct {
     ZzStruct field;
     MmEnum field_again;
+};
+
+protocol IiInterface {
+    DoSomething() -> ();
 };

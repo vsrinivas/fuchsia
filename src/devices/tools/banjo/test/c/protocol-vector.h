@@ -14,10 +14,10 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+#define vector_size UINT32_C(32)
 typedef struct vector_of_vectors_protocol vector_of_vectors_protocol_t;
 typedef struct vector2_protocol vector2_protocol_t;
 typedef struct vector_protocol vector_protocol_t;
-#define vector_size UINT32_C(32)
 
 // Declarations
 typedef struct vector_of_vectors_protocol_ops {

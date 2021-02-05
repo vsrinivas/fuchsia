@@ -17,6 +17,21 @@ BanjoAst {
                     "12345",
                 ),
             },
+            Constant {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order",
+                    ),
+                    name: "yy_constant",
+                },
+                ty: Int8,
+                value: Constant(
+                    "17",
+                ),
+            },
             Struct {
                 attributes: Attrs(
                     [],
@@ -130,6 +145,50 @@ BanjoAst {
                             name: "field_again",
                         },
                         val: None,
+                    },
+                ],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [],
+            },
+            Protocol {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.order",
+                    ),
+                    name: "IiInterface",
+                },
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        name: "DoSomething",
+                        in_params: [],
+                        out_params: [],
+                    },
+                ],
+                placeholders: [
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix0",
+                        },
+                        reference: false,
                     },
                 ],
             },

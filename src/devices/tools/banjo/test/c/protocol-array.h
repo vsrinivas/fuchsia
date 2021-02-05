@@ -14,10 +14,10 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+#define array_size UINT32_C(32)
 typedef struct arrayof_arrays_protocol arrayof_arrays_protocol_t;
 typedef struct array2_protocol array2_protocol_t;
 typedef struct array_protocol array_protocol_t;
-#define array_size UINT32_C(32)
 
 // Declarations
 typedef struct arrayof_arrays_protocol_ops {

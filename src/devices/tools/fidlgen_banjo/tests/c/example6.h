@@ -1,0 +1,1 @@
+../../../banjo/test/c/example-6.h

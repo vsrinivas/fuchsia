@@ -15,13 +15,22 @@ __BEGIN_CDECLS
 
 // Forward declarations
 typedef struct some_type some_type_t;
-typedef struct in_out_protocol_protocol in_out_protocol_protocol_t;
 typedef struct vector_field_in_struct vector_field_in_struct_t;
+typedef struct in_out_protocol_protocol in_out_protocol_protocol_t;
 typedef struct mutable_field mutable_field_t;
 
 // Declarations
 struct some_type {
     uint32_t value;
+};
+
+struct vector_field_in_struct {
+    const some_type_t** the_vector_list;
+    size_t the_vector_count;
+    const some_type_t* the_other_vector_list;
+    size_t the_other_vector_count;
+    const some_type_t* the_default_vector_list;
+    size_t the_default_vector_count;
 };
 
 typedef struct in_out_protocol_protocol_ops {
@@ -48,15 +57,6 @@ static inline void in_out_protocol_do_some_default_thing(const in_out_protocol_p
     proto->ops->do_some_default_thing(proto->ctx, param);
 }
 
-
-struct vector_field_in_struct {
-    const some_type_t** the_vector_list;
-    size_t the_vector_count;
-    const some_type_t* the_other_vector_list;
-    size_t the_other_vector_count;
-    const some_type_t* the_default_vector_list;
-    size_t the_default_vector_count;
-};
 
 struct mutable_field {
     char* some_string;

@@ -44,5 +44,8 @@ mod c {
     codegen_test!(example2, CBackend, "c/example2.h");
     codegen_test!(example3, CBackend, "c/example3.h");
     codegen_test!(example4, CBackend, "c/example4.h");
+    codegen_test!(example6, CBackend, "c/example6.h");
+    codegen_test!(example7, CBackend, "c/example7.h");
+    codegen_test!(example8, CBackend, "c/example8.h");
     codegen_test!(order, CBackend, "c/order.h");
 }

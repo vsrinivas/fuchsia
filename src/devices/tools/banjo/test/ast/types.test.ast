@@ -55,6 +55,18 @@ BanjoAst {
                     },
                 ],
             },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [],
+            },
             Protocol {
                 attributes: Attrs(
                     [],
@@ -113,6 +125,17 @@ BanjoAst {
                                 ),
                             ),
                         ],
+                    },
+                ],
+                placeholders: [
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix0",
+                        },
+                        reference: false,
                     },
                 ],
             },

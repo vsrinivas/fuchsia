@@ -465,7 +465,7 @@ fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Protocol { ref name, ref methods, ref attributes } = *decl {
+    if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
         if let Some(layout) = attributes.get_attribute("BanjoLayout") {
             if layout == "ddk-interface" {
                 return Some((name, methods, attributes));
@@ -479,7 +479,7 @@ fn filter_interface<'a>(
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Protocol { ref name, ref methods, ref attributes } = *decl {
+    if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
         if let Some(layout) = attributes.get_attribute("BanjoLayout") {
             if layout == "ddk-protocol" {
                 return Some((name, methods, attributes));

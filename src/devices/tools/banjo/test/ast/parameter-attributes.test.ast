@@ -2,6 +2,30 @@ BanjoAst {
     primary_namespace: "banjo.examples.paramattr",
     namespaces: {
         "banjo.examples.paramattr": [
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix0",
+                },
+                fields: [],
+            },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "placeholder",
+                    ),
+                    name: "SomeLongAnonymousPrefix1",
+                },
+                fields: [],
+            },
             Protocol {
                 attributes: Attrs(
                     [],
@@ -73,6 +97,26 @@ BanjoAst {
                                 ),
                             ),
                         ],
+                    },
+                ],
+                placeholders: [
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix0",
+                        },
+                        reference: false,
+                    },
+                    Identifier {
+                        id: Ident {
+                            namespace: Some(
+                                "placeholder",
+                            ),
+                            name: "SomeLongAnonymousPrefix1",
+                        },
+                        reference: false,
                     },
                 ],
             },

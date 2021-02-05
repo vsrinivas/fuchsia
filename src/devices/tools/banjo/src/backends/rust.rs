@@ -313,6 +313,9 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
     ) -> Result<String, Error> {
         let mut accum = Vec::new();
         for decl in namespace {
+            if ast::is_placeholder_struct(decl) {
+                continue;
+            }
             if let ast::Decl::Struct { ref name, ref fields, ref attributes } = *decl {
                 let mut field_str = Vec::new();
                 let alignment =
