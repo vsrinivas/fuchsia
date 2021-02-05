@@ -37,7 +37,9 @@ pub async fn exec_config(config: ConfigCommand) -> Result<()> {
 fn json_output<W: Write + Sync>(mut writer: W, value: Option<Value>) -> Result<()> {
     match value {
         Some(v) => writeln!(writer, "{}", v).map_err(|e| anyhow!("{}", e)),
-        None => ffx_bail!("Value not found"),
+        // Use 2 error code so wrapper scripts don't need check for the string to differentiate
+        // errors.
+        None => ffx_bail!("Value not found", 2),
     }
 }
 
@@ -60,7 +62,9 @@ fn json_output_array<W: Write + Sync>(
                 writeln!(writer, "{}", Value::Array(v)).map_err(|e| anyhow!("{}", e))
             }
         }
-        Err(_) => ffx_bail!("Value not found"),
+        // Use 2 error code so wrapper scripts don't need check for the string to differentiate
+        // errors.
+        Err(_) => ffx_bail!("Value not found", 2),
     }
 }
 

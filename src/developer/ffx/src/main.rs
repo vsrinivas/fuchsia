@@ -281,11 +281,15 @@ async fn main() {
             std::process::exit(0)
         }
         Err(err) => {
-            if let Some(ffx_err) = err.downcast_ref::<FfxError>() {
+            let error_code = if let Some(ffx_err) = err.downcast_ref::<FfxError>() {
                 eprintln!("{}", ffx_err);
+                match ffx_err {
+                    FfxError::Error(_, code) => *code,
+                }
             } else {
                 eprintln!("BUG: An internal command error occurred.\n{:?}", err);
-            }
+                1
+            };
             let err_msg = format!("{}", err);
             // TODO(66918): make configurable, and evaluate chosen time value.
             if let Err(e) = add_crash_event(&err_msg)
@@ -297,7 +301,7 @@ async fn main() {
             {
                 log::error!("analytics failed to submit crash event: {}", e);
             }
-            std::process::exit(1);
+            std::process::exit(error_code);
         }
     }
 }

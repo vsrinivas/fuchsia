@@ -68,7 +68,12 @@ pub enum OutputType {
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "get", description = "display config values")]
+#[argh(
+    subcommand,
+    name = "get",
+    description = "display config values",
+    error_code(2, "No value found")
+)]
 pub struct GetCommand {
     #[argh(positional)]
     /// name of the config property

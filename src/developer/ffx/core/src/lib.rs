@@ -22,18 +22,24 @@ pub use ffx_build_version::build_info;
 // TODO(fxbug.dev/57592): consider extending this to allow custom types from plugins.
 #[derive(thiserror::Error, Debug)]
 pub enum FfxError {
-    #[error(transparent)]
-    Error(#[from] anyhow::Error),
+    #[error("{}", .0)]
+    Error(#[source] anyhow::Error, i32 /* Error status code */),
 }
 
 // Utility macro for constructing a FfxError::Error with a simple error string.
 #[macro_export]
 macro_rules! ffx_error {
     ($error_message: expr) => {{
-        $crate::FfxError::Error(anyhow::anyhow!($error_message))
+        $crate::FfxError::Error(anyhow::anyhow!($error_message), 1)
+    }};
+    ($error_message: expr, $error_code: literal) => {{
+        $crate::FfxError::Error(anyhow::anyhow!($error_message), $error_code)
     }};
     ($fmt:expr, $($arg:tt)*) => {
         $crate::ffx_error!(format!($fmt, $($arg)*));
+    };
+    ($fmt:expr, $($arg:tt)*, $error_code: literal) => {
+        $crate::ffx_error!(format!($fmt, $($arg)*), $error_code);
     };
 }
 
@@ -42,8 +48,14 @@ macro_rules! ffx_bail {
     ($msg:literal $(,)?) => {
         anyhow::bail!($crate::ffx_error!($msg))
     };
+    ($msg:literal, $code:literal $(,)?) => {
+        anyhow::bail!($crate::ffx_error!($msg, $code))
+    };
     ($fmt:expr, $($arg:tt)*) => {
         anyhow::bail!($crate::ffx_error!($fmt, $($arg)*));
+    };
+    ($fmt:expr, $($arg:tt)*, $code: literal) => {
+        anyhow::bail!($crate::ffx_error!($fmt, $($arg)*, $code));
     };
 }
 
