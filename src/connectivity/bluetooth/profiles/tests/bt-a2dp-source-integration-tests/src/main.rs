@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_profile_test_server::ProfileTestHarness,
+    bt_profile_test_server_client::ProfileTestHarness,
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async as fasync,

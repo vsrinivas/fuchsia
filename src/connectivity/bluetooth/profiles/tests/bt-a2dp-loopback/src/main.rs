@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, argh::FromArgs, bt_profile_test_server::ProfileTestHarness,
+    anyhow::Error, argh::FromArgs, bt_profile_test_server_client::ProfileTestHarness,
     fidl_fuchsia_bluetooth_bredr::LaunchInfo, fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId, fuchsia_zircon as zx, futures::future,
     matches::assert_matches, std::convert::TryInto,

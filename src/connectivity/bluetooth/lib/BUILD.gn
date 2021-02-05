@@ -12,7 +12,6 @@ group("lib") {
     "bt-avdtp",
     "bt-avdtp:tests",
     "bt-fidl-mocks:tests",
-    "bt-profile-test-server",
     "bt-rfcomm",
     "bt-rfcomm:tests",
     "cpp-type",

@@ -9,7 +9,7 @@ register mock peers in the piconet, launch profiles to test, and drive peer beha
 
 ## Build Configuration
 
-To include the profile server in your build, add:
+To include the profile server and its tests in your build, add:
 
 `--with //src/connectivity/bluetooth/testing/bt-profile-test-server` and
 `--with //src/connectivity/bluetooth/testing/bt-profile-test-server:tests`
@@ -17,3 +17,14 @@ to your `fx set`.
 
 
 To run the unit tests for the server: `fx test bt-profile-test-server-tests`.
+
+## Library
+
+The Profile Test Server also provides a client-facing library of utilities to launch and interact
+with the server.
+To use the tools provided in the library, add `//src/connectivity/bluetooth/testing/bt-profile-test-server:lib` to the
+`BUILD.gn` of your test component.
+
+Import the `ProfileTestHarness` to your test to get started! Instantiate the ProfileTestHarness and register mock peers using
+the `ProfileTestHarness::register_peer` method. You can then emulate peer behavior by either operating directly on the mock peer or
+launching a Bluetooth profile.
