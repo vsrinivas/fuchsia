@@ -87,7 +87,7 @@ func TestOOMSignal(t *testing.T) {
 	}
 
 	// Ensure that the system reboots without panicking.
-	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC"); err != nil {
+	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -161,7 +161,7 @@ func TestOOM(t *testing.T) {
 	}
 
 	// Ensure that the system reboots without panicking.
-	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC"); err != nil {
+	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -224,7 +224,7 @@ func TestOOMHard(t *testing.T) {
 	}
 
 	// Ensure that the system reboots without panicking.
-	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "ZIRCON KERNEL PANIC"); err != nil {
+	if err = i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC"); err != nil {
 		t.Fatal(err)
 	}
 }
