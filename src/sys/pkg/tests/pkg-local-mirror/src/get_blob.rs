@@ -4,15 +4,9 @@
 
 /// This module tests calls to the get_blob API.
 use {
-    super::*,
-    fidl::endpoints::{create_proxy, create_request_stream},
-    fidl_fuchsia_io::FileEvent::OnOpen_,
-    fidl_fuchsia_pkg::GetBlobError,
-    fidl_fuchsia_pkg_ext::BlobId,
-    fuchsia_zircon::Status,
-    futures::channel::oneshot,
-    matches::assert_matches,
-    vfs::file::pcb::read_only_static,
+    super::*, fidl::endpoints::create_proxy, fidl_fuchsia_io::FileEvent::OnOpen_,
+    fidl_fuchsia_pkg::GetBlobError, fidl_fuchsia_pkg_ext::BlobId, fuchsia_zircon::Status,
+    futures::channel::oneshot, matches::assert_matches, vfs::file::pcb::read_only_static,
 };
 
 async fn verify_get_blob_with_read_success(env: &TestEnv, blob: &str, file_contents: &str) {
@@ -31,10 +25,10 @@ async fn verify_get_blob_with_read_success(env: &TestEnv, blob: &str, file_conte
     assert_eq!(io_util::read_file(&file_proxy).await.unwrap(), file_contents.to_owned());
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn success() {
     let env = TestEnv::builder()
-        .usb_dir(spawn_vfs(pseudo_directory! {
+        .usb_dir(pseudo_directory! {
             "0" => pseudo_directory! {
                 "fuchsia_pkg" => pseudo_directory! {
                     "blobs" => pseudo_directory! {
@@ -52,8 +46,9 @@ async fn success() {
                     "repository_metadata" => pseudo_directory! {},
                 },
             },
-        }))
-        .build();
+        })
+        .build()
+        .await;
 
     verify_get_blob_with_read_success(
         &env,
@@ -75,9 +70,9 @@ async fn success() {
     .await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn missing_blob() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
     let (file_proxy, server_end) = create_proxy().unwrap();
 
     let res = env
@@ -98,17 +93,24 @@ async fn missing_blob() {
     assert_matches!(io_util::read_file(&file_proxy).await, Err(_));
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn error_opening_blob() {
-    let (client_end, stream) = create_request_stream().unwrap();
-    let env = TestEnv::builder().usb_dir(client_end).build();
-
-    let (channels_closed_sender, channels_closed_recv) = oneshot::channel();
-    fasync::Task::spawn(close_channels_then_notify(stream, channels_closed_sender)).detach();
+    let (blobs_closed_sender, blobs_closed_recv) = oneshot::channel();
+    let env = TestEnv::builder()
+        .usb_dir(pseudo_directory! {
+            "0" => pseudo_directory! {
+                "fuchsia_pkg" => pseudo_directory! {
+                    "blobs" => DropAndSignal::new(blobs_closed_sender),
+                    "repository_metadata" => pseudo_directory! {},
+                }
+            }
+        })
+        .build()
+        .await;
 
     // Wait for the channel connecting the pkg-local-mirror to the blobs dir to close.
     // This ensures that GetBlob calls will fail with the expected fidl error.
-    let () = channels_closed_recv.await.unwrap();
+    let () = blobs_closed_recv.await.unwrap();
 
     let (file_proxy, server_end) = create_proxy().unwrap();
     let res = env

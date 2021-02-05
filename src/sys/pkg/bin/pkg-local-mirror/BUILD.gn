@@ -50,5 +50,5 @@ rustc_library("lib") {
 
 fuchsia_component("pkg-local-mirror") {
   deps = [ ":bin" ]
-  manifest = "meta/pkg-local-mirror.cmx"
+  manifest = "meta/pkg-local-mirror.cml"
 }

@@ -5,7 +5,7 @@
 /// This module tests calls to the get_metadata API.
 use {
     super::*,
-    fidl::endpoints::{create_proxy, create_request_stream},
+    fidl::endpoints::create_proxy,
     fidl_fuchsia_io::FileEvent::OnOpen_,
     fidl_fuchsia_pkg::{GetMetadataError, RepositoryUrl},
     fuchsia_zircon::Status,
@@ -30,10 +30,10 @@ async fn verify_get_metadata_with_read_success(env: &TestEnv, path: &str, file_c
     assert_eq!(io_util::read_file(&file_proxy).await.unwrap(), file_contents.to_owned());
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn success() {
     let env = TestEnv::builder()
-        .usb_dir(spawn_vfs(pseudo_directory! {
+        .usb_dir(pseudo_directory! {
             "0" => pseudo_directory! {
                 "fuchsia_pkg" => pseudo_directory! {
                     "blobs" => pseudo_directory! {},
@@ -45,17 +45,18 @@ async fn success() {
                     },
                 },
             },
-        }))
-        .build();
+        })
+        .build()
+        .await;
 
     verify_get_metadata_with_read_success(&env, "1.root.json", "beep").await;
     verify_get_metadata_with_read_success(&env, "2.root.json", "boop").await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn success_multiple_path_segments() {
     let env = TestEnv::builder()
-        .usb_dir(spawn_vfs(pseudo_directory! {
+        .usb_dir(pseudo_directory! {
             "0" => pseudo_directory! {
                 "fuchsia_pkg" => pseudo_directory! {
                     "blobs" => pseudo_directory! {},
@@ -73,8 +74,9 @@ async fn success_multiple_path_segments() {
                     },
                 },
             },
-        }))
-        .build();
+        })
+        .build()
+        .await;
 
     verify_get_metadata_with_read_success(&env, "foo/bar/1.root.json", "beep").await;
     verify_get_metadata_with_read_success(&env, "baz/2.root.json", "boop").await;
@@ -100,17 +102,17 @@ async fn verify_get_metadata_with_on_open_failure_status(
     assert_matches!(io_util::read_file(&file_proxy).await, Err(_));
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn missing_repo_url_directory() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     verify_get_metadata_with_on_open_failure_status(&env, "1.root.json", Status::NOT_FOUND).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn missing_metadata_file() {
     let env = TestEnv::builder()
-        .usb_dir(spawn_vfs(pseudo_directory! {
+        .usb_dir(pseudo_directory! {
             "0" => pseudo_directory! {
                 "fuchsia_pkg" => pseudo_directory! {
                     "blobs" => pseudo_directory! {},
@@ -121,23 +123,31 @@ async fn missing_metadata_file() {
                     },
                 },
             },
-        }))
-        .build();
+        })
+        .build()
+        .await;
 
     verify_get_metadata_with_on_open_failure_status(&env, "1.root.json", Status::NOT_FOUND).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn error_opening_metadata() {
-    let (client_end, stream) = create_request_stream().unwrap();
-    let env = TestEnv::builder().usb_dir(client_end).build();
-
-    let (channels_closed_sender, channels_closed_recv) = oneshot::channel();
-    fasync::Task::spawn(close_channels_then_notify(stream, channels_closed_sender)).detach();
+    let (metadata_closed_sender, metadata_closed_recv) = oneshot::channel();
+    let env = TestEnv::builder()
+        .usb_dir(pseudo_directory! {
+            "0" => pseudo_directory! {
+                "fuchsia_pkg" => pseudo_directory! {
+                    "blobs" => pseudo_directory! {},
+                    "repository_metadata" => DropAndSignal::new(metadata_closed_sender),
+                }
+            }
+        })
+        .build()
+        .await;
 
     // Wait for the channel connecting the pkg-local-mirror to the metadata dir to close.
     // This ensures that GetMetadata calls will fail with the expected fidl error.
-    let () = channels_closed_recv.await.unwrap();
+    let () = metadata_closed_recv.await.unwrap();
 
     let (file_proxy, server_end) = create_proxy().unwrap();
     let res = env
