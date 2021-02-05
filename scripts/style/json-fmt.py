@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -21,7 +21,7 @@ def sort(data):
             key: (
                 sort(value) if key not in [
                     "args", "arguments", "injected-services"
-                ] else value) for key, value in data.iteritems()
+                ] else value) for key, value in data.items()
         }
     elif isinstance(data, list):
         return sorted(sort(datum) for datum in data)

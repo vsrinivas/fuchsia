@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -37,7 +37,7 @@ SYSROOT_PREFIXES = [
     'ZIRCON_SYSTEM_PUBLIC',
     'ZIRCON_THIRD_PARTY_ULIB_MUSL_INCLUDE',
 ]
-sysroot_prefix = re.compile('^(' + string.join(SYSROOT_PREFIXES, '|') + ')_')
+sysroot_prefix = re.compile('^(' + '|'.join(SYSROOT_PREFIXES) + ')_')
 
 PUBLIC_PREFIXES = [
     'ZIRCON_SYSTEM_ULIB_.*_INCLUDE',
@@ -46,7 +46,7 @@ PUBLIC_PREFIXES = [
     'TOPAZ_PUBLIC',
     'SDK'
 ]
-public_prefix = re.compile('^(' + string.join(PUBLIC_PREFIXES, '|') + ')_')
+public_prefix = re.compile('^(' + '|'.join(PUBLIC_PREFIXES) + ')_')
 
 all_header_guards = collections.defaultdict(list)
 
@@ -166,7 +166,7 @@ def check_file(path, fix_guards=False):
         header_guards_fixed = fix_header_guard(path, header_guard)
 
     if not header_guards_fixed:
-        print('Allowable header guard values are %s' % all_header_guards.keys());
+        print('Allowable header guard values are %s' % list(all_header_guards.keys()))
 
     return False
 
@@ -239,7 +239,7 @@ def check_dir(p, fix_guards=False):
 
 
 def check_collisions():
-    for header_guard, paths in all_header_guards.iteritems():
+    for header_guard, paths in all_header_guards.items():
         if len(paths) == 1:
             continue
         print('Multiple files could use %s as a header guard:' % header_guard)

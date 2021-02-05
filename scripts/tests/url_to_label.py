@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -25,7 +25,7 @@ def main():
             for entry in tests_json
         }
         for line in sys.stdin:
-            print url_to_label.get(line.strip(), '')
+            print(url_to_label.get(line.strip(), ''))
 
     return 0
 
