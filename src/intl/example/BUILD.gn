@@ -22,6 +22,10 @@ executable("src_intl_example_bin") {
 
   # [START deps]
   deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/intl/lookup/cpp:lib",
+    "//third_party/googletest:gtest_prod",
+
     # This is the underlying generated FIDL code, must be included so that
     # its settings make it to the -I flag for compiler invocation.
     # Generate all needed intermediate resources.
@@ -63,11 +67,11 @@ package("pkg") {
     },
   ]
 
-  # This declaration works, but needs to be maintained manually.  Work is
-  # underway to make the "package" target collect and apply this information
-  # automatically.
   # [START resources]
   resources = [
+    # These declaration works, but need to be maintained manually.  Work is
+    # underway to make the "package" target collect and apply the locale files
+    # automatically.
     {
       path = rebase_path("$target_gen_dir/en/l10n.json")
       dest = "assets/locales/en/l10n.json"
@@ -79,6 +83,12 @@ package("pkg") {
     {
       path = rebase_path("$target_gen_dir/es/l10n.json")
       dest = "assets/locales/es/l10n.json"
+    },
+
+    # Contains the necessary ICU data.
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
     },
   ]
 

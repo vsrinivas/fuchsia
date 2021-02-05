@@ -12,7 +12,11 @@ toc:
   path: /docs/development/internationalization/localization/message_translation.md
 - title: "Lookup API"
   path: /docs/development/internationalization/localization/lookup_api.md
+- title: "Locale fallback"
+  path: /docs/development/internationalization/localization/locale_fallback.md
 - title: "Localization workflow"
   path: /docs/development/internationalization/localization/workflow.md
 - title: "Packaging"
   path: /docs/development/internationalization/localization/packaging.md
+- title: "Future work"
+  path: /docs/development/internationalization/localization/future_work.md

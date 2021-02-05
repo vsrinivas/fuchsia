@@ -24,3 +24,35 @@ program to speak English.
 
 Please refer to the `BUILD.gn` file for a minimal example of how to compile a
 C++ program that uses generated strings constants.
+
+# Building and running
+
+## Building
+
+Before you build:
+
+1. Make sure your `fx set` command has `--with=//src/intl/example`. 
+1. Make sure `fx serve` is running.
+
+```
+fx build src/intl/example
+```
+
+## Testing
+
+Before you test:
+
+1. Make sure `fx serve` is running.
+
+```
+fx test src/intl/example
+```
+
+## Running
+
+**Prerequisite.** You will need to have `fx serve` running.
+
+```
+fx shell run \
+  fuchsia-pkg://fuchsia.com/src-intl-example#meta/src-intl-example.cmx
+```
