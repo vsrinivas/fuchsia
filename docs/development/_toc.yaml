@@ -38,6 +38,9 @@ toc:
 - title: "Develop components"
   section:
   - include: /docs/development/components/_toc.yaml
+- title: "Develop sessions"
+  section:
+  - include: /docs/development/sessions/_toc.yaml
 - title: "Develop using the IDK"
   section:
   - include: /docs/development/idk/_toc.yaml
