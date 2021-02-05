@@ -33,24 +33,23 @@ fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"sessionmgr"});
-  if (!modular::ModularConfigReader::OverriddenConfigExists()) {
+
+  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
+
+  if (!config_reader.OverriddenConfigExists()) {
     FX_LOGS(WARNING) << "Stopping initialization because a configuration couldn't be found at "
                      << modular::ModularConfigReader::GetOverriddenConfigPath() << ". "
                      << "This is expected if basemgr is shutting down.";
     return 0;
   }
 
-  FX_LOGS(INFO) << "Using configuration at "
-                << modular::ModularConfigReader::GetOverriddenConfigPath() << " to start Modular.";
+  FX_LOGS(INFO) << "Using configuration at /"
+                << modular::ModularConfigReader::GetOverriddenConfigPath()
+                << " in sessionmgr's namespace to start Modular.";
 
   // Read configurations from file. This sets default values for any
   // configurations that aren't specified in the configuration.
-  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
-
-  fuchsia::modular::session::ModularConfig modular_config;
-  modular_config.set_basemgr_config(config_reader.GetBasemgrConfig());
-  modular_config.set_sessionmgr_config(config_reader.GetSessionmgrConfig());
-  modular::ModularConfigAccessor config_accessor(std::move(modular_config));
+  modular::ModularConfigAccessor config_accessor(config_reader.GetConfig());
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
@@ -60,8 +59,8 @@ int main(int argc, const char** argv) {
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  auto cobalt_cleanup = SetupCobalt(config_accessor.enable_cobalt(), std::move(loop.dispatcher()),
-                                    component_context.get());
+  auto cobalt_cleanup =
+      SetupCobalt(config_accessor.enable_cobalt(), loop.dispatcher(), component_context.get());
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       component_context->outgoing(),

@@ -297,8 +297,9 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
 }
 
 void TestHarnessImpl::ParseConfig(std::string config, ParseConfigCallback callback) {
-  auto config_reader = modular::ModularConfigReader(config);
-  callback(config_reader.GetBasemgrConfig(), config_reader.GetSessionmgrConfig());
+  auto parsed = modular::ParseConfig(config).take_value();
+  callback(std::move(*parsed.mutable_basemgr_config()),
+           std::move(*parsed.mutable_sessionmgr_config()));
 }
 
 void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {

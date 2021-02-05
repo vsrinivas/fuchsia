@@ -14,6 +14,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/json_parser/json_parser.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
@@ -88,20 +89,21 @@ std::string ConfigToJsonString(const fuchsia::modular::session::ModularConfig& c
   return json;
 }
 
-ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
-  FX_CHECK(dir_fd.get() >= 0);
+ModularConfigReader::ModularConfigReader(fbl::unique_fd root_dir) : root_dir_(std::move(root_dir)) {
+  FX_CHECK(root_dir_.is_valid());
 
   // 1. Figure out where the config file is.
-  std::string config_path = files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
-                                            modular_config::kStartupConfigFilePath);
-  if (!files::IsFileAt(dir_fd.get(), config_path)) {
-    config_path = files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
-                                  modular_config::kStartupConfigFilePath);
+  std::string config_path = GetDefaultConfigPath();
+  if (OverriddenConfigExists()) {
+    config_path = GetOverriddenConfigPath();
+  } else if (PersistentConfigOverrideAllowed() && PersistentConfigExists()) {
+    config_path = GetPersistentConfigPath();
+    FX_LOGS(INFO) << "Reading persistent configuration from /" << config_path;
   }
 
   // 2. Read the file
   std::string config;
-  if (!files::ReadFileToStringAt(dir_fd.get(), config_path, &config)) {
+  if (!files::ReadFileToStringAt(root_dir_.get(), config_path, &config)) {
     FX_LOGS(ERROR) << "Failed to read file: " << config_path;
     UseDefaults();
     return;
@@ -111,15 +113,15 @@ ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
   ParseConfig(config, config_path);
 }
 
-ModularConfigReader::ModularConfigReader(std::string config) {
-  constexpr char kPathForErrorStrings[] = ".";
-
-  ParseConfig(config, kPathForErrorStrings);
-}
-
 // static
 ModularConfigReader ModularConfigReader::CreateFromNamespace() {
   return ModularConfigReader(fbl::unique_fd(open("/", O_RDONLY)));
+}
+
+// static
+std::string ModularConfigReader::GetDefaultConfigPath() {
+  return files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
+                         modular_config::kStartupConfigFilePath);
 }
 
 // static
@@ -129,8 +131,27 @@ std::string ModularConfigReader::GetOverriddenConfigPath() {
 }
 
 // static
+std::string ModularConfigReader::GetPersistentConfigPath() {
+  return files::JoinPath(StripLeadingSlash(modular_config::kPersistentConfigDir),
+                         modular_config::kStartupConfigFilePath);
+}
+
+// static
+std::string ModularConfigReader::GetAllowPersistentConfigOverridePath() {
+  return files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
+                         modular_config::kAllowPersistentConfigOverrideFilePath);
+}
+
 bool ModularConfigReader::OverriddenConfigExists() {
-  return files::IsFile(GetOverriddenConfigPath());
+  return files::IsFileAt(root_dir_.get(), GetOverriddenConfigPath());
+}
+
+bool ModularConfigReader::PersistentConfigExists() {
+  return files::IsFileAt(root_dir_.get(), GetPersistentConfigPath());
+}
+
+bool ModularConfigReader::PersistentConfigOverrideAllowed() {
+  return files::IsFileAt(root_dir_.get(), GetAllowPersistentConfigOverridePath());
 }
 
 void ModularConfigReader::ParseConfig(const std::string& config, const std::string& config_path) {
@@ -175,6 +196,13 @@ fuchsia::modular::session::SessionmgrConfig ModularConfigReader::GetSessionmgrCo
   return result;
 }
 
+fuchsia::modular::session::ModularConfig ModularConfigReader::GetConfig() const {
+  fuchsia::modular::session::ModularConfig result;
+  basemgr_config_.Clone(result.mutable_basemgr_config());
+  sessionmgr_config_.Clone(result.mutable_sessionmgr_config());
+  return result;
+}
+
 // static
 std::string ModularConfigReader::GetConfigAsString(
     fuchsia::modular::session::BasemgrConfig* basemgr_config,
@@ -190,6 +218,56 @@ std::string ModularConfigReader::GetConfigAsString(
     })",
                          modular_config::kBasemgrConfigName, basemgr_json,
                          modular_config::kSessionmgrConfigName, sessionmgr_json);
+}
+
+fit::result<fuchsia::modular::session::ModularConfig, std::string>
+ModularConfigReader::ReadAndMaybePersistConfig(ModularConfigWriter* config_writer) {
+  FX_DCHECK(config_writer);
+
+  auto config = GetConfig();
+
+  // Persist |config| if allowed and if the config was read from /config_override.
+  if (modular::ModularConfigReader::PersistentConfigOverrideAllowed() &&
+      modular::ModularConfigReader::OverriddenConfigExists()) {
+    if (auto result = config_writer->Write(config); result.is_error()) {
+      return fit::error("Failed to persist config_override: " + result.take_error());
+    }
+    FX_LOGS(INFO) << "Configuration from config_override has been persisted.";
+  }
+
+  return fit::ok(std::move(config));
+}
+
+ModularConfigWriter::ModularConfigWriter(fbl::unique_fd root_dir) : root_dir_(std::move(root_dir)) {
+  FX_CHECK(root_dir_.is_valid());
+}
+
+ModularConfigWriter ModularConfigWriter::CreateFromNamespace() {
+  return ModularConfigWriter(fbl::unique_fd(open(modular_config::kPersistentConfigDir, O_RDONLY)));
+}
+
+fit::result<void, std::string> ModularConfigWriter::Write(
+    const fuchsia::modular::session::ModularConfig& config) {
+  auto config_json = ConfigToJsonString(config);
+  if (!files::WriteFileAt(root_dir_.get(), modular_config::kStartupConfigFilePath,
+                          config_json.data(), config_json.size())) {
+    return fit::error("could not write config file");
+  }
+
+  return fit::ok();
+}
+
+fit::result<void, std::string> ModularConfigWriter::Delete() {
+  if (!files::IsFileAt(root_dir_.get(), modular_config::kStartupConfigFilePath)) {
+    return fit::ok();
+  }
+
+  if (!files::DeletePathAt(root_dir_.get(), modular_config::kStartupConfigFilePath,
+                           /*recursive=*/false)) {
+    return fit::error("could not delete config file");
+  }
+
+  return fit::ok();
 }
 
 }  // namespace modular

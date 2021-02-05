@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/config.gni")
+
+# Include this target from a product config if you want to allow basemgr
+# to persist configuration provided to it in /config_override.
+config_data("allow_persistent_config_override") {
+  for_pkg = "basemgr"
+  sources = [ "allow_persistent_config_override.config" ]
+  outputs = [ "allow_persistent_config_override" ]
+
+  # We should never allow persistent configs on a production, user-facing build.
+  deps = [ "//build/validate:non_production_tag" ]
+}

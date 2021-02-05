@@ -11,8 +11,11 @@
 #include <thread>
 
 #include <fbl/unique_fd.h>
+#include <rapidjson/document.h>
+#include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
+#include <src/lib/files/scoped_temp_dir.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_server.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
@@ -21,7 +24,22 @@
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
+// Creates the file at |path| in the directory with file descriptor |root_fd| with
+// the contents |data|.
+//
+// If necessary, creates the |path| directory, including intermediate directories.
+bool CreateFileAt(int root_fd, const std::string& path, std::string_view data) {
+  if (!files::CreateDirectoryAt(root_fd, files::GetDirectoryName(path))) {
+    return false;
+  }
+  if (!files::WriteFileAt(root_fd, path, data.data(), data.size())) {
+    return false;
+  }
+  return true;
+}
+
 class ModularConfigReaderTest : public gtest::RealLoopFixture {};
+class ModularConfigWriterTest : public gtest::RealLoopFixture {};
 
 // Test that ModularConfigReader finds and reads the startup.config file given a
 // root directory that contains config data.
@@ -378,4 +396,316 @@ TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
 
   EXPECT_EQ(expected_json_doc, config_json_doc)
       << "Expected: " << kExpectedJson << "\nActual: " << config_json;
+}
+
+// Tests that ModularConfigReader reads from the persistent configuration when it exists and
+// persistent config_override is allowed.
+TEST_F(ModularConfigReaderTest, ReadPersistentConfig) {
+  constexpr char kSessionShellForTest[] =
+      "fuchsia-pkg://example.com/ModularConfigReaderTest#meta/"
+      "ModularConfigReaderTest.cmx";
+
+  std::string persistent_config_contents = fxl::Substitute(
+      R"({
+        "basemgr": {
+          "session_shells": [
+            {
+              "url": "$0"
+            }
+          ]
+        }
+      })",
+      kSessionShellForTest);
+
+  // Create a directory that simulates the component namespace with the layout:
+  //
+  //    /
+  //    ├── cache
+  //    │   └── startup.config
+  //    └── config
+  //        └── data
+  //            ├── startup.config
+  //            └── allow_persistent_config_override
+  files::ScopedTempDir root_dir;
+  fbl::unique_fd root_fd(open(root_dir.path().c_str(), O_RDONLY));
+
+  // The persistent /cache/startup.config file contains |persistent_config_contents|.
+  ASSERT_TRUE(CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath(),
+                           persistent_config_contents));
+
+  // The /config/data/startup.config file contains an empty config.
+  ASSERT_TRUE(
+      CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetDefaultConfigPath(), "{}"));
+
+  // Allow persistent config_override.
+  ASSERT_TRUE(CreateFileAt(root_fd.get(),
+                           modular::ModularConfigReader::GetAllowPersistentConfigOverridePath(),
+                           "(file contents are ignored)"));
+
+  modular::ModularConfigReader reader(std::move(root_fd));
+
+  // Verify that ModularConfigReader read from the persistent config in /cache.
+  auto basemgr_config = reader.GetBasemgrConfig();
+  EXPECT_EQ(kSessionShellForTest,
+            basemgr_config.session_shell_map().at(0).config().app_config().url());
+}
+
+// Tests that ModularConfigReader reads from the regular config_override when persistence is
+// not allowed even if a persistent config exists.
+TEST_F(ModularConfigReaderTest, ReadPersistentConfigNotAllowed) {
+  constexpr char kSessionShellForTest[] =
+      "fuchsia-pkg://example.com/ModularConfigReaderTest#meta/"
+      "ModularConfigReaderTest.cmx";
+
+  std::string config_contents = fxl::Substitute(
+      R"({
+        "basemgr": {
+          "session_shells": [
+            {
+              "url": "$0"
+            }
+          ]
+        }
+      })",
+      kSessionShellForTest);
+
+  // Create a directory that simulates the component namespace with the layout:
+  //
+  //    /
+  //    ├── cache
+  //    │   └── startup.config
+  //    ├── config
+  //    │   └── data
+  //    └── config_override
+  //        └── data
+  //            └── startup.config
+  files::ScopedTempDir root_dir;
+  fbl::unique_fd root_fd(open(root_dir.path().c_str(), O_RDONLY));
+
+  // The persistent /cache/startup.config file exists but its contents won't be read.
+  ASSERT_TRUE(CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath(),
+                           "(file contents are ignored)"));
+
+  // The /config_override/data/startup.config file contains |config_contents|.
+  ASSERT_TRUE(CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetOverriddenConfigPath(),
+                           config_contents));
+
+  // Create the directory where the allow_persistent_config_override marker file
+  // should be, but not the file itself.
+  ASSERT_TRUE(files::CreateDirectoryAt(
+      root_fd.get(), files::GetDirectoryName(
+                         modular::ModularConfigReader::GetAllowPersistentConfigOverridePath())));
+
+  modular::ModularConfigReader reader(std::move(root_fd));
+
+  // Verify that ModularConfigReader read from /config_override.
+  auto basemgr_config = reader.GetBasemgrConfig();
+  EXPECT_EQ(kSessionShellForTest,
+            basemgr_config.session_shell_map().at(0).config().app_config().url());
+}
+
+// Tests that ModularConfigReader.ReadAndMaybePersistConfig stores configuration from
+// config_override to the persistent config dir when allowed.
+TEST_F(ModularConfigReaderTest, ReadAndMaybePersistConfig) {
+  // Create a directory that simulates the component namespace with the layout:
+  //
+  //    /
+  //    ├── cache
+  //    ├── config
+  //    │   └── data
+  //    │       └── allow_persistent_config_override
+  //    └── config_override
+  //        └── data
+  //            └── startup.config
+  files::ScopedTempDir root_dir;
+  fbl::unique_fd root_fd(open(root_dir.path().c_str(), O_RDONLY));
+
+  auto persistent_config_dir =
+      files::GetDirectoryName(modular::ModularConfigReader::GetPersistentConfigPath());
+
+  // Create the directory where the persistent config should be, but not the file itself.
+  ASSERT_TRUE(files::CreateDirectoryAt(root_fd.get(), persistent_config_dir));
+
+  // The /config_override/data/startup.config file contains an empty config.
+  ASSERT_TRUE(
+      CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetOverriddenConfigPath(), "{}"));
+
+  // Allow persistent config_override.
+  ASSERT_TRUE(CreateFileAt(root_fd.get(),
+                           modular::ModularConfigReader::GetAllowPersistentConfigOverridePath(),
+                           "(file contents are ignored)"));
+
+  modular::ModularConfigReader reader(root_fd.duplicate());
+
+  fbl::unique_fd write_fd(
+      openat(root_fd.get(), persistent_config_dir.c_str(), O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(write_fd.is_valid());
+  modular::ModularConfigWriter writer(std::move(write_fd));
+
+  auto config_result = reader.ReadAndMaybePersistConfig(&writer);
+  ASSERT_TRUE(config_result.is_ok());
+
+  // Verify that ReadAndMaybePersistConfig persisted the configuration.
+  EXPECT_TRUE(reader.PersistentConfigExists());
+  EXPECT_TRUE(
+      files::IsFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath()));
+}
+
+// Tests that ModularConfigReader.ReadAndMaybePersistConfig does not store configuration from
+// config_override to the persistent config dir when not allowed.
+TEST_F(ModularConfigReaderTest, ReadAndMaybePersistConfigNotAllowed) {
+  // Create a directory that simulates the component namespace with the layout:
+  //
+  //    /
+  //    ├── cache
+  //    ├── config
+  //    │   └── data
+  //    └── config_override
+  //        └── data
+  //            └── startup.config
+  files::ScopedTempDir root_dir;
+  fbl::unique_fd root_fd(open(root_dir.path().c_str(), O_RDONLY));
+
+  auto persistent_config_dir =
+      files::GetDirectoryName(modular::ModularConfigReader::GetPersistentConfigPath());
+
+  // Create the directory where the persistent config should be, but not the file itself.
+  ASSERT_TRUE(files::CreateDirectoryAt(root_fd.get(), persistent_config_dir));
+
+  // The /config_override/data/startup.config file contains an empty config.
+  ASSERT_TRUE(
+      CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetOverriddenConfigPath(), "{}"));
+
+  // Create the directory where the allow_persistent_config_override marker file
+  // should be, but not the file itself.
+  ASSERT_TRUE(files::CreateDirectoryAt(
+      root_fd.get(), files::GetDirectoryName(
+                         modular::ModularConfigReader::GetAllowPersistentConfigOverridePath())));
+
+  modular::ModularConfigReader reader(root_fd.duplicate());
+
+  fbl::unique_fd write_fd(
+      openat(root_fd.get(), persistent_config_dir.c_str(), O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(write_fd.is_valid());
+  modular::ModularConfigWriter writer(std::move(write_fd));
+
+  auto config_result = reader.ReadAndMaybePersistConfig(&writer);
+  ASSERT_TRUE(config_result.is_ok());
+
+  // Verify that ReadAndMaybePersistConfig has not persisted the configuration.
+  EXPECT_FALSE(reader.PersistentConfigExists());
+  EXPECT_FALSE(
+      files::IsFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath()));
+}
+
+// Tests that ModularConfigReader.ReadAndMaybePersistConfig overwrites existing
+// persistent configuration.
+TEST_F(ModularConfigReaderTest, ReadAndMaybePersistConfigOverwritesExisting) {
+  constexpr char kSessionShellForTest[] =
+      "fuchsia-pkg://example.com/ModularConfigReaderTest#meta/"
+      "ModularConfigReaderTest.cmx";
+
+  std::string config_contents = fxl::Substitute(
+      R"({
+        "basemgr": {
+          "session_shells": [
+            {
+              "url": "$0"
+            }
+          ]
+        }
+      })",
+      kSessionShellForTest);
+
+  // Create a directory that simulates the component namespace with the layout:
+  //
+  //    /
+  //    ├── cache
+  //    │   └── startup.config
+  //    ├── config
+  //    │   └── data
+  //    │       └── allow_persistent_config_override
+  //    └── config_override
+  //        └── data
+  //            └── startup.config
+  files::ScopedTempDir root_dir;
+  fbl::unique_fd root_fd(open(root_dir.path().c_str(), O_RDONLY));
+
+  auto persistent_config_dir =
+      files::GetDirectoryName(modular::ModularConfigReader::GetPersistentConfigPath());
+
+  // The persistent /cache/startup.config file contains an empty config.
+  ASSERT_TRUE(
+      CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath(), "{}"));
+
+  // The /config_override/data/startup.config file contains a config with |kSessionShellForTest|.
+  ASSERT_TRUE(CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetOverriddenConfigPath(),
+                           config_contents));
+
+  // Allow persistent config_override.
+  ASSERT_TRUE(CreateFileAt(root_fd.get(),
+                           modular::ModularConfigReader::GetAllowPersistentConfigOverridePath(),
+                           "(file contents are ignored)"));
+
+  modular::ModularConfigReader reader(root_fd.duplicate());
+
+  // The persistent config exists before ReadAndMaybePersistConfig is called.
+  ASSERT_TRUE(reader.PersistentConfigExists());
+  ASSERT_TRUE(
+      files::IsFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath()));
+
+  fbl::unique_fd write_fd(
+      openat(root_fd.get(), persistent_config_dir.c_str(), O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(write_fd.is_valid());
+  modular::ModularConfigWriter writer(std::move(write_fd));
+
+  auto config_result = reader.ReadAndMaybePersistConfig(&writer);
+  ASSERT_TRUE(config_result.is_ok());
+
+  // Read the config with a new reader.
+  modular::ModularConfigReader reader2(root_fd.duplicate());
+
+  ASSERT_TRUE(reader2.PersistentConfigExists());
+
+  // Verify that ModularConfigReader read from overwritten config.
+  auto basemgr_config = reader2.GetBasemgrConfig();
+  EXPECT_EQ(kSessionShellForTest,
+            basemgr_config.session_shell_map().at(0).config().app_config().url());
+}
+
+// Tests that ModularConfigWriter.Delete deletes the persistent configuration file.
+TEST_F(ModularConfigWriterTest, Delete) {
+  // Create a directory that simulates the component namespace with the layout:
+  //
+  //    /
+  //    └── cache
+  //        └── startup.config
+  files::ScopedTempDir root_dir;
+  fbl::unique_fd root_fd(open(root_dir.path().c_str(), O_RDONLY));
+
+  auto persistent_config_dir =
+      files::GetDirectoryName(modular::ModularConfigReader::GetPersistentConfigPath());
+
+  // The persistent /cache/startup.config file contains an empty config.
+  ASSERT_TRUE(
+      CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath(), "{}"));
+
+  modular::ModularConfigReader reader(root_fd.duplicate());
+
+  fbl::unique_fd write_fd(
+      openat(root_fd.get(), persistent_config_dir.c_str(), O_RDONLY | O_DIRECTORY));
+  ASSERT_TRUE(write_fd.is_valid());
+  modular::ModularConfigWriter writer(std::move(write_fd));
+
+  // The persistent config exists before Delete is called.
+  ASSERT_TRUE(reader.PersistentConfigExists());
+  ASSERT_TRUE(
+      files::IsFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath()));
+
+  writer.Delete();
+
+  // The config should have been deleted.
+  EXPECT_FALSE(reader.PersistentConfigExists());
+  EXPECT_FALSE(
+      files::IsFileAt(root_fd.get(), modular::ModularConfigReader::GetPersistentConfigPath()));
 }

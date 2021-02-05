@@ -14,13 +14,17 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
+
+// Command-line command to delete the persistent configuration.
+constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
 
 fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
                                                sys::ComponentContext* component_context) {
@@ -49,23 +53,44 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
       });
 }
 
-modular::ModularConfigAccessor ReadConfigFromNamespace() {
-  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
+std::string GetUsage() {
+  return R"(Usage: basemgr [<command>]
 
-  fuchsia::modular::session::ModularConfig modular_config;
-  modular_config.set_basemgr_config(config_reader.GetBasemgrConfig());
-  modular_config.set_sessionmgr_config(config_reader.GetSessionmgrConfig());
+  <command>
+    (none)                    Launches basemgr.
+    delete_persistent_config  Deletes any existing persistent configuration, and exits.
 
-  return modular::ModularConfigAccessor(std::move(modular_config));
+basemgr cannot be launched from the shell. Please use `basemgr_launcher` or `run`.
+)";
 }
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"basemgr"});
 
-  if (argc != 1) {
-    std::cerr << "basemgr does not support arguments. Please use basemgr_launcher to "
-              << "launch basemgr with custom configurations." << std::endl;
-    return 1;
+  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
+  auto config_writer = modular::ModularConfigWriter::CreateFromNamespace();
+
+  // Process command line arguments.
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  const auto& positional_args = command_line.positional_args();
+  if (positional_args.size() == 1 && positional_args[0] == kDeletePersistentConfigCommand) {
+    if (auto result = config_writer.Delete(); result.is_error()) {
+      std::cerr << result.take_error() << std::endl;
+      return EXIT_FAILURE;
+    }
+    std::cout << "Deleted persistent configuration." << std::endl;
+    return EXIT_SUCCESS;
+  }
+  if (!positional_args.empty()) {
+    std::cerr << GetUsage() << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  // Read configuration.
+  auto config_result = config_reader.ReadAndMaybePersistConfig(&config_writer);
+  if (config_result.is_error()) {
+    std::cerr << config_result.take_error() << std::endl;
+    return EXIT_FAILURE;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -73,10 +98,8 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
-  // Read configuration from /config/data
-  auto config_accessor = ReadConfigFromNamespace();
-
-  auto basemgr_impl = CreateBasemgrImpl(std::move(config_accessor), component_context.get(), &loop);
+  auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
+                                        component_context.get(), &loop);
 
   // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
   // component's out directory has mounted. basemgr_launcher uses this signal

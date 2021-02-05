@@ -8,7 +8,8 @@
     "sandbox": {
         "features": [
             "config-data",
-            "isolated-persistent-storage"
+            "isolated-persistent-storage",
+            "isolated-cache-storage"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",

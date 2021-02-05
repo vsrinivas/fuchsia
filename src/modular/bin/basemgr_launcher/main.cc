@@ -96,33 +96,35 @@ Usage: basemgr_launcher [<command>]
               read from stdin.
     shutdown  Terminates the running instance of basemgr, if found.
 
-Exmaples (from host machine):
+# Examples (from host machine):
 
   $ cat myconfig.json | fx shell basemgr_launcher
   $ fx shell basemgr_launcher shutdown
-)";
-}
 
-std::string GetDefaultConfig() {
-  auto config_reader = modular::ModularConfigReader(/*config=*/"{}");
-  fuchsia::modular::session::BasemgrConfig basemgr_config = config_reader.GetBasemgrConfig();
-  fuchsia::modular::session::SessionmgrConfig sessionmgr_config =
-      config_reader.GetSessionmgrConfig();
-  return modular::ModularConfigReader::GetConfigAsString(&basemgr_config, &sessionmgr_config);
+# Persistent configuration
+
+Persistent configuration can enabled by adding //src/modular/build:allow_persistent_config_override
+to a non-production build. When enabled, the configuration provided to basemgr_launcher will
+be stored and used when basemgr restarts and across reboots.
+
+This configuration can be deleted by running (from host machine)
+
+  $ fx shell run fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx delete_persistent_config
+)";
 }
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"basemgr_launcher"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::string config_str = "";
+  std::string config_str;
   if (argc > 1) {
     const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
     const auto& positional_args = command_line.positional_args();
     const auto& cmd = positional_args.empty() ? "" : positional_args[0];
 
     if (cmd.empty()) {
-      config_str = GetDefaultConfig();
+      config_str = modular::ConfigToJsonString(modular::DefaultConfig());
     } else if (cmd == kShutdownBasemgrCommandString) {
       return ShutdownBasemgr(&loop);
     } else {

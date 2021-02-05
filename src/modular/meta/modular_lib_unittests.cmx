@@ -6,6 +6,9 @@
         "binary": "bin/modular_lib_unittests"
     },
     "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
