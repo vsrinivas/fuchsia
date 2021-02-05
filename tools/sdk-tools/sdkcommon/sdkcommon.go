@@ -288,7 +288,7 @@ func (sdk SDKProperties) GetAvailableImages(version string, bucket string) ([]GC
 	}
 
 	for _, b := range buckets {
-		url := fmt.Sprintf("gs://%v/development/%v/images", b, version)
+		url := fmt.Sprintf("gs://%v/development/%v/images*", b, version)
 		args := []string{"ls", url}
 		output, err := runGSUtil(args)
 		if err != nil {
@@ -296,8 +296,9 @@ func (sdk SDKProperties) GetAvailableImages(version string, bucket string) ([]GC
 		}
 		for _, line := range strings.Split(strings.TrimSuffix(string(output), "\n"), "\n") {
 			if len(filepath.Base(line)) >= 4 {
+				bucketVersion := filepath.Base(filepath.Dir(filepath.Dir(line)))
 				name := filepath.Base(line)[:len(filepath.Base(line))-4]
-				images = append(images, GCSImage{Bucket: b, Version: version, Name: name})
+				images = append(images, GCSImage{Bucket: b, Version: bucketVersion, Name: name})
 			} else {
 				log.Warningf("Could not parse image name: %v", line)
 			}

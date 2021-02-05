@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 const resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
@@ -63,6 +64,41 @@ func TestGetAvailableImages(t *testing.T) {
 	}
 	if len(images) != 4 {
 		t.Fatalf("Expected 4 images, got %v: %v", len(images), images)
+	}
+
+	bucket = "new"
+	version = "multi-version**"
+	images, err = testSDK.GetAvailableImages(version, bucket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(images) != 4 {
+		t.Fatalf("Expected 4 images, got %v: %v", len(images), images)
+	}
+	expectedImages := []GCSImage{
+		{
+			Bucket:  "new",
+			Version: "multi-version1",
+			Name:    "priv-image1",
+		}, {
+			Bucket:  "new",
+			Version: "multi-version2",
+			Name:    "priv-image1",
+		},
+		{
+			Bucket:  "fuchsia",
+			Version: "multi-version1",
+			Name:    "image1",
+		}, {
+			Bucket:  "fuchsia",
+			Version: "multi-version2",
+			Name:    "image1",
+		},
+	}
+	if diff := cmp.Diff(expectedImages, images, cmpopts.SortSlices(func(a, b GCSImage) bool {
+		return a.Bucket == b.Bucket && a.Version == b.Version && a.Name == b.Name
+	})); diff != "" {
+		t.Errorf("GetAvailableImages() mismatch (-want +got):\n%s", diff)
 	}
 
 	bucket = ""
@@ -890,15 +926,23 @@ func fakeGSUtil(args []string) {
 	switch args[0] {
 	case "ls":
 		switch args[1] {
-		case "gs://fuchsia/development/test-version/images":
+		case "gs://fuchsia/development/test-version/images*":
 			expected = []string{args[0], args[1]}
 			fmt.Printf("%v/image1.tgz\n", args[1])
 			fmt.Printf("%v/image2.tgz\n", args[1])
-		case "gs://private-bucket/development/test-version/images":
+		case "gs://private-bucket/development/test-version/images*":
 			expected = []string{args[0], args[1]}
 			fmt.Printf("%v/priv-image3.tgz\n", args[1])
 			fmt.Printf("%v/priv-image4.tgz\n", args[1])
-		case "gs://fuchsia/development/unknown/images":
+		case "gs://fuchsia/development/multi-version**/images*":
+			expected = []string{args[0], args[1]}
+			fmt.Print("gs://fuchsia/development/multi-version1/images/image1.tgz\n")
+			fmt.Print("gs://fuchsia/development/multi-version2/images/image1.tgz\n")
+		case "gs://new/development/multi-version**/images*":
+			expected = []string{args[0], args[1]}
+			fmt.Print("gs://new/development/multi-version1/images/priv-image1.tgz\n")
+			fmt.Print("gs://new/development/multi-version2/images/priv-image1.tgz\n")
+		case "gs://fuchsia/development/unknown/images*":
 			expected = []string{args[0], args[1]}
 			fmt.Fprintf(os.Stderr, "CommandException: One or more URLs matched no objects.")
 			os.Exit(2)
