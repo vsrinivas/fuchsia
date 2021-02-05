@@ -3,16 +3,19 @@
 // found in the LICENSE file.
 
 #include "stack_impl.h"
-#include "stack_utils.h"
+
+#include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <string>
 
-#include <lib/syslog/cpp/macros.h>
-#include <zircon/types.h>
-#include <zircon/status.h>
-
+// clang-format off
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ConfigurationManager.h>
+// clang-format on
+
+#include "stack_utils.h"
 
 namespace weavestack {
 namespace {
@@ -25,10 +28,10 @@ using fuchsia::weave::PairingState;
 using fuchsia::weave::PairingStateWatcher;
 using fuchsia::weave::QrCode;
 using fuchsia::weave::ResetConfigFlags;
-using fuchsia::weave::Stack_GetQrCode_Result;
 using fuchsia::weave::Stack_GetQrCode_Response;
-using fuchsia::weave::Stack_ResetConfig_Result;
+using fuchsia::weave::Stack_GetQrCode_Result;
 using fuchsia::weave::Stack_ResetConfig_Response;
+using fuchsia::weave::Stack_ResetConfig_Result;
 using fuchsia::weave::SvcDirectoryWatcher;
 
 using nl::Weave::DeviceLayer::ConfigurationMgr;
@@ -38,11 +41,9 @@ using nl::Weave::Profiles::DeviceControl::DeviceControlDelegate;
 using nl::Weave::Profiles::ServiceDirectory::WeaveServiceManager;
 
 // Size of the buffer for retrieving the QR code.
-constexpr size_t kQrCodeBufSize
-    = fuchsia::weave::MAX_QR_CODE_SIZE + 1;
+constexpr size_t kQrCodeBufSize = fuchsia::weave::MAX_QR_CODE_SIZE + 1;
 // Size of the buffer for retrieving hostnames.
-constexpr size_t kHostnameBufferSize
-    = fuchsia::net::MAX_HOSTNAME_SIZE + 1;
+constexpr size_t kHostnameBufferSize = fuchsia::net::MAX_HOSTNAME_SIZE + 1;
 }  // namespace
 
 // Watcher class declarations --------------------------------------------------
@@ -109,8 +110,7 @@ class StackImpl::SvcDirectoryWatcherImpl : public SvcDirectoryWatcher {
 
 // StackImpl definitions -------------------------------------------------------
 
-StackImpl::StackImpl(sys::ComponentContext* context) :
-  context_(context) {}
+StackImpl::StackImpl(sys::ComponentContext* context) : context_(context) {}
 
 zx_status_t StackImpl::Init() {
   zx_status_t status = ZX_OK;
@@ -125,11 +125,9 @@ zx_status_t StackImpl::Init() {
   }
 
   // Register event handler with Weave Device Layer.
-  err = PlatformMgrImpl().AddEventHandler(TrampolineEvent,
-                                          reinterpret_cast<uintptr_t>(this));
+  err = PlatformMgrImpl().AddEventHandler(TrampolineEvent, reinterpret_cast<uintptr_t>(this));
   if (err != WEAVE_NO_ERROR) {
-    FX_LOGS(ERROR) << "Failed to register event handler with device layer: "
-                   << nl::ErrorStr(err);
+    FX_LOGS(ERROR) << "Failed to register event handler with device layer: " << nl::ErrorStr(err);
     return ZX_ERR_INTERNAL;
   }
 
@@ -141,19 +139,15 @@ zx_status_t StackImpl::Init() {
 // generated default destructor.
 StackImpl::~StackImpl() = default;
 
-void StackImpl::GetPairingStateWatcher(
-    fidl::InterfaceRequest<PairingStateWatcher> watcher) {
-  pairing_state_watchers_.AddBinding(
-      std::make_unique<PairingStateWatcherImpl>(this),
-      std::move(watcher));
+void StackImpl::GetPairingStateWatcher(fidl::InterfaceRequest<PairingStateWatcher> watcher) {
+  pairing_state_watchers_.AddBinding(std::make_unique<PairingStateWatcherImpl>(this),
+                                     std::move(watcher));
 }
 
-void StackImpl::GetSvcDirectoryWatcher(
-    uint64_t endpoint_id,
-    fidl::InterfaceRequest<SvcDirectoryWatcher> watcher) {
-  svc_directory_watchers_.AddBinding(
-      std::make_unique<SvcDirectoryWatcherImpl>(this, endpoint_id),
-      std::move(watcher));
+void StackImpl::GetSvcDirectoryWatcher(uint64_t endpoint_id,
+                                       fidl::InterfaceRequest<SvcDirectoryWatcher> watcher) {
+  svc_directory_watchers_.AddBinding(std::make_unique<SvcDirectoryWatcherImpl>(this, endpoint_id),
+                                     std::move(watcher));
 }
 
 void StackImpl::GetQrCode(GetQrCodeCallback callback) {
@@ -172,22 +166,18 @@ void StackImpl::GetQrCode(GetQrCodeCallback callback) {
     result.set_err(ErrorCode::UNSPECIFIED_ERROR);
   } else {
     // Resize to returned length.
-    response.qr_code.data.resize(strnlen(response.qr_code.data.data(),
-                                         kQrCodeBufSize));
+    response.qr_code.data.resize(strnlen(response.qr_code.data.data(), kQrCodeBufSize));
     result.set_response(response);
   }
 
   callback(std::move(result));
 }
 
-void StackImpl::ResetConfig(ResetConfigFlags flags,
-                              ResetConfigCallback callback) {
+void StackImpl::ResetConfig(ResetConfigFlags flags, ResetConfigCallback callback) {
   Stack_ResetConfig_Response response;
   Stack_ResetConfig_Result result;
 
-  WEAVE_ERROR err =
-      GetDeviceControl()
-      .OnResetConfig(static_cast<uint16_t>(flags));
+  WEAVE_ERROR err = GetDeviceControl().OnResetConfig(static_cast<uint16_t>(flags));
   if (err != WEAVE_NO_ERROR) {
     result.set_err(ErrorCode::UNSPECIFIED_ERROR);
   } else {
@@ -237,8 +227,7 @@ void StackImpl::HandleWeaveDeviceEvent(const WeaveDeviceEvent* event) {
   }
 }
 
-void StackImpl::TrampolineEvent(const WeaveDeviceEvent* event,
-                                  intptr_t arg) {
+void StackImpl::TrampolineEvent(const WeaveDeviceEvent* event, intptr_t arg) {
   StackImpl* self = reinterpret_cast<StackImpl*>(arg);
   self->HandleWeaveDeviceEvent(event);
 }
@@ -247,22 +236,18 @@ DeviceControlDelegate& StackImpl::GetDeviceControl() {
   return PlatformMgrImpl().GetDeviceControl();
 }
 
-zx_status_t StackImpl::LookupHostPorts(uint64_t endpoint_id,
-                                         std::vector<HostPort>* host_ports) {
+zx_status_t StackImpl::LookupHostPorts(uint64_t endpoint_id, std::vector<HostPort>* host_ports) {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
   nl::Weave::HostPortList host_port_list;
 
   // Lookup host endpoints from service directory.
-  err = PlatformMgrImpl()
-      .GetServiceDirectoryManager()
-      .lookup(endpoint_id, &host_port_list);
+  err = PlatformMgrImpl().GetServiceDirectoryManager().lookup(endpoint_id, &host_port_list);
   if (err == WEAVE_ERROR_INVALID_SERVICE_EP) {
     FX_LOGS(WARNING) << "Invalid service directory endpoint: " << endpoint_id;
     return ZX_ERR_INVALID_ARGS;
   } else if (err != WEAVE_NO_ERROR) {
-    FX_LOGS(ERROR) << "Failed to lookup service directory: "
-                   << nl::ErrorStr(err);
-    return ZX_ERR_INTERNAL;;
+    FX_LOGS(ERROR) << "Failed to lookup service directory: " << nl::ErrorStr(err);
+    return ZX_ERR_INTERNAL;
   }
 
   while (!host_port_list.IsEmpty()) {
@@ -273,8 +258,7 @@ zx_status_t StackImpl::LookupHostPorts(uint64_t endpoint_id,
     // Extract HostPort info from host_port_list.
     err = host_port_list.Pop(hostname_buf, kHostnameBufferSize, port);
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "Failed to extract host/port in HostPortList: "
-                     << nl::ErrorStr(err);
+      FX_LOGS(ERROR) << "Failed to extract host/port in HostPortList: " << nl::ErrorStr(err);
       return ZX_ERR_INTERNAL;
     }
 
@@ -291,11 +275,10 @@ zx_status_t StackImpl::LookupHostPorts(uint64_t endpoint_id,
 
 // Watcher class definitions ---------------------------------------------------
 
-StackImpl::PairingStateWatcherImpl::PairingStateWatcherImpl(
-    StackImpl* stack) : stack_(stack), first_call_(true) {}
+StackImpl::PairingStateWatcherImpl::PairingStateWatcherImpl(StackImpl* stack)
+    : stack_(stack), first_call_(true) {}
 
-void StackImpl::PairingStateWatcherImpl::WatchPairingState(
-    WatchPairingStateCallback callback) {
+void StackImpl::PairingStateWatcherImpl::WatchPairingState(WatchPairingStateCallback callback) {
   // Check to make sure there isn't a waiting callback already.
   if (pairing_state_callback_) {
     stack_->pairing_state_watchers_.CloseBinding(this, ZX_ERR_BAD_STATE);
@@ -326,8 +309,7 @@ zx_status_t StackImpl::PairingStateWatcherImpl::DoCallback() {
 
   // Allocate pairing state if not present.
   if (!stack_->last_pairing_state_) {
-    stack_->last_pairing_state_ =
-        std::make_unique<PairingState>(CurrentPairingState());
+    stack_->last_pairing_state_ = std::make_unique<PairingState>(CurrentPairingState());
   }
 
   // Reset for next callback.
@@ -338,8 +320,7 @@ zx_status_t StackImpl::PairingStateWatcherImpl::DoCallback() {
   // Copy the pairing state into return value.
   status = stack_->last_pairing_state_->Clone(&pairing_state);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to clone pairing state: "
-                   << zx_status_get_string(status)
+    FX_LOGS(ERROR) << "Failed to clone pairing state: " << zx_status_get_string(status)
                    << ", cannot send callback!";
     stack_->pairing_state_watchers_.CloseBinding(this, status);
     return status;
@@ -350,13 +331,8 @@ zx_status_t StackImpl::PairingStateWatcherImpl::DoCallback() {
   return ZX_OK;
 }
 
-StackImpl::SvcDirectoryWatcherImpl::SvcDirectoryWatcherImpl(
-    StackImpl* stack,
-    uint64_t endpoint_id) :
-  stack_(stack),
-  first_call_(true),
-  endpoint_id_(endpoint_id) {}
-
+StackImpl::SvcDirectoryWatcherImpl::SvcDirectoryWatcherImpl(StackImpl* stack, uint64_t endpoint_id)
+    : stack_(stack), first_call_(true), endpoint_id_(endpoint_id) {}
 
 void StackImpl::SvcDirectoryWatcherImpl::WatchServiceDirectory(
     WatchServiceDirectoryCallback callback) {
@@ -406,5 +382,3 @@ zx_status_t StackImpl::SvcDirectoryWatcherImpl::DoCallback() {
 }
 
 }  // namespace weavestack
-
-
