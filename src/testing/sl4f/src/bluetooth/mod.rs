@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod avdtp_facade;
+pub mod avrcp_facade;
 pub mod ble_advertise_facade;
 pub mod bt_sys_facade;
 pub mod commands;

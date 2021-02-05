@@ -12,6 +12,7 @@ use serde_json::{to_value, Value};
 
 // Bluetooth-related functionality
 use crate::bluetooth::avdtp_facade::AvdtpFacade;
+use crate::bluetooth::avrcp_facade::AvrcpFacade;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::facade::BluetoothFacade;
@@ -453,6 +454,28 @@ impl Facade for AvdtpFacade {
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid AVDTP FIDL method: {:?}", method),
+        }
+    }
+}
+
+#[async_trait(?Send)]
+impl Facade for AvrcpFacade {
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "AvrcpInit" => {
+                let target_id = parse_arg!(args, as_str, "target_id")?;
+                let result = self.init_avrcp(target_id.to_string()).await?;
+                Ok(to_value(result)?)
+            }
+            "AvrcpGetMediaAttributes" => {
+                let result = self.get_media_attributes().await?;
+                Ok(to_value(result)?)
+            }
+            "AvrcpGetPlayStatus" => {
+                let result = self.get_play_status().await?;
+                Ok(to_value(result)?)
+            }
+            _ => bail!("Invalid AVRCP FIDL method: {:?}", method),
         }
     }
 }

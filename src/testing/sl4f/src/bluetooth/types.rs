@@ -4,6 +4,7 @@
 
 use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_avdtp::PeerControllerProxy;
+use fidl_fuchsia_bluetooth_avrcp::{PlayStatus, PlaybackStatus};
 use fidl_fuchsia_bluetooth_gatt::{
     AttributePermissions, Characteristic, Descriptor, ReadByTypeResult, SecurityRequirements,
     ServiceInfo,
@@ -233,5 +234,68 @@ pub struct SerializableReadByTypeResult {
 impl SerializableReadByTypeResult {
     pub fn new(result: &ReadByTypeResult) -> Self {
         SerializableReadByTypeResult { id: result.id.clone(), value: result.value.clone() }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Eq, Copy)]
+pub struct CustomPlayStatus {
+    pub song_length: Option<u32>,
+    pub song_position: Option<u32>,
+    pub playback_status: Option<u8>,
+}
+
+impl CustomPlayStatus {
+    pub fn new(status: &PlayStatus) -> Self {
+        let playback_status = match status.playback_status {
+            Some(p) => Some(p as u8),
+            None => None,
+        };
+        CustomPlayStatus {
+            song_length: status.song_length,
+            song_position: status.song_position,
+            playback_status: playback_status,
+        }
+    }
+}
+
+impl From<CustomPlayStatus> for PlayStatus {
+    fn from(status: CustomPlayStatus) -> Self {
+        let playback_status = match status.playback_status {
+            Some(0) => Some(PlaybackStatus::Stopped),
+            Some(1) => Some(PlaybackStatus::Playing),
+            Some(2) => Some(PlaybackStatus::Paused),
+            Some(3) => Some(PlaybackStatus::FwdSeek),
+            Some(4) => Some(PlaybackStatus::RevSeek),
+            Some(255) => Some(PlaybackStatus::Error),
+            None => None,
+            _ => panic!("Unknown playback status!"),
+        };
+        PlayStatus {
+            song_length: status.song_length,
+            song_position: status.song_position,
+            playback_status: playback_status,
+            ..PlayStatus::EMPTY
+        }
+    }
+}
+
+impl From<PlayStatus> for CustomPlayStatus {
+    fn from(status: PlayStatus) -> Self {
+        CustomPlayStatus {
+            song_length: status.song_length,
+            song_position: status.song_position,
+            playback_status: match status.playback_status {
+                Some(p) => Some(p as u8),
+                None => None,
+            },
+        }
+    }
+}
+
+impl PartialEq for CustomPlayStatus {
+    fn eq(&self, other: &CustomPlayStatus) -> bool {
+        self.song_length == other.song_length
+            && self.song_position == other.song_position
+            && self.playback_status == other.playback_status
     }
 }
