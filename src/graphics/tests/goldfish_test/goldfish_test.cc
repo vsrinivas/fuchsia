@@ -360,6 +360,147 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
   EXPECT_TRUE(collection.Close().ok());
 }
 
+TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
+  using llcpp::fuchsia::sysmem::BufferCollection;
+  using llcpp::fuchsia::sysmem::BufferCollectionConstraints;
+
+  int fd = open("/dev/class/goldfish-control/000", O_RDWR);
+  EXPECT_GE(fd, 0);
+
+  zx::channel channel;
+  EXPECT_EQ(fdio_get_service_handle(fd, channel.reset_and_get_address()), ZX_OK);
+
+  auto allocator = CreateSysmemAllocator();
+  EXPECT_TRUE(allocator.channel());
+
+  constexpr size_t kNumClients = 2;
+  zx::channel token_client[kNumClients];
+  zx::channel token_server[kNumClients];
+  zx::channel collection_client[kNumClients];
+  zx::channel collection_server[kNumClients];
+
+  EXPECT_EQ(zx::channel::create(0, &token_client[0], &token_server[0]), ZX_OK);
+  EXPECT_EQ(zx::channel::create(0, &token_client[1], &token_server[1]), ZX_OK);
+  EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server[0])).ok());
+
+  llcpp::fuchsia::sysmem::BufferCollectionToken::Call::Duplicate(token_client[0].borrow(), 0,
+                                                                 std::move(token_server[1]));
+  llcpp::fuchsia::sysmem::BufferCollectionToken::Call::Sync(token_client[0].borrow());
+
+  for (size_t i = 0; i < kNumClients; i++) {
+    EXPECT_EQ(zx::channel::create(0, &collection_client[i], &collection_server[i]), ZX_OK);
+    EXPECT_TRUE(
+        allocator.BindSharedCollection(std::move(token_client[i]), std::move(collection_server[i]))
+            .ok());
+  }
+
+  const size_t kMinSizeBytes = 4 * 1024;
+  const size_t kMaxSizeBytes = 4 * 1024 * 512;
+  const size_t kTargetSizeBytes = 4 * 1024 * 512;
+  BufferCollectionConstraints constraints[kNumClients];
+  for (size_t i = 0; i < kNumClients; i++) {
+    constraints[i].usage.vulkan = llcpp::fuchsia::sysmem::VULKAN_IMAGE_USAGE_TRANSFER_DST;
+    constraints[i].min_buffer_count = 1;
+    constraints[i].has_buffer_memory_constraints = true;
+    constraints[i].buffer_memory_constraints = llcpp::fuchsia::sysmem::BufferMemoryConstraints{
+        .min_size_bytes = kMinSizeBytes,
+        .max_size_bytes = kMaxSizeBytes,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 1,
+        .heap_permitted = {llcpp::fuchsia::sysmem::HeapType::GOLDFISH_HOST_VISIBLE}};
+    constraints[i].image_format_constraints_count = 1;
+    constraints[i].image_format_constraints[0] = llcpp::fuchsia::sysmem::ImageFormatConstraints{
+        .pixel_format =
+            llcpp::fuchsia::sysmem::PixelFormat{
+                .type = llcpp::fuchsia::sysmem::PixelFormatType::BGRA32,
+                .has_format_modifier = false,
+                .format_modifier = {},
+            },
+        .color_spaces_count = 1,
+        .color_space =
+            {
+                llcpp::fuchsia::sysmem::ColorSpace{
+                    .type = llcpp::fuchsia::sysmem::ColorSpaceType::SRGB},
+            },
+    };
+  }
+
+  // Set different min_coded_width and required_max_coded_width for each client.
+  constraints[0].image_format_constraints[0].min_coded_width = 32;
+  constraints[0].image_format_constraints[0].min_coded_height = 64;
+  constraints[1].image_format_constraints[0].min_coded_width = 16;
+  constraints[1].image_format_constraints[0].min_coded_height = 512;
+  constraints[1].image_format_constraints[0].required_max_coded_width = 1024;
+  constraints[1].image_format_constraints[0].required_max_coded_height = 256;
+
+  BufferCollection::SyncClient collection[kNumClients];
+  for (size_t i = 0; i < kNumClients; i++) {
+    collection[i] = BufferCollection::SyncClient(std::move(collection_client[i])),
+    SetDefaultCollectionName(collection[i]);
+    EXPECT_TRUE(collection[i].SetConstraints(true, std::move(constraints[i])).ok());
+  };
+
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
+  {
+    auto result = collection[0].WaitForBuffersAllocated();
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(result.Unwrap()->status, ZX_OK);
+
+    info = std::move(result.Unwrap()->buffer_collection_info);
+    EXPECT_EQ(info.buffer_count, 1u);
+    EXPECT_TRUE(info.buffers[0].vmo.is_valid());
+    EXPECT_EQ(info.settings.buffer_settings.coherency_domain,
+              llcpp::fuchsia::sysmem::CoherencyDomain::CPU);
+
+    const auto& image_format_constraints =
+        result.value().buffer_collection_info.settings.image_format_constraints;
+
+    EXPECT_EQ(image_format_constraints.min_coded_width, 32u);
+    EXPECT_EQ(image_format_constraints.min_coded_height, 512u);
+    EXPECT_EQ(image_format_constraints.required_max_coded_width, 1024u);
+    EXPECT_EQ(image_format_constraints.required_max_coded_height, 256u);
+
+    // Expected coded_width = max(min_coded_width, requied_max_coded_width);
+    // Expected coded_height = max(min_coded_height, requied_max_coded_height).
+    // Thus target size should be 1024 x 512 x 4.
+    EXPECT_GE(info.settings.buffer_settings.size_bytes, kTargetSizeBytes);
+  }
+
+  zx::vmo vmo = std::move(info.buffers[0].vmo);
+  EXPECT_TRUE(vmo.is_valid());
+
+  uint64_t vmo_size;
+  EXPECT_EQ(vmo.get_size(&vmo_size), ZX_OK);
+  EXPECT_GE(vmo_size, kTargetSizeBytes);
+  EXPECT_LE(vmo_size, kMaxSizeBytes);
+
+  // Test if the vmo is mappable.
+  zx_vaddr_t addr;
+  EXPECT_EQ(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, /*vmar_offset*/ 0, vmo,
+                                       /*vmo_offset*/ 0, vmo_size, &addr),
+            ZX_OK);
+
+  // Test if write and read works correctly.
+  uint8_t* ptr = reinterpret_cast<uint8_t*>(addr);
+  std::vector<uint8_t> copy_target(vmo_size, 0u);
+  for (uint32_t trial = 0; trial < 10u; trial++) {
+    memset(ptr, trial, vmo_size);
+    memcpy(copy_target.data(), ptr, vmo_size);
+    zx_cache_flush(ptr, vmo_size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+    EXPECT_EQ(memcmp(copy_target.data(), ptr, vmo_size), 0);
+  }
+
+  EXPECT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);
+
+  for (size_t i = 0; i < kNumClients; i++) {
+    EXPECT_TRUE(collection[i].Close().ok());
+  }
+}
+
 TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
   int fd = open("/dev/class/goldfish-control/000", O_RDWR);
   EXPECT_GE(fd, 0);

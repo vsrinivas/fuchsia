@@ -21,6 +21,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
@@ -123,7 +124,21 @@ GetCreateColorBuffer2Params(const llcpp::fuchsia::sysmem2::SingleBufferSettings&
   }
 
   uint32_t width = image_constraints.min_coded_width();
+  if (image_constraints.has_required_max_coded_width()) {
+    width = std::max(width, image_constraints.required_max_coded_width());
+  }
+  width = fbl::round_up(width, image_constraints.has_coded_width_divisor()
+                                   ? image_constraints.coded_width_divisor()
+                                   : 1);
+
   uint32_t height = image_constraints.min_coded_height();
+  if (image_constraints.has_required_max_coded_height()) {
+    height = std::max(height, image_constraints.required_max_coded_height());
+  }
+  height = fbl::round_up(height, image_constraints.has_coded_height_divisor()
+                                     ? image_constraints.coded_height_divisor()
+                                     : 1);
+
   return fit::ok(
       CreateColorBuffer2Params::Builder(std::make_unique<CreateColorBuffer2Params::Frame>())
           .set_width(std::make_unique<uint32_t>(width))
