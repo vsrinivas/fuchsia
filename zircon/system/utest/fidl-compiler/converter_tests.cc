@@ -38,6 +38,90 @@ std::string ToNewSyntax(const std::string& in, fidl::ExperimentalFlags flags) {
   return Convert(in, flags, fidl::conv::Conversion::Syntax::kNew);
 }
 
+TEST(ConverterTests, Consts) {
+  std::string old_version = R"FIDL(
+library example;
+
+const uint8 FOO = 34;
+const string:3 BAR = "abc";
+const bool BAZ = true;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+const FOO uint8 = 34;
+const BAR string:3 = "abc";
+const BAZ bool = true;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, Protocol) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(string a, int32 b);
+}
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(a string, b int32);
+}
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, ProtocolWithResponse) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(string a, int32 b) -> (bool c);
+}
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(a string, b int32) -> (c bool);
+}
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, ProtocolWithResponseAndError) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(string a, int32 b) -> (bool c) error int32;
+}
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(a string, b int32) -> (c bool) error int32;
+}
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, StructEmpty) {
   std::string old_version = R"FIDL(
 library example;

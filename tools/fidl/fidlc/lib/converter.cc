@@ -8,10 +8,22 @@
 
 namespace fidl::conv {
 
+void ConvertingTreeVisitor::OnConstDeclaration(const std::unique_ptr<raw::ConstDeclaration> &element) {
+  std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
+  Converting converting(this, std::move(conv), element->type_ctor->start_, element->identifier->end_);
+  TreeVisitor::OnConstDeclaration(element);
+}
+
 void ConvertingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& element) {
   last_conversion_end_ = element->start_.previous_end().data().data();
   DeclarationOrderTreeVisitor::OnFile(element);
   converted_output_ += last_conversion_end_;
+}
+
+void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter> &element) {
+  std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(element->identifier, element->type_ctor);
+  Converting converting(this, std::move(conv), element->type_ctor->start_, element->identifier->end_);
+  TreeVisitor::OnParameter(element);
 }
 
 void ConvertingTreeVisitor::OnStructDeclaration(const std::unique_ptr<raw::StructDeclaration> &element) {

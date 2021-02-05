@@ -51,7 +51,10 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // void OnLiteral(std::unique_ptr<fidl::raw::Literal> const& element) override {}
   // void OnLiteralConstant(std::unique_ptr<LiteralConstant> const& element) override {}
   // void OnNullability(types::Nullability nullability) override {}
+  // void OnParameterList(std::unique_ptr<ParameterList> const& element) override {}
   // void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override {}
+  // void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {}
+  // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {}
 
   // The remaining "On*" methods are loosely organized by keyword.  All of them
   // must be overwritten by the implementation.
@@ -65,7 +68,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {}
 
   // Constants.
-  void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override {}
+  void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override;
 
   // Enums.
   void OnEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> const& element) override {}
@@ -74,10 +77,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnFile(std::unique_ptr<raw::File> const& element) override;
 
   // Protocols.
-  void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {}
-  void OnParameterList(std::unique_ptr<raw::ParameterList> const& element) override {}
-  void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override {}
-  void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override {}
+  void OnParameter(std::unique_ptr<raw::Parameter> const& element) override;
 
   // Resources.
   void OnResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> const& element) override {}
