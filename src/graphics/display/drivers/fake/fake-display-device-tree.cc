@@ -94,6 +94,7 @@ zx_status_t Binder::DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* dat
 FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper> sysmem,
                                              bool start_vsync)
     : sysmem_(std::move(sysmem)) {
+  pdev_.UseFakeBti();
 
   // Protocols for sysmem
   fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
@@ -106,9 +107,7 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
 
   // Fragments for fake-display
   fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[2], 2);
-  fragments[0].name = "fuchsia.hardware.platform.device.PDev";
-  fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
-      ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
+  fragments[0] = pdev_.fragment();
   fragments[1].name = "sysmem";
   fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
       ZX_PROTOCOL_SYSMEM, *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_->proto())});
@@ -121,9 +120,9 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   // Protocols for display controller.
   protocols = fbl::Array<fake_ddk::ProtocolEntry>(new fake_ddk::ProtocolEntry[2], 2);
   protocols[0] = {ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL,
-    *reinterpret_cast<const fake_ddk::Protocol*>(display_->dcimpl_proto())};
+                  *reinterpret_cast<const fake_ddk::Protocol*>(display_->dcimpl_proto())};
   protocols[1] = {ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL,
-    *reinterpret_cast<const fake_ddk::Protocol*>(display_->clamp_rgbimpl_proto())};
+                  *reinterpret_cast<const fake_ddk::Protocol*>(display_->clamp_rgbimpl_proto())};
 
   ddk_.SetProtocols(std::move(protocols));
 

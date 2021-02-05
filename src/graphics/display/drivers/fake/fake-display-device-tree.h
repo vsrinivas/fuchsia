@@ -13,7 +13,6 @@
 #include <fuchsia/sysmem/c/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <map>
@@ -21,6 +20,7 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 #include "src/devices/sysmem/drivers/sysmem/driver.h"
 #include "src/graphics/display/drivers/display/controller.h"
 
@@ -117,35 +117,6 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   pbus_protocol_t proto_;
 };
 
-// Helper class for internal use by FakeDisplayDeviceTree, below.
-class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
- public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {}
-
-  const pdev_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) {
-    return fake_bti_create(out_bti->reset_and_get_address());
-  }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
- private:
-  pdev_protocol_t proto_;
-};
-
 // Clients of FakeDisplayDeviceTree pass a SysmemDeviceWrapper into the constructor to provide a
 // sysmem implementation to the display driver, with the goal of supporting the following use cases:
 //   - display driver unit tests want to use a self-contained/hermetic sysmem implementation, to
@@ -212,7 +183,7 @@ class FakeDisplayDeviceTree {
  private:
   Binder ddk_;
   FakePBus pbus_;
-  FakePDev pdev_;
+  fake_pdev::FakePDev pdev_;
 
   std::unique_ptr<SysmemDeviceWrapper> sysmem_;
 

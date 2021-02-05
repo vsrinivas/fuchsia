@@ -98,7 +98,7 @@ static_library("fake-display-device-tree") {
     "//sdk/banjo/fuchsia.hardware.platform.device",
     "//sdk/banjo/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
-    "//src/devices/testing/fake-bti",
+    "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake_ddk",
     "//src/graphics/display/drivers/display:shared",
     "//src/lib/ddktl",
