@@ -9,6 +9,8 @@ use {std::error::Error as StdError, thiserror::Error};
 pub enum Error {
     #[error("Error using BR/EDR resource {:?}", .resource)]
     ProfileResourceError { resource: ProfileResource, source: Box<dyn StdError> },
+    #[error("System error encountered: {}", .message)]
+    System { message: String, source: Box<dyn StdError> },
 }
 
 #[derive(Debug)]
@@ -43,5 +45,12 @@ impl Error {
     /// protocol.
     pub fn profile_connection_receiver<E: StdError + 'static>(e: E) -> Self {
         Self::profile_resource(ProfileResource::ConnectionReceiver, e)
+    }
+
+    /// An error occurred when interacting with the system.
+    ///
+    /// This allocates memory which could fail if the error is an OOM.
+    pub fn system<E: StdError + 'static>(message: impl Into<String>, e: E) -> Self {
+        Self::System { message: message.into(), source: Box::new(e) }
     }
 }

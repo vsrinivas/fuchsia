@@ -45,7 +45,7 @@ pub enum ProfileEvent {
 
 impl ProfileEvent {
     /// Return the PeerId associated with this event.
-    pub fn _peer_id(&self) -> PeerId {
+    pub fn peer_id(&self) -> PeerId {
         match self {
             Self::ConnectionRequest { id, .. } => *id,
             Self::SearchResult { id, .. } => *id,
@@ -60,7 +60,7 @@ impl ProfileEvent {
 /// when `Profile` fails to register a search request, fails to register an advertisement, when the
 /// advertisement is terminated, or any channel to the bredr service returns an error.
 pub struct Profile {
-    _proxy: bredr::ProfileProxy,
+    proxy: bredr::ProfileProxy,
     advertisement: QueryResponseFut<bredr::ProfileAdvertiseResult>,
     connect_requests: bredr::ConnectionReceiverRequestStream,
     search_results: bredr::SearchResultsRequestStream,
@@ -80,6 +80,11 @@ impl Profile {
         )
     }
 
+    /// Return a clone of the associated `ProfileProxy`.
+    pub fn proxy(&self) -> bredr::ProfileProxy {
+        self.proxy.clone()
+    }
+
     /// Advertise `service` and search for `search_id` using `proxy`.
     fn register(
         proxy: bredr::ProfileProxy,
@@ -97,13 +102,7 @@ impl Profile {
             .check()
             .context("Advertise request")?;
 
-        Ok(Self {
-            _proxy: proxy,
-            advertisement,
-            connect_requests,
-            search_results,
-            terminated: false,
-        })
+        Ok(Self { proxy, advertisement, connect_requests, search_results, terminated: false })
     }
 
     fn handle_connection_request(

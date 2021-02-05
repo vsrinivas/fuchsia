@@ -83,7 +83,7 @@ impl CallManager {
     }
 
     /// A new Bluetooth peer that supports the HFP HF role has been connected.
-    pub async fn _peer_added(&self, id: PeerId, handle: ServerEnd<PeerHandlerMarker>) {
+    pub async fn peer_added(&self, id: PeerId, handle: ServerEnd<PeerHandlerMarker>) {
         let mut inner = self.inner.lock().await;
         inner.added_peers.push_back((id, handle));
         if let Err(e) = inner.respond_to_peer_watcher() {
@@ -363,7 +363,7 @@ mod tests {
         assert_matches!(item, Some(CallManagerEvent::ManagerRegistered));
 
         let (_, handle) = endpoints::create_proxy().unwrap();
-        manager._peer_added(PeerId(1), handle).await;
+        manager.peer_added(PeerId(1), handle).await;
         // poll the manager stream in the background while making a watch request
         // in this task.
         let _manager = fasync::Task::local(async move {
@@ -381,10 +381,10 @@ mod tests {
 
         // Add 2 peers to make sure multiple peers can be queued
         let (_, handle) = endpoints::create_proxy().unwrap();
-        manager._peer_added(PeerId(1), handle).await;
+        manager.peer_added(PeerId(1), handle).await;
 
         let (_, handle) = endpoints::create_proxy().unwrap();
-        manager._peer_added(PeerId(2), handle).await;
+        manager.peer_added(PeerId(2), handle).await;
 
         let _stream = fasync::Task::local(async move {
             while let Some(_) = manager.next().await {}
@@ -422,7 +422,7 @@ mod tests {
             // cause the manager to notice that the client end is closed and set the stream to
             // terminated.
             let (_, handle) = endpoints::create_proxy().unwrap();
-            let peer_added_fut = manager._peer_added(PeerId(1), handle);
+            let peer_added_fut = manager.peer_added(PeerId(1), handle);
             pin_mut!(peer_added_fut);
             exec.run_until_stalled(&mut peer_added_fut)
                 .expect("peer_added is expected to complete");

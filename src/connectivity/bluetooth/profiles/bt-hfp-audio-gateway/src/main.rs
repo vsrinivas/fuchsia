@@ -23,6 +23,7 @@ mod config;
 mod error;
 mod fidl_service;
 mod hfp;
+mod peer;
 mod profile;
 mod service_definitions;
 
@@ -35,7 +36,7 @@ async fn main() -> Result<(), Error> {
     let mut call_manager = CallManager::new();
     let service_provider =
         call_manager.service_provider().expect("A valid call manager service provider");
-    let hfp = Hfp::new(profile, call_manager).run();
+    let hfp = Hfp::new(profile, call_manager, feature_support).run();
     pin_mut!(hfp);
 
     let mut fs = ServiceFs::new();
