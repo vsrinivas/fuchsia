@@ -16,10 +16,11 @@
 #include <zxtest/zxtest.h>
 
 #include "registers.h"
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 
 namespace spi {
 
-class FakeDdkSpi : public fake_ddk::Bind, public ddk::PDevProtocol<FakeDdkSpi> {
+class FakeDdkSpi : public fake_ddk::Bind {
  public:
   struct ChildDevice {
     AmlSpi* device;
@@ -31,9 +32,7 @@ class FakeDdkSpi : public fake_ddk::Bind, public ddk::PDevProtocol<FakeDdkSpi> {
   FakeDdkSpi() {
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[4], 4);
     ASSERT_TRUE(fragments);
-    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
-    fragments[0].protocols.emplace_back(
-        fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, {&pdev_protocol_ops_, this}});
+    fragments[0] = pdev_.fragment();
     fragments[1].name = "gpio-cs-2";
     fragments[1].protocols.emplace_back(
         fake_ddk::ProtocolEntry{ZX_PROTOCOL_GPIO, {gpio_.GetProto()->ops, &gpio_}});
@@ -49,6 +48,21 @@ class FakeDdkSpi : public fake_ddk::Bind, public ddk::PDevProtocol<FakeDdkSpi> {
 
     ASSERT_OK(
         mmio_mapper_.CreateAndMap(0x100, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &mmio_));
+
+    pdev_.set_device_info(pdev_device_info_t{
+        .mmio_count = countof(kGpioMap),
+        .irq_count = countof(kGpioMap),
+    });
+    for (uint32_t i = 0; i < std::size(kGpioMap); i++) {
+      zx::vmo dup;
+      ASSERT_OK(mmio_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+
+      pdev_.set_mmio(i, {
+                            .vmo = std::move(dup),
+                            .offset = 0,
+                            .size = mmio_mapper_.size(),
+                        });
+    }
   }
 
   ~FakeDdkSpi() override {
@@ -124,37 +138,6 @@ class FakeDdkSpi : public fake_ddk::Bind, public ddk::PDevProtocol<FakeDdkSpi> {
     return ZX_ERR_NOT_FOUND;
   }
 
-  // ZX_PROTOCOL_PDEV
-
-  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
-    if (index >= countof(kGpioMap)) {
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    out_mmio->offset = 0;
-    out_mmio->size = mmio_mapper_.size();
-    out_mmio->vmo = mmio_.get();
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_smc) { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) {
-    *out_info = {
-        .mmio_count = countof(kGpioMap),
-        .irq_count = countof(kGpioMap),
-    };
-    return ZX_OK;
-  }
-
-  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-
  private:
   static constexpr amlspi_cs_map_t kGpioMap[] = {
       {.bus_id = 0, .cs_count = 2, .cs = {5, 3}},
@@ -165,6 +148,7 @@ class FakeDdkSpi : public fake_ddk::Bind, public ddk::PDevProtocol<FakeDdkSpi> {
   zx::vmo mmio_;
   fzl::VmoMapper mmio_mapper_;
   ddk::MockGpio gpio_;
+  fake_pdev::FakePDev pdev_;
 };
 
 }  // namespace spi

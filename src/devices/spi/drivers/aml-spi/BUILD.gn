@@ -44,6 +44,7 @@ test("aml-spi-test-bin") {
   deps = [
     ":common",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_mock",
+    "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
   ]
