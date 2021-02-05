@@ -6,7 +6,6 @@
 #define SRC_DEVICES_BIN_DRIVER_HOST_DEVICE_CONTROLLER_CONNECTION_H_
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zx/channel.h>

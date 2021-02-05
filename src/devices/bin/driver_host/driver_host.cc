@@ -7,7 +7,6 @@
 #include <dlfcn.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
