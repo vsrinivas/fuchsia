@@ -33,11 +33,16 @@ class Localhost {
   bool _isReady;
   final _pages = <String, File>{};
 
+  // A keyword that will call stopServer() when it's requested in the form of
+  // 'http://127.0.0.1:8080/$_stopKeyword'
+  String _stopKeyword;
+
   Map<String, File> get pages => _pages;
 
-  Localhost() {
+  Localhost({String stopKeyword = 'stop'}) {
     setupLogger(name: 'simple_browser_localhost');
     _isReady = false;
+    _stopKeyword = stopKeyword;
   }
 
   /// Starts listening on the allocated url. The host address is usually
@@ -70,6 +75,12 @@ class Localhost {
     );
     await for (var req in _server) {
       final fileName = req.uri.path.substring(1); // eleminates '/'
+
+      if (fileName == _stopKeyword) {
+        stopServer();
+        return;
+      }
+
       final targetFile = _pages[fileName];
       final mimeType = lookupMimeType(fileName);
       if (mimeType == null) {

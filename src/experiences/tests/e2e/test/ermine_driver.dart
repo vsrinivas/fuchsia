@@ -12,6 +12,8 @@ import 'package:test/test.dart';
 import 'package:webdriver/sync_io.dart' show WebDriver;
 
 const _chromeDriverPath = 'runtime_deps/chromedriver';
+const simpleBrowserUrl =
+    'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 
 /// Defines a test utility class to drive Ermine during integration test using
 /// Flutter Driver. This utility will grow with more convenience methods in the
@@ -105,9 +107,6 @@ class ErmineDriver {
     bool openNewTab = true,
     bool fullscreen = true,
   }) async {
-    const simpleBrowserUrl =
-        'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
-
     await launch(simpleBrowserUrl);
     final runningComponents = await component.list();
     expect(

@@ -18,6 +18,7 @@ const testserverUrl =
 void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
+  FlutterDriver browser;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -27,19 +28,34 @@ void main() {
     await ermine.setUp();
 
     // Starts hosting a local http website.
+    // TODO(fxb/69256): Replace `ermine.launch(testserverUrl)` with
+    // `ermine.component.launch(testserverUrl)`
     await ermine.launch(testserverUrl);
+
     final runningComponents = await ermine.component.list();
     expect(runningComponents.where((c) => c.contains(testserverUrl)).length, 1);
+
+    // Launches a browser.
+    browser = await ermine.launchAndWaitForSimpleBrowser();
   });
 
   tearDownAll(() async {
+    // Stops the server.
+    await browser.requestData('http://127.0.0.1:8080/stop');
+
+    // Closes all views.
     await ermine.driver.requestData('closeAll');
     await ermine.driver.waitForAbsent(find.text('ermine_testserver.cmx'));
     await ermine.driver.waitForAbsent(find.text('simple_browser'));
 
+    final runningComponents = await ermine.component.list();
+    expect(runningComponents.where((c) => c.contains(testserverUrl)).length, 0);
+    expect(
+        runningComponents.where((c) => c.contains(simpleBrowserUrl)).length, 0);
+
     await ermine.tearDown();
 
-    await sl4f?.stopServer();
+    await sl4f.stopServer();
     sl4f?.close();
   });
 
@@ -47,9 +63,6 @@ void main() {
   test(
       'Simple browser\'s page and history navigation features '
       'should work correctly.', () async {
-    // Launches a browser.
-    final browser = await ermine.launchAndWaitForSimpleBrowser();
-
     final newTabFinder = find.text('NEW TAB');
     final indexTabFinder = find.text('Localhost');
     final nextTabFinder = find.text('Next Page');
@@ -57,6 +70,7 @@ void main() {
 
     // Access to the website.
     await browser.requestData('http://127.0.0.1:8080/index.html');
+
     await browser.waitFor(indexTabFinder, timeout: _timeout);
     final webdriver = await ermine.getWebDriverFor('127.0.0.1');
 
@@ -119,15 +133,9 @@ void main() {
     expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
     expect(await browser.getText(popupTabFinder), isNotNull);
-
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitForAbsent(find.text('simple_browser'));
   });
 
   test('Simple browser should be able to play videos on web pages.', () async {
-    // Launches a browser.
-    final browser = await ermine.launchAndWaitForSimpleBrowser();
-
     // Access to video.html where the following video is played:
     // experiences/bin/ermine_testserver/public/simple_browser_test/sample_video.mp4
     // It shows the violet-colored background for the first 3 seconds then shows
@@ -153,8 +161,5 @@ void main() {
 
     final diff = ermine.screenshotsDiff(earlyScreenshot, lateScreenshot);
     expect(diff, 1, reason: 'The screenshots are more similar than expected.');
-
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitForAbsent(find.text('simple_browser'));
   });
 }
