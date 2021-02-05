@@ -519,6 +519,11 @@ async fn test_persisted_values_applied_at_start() {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
 
+    // Check to make sure mic mute value is loaded properly.
+    let mut audio_input = AudioInput::EMPTY;
+    audio_input.muted = Some(test_audio_info.input.mic_mute);
+
+    assert_eq!(settings.input, Some(audio_input));
     // Check that the stored values were returned from watch() and applied to the audio core
     // service.
     for stream in test_audio_info.streams.iter() {

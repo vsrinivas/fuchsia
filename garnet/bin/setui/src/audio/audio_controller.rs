@@ -39,7 +39,7 @@ pub struct VolumeController {
     client: ClientProxy<AudioInfo>,
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
-    mic_mute_state: bool,
+    mic_mute_state: Option<bool>,
     modified_counters: ModifiedCounters,
 }
 
@@ -49,7 +49,7 @@ impl VolumeController {
             client: client.clone(),
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
-            mic_mute_state: false,
+            mic_mute_state: None,
             modified_counters: create_default_modified_counters(),
         }));
 
@@ -74,7 +74,11 @@ impl VolumeController {
     async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
         let mut audio_info = self.client.read().await;
 
-        audio_info.input = AudioInputInfo { mic_mute: self.mic_mute_state };
+        // Only override the mic mute state if present.
+        if let Some(mic_mute_state) = self.mic_mute_state {
+            audio_info.input = AudioInputInfo { mic_mute: mic_mute_state };
+        }
+
         audio_info.modified_counters = Some(self.modified_counters.clone());
         Ok(audio_info)
     }
@@ -103,10 +107,10 @@ impl VolumeController {
     }
 
     async fn set_mic_mute_state(&mut self, mic_mute_state: bool) -> SettingHandlerResult {
-        self.mic_mute_state = mic_mute_state;
+        self.mic_mute_state = Some(mic_mute_state);
 
         let mut audio_info = self.client.read().await;
-        audio_info.input.mic_mute = self.mic_mute_state;
+        audio_info.input.mic_mute = mic_mute_state;
 
         write(&self.client, audio_info, false).await.into_handler_result()
     }
