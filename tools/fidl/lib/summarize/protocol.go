@@ -11,6 +11,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+const protocolKind = "protocol"
+
 // addProtocols adds the protocols to the elements list.
 func (s *summarizer) addProtocols(protocols []fidlgen.Protocol) {
 	for _, p := range protocols {
@@ -29,7 +31,13 @@ type protocol struct {
 
 // String implements Element.
 func (p protocol) String() string {
-	return fmt.Sprintf("protocol %v", p.Name())
+	return p.Serialize().String()
+}
+
+func (p protocol) Serialize() elementStr {
+	e := p.named.Serialize()
+	e.Kind = protocolKind
+	return e
 }
 
 // method represents an Element for a protocol method.

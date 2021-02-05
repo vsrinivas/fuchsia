@@ -1142,7 +1142,7 @@ protocol Calculator {
   },
   {
     "name": "l/Calculator",
-    "kind": ""
+    "kind": "protocol"
   },
   {
     "name": "l",
@@ -1177,7 +1177,7 @@ protocol P {
   },
   {
     "name": "l/P",
-    "kind": ""
+    "kind": "protocol"
   },
   {
     "name": "l",
@@ -1206,7 +1206,7 @@ protocol P2 {
   },
   {
     "name": "l/P",
-    "kind": ""
+    "kind": "protocol"
   },
   {
     "name": "l/P2.M1",
@@ -1230,7 +1230,7 @@ protocol P2 {
   },
   {
     "name": "l/P2",
-    "kind": ""
+    "kind": "protocol"
   },
   {
     "name": "l",
@@ -1273,7 +1273,7 @@ protocol P {
   },
   {
     "name": "l/P",
-    "kind": ""
+    "kind": "protocol"
   },
   {
     "name": "l/P_F3_Response",
@@ -1388,7 +1388,7 @@ protocol Calculator {
   },
   {
     "name": "l/Calculator",
-    "kind": ""
+    "kind": "protocol"
   },
   {
     "name": "l/Foo",
@@ -1425,7 +1425,7 @@ protocol Calculator {
   },
   {
     "name": "l/Calculator",
-    "kind": ""
+    "kind": "protocol"
   },
   {
     "name": "l/Foo",
