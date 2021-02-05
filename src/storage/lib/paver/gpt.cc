@@ -69,7 +69,8 @@ bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, fbl::Str
   return type == Uuid(part.type) && FilterByName(part, name);
 }
 
-zx::status<> RebindGptDriver(const zx::channel& svc_root, zx::unowned_channel chan) {
+zx::status<> RebindGptDriver(fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                             zx::unowned_channel chan) {
   auto pauser = BlockWatcherPauser::Create(svc_root);
   if (pauser.is_error()) {
     return pauser.take_error();
@@ -142,7 +143,8 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
 }
 
 zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::InitializeProvidedGptDevice(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, fbl::unique_fd gpt_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    fbl::unique_fd gpt_device) {
   auto pauser = BlockWatcherPauser::Create(svc_root);
   if (pauser.is_error()) {
     ERROR("Failed to pause the block watcher\n");
@@ -189,7 +191,8 @@ zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
 }
 
 zx::status<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::InitializeGpt(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    const fbl::unique_fd& block_device) {
   if (block_device) {
     auto status =
         InitializeProvidedGptDevice(std::move(devfs_root), svc_root, block_device.duplicate());

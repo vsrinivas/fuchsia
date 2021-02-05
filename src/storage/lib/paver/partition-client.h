@@ -5,6 +5,7 @@
 #define SRC_STORAGE_LIB_PAVER_PARTITION_CLIENT_H_
 
 #include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
@@ -42,9 +43,6 @@ class PartitionClient {
   // Flushes all previous operations to persistent storage.
   virtual zx::status<> Flush() = 0;
 
-  // Returns a channel to the partition, when backed by a block device.
-  virtual zx::channel GetChannel() = 0;
-
   // Returns a file descriptor representing the partition.
   // Will return an invalid fd if underlying partition is not a block device.
   virtual fbl::unique_fd block_fd() = 0;
@@ -52,9 +50,25 @@ class PartitionClient {
   virtual ~PartitionClient() = default;
 };
 
-class BlockPartitionClient final : public PartitionClient {
+// A partition client that is backed by a channel that speaks
+// |fuchsia.hardware.block/Block|, or a protocol that composes the previous protocol.
+class BlockDevicePartitionClient : public PartitionClient {
  public:
-  explicit BlockPartitionClient(zx::channel partition) : partition_(std::move(partition)) {}
+  // Returns a channel to the partition, when backed by a block device.
+  virtual fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() = 0;
+};
+
+class BlockPartitionClient final : public BlockDevicePartitionClient {
+ public:
+  explicit BlockPartitionClient(fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> partition)
+      : partition_(std::move(partition)) {}
+
+  // Note: converting from |fuchsia.hardware.block.partition/Partition|
+  // to |fuchsia.hardware.block/Block|.
+  explicit BlockPartitionClient(
+      fidl::ClientEnd<::llcpp::fuchsia::hardware::block::partition::Partition> partition)
+      : BlockPartitionClient(
+            fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>(partition.TakeChannel())) {}
 
   ~BlockPartitionClient();
 
@@ -66,7 +80,7 @@ class BlockPartitionClient final : public PartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset, size_t vmo_offset);
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  zx::channel GetChannel() final;
+  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -91,13 +105,23 @@ class BlockPartitionClient final : public PartitionClient {
 // This is for those cases where image doesn't necessarily start from the beginning of
 // the partition, (i.e. for preserving metatdata/header).
 // It's also used for cases where input image is a combined image for multiple partitions.
-class FixedOffsetBlockPartitionClient final : public PartitionClient {
+class FixedOffsetBlockPartitionClient final : public BlockDevicePartitionClient {
  public:
-  explicit FixedOffsetBlockPartitionClient(zx::channel partition, size_t offset_partition_in_blocks,
-                                           size_t offset_buffer_in_blocks)
+  explicit FixedOffsetBlockPartitionClient(
+      fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> partition,
+      size_t offset_partition_in_blocks, size_t offset_buffer_in_blocks)
       : client_(std::move(partition)),
         offset_partition_in_blocks_(offset_partition_in_blocks),
         offset_buffer_in_blocks_(offset_buffer_in_blocks) {}
+
+  // Note: converting from |fuchsia.hardware.block.partition/Partition|
+  // to |fuchsia.hardware.block/Block|.
+  explicit FixedOffsetBlockPartitionClient(
+      fidl::ClientEnd<::llcpp::fuchsia::hardware::block::partition::Partition> partition,
+      size_t offset_partition_in_blocks, size_t offset_buffer_in_blocks)
+      : FixedOffsetBlockPartitionClient(
+            fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>(partition.TakeChannel()),
+            offset_partition_in_blocks, offset_buffer_in_blocks) {}
 
   zx::status<size_t> GetBlockSize() final;
   zx::status<size_t> GetPartitionSize() final;
@@ -105,7 +129,7 @@ class FixedOffsetBlockPartitionClient final : public PartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  zx::channel GetChannel() final;
+  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -126,7 +150,7 @@ class FixedOffsetBlockPartitionClient final : public PartitionClient {
 
 // Specialized partition client which duplicates to multiple partitions, and attempts to read from
 // each.
-class PartitionCopyClient final : public PartitionClient {
+class PartitionCopyClient final : public BlockDevicePartitionClient {
  public:
   explicit PartitionCopyClient(std::vector<std::unique_ptr<PartitionClient>> partitions)
       : partitions_(std::move(partitions)) {}
@@ -137,7 +161,7 @@ class PartitionCopyClient final : public PartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  zx::channel GetChannel() final;
+  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.

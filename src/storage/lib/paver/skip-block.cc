@@ -30,9 +30,9 @@ namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
 
 }  // namespace
 
-zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindPartition(
+zx::status<std::unique_ptr<SkipBlockPartitionClient>> SkipBlockDevicePartitioner::FindPartition(
     const Uuid& type) const {
-  zx::status<zx::channel> status = OpenSkipBlockPartition(devfs_root_, type, ZX_SEC(5));
+  auto status = OpenSkipBlockPartition(devfs_root_, type, ZX_SEC(5));
   if (status.is_error()) {
     return status.take_error();
   }
@@ -42,8 +42,7 @@ zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindPar
 
 zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindFvmPartition() const {
   // FVM partition is managed so it should expose a normal block device.
-  zx::status<zx::channel> status =
-      OpenBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE), ZX_SEC(5));
+  auto status = OpenBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE), ZX_SEC(5));
   if (status.is_error()) {
     return status.take_error();
   }
@@ -53,14 +52,16 @@ zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindFvm
 
 zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
   const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-  zx::status<zx::channel> status =
-      OpenBlockPartition(devfs_root_, std::nullopt, Uuid(fvm_type), ZX_SEC(3));
+  auto status = OpenBlockPartition(devfs_root_, std::nullopt, Uuid(fvm_type), ZX_SEC(3));
   if (status.is_error()) {
     ERROR("Warning: Could not open partition to wipe: %s\n", status.status_string());
     return zx::ok();
   }
 
-  device::Controller::SyncClient block_client(std::move(status.value()));
+  // Note: converting from |fuchsia.hardware.block.partition/Partition| to
+  // |fuchsia.device/Controller| works because devfs connections compose |Controller|.
+  device::Controller::SyncClient block_client(
+      fidl::ClientEnd<device::Controller>(status.value().TakeChannel()));
 
   auto result = block_client.GetTopologicalPath();
   if (!result.ok()) {
@@ -240,9 +241,10 @@ zx::status<> SkipBlockPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPP
 
 zx::status<> SkipBlockPartitionClient::Flush() { return zx::ok(); }
 
-zx::channel SkipBlockPartitionClient::GetChannel() {
-  zx::channel channel(fdio_service_clone(partition_.channel().get()));
-  return channel;
+fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock>
+SkipBlockPartitionClient::GetChannel() {
+  return fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock>(
+      zx::channel(fdio_service_clone(partition_.channel().get())));
 }
 
 fbl::unique_fd SkipBlockPartitionClient::block_fd() { return fbl::unique_fd(); }

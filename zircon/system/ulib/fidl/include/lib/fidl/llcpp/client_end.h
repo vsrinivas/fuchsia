@@ -94,7 +94,7 @@ class UnownedClientEnd final {
 
   // Creates an |UnownedClientEnd| from a raw zircon handle.
   // Prefer only using this constructor when interfacing with C APIs.
-  explicit UnownedClientEnd(zx_handle_t h) : channel_(h) {}
+  constexpr explicit UnownedClientEnd(zx_handle_t h) : channel_(h) {}
 
   // Creates an |UnownedClientEnd| from a |zx::unowned_channel|.
   //

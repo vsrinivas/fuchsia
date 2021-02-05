@@ -43,14 +43,16 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
 
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
   void set_devfs_root(fbl::unique_fd devfs_root) { devfs_root_ = std::move(devfs_root); }
-  void set_svc_root(zx::channel svc_root) { svc_root_ = std::move(svc_root); }
+  void set_svc_root(fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
+    svc_root_ = std::move(svc_root);
+  }
 
   Paver() : context_(std::make_shared<Context>()) {}
 
  private:
   // Used for test injection.
   fbl::unique_fd devfs_root_;
-  zx::channel svc_root_;
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root_;
 
   async_dispatcher_t* dispatcher_ = nullptr;
 
@@ -105,8 +107,9 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
 
   // Automatically finds block device to use.
-  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
-                   zx::channel server, std::shared_ptr<Context> context);
+  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
+                   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root, zx::channel server,
+                   std::shared_ptr<Context> context);
 
   void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
                  ::llcpp::fuchsia::paver::Asset asset,
@@ -151,7 +154,8 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
   DynamicDataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
 
-  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
+  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
+                   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
                    zx::channel block_device, zx::channel server, std::shared_ptr<Context> context);
 
   void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override;
@@ -198,10 +202,12 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
 
 class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
  public:
-  BootManager(std::unique_ptr<abr::Client> abr_client, zx::channel svc_root)
+  BootManager(std::unique_ptr<abr::Client> abr_client,
+              fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root)
       : abr_client_(std::move(abr_client)), svc_root_(std::move(svc_root)) {}
 
-  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
+  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
+                   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
                    std::shared_ptr<Context> context, zx::channel server);
 
   void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override;
@@ -226,7 +232,7 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
 
  private:
   std::unique_ptr<abr::Client> abr_client_;
-  zx::channel svc_root_;
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root_;
 };
 
 }  // namespace paver

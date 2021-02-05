@@ -1631,8 +1631,16 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_EQ(kBufferSize, pread(fvm_.get(), buffer, kBufferSize, 0));
   EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
 
-  zx::channel channel = std::move(result->result.mutable_response().volume.channel());
-  std::string path = storage::GetTopologicalPath(channel).value().substr(5);  // strip "/dev/"
+  fidl::ClientEnd<llcpp::fuchsia::hardware::block::volume::VolumeManager> volume_client =
+      std::move(result->result.mutable_response().volume);
+  // This force-casts the protocol type from
+  // |fuchsia.hardware.block.volume/VolumeManager| into
+  // |fuchsia.device/Controller|. It only works because protocols hosted
+  // on devfs are automatically multiplexed with both the
+  // |fuchsia.device/Controller| and the |fuchsia.io/File| protocol.
+  fidl::ClientEnd<llcpp::fuchsia::device::Controller> device_client(
+      std::move(volume_client.channel()));
+  std::string path = storage::GetTopologicalPath(device_client).value().substr(5);  // strip "/dev/"
   ASSERT_FALSE(path.empty());
 
   std::string blob_path = path + "/blobfs-p-1/block";
@@ -1903,7 +1911,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
     static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
-    zx::channel svc_root = GetSvcRoot();
+    fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root = GetSvcRoot();
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(svc_root));
   }
 
@@ -1915,7 +1923,10 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, block_size, &gpt_dev_));
   }
 
-  zx::channel GetSvcRoot() { return zx::channel(fdio_service_clone(fake_svc_.svc_chan().get())); }
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> GetSvcRoot() {
+    return fidl::ClientEnd<::llcpp::fuchsia::io::Directory>(
+        zx::channel(fdio_service_clone(fake_svc_.svc_chan().get())));
+  }
 
   struct PartitionDescription {
     const char* name;
@@ -1981,7 +1992,7 @@ class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
 TEST_F(PaverServiceLuisTest, CreateAbr) {
   ASSERT_NO_FATAL_FAILURES(InitializeLuisGPTPartitions());
   std::shared_ptr<paver::Context> context;
-  zx::channel svc_root = GetSvcRoot();
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root = GetSvcRoot();
   EXPECT_OK(
       abr::ClientFactory::Create(devmgr_.devfs_root().duplicate(), std::move(svc_root), context));
 }

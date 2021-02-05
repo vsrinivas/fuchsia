@@ -35,9 +35,9 @@ class GptDevicePartitioner {
   // directly. If it is not provided, we search for a device with a valid GPT,
   // with an entry for an FVM. If multiple devices with valid GPT containing
   // FVM entries are found, an error is returned.
-  static zx::status<InitializeGptResult> InitializeGpt(fbl::unique_fd devfs_root,
-                                                       const zx::channel& svc_root,
-                                                       const fbl::unique_fd& block_device);
+  static zx::status<InitializeGptResult> InitializeGpt(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      const fbl::unique_fd& block_device);
 
   // Returns block info for a specified block device.
   const ::llcpp::fuchsia::hardware::block::BlockInfo& GetBlockInfo() const { return block_info_; }
@@ -65,7 +65,7 @@ class GptDevicePartitioner {
                                                             size_t optional_reserve_bytes) const;
 
   struct FindPartitionResult {
-    std::unique_ptr<PartitionClient> partition;
+    std::unique_ptr<BlockDevicePartitionClient> partition;
     gpt_partition_t* gpt_partition;
   };
 
@@ -85,7 +85,7 @@ class GptDevicePartitioner {
 
   const fbl::unique_fd& devfs_root() { return devfs_root_; }
 
-  const zx::channel& svc_root() { return svc_root_; }
+  fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root() { return svc_root_; }
 
  private:
   using GptDevices = std::vector<std::pair<std::string, fbl::unique_fd>>;
@@ -96,13 +96,15 @@ class GptDevicePartitioner {
   // Initializes GPT for a device which was explicitly provided. If |gpt_device| doesn't have a
   // valid GPT, it will initialize it with a valid one.
   static zx::status<std::unique_ptr<GptDevicePartitioner>> InitializeProvidedGptDevice(
-      fbl::unique_fd devfs_root, const zx::channel& svc_root, fbl::unique_fd gpt_device);
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      fbl::unique_fd gpt_device);
 
-  GptDevicePartitioner(fbl::unique_fd devfs_root, const zx::channel& svc_root, fbl::unique_fd fd,
-                       std::unique_ptr<GptDevice> gpt,
+  GptDevicePartitioner(fbl::unique_fd devfs_root,
+                       fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                       fbl::unique_fd fd, std::unique_ptr<GptDevice> gpt,
                        ::llcpp::fuchsia::hardware::block::BlockInfo block_info)
       : devfs_root_(std::move(devfs_root)),
-        svc_root_(fdio_service_clone(svc_root.get())),
+        svc_root_(zx::channel(fdio_service_clone(svc_root.channel()))),
         caller_(std::move(fd)),
         gpt_(std::move(gpt)),
         block_info_(block_info) {}
@@ -111,7 +113,7 @@ class GptDevicePartitioner {
                                             uint64_t offset, uint64_t blocks) const;
 
   fbl::unique_fd devfs_root_;
-  zx::channel svc_root_;
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root_;
   fdio_cpp::FdioCaller caller_;
   mutable std::unique_ptr<GptDevice> gpt_;
   ::llcpp::fuchsia::hardware::block::BlockInfo block_info_;
@@ -119,7 +121,8 @@ class GptDevicePartitioner {
 
 zx::status<uuid::Uuid> GptPartitionType(Partition type);
 
-zx::status<> RebindGptDriver(const zx::channel& svc_root, zx::unowned_channel chan);
+zx::status<> RebindGptDriver(fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                             zx::unowned_channel chan);
 
 inline void utf16_to_cstring(char* dst, const uint8_t* src, size_t charcount) {
   while (charcount > 0) {

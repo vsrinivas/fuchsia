@@ -807,8 +807,9 @@ zx::status<zx::channel> DataSinkImpl::WipeVolume() {
   }
 }
 
-void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
-                    zx::channel server, std::shared_ptr<Context> context) {
+void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
+                    fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root, zx::channel server,
+                    std::shared_ptr<Context> context) {
   auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
                                                       GetCurrentArch(), context);
   if (!partitioner) {
@@ -821,7 +822,8 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, z
 }
 
 void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                           zx::channel svc_root, zx::channel block_device, zx::channel server,
+                           fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                           zx::channel block_device, zx::channel server,
                            std::shared_ptr<Context> context) {
   auto partitioner =
       DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
@@ -872,9 +874,13 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
 }
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                       zx::channel svc_root, std::shared_ptr<Context> context, zx::channel server) {
-  auto status = abr::ClientFactory::Create(
-      std::move(devfs_root), zx::channel(fdio_service_clone(svc_root.get())), context);
+                       fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                       std::shared_ptr<Context> context, zx::channel server) {
+  auto status =
+      abr::ClientFactory::Create(std::move(devfs_root),
+                                 fidl::ClientEnd<::llcpp::fuchsia::io::Directory>(
+                                     zx::channel(fdio_service_clone(svc_root.borrow().channel()))),
+                                 context);
   if (status.is_error()) {
     ERROR("Failed to get ABR client: %s\n", status.status_string());
     fidl_epitaph_write(server.get(), status.error_value());

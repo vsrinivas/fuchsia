@@ -27,7 +27,8 @@ inline constexpr Arch GetCurrentArch() {
 }  // namespace
 
 void Sysconfig::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                     zx::channel svc_root, std::shared_ptr<Context> context, zx::channel server) {
+                     fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+                     std::shared_ptr<Context> context, zx::channel server) {
   auto device_partitioner = DevicePartitionerFactory::Create(
       devfs_root.duplicate(), std::move(svc_root), GetCurrentArch(), context);
   if (!device_partitioner) {

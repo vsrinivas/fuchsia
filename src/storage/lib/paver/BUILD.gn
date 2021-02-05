@@ -44,9 +44,13 @@ source_set("paver-core") {
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
+    "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//src/firmware/lib/abr",
     "//src/lib/uuid",
@@ -114,6 +118,7 @@ source_set("astro") {
     "//src/devices/lib/amlogic",
     "//src/lib/uuid",
     "//zircon/system/ulib/gpt",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
     ":skip-block",

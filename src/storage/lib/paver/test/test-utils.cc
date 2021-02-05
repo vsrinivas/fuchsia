@@ -144,6 +144,8 @@ zx::status<> FakePartitionClient::Trim() {
 
 zx::status<> FakePartitionClient::Flush() { return zx::ok(); }
 
-zx::channel FakePartitionClient::GetChannel() { return {}; }
+fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> FakePartitionClient::GetChannel() {
+  return {};
+}
 
 fbl::unique_fd FakePartitionClient::block_fd() { return fbl::unique_fd(); }

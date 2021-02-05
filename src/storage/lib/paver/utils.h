@@ -5,6 +5,8 @@
 #define SRC_STORAGE_LIB_PAVER_UTILS_H_
 
 #include <fuchsia/fshost/llcpp/fidl.h>
+#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
+#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 
@@ -31,13 +33,13 @@ class BlockWatcherPauser {
   ~BlockWatcherPauser();
 
   // This is the function used for creating the BlockWatcherPauser.
-  static zx::status<BlockWatcherPauser> Create(const zx::channel& svc_root);
+  static zx::status<BlockWatcherPauser> Create(
+      fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root);
 
  private:
   // Create a new Pauser. This should immediately be followed by a call to Pause().
-  BlockWatcherPauser(zx::channel chan)
-      : watcher_(llcpp::fuchsia::fshost::BlockWatcher::SyncClient(std::move(chan))),
-        valid_(false) {}
+  explicit BlockWatcherPauser(fidl::ClientEnd<llcpp::fuchsia::fshost::BlockWatcher> chan)
+      : watcher_(fidl::BindSyncClient(std::move(chan))), valid_(false) {}
   zx::status<> Pause();
 
   llcpp::fuchsia::fshost::BlockWatcher::SyncClient watcher_;
@@ -50,17 +52,20 @@ std::unique_ptr<T> WrapUnique(T* ptr) {
   return std::unique_ptr<T>(ptr);
 }
 
+// Either opens a |fuchsia.hardware.block.partition/Partition|, or
+// |fuchsia.hardware.skipblock/SkipBlock|, depending on the filter rules
+// defined in |should_filter_file|.
 zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
                                       fbl::Function<bool(const zx::channel&)> should_filter_file,
                                       zx_duration_t timeout);
 
-zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
-                                           std::optional<uuid::Uuid> unique_guid,
-                                           std::optional<uuid::Uuid> type_guid,
-                                           zx_duration_t timeout);
+zx::status<fidl::ClientEnd<::llcpp::fuchsia::hardware::block::partition::Partition>>
+OpenBlockPartition(const fbl::unique_fd& devfs_root, std::optional<uuid::Uuid> unique_guid,
+                   std::optional<uuid::Uuid> type_guid, zx_duration_t timeout);
 
-zx::status<zx::channel> OpenSkipBlockPartition(const fbl::unique_fd& devfs_root,
-                                               const uuid::Uuid& type_guid, zx_duration_t timeout);
+zx::status<fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock>>
+OpenSkipBlockPartition(const fbl::unique_fd& devfs_root, const uuid::Uuid& type_guid,
+                       zx_duration_t timeout);
 
 bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root);
 

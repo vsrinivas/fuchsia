@@ -11,7 +11,8 @@ namespace paver {
 class LuisPartitioner : public DevicePartitioner {
  public:
   static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
-      fbl::unique_fd devfs_root, const zx::channel& svc_root, const fbl::unique_fd& block_device);
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      const fbl::unique_fd& block_device);
 
   bool IsFvmWithinFtl() const override { return false; }
 
@@ -46,16 +47,15 @@ class LuisPartitioner : public DevicePartitioner {
 
 class LuisPartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(fbl::unique_fd devfs_root,
-                                                     const zx::channel& svc_root, Arch arch,
-                                                     std::shared_ptr<Context> context,
-                                                     const fbl::unique_fd& block_device) final;
+  zx::status<std::unique_ptr<DevicePartitioner>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class LuisAbrClientFactory : public abr::ClientFactory {
  public:
-  zx::status<std::unique_ptr<abr::Client>> New(fbl::unique_fd devfs_root,
-                                               const zx::channel& svc_root,
-                                               std::shared_ptr<paver::Context> context) final;
+  zx::status<std::unique_ptr<abr::Client>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      std::shared_ptr<paver::Context> context) final;
 };
 }  // namespace paver

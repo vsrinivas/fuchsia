@@ -23,7 +23,8 @@ constexpr size_t kMebibyte = kKibibyte * 1024;
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> SherlockPartitioner::Initialize(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "sherlock");
   if (status.is_error()) {
     return status.take_error();
@@ -313,13 +314,13 @@ zx::status<> SherlockPartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> SherlockPartitionerFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return SherlockPartitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
 zx::status<std::unique_ptr<abr::Client>> SherlockAbrClientFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
   auto partitioner =

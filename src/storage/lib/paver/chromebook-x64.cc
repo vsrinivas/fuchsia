@@ -43,8 +43,8 @@ zx::status<Uuid> CrosPartitionType(Partition type) {
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, const fbl::unique_fd& block_device) {
   if (arch != Arch::kX64) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
@@ -331,8 +331,8 @@ zx::status<> CrosDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> ChromebookX64PartitionerFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return CrosDevicePartitioner::Initialize(std::move(devfs_root), svc_root, arch, block_device);
 }
 

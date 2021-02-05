@@ -6,6 +6,7 @@
 
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
@@ -22,25 +23,18 @@ namespace {
 using uuid::Uuid;
 
 std::optional<::llcpp::fuchsia::boot::Arguments::SyncClient> OpenBootArgumentClient(
-    const zx::channel& svc_root) {
+    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
   if (!svc_root.is_valid()) {
     return {};
   }
 
-  zx::channel local, remote;
-  if (zx_status_t status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
-    ERROR("Failed to create channel. \n");
-    return {};
-  }
-
-  auto status = fdio_service_connect_at(svc_root.get(), ::llcpp::fuchsia::boot::Arguments::Name,
-                                        remote.release());
-  if (status != ZX_OK) {
+  auto local = service::ConnectAt<::llcpp::fuchsia::boot::Arguments>(svc_root);
+  if (!local.is_ok()) {
     ERROR("Failed to connect to boot::Arguments service.\n");
     return {};
   }
 
-  return {::llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local))};
+  return {fidl::BindSyncClient(std::move(*local))};
 }
 
 bool GetBool(::llcpp::fuchsia::boot::Arguments::SyncClient& client, ::fidl::StringView key,
@@ -133,7 +127,8 @@ zx::status<> AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_roo
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, std::shared_ptr<Context> context) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    std::shared_ptr<Context> context) {
   auto boot_arg_client = OpenBootArgumentClient(svc_root);
   zx::status<> status = IsBoard(devfs_root, "astro");
   if (status.is_error()) {
@@ -230,7 +225,7 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
         if (auto status = skip_block_->FindPartition(GUID_BL2_VALUE); status.is_error()) {
           return status.take_error();
         } else {
-          std::unique_ptr<PartitionClient>& bl2_skip_block = status.value();
+          std::unique_ptr<SkipBlockPartitionClient>& bl2_skip_block = status.value();
 
           // Upgrade this into a more specialized partition client for custom
           // handling required by BL2.
@@ -239,7 +234,7 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
       }
       // If we get here, we must have added another type to SupportsPartition()
       // without actually implementing it.
-      ERROR("Unimplemeneted partition '%s'\n", spec.ToString().c_str());
+      ERROR("Unimplemented partition '%s'\n", spec.ToString().c_str());
       return zx::error(ZX_ERR_INTERNAL);
     }
     case Partition::kZirconA:
@@ -312,13 +307,13 @@ zx::status<> AstroPartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitionerFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context);
 }
 
 zx::status<std::unique_ptr<abr::Client>> AstroAbrClientFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   auto status = AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context);
   if (status.is_error()) {
@@ -387,7 +382,10 @@ zx::status<> AstroSysconfigPartitionClientBuffered::Flush() {
       [&](auto* ctx) { return zx::make_status(ctx->client_->Flush()); });
 }
 
-zx::channel AstroSysconfigPartitionClientBuffered::GetChannel() { return {}; }
+fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>
+AstroSysconfigPartitionClientBuffered::GetChannel() {
+  return {};
+}
 
 fbl::unique_fd AstroSysconfigPartitionClientBuffered::block_fd() { return fbl::unique_fd(); }
 

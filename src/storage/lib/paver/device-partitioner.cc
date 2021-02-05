@@ -154,8 +154,8 @@ DevicePartitionerFactory::registered_factory_list() {
 }
 
 std::unique_ptr<DevicePartitioner> DevicePartitionerFactory::Create(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    std::shared_ptr<Context> context, zx::channel block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, std::shared_ptr<Context> context, zx::channel block_device) {
   fbl::unique_fd block_dev;
   if (block_device) {
     int fd;
@@ -237,8 +237,7 @@ zx::status<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::FindPartiti
   }
   Uuid type = type_or.value();
 
-  zx::status<zx::channel> partition =
-      OpenBlockPartition(devfs_root_, std::nullopt, type, ZX_SEC(5));
+  auto partition = OpenBlockPartition(devfs_root_, std::nullopt, type, ZX_SEC(5));
   if (partition.is_error()) {
     return partition.take_error();
   }
@@ -276,8 +275,8 @@ zx::status<> FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> DefaultPartitionerFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return FixedDevicePartitioner::Initialize(std::move(devfs_root));
 }
 

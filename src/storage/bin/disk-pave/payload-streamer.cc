@@ -9,9 +9,10 @@
 
 namespace disk_pave {
 
-PayloadStreamer::PayloadStreamer(zx::channel chan, fbl::unique_fd payload)
+PayloadStreamer::PayloadStreamer(fidl::ServerEnd<llcpp::fuchsia::paver::PayloadStream> server_end,
+                                 fbl::unique_fd payload)
     : payload_(std::move(payload)) {
-  fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(chan), this);
+  fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(server_end), this);
 }
 
 PayloadStreamer::~PayloadStreamer() {

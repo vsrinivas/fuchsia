@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/abr/abr.h>
 #include <lib/cksum.h>
 #include <lib/fdio/directory.h>
@@ -25,17 +26,19 @@ namespace abr {
 using ::llcpp::fuchsia::paver::Asset;
 using ::llcpp::fuchsia::paver::Configuration;
 
-zx::status<Configuration> QueryBootConfig(const zx::channel& svc_root) {
-  zx::channel local, remote;
-  if (auto status = zx::make_status(zx::channel::create(0, &local, &remote)); status.is_error()) {
-    return status.take_error();
+zx::status<Configuration> QueryBootConfig(
+    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
+  auto endpoints = fidl::CreateEndpoints<::llcpp::fuchsia::boot::Arguments>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
-  auto status = zx::make_status(fdio_service_connect_at(
-      svc_root.get(), ::llcpp::fuchsia::boot::Arguments::Name, remote.release()));
+  auto status = zx::make_status(fdio_service_connect_at(svc_root.channel(),
+                                                        ::llcpp::fuchsia::boot::Arguments::Name,
+                                                        endpoints->server.channel().release()));
   if (status.is_error()) {
     return status.take_error();
   }
-  ::llcpp::fuchsia::boot::Arguments::SyncClient client(std::move(local));
+  auto client = fidl::BindSyncClient(std::move(endpoints->client));
   auto result = client.GetString(::fidl::StringView{"zvb.current_slot"});
   if (!result.ok()) {
     return zx::error(result.status());
@@ -64,7 +67,8 @@ zx::status<Configuration> QueryBootConfig(const zx::channel& svc_root) {
 
 namespace {
 
-zx::status<> SupportsVerifiedBoot(const zx::channel& svc_root) {
+zx::status<> SupportsVerifiedBoot(
+    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
   return zx::make_status(QueryBootConfig(svc_root).status_value());
 }
 }  // namespace
@@ -120,7 +124,7 @@ std::vector<std::unique_ptr<ClientFactory>>* ClientFactory::registered_factory_l
 }
 
 zx::status<std::unique_ptr<abr::Client>> ClientFactory::Create(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   if (auto status = SupportsVerifiedBoot(svc_root); status.is_error()) {
     return status.take_error();

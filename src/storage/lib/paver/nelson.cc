@@ -22,7 +22,8 @@ using uuid::Uuid;
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> NelsonPartitioner::Initialize(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "nelson");
   if (status.is_error()) {
     return status.take_error();
@@ -120,8 +121,11 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetBootloaderPar
     return tpl_block_size_status.take_error();
   }
   size_t block_size = tpl_block_size_status.value();
-  auto tpl = std::make_unique<FixedOffsetBlockPartitionClient>(tpl_status.value()->GetChannel(), 0,
-                                                               kNelsonBL2Size / block_size);
+  // Casting to |BlockDevicePartitionClient| is safe because all branches
+  // in |FindPartition| returns a block-device-based partition client.
+  auto tpl = std::make_unique<FixedOffsetBlockPartitionClient>(
+      static_cast<BlockDevicePartitionClient*>(tpl_status.value().get())->GetChannel(), 0,
+      kNelsonBL2Size / block_size);
 
   return zx::ok(std::make_unique<NelsonBootloaderPartitionClient>(std::move(boot_status.value()),
                                                                   std::move(tpl)));
@@ -194,7 +198,7 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
   };
 
   if (std::holds_alternative<Uuid>(part_info)) {
-    zx::status<zx::channel> partition =
+    auto partition =
         OpenBlockPartition(gpt_->devfs_root(), std::nullopt, std::get<Uuid>(part_info), ZX_SEC(5));
     if (partition.is_error()) {
       return partition.take_error();
@@ -238,13 +242,13 @@ zx::status<> NelsonPartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> NelsonPartitionerFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return NelsonPartitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
 zx::status<std::unique_ptr<abr::Client>> NelsonAbrClientFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
   auto partitioner =
@@ -297,7 +301,8 @@ zx::status<> NelsonBootloaderPartitionClient::Flush() {
   return tpl_client_->Flush();
 }
 
-zx::channel NelsonBootloaderPartitionClient::GetChannel() {
+fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>
+NelsonBootloaderPartitionClient::GetChannel() {
   ERROR("GetChannel() is not supported for NelsonBootloaderPartitionClient\n");
   ZX_ASSERT(false);
   return zx::channel();

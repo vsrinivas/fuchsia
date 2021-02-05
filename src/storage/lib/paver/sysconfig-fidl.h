@@ -16,7 +16,8 @@ class Sysconfig : public ::llcpp::fuchsia::paver::Sysconfig::Interface {
  public:
   explicit Sysconfig(std::unique_ptr<PartitionClient> client) : partitioner_(std::move(client)) {}
 
-  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
+  static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
+                   fidl::ClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
                    std::shared_ptr<Context> context, zx::channel server);
 
   void Read(ReadCompleter::Sync& completer) override;

@@ -8,6 +8,7 @@
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <string.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
@@ -27,7 +28,7 @@ using devmgr_integration_test::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 using paver::BlockWatcherPauser;
 
-class FakePartitionClient final : public paver::PartitionClient {
+class FakePartitionClient final : public paver::BlockDevicePartitionClient {
  public:
   explicit FakePartitionClient(size_t block_size, size_t partition_size)
       : block_size_(block_size), partition_size_(partition_size) {}
@@ -67,7 +68,7 @@ class FakePartitionClient final : public paver::PartitionClient {
     return zx::make_status(result_);
   }
 
-  zx::channel GetChannel() final { return {}; }
+  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final { return {}; }
   fbl::unique_fd block_fd() final { return {}; }
 
   bool read_called() { return read_called_; }
@@ -195,7 +196,7 @@ TEST(PartitionCopyClientTest, GetChannelSinglePartition) {
   partitions.push_back(std::move(fake));
   paver::PartitionCopyClient client(std::move(partitions));
 
-  ASSERT_EQ(client.GetChannel(), zx::channel());
+  ASSERT_FALSE(client.GetChannel().is_valid());
 }
 
 TEST(PartitionCopyClientTest, BlockFdSinglePartition) {
@@ -357,7 +358,7 @@ TEST(PartitionCopyClientTest, GetChannelMultiplePartitions) {
   partitions.push_back(std::move(fake2));
   paver::PartitionCopyClient client(std::move(partitions));
 
-  ASSERT_EQ(client.GetChannel(), zx::channel());
+  ASSERT_FALSE(client.GetChannel().is_valid());
 }
 
 TEST(PartitionCopyClientTest, BlockFdMultilplePartition) {
@@ -393,7 +394,8 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
   // Creates a BlockPartitionClient which will read/write the entire device.
   std::unique_ptr<paver::BlockPartitionClient> RawClient() {
     return std::make_unique<paver::BlockPartitionClient>(
-        zx::channel(fdio_service_clone(service_channel_.get())));
+        fidl::ClientEnd<llcpp::fuchsia::hardware::block::Block>(
+            zx::channel(fdio_service_clone(service_channel_.get()))));
   }
 
   // Creates a FixedOffsetBlockPartitionClient which will read/write with a partition
@@ -401,24 +403,19 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
   std::unique_ptr<paver::FixedOffsetBlockPartitionClient> FixedOffsetClient(size_t partition_offset,
                                                                             size_t buffer_offset) {
     return std::make_unique<paver::FixedOffsetBlockPartitionClient>(
-        zx::channel(fdio_service_clone(service_channel_.get())), partition_offset, buffer_offset);
+        fidl::ClientEnd<llcpp::fuchsia::hardware::block::Block>(
+            zx::channel(fdio_service_clone(service_channel_.get()))),
+        partition_offset, buffer_offset);
   }
 
-  zx::channel GetSvcRoot() {
+  fidl::ClientEnd<::llcpp::fuchsia::io::Directory> GetSvcRoot() {
     auto fshost_root = devmgr_.fshost_outgoing_dir();
-
-    zx::channel local, remote;
-    auto status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      return zx::channel();
+    auto local = service::ConnectAt<::llcpp::fuchsia::io::Directory>(fshost_root, "svc");
+    if (!local.is_ok()) {
+      std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
+      return fidl::ClientEnd<::llcpp::fuchsia::io::Directory>();
     }
-    status = fdio_service_connect_at(fshost_root.channel(), "svc", remote.release());
-    if (status != ZX_OK) {
-      std::cout << "Failed to connect to fshost svc dir: " << zx_status_get_string(status)
-                << std::endl;
-      return zx::channel();
-    }
-    return local;
+    return std::move(*local);
   }
 
  private:

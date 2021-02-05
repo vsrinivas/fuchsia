@@ -22,7 +22,8 @@ using uuid::Uuid;
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> Vim3Partitioner::Initialize(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "vim3");
   if (status.is_error()) {
     return status.take_error();
@@ -165,13 +166,13 @@ zx::status<> Vim3Partitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> Vim3PartitionerFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root, Arch arch,
-    std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+    Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return Vim3Partitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
 zx::status<std::unique_ptr<abr::Client>> Vim3AbrClientFactory::New(
-    fbl::unique_fd devfs_root, const zx::channel& svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
   auto partitioner = Vim3Partitioner::Initialize(std::move(devfs_root), std::move(svc_root), none);

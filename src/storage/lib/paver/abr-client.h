@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_ABR_CLIENT_H_
 #define SRC_STORAGE_LIB_PAVER_ABR_CLIENT_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/abr/abr.h>
 #include <lib/zx/channel.h>
@@ -20,15 +21,16 @@
 
 namespace abr {
 
-zx::status<llcpp::fuchsia::paver::Configuration> QueryBootConfig(const zx::channel& svc_root);
+zx::status<llcpp::fuchsia::paver::Configuration> QueryBootConfig(
+    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root);
 
 // Interface for interacting with ABR data.
 class Client {
  public:
   // Factory create method.
-  static zx::status<std::unique_ptr<abr::Client>> Create(fbl::unique_fd devfs_root,
-                                                         const zx::channel& svc_root,
-                                                         std::shared_ptr<paver::Context> context);
+  static zx::status<std::unique_ptr<abr::Client>> Create(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      std::shared_ptr<paver::Context> context);
   virtual ~Client() = default;
 
   AbrSlotIndex GetBootSlot(bool update_metadata, bool* is_slot_marked_successful) const {
@@ -90,18 +92,18 @@ class Client {
 class ClientFactory {
  public:
   // Factory create method.
-  static zx::status<std::unique_ptr<abr::Client>> Create(fbl::unique_fd devfs_root,
-                                                         const zx::channel& svc_root,
-                                                         std::shared_ptr<paver::Context> context);
+  static zx::status<std::unique_ptr<abr::Client>> Create(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      std::shared_ptr<paver::Context> context);
 
   static void Register(std::unique_ptr<ClientFactory> factory);
 
   virtual ~ClientFactory() = default;
 
  private:
-  virtual zx::status<std::unique_ptr<abr::Client>> New(fbl::unique_fd devfs_root,
-                                                       const zx::channel& svc_root,
-                                                       std::shared_ptr<paver::Context> context) = 0;
+  virtual zx::status<std::unique_ptr<abr::Client>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      std::shared_ptr<paver::Context> context) = 0;
 
   static std::vector<std::unique_ptr<ClientFactory>>* registered_factory_list();
 };

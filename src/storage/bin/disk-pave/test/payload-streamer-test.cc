@@ -18,9 +18,9 @@ constexpr char kFileData[] = "lalalala";
 
 TEST(PayloadStreamerTest, TrivialLifetime) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-  disk_pave::PayloadStreamer streamer(std::move(server), fbl::unique_fd());
+  auto stream = fidl::CreateEndpoints<::llcpp::fuchsia::paver::PayloadStream>();
+  ASSERT_OK(stream.status_value());
+  disk_pave::PayloadStreamer streamer(std::move(stream->server), fbl::unique_fd());
 }
 
 class PayloadStreamerTest : public zxtest::Test {
@@ -33,10 +33,10 @@ class PayloadStreamerTest : public zxtest::Test {
     ASSERT_EQ(write(src.get(), kFileData, sizeof(kFileData)), sizeof(kFileData));
     lseek(src.get(), 0, SEEK_SET);
 
-    zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
-    streamer_.emplace(std::move(server), std::move(src));
-    client_.emplace(std::move(client));
+    auto stream = fidl::CreateEndpoints<::llcpp::fuchsia::paver::PayloadStream>();
+    ASSERT_OK(stream.status_value());
+    streamer_.emplace(std::move(stream->server), std::move(src));
+    client_.emplace(std::move(stream->client));
     loop_.StartThread("payload-stream-test-loop");
   }
 

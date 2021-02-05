@@ -16,7 +16,8 @@ constexpr size_t kNelsonBL2Size = 64 * 1024;
 class NelsonPartitioner : public DevicePartitioner {
  public:
   static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
-      fbl::unique_fd devfs_root, const zx::channel& svc_root, const fbl::unique_fd& block_device);
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      const fbl::unique_fd& block_device);
 
   bool IsFvmWithinFtl() const override { return false; }
 
@@ -54,20 +55,19 @@ class NelsonPartitioner : public DevicePartitioner {
 
 class NelsonPartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(fbl::unique_fd devfs_root,
-                                                     const zx::channel& svc_root, Arch arch,
-                                                     std::shared_ptr<Context> context,
-                                                     const fbl::unique_fd& block_device) final;
+  zx::status<std::unique_ptr<DevicePartitioner>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class NelsonAbrClientFactory : public abr::ClientFactory {
  public:
-  zx::status<std::unique_ptr<abr::Client>> New(fbl::unique_fd devfs_root,
-                                               const zx::channel& svc_root,
-                                               std::shared_ptr<paver::Context> context) final;
+  zx::status<std::unique_ptr<abr::Client>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      std::shared_ptr<paver::Context> context) final;
 };
 
-class NelsonBootloaderPartitionClient final : public PartitionClient {
+class NelsonBootloaderPartitionClient final : public BlockDevicePartitionClient {
  public:
   explicit NelsonBootloaderPartitionClient(
       std::unique_ptr<PartitionClient> emmc_boot_client,
@@ -80,7 +80,7 @@ class NelsonBootloaderPartitionClient final : public PartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  zx::channel GetChannel() final;
+  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.

@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_LIB_UTILS_TOPOLOGICAL_PATH_H_
 #define SRC_STORAGE_LIB_UTILS_TOPOLOGICAL_PATH_H_
 
+#include <fuchsia/device/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 
@@ -13,7 +14,8 @@
 
 namespace storage {
 
-zx::status<std::string> GetTopologicalPath(const zx::channel& channel);
+zx::status<std::string> GetTopologicalPath(
+    fidl::UnownedClientEnd<llcpp::fuchsia::device::Controller> channel);
 zx::status<std::string> GetTopologicalPath(const std::string& path);
 
 }  // namespace storage

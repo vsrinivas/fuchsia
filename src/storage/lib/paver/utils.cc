@@ -15,6 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/service/llcpp/service.h>
 
 #include <gpt/gpt.h>
 
@@ -47,20 +48,14 @@ BlockWatcherPauser::~BlockWatcherPauser() {
   }
 }
 
-zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(const zx::channel& svc_root) {
-  zx::channel local, remote;
-  auto status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return zx::error(status);
+zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
+    fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root) {
+  auto local = service::ConnectAt<llcpp::fuchsia::fshost::BlockWatcher>(svc_root);
+  if (!local.is_ok()) {
+    return local.take_error();
   }
 
-  status = fdio_service_connect_at(svc_root.get(), llcpp::fuchsia::fshost::BlockWatcher::Name,
-                                   remote.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  BlockWatcherPauser pauser(std::move(local));
+  BlockWatcherPauser pauser(std::move(*local));
   if (auto status = pauser.Pause(); status.is_error()) {
     return status.take_error();
   }
@@ -130,9 +125,9 @@ zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const ch
 
 constexpr char kBlockDevPath[] = "class/block/";
 
-zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
-                                           std::optional<Uuid> unique_guid,
-                                           std::optional<Uuid> type_guid, zx_duration_t timeout) {
+zx::status<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
+    const fbl::unique_fd& devfs_root, std::optional<Uuid> unique_guid,
+    std::optional<Uuid> type_guid, zx_duration_t timeout) {
   ZX_ASSERT(unique_guid || type_guid);
 
   auto cb = [&](const zx::channel& chan) {
@@ -164,8 +159,8 @@ zx::status<zx::channel> OpenBlockPartition(const fbl::unique_fd& devfs_root,
 
 constexpr char kSkipBlockDevPath[] = "class/skip-block/";
 
-zx::status<zx::channel> OpenSkipBlockPartition(const fbl::unique_fd& devfs_root,
-                                               const Uuid& type_guid, zx_duration_t timeout) {
+zx::status<fidl::ClientEnd<skipblock::SkipBlock>> OpenSkipBlockPartition(
+    const fbl::unique_fd& devfs_root, const Uuid& type_guid, zx_duration_t timeout) {
   auto cb = [&](const zx::channel& chan) {
     auto result = skipblock::SkipBlock::Call::GetPartitionInfo(zx::unowned(chan));
     if (!result.ok()) {

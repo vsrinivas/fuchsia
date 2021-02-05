@@ -18,7 +18,8 @@ class AstroPartitioner : public DevicePartitioner {
   enum class AbrWearLevelingOption { ON, OFF };
 
   static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
-      fbl::unique_fd devfs_root, const zx::channel& svc_root, std::shared_ptr<Context> context);
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      std::shared_ptr<Context> context);
 
   bool IsFvmWithinFtl() const override { return true; }
 
@@ -61,21 +62,20 @@ class AstroPartitioner : public DevicePartitioner {
 
 class AstroPartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(fbl::unique_fd devfs_root,
-                                                     const zx::channel& svc_root, Arch arch,
-                                                     std::shared_ptr<Context> context,
-                                                     const fbl::unique_fd& block_device) final;
+  zx::status<std::unique_ptr<DevicePartitioner>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class AstroAbrClientFactory : public abr::ClientFactory {
  public:
-  zx::status<std::unique_ptr<abr::Client>> New(fbl::unique_fd devfs_root,
-                                               const zx::channel& svc_root,
-                                               std::shared_ptr<paver::Context> context) final;
+  zx::status<std::unique_ptr<abr::Client>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::llcpp::fuchsia::io::Directory> svc_root,
+      std::shared_ptr<paver::Context> context) final;
 };
 
 // Specialized astro sysconfig partition client built on SyncClientBuffered.
-class AstroSysconfigPartitionClientBuffered : public PartitionClient {
+class AstroSysconfigPartitionClientBuffered : public BlockDevicePartitionClient {
  public:
   AstroSysconfigPartitionClientBuffered(std::shared_ptr<Context> context,
                                         ::sysconfig::SyncClient::PartitionType partition)
@@ -87,7 +87,7 @@ class AstroSysconfigPartitionClientBuffered : public PartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  zx::channel GetChannel() final;
+  fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -107,7 +107,8 @@ class AstroSysconfigPartitionClientBuffered : public PartitionClient {
 // quirk.
 class Bl2PartitionClient final : public SkipBlockPartitionClient {
  public:
-  explicit Bl2PartitionClient(zx::channel partition)
+  explicit Bl2PartitionClient(
+      fidl::ClientEnd<::llcpp::fuchsia::hardware::skipblock::SkipBlock> partition)
       : SkipBlockPartitionClient(std::move(partition)) {}
 
   zx::status<size_t> GetBlockSize() final;

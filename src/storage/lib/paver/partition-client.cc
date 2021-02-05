@@ -218,9 +218,9 @@ zx::status<> BlockPartitionClient::Flush() {
   return zx::make_status(client_->Transaction(&request, 1));
 }
 
-zx::channel BlockPartitionClient::GetChannel() {
-  zx::channel channel(fdio_service_clone(partition_.channel().get()));
-  return channel;
+fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> BlockPartitionClient::GetChannel() {
+  return fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>(
+      zx::channel(fdio_service_clone(partition_.channel().get())));
 }
 
 fbl::unique_fd BlockPartitionClient::block_fd() {
@@ -281,7 +281,10 @@ zx::status<> FixedOffsetBlockPartitionClient::Trim() { return client_.Trim(); }
 
 zx::status<> FixedOffsetBlockPartitionClient::Flush() { return client_.Flush(); }
 
-zx::channel FixedOffsetBlockPartitionClient::GetChannel() { return client_.GetChannel(); }
+fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block>
+FixedOffsetBlockPartitionClient::GetChannel() {
+  return client_.GetChannel();
+}
 
 fbl::unique_fd FixedOffsetBlockPartitionClient::block_fd() { return client_.block_fd(); }
 
@@ -363,7 +366,9 @@ zx::status<> PartitionCopyClient::Flush() {
   return zx::ok();
 }
 
-zx::channel PartitionCopyClient::GetChannel() { return {}; }
+fidl::ClientEnd<::llcpp::fuchsia::hardware::block::Block> PartitionCopyClient::GetChannel() {
+  return {};
+}
 
 fbl::unique_fd PartitionCopyClient::block_fd() { return fbl::unique_fd(); }
 
