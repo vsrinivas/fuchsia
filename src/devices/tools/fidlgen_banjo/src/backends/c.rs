@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{
-        util::{extract_name, to_c_name},
-        Backend,
-    },
+    super::{util::to_c_name, Backend},
     crate::fidl::{self, *},
     anyhow::{anyhow, Error},
     std::io,
@@ -28,6 +25,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
 enum Decl<'a> {
     Const { data: &'a fidl::Const },
     Enum { data: &'a fidl::Enum },
+    Interface { data: &'a fidl::Interface },
     Struct { data: &'a fidl::Struct },
 }
 
@@ -84,20 +82,47 @@ fn integer_type_to_c_str(ty: &IntegerType) -> Result<String, Error> {
     primitive_type_to_c_str(&integer_type_to_primitive(ty))
 }
 
-fn type_to_c_str(ty: &Type, decl_map: &DeclarationsMap) -> Result<String, Error> {
+fn type_to_c_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
     match ty {
-        Type::Array { ref element_type, .. } => type_to_c_str(element_type, decl_map),
-        Type::Vector { ref element_type, .. } => type_to_c_str(element_type, decl_map),
+        Type::Array { ref element_type, .. } => type_to_c_str(element_type, ir),
+        Type::Vector { ref element_type, .. } => type_to_c_str(element_type, ir),
         Type::Str { .. } => Ok(String::from("char*")),
         Type::Primitive { ref subtype } => primitive_type_to_c_str(subtype),
-        Type::Identifier { identifier, .. } => match decl_map.0.get(identifier).unwrap() {
+        Type::Identifier { identifier, .. } => match ir.get_declaration(identifier).unwrap() {
             Declaration::Struct | Declaration::Union | Declaration::Enum => {
-                Ok(format!("{}_t", to_c_name(&extract_name(identifier))))
+                Ok(format!("{}_t", to_c_name(&identifier.get_name())))
             }
             _ => Err(anyhow!("Identifier type not handled: {:?}", identifier)),
         },
         _ => Err(anyhow!("Type not handled: {:?}", ty)),
     }
+}
+
+pub fn array_bounds(ty: &Type) -> Option<String> {
+    if let Type::Array { ref element_type, element_count } = ty {
+        return if let Some(bounds) = array_bounds(element_type) {
+            Some(format!("[{}]{}", element_count.0, bounds))
+        } else {
+            Some(format!("[{}]", element_count.0))
+        };
+    }
+    None
+}
+
+fn protocol_to_ops_c_str(id: &CompoundIdentifier, ir: &FidlIr) -> Result<String, Error> {
+    if ir.is_protocol(id) {
+        return Ok(to_c_name(id.get_name()) + "_protocol_ops_t");
+    }
+    Err(anyhow!("Identifier does not represent a protocol: {:?}", id))
+}
+
+pub fn not_callback(id: &CompoundIdentifier, ir: &FidlIr) -> Result<bool, Error> {
+    if let Some(layout) = get_attribute(ir.get_protocol_attributes(id)?, "BanjoLayout") {
+        if layout == "ddk-callback" {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 fn integer_constant_to_c_str(ty: &IntegerType, constant: &Constant) -> Result<String, Error> {
@@ -134,6 +159,34 @@ fn has_attribute(maybe_attributes: &Option<Vec<Attribute>>, name: &str) -> bool 
     }
 }
 
+fn get_attribute<'b>(
+    maybe_attributes: &'b Option<Vec<Attribute>>,
+    name: &str,
+) -> Option<&'b String> {
+    match maybe_attributes {
+        Some(attrs) => {
+            attrs.iter().filter_map(|a| if a.name == name { Some(&a.value) } else { None }).next()
+        }
+        None => None,
+    }
+}
+
+pub fn name_buffer(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
+    if has_attribute(maybe_attributes, "Buffer") {
+        "buffer"
+    } else {
+        "list"
+    }
+}
+
+pub fn name_size(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
+    if has_attribute(maybe_attributes, "Buffer") {
+        "size"
+    } else {
+        "count"
+    }
+}
+
 fn struct_attrs_to_c_str(maybe_attributes: &Option<Vec<Attribute>>) -> String {
     if let Some(attributes) = maybe_attributes {
         attributes
@@ -155,7 +208,7 @@ fn field_to_c_str(
     ident: &Identifier,
     indent: &str,
     preserve_names: bool,
-    decl_map: &DeclarationsMap,
+    ir: &FidlIr,
 ) -> Result<String, Error> {
     let mut accum = String::new();
     accum.push_str(get_doc_comment(maybe_attributes, 1).as_str());
@@ -168,7 +221,7 @@ fn field_to_c_str(
                     "{indent}{ty} {c_name};",
                     indent = indent,
                     c_name = c_name,
-                    ty = type_to_c_str(&ty, decl_map)?
+                    ty = type_to_c_str(&ty, ir)?
                 )
                 .as_str(),
             );
@@ -177,9 +230,260 @@ fn field_to_c_str(
     Ok(accum)
 }
 
+fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error> {
+    if let Some(response) = &method.maybe_response {
+        if let Some(param) = response.get(0) {
+            if param._type.is_primitive(ir)? {
+                return Ok((true, type_to_c_str(&param._type, ir)?));
+            }
+        }
+    }
+    Ok((false, "void".to_string()))
+}
+
+fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>, Error> {
+    if m.maybe_request == None {
+        return Ok(vec![]);
+    }
+    m.maybe_request
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|param| {
+            let c_name = to_c_name(&param.name.0);
+            let ty_name = type_to_c_str(&param._type, ir)?;
+            match &param._type {
+                Type::Identifier { identifier, .. } => {
+                    if identifier.is_base_type() {
+                        let ty_name = type_to_c_str(&param._type, ir)?;
+                        return Ok(format!("{} {}", ty_name, c_name));
+                    }
+                    match ir.get_declaration(identifier).unwrap() {
+                        Declaration::Interface => {
+                            if transform && not_callback(identifier, ir)? {
+                                let ty_name = protocol_to_ops_c_str(identifier, ir).unwrap();
+                                Ok(format!(
+                                    "void* {name}_ctx, {ty_name}* {name}_ops",
+                                    ty_name = ty_name,
+                                    name = to_c_name(&param.name.0)
+                                ))
+                            } else {
+                                Ok(format!("const {}* {}", ty_name, c_name))
+                            }
+                        }
+                        Declaration::Struct | Declaration::Union => {
+                            let prefix = if has_attribute(&param.maybe_attributes, "InOut")
+                                || has_attribute(&param.maybe_attributes, "Mutable")
+                            {
+                                ""
+                            } else {
+                                "const "
+                            };
+                            Ok(format!("{}{}* {}", prefix, ty_name, c_name))
+                        }
+                        Declaration::Enum => Ok(format!("{} {}", ty_name, c_name)),
+                        decl => Err(anyhow!("Unsupported declaration: {:?}", decl)),
+                    }
+                }
+                Type::Str { .. } => Ok(format!("const {} {}", ty_name, c_name)),
+                Type::Array { .. } => {
+                    let bounds = array_bounds(&param._type).unwrap();
+                    Ok(format!(
+                        "const {ty} {name}{bounds}",
+                        bounds = bounds,
+                        ty = ty_name,
+                        name = c_name
+                    ))
+                }
+                Type::Vector { .. } => {
+                    let ptr = if has_attribute(&param.maybe_attributes, "InnerPointer") {
+                        "*"
+                    } else {
+                        ""
+                    };
+                    Ok(format!(
+                        "const {ty}{ptr}* {name}_{buffer}, size_t {name}_{size}",
+                        buffer = name_buffer(&param.maybe_attributes),
+                        size = name_size(&param.maybe_attributes),
+                        ty = ty_name,
+                        ptr = ptr,
+                        name = c_name
+                    ))
+                }
+                _ => Ok(format!("{} {}", ty_name, c_name)),
+            }
+        })
+        .collect()
+}
+
+fn get_out_params(name: &str, m: &Method, ir: &FidlIr) -> Result<(Vec<String>, String), Error> {
+    let protocol_name = to_c_name(name);
+    let method_name = to_c_name(&m.name.0);
+    if has_attribute(&m.maybe_attributes, "Async") {
+        return Ok((
+            vec![
+                format!(
+                    "{protocol_name}_{method_name}_callback callback",
+                    protocol_name = protocol_name,
+                    method_name = method_name
+                ),
+                "void* cookie".to_string(),
+            ],
+            "void".to_string(),
+        ));
+    }
+
+    let (skip, return_param) = get_first_param(m, ir)?;
+    let skip_amt = if skip { 1 } else { 0 };
+
+    Ok((
+        m.maybe_response.as_ref()
+            .map_or(Vec::new(), |response| {
+                response.iter().skip(skip_amt)
+                .map(|param| {
+                    let ty_name = type_to_c_str(&param._type, ir).unwrap();
+                    let c_name = to_c_name(&param.name.0);
+                    match &param._type {
+                        Type::Identifier { identifier, nullable } => {
+                            match ir.get_declaration(identifier).unwrap() {
+                                Declaration::Interface => format!("const {}* {}", ty_name, c_name),
+                                _ => format!("{}{}* out_{}", ty_name, if *nullable { "*" } else { "" }, c_name),
+                            }
+                        }
+                        Type::Array { .. } => {
+                            let bounds = array_bounds(&param._type).unwrap();
+                            format!(
+                                "{ty} out_{name}{bounds}",
+                                bounds = bounds,
+                                ty = ty_name,
+                                name = c_name
+                            )
+                        }
+                        Type::Vector { .. } => {
+                            let buffer_name = name_buffer(&param.maybe_attributes);
+                            let size_name = name_size(&param.maybe_attributes);
+                            if has_attribute(&param.maybe_attributes, "CalleeAllocated") {
+                                format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
+                                        buffer = buffer_name,
+                                        size = size_name,
+                                        ty = ty_name,
+                                        name = c_name)
+                            } else {
+                                format!("{ty}* out_{name}_{buffer}, size_t {name}_{size}, size_t* out_{name}_actual",
+                                        buffer = buffer_name,
+                                        size = size_name,
+                                        ty = ty_name,
+                                        name = c_name)
+                            }
+                        },
+                        Type::Str {..} => {
+                            format!("{ty} out_{c_name}, size_t {c_name}_capacity",
+                                    ty = ty_name, c_name = c_name)
+                        }
+                        Type::Handle {..} => format!("{}* out_{}", ty_name, c_name),
+                        _ => format!("{}* out_{}", ty_name, c_name),
+                    }
+                }).collect()
+            }), return_param))
+}
+
+fn get_in_args(m: &Method, _ir: &FidlIr) -> Result<Vec<String>, Error> {
+    if let Some(request) = &m.maybe_request {
+        return request
+            .iter()
+            .map(|param| match &param._type {
+                Type::Vector { .. } => Ok(format!(
+                    "{name}_{buffer}, {name}_{size}",
+                    buffer = name_buffer(&param.maybe_attributes),
+                    size = name_size(&param.maybe_attributes),
+                    name = to_c_name(&param.name.0)
+                )),
+                _ => Ok(format!("{}", to_c_name(&param.name.0))),
+            })
+            .collect();
+    }
+    Ok(Vec::new())
+}
+
+fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
+    if has_attribute(&m.maybe_attributes, "Async") {
+        return Ok((vec!["callback".to_string(), "cookie".to_string()], false));
+    }
+
+    let (skip, _) = get_first_param(m, ir)?;
+    let skip_amt = if skip { 1 } else { 0 };
+    Ok((
+        m.maybe_response.as_ref().map_or(Vec::new(), |response| {
+            response
+                .iter()
+                .skip(skip_amt)
+                .map(|param| {
+                    let c_name = to_c_name(&param.name.0);
+                    match &param._type {
+                        Type::Identifier { identifier, .. } => {
+                            match ir.get_declaration(identifier).unwrap() {
+                                Declaration::Interface => format!("{}", c_name),
+                                _ => format!("out_{}", c_name),
+                            }
+                        }
+                        Type::Vector { .. } => {
+                            let buffer_name = name_buffer(&param.maybe_attributes);
+                            let size_name = name_size(&param.maybe_attributes);
+                            if has_attribute(&param.maybe_attributes, "CalleeAllocated") {
+                                format!(
+                                    "out_{name}_{buffer}, {name}_{size}",
+                                    buffer = buffer_name,
+                                    size = size_name,
+                                    name = c_name
+                                )
+                            } else {
+                                format!(
+                                    "out_{name}_{buffer}, {name}_{size}, out_{name}_actual",
+                                    buffer = buffer_name,
+                                    size = size_name,
+                                    name = c_name
+                                )
+                            }
+                        }
+                        Type::Str { .. } => {
+                            format!("out_{c_name}, {c_name}_capacity", c_name = c_name)
+                        }
+                        _ => format!("out_{}", c_name),
+                    }
+                })
+                .collect()
+        }),
+        skip,
+    ))
+}
+
+enum ProtocolType {
+    Callback,
+    Interface,
+    Protocol,
+}
+
+impl From<&Option<Vec<Attribute>>> for ProtocolType {
+    fn from(maybe_attributes: &Option<Vec<Attribute>>) -> Self {
+        if let Some(layout) = get_attribute(maybe_attributes, "BanjoLayout") {
+            if layout == "ddk-callback" {
+                ProtocolType::Callback
+            } else if layout == "ddk-interface" {
+                ProtocolType::Interface
+            } else if layout == "ddk-protocol" {
+                ProtocolType::Protocol
+            } else {
+                panic!("Unknown layout attribute: {}", layout)
+            }
+        } else {
+            ProtocolType::Protocol
+        }
+    }
+}
+
 impl<'a, W: io::Write> CBackend<'a, W> {
     fn codegen_enum_decl(&self, data: &Enum) -> Result<String, Error> {
-        let name = extract_name(&data.name);
+        let name = &data.name.get_name();
         let enum_defines = data
             .members
             .iter()
@@ -207,7 +511,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         accum.push_str(
             format!(
                 "#define {name} {value}",
-                name = extract_name(&data.name),
+                name = &data.name.get_name(),
                 value = constant_to_c_str(&data._type, &data.value)?
             )
             .as_str(),
@@ -218,29 +522,18 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     fn codegen_struct_decl(&self, data: &Struct) -> Result<String, Error> {
         Ok(format!(
             "typedef struct {c_name} {c_name}_t;",
-            c_name = to_c_name(&extract_name(&data.name))
+            c_name = to_c_name(&data.name.get_name())
         ))
     }
 
-    fn codegen_struct_def(
-        &self,
-        data: &Struct,
-        decl_map: &DeclarationsMap,
-    ) -> Result<String, Error> {
+    fn codegen_struct_def(&self, data: &Struct, ir: &FidlIr) -> Result<String, Error> {
         let attrs = struct_attrs_to_c_str(&data.maybe_attributes);
         let preserve_names = has_attribute(&data.maybe_attributes, "PreserveCNames");
         let members = data
             .members
             .iter()
             .map(|f| {
-                field_to_c_str(
-                    &f.maybe_attributes,
-                    &f._type,
-                    &f.name,
-                    "    ",
-                    preserve_names,
-                    decl_map,
-                )
+                field_to_c_str(&f.maybe_attributes, &f._type, &f.name, "    ", preserve_names, ir)
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
@@ -249,7 +542,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         accum.push_str(
             format!(
                 include_str!("templates/c/struct.h"),
-                c_name = to_c_name(&extract_name(&data.name)),
+                c_name = to_c_name(&data.name.get_name()),
                 decl = "struct",
                 attrs = if attrs.is_empty() { "".to_string() } else { format!(" {}", attrs) },
                 members = members
@@ -257,6 +550,202 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .as_str(),
         );
         Ok(accum)
+    }
+
+    fn codegen_protocol_def2(
+        &self,
+        name: &str,
+        methods: &Vec<Method>,
+        ir: &FidlIr,
+    ) -> Result<String, Error> {
+        let fns = methods
+            .iter()
+            .map(|m| {
+                let (out_params, return_param) = get_out_params(name, &m, ir)?;
+                let in_params = get_in_params(&m, false, ir)?;
+
+                let params = iter::once("void* ctx".to_string())
+                    .chain(in_params)
+                    .chain(out_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Ok(format!(
+                    "    {return_param} (*{fn_name})({params});",
+                    return_param = return_param,
+                    params = params,
+                    fn_name = to_c_name(&m.name.0)
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n");
+        Ok(format!(include_str!("templates/c/protocol_ops.h"), c_name = to_c_name(name), fns = fns))
+    }
+
+    fn codegen_helper_def(
+        &self,
+        name: &str,
+        methods: &Vec<Method>,
+        ir: &FidlIr,
+    ) -> Result<String, Error> {
+        methods
+            .iter()
+            .map(|m| {
+                let mut accum = String::new();
+                accum.push_str(get_doc_comment(&m.maybe_attributes, 0).as_str());
+
+                let (out_params, return_param) = get_out_params(name, &m, ir)?;
+                let in_params = get_in_params(&m, true, ir)?;
+
+                let first_param = format!("const {}_protocol_t* proto", to_c_name(name));
+
+                let params = iter::once(first_param)
+                    .chain(in_params)
+                    .chain(out_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                accum.push_str(
+                    format!(
+                        "static inline {return_param} {protocol_name}_{fn_name}({params}) {{\n",
+                        return_param = return_param,
+                        params = params,
+                        protocol_name = to_c_name(name),
+                        fn_name = to_c_name(&m.name.0)
+                    )
+                    .as_str(),
+                );
+
+                let (out_args, skip) = get_out_args(&m, ir)?;
+                let in_args = get_in_args(&m, ir)?;
+
+                if let Some(request) = &m.maybe_request {
+                    let proto_args = request
+                        .iter()
+                        .filter_map(|param| {
+                            if let Type::Identifier { ref identifier, .. } = param._type {
+                                if not_callback(identifier, ir).ok()? {
+                                    return Some((
+                                        to_c_name(&param.name.0),
+                                        type_to_c_str(&param._type, ir).unwrap(),
+                                    ));
+                                }
+                            }
+                            None
+                        })
+                        .collect::<Vec<_>>();
+                    for (name, ty) in proto_args.iter() {
+                        accum.push_str(
+                            format!(
+                                include_str!("templates/c/proto_transform.h"),
+                                ty = ty,
+                                name = name
+                            )
+                            .as_str(),
+                        );
+                    }
+                }
+
+                let args = iter::once("proto->ctx".to_string())
+                    .chain(in_args)
+                    .chain(out_args)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                let return_statement = if skip { "return " } else { "" };
+
+                accum.push_str(
+                    format!(
+                        "    {return_statement}proto->ops->{fn_name}({args});\n",
+                        return_statement = return_statement,
+                        args = args,
+                        fn_name = to_c_name(&m.name.0)
+                    )
+                    .as_str(),
+                );
+                accum.push_str("}\n");
+                Ok(accum)
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
+    }
+
+    fn codegen_protocol_def(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
+        let name = data.name.get_name();
+        Ok(match ProtocolType::from(&data.maybe_attributes) {
+            ProtocolType::Interface | ProtocolType::Protocol => format!(
+                include_str!("templates/c/protocol.h"),
+                protocol_name = to_c_name(name),
+                protocol_def = self.codegen_protocol_def2(name, &data.methods, ir)?,
+                helper_def = self.codegen_helper_def(name, &data.methods, ir)?
+            ),
+            ProtocolType::Callback => {
+                let m = data.methods.get(0).ok_or(anyhow!("callback has no methods"))?;
+                let (out_params, return_param) = get_out_params(name, &m, ir)?;
+                let in_params = get_in_params(&m, false, ir)?;
+
+                let params = iter::once("void* ctx".to_string())
+                    .chain(in_params)
+                    .chain(out_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let method = format!(
+                    "{return_param} (*{fn_name})({params})",
+                    return_param = return_param,
+                    params = params,
+                    fn_name = to_c_name(&m.name.0)
+                );
+                format!(
+                    include_str!("templates/c/callback.h"),
+                    callback_name = to_c_name(name),
+                    callback = method,
+                )
+            }
+        })
+    }
+
+    fn codegen_async_decls(
+        &self,
+        name: &String,
+        data: &Vec<Method>,
+        ir: &FidlIr,
+    ) -> Result<String, Error> {
+        Ok(data
+            .iter()
+            .filter(|method| has_attribute(&method.maybe_attributes, "Async"))
+            .map(|method| {
+                let mut temp_method = method.clone();
+                temp_method.maybe_request = method.maybe_response.clone();
+                temp_method.maybe_response = None;
+                let in_params = get_in_params(&temp_method, true, ir)?;
+                let params = iter::once("void* ctx".to_string())
+                    .chain(in_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Ok(format!(
+                    "typedef void (*{protocol_name}_{method_name}_callback)({params});\n",
+                    protocol_name = name,
+                    method_name = to_c_name(&method.name.0),
+                    params = params
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join(""))
+    }
+
+    fn codegen_protocol_decl(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
+        let name = to_c_name(&data.name.get_name());
+        Ok(match ProtocolType::from(&data.maybe_attributes) {
+            ProtocolType::Interface | ProtocolType::Protocol => {
+                format!(
+                    "{async_decls}typedef struct {c_name}_protocol {c_name}_protocol_t;",
+                    async_decls = self.codegen_async_decls(&name, &data.methods, ir)?,
+                    c_name = name
+                )
+            }
+            ProtocolType::Callback => {
+                format!("typedef struct {c_name} {c_name}_t;", c_name = name)
+            }
+        })
     }
 
     fn codegen_includes(&self, ir: &FidlIr) -> Result<String, Error> {
@@ -275,20 +764,20 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(ir
             .declaration_order
             .iter()
-            .filter_map(|ident| {
-                let decl = ir.declarations.0.get(ident)?;
-                match decl {
-                    Declaration::Const => Some(Decl::Const {
-                        data: ir.const_declarations.iter().filter(|c| c.name == *ident).nth(0)?,
-                    }),
-                    Declaration::Enum => Some(Decl::Enum {
-                        data: ir.enum_declarations.iter().filter(|e| e.name == *ident).nth(0)?,
-                    }),
-                    Declaration::Struct => Some(Decl::Struct {
-                        data: ir.struct_declarations.iter().filter(|e| e.name == *ident).nth(0)?,
-                    }),
-                    _ => None,
-                }
+            .filter_map(|ident| match ir.get_declaration(ident)? {
+                Declaration::Const => Some(Decl::Const {
+                    data: ir.const_declarations.iter().filter(|c| c.name == *ident).next()?,
+                }),
+                Declaration::Enum => Some(Decl::Enum {
+                    data: ir.enum_declarations.iter().filter(|e| e.name == *ident).next()?,
+                }),
+                Declaration::Interface => Some(Decl::Interface {
+                    data: ir.interface_declarations.iter().filter(|e| e.name == *ident).next()?,
+                }),
+                Declaration::Struct => Some(Decl::Struct {
+                    data: ir.struct_declarations.iter().filter(|e| e.name == *ident).next()?,
+                }),
+                _ => None,
             })
             .collect())
     }
@@ -309,6 +798,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             .filter_map(|decl| match decl {
                 Decl::Const { data } => Some(self.codegen_constant_decl(data)),
                 Decl::Enum { data } => Some(self.codegen_enum_decl(data)),
+                Decl::Interface { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
             })
             .collect::<Result<Vec<_>, Error>>()?
@@ -317,7 +807,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
         let definitions = decl_order
             .iter()
             .filter_map(|decl| match decl {
-                Decl::Struct { data } => Some(self.codegen_struct_def(data, &ir.declarations)),
+                Decl::Interface { data } => Some(self.codegen_protocol_def(data, &ir)),
+                Decl::Struct { data } => Some(self.codegen_struct_def(data, &ir)),
                 _ => None,
             })
             .collect::<Result<Vec<_>, Error>>()?

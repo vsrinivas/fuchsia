@@ -15,6 +15,7 @@ macro_rules! codegen_test {
         #[test]
         fn $id() -> Result<(), anyhow::Error> {
             use fidlgen_banjo_lib::{backends, fidl::FidlIr};
+            use pretty_assertions::assert_eq;
 
             let ir: FidlIr = serde_json::from_str(test_irs::$id::IR)?;
             let mut output = vec![];
@@ -42,5 +43,6 @@ mod c {
     codegen_test!(example1, CBackend, "c/example1.h");
     codegen_test!(example2, CBackend, "c/example2.h");
     codegen_test!(example3, CBackend, "c/example3.h");
+    codegen_test!(example4, CBackend, "c/example4.h");
     codegen_test!(order, CBackend, "c/order.h");
 }

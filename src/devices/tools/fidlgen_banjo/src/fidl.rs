@@ -5,6 +5,7 @@
 // Based on https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/fidl/fidlc/schema.json
 
 use {
+    anyhow::{anyhow, Error},
     lazy_static::lazy_static,
     regex::Regex,
     serde::{Deserialize, Deserializer, Serialize},
@@ -365,6 +366,7 @@ pub struct FieldShape {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MethodParameter {
+    pub maybe_attributes: Option<Vec<Attribute>>,
     #[serde(rename = "type")]
     pub _type: Type,
     pub name: Identifier,
@@ -532,4 +534,80 @@ pub struct FidlIr {
     pub declaration_order: Vec<CompoundIdentifier>,
     pub declarations: DeclarationsMap,
     pub library_dependencies: Vec<Library>,
+}
+
+// Additional methods for IR types.
+
+// Compound identifiers are of the form: my.parent.library/ThisIsMyName
+impl CompoundIdentifier {
+    pub fn get_name(&self) -> &str {
+        self.0.split("/").last().unwrap()
+    }
+
+    pub fn is_base_type(&self) -> bool {
+        self.0.split("/").next().unwrap() == "zx"
+    }
+}
+
+impl FidlIr {
+    pub fn get_declaration(&self, identifier: &CompoundIdentifier) -> Option<&Declaration> {
+        self.declarations.0.get(identifier)
+    }
+
+    pub fn is_protocol(&self, identifier: &CompoundIdentifier) -> bool {
+        self.declarations.0.get(identifier) == Some(&Declaration::Interface)
+    }
+
+    pub fn get_protocol_attributes(
+        &self,
+        identifier: &CompoundIdentifier,
+    ) -> Result<&Option<Vec<Attribute>>, Error> {
+        if let Some(Declaration::Interface) = self.declarations.0.get(identifier) {
+            return Ok(&self
+                .interface_declarations
+                .iter()
+                .filter(|e| e.name == *identifier)
+                .next()
+                .expect(&format!("Could not find protocol declaration: {:?}", identifier))
+                .maybe_attributes);
+        }
+        Err(anyhow!("Identifier does not represent a protocol: {:?}", identifier))
+    }
+}
+
+macro_rules! fetch_declaration {
+    ( $ir: ident, $field: ident, $identifier: ident) => {
+        $ir.$field
+            .iter()
+            .filter(|e| e.name == *$identifier)
+            .next()
+            .expect(&format!("Could not find declaration: {:?}", $identifier))
+    };
+}
+
+impl Type {
+    pub fn is_primitive(&self, ir: &FidlIr) -> Result<bool, Error> {
+        match self {
+            Type::Identifier { ref identifier, .. } => {
+                if identifier.is_base_type() {
+                    Ok(true)
+                } else {
+                    match ir.get_declaration(identifier).unwrap() {
+                        Declaration::Bits => fetch_declaration!(ir, bits_declarations, identifier)
+                            ._type
+                            .is_primitive(ir),
+                        Declaration::Const => {
+                            fetch_declaration!(ir, const_declarations, identifier)
+                                ._type
+                                .is_primitive(ir)
+                        }
+                        Declaration::Enum => Ok(true),
+                        _ => Ok(false),
+                    }
+                }
+            }
+            Type::Primitive { .. } => Ok(true),
+            _ => Ok(false),
+        }
+    }
 }

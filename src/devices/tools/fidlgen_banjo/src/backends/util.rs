@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::fidl::CompoundIdentifier, heck::SnakeCase, std::iter};
+use {heck::SnakeCase, std::iter};
 
 pub fn to_c_name(name: &str) -> String {
     if name.is_empty() {
@@ -24,9 +24,4 @@ pub fn to_c_name(name: &str) -> String {
             .collect::<String>();
         name.trim().to_snake_case()
     }
-}
-
-pub fn extract_name(ident: &CompoundIdentifier) -> String {
-    // Compound identifiers are of the form: my.parent.library/ThisIsMyName
-    ident.0.split("/").last().unwrap().to_string()
 }
