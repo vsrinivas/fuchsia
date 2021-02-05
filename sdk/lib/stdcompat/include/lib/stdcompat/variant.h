@@ -6,6 +6,7 @@
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VARIANT_H_
 
 #include <limits>
+#include <type_traits>
 
 #include "internal/exception.h"
 #include "utility.h"
@@ -420,7 +421,7 @@ class variant
 
   // Swap.
 
-  void swap(variant& other) { storage_.swap(other.storage_); }
+  void swap(variant& other) { cpp20::swap(storage_, other.storage_); }
 
   // Comparison.
 
@@ -551,20 +552,13 @@ class variant
 };
 
 // Swaps variants.
-template <typename... Ts>
+template <typename... Ts, ::cpp17::internal::requires_conditions<std::is_move_constructible<Ts>...,
+                                                                 ::cpp17::internal::is_swappable<Ts>...> = true>
 void swap(variant<Ts...>& a, variant<Ts...>& b) {
   a.swap(b);
 }
 
 // Accesses the variant by zero-based index.
-//
-// Accesses should use ADL, similar to the pattern for std::swap:
-//
-//  using std::get;
-//  get<some_index>(some_cpp17_variant);
-//
-// This makes code adaptable to substituting std::variant for cpp17::variant on
-// newer compilers.
 template <size_t Index, typename... Ts>
 constexpr auto& get(variant<Ts...>& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {

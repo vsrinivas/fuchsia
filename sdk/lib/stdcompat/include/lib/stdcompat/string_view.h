@@ -36,20 +36,9 @@ using std::wstring_view;
 
 #include "internal/exception.h"
 #include "memory.h"
+#include "utility.h"
 
 namespace cpp17 {
-
-namespace internal {
-
-// Constexpr filler for std::swap. No specialization for arrays.
-template <typename T>
-constexpr void constexpr_swap(T& a, T& b) noexcept {
-  T tmp = std::move(a);
-  a = std::move(b);
-  b = std::move(tmp);
-}
-
-}  // namespace internal
 
 // Provides a view to a sequence of characters.
 template <class CharT, class Traits = std::char_traits<CharT>>
@@ -126,8 +115,8 @@ class basic_string_view {
   }
 
   constexpr void swap(basic_string_view& other) noexcept {
-    internal::constexpr_swap(data_, other.data_);
-    internal::constexpr_swap(length_, other.length_);
+    cpp20::swap(data_, other.data_);
+    cpp20::swap(length_, other.length_);
   }
 
   size_type copy(CharT* dest, size_type count, size_type pos = 0) const {

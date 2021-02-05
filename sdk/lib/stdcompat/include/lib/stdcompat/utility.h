@@ -71,4 +71,25 @@ static constexpr const in_place_index_t<Index>& in_place_index =
 
 }  // namespace cpp17
 
+namespace cpp20 {
+
+#if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::swap;
+
+#else  // Add swap constexpr polyfill.
+
+template <typename T, typename std::enable_if<std::is_move_constructible<T>::value &&
+                                                  std::is_move_assignable<T>::value,
+                                              bool>::type = true>
+constexpr void swap(T& a, T& b) noexcept {
+  T tmp = std::move(b);
+  b = std::move(a);
+  a = std::move(tmp);
+}
+
+#endif  // __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+}  // namespace cpp20
+
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_
