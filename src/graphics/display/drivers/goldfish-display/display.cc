@@ -646,12 +646,16 @@ zx_status_t Display::DisplayControllerImplSetBufferCollectionConstraints(const i
   buffer_constraints.heap_permitted_count = 2;
   buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
   buffer_constraints.heap_permitted[1] = fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL;
-  constraints.image_format_constraints_count = 2;
+  constraints.image_format_constraints_count = 4;
   for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[i];
     image_constraints.pixel_format.type =
-        i == 1 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8 : fuchsia_sysmem_PixelFormatType_BGRA32;
+        i & 0b01 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8 : fuchsia_sysmem_PixelFormatType_BGRA32;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value =
+        i & 0b10 ? fuchsia_sysmem_FORMAT_MODIFIER_LINEAR
+                 : fuchsia_sysmem_FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
     image_constraints.min_coded_width = 0;
