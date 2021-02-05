@@ -682,17 +682,51 @@ macro_rules! merge_from_field {
 }
 
 impl Document {
-    pub fn merge_from(&mut self, other: &mut Document) {
+    pub fn merge_from(&mut self, other: &mut Document, include_path: &path::Path) -> Result<(), Error> {
         merge_from_field!(self, other, include);
-        // Note: intentionally don't merge `program`.
         merge_from_field!(self, other, r#use);
         merge_from_field!(self, other, expose);
         merge_from_field!(self, other, offer);
         merge_from_field!(self, other, capabilities);
         merge_from_field!(self, other, children);
         merge_from_field!(self, other, collections);
-        // Note: intentionally don't merge `facets`.
         merge_from_field!(self, other, environments);
+        self.merge_program(other, include_path)?;
+        // Facets aren't an actively used feature so we don't need to support them. Also,
+        // the merge policy for facets would be non-trivial because they can contain nested maps.
+        if let Some(_) = other.facets {
+            return Err(Error::validate(format!(
+                "facets found in manifest include, which are not supported: {}",
+                include_path.display()
+            )));
+        }
+        Ok(())
+    }
+
+    fn merge_program(&mut self, other: &mut Document, include_path: &path::Path) -> Result<(), Error> {
+        if let None = other.program {
+            return Ok(());
+        }
+        if let None = self.program {
+            self.program = Some(Program::default());
+        }
+        let my_program = self.program.as_mut().unwrap();
+        let other_program = other.program.as_mut().unwrap();
+        if my_program.runner.is_some() && other_program.runner.is_some() {
+            return Err(Error::validate(format!(
+                "manifest include had a conflicting `program.runner`: {}",
+                include_path.display()
+            )));
+        }
+        if !other_program.info.is_empty() {
+            return Err(Error::validate(format!(
+                "manifest include had a program fields other than `runner`, which is not \
+                supported: {}",
+                include_path.display()
+            )));
+        }
+        *(&mut my_program.runner) = other_program.runner.take();
+        Ok(())
     }
 
     pub fn includes(&self) -> Vec<String> {
@@ -900,7 +934,7 @@ impl Deref for EventSubscriptions {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct Program {
     pub runner: Option<Name>,
     pub info: Map<String, Value>,
@@ -1565,7 +1599,6 @@ mod tests {
         serde_json::{self, json},
         serde_json5,
         std::path::Path,
-        std::str::FromStr,
     };
 
     // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
@@ -1930,11 +1963,72 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_from() {
+    fn test_merge_same_section() {
+        let mut some = document(json!({ "use": [{ "protocol": "foo" }] }));
+        let mut other = document(json!({ "use": [{ "protocol": "bar" }] }));
+        some.merge_from(&mut other, &Path::new("some/path")).unwrap();
+        let uses = some.r#use.as_ref().unwrap();
+        assert_eq!(uses.len(), 2);
+        assert_eq!(
+            uses[0].protocol.as_ref().unwrap(),
+            &OneOrMany::One("foo".parse::<Name>().unwrap())
+        );
+        assert_eq!(
+            uses[1].protocol.as_ref().unwrap(),
+            &OneOrMany::One("bar".parse::<Name>().unwrap())
+        );
+    }
+
+    #[test]
+    fn test_merge_different_sections() {
+        let mut some = document(json!({ "use": [{ "protocol": "foo" }] }));
+        let mut other = document(json!({ "expose": [{ "protocol": "bar", "from": "self" }] }));
+        some.merge_from(&mut other, &Path::new("some/path")).unwrap();
+        let uses = some.r#use.as_ref().unwrap();
+        let exposes = some.r#expose.as_ref().unwrap();
+        assert_eq!(uses.len(), 1);
+        assert_eq!(exposes.len(), 1);
+        assert_eq!(
+            uses[0].protocol.as_ref().unwrap(),
+            &OneOrMany::One("foo".parse::<Name>().unwrap())
+        );
+        assert_eq!(
+            exposes[0].protocol.as_ref().unwrap(),
+            &OneOrMany::One("bar".parse::<Name>().unwrap())
+        );
+    }
+
+    #[test]
+    fn test_merge_from_program() {
         let mut some = document(json!({ "program": { "binary": "bin/hello_world" } }));
-        assert_eq!(some.r#use.is_none(), true);
-        let mut other = document(json!({ "use": [{ "runner": "elf" }] }));
-        some.merge_from(&mut other);
-        assert_eq!(some.r#use.unwrap()[0].runner, Some(Name::from_str("elf").unwrap()));
+        let mut other = document(json!({ "program": { "runner": "elf" } }));
+        some.merge_from(&mut other, &Path::new("some/path")).unwrap();
+        let mut info = Map::new();
+        info.insert("binary".into(), Value::String("bin/hello_world".into()));
+        assert_eq!(some.program, Some(Program { runner: Some("elf".parse().unwrap()), info }));
+    }
+
+    #[test]
+    fn test_merge_from_program_error() {
+        {
+            let mut some = document(json!({ "program": { "runner": "elf" } }));
+            let mut other = document(json!({ "program": { "runner": "fle" } }));
+            assert_matches!(
+                some.merge_from(&mut other, &path::Path::new("some/path")),
+                Err(Error::Validate { schema_name: None, err, .. })
+                    if &err == "manifest include had a conflicting `program.runner`: some/path"
+            );
+        }
+        {
+            let mut some = document(json!({ "program": { "runner": "elf" } }));
+            let mut other = document(json!({ "program": { "binary": "bin/hello_world" } }));
+            assert_matches!(
+                some.merge_from(&mut other, &path::Path::new("some/path")),
+                Err(Error::Validate { schema_name: None, err, .. })
+                    if err.starts_with(
+                        "manifest include had a program fields other than `runner`, which is not \
+                        supported: some/path")
+            );
+        }
     }
 }

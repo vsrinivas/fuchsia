@@ -92,6 +92,7 @@ pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
             "/*/program" => hashset! {
                 PathOption::CollapseContainersOfOne(false),
                 PathOption::PropertyNameOrder(vec![
+                    "runner",
                     "binary",
                     "args",
                 ])
@@ -234,9 +235,6 @@ mod tests {
     ],
     use: [
         {
-            runner: "elf",
-        },
-        {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
@@ -254,10 +252,12 @@ mod tests {
     program: {
         args: [ "--zarg_first", "zoo_opt", "--arg3", "and_arg3_value" ],
         binary: "bin/session_manager",
+        runner: "elf",
     },
 }"##;
         let expected = r##"{
     program: {
+        runner: "elf",
         binary: "bin/session_manager",
         args: [
             "--zarg_first",
@@ -274,7 +274,6 @@ mod tests {
         },
     ],
     use: [
-        { runner: "elf" },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",

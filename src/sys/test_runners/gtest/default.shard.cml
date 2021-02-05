@@ -1,9 +1,9 @@
 {
+    program: {
+        runner: "gtest_runner",
+    },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "gtest_runner" },
     ],
     expose: [
         {

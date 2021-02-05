@@ -1,9 +1,9 @@
 {
+    program: {
+        runner: "rust_test_runner",
+    },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
-        { runner: "rust_test_runner" },
     ],
     expose: [
         {

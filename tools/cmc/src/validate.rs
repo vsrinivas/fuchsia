@@ -46,8 +46,9 @@ pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Docu
 
     if let Some(include_path) = includepath {
         for include in include::transitive_includes(&file.into(), include_path)? {
-            let mut include_document = util::read_cml(&include_path.join(&include))?;
-            document.merge_from(&mut include_document);
+            let include_path = include_path.join(&include);
+            let mut include_document = util::read_cml(&include_path)?;
+            document.merge_from(&mut include_document, &include_path)?;
         }
     }
 
