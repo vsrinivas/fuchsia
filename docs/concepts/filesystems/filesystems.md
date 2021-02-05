@@ -4,14 +4,14 @@ This document seeks to describe a high-level view of the Fuchsia filesystems,
 from their initialization, discussion of standard filesystem operations (such as
 Open, Read, Write, etc), and the quirks of implementing user-space filesystems
 on top of a microkernel. Additionally, this document describes the VFS-level
-walking through a namespace which can be used to communicate with non-storage
+walking through a namespace, which can be used to communicate with non-storage
 entities (such as system services).
 
 ## Filesystems are Services
 
 Unlike more common monolithic kernels, Fuchsia’s filesystems live entirely
 within userspace. They are not linked nor loaded with the kernel; they are
-simply userspace processes which implement servers that can appear as
+simply userspace processes that implement servers that can appear as
 filesystems. As a consequence, Fuchsia’s filesystems themselves can be changed
 with ease -- modifications don’t require recompiling the kernel. In fact,
 updating to a new Fuchsia filesystem can be done without rebooting.
@@ -55,7 +55,7 @@ open document](/docs/concepts/system/life_of_an_open.md).
 
 ### Namespaces
 
-On Fuchsia, a [namespace](/docs/concepts/process/namespaces.md) is a small filesystem which exists
+On Fuchsia, a [namespace](/docs/concepts/process/namespaces.md) is a small filesystem that exists
 entirely within the client. At the most basic level, the idea of the client
 saving “/” as root and associating a handle with it is a very primitive
 namespace. Instead of a typical singular "global" filesystem namespace, Fuchsia
@@ -195,7 +195,7 @@ mountpoints exist elsewhere.
 
 ### Filesystem Management
 
-There are a collection of filesystem operations which are considered related to
+There are a collection of filesystem operations that are considered related to
 "administration", including "unmounting the current filesystem", "querying for
 the underlying block device path", etc. These operations are defined by the
 DirectoryAdmin interface within [io.fidl](/sdk/fidl/fuchsia.io/io.fidl).
@@ -236,7 +236,7 @@ unwrapped into user-accessible Vnodes at boot (these files are accessible in
 ### MinFS: A persistent filesystem
 
 [MinFS](/src/storage/bin/minfs/)
-is a simple, traditional filesystem which is capable of storing files
+is a simple, traditional filesystem that is capable of storing files
 persistently. Like MemFS, it makes extensive use of the VFS layers mentioned
 earlier, but unlike MemFS, it requires an additional handle to a block device
 (which is transmitted on startup to a new MinFS process). For ease of use,
@@ -250,7 +250,7 @@ filesystems to a namespace from the command line.
 is a simple, flat filesystem optimized for “write-once, then read-only” [signed
 data](/docs/concepts/packages/merkleroot.md), such as
 [packages](/docs/concepts/packages/package.md).
-Other than two small prerequisites (file names which are deterministic, content
+Other than two small prerequisites (file names, which are deterministic, content
 addressable hashes of a file’s Merkle Tree root, for integrity-verification)
 and forward knowledge of file size (identified to Blobfs by a call to
 “ftruncate” before writing a blob to storage), Blobfs appears like a

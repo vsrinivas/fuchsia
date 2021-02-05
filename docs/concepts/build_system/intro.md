@@ -92,7 +92,7 @@ your $EDITOR on the `args.gn` file, and upon exiting the editor the command
 will re-run `gn gen` for you with the new arguments.  You can also just edit
 `args.gn` any time, and the next Ninja run will re-generate the build files.
 
-Args can also be set using the `fx set` command which invokes `gn gen`. For
+Args can also be set using the `fx set` command, which invokes `gn gen`. For
 example to set `foxtrot` to ' `true` via `fx set`:
 
 ```sh

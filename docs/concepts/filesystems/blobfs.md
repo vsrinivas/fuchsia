@@ -33,8 +33,7 @@ are executed.
 
 BlobFS stores each blob in a linked list of non-adjacent extents (a contiguous
 range of data blocks). Each blob has an associated Inode, which describes where
-the block's data starts on disk and which contains some other metadata about the
-blob.
+the block's data starts on disk and other metadata about the blob.
 
 BlobFS divides a disk (or a partition thereof) into five chunks:
 
@@ -70,12 +69,12 @@ whenever the size of the BlobFS filesystem shrinks or grows.
 Figure 2: BlobFS superblock
 
 When BlobFS is managed by FVM, the superblock contains some additional metadata
-describing the FVM slices which contain the BlobFS filesystem. These fields
+describing the FVM slices that contain the BlobFS filesystem. These fields
 (yellow in the above diagram) are ignored for non-FVM, fixed-size BlobFS images.
 
 #### Block map
 
-The block map is a simple bit-map which marks each data block as allocated or
+The block map is a simple bit-map that marks each data block as allocated or
 not. This map is used during block allocation to find contiguous ranges of
 blocks, known as _extents_, to store blob contents in.
 
@@ -97,7 +96,7 @@ variations:
     data.
 
 Nodes of both types are stored together in a single flat array. Each node has a
-common header which describes what type the node is, and whether the node is
+common header that describes what type the node is, and whether the node is
 allocated. Both node types are the same size, so there is no internal
 fragmentation of the array.
 
@@ -129,7 +128,7 @@ Note that this representation of extents implies that an extent can have at most
 
 ##### ExtentContainers
 
-An ExtentContainer holds references to several (up to 6) extents which store
+An ExtentContainer holds references to several (up to 6) extents, which store
 some of the contents of a blob.
 
 The extents in an ExtentContainer are logically contiguous (i.e. the logical
@@ -229,7 +228,7 @@ number of data blocks reserved for storing verification metadata of the blob.
 This metadata is always stored in the first blocks of the blob. Metadata is
 padded so that the actual data always starts at a block-aligned address.
 
-This verification metadata is called a **Merkle Tree**, a data structure which
+This verification metadata is called a **Merkle Tree**, a data structure that
 uses cryptographic hashes to guarantee the integrity of the blob's contents.
 
 ##### Merkle tree

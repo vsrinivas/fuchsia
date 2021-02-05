@@ -4,7 +4,7 @@ The codec interface is meant to be used when the codecs are secondary to a
 controller driver. This interface is a FIDL protocol exposed by codec drivers.
 In this arrangement the codec drivers are not directly exposing a streaming
 interface, and they are configured through the codec interface by a controller.
-This is a reference for driver-authors, defining the interface contract which
+This is a reference for driver-authors, defining the interface contract that
 codec drivers must implement and that controllers can use.
 
 ## Notation and Terminology
@@ -207,7 +207,7 @@ reported.
 
 Clients may request that codecs send them asynchronous notifications of
 plug state changes by using the `WatchPlugState` command if the `CAN_ASYNC_NOTIFY`
-flag was sent by the driver in `GetPlugDetectCapabilites`. I.e. drivers for codecs which
+flag was sent by the driver in `GetPlugDetectCapabilites`. Drivers for codecs that
 do not set the `CAN_ASYNC_NOTIFY` flag are free to ignore the `WatchPlugState` sent
 by clients. Drivers with `CAN_ASYNC_NOTIFY` set will reply to the first
 |WatchPlugState| sent by the client and will not respond to subsequent client

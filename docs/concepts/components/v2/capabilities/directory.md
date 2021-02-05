@@ -138,7 +138,7 @@ routing a directory capability from one component to another.
 As directories are [offered][offer] and [exposed][expose] throughout the system
 a user may want to restrict what components who have access to this directory
 may do. For example, a component could expose a directory as read-write to its
-parent realm which could expose that directory it to its children as read-write
+parent realm, which could expose that directory it to its children as read-write
 but to its parent as read-only.
 
 [Directory rights][directory-rights] allow any directory declaration to specify

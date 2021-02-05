@@ -6,7 +6,7 @@ Component instances progress through four major lifecycle events: create, start,
 stop, and destroy.
 
 Component instances may retain isolated persistent state on a storage medium
-while they are not running which helps them maintain the
+while they are not running, which helps them maintain the
 [illusion of continuity][principle-continuity] across restarts.
 
 ## Creating a component instance

@@ -20,7 +20,7 @@ itself can be used to refer to a number of different concepts:
 * [**FIDL compiler**][compiler-spec]: the FIDL compiler generates code for
   programs to use and implement protocols
 * [**FIDL bindings**][bindings-reference]: the FIDL bindings are
-  language-specific runtime support libraries and code generators which provide
+  language-specific runtime support libraries and code generators that provide
   APIs for manipulating FIDL data structures and protocols.
 
 The main job of FIDL is to allow diverse clients and services to interoperate.
@@ -448,7 +448,7 @@ The `fidlc` FIDL compiler also generates server code for a given target
 language. Just like the client code, this code has a common structure regardless
 of the target language. The code:
 
-1. creates an object which clients can connect to,
+1. creates an object that clients can connect to,
 2. starts a main processing loop, which:
     1. waits for messages
     2. processes messages by calling out to the implementation functions
@@ -474,7 +474,7 @@ least as good as hand-rolled code would be where it matters most.
 
 **IPC determinism** pertains to the ability to perform transactions within a
 known resource envelope. IPC will be used extensively by critical system
-services such as filesystems which serve many clients and which must perform in
+services such as filesystems, which serve many clients and must perform in
 predictable ways. The FIDL wire format must offer strong static guarantees such
 as ensuring that structure size and layout is invariant thereby alleviating the
 need for dynamic memory allocation or complex validation rules.
@@ -525,7 +525,7 @@ particular, the design of FIDL aims to satisfy the following goals:
     padding.
 *   Avoid back-patching pointers.
 *   Avoid expensive validation.
-*   Avoid calculations which may overflow.
+*   Avoid calculations that may overflow.
 *   Leverage pipelining of protocol requests for asynchronous operation.
 *   Structures are fixed size; variable-size data is stored out-of-line.
 *   Structures are not self-described; FIDL files describe their contents.
@@ -579,7 +579,7 @@ The publisher of a FIDL based protocol is responsible for making FIDL libraries
 available to consumers. For example, the author may disseminate FIDL libraries
 in a public source repository or distribute them as part of an SDK.
 
-Consumers need only point the FIDL compiler at the directory which contains the
+Consumers need only point the FIDL compiler at the directory that contains the
 FIDL files for a library (and its dependencies) to generate code for that
 library. The precise details for how this is done will generally be addressed by
 the consumer's build system.
@@ -597,7 +597,7 @@ be done automatically for all relevant languages by individual FIDL build
 targets for each library.
 
 In the Fuchsia SDK environment, generating code from FIDL libraries will be done
-as part of compiling the applications which use them.
+as part of compiling the applications that use them.
 
 ## Getting Started
 

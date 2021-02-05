@@ -2,8 +2,8 @@
 
 ## Introduction
 
-The kernel manages a number of different types of Objects. Those which are
-accessible directly via system calls are C++ classes which implement the
+The kernel manages a number of different types of Objects. Those that are
+accessible directly via system calls are C++ classes that implement the
 Dispatcher interface. These are implemented in
 [kernel/object](/zircon/kernel/object). Many are self-contained higher-level Objects.
 Some wrap lower-level [lk](/docs/glossary.md#lk) primitives.
@@ -21,13 +21,13 @@ requested operation.
 
 System calls fall into three broad categories, from an access standpoint:
 
-1. Calls which have no limitations, of which there are only a very few, for
+1. Calls that have no limitations, of which there are only a very few, for
 example [`zx_clock_get_monotonic()`](/docs/reference/syscalls/clock_get_monotonic.md)
 and [`zx_nanosleep()`](/docs/reference/syscalls/nanosleep.md) may be called by any thread.
-2. Calls which take a Handle as the first parameter, denoting the Object they act upon,
+2. Calls that take a Handle as the first parameter, denoting the Object they act upon,
 which are the vast majority, for example [`zx_channel_write()`](/docs/reference/syscalls/channel_write.md)
 and [`zx_port_queue()`](/docs/reference/syscalls/port_queue.md).
-3. Calls which create new Objects but do not take a Handle, such as
+3. Calls that create new Objects but do not take a Handle, such as
 [`zx_event_create()`](/docs/reference/syscalls/event_create.md) and
 [`zx_channel_create()`](/docs/reference/syscalls/channel_create.md).  Access to these (and limitations
 upon them) is controlled by the Job in which the calling Process is contained.
@@ -55,7 +55,7 @@ Handles may be moved from one Process to another by writing them into a Channel
 [`zx_process_start()`](/docs/reference/syscalls/process_start.md) to pass a Handle as the argument
 of the first thread in a new Process.
 
-The actions which may be taken on a Handle or the Object it refers to are governed
+The actions that may be taken on a Handle or the Object it refers to are governed
 by the Rights associated with that Handle.  Two Handles that refer to the same Object
 may have different Rights.
 
@@ -95,9 +95,9 @@ this document does not impose any rules or conventions.
 ## Running Code: Jobs, Processes, and Threads.
 
 Threads represent threads of execution (CPU registers, stack, etc) within an
-address space which is owned by the Process in which they exist.  Processes are
+address space that is owned by the Process in which they exist.  Processes are
 owned by Jobs, which define various resource limitations.  Jobs are owned by
-parent Jobs, all the way up to the Root Job which was created by the kernel at
+parent Jobs, all the way up to the Root Job, which was created by the kernel at
 boot and passed to [`userboot`, the first userspace Process to begin execution](/docs/concepts/booting/userboot.md).
 
 Without a Job Handle, it is not possible for a Thread within a Process to create another
@@ -114,7 +114,7 @@ and [`zx_thread_start()`](/docs/reference/syscalls/thread_start.md).
 
 ## Message Passing: Sockets and Channels
 
-Both Sockets and Channels are IPC Objects which are bi-directional and two-ended.
+Both Sockets and Channels are IPC Objects that are bi-directional and two-ended.
 Creating a Socket or a Channel will return two Handles, one referring to each endpoint
 of the Object.
 
@@ -129,7 +129,7 @@ They do not support short reads or writes -- either a message fits or it does no
 When Handles are written into a Channel, they are removed from the sending Process.
 When a message with Handles is read from a Channel, the Handles are added to the receiving
 Process.  Between these two events, the Handles continue to exist (ensuring the Objects
-they refer to continue to exist), unless the end of the Channel which they have been written
+they refer to continue to exist), unless the end of the Channel that they have been written
 towards is closed -- at which point messages in flight to that endpoint are discarded and
 any Handles they contained are closed.
 
@@ -221,7 +221,7 @@ and [`zx_vmar_destroy()`](/docs/reference/syscalls/vmar_destroy.md),
 ## Futexes
 
 Futexes are kernel primitives used with userspace atomic operations to implement
-efficient synchronization primitives -- for example, Mutexes which only need to make
+efficient synchronization primitives -- for example, Mutexes, which only need to make
 a syscall in the contended case.  Usually they are only of interest to implementers of
 standard libraries.  Zircon's libc and libc++ provide C11, C++, and pthread APIs for
 mutexes, condition variables, etc, implemented in terms of Futexes.

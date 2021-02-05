@@ -70,8 +70,8 @@ The thread locals should use the `thread_local` spelling from
 prefer `alignas` and `alignof` from `<stdalign.h>`, rather than
 `_Alignas` and `_Alignof`.
 
-Note that compilers support flags which may alter the ABI of the
-code. For instance, GCC has a `-m96bit-long-double` flag which alters
+Note that compilers support flags that may alter the ABI of the
+code. For instance, GCC has a `-m96bit-long-double` flag that alters
 the size of a long double. We assume that such flags are not used.
 
 Finally, some libraries (such as Fuchsia's C standard library) in our
@@ -411,7 +411,7 @@ C enums are banned. They are brittle from an ABI standpoint.
 C's bitfields are banned. They are brittle from an ABI standpoint, and
 have a lot of nonintuitive sharp edges.
 
-Note that this applies to the C language feature, not to an API which
+Note that this applies to the C language feature, not to an API that
 exposes bit flags. The C bitfield feature looks like:
 
 ```C
@@ -435,7 +435,7 @@ parameters". We ban the empty parameter list for being too dangerous.
 
 ### Flexible Array Members
 
-This is the C99 feature which allows declaring an incomplete array as
+This is the C99 feature that allows declaring an incomplete array as
 the last member of a struct with more than one parameter. For example:
 
 ```C
@@ -454,7 +454,7 @@ similarly disallowed.
 
 ### Module Maps
 
-These are a Clang extension to C-like languages which attempt to solve
+These are part of a Clang extension to C-like languages that attempt to solve
 many of the issues with header-driven compilation. While the Fuchsia
 toolchain team is very likely to invest in these in the future, we
 currently do not support them.

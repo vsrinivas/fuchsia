@@ -24,7 +24,7 @@ In the driver's `BUILD.gn`, there should be a `driver_module` target. In order
 to get a driver to show up under `/boot/driver`, it should be included as under
 the `board_bootfs_labels` list in the relevant board file(s) under //boards. In
 order to get it to show up inside of `/system/driver` it should be added to the
-system package with a `driver_package` build target which should then be
+system package with a `driver_package` build target, which should then be
 referenced by relevant boardfile(s) under `//boards`. The driver manager looks
 first in `/boot/driver`, then `/system/driver/` for loadable drivers.
 
@@ -180,7 +180,7 @@ There are generally four outcomes from `bind()`:
     with a status indicating whether it was able to successfully initialize the
     device and should be made visible, or that the device should be removed.
 
-4.  The driver represents a bus or controller with 0..n children which may
+4.  The driver represents a bus or controller with 0..n children that may
     dynamically appear or disappear. In this case it should publish a device
     immediately representing the bus or controller, and then dynamically publish
     children (that downstream drivers will bind to) representing hardware on

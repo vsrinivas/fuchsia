@@ -174,7 +174,7 @@ graph Q {
 ## Using Handles
 
 There are many syscalls that create a new kernel object
-and which return a handle to it. To name a few:
+and that return a handle to it. To name a few:
 
 * <code>[zx_event_create()][zx-event-create]</code>
 * <code>[zx_process_create()][zx-process-create]</code>

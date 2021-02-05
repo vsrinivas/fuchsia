@@ -9,7 +9,7 @@ The diagram below shows the steps a client Present follows when it is requested.
 1. Client `Enqueue()`s a set of commands to change the contents of its part of the scene, and calls `Present2()` to commit them.
 2. The `Present2()` request enters `scenic_impl::Session`,. `scenic_impl::Session` waits for any acquire fences to signal, as well as any previous `Present2()` calls whose fences haven't been reached yet. `scenic_impl::Session` then schedules an update for the targeted `presentation_time` with the `FrameScheduler`.
 3. The `FrameScheduler` starts sleeps until there's just enough time to prepare a frame in time for the targeted presentation time. At that point the `FrameScheduler` wakes up and calls `SessionUpdater::UpdateSessions()` on all `SessionUpdaters`.
-4. For each client Session, `GfxSystem` calls `ApplyScheduledUpdates()`, which applies the commands to the scene graph which were enqueued in step 1.
+4. For each client Session, `GfxSystem` calls `ApplyScheduledUpdates()`, which applies the commands to the scene graph that were enqueued in step 1.
   Note: `GfxSystem` is a `SessionUpdater`.
 5. Commands from a Session are applied to the global scene graph. The scene graph is in an inconsistent state ("dirty") at this time, and should not be read by other systems (i.e. input) until after the scene graph has been post-processed.
 6. When all `SessionUpdaters` have successfully updated, the `FrameScheduler` is notified that the scene graph is dirty, and triggers a `RenderFrame()` call on the `FrameRenderer`.

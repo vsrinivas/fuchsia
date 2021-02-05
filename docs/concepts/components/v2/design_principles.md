@@ -10,7 +10,7 @@ Components should receive the minimum capabilities they need to perform their
 role in the system and nothing more, in accordance with the
 [Principle of Least Privilege][wiki-least-privilege].
 
-Some components may be entrusted with privileges which could be harmful if
+Some components may be entrusted with privileges that could be harmful if
 misused.  To mitigate this potential harm, the component architecture provides
 mechanisms to grant components the minimum set of capabilities they require,
 such as sandboxing, role-based access control, and isolation policies.

@@ -37,7 +37,7 @@ The _component instance tree_ expresses how components are assembled together to
 make more complex components.
 
 Using hierarchical composition, a parent component creates instances of other
-components which are known as its _children_. The child instances belong to the
+components, which are known as its _children_. The child instances belong to the
 parent and depend on the parent to provide them with the capabilities that they
 need to run. Meanwhile, the parent gains access to the capabilities exposed by
 its children through [capability routing](#capability-routing).

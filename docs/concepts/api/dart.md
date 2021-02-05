@@ -19,7 +19,7 @@ to reading this rubric.
 
 ### Terminology
 
-There are some terms of art that Dart uses which conflict with Fuchsia’s
+There are some terms of art that Dart uses that conflict with Fuchsia’s
 terminology.
 
 - [Fuchsia
@@ -56,8 +56,8 @@ etc.).
 
 ### Focus on the Interfaces
 
-Public classes should expose a clean user interface which clearly describes the
-API surface and is free from internal implementation details. Classes which
+Public classes should expose a clean user interface that clearly describes the
+API surface and is free from internal implementation details. Classes that
 contain more than a minimal amount of functionality should expose their API in
 an abstract class with the implementation inside a private implementation file.
 Doing so allows for the users of the classes to focus on the public methods and
@@ -67,7 +67,7 @@ implementation.
 ### Consider Composability
 
 When designing the API consider how it will fit into the larger Dart ecosystem
-of libraries. For example, if writing an API which delivers events consider
+of libraries. For example, if writing an API that delivers events, consider
 using Streams instead of callbacks because they compose better with libraries
 like Flutter.
 
@@ -76,7 +76,7 @@ like Flutter.
 Dart code written against the Fuchsia SDK should pass all the lint rules
 specified by the
 [analysis_options.yaml](https://fuchsia.googlesource.com/topaz/+/HEAD/tools/analysis_options.yaml)
-file which lives in the topaz repository. These lint rules will help to automate
+file, which lives in the topaz repository. These lint rules will help to automate
 the review API review process. There are situations where a lint rule may be in
 conflict with a specific API and may need to be explicitly ignored. If a file is
 opting out of a lint rule the developer must provide a comment explaining the
@@ -92,7 +92,7 @@ complicated package, developers should avoid a singular catch all top-level
 export file and rather expose a top level file per logical grouping of classes
 that make sense to be pulled under one import line. This allows users of the
 library the ability to have finer grained control over which sections of the
-library they import. An example is a package which contains functionality for
+library they import. An example is a package that contains functionality for
 both agents and modules. In this scenario, we could have one import for agents
 and one for modules but they could be in the same package.
 
@@ -106,8 +106,8 @@ as well as the [Fuchsia Documentation](documentation.md) guide.
 
 Packages written for the Dart Fuchsia SDK should not take on third party
 dependencies that are not themselves also in the Fuchsia SDK. Exceptions will be
-made for the following, well established, dependencies which are likely to be
-present in all environments. Any packages which should be added to this list
+made for the following, well established, dependencies that are likely to be
+present in all environments. Any packages that should be added to this list
 must be approved by the [API
 Council](/docs/contribute/governance/api_council.md).
 
@@ -117,7 +117,7 @@ Council](/docs/contribute/governance/api_council.md).
 - [flutter](https://flutter.dev/)
 
 
-Packages which do take on external dependencies should consider whether they
+Packages that do take on external dependencies should consider whether they
 want to reexport those symbols. If the dependency is reexported then the
 generated documentation will generate documentation for the external dependency.
 However, reexporting the dependency will create a tight coupling between package
@@ -146,7 +146,7 @@ staged dart files.
 - PREFER using named parameters vs positional parameters for public methods on
   public classes that have greater than 2 parameters. This aids code refactor
   and allowed adding extra parameters without breaking the public API contract.
-- AVOID using functions which can do more than one thing like `void
+- AVOID using functions that can do more than one thing like `void
   updateAndCommit();` but prefer explicit naming.
 
 ### Constructors
@@ -155,9 +155,9 @@ staged dart files.
   parameters.
 - DO use the meta package to indicate which parameters are required.
 - DO assert on required parameters.
-- DO throw exceptions/errors for public API which will have detrimental side
-  effects if invalid input is passed to constructors since asserts do not run in
-  release builds.
+- DO throw exceptions/errors for public APIs that will have detrimental side
+  effects if invalid input is passed to constructors, since asserts do not run
+  in release builds.
 
 ```
 /// Constructs a [Car] object
@@ -186,9 +186,9 @@ class Node {
 }
 ```
 
-When adding a function or interface which will have methods invoked in response
+When adding a function or interface that will have methods invoked in response
 to another action, name the methods add<NAME>Listener() and
-remove<NAME>Listener(). The objects which implement the <NAME>Listener interface
+remove<NAME>Listener(). The objects that implement the <NAME>Listener interface
 should name the invoked methods on<EVENT>.
 
 ```
@@ -234,8 +234,8 @@ following types should be used when possible:
 - [DateTime](https://api.dartlang.org/stable/2.4.0/dart-core/DateTime-class.html)
   when working with dates.
 
-If there is not a concrete type which can be used to represent your object at a
-higher level your API should expose one. For example, if we had an API which
+If there is not a concrete type that can be used to represent your object at a
+higher level your API should expose one. For example, if we had an API that
 dealt with currency we would create a `Currency` data type instead of working
 with `num` types.
 
@@ -425,8 +425,8 @@ Dart does not allow a private class/function to be accessed from within a test.
 This has the effect that any private classes cannot be tested. This may be ok if
 there is a corresponding public class/function that can exercise the private
 members but this may not always be the case. In these situations it is best to
-move the private class into its own file which does not get exported by the
-top-level export and make it public. The tests can now access your private
+move the private class into its own file, which does not get exported by the
+top-level export, and make it public. The tests can now access your private
 members.
 
 ```
@@ -504,7 +504,7 @@ restriction is required see the factory constructors pattern below.
 
 This pattern is useful if the implementation surface is small since the pattern
 requires all of the subclasses to live in the same file as the base class or to
-use the part of directive which is discouraged. If the surface area is too large
+use the part of directive, which is discouraged. If the surface area is too large
 for a single file consider an alternate pattern.
 
 
@@ -513,9 +513,9 @@ for a single file consider an alternate pattern.
 There are times when a user only needs to interact with a single interface but
 which may have a different implementation depending on how the object was
 constructed. Requiring the user to know about the different implementations can
-add extra API which is not needed and only serves to confuse the user. In this
-situation you can define an abstract base class which defines the API surface
-and create factory constructors which vends the appropriate private class.
+add unnecessary APIs, and only serves to confuse the user. In this
+situation you can define an abstract base class that defines the API surface
+and create factory constructors that vend the appropriate private class.
 
 ```
 // Publicly exported class
@@ -550,7 +550,7 @@ class NamespacedFoo extends FooImpl {
 ```
 
 Note: If you need to add the restriction that the base class cannot be extended
-you can implement the pattern defined in Disallowing Subclassing which adds a
+you can implement the pattern defined in Disallowing Subclassing that adds a
 private constructor to the public base class
 
 ### Working with FIDLs
@@ -572,12 +572,12 @@ When subclassing FIDL types extend them so they can be interchanged with the
 generated FIDL files. Usually, wrappers decorate the existing type with
 additional functionality that compliments the original object. However, by
 extending it from the original FIDL it allows the existing and new API to work
-with original FIDL types instead of the more concrete types which is useful when
+with original FIDL types instead of the more concrete types, which is useful when
 interacting with other FIDLs or when developers are not using your wrapper.
 
 ### Decoupling implementation concerns
 
-Try to avoid interfaces which cover multiple areas of concerns. By breaking down
+Try to avoid interfaces that cover multiple areas of concerns. By breaking down
 the concerns users can have more flexibility with how they choose to combine the
 interfaces and allows composed objects to be passed to methods with specific
 concerns.
@@ -644,22 +644,22 @@ class Controller {
 The following patterns should be avoided when writing Dart libraries for the
 Fuchsia Dart SDK. Exposing Internal Details for Testing It may be tempting to
 expose certain aspects of your API for testing concerns. However, doing so can
-clutter your public interface and leak implementation details which the user
+clutter your public interface and leak implementation details that the user
 does not need to know about or may come to rely on. See the [Testing](#Testing)
 section for more details
 
 ### Accepting/Returning dynamic Types
 
-Dart provides a dynamic type which the compiler will allow any type to be passed
-to a function and returned from a function. This can be useful in some
+Dart provides a dynamic type for which the compiler will allow any type to be
+passed to a function and returned from a function. This can be useful in some
 situations like json encoding/decoding but in the general case it should be
 avoided. Using dynamic types prevents the compiler from performing static type
 checking at compile time and introduces hard to debug run-time errors.
 
 In situations where an API might need to accept/return multiple input types
-consider using generics or defining an interface which the object implements
+consider using generics or defining an interface that the object implements
 instead. In situations where this will not work, consider defining multiple
-methods which call through to the private dynamic accepting function.
+methods that call through to the private dynamic accepting function.
 
 ### Using Private Methods Across Files
 
@@ -678,7 +678,7 @@ their relationship.
 
 Global static variables can be useful in sharing state across a library but they
 can easily introduce race conditions and hard to debug code. Global variables
-can also be accessed by users of your library which may introduce unexpected
+can also be accessed by users of your library, which may introduce unexpected
 side effects. It is strongly recommended that you avoid global static variables
 in public libraries.
 

@@ -13,7 +13,7 @@ paging allows a file to be partially loaded into memory, which saves system
 memory. Full-file compression prevents a file from being partially loaded.
 
 The [chunked-compression](/src/lib/chunked-compression/) format and library in
-Fuchsia breaks compressed files up into frames which can be independently
+Fuchsia breaks compressed files up into frames that can be independently
 decompressed. This allows BlobFS to implement demand paging of compressed files,
 since the file can be partially loaded and decompressed.
 
@@ -22,7 +22,7 @@ explains its use in Fuchsia.
 
 ## Design goals and non-goals
 
-The following are the goals which motivate the design of the chunked-compression
+The following are the goals that motivate the design of the chunked-compression
 format and library:
 
 *   **Random access decompression**. It must be possible to independently
@@ -34,7 +34,7 @@ format and library:
     the client (BlobFS) has more information about access patterns and can
     control read-ahead and prefetch precisely by decompressing specific frames.
 
-    This is in contrast to a more managed API which hides the details of which
+    This is in contrast to a more managed API that hides the details of which
     frames contain which decompressed bytes.
 
 *   **Configurable frame sizes**. It must be possible to adjust the sizes of
@@ -45,7 +45,7 @@ format and library:
     layouts, such as having non-uniform frame sizes or having aligned frame
     starts, in order to accommodate future use cases that require more
     flexibility. For example, non-uniform frame sizes could be used to improve
-    data locality by grouping together data which is read together into smaller
+    data locality by grouping together data that is read together into smaller
     or larger frames.
 
 *   **Comparable compression ratio to [zstd](https://facebook.github.io/zstd)**.
@@ -78,7 +78,7 @@ A chunked archive consists of a header followed by zero or more
 
 #### Header
 
-The header describes the format of the archive and contains a seek table which
+The header describes the format of the archive and contains a seek table that
 maps the compressed frames to decompressed space.
 
 ```
@@ -164,7 +164,7 @@ equal-sized frames. The size of the frames is configurable during compression.
 
 ### Random-access decompression
 
-The seek table is used to look up the frames which contain a given decompressed
+The seek table is used to look up the frames that contain a given decompressed
 range. When a given range in the decompressed file is requested, one or more
 compressed frames must be loaded and decompressed.
 

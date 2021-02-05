@@ -53,7 +53,7 @@ well as other underlying protocols that the transport device supports. Once a
 Bluetooth controller has been initialized and is ready for the host subsystem,
 the vendor driver publishes a `bt-hci` device.
 
-The system provides the `bthci-passthrough` driver which binds to bt-transport
+The system provides the `bthci-passthrough` driver, which binds to bt-transport
 devices that are not claimed by any vendor-specific driver. bthci-passthrough
 simply publishes a bt-hci device without doing special initialization.
 

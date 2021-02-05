@@ -608,7 +608,7 @@ comprehensible and actionable.
 If the error came from bad inputs
 
 1. If the user gave the tool bad data, give context about the error and guide
-   the user toward fixing the input, for example, by printing which input file
+   the user toward fixing the input, for example, by printing the input file
    (and line number if that's appropriate for the input) where the input error occurred.
    - Prefer output that follows this format (for easy regex use):
      `file_name:line:column:description`. This is a common format used by many

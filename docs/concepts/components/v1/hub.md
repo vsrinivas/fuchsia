@@ -10,14 +10,14 @@ such as their names, job and process ids, and published services.
 
 ## Organization
 
-The hub is organized as a tree of directories and files which describe
+The hub is organized as a tree of directories and files that describe
 individual realms and component instances at runtime.
 
 The hub’s structure is mostly **read-only**.  It is not possible to
-create, rename, delete, or otherwise modify directories and files which
+create, rename, delete, or otherwise modify directories and files that
 form the structure of the hub itself.  However, the **outgoing**
 directories of component instances may include mutable directories,
-files, and services which clients can access via the hub.
+files, and services that clients can access via the hub.
 
 The hub's structure is **observable**.  Clients can watch the filesystem
 to observe changes such as realms being created or destroyed as indicated
@@ -51,8 +51,8 @@ The hub is organized as follows:
 > without padding or terminators.
 
 **\<realm id\>/svc**: realm’s services
-> Contains all the services which are available in this realm. ls command
-> will only show the services which were directly created in this realm.
+> Contains all the services that are available in this realm. ls command
+> will only show the services that were directly created in this realm.
 
 **\<realm id\>/r/**: child realm list
 > A read-only directory containing a list of child realms.
@@ -105,20 +105,20 @@ The hub is organized as follows:
 > This maps to `/svc` in the component's own namespace.
 
 **\<component instance id\>/out/**: component’s out directory
-> A directory containing objects which the component has exported, such as its
+> A directory containing objects that the component has exported, such as its
 > services.  May be absent if the component exports nothing.  May contain
 > read-write objects.
 
 **\<component instance id\>/out/svc**: component’s exported public object directory
-> A directory containing objects which the component has exported to its host,
+> A directory containing objects that the component has exported to its host,
 > such as its services.  May contain read-write objects.
 
 **\<component instance id\>/out/ctrl**: component’s exported control object directory
-> A directory containing objects which the component has offered to the realm
+> A directory containing objects that the component has offered to the realm
 > manager for lifecycle control.  May contain read-write objects.
 
 **\<component instance id\>/out/debug**: component’s exported debug object directory
-> A directory containing objects which the component has published for debugging
+> A directory containing objects that the component has published for debugging
 > purposes, such as introspection files and services.  May contain read-write
 > objects.
 

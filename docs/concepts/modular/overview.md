@@ -20,12 +20,12 @@ standard IPC mechanism for Fuchsia.
 
 ## Extension Points
 
-The framework defines several different classes of components which can be
+The framework defines several different classes of components that can be
 implemented by developers to extend the behavior of user experiences:
 
-1.  [Modules](module.md) are components which display UI and are visually
+1.  [Modules](module.md) are components that display UI and are visually
     composed in a Story.
-1.  [Agents](agent.md) are components which run in the background to provide
+1.  [Agents](agent.md) are components that run in the background to provide
     services and data to Modules and other Agents.
 
 ## `basemgr` and `sessionmgr`

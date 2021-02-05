@@ -3,7 +3,7 @@
 ## Introduction
 
 When a thread encounters a fault condition, for example a segfault, execution
-is paused and the thread enters exception handling. Handlers which have
+is paused and the thread enters exception handling. Handlers that have
 registered to receive these exceptions are notified and given a chance to
 inspect or correct the condition.
 

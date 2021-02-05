@@ -6,7 +6,7 @@ A hardware watchdog timer (WDT) is a special piece of hardware responsible for
 resetting a system in the event of a hard system-wide lockup. They are
 frequently present in system-on-a-chip (SoC) designs, especially in SoCs
 targeted towards smaller embedded systems applications. They can be an important
-aspect of system design in that they can trigger a reboot of a system which has
+aspect of system design in that they can trigger a reboot of a system that has
 locked up so completely that is has become incapable of managing mission
 critical tasks, such as active thermal management, before the system suffers
 irreparable damage. In addition, they can help to mitigate a poor user

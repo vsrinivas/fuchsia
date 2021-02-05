@@ -72,7 +72,7 @@ prose.
 - Multi-line sections will be written immediately following the label (without a
   blank line). Each line after the label will be indented two spaces.
 - All output is a single column of text with the exception of Options, Commands,
-  and Error codes which are two column tables.
+  and Error codes, which are two column tables.
 - Use spaces for indentation or alignment. Do not output tab characters.
 - Wrap text at 80 columns. When wrapping Option or Command descriptions, align
   the subsequent lines with the start of the description (e.g. about 20
@@ -215,7 +215,7 @@ always interpreted as the `<to>`, while the preceding values are multiple
 `<from>` entries, while "`Usage: copy [<from>...] <to>`" means zero or more
 `<from>` entries are accepted.
 
-For Key/Value pairs which may be repeated, group them with brackets (if the pair
+For Key/Value pairs that may be repeated, group them with brackets (if the pair
 is optional) or parentheses (if the pair is not optional) and add an ellipsis to
 the group, e.g. `[--input <file>]...` or `(--input <file>)...` respectively.
 

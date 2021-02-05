@@ -78,7 +78,7 @@ process.
 
 ### Options Parameter
 
-Often functions include an `options` parameter to allow for flags which affect
+Often functions include an `options` parameter to allow for flags that affect
 the operation, and include room for further flags being added to future
 revisions of the API.
 

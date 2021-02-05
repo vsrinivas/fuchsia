@@ -257,7 +257,7 @@ the normal device, in the same process as its parent, and a proxy.
 
 The proxy is created in a new driver host; if the normal device's
 driver is `normal.so`, then its driver is `normal.proxy.so`.
-This driver is expected to implement a **create()** method which calls
+This driver is expected to implement a **create()** method, which calls
 **device_add()** and stashes the IPC channel it's given.
 That channel will be used later for communicating with the normal
 device in order to satisfy the proxy's children's requests.

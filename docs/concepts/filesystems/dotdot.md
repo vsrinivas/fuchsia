@@ -21,7 +21,7 @@ trivial cases of path traversal. However, this approach has some problems:
 
   * Chroot changes the notion of root on a coarse, "per-program" basis, not on
     a per-descriptor basis
-  * Chroots are often misused (i.e., fchdir to a different open handle which
+  * Chroots are often misused (i.e., fchdir to a different open handle that
     sits outside the chroot)
   * Chroots are not "on by default", so it may be tempting for programs to
     simply not use them.
@@ -35,14 +35,14 @@ process access to "/data/my_private_data", then it can simply provide a handle
 to that open directory to the child process, and it will "automatically" be
 sandboxed.
 
-## What about paths which can be resolved without the filesystem server?
+## What about paths that can be resolved without the filesystem server?
 
 Certain paths, such as “foo/../bar”, which can be transformed to “bar”, can be
 determined without accessing a filesystem server in the absence of symbolic
 links (and at the time of writing, symbolic links do not exist on Fuchsia).
 These paths may be canonicalized, or cleaned, on the client-side, prior to
 sending path-based requests to filesystem servers: the libfdio library already
-does this for any fdio operations which are eventually transmitted to
+does this for any fdio operations that are eventually transmitted to
 filesystem servers in a function called `__fdio_cleanpath`.
 
 ## What about shell traversal?

@@ -164,7 +164,7 @@ delivered in.
 
 -   Origin: "Back corner" of View. The Z dimension of the View is usually set up
     as -1000 to 0 (as a side effect of starting out as a left handed coordinate
-    system which only later became right handed), so the View's origin is at the
+    system that only later became right handed), so the View's origin is at the
     maximal Z value, but at minimal X and Y values. Usually axis-aligned with
     world space.
 

@@ -1,4 +1,4 @@
-# Define an index of components which use storage
+# Define an index of components that use storage
 
 Note: This guide uses the [components v1](/docs/glossary.md#components-v1)
 architecture.

@@ -1,7 +1,7 @@
 # Block Devices
 
 Fuchsia Block device drivers are, like other drivers on the system, implemented
-as userspace services which are accessible via IPC. Programs using block devices
+as userspace services that are accessible via IPC. Programs using block devices
 will have one or more handles to these underlying drivers. Similar to filesystem
 clients, which may send “read” or “write” requests to servers by encoding these
 requests within RPC messages, programs may act as clients to block devices, and

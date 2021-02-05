@@ -61,7 +61,7 @@ test harness then unbinds the test driver and rebinds the production driver.
 
 ## Hardware Interaction Tests
 
-The interaction between app, libvulkan, msd, and gpu is complex.  Generally speaking the app generates Vulkan command buffers and shader programs which are created in a gpu specific binary format by libvulkan.
+The interaction between app, libvulkan, msd, and gpu is complex.  Generally speaking the app generates Vulkan command buffers and shader programs, which are created in a gpu specific binary format by libvulkan.
 Those command buffers as well as other resources are shared with the magma system driver, which maps resources into the gpu's address space and schedules command buffers on the gpu's execution units.
 
 * magma_abi_conformance_tests

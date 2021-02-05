@@ -19,7 +19,7 @@ The Integrator Development Kit (IDK) will contain:
   * The tool binary itself.
 
   * The [device-finder](/docs/development/idk/documentation/device_discovery.md)
-    tool which can enumerate Fuchsia devices to get their names.
+    tool, which can enumerate Fuchsia devices to get their names.
 
   * A document in
     [//docs/development/idk/documentation](/docs/development/idk/documentation)

@@ -87,7 +87,7 @@ event_source.start_component_tree().await?;
 
 By the end of this code block:
 
-- An `event_stream` has been created which receives `Stopped` events.
+- An `event_stream` has been created that receives `Stopped` events.
 - Component manager’s execution has begun.
 - The root component (and its eager children, if any) will be started soon.
 

@@ -3,7 +3,7 @@
 > DEPRECATION WARNING: The Modular framework is being deprecated in favor of
 > the [Session Framework](/docs/concepts/session/introduction.md).
 
-A `Module` is a component which displays UI in a Modular session. Modules are
+A `Module` is a component that displays UI in a Modular session. Modules are
 added to a story (a container for Modules). Multiple modules can be added to a
 single story.
 
@@ -13,7 +13,7 @@ A module is given access to two services provided by the modular framework in
 its incoming namespace:
 
 *   `fuchsia.modular.ComponentContext` which gives the agent access to
-    functionality which is shared across components run under the modular
+    functionality that is shared across components run under the modular
     framework (e.g. modules, shells, agents).
 *   `fuchsia.modular.ModuleContext` which gives modules access to module
     specific functionality.

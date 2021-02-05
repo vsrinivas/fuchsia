@@ -77,7 +77,7 @@ Most `bt-host` tests are written in the following pattern:
 
 ### Test fixtures
 
-GTest test fixtures are reusable environments which often store test
+GTest test fixtures are reusable environments that often store test
 dependencies and provide convenience methods for writing unit tests. The test
 fixture used in this example is the [`SMP_Phase1Test` class](#smp_phase1_test).
 
@@ -335,5 +335,5 @@ EXPECT_TRUE(ContainersEqual(kResponse, *last_pres()));
      A test case is actually a subclass of the test fixture
 
 [^2]:
-     PairingChannel is an SM-specific wrapper which is not relevant to the
+     PairingChannel is an SM-specific wrapper that is not relevant to the
      functioning of these tests.

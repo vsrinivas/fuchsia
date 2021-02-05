@@ -48,7 +48,7 @@ as well as offloading animations to Scenic.
 [_Escher_](/src/ui/lib/escher/README.md)
 is a Vulkan-based rendering library used by the _Gfx_ system.
 
-_Root Presenter_ is an independent service which is responsible for
+_Root Presenter_ is an independent service that is responsible for
 _presenting_ the system's UI; using the Scenic API, it creates the root of a
 Scenic scene graph, embeds the root process's UI, and reads input events
 using its _Input Reader_ library and continually forwards them to Scenic.
@@ -75,7 +75,7 @@ domain and can be seamlessly intermixed.
 
 In practice, there is one instance of Scenic and one Scene that is rendered to a
 target. However, creating separate Scenic instances can be useful for rendering
-to targets which have very different scheduling requirements or for running
+to targets that have very different scheduling requirements or for running
 tests in isolation. Independent Scenic instances cannot share content and are
 therefore not coherent amongst themselves.
 
@@ -108,7 +108,7 @@ its links become inoperable.
 ## Resources {#resources}
 
 `Resources` represent scene elements such as nodes, shapes, materials, and
-animations which belong to particular `Sessions`.
+animations that belong to particular `Sessions`.
 
 The list of Scenic resources is described by the API:
 [//sdk/fidl/fuchsia.ui.gfx/resources.fidl](/sdk/fidl/fuchsia.ui.gfx/resources.fidl)
@@ -119,7 +119,7 @@ session.
 
 Each resource is identified within its session by a locally unique id which
 is assigned by the owner of the session (by arbitrary means).  Sessions
-cannot directly refer to resources which belong to other sessions (even if
+cannot directly refer to resources that belong to other sessions (even if
 they happen to know their id) therefore content embedding between sessions
 is performed using `Link` objects as intermediaries.
 
@@ -141,10 +141,10 @@ properties in the same manner used when the resource was added.
 The remove a resource, enqueue an operation to remove the resource.
 
 Removing a resource causes its id to become available for reuse.  However,
-the session maintains a reference count for each resource which is
+the session maintains a reference count for each resource that is
 internally referenced.  The underlying storage will not be released (and
 cannot be reused) until all remaining references to the resource have been
-cleared *and* until the next frame which does not require the resource has
+cleared *and* until the next frame that does not require the resource has
 been presented.  This is especially important for `Memory` resources.
 See also [Fences](#fences).
 
@@ -153,7 +153,7 @@ indefinitely to incrementally update resources within a session.
 
 ### Nodes {#nodes}
 
-A `Node` resource represents a graphical object which can be assembled into
+A `Node` resource represents a graphical object that can be assembled into
 a hierarchy called a `node tree` for rendering.
 
 [Here](scenic_resource_lifecycle.md) is a walk-through on how Scenic internally manages

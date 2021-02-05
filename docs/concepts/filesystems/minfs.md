@@ -8,7 +8,7 @@ It currently supports files up to 4 GB in size.
 
 ### Host Device (QEMU Only)
 
- * Create a disk image which stores MinFS
+ * Create a disk image that stores MinFS
 
   ```shell
   # (Linux)
@@ -79,7 +79,7 @@ accessible from Zircon.
   ```
 
  * Within Zircon, format the partition as MinFS. Using `lsblk` you should see
-   a block device which is the whole disk and a slightly smaller device which
+   a block device, which is the whole disk, and a slightly smaller device, which
    is the partition. In the above output, the partition is device 003, and would
    have the path `/dev/class/block/003`
 
@@ -139,7 +139,7 @@ user operation like read()/write().
 * The "Write" operation issues a single data block write to a previously
   unaccessed portion of the vnode.
 * The "Overwrite" operation issues a single data block write to a portion of the
-  block which has previously been allocated from an earlier "Write" operation.
+  block that has previously been allocated from an earlier "Write" operation.
 
 ### Keys to the columns.
 1. OPERATION: The action requested by a client of the filesystem.

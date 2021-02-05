@@ -27,7 +27,7 @@ Realms play a special role in the component framework. A realm is an
     [exposes][expose] the same set of capabilities.
 
 A realm also acts as an *ownership boundary*, that is, a child component
-instance is the root of a sub-realm which is owned by the parent, who controls
+instance is the root of a sub-realm that is owned by the parent, who controls
 its existence. See [Child component instances](#child-component-instances) for
 more information.
 

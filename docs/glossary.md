@@ -91,7 +91,7 @@ instance’s [namespace](#namespace).
 
 ### **Capability** {#capability}
 
-A capability is a value which combines an *object reference* and a set of
+A capability is a value that combines an *object reference* and a set of
 *rights*. When a program has a capability it is conferred the privilege to
 perform certain actions using that capability. A [handle](#handle) is a common
 example for a capability.
@@ -194,7 +194,7 @@ Component instance tree is a [components v2](#components-v2) concept.
 
 ### **Component Manager** {#component-manager}
 
-A system service which lets [component instances](#component-instance) manage
+A system service that lets [component instances](#component-instance) manage
 their children and [routes capabilities](#capability-routing) between them, thus
 implementing the [component instance tree](#component-instance-tree). Component
 Manager is the system service that implements the
@@ -325,7 +325,7 @@ Directory capability is a [components v2](#components-v2) concept.
 
 ### **Driver** {#driver}
 
-A driver is a dynamic shared library which [Driver Manager](#drivermanager) can load
+A driver is a dynamic shared library that [Driver Manager](#drivermanager) can load
 into a [Driver Host](#driverhost) and that enables, and controls one or more devices.
 
 -   [Reference](/docs/development/drivers/developer_guide/driver-development.md)
@@ -480,7 +480,7 @@ with it in a manner largely consistent with a regular block device.
 
 ### **GN** {#gn}
 
-GN is a meta-build system which generates build files so that Fuchsia can be
+GN is a meta-build system that generates build files so that Fuchsia can be
 built with [Ninja](#ninja). GN is fast and comes with solid tools to manage and
 explore dependencies. GN files, named `BUILD.gn`, are located all over the
 repository.
@@ -593,7 +593,7 @@ A stateless representation of an event from a physical input device. Zircon gene
 ### **Jiri** {#jiri}
 
 Jiri is a tool for multi-repo development. It is used to checkout the Fuchsia
-codebase. It supports various subcommands which makes it easy for developers to
+codebase. It supports various subcommands, which makes it easy for developers to
 manage their local checkouts.
 
 -   [Reference](https://fuchsia.googlesource.com/jiri/+/HEAD/README.md)
@@ -612,7 +612,7 @@ rooted tree.
 
 ### **Kernel Object** {#kernel-object}
 
-A kernel object is a kernel data structure which is used to regulate access to
+A kernel object is a kernel data structure that is used to regulate access to
 system resources such as memory, i/o, processor time and access to other
 processes. Userspace can only reference kernel objects via [Handles](#handle).
 
@@ -662,7 +662,7 @@ Fuchsia's standard C library (libc) is based on Musl Libc.
 ### **Namespace** {#namespace}
 
 A namespace is the composite hierarchy of files, directories, sockets,
-[service](#service)s, and other named objects which are offered to components by
+[service](#service)s, and other named objects offered to components by
 their [environment](#environment).
 
 -   [Fuchsia Namespace Spec](/docs/concepts/process/namespaces.md)
@@ -703,7 +703,7 @@ Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
 ### **Process** {#process}
 
 A Process is a [kernel object](#kernel-object) that represents an instance
-of a program as a set of instructions which are executed by one or more
+of a program as a set of instructions that are executed by one or more
 [threads](#thread) together with a collection of [capabilities](#capability).
 Every process is contained in a [job](#job).
 
@@ -888,7 +888,7 @@ space of a process.
 ### **Virtual Memory Object** {#virtual-memory-object}
 
 A Virtual Memory Object (VMO) is a Zircon [kernel object](#kernel-object) that
-represents a collection of pages (or the potential for pages) which may be read,
+represents a collection of pages (or the potential for pages) that may be read,
 written, mapped into the address space of a process, or shared with another
 process by passing a [Handle](#handle) over a [Channel](#channel).
 
@@ -908,7 +908,7 @@ Zedboot is a recovery image that is used to install and boot a full Fuchsia
 system. Zedboot is actually an instance of the Zircon kernel with a minimal set
 of drivers and services running used to bootstrap a complete Fuchsia system on a
 target device. Upon startup, Zedboot listens on the network for instructions
-from a bootserver which may instruct Zedboot to [install](#paver) a new OS. Upon
+from a bootserver that may instruct Zedboot to [install](#paver) a new OS. Upon
 completing the installation Zedboot will reboot into the newly installed system.
 
 ### **Zircon** {#zircon}

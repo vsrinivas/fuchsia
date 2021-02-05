@@ -352,16 +352,16 @@ appropriate defaults and adjust the information architecture to suit the role
 of that display.
 
 * **Unknown**: The role of the display is unknown.
-* **Handheld**: The display is mounted in a device which is typically supported
+* **Handheld**: The display is mounted in a device that is typically supported
   by the user in one or both hands.  The user interface will be optimized for
   single-user direct manipulation.  Like a phone or tablet.
-* **Close**: The display is mounted in a device which is typically located
+* **Close**: The display is mounted in a device that is typically located
   well within arm's reach of the user.  The user interface will be optimized
   for single-user direct and indirect manipulation.  Like a laptop.
-* **Near**: The display is mounted in a device which is typically located
+* **Near**: The display is mounted in a device that is typically located
   at arm's reach from the user.  The user interface will be optimized for
   single-user indirect manipulation.  Like a desktop.
-* **Far**: The display is mounted in a device which is typically located well
+* **Far**: The display is mounted in a device that is typically located well
   beyond arm's reach of the user or a group of users and is intended to be
   viewed from a variety of distances.  The user interface will be optimized for
   single-user and multi-user interaction and media consumption.  Like a TV.

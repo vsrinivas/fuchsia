@@ -180,7 +180,7 @@ to it’s parent `fuchsia.net.dhcp`, or its siblings e.g.
 
 ### Using multi-words library components
 
-While library names with components which join multiple words (e.g.
+While library names with components that join multiple words (e.g.
 `fuchsia.modular.storymodel`) are allowed, their use should be exceptional.
 Library authors can resort to joining multiple words together if the library
 name would violate nesting rules, or if neither word should take precedence over
@@ -201,7 +201,7 @@ is used for lower level device handling, while `fuchsia.ui.input{2,3}` is used
 for input that's interacting with scenic and with software components that
 render UIs. Focusing solely on versioning, it would have been clearer as
 `fuchsia.ui.scenic.input` and `fuchsia.ui.scenic.input2` to distinguish from the
-other domain which `fuchsia.input` serves.
+other domain that `fuchsia.input` serves.
 
 ## Types
 
@@ -1229,7 +1229,7 @@ could potentially be extended with methods for controlling the created object.
 
 ### Controlling settings-like data
 
-Often, servers will expose settings which the client can modify. Prefer using a
+Often, servers will expose settings that the client can modify. Prefer using a
 `table` to represent such settings. For instance, the `fuchsia.accessibility`
 library defines:
 

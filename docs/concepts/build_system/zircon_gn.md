@@ -220,8 +220,8 @@ as-needed to resolve symbols.
     test harness depends on static initializers while the static library
     linking rules will strip the tests. All kernel code.
 
-  * A `static_library` should be used for higher-level things that looks like
-    libraries or a part of one. The dead code stripping is more efficient which can
+  * A `static_library` should be used for a higher-level thing that looks like
+    a library or a part of one. Dead code stripping is more efficient, and can
     produce faster links and smaller binaries in cases where some code isn't
     needed.
 

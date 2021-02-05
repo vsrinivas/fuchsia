@@ -1,7 +1,7 @@
 # SDMMC drivers architecture
 
 The SDMMC driver stack is divided into two main components: platform drivers
-which talk directly to controller hardware, and the core driver which handles
+that talk directly to controller hardware, and the core driver that handles
 protocol-specific device initialization and communication. The core driver is
 further divided into an SDIO driver and a block driver (for SD and eMMC). Each
 SDMMC controller has a different platform driver, while the core driver is

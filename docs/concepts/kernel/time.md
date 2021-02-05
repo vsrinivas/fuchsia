@@ -10,7 +10,7 @@ Use [`zx_clock_get_monotonic()`] to get the current time as the number of nanose
 
 *lk\_time\_t* is in nanoseconds.
 
-When writing code which will run in the kernel, to read the current monotonic clock value, use:
+When writing code that will run in the kernel, to read the current monotonic clock value, use:
 
 ```
 #include <platform.h>

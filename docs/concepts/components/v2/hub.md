@@ -19,7 +19,7 @@ instances at runtime. The hub provides information such as:
 ### Immutability
 
 The hub’s structure is mostly read-only. It is not possible to create, rename,
-delete, or otherwise modify directories and files which form the structure of
+delete, or otherwise modify directories and files that form the structure of
 the hub itself. However, the [outgoing](/docs/concepts/system/abi/system.md)
 directory of an instance may include mutable directories, files, and services
 which can be accessed through the hub.

@@ -88,7 +88,7 @@ will need to be filled in by the higher levels of the input stack.
 The InputReport API will explicitly not use HID enums for descriptions (e.g: LED
 enums, Keyboard Key enums). It will use Fuchsia specific enums. This grants
 the API an extra layer of flexibility for declaring additional uses and removing
-usages which we choose not to support. (One example is that HID does not have a
+usages that we choose not to support. (One example is that HID does not have a
 Factory Data Reset (FDR) button enum, which we need to support).
 
 It is easier to be consistent by explicitly not using HID enums than to be

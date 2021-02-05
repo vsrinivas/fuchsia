@@ -149,7 +149,7 @@ load components that are stored in packages.
 
 [Appmgr][appmgr] runs the v1 component framework, which coexists with the v2
 component framework. Appmgr is [stored in a package][appmgr-pkg], unlike fshost
-and driver manager which are stored in bootfs, so component manager uses the
+and driver manager, which are stored in bootfs, so component manager uses the
 /pkgfs-delayed handle from fshost to load appmgr.
 
 Capabilities from the v2 framework can be

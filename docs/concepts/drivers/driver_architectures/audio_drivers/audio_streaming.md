@@ -2,7 +2,7 @@
 
 This document describes the audio streaming interface exposed by audio drivers
 in Fuchsia. It is meant to serve as a reference for both users and
-driver-authors, and to unambiguously define the interface contract which drivers
+driver-authors, and to unambiguously define the interface contract that drivers
 must implement and users must follow.
 
 ## Overview
@@ -10,7 +10,7 @@ must implement and users must follow.
 Audio streams are device nodes published by driver services intended to be used
 by applications in order to capture or render audio on a Fuchsia device.
 Each stream in the system (input or output) represents a stream of digital audio
-information which may be either received or transmitted by device. Streams are
+information that may be either received or transmitted by device. Streams are
 dynamic and may created or destroyed by the system at any time. Which streams
 exist at any given point in time, and what controls their lifecycles are
 considered to be issues of audio policy and codec management and are not
@@ -45,11 +45,11 @@ audio is not a service provided by the audio stream interface.
 :                               : encoded audio are linearly distributed       :
 :                               : across the amplitude levels of the rendering :
 :                               : or capture device. This is in contrast to    :
-:                               : A-law and &mu;-law encodings which have      :
+:                               : A-law and &mu;-law encodings, which have     :
 :                               : non-linear mappings from numeric value to    :
 :                               : amplitude level.                             :
 | Channel                       | Within an audio stream, the subset of        |
-:                               : information which will be rendered by a      :
+:                               : information that will be rendered by a       :
 :                               : single speaker, or which was captured by a   :
 :                               : single microphone in a stream.               :
 | Frame                         | A set of audio samples for every channel of  |
@@ -66,7 +66,7 @@ audio is not a service provided by the audio stream interface.
 
 {% comment %}
 > TODO: do we need to extend this interface to support non-linear audio sample
-> encodings? This may be important for telephony oriented microphones which
+> encodings? This may be important for telephony oriented microphones that
 > deliver &mu;-law encoded samples.
 {% endcomment %}
 
@@ -105,7 +105,7 @@ Generally, the operations conducted over the ring buffer channel include:
 *   Starting and Stopping stream playback and capture
 *   Receiving notifications of playback and capture progress
 *   Receiving clock recovery information in the case that the audio output clock
-    is based on a different oscillator than the oscillator which backs
+    is based on a different oscillator than the oscillator that backs
     the [monotonic clock](/docs/reference/syscalls/clock_get_monotonic.md)
 
 ## Operational Details
@@ -139,7 +139,7 @@ any on-going streaming operations in the process.
 
 ### Sending and receiving messages on the stream and ring-buffer channels
 
-All of the messages and message payloads which may be sent or received over
+All of the messages and message payloads that may be sent or received over
 stream and ring buffer channels are defined in
 [stream.fidl](/sdk/fidl/fuchsia.hardware.audio/stream.fidl)
 and [ring_buffer.fidl](/sdk/fidl/fuchsia.hardware.audio/ring_buffer.fidl).
@@ -277,14 +277,14 @@ must respond to this message, regardless of whether or not the stream
 hardware is capable of any gain control. All gain values are expressed using 32
 bit floating point numbers expressed in dB.
 
-Drivers respond to this message with values which indicate the current stream's
+Drivers respond to this message with values that indicate the current stream's
 gain control capabilities. Current gain settings are expressed using a bool
 indicating whether the stream can be muted, a bool that indicates whether the
 stream can AGC, the minimum and maximum gain settings, and a `gain_step_db`. The
 `gain_step_db` indicates the smallest increment with which the gain can be
 controlled counting from the minimum gain value.
 
-For example, an amplifier which has 5 gain steps of 7.5 dB each and a maximum 0
+For example, an amplifier that has 5 gain steps of 7.5 dB each and a maximum 0
 dB gain would indicate a range of (-30.0, 0.0) and a step size of 7.5.
 Amplifiers capable of functionally continuous gain control may encode their
 gain step size as 0.0.
@@ -297,7 +297,7 @@ situation, but drivers should report it as 0.0.
 
 In order to change a stream's current gain settings, applications send a
 `SetGain` message over the stream channel. This message include a parameter
-`GainState` indicating gain parameters to be configured including the dB gain which
+`GainState` indicating gain parameters to be configured including the dB gain that
 should be applied to the stream, muted and AGC enablement.
 
 Presuming that the request is valid, drivers should round the request to the
@@ -352,7 +352,7 @@ Valid plug-detect capabilities flags currently defined are:
 
 Clients may request that streams send them asynchronous notifications of
 plug state changes by using the `WatchPlugState` command if the `CAN_ASYNC_NOTIFY`
-flag was sent by the driver in `StreamProperties`. I.e. drivers for streams which
+flag was sent by the driver in `StreamProperties`. I.e. drivers for streams that
 do not set the `CAN_ASYNC_NOTIFY` flag are free to ignore the `WatchPlugState` sent
 by applications. Driver with `CAN_ASYNC_NOTIFY` set will reply to the first
 |WatchPlugState| sent by the client and will not respond to subsequent client
@@ -393,7 +393,7 @@ it may go through software processing of each sample done by the driver.
 Ring buffer data production proceeds at the nominal rate from the point in time
 given in a successful response to the `Start` command. Note though that the ring-buffer
 will almost certainly have some form of FIFO buffer
-between the memory bus and the audio hardware which causes it to either
+between the memory bus and the audio hardware, which causes it to either
 read-ahead in the stream (in the case of playback), or potentially hold onto
 data (in the case of capturing). It is important for clients to query the size
 of this buffer before beginning
@@ -401,7 +401,7 @@ operation so they know how far ahead/behind the stream's nominal inferred
 read/write position they need to stay in order to prevent audio glitching.
 Also note that because of the shared buffer nature of the system, and the fact
 that drivers are likely to be DMA-ing directly from this buffer to hardware, it
-is important for clients running on architectures which are not automatically
+is important for clients running on architectures that are not automatically
 cache coherent to be sure that they have properly written-back their cache after
 writing playback data to the buffer, or invalidated their cache before reading
 captured data.
@@ -464,7 +464,7 @@ must ensure that the size of the ring buffer is an integral number of audio
 frames.
 
 {% comment %}
-> TODO : Is it reasonable to require that drivers produce buffers which are an
+> TODO : Is it reasonable to require that drivers produce buffers that are an
 > integral number of audio frames in length? It certainly makes the audio
 > client's life easier (client code never needs to split or re-assemble a frame
 > before processing), but it might make it difficult for some audio hardware to
@@ -483,7 +483,7 @@ must not rely on perfectly uniform spacing of the update notifications.
 #### `ring_buffer`
 
 If the request succeeds, the driver must return a handle to a
-[VMO](/docs/reference/kernel_objects/vm_object.md) with permissions which allow applications to map
+[VMO](/docs/reference/kernel_objects/vm_object.md) with permissions that allow applications to map
 the VMO into their address space using [zx_vmar_map](/docs/reference/syscalls/vmar_map.md),
 and to read/write data in the buffer in the case of playback, or simply to read
 the data in the buffer in the case of capture.
@@ -501,7 +501,7 @@ than the `min_frames` request from the client but must not be smaller than this 
 Clients may request that a ring-buffer start or stop using the `Start` and `Stop`
 commands. Attempting to start a stream
 which is already started must be considered a failure. Attempting to stop a
-stream which is already stopped should be considered a success. Ring-buffers
+stream that is already stopped should be considered a success. Ring-buffers
 cannot be either stopped or started until after a shared buffer has been
 established using the `CreateRingBuffer` operation.
 
@@ -562,7 +562,7 @@ values themselves ARE intended to be used to recover the clock for the audio
 stream. If a client discovers that a driver has consumed past the point in the
 ring buffer where that client has written playback data, audio presentation is
 undefined. Clients should increase their clock lead time and be certain to stay
-ahead of this point in the stream in the future. Likewise, clients which capture
+ahead of this point in the stream in the future. Likewise, clients that capture
 audio should not attempt to read beyond the point in the ring buffer
 indicated by the most recent position notification sent by the driver.
 
@@ -614,7 +614,7 @@ TODO: define these and what driver behavior should be, if/when they occur.
 If the client side of a ring buffer control channel is closed for any reason,
 drivers must immediately close the control channel and shut down the ring
 buffer, such that no further audio is emitted nor captured. While drivers are
-encouraged to do so in a way which produces a graceful transition to silence,
+encouraged to do so in a way that produces a graceful transition to silence,
 they must ensure that the audio stream goes silent instead of looping. Once
 the transition to silence is complete, resources associated with playback or
 capture may be released and reused by the driver.

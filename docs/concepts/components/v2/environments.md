@@ -19,7 +19,7 @@ Environments let you configure the following behavior of a realm:
 ### Runners {#runners}
 
 By registering a runner in an [environment declaration][doc-environments], you
-make it available to any component instance which has that environment assigned
+make it available to any component instance that has that environment assigned
 to it. Components specify which runner they use with a [`use`][doc-use]
 declaration naming the runner.
 

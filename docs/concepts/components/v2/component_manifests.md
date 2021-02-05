@@ -695,7 +695,7 @@ offer: [
 ### facets {#facets}
 
 The `facets` section is a JSON object containing [facets](#facet-metadata),
-chunks of metadata which components may interpret for their own purposes. The
+chunks of metadata that components may interpret for their own purposes. The
 component framework enforces no schema for this section, but third parties may
 expect their facets to adhere to a particular schema.
 
