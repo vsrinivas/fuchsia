@@ -39,9 +39,6 @@ pub enum PolicyError {
 pub enum VerifyError {
     #[error("the blobfs verification failed")]
     BlobFs(#[source] VerifyFailureReason),
-
-    #[error("an unexpected error occurred")]
-    Other(#[source] anyhow::Error),
 }
 
 #[derive(Error, Debug)]
