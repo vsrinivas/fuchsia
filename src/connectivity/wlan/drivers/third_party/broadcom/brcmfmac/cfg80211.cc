@@ -2371,6 +2371,7 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   if (cfg->scan_request) {
     escan->escan_state = WL_ESCAN_STATE_IDLE;
     if ((err = brcmf_abort_escan(escan->ifp)) != ZX_OK) {
+      brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
       BRCMF_ERR("Abort scan failed -- error: %s", zx_status_get_string(err));
       return err;
     }
