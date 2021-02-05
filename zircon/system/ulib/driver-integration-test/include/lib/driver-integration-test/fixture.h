@@ -5,6 +5,7 @@
 #ifndef LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
 #define LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fit/function.h>
 
@@ -63,11 +64,18 @@ class IsolatedDevmgr {
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
-  const zx::channel& svc_root_dir() const { return devmgr_.svc_root_dir(); }
+  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc_root_dir() const {
+    return devmgr_.svc_root_dir();
+  }
 
-  const zx::channel& fshost_outgoing_dir() const { return devmgr_.fshost_outgoing_dir(); }
+  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_dir() const {
+    return devmgr_.fshost_outgoing_dir();
+  }
 
-  const zx::channel& component_lifecycle_svc() const { return devmgr_.component_lifecycle_svc(); }
+  fidl::UnownedClientEnd<llcpp::fuchsia::process::lifecycle::Lifecycle> component_lifecycle_svc()
+      const {
+    return devmgr_.component_lifecycle_svc();
+  }
 
  private:
   devmgr_integration_test::IsolatedDevmgr devmgr_;

@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/vfs.h>
@@ -70,26 +72,23 @@ TEST(LauncherTest, OutgoingServices) {
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
-  ASSERT_NE(devmgr.svc_root_dir().get(), ZX_HANDLE_INVALID);
+  ASSERT_NE(devmgr.svc_root_dir().channel(), ZX_HANDLE_INVALID);
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  // Test we are able to connect to atleast one of the default services.
-  const char* service = "svc/" fuchsia_device_manager_DebugDumper_Name;
-  ASSERT_OK(fdio_service_connect_at(devmgr.svc_root_dir().get(), service, remote.release()));
+  // Test we are able to connect to at least one of the default services.
+  auto svc_dir = service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.svc_root_dir(), "svc");
+  ASSERT_OK(svc_dir.status_value());
+  auto local = service::ConnectAt<llcpp::fuchsia::device::manager::DebugDumper>(*svc_dir);
+  ASSERT_OK(local.status_value());
 
   zx::vmo debug_vmo;
-  zx_handle_t vmo_dup;
+  zx::vmo vmo_dup;
   size_t vmo_size = 512 * 512;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &debug_vmo));
-  ASSERT_OK(zx_handle_duplicate(debug_vmo.get(), ZX_RIGHTS_IO | ZX_RIGHT_TRANSFER, &vmo_dup));
-  zx_status_t call_status = ZX_OK;
-  uint64_t data_written, data_avail;
+  ASSERT_OK(debug_vmo.duplicate(ZX_RIGHTS_IO | ZX_RIGHT_TRANSFER, &vmo_dup));
 
-  ASSERT_OK(fuchsia_device_manager_DebugDumperDumpTree(local.get(), vmo_dup, &call_status,
-                                                       &data_written, &data_avail));
-  ASSERT_OK(call_status);
+  auto result = fidl::BindSyncClient(std::move(*local)).DumpTree(std::move(vmo_dup));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
 }
 
 TEST(LauncherTest, ExposeDevfsToHub) {

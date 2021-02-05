@@ -9,6 +9,7 @@ test("devmgr-integration") {
   sources = [ "launcher_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
@@ -16,6 +17,7 @@ test("devmgr-integration") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

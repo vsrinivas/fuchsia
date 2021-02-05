@@ -30,7 +30,7 @@ class BindDebuggerTest : public testing::Test {
     args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
-    ASSERT_NE(devmgr_.svc_root_dir().get(), ZX_HANDLE_INVALID);
+    ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);
 
     // Wait for /dev/test/test to appear, then get a channel to it.
     fbl::unique_fd root_fd;
@@ -74,7 +74,7 @@ class BindDebuggerTest : public testing::Test {
 
     std::string svc_name =
         fxl::StringPrintf("svc/%s", fuchsia::device::manager::BindDebugger::Name_);
-    sys::ServiceDirectory svc_dir(devmgr_.TakeSvcRootDir());
+    sys::ServiceDirectory svc_dir(devmgr_.TakeSvcRootDir().TakeChannel());
     status = svc_dir.Connect(svc_name, std::move(remote));
     ASSERT_EQ(status, ZX_OK);
 

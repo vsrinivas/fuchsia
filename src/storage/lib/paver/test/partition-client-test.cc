@@ -405,14 +405,14 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
   }
 
   zx::channel GetSvcRoot() {
-    const zx::channel& fshost_root = devmgr_.fshost_outgoing_dir();
+    auto fshost_root = devmgr_.fshost_outgoing_dir();
 
     zx::channel local, remote;
     auto status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
       return zx::channel();
     }
-    status = fdio_service_connect_at(fshost_root.get(), "svc", remote.release());
+    status = fdio_service_connect_at(fshost_root.channel(), "svc", remote.release());
     if (status != ZX_OK) {
       std::cout << "Failed to connect to fshost svc dir: " << zx_status_get_string(status)
                 << std::endl;

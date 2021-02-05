@@ -228,8 +228,9 @@ class FakeSvc {
     vfs_.ServeDirectory(root_dir_, std::move(svc_remote));
   }
 
-  void ForwardServiceTo(const char* name, const zx::channel& root) {
-    zx::channel cloned = zx::channel(fdio_service_clone(root.get()));
+  void ForwardServiceTo(const char* name,
+                        fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> root) {
+    zx::channel cloned = zx::channel(fdio_service_clone(root.channel()));
     root_dir_->AddEntry(
         name,
         fbl::MakeRefCounted<fs::Service>([name, cloned = std::move(cloned)](zx::channel request) {

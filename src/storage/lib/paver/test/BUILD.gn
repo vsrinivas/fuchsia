@@ -62,6 +62,7 @@ test("test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]

@@ -8,6 +8,7 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 
 #include <zxtest/zxtest.h>
 
@@ -49,12 +50,12 @@ TEST(SherlockAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  zx::channel svc_root, remote;
-  ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
-  ASSERT_OK(fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release()));
+  auto svc_root =
+      service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
+  ASSERT_OK(svc_root.status_value());
 
-  ASSERT_NOT_OK(
-      paver::SherlockAbrClientFactory().Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
+  ASSERT_NOT_OK(paver::SherlockAbrClientFactory().Create(devmgr.devfs_root().duplicate(),
+                                                         svc_root->channel(), nullptr));
 }
 
 TEST(LuisAbrTests, CreateFails) {
@@ -68,12 +69,12 @@ TEST(LuisAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  zx::channel svc_root, remote;
-  ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
-  ASSERT_OK(fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release()));
+  auto svc_root =
+      service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
+  ASSERT_OK(svc_root.status_value());
 
-  ASSERT_NOT_OK(
-      paver::LuisAbrClientFactory().Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
+  ASSERT_NOT_OK(paver::LuisAbrClientFactory().Create(devmgr.devfs_root().duplicate(),
+                                                     svc_root->channel(), nullptr));
 }
 
 TEST(X64AbrTests, CreateFails) {
@@ -87,12 +88,12 @@ TEST(X64AbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  zx::channel svc_root, remote;
-  ASSERT_OK(zx::channel::create(0, &svc_root, &remote));
-  ASSERT_OK(fdio_service_connect_at(devmgr.fshost_outgoing_dir().get(), "svc", remote.release()));
+  auto svc_root =
+      service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
+  ASSERT_OK(svc_root.status_value());
 
-  ASSERT_NOT_OK(
-      paver::X64AbrClientFactory().Create(devmgr.devfs_root().duplicate(), svc_root, nullptr));
+  ASSERT_NOT_OK(paver::X64AbrClientFactory().Create(devmgr.devfs_root().duplicate(),
+                                                    svc_root->channel(), nullptr));
 }
 
 }  // namespace

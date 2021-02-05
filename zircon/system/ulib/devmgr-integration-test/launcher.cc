@@ -421,10 +421,9 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   }
 
   GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
-  zx::channel component_lifecycle_client, component_lifecycle_server;
-  status = zx::channel::create(0, &component_lifecycle_client, &component_lifecycle_server);
-  if (status != ZX_OK) {
-    return status;
+  auto component_lifecycle = fidl::CreateEndpoints<llcpp::fuchsia::process::lifecycle::Lifecycle>();
+  if (!component_lifecycle.is_ok()) {
+    return component_lifecycle.status_value();
   }
 
   IsolatedDevmgr devmgr;
@@ -433,7 +432,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   std::map<std::string, std::string> boot_args = std::move(args.boot_args);
   status = devmgr_launcher::Launch(
       std::move(args), std::move(svc_client), std::move(fshost_outgoing_server),
-      std::move(component_lifecycle_server), &devmgr.job_, &devfs, &outgoing_svc_root);
+      component_lifecycle->server.TakeChannel(), &devmgr.job_, &devfs, &outgoing_svc_root);
   if (status != ZX_OK) {
     return status;
   }
@@ -459,9 +458,9 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
     return status;
   }
   devmgr.devfs_root_.reset(fd);
-  devmgr.component_lifecycle_client_.reset(component_lifecycle_client.release());
-  devmgr.svc_root_dir_.reset(outgoing_svc_root.release());
-  devmgr.fshost_outgoing_dir_.reset(fshost_client_dup.release());
+  devmgr.component_lifecycle_client_ = std::move(component_lifecycle->client);
+  devmgr.svc_root_dir_ = std::move(outgoing_svc_root);
+  devmgr.fshost_outgoing_dir_ = std::move(fshost_client_dup);
   *out = std::move(devmgr);
   return ZX_OK;
 }

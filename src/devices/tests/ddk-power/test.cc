@@ -9,6 +9,7 @@
 #include <fuchsia/process/lifecycle/llcpp/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -104,15 +105,12 @@ class PowerTestCase : public zxtest::Test {
   }
 
   void SetTerminationSystemState(SystemPowerState state) {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
-    char service_name[100];
-    snprintf(service_name, sizeof(service_name), "svc/%s",
-             device_manager_fidl::SystemStateTransition::Name);
-    ASSERT_OK(fdio_service_connect_at(devmgr.svc_root_dir().get(), service_name, remote.release()));
-    ASSERT_NE(devmgr.svc_root_dir().get(), ZX_HANDLE_INVALID);
-    auto system_state_transition_client =
-        device_manager_fidl::SystemStateTransition::SyncClient(std::move(local));
+    ASSERT_NE(devmgr.svc_root_dir().channel(), ZX_HANDLE_INVALID);
+    auto svc = service::ConnectAt<llcpp::fuchsia::io::Directory>(devmgr.svc_root_dir(), "svc");
+    ASSERT_OK(svc.status_value());
+    auto local = service::ConnectAt<device_manager_fidl::SystemStateTransition>(*svc);
+    ASSERT_OK(local.status_value());
+    auto system_state_transition_client = fidl::BindSyncClient(std::move(*local));
     auto resp = system_state_transition_client.SetTerminationSystemState(state);
     ASSERT_OK(resp.status());
     ASSERT_FALSE(resp->result.is_err());
@@ -783,9 +781,8 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   ASSERT_OK(auto_suspend_response.status);
 
   // Verify systemsuspend overrides autosuspend
-  ASSERT_NE(devmgr.component_lifecycle_svc().get(), ZX_HANDLE_INVALID);
-  auto result =
-      lifecycle_fidl::Lifecycle::Call::Stop(zx::unowned(devmgr.component_lifecycle_svc()));
+  ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
+  auto result = lifecycle_fidl::Lifecycle::Call::Stop(devmgr.component_lifecycle_svc());
   ASSERT_OK(result.status());
 
   // Wait till child2's suspend event is called.
@@ -1061,9 +1058,8 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_NE(devmgr.component_lifecycle_svc().get(), ZX_HANDLE_INVALID);
-  auto result =
-      lifecycle_fidl::Lifecycle::Call::Stop(zx::unowned(devmgr.component_lifecycle_svc()));
+  ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
+  auto result = lifecycle_fidl::Lifecycle::Call::Stop(devmgr.component_lifecycle_svc());
   ASSERT_OK(result.status());
 
   // Wait till child2's suspend event is called.
@@ -1140,9 +1136,8 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_NE(devmgr.component_lifecycle_svc().get(), ZX_HANDLE_INVALID);
-  auto result =
-      lifecycle_fidl::Lifecycle::Call::Stop(zx::unowned(devmgr.component_lifecycle_svc()));
+  ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
+  auto result = lifecycle_fidl::Lifecycle::Call::Stop(devmgr.component_lifecycle_svc());
   ASSERT_OK(result.status());
 
   // Wait till child2's suspend event is called.

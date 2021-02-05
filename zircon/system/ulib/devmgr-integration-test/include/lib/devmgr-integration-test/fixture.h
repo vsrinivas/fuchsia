@@ -5,6 +5,8 @@
 #ifndef LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 #define LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/process/lifecycle/llcpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fit/function.h>
@@ -45,11 +47,20 @@ class IsolatedDevmgr {
   // Get a fd to the root of the isolate devmgr's devfs.  This fd
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devfs_root_; }
-  const zx::channel& svc_root_dir() const { return svc_root_dir_; }
-  const zx::channel& fshost_outgoing_dir() const { return fshost_outgoing_dir_; }
-  const zx::channel& component_lifecycle_svc() const { return component_lifecycle_client_; }
+  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> svc_root_dir() const {
+    return svc_root_dir_;
+  }
+  fidl::UnownedClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_dir() const {
+    return fshost_outgoing_dir_;
+  }
+  fidl::UnownedClientEnd<llcpp::fuchsia::process::lifecycle::Lifecycle> component_lifecycle_svc()
+      const {
+    return component_lifecycle_client_;
+  }
 
-  zx::channel TakeSvcRootDir() { return std::move(svc_root_dir_); }
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> TakeSvcRootDir() {
+    return std::move(svc_root_dir_);
+  }
 
   // Expose devfs in component outgoing directory.
   zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir);
@@ -85,16 +96,16 @@ class IsolatedDevmgr {
   zx::job job_;
 
   // Channel for the root of outgoing services
-  zx::channel svc_root_dir_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> svc_root_dir_;
 
   // Channel for the root of fshost
-  zx::channel fshost_outgoing_dir_;
+  fidl::ClientEnd<llcpp::fuchsia::io::Directory> fshost_outgoing_dir_;
 
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;
 
   // Channel for component lifecycle events
-  zx::channel component_lifecycle_client_;
+  fidl::ClientEnd<llcpp::fuchsia::process::lifecycle::Lifecycle> component_lifecycle_client_;
 
   // Opaque state associated with the async_loop_
   std::unique_ptr<SvcLoopState> svc_loop_state_;
