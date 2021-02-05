@@ -29,6 +29,7 @@ zx_library("stdcompat") {
     # Due to a bug in the SDK bazel generation, private headers in sources are
     # not propagated correctly until this is fixed, internal healders are un the public
     # section.
+    "lib/stdcompat/internal/bit.h",
     "lib/stdcompat/internal/constructors.h",
     "lib/stdcompat/internal/exception.h",
     "lib/stdcompat/internal/storage.h",

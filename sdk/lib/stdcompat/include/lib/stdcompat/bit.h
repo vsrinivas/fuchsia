@@ -7,11 +7,14 @@
 
 #include <limits>
 
-#if __has_include(<bit>)
-#include <bit>
-#endif
-
+#include "internal/bit.h"
 #include "memory.h"
+
+#if __has_include(<bit>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#include <bit>
+
+#endif  //__has_include(<bit>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 namespace cpp20 {
 
@@ -50,6 +53,65 @@ bit_cast(const From& from) {
 #endif  //  defined(__has_builtin) && __has_builtin(__builtin_bit_cast)
 
 #endif  //  __cpp_lib_bit_cast >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#if __cpp_lib_bitops >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::countl_one;
+using std::countl_zero;
+using std::countr_one;
+using std::countr_zero;
+using std::popcount;
+using std::rotl;
+using std::rotr;
+
+#else
+
+template <class T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, int> countr_zero(T x) noexcept {
+  if (x == 0) {
+    return std::numeric_limits<T>::digits;
+  }
+
+  return internal::count_zeros_from_right(x);
+}
+
+template <class T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, int> countl_zero(T x) noexcept {
+  if (x == 0) {
+    return std::numeric_limits<T>::digits;
+  }
+
+  return internal::count_zeros_from_left(x);
+}
+
+template <class T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, int> countl_one(T x) noexcept {
+  return countl_zero(static_cast<T>(~x));
+}
+
+template <class T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, int> countr_one(T x) noexcept {
+  return countr_zero(static_cast<T>(~x));
+}
+
+template <class T>
+[[gnu::warn_unused_result]] constexpr std::enable_if_t<std::is_unsigned<T>::value, T> rotl(
+    T x, int s) noexcept {
+  return internal::rotl(x, s);
+}
+
+template <class T>
+[[gnu::warn_unused_result]] constexpr std::enable_if_t<std::is_unsigned<T>::value, T> rotr(
+    T x, int s) noexcept {
+  return internal::rotr(x, s);
+}
+
+template <class T>
+constexpr int popcount(T x) noexcept {
+  return internal::popcount(x);
+}
+
+#endif
 
 }  // namespace cpp20
 

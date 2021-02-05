@@ -1,5 +1,6 @@
 {
-  "pkg/stdcompat/include/lib/stdcompat/bit.h": "58a7d1bd07ea78752ddd67887f6fa2fe",
+  "pkg/stdcompat/include/lib/stdcompat/bit.h": "0a48b97eafbedc0b01593a02c6dc965c",
+  "pkg/stdcompat/include/lib/stdcompat/internal/bit.h": "a1a1a0361767d77b5d525b3b78c1c6a0",
   "pkg/stdcompat/include/lib/stdcompat/internal/constructors.h": "664276aef7a6132071fbf93b5ee3fe75",
   "pkg/stdcompat/include/lib/stdcompat/internal/exception.h": "36e3245793a2229c969370af46d7f692",
   "pkg/stdcompat/include/lib/stdcompat/internal/storage.h": "49ddf504b1b4a507bb845b56e2a8057f",
