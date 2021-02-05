@@ -16,6 +16,7 @@ group("tests") {
 }
 
 stdcompat_test_sources = [
+  "bit_test.cc",
   "constructors_internal_test.cc",
   "memory_test.cc",
   "optional_test.cc",
