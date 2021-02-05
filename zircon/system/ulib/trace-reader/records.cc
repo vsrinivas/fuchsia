@@ -452,9 +452,8 @@ void LargeRecordData::MoveFrom(trace::LargeRecordData&& other) {
 fbl::String LargeRecordData::ToString() const {
   switch (type_) {
     case LargeRecordType::kBlob:
-      using std::get;
-      if (fit::holds_alternative<BlobEvent>(blob_)) {
-        const auto& data = get<BlobEvent>(blob_);
+      if (cpp17::holds_alternative<BlobEvent>(blob_)) {
+        const auto& data = cpp17::get<BlobEvent>(blob_);
         return fbl::StringPrintf(
             "Blob(format: blob_event, category: \"%s\", name: \"%s\", "
             "ts: %" PRIu64
@@ -463,8 +462,8 @@ fbl::String LargeRecordData::ToString() const {
             data.category.c_str(), data.name.c_str(), data.timestamp,
             data.process_thread.ToString().c_str(), FormatArgumentList(data.arguments).c_str(),
             data.blob_size, PreviewBlobData<8, 8>(data.blob, data.blob_size).c_str());
-      } else if (fit::holds_alternative<BlobAttachment>(blob_)) {
-        const auto& data = get<BlobAttachment>(blob_);
+      } else if (cpp17::holds_alternative<BlobAttachment>(blob_)) {
+        const auto& data = cpp17::get<BlobAttachment>(blob_);
         return fbl::StringPrintf(
             "Blob(format: blob_attachment, category: \"%s\", name: \"%s\", "
             "size: %" PRIu64 ", preview: %s)",

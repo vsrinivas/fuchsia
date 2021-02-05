@@ -5,7 +5,7 @@
 #ifndef TRACE_READER_RECORDS_H_
 #define TRACE_READER_RECORDS_H_
 
-#include <lib/fit/variant.h>
+#include <lib/stdcompat/variant.h>
 #include <lib/trace-engine/types.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -546,7 +546,7 @@ class LargeRecordData final {
   // to free it. The record consumer must finish processing the
   // blob data within the callback, as the pointer may not be valid
   // after the completion of that callback.
-  using Blob = fit::variant<BlobEvent, BlobAttachment>;
+  using Blob = cpp17::variant<BlobEvent, BlobAttachment>;
 
   explicit LargeRecordData(Blob blob) : type_(LargeRecordType::kBlob), blob_(std::move(blob)) {}
 

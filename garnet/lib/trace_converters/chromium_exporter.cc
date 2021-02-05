@@ -5,6 +5,7 @@
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 
 #include <inttypes.h>
+#include <lib/stdcompat/variant.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-engine/types.h>
 
@@ -473,9 +474,8 @@ void ChromiumExporter::ExportContextSwitch(const trace::Record::ContextSwitch& c
 }
 
 void ChromiumExporter::ExportBlob(const trace::LargeRecordData::Blob& data) {
-  using std::get;
-  if (fit::holds_alternative<trace::LargeRecordData::BlobEvent>(data)) {
-    const auto& blob = get<trace::LargeRecordData::BlobEvent>(data);
+  if (cpp17::holds_alternative<trace::LargeRecordData::BlobEvent>(data)) {
+    const auto& blob = cpp17::get<trace::LargeRecordData::BlobEvent>(data);
 
     if (blob.category == "fidl:blob") {
       ExportFidlBlob(blob);
@@ -485,8 +485,8 @@ void ChromiumExporter::ExportBlob(const trace::LargeRecordData::Blob& data) {
     // Drop blob event record.
     FX_LOGS(INFO) << "Dropping large blob event record: "
                   << "name " << blob.name.c_str() << " of size " << blob.blob_size;
-  } else if (fit::holds_alternative<trace::LargeRecordData::BlobAttachment>(data)) {
-    const auto& blob = get<trace::LargeRecordData::BlobAttachment>(data);
+  } else if (cpp17::holds_alternative<trace::LargeRecordData::BlobAttachment>(data)) {
+    const auto& blob = cpp17::get<trace::LargeRecordData::BlobAttachment>(data);
 
     // Drop blob attachment record.
     FX_LOGS(INFO) << "Dropping large blob attachment record: "
