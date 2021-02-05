@@ -428,6 +428,20 @@ std::string roleToString(const fuchsia::accessibility::semantics::Role role) {
       return "TEXT_FIELD";
     case fuchsia::accessibility::semantics::Role::SLIDER:
       return "SLIDER";
+    case fuchsia::accessibility::semantics::Role::LINK:
+      return "LINK";
+    case fuchsia::accessibility::semantics::Role::CHECK_BOX:
+      return "CHECK_BOX";
+    case fuchsia::accessibility::semantics::Role::RADIO_BUTTON:
+      return "RADIO_BUTTON";
+    case fuchsia::accessibility::semantics::Role::LIST:
+      return "LIST";
+    case fuchsia::accessibility::semantics::Role::LIST_ELEMENT_MARKER:
+      return "LIST_ELEMENT_MARKER";
+    case fuchsia::accessibility::semantics::Role::STATIC_TEXT:
+      return "STATIC_TEXT";
+    case fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH:
+      return "TOGGLE_SWITCH";
     default:
       return "Default";
   }
