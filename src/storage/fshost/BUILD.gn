@@ -127,10 +127,7 @@ source_set("metrics") {
 }
 
 source_set("block-watcher") {
-  configs += [
-    "//build/unification/config:zircon-migrated",
-    "//build/config:all_source",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "block-device-manager.cc",
     "block-device.cc",
@@ -173,6 +170,7 @@ source_set("block-watcher") {
     "//src/lib/loader_service",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/minfs",
+    "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fit",
@@ -342,6 +340,7 @@ test("fshost_integration_test") {
     "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/blobfs",
     "//src/storage/minfs",
+    "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",

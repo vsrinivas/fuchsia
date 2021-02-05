@@ -99,6 +99,9 @@
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.BlockWatcher",
                 "fuchsia.fshost.Loader",
+
+                // This service is forwarded from blobfs when blobfs is present.
+                "fuchsia.update.verify.BlobfsVerifier",
             ],
         },
     ],
@@ -201,6 +204,7 @@
                 "fuchsia.fshost.BlockWatcher",
                 "fuchsia.fshost.Filesystems",
                 "fuchsia.fshost.Registry",
+                "fuchsia.update.verify.BlobfsVerifier",
             ],
             from: "self",
         },

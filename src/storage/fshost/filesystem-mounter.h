@@ -31,8 +31,11 @@ class FilesystemMounter {
 
   void FuchsiaStart() const { fshost_.FuchsiaStart(); }
 
-  zx_status_t InstallFs(const char* path, zx::channel h) {
-    return fshost_.InstallFs(path, std::move(h));
+  // Installs the filesystem rooted at |root_directory| at |point|.
+  // |root_directory| can be an arbitrary Directory connection (although the fact that the) peer is
+  // a directory is not verified).
+  zx_status_t InstallFs(FsManager::MountPoint point, zx::channel root_directory) {
+    return fshost_.InstallFs(point, std::move(root_directory));
   }
 
   bool Netbooting() const { return config_.netboot(); }
@@ -80,7 +83,8 @@ class FilesystemMounter {
  private:
   // Performs the mechanical action of mounting a filesystem, without
   // validating the type of filesystem being mounted.
-  zx::status<zx::channel> MountFilesystem(const char* mount_path, const char* binary,
+  // Returns a channel to the filesystem's root export directory.
+  zx::status<zx::channel> MountFilesystem(FsManager::MountPoint point, const char* binary,
                                           const mount_options_t& options,
                                           zx::channel block_device_client, uint32_t fs_flags);
 

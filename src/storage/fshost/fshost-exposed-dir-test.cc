@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/update/verify/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <sys/statfs.h>
 #include <zircon/device/block.h>
@@ -26,9 +27,9 @@ constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kSliceSize = 32'768;
 constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
 
-using FshostDiagnosticsTest = FshostIntegrationTest;
+using FshostExposedDirTest = FshostIntegrationTest;
 
-TEST_F(FshostDiagnosticsTest, DiagnosticsDirHasBlobfsEntry) {
+TEST_F(FshostExposedDirTest, ExposesDiagnosticsAndServicesForBlobfs) {
   PauseWatcher();  // Pause whilst we create a ramdisk.
 
   // Create a ramdisk with an empty blobfs partitition.
@@ -79,9 +80,16 @@ TEST_F(FshostDiagnosticsTest, DiagnosticsDirHasBlobfsEntry) {
             ZX_OK);
   ASSERT_TRUE(export_dir_fd);
 
+  std::string svc_name = "diagnostics/blobfs";
   fbl::unique_fd blobfs_diag_dir_fd(
-      openat(export_dir_fd.get(), "diagnostics/blobfs", fuchsia::io::OPEN_FLAG_DESCRIBE, 0644));
-  ASSERT_TRUE(blobfs_diag_dir_fd);
+      openat(export_dir_fd.get(), svc_name.c_str(), fuchsia::io::OPEN_FLAG_DESCRIBE, 0644));
+  EXPECT_TRUE(blobfs_diag_dir_fd) << "failed to open " << svc_name << ": " << strerror(errno);
+
+  svc_name = llcpp::fuchsia::update::verify::BlobfsVerifier::Name;
+  fbl::unique_fd blobfs_health_check_dir_fd(
+      openat(export_dir_fd.get(), svc_name.c_str(), fuchsia::io::OPEN_FLAG_DESCRIBE, 0644));
+  EXPECT_TRUE(blobfs_health_check_dir_fd)
+      << "failed to open " << svc_name << ": " << strerror(errno);
 }
 
 }  // namespace

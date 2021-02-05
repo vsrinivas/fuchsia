@@ -17,7 +17,9 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <iterator>
+#include <map>
 
 #include <fs/vfs.h>
 
@@ -53,9 +55,37 @@ class FsManager {
   // "/system" has been mounted.
   void FuchsiaStart() { delayed_outdir_.Start(); }
 
-  // Pins a handle to a remote filesystem on one of the paths specified
-  // by |kMountPoints|.
-  zx_status_t InstallFs(const char* path, zx::channel h);
+  // MountPoint is a possible location that a filesystem can be installed at.
+  enum class MountPoint {
+    kUnknown = 0,
+    kBin,
+    kData,
+    kVolume,
+    kSystem,
+    kInstall,
+    kBlob,
+    kPkgfs,
+    kFactory,
+    kDurable,
+  };
+
+  // Returns the fully qualified for the given mount point.
+  static const char* MountPointPath(MountPoint);
+
+  constexpr static std::array<MountPoint, 9> kAllMountPoints{
+      MountPoint::kBin,    MountPoint::kData,    MountPoint::kVolume,
+      MountPoint::kSystem, MountPoint::kInstall, MountPoint::kBlob,
+      MountPoint::kPkgfs,  MountPoint::kFactory, MountPoint::kDurable,
+  };
+
+  // Installs the filesystem with |root_directory| at |mount_point| (which must not already have an
+  // installed filesystem).
+  // |root_directory| should be a connection to a Directory, but this is not verified.
+  zx_status_t InstallFs(MountPoint mount_point, zx::channel root_directory);
+
+  // Stores |export_root_directory| for the filesystem installed at |mount_point|.
+  // This must be called before any services are forwarded (e.g. |ForwardFsService()|).
+  zx_status_t SetFsExportRoot(MountPoint mount_point, zx::channel export_root_directory);
 
   // Serves connection to the root directory ("/") on |server|.
   zx_status_t ServeRoot(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server);
@@ -80,10 +110,14 @@ class FsManager {
   void WaitForShutdown();
 
   // Creates a new subdirectory in the fshost diagnostics directory by the name of
-  // |diagnostics_dir_name|, which forwards the diagnostics directory exposed in the given
-  // filesystem |export_root|.
-  zx_status_t ForwardFsDiagnosticsDirectory(const char* diagnostics_dir_name,
-                                            zx::channel fs_export_root);
+  // |diagnostics_dir_name|, which forwards the diagnostics dir exposed in the export root directory
+  // of the given filesystem previously installed via |InstallFs()| at |point|.
+  zx_status_t ForwardFsDiagnosticsDirectory(MountPoint point, const char* diagnostics_dir_name);
+
+  // Creates a new subdirectory in the fshost svc directory by the name of
+  // |service_name|, which forwards the service by the same name exposed in the outgoing service
+  // directory of the given filesystem previously installed via |InstallFs()| at |point|.
+  zx_status_t ForwardFsService(MountPoint point, const char* service_name);
 
  private:
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> dir_request,
@@ -93,9 +127,14 @@ class FsManager {
   zx_status_t SetupLifecycleServer(
       fidl::ServerEnd<::llcpp::fuchsia::process::lifecycle::Lifecycle> lifecycle_request);
 
-  static constexpr const char* kMountPoints[] = {
-      "/bin", "/data", "/volume", "/system", "/install", "/blob", "/pkgfs", "/factory", "/durable"};
-  fbl::RefPtr<fs::Vnode> mount_nodes[std::size(kMountPoints)];
+  struct MountNode {
+    // Set by |InstallFs()|.
+    zx::channel root_export_dir;
+    fbl::RefPtr<fs::Vnode> root_directory;
+
+    bool Installed() const { return root_export_dir.is_valid(); }
+  };
+  std::map<MountPoint, MountNode> mount_nodes_;
 
   // The Root VFS manages the following filesystems:
   // - The global root filesystem (including the mount points)
@@ -120,6 +159,9 @@ class FsManager {
 
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
   std::shared_ptr<devmgr::FshostBootArgs> boot_args_;
+
+  // The outgoing service directory for fshost.
+  fbl::RefPtr<fs::PseudoDir> svc_dir_;
 
   // TODO(fxbug.dev/39588): delete this
   // A RemoteDir in the outgoing directory that ignores requests until Start is

@@ -5,11 +5,14 @@
 #include "filesystem-mounter.h"
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/update/verify/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <zircon/status.h>
+
+#include <fbl/ref_ptr.h>
 
 #include "fdio.h"
 #include "fshost-fs-provider.h"
@@ -30,7 +33,7 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
                          fs_flags);
 }
 
-zx::status<zx::channel> FilesystemMounter::MountFilesystem(const char* mount_path,
+zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint point,
                                                            const char* binary,
                                                            const mount_options_t& options,
                                                            zx::channel block_device_client,
@@ -88,13 +91,12 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(const char* mount_pat
   if (status != ZX_OK) {
     return zx::error(status);
   }
-
-  status = InstallFs(mount_path, std::move(root));
+  status = InstallFs(point, std::move(root));
   if (status != ZX_OK) {
     return zx::error(status);
   }
 
-  return zx::success(std::move(client));
+  return zx::ok(std::move(client));
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_options_t& options) {
@@ -102,8 +104,8 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret =
-      MountFilesystem(PATH_DATA, "/pkg/bin/minfs", options, std::move(block_device), FS_SVC);
+  zx::status ret = MountFilesystem(FsManager::MountPoint::kData, "/pkg/bin/minfs", options,
+                                   std::move(block_device), FS_SVC);
   if (ret.is_error()) {
     return ret.error_value();
   }
@@ -118,8 +120,8 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret =
-      MountFilesystem(PATH_INSTALL, "/pkg/bin/minfs", options, std::move(block_device), FS_SVC);
+  zx::status ret = MountFilesystem(FsManager::MountPoint::kInstall, "/pkg/bin/minfs", options,
+                                   std::move(block_device), FS_SVC);
   if (ret.is_error()) {
     return ret.error_value();
   }
@@ -134,8 +136,8 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret =
-      MountFilesystem(PATH_FACTORY, "/pkg/bin/factoryfs", options, std::move(block_device), FS_SVC);
+  zx::status ret = MountFilesystem(FsManager::MountPoint::kFactory, "/pkg/bin/factoryfs", options,
+                                   std::move(block_device), FS_SVC);
   if (ret.is_error()) {
     return ret.error_value();
   }
@@ -150,8 +152,8 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret =
-      MountFilesystem(PATH_DURABLE, "/pkg/bin/minfs", options, std::move(block_device), FS_SVC);
+  zx::status ret = MountFilesystem(FsManager::MountPoint::kDurable, "/pkg/bin/minfs", options,
+                                   std::move(block_device), FS_SVC);
   if (ret.is_error()) {
     return ret.error_value();
   }
@@ -174,16 +176,25 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
     return status;
   }
 
-  zx::status ret = MountFilesystem(PATH_BLOB, "/pkg/bin/blobfs", options, std::move(block_device),
-                                   FS_SVC | FS_SVC_BLOBFS);
+  zx::status ret = MountFilesystem(FsManager::MountPoint::kBlob, "/pkg/bin/blobfs", options,
+                                   std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
   if (ret.is_error()) {
     return ret.error_value();
   }
-  zx::channel export_root = std::move(ret.value());
+  status = fshost_.SetFsExportRoot(FsManager::MountPoint::kBlob, std::move(ret).value());
+  if (status != ZX_OK) {
+    return status;
+  }
 
-  status = fshost_.ForwardFsDiagnosticsDirectory("blobfs", std::move(export_root));
+  status = fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kBlob, "blobfs");
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
+                   << zx_status_get_string(status);
+  }
+  status = fshost_.ForwardFsService(FsManager::MountPoint::kBlob,
+                                    llcpp::fuchsia::update::verify::BlobfsVerifier::Name);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to forward BlobfsVerifier service for blobfs: "
                    << zx_status_get_string(status);
   }
 
@@ -201,8 +212,8 @@ void FilesystemMounter::TryMountPkgfs() {
   // TODO(fxbug.dev/38621): In the future, this mechanism may be replaced with a feed-forward
   // design to the mounted filesystems.
   if (!pkgfs_mounted_ && blob_mounted_ && (data_mounted_ || !WaitForData())) {
-    // Historically we don't retry if pkgfs fails to launch, which seems reasonable since the cause
-    // of a launch failure is unlikely to be transient.
+    // Historically we don't retry if pkgfs fails to launch, which seems reasonable since the
+    // cause of a launch failure is unlikely to be transient.
     // TODO(fxbug.dev/58363): fshost should handle failures to mount critical filesystems better.
     auto status = LaunchPkgfs(this);
     if (status.is_error()) {

@@ -33,6 +33,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 #include <fs/remote_dir.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
@@ -92,14 +93,14 @@ zx_status_t FsManager::SetupOutgoingDirectory(
   // registry.
 
   // Add loader and admin services to the vfs
-  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
   if (loader) {
     // This service name is breaking the convention whereby the directory entry
     // name matches the protocol name. This is an implementation of
     // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
     // this implementation comes from fshost.
-    svc_dir->AddEntry(
+    svc_dir_->AddEntry(
         "fuchsia.fshost.Loader", fbl::MakeRefCounted<fs::Service>([loader](zx::channel chan) {
           auto status = loader->Bind(std::move(chan));
           if (status.is_error()) {
@@ -108,13 +109,13 @@ zx_status_t FsManager::SetupOutgoingDirectory(
           return status.status_value();
         }));
   }
-  svc_dir->AddEntry(llcpp::fuchsia::fshost::Admin::Name,
-                    AdminServer::Create(this, global_loop_->dispatcher()));
+  svc_dir_->AddEntry(llcpp::fuchsia::fshost::Admin::Name,
+                     AdminServer::Create(this, global_loop_->dispatcher()));
 
-  svc_dir->AddEntry(llcpp::fuchsia::fshost::BlockWatcher::Name,
-                    BlockWatcherServer::Create(global_loop_->dispatcher(), watcher));
+  svc_dir_->AddEntry(llcpp::fuchsia::fshost::BlockWatcher::Name,
+                     BlockWatcherServer::Create(global_loop_->dispatcher(), watcher));
 
-  outgoing_dir->AddEntry("svc", std::move(svc_dir));
+  outgoing_dir->AddEntry("svc", svc_dir_);
 
   // Add /fs to the outgoing vfs
   zx::channel filesystems_client, filesystems_server;
@@ -185,8 +186,8 @@ zx_status_t FsManager::Initialize(
   if ((status = global_root_->Create("tmp", S_IFDIR, &vn)) != ZX_OK) {
     return status;
   }
-  for (unsigned n = 0; n < std::size(kMountPoints); n++) {
-    auto open_result = root_vfs_->Open(global_root_, std::string_view(kMountPoints[n]),
+  for (const auto& point : kAllMountPoints) {
+    auto open_result = root_vfs_->Open(global_root_, std::string_view(MountPointPath(point)),
                                        fs::VnodeConnectionOptions::ReadWrite().set_create(),
                                        fs::Rights::ReadWrite(), S_IFDIR);
     if (open_result.is_error()) {
@@ -194,7 +195,7 @@ zx_status_t FsManager::Initialize(
     }
 
     ZX_ASSERT(open_result.is_ok());
-    mount_nodes[n] = std::move(open_result.ok().vnode);
+    mount_nodes_[point].root_directory = std::move(open_result.ok().vnode);
   }
 
   auto open_result =
@@ -225,13 +226,26 @@ zx_status_t FsManager::Initialize(
 
 void FsManager::FlushMetrics() { mutable_metrics()->Flush(); }
 
-zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
-  for (unsigned n = 0; n < std::size(kMountPoints); n++) {
-    if (!strcmp(path, kMountPoints[n])) {
-      return root_vfs_->InstallRemote(mount_nodes[n], fs::MountChannel(std::move(h)));
-    }
+zx_status_t FsManager::InstallFs(MountPoint point, zx::channel root_directory) {
+  if (mount_nodes_.find(point) == mount_nodes_.end()) {
+    // The map should have been fully initialized.
+    return ZX_ERR_BAD_STATE;
   }
-  return ZX_ERR_NOT_FOUND;
+  if (zx_status_t status = root_vfs_->InstallRemote(mount_nodes_[point].root_directory,
+                                                    fs::MountChannel(std::move(root_directory)));
+      status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t FsManager::SetFsExportRoot(MountPoint point, zx::channel export_root_directory) {
+  if (mount_nodes_.find(point) == mount_nodes_.end()) {
+    // The map should have been fully initialized.
+    return ZX_ERR_BAD_STATE;
+  }
+  mount_nodes_[point].root_export_dir = std::move(export_root_directory);
+  return ZX_OK;
 }
 
 zx_status_t FsManager::ServeRoot(fidl::ServerEnd<::llcpp::fuchsia::io::Directory> server) {
@@ -265,25 +279,80 @@ bool FsManager::IsShutdown() { return sync_completion_signaled(&shutdown_); }
 
 void FsManager::WaitForShutdown() { sync_completion_wait(&shutdown_, ZX_TIME_INFINITE); }
 
-zx_status_t FsManager::ForwardFsDiagnosticsDirectory(const char* diagnostics_dir_name,
-                                                     zx::channel fs_export_root) {
+const char* FsManager::MountPointPath(FsManager::MountPoint point) {
+  switch (point) {
+    case MountPoint::kUnknown:
+      return "";
+    case MountPoint::kBin:
+      return "/bin";
+    case MountPoint::kData:
+      return "/data";
+    case MountPoint::kVolume:
+      return "/volume";
+    case MountPoint::kSystem:
+      return "/system";
+    case MountPoint::kInstall:
+      return "/install";
+    case MountPoint::kBlob:
+      return "/blob";
+    case MountPoint::kPkgfs:
+      return "/pkgfs";
+    case MountPoint::kFactory:
+      return "/factory";
+    case MountPoint::kDurable:
+      return "/durable";
+  }
+}
+
+zx_status_t FsManager::ForwardFsDiagnosticsDirectory(MountPoint point,
+                                                     const char* diagnostics_dir_name) {
   // The diagnostics directory may not be initialized in tests.
   if (diagnostics_dir_ == nullptr) {
     return ZX_ERR_INTERNAL;
   }
+  if (point == MountPoint::kUnknown) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (!mount_nodes_[point].root_export_dir) {
+    FX_LOGS(ERROR) << "Can't forward diagnostics dir for " << MountPointPath(point)
+                   << ", export root directory was not set";
+    return ZX_ERR_BAD_STATE;
+  }
 
-  auto inspect_node = fbl::MakeRefCounted<fs::Service>(
-      [fs_export_root = std::move(fs_export_root)](zx::channel request) {
-        std::string name = std::string("diagnostics/") + fuchsia::inspect::Tree::Name_;
-        return fdio_service_connect_at(fs_export_root.get(), name.c_str(), request.release());
-      });
-
+  auto inspect_node = fbl::MakeRefCounted<fs::Service>([this, point](zx::channel request) {
+    std::string name = std::string("diagnostics/") + fuchsia::inspect::Tree::Name_;
+    return fdio_service_connect_at(mount_nodes_[point].root_export_dir.get(), name.c_str(),
+                                   request.release());
+  });
   auto fs_diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   zx_status_t status = fs_diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_node);
   if (status != ZX_OK) {
     return status;
   }
   return diagnostics_dir_->AddEntry(diagnostics_dir_name, fs_diagnostics_dir);
+}
+
+zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_name) {
+  // The outgoing service directory may not be initialized in tests.
+  if (svc_dir_ == nullptr) {
+    return ZX_ERR_INTERNAL;
+  }
+  if (point == MountPoint::kUnknown) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (!mount_nodes_[point].root_export_dir) {
+    FX_LOGS(ERROR) << "Can't forward service for " << MountPointPath(point)
+                   << ", export root directory was not set";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  auto service_node =
+      fbl::MakeRefCounted<fs::Service>([this, point, service_name](zx::channel request) {
+        std::string name = std::string("svc/") + service_name;
+        return fdio_service_connect_at(mount_nodes_[point].root_export_dir.get(), name.c_str(),
+                                       request.release());
+      });
+  return svc_dir_->AddEntry(service_name, std::move(service_node));
 }
 
 }  // namespace devmgr
