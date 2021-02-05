@@ -24,22 +24,33 @@ type Client interface {
 
 // ClientImpl implements the Client interface; it is exported for testing.
 type ClientImpl struct {
-	addr *net.UDPAddr
-	conn *net.UDPConn
-	mu   *sync.Mutex
+	addr       *net.UDPAddr
+	conn       *net.UDPConn
+	mu         *sync.Mutex
+	blockSize  uint16
+	windowSize uint16
 }
 
 // NewClient returns a Client which can be used to Read or Write
-// files to/from a TFTP remote.
-func NewClient(addr *net.UDPAddr) (*ClientImpl, error) {
+// files to/from a TFTP remote. A blockSize and windowSize of 0 will use the
+// default values defined in tftp.go.
+func NewClient(addr *net.UDPAddr, blockSize, windowSize uint16) (*ClientImpl, error) {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6zero})
 	if err != nil {
 		return nil, err
 	}
+	if blockSize == 0 {
+		blockSize = defaultBlockSize
+	}
+	if windowSize == 0 {
+		windowSize = defaultWindowSize
+	}
 	return &ClientImpl{
-		addr: addr,
-		conn: conn,
-		mu:   &sync.Mutex{},
+		addr:       addr,
+		conn:       conn,
+		mu:         &sync.Mutex{},
+		blockSize:  blockSize,
+		windowSize: windowSize,
 	}, nil
 }
 
@@ -52,8 +63,8 @@ func (c *ClientImpl) newTransfer(opCode uint8, filename string) *transfer {
 		opCode:   opCode,
 		opts: &options{
 			timeout:    timeout,
-			blockSize:  blockSize,
-			windowSize: windowSize,
+			blockSize:  c.blockSize,
+			windowSize: c.windowSize,
 		},
 	}
 	return t

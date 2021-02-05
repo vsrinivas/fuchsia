@@ -20,7 +20,7 @@ const (
 
 const (
 	// Ethernet MTU, less the TFTP, UDP and IP header lengths (RFC 2348).
-	blockSize = 1428 // default block size
+	defaultBlockSize = 1428 // default block size
 	// Arbitrary.
 	timeout = 1 * time.Second // default udp client timeout
 	// Arbitrary.
@@ -28,7 +28,7 @@ const (
 	// Point at where window size gains begin to tail off (RFC 7440)
 	// A higher window size begins to cause increased NACKs over
 	// lossy connections.
-	windowSize = 16 // default window size
+	defaultWindowSize = 16 // default window size
 )
 
 const (

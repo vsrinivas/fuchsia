@@ -153,7 +153,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 			IP:   addr.IP,
 			Port: tftp.ClientPort,
 			Zone: addr.Zone,
-		})
+		}, 0, 0)
 		if err != nil {
 			return err
 		}

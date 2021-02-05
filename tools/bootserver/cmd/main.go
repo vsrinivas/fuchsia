@@ -25,8 +25,6 @@ import (
 
 const (
 	bootloaderVersion             = "0.7.22"
-	defaultTftpBlockSize          = 1428
-	defaultTftpWindowSize         = 256
 	defaultMicrosecBetweenPackets = 20
 	nodenameEnvKey                = "ZIRCON_NODENAME"
 	retryDelay                    = time.Second
@@ -102,16 +100,16 @@ func init() {
 
 	flag.BoolVar(&allowZedbootVersionMismatch, "allow-zedboot-version-mismatch", false, "warn on zedboot version mismatch rather than fail")
 	flag.StringVar(&authorizedKeysFile, "authorized-keys", "", "use the supplied file as an authorized_keys file")
+	flag.IntVar(&tftpBlockSize, "b", 0, "tftp block size")
 	flag.StringVar(&boardName, "board_name", "", "name of the board files are meant for")
 	flag.BoolVar(&bootOnce, "1", true, "only boot once, then exit")
 	flag.BoolVar(&failFast, "fail-fast", false, "exit on first error")
 	flag.BoolVar(&failFastZedbootVersionMismatch, "fail-fast-if-version-mismatch", false, "error if zedboot version does not match")
+	flag.IntVar(&windowSize, "w", 0, "tftp window size, ignored with --netboot")
 
 	//  TODO(fxbug.dev/38517): Implement the following unsupported flags.
 	flag.StringVar(&bootIpv6, "a", "", "only boot device with this IPv6 address")
-	flag.IntVar(&tftpBlockSize, "b", defaultTftpBlockSize, "tftp block size")
 	flag.IntVar(&packetInterval, "i", defaultMicrosecBetweenPackets, "number of microseconds between packets; ignored with --tftp")
-	flag.IntVar(&windowSize, "w", defaultTftpWindowSize, "tftp window size, ignored with --netboot")
 	// We currently always default to tftp
 	flag.BoolVar(&useNetboot, "netboot", false, "use the netboot protocol")
 	flag.BoolVar(&useTftp, "tftp", true, "use the tftp protocol (default)")
@@ -327,7 +325,7 @@ func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Imag
 		Port: tftp.ClientPort,
 		Zone: addr.Zone,
 	}
-	client, err := tftp.NewClient(udpAddr)
+	client, err := tftp.NewClient(udpAddr, uint16(tftpBlockSize), uint16(windowSize))
 	if err != nil {
 		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
 	}

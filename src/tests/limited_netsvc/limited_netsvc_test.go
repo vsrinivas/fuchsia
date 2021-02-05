@@ -127,7 +127,7 @@ func attemptTftp(t *testing.T, i *emulator.Instance, shouldWork bool) {
 		IP:   addr.IP,
 		Port: tftp.ClientPort,
 		Zone: addr.Zone,
-	})
+	}, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 		return
