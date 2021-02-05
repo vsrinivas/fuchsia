@@ -17,13 +17,13 @@
 #include <fbl/mutex.h>
 
 namespace power {
-class PowerDeviceComponentChild;
+class PowerDeviceFragmentChild;
 class PowerDevice;
 using PowerDeviceType = ddk::Device<PowerDevice, ddk::Unbindable, ddk::Multibindable>;
 
 // Each power domain is modelled to be a power device and the power device class talks to
 // a driver that implements ZX_PROTOCOL_POWER_IMPL, passing in the index of this power domain.
-// For each dependent composite device of a PowerDevice(power domain), a PowerDeviceComponentChild
+// For each dependent composite device of a PowerDevice(power domain), a PowerDeviceFragmentChild
 // is created.
 class PowerDevice : public PowerDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_POWER> {
  public:
@@ -45,22 +45,22 @@ class PowerDevice : public PowerDeviceType, public ddk::EmptyProtocol<ZX_PROTOCO
   zx_status_t DdkCloseProtocolSessionMultibindable(void* child_ctx);
   void DdkRelease();
 
-  zx_status_t RegisterPowerDomain(uint64_t component_device_id, uint32_t min_needed_voltage_uV,
+  zx_status_t RegisterPowerDomain(uint64_t fragment_device_id, uint32_t min_needed_voltage_uV,
                                   uint32_t max_supported_voltage_uV);
-  zx_status_t UnregisterPowerDomain(uint64_t component_device_id);
-  zx_status_t GetPowerDomainStatus(uint64_t component_device_id, power_domain_status_t* out_status);
-  zx_status_t GetSupportedVoltageRange(uint64_t component_device_id, uint32_t* min_voltage,
+  zx_status_t UnregisterPowerDomain(uint64_t fragment_device_id);
+  zx_status_t GetPowerDomainStatus(uint64_t fragment_device_id, power_domain_status_t* out_status);
+  zx_status_t GetSupportedVoltageRange(uint64_t fragment_device_id, uint32_t* min_voltage,
                                        uint32_t* max_voltage);
-  zx_status_t RequestVoltage(uint64_t component_device_id, uint32_t voltage,
+  zx_status_t RequestVoltage(uint64_t fragment_device_id, uint32_t voltage,
                              uint32_t* actual_voltage);
-  zx_status_t GetCurrentVoltage(uint64_t component_device_id, uint32_t index,
+  zx_status_t GetCurrentVoltage(uint64_t fragment_device_id, uint32_t index,
                                 uint32_t* current_voltage);
-  zx_status_t WritePmicCtrlReg(uint64_t component_device_id, uint32_t reg_addr, uint32_t value);
-  zx_status_t ReadPmicCtrlReg(uint64_t component_device_id, uint32_t reg_addr, uint32_t* out_value);
+  zx_status_t WritePmicCtrlReg(uint64_t fragment_device_id, uint32_t reg_addr, uint32_t value);
+  zx_status_t ReadPmicCtrlReg(uint64_t fragment_device_id, uint32_t reg_addr, uint32_t* out_value);
   uint32_t GetDependentCount();
 
  private:
-  PowerDeviceComponentChild* GetComponentChildLocked(uint64_t component_device_id)
+  PowerDeviceFragmentChild* GetFragmentChildLocked(uint64_t fragment_device_id)
       __TA_REQUIRES(power_device_lock_);
   zx_status_t GetSuitableVoltageLocked(uint32_t voltage, uint32_t* suitable_voltage)
       __TA_REQUIRES(power_device_lock_);
@@ -69,7 +69,7 @@ class PowerDevice : public PowerDeviceType, public ddk::EmptyProtocol<ZX_PROTOCO
   const ddk::PowerImplProtocolClient power_impl_;
   const ddk::PowerProtocolClient parent_power_;
   fbl::Mutex power_device_lock_;
-  std::vector<std::unique_ptr<PowerDeviceComponentChild>> children_;
+  std::vector<std::unique_ptr<PowerDeviceFragmentChild>> children_;
   // Min supported voltage of this domain
   uint32_t min_voltage_uV_;
   // Max supported voltage of this domain
@@ -82,12 +82,12 @@ class PowerDevice : public PowerDeviceType, public ddk::EmptyProtocol<ZX_PROTOCO
 // an object of this class is created. This class maintains the context that is specific
 // to the composite device. All the power protocol ops made by the composite device first
 // arrive on this calss and are forwarded to the PowerDevice with the corresponding composite
-// device context(component_device_id).
-class PowerDeviceComponentChild
-    : public ddk::PowerProtocol<PowerDeviceComponentChild, ddk::base_protocol> {
+// device context(fragment_device_id).
+class PowerDeviceFragmentChild
+    : public ddk::PowerProtocol<PowerDeviceFragmentChild, ddk::base_protocol> {
  public:
-  explicit PowerDeviceComponentChild(uint64_t component_device_id, PowerDevice* parent)
-      : component_device_id_(component_device_id), power_device_(parent) {}
+  explicit PowerDeviceFragmentChild(uint64_t fragment_device_id, PowerDevice* parent)
+      : fragment_device_id_(fragment_device_id), power_device_(parent) {}
 
   zx_status_t PowerRegisterPowerDomain(uint32_t min_needed_voltage_uV,
                                        uint32_t max_supported_voltage_uV);
@@ -98,7 +98,7 @@ class PowerDeviceComponentChild
   zx_status_t PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage);
   zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
   zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
-  uint64_t component_device_id() const { return component_device_id_; }
+  uint64_t fragment_device_id() const { return fragment_device_id_; }
   power_protocol_ops_t* ops() { return &power_protocol_ops_; }
   uint32_t min_needed_voltage_uV() const { return min_needed_voltage_uV_; }
   uint32_t max_supported_voltage_uV() const { return max_supported_voltage_uV_; }
@@ -108,7 +108,7 @@ class PowerDeviceComponentChild
   void set_registered(bool value) { registered_ = value; }
 
  private:
-  uint64_t component_device_id_;
+  uint64_t fragment_device_id_;
   PowerDevice* power_device_;
   uint32_t min_needed_voltage_uV_ = 0;
   uint32_t max_supported_voltage_uV_ = 0;
