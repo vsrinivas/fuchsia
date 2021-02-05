@@ -160,7 +160,8 @@ TEST(ModularConfigXdr, SessionmgrWriteDefaultValues) {
       "session_agents": null,
       "component_args": null,
       "agent_service_index": null,
-      "restart_session_on_agent_crash": null
+      "restart_session_on_agent_crash": null,
+      "disable_agent_restart_on_crash": false
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
@@ -186,6 +187,7 @@ TEST(ModularConfigXdr, SessionmgrReadDefaultValues) {
   EXPECT_EQ(0u, read_config.startup_agents().size());
   EXPECT_EQ(0u, read_config.session_agents().size());
   EXPECT_EQ(0u, read_config.restart_session_on_agent_crash().size());
+  EXPECT_FALSE(read_config.disable_agent_restart_on_crash());
 }
 
 // Tests that values are set correctly for SessionmgrConfig when reading JSON and
@@ -223,7 +225,8 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
       ],
       "restart_session_on_agent_crash": [
         "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
-      ]
+      ],
+      "disable_agent_restart_on_crash": true
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
@@ -234,6 +237,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   write_config.set_enable_cobalt(false);
   write_config.mutable_startup_agents()->push_back(kStartupAgentUrl);
   write_config.mutable_session_agents()->push_back(kSessionAgentUrl);
+  write_config.set_disable_agent_restart_on_crash(true);
   fuchsia::modular::session::AppConfig component_arg;
   component_arg.set_url(kAgentUrl);
   component_arg.mutable_args()->push_back(kAgentComponentArg);
@@ -265,6 +269,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   EXPECT_EQ(kAgentServiceName, read_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(kAgentUrl, read_config.agent_service_index().at(0).agent_url());
   EXPECT_EQ(kSessionAgentUrl, read_config.restart_session_on_agent_crash().at(0));
+  EXPECT_TRUE(read_config.disable_agent_restart_on_crash());
 }
 
 // Tests that default values are set correctly for ModularConfig when reading an empty config.
@@ -308,7 +313,8 @@ TEST(ModularConfigXdr, ModularWriteDefaultValues) {
         "session_agents": [],
         "component_args": [],
         "agent_service_index": [],
-        "restart_session_on_agent_crash": []
+        "restart_session_on_agent_crash": [],
+        "disable_agent_restart_on_crash": false
       }
     })";
   rapidjson::Document expected_json_doc;
@@ -354,7 +360,8 @@ TEST(ModularConfigXdr, ModularReadWriteValues) {
         "session_agents": null,
         "component_args": null,
         "agent_service_index": null,
-        "restart_session_on_agent_crash": null
+        "restart_session_on_agent_crash": null,
+        "disable_agent_restart_on_crash": false
       }
     })";
   rapidjson::Document expected_json_doc;

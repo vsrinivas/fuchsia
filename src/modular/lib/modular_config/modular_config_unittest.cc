@@ -212,6 +212,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   agent_entry.set_agent_url(agent_url);
   sessionmgr_config.mutable_agent_service_index()->push_back(std::move(agent_entry));
   sessionmgr_config.mutable_restart_session_on_agent_crash()->push_back(agent_url);
+  sessionmgr_config.set_disable_agent_restart_on_crash(true);
 
   modular::ModularConfigReader::GetConfigAsString(&basemgr_config, &sessionmgr_config);
 
@@ -243,6 +244,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   EXPECT_EQ(agent_service_name, sessionmgr_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(agent_url, sessionmgr_config.agent_service_index().at(0).agent_url());
   EXPECT_EQ(agent_url, sessionmgr_config.restart_session_on_agent_crash().at(0));
+  EXPECT_TRUE(sessionmgr_config.disable_agent_restart_on_crash());
 }
 
 // Test that ModularConfigReader accepts JSON documents that contain comments
@@ -359,7 +361,8 @@ TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
         "session_agents": [],
         "component_args": [],
         "agent_service_index": [],
-        "restart_session_on_agent_crash": []
+        "restart_session_on_agent_crash": [],
+        "disable_agent_restart_on_crash": false
       }
     })";
   rapidjson::Document expected_json_doc;
@@ -373,5 +376,6 @@ TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
   config_json_doc.Parse(config_json);
   EXPECT_FALSE(config_json_doc.HasParseError());
 
-  EXPECT_EQ(expected_json_doc, config_json_doc);
+  EXPECT_EQ(expected_json_doc, config_json_doc)
+      << "Expected: " << kExpectedJson << "\nActual: " << config_json;
 }

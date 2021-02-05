@@ -270,6 +270,11 @@ void XdrSessionmgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kAgentServiceIndex, data->mutable_agent_service_index(),
                         XdrAgentServiceIndexEntry, has_agent_service_index,
                         std::move(default_agent_service_index));
+
+  bool has_disable_agent_restart_on_crash = data->has_disable_agent_restart_on_crash();
+  xdr->FieldWithDefault(modular_config::kDisableAgentRestartOnCrash,
+                        data->mutable_disable_agent_restart_on_crash(),
+                        has_disable_agent_restart_on_crash, false);
 }
 
 }  // namespace modular

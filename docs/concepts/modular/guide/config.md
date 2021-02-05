@@ -175,9 +175,13 @@ for instructing `basemgr` to launch a session with a complete configuration file
     - `service_name`: The name of a service offered by `agent_url`.
     - `agent_url`: A fuchsia component url that specifies which agent/shell will
       provide the named service.
-- `restart_session_on_agent_crash`: array (optional)
+- `restart_session_on_agent_crash`: **array** _(optional)_
   - A list of agent URLs that will cause the session to be restarted
     when they terminate unexpectedly. If an agent is not in this list,
     sessionmgr will restart it individually, preserving the session.
 
     The session shell is automatically added to this list.
+- `disable_agent_restart_on_crash`: **boolean** _(optional)_
+  - When set to true, disables any automatic restarts of agents listed in
+    `session_agents` if they crash.
+  - **default**: `false`
