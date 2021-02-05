@@ -119,6 +119,13 @@ func TestParseArgs(t *testing.T) {
 				isRelease: true,
 			},
 		},
+		{
+			name: "fint params path",
+			args: []string{"--fint-params-path", "foo.fint.textproto"},
+			expected: setArgs{
+				fintParamsPath: "foo.fint.textproto",
+			},
+		},
 	}
 
 	for _, tc := range testCases {

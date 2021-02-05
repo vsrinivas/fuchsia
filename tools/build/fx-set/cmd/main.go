@@ -60,9 +60,21 @@ func mainImpl(ctx context.Context) error {
 		}
 	}
 
-	staticSpec, err := constructStaticSpec(checkoutDir, args)
-	if err != nil {
-		return err
+	var staticSpec *fintpb.Static
+	if args.fintParamsPath == "" {
+		staticSpec, err = constructStaticSpec(checkoutDir, args)
+		if err != nil {
+			return err
+		}
+	} else {
+		path := args.fintParamsPath
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(checkoutDir, path)
+		}
+		staticSpec, err = fint.ReadStatic(path)
+		if err != nil {
+			return err
+		}
 	}
 
 	contextSpec := &fintpb.Context{
@@ -77,7 +89,8 @@ func mainImpl(ctx context.Context) error {
 }
 
 type setArgs struct {
-	verbose bool
+	verbose        bool
+	fintParamsPath string
 
 	// Flags passed to GN.
 	board            string
@@ -99,6 +112,7 @@ func parseArgs(args []string) (*setArgs, error) {
 	// Help strings don't matter because `fx set -h` uses the help text from
 	// //tools/devshell/set, which should be kept up to date with these flags.
 	flagSet.BoolVar(&cmd.verbose, "verbose", false, "")
+	flagSet.StringVar(&cmd.fintParamsPath, "fint-params-path", "", "")
 	flagSet.BoolVar(&cmd.isRelease, "release", false, "")
 	flagSet.StringSliceVar(&cmd.universePackages, "with", []string{}, "")
 	flagSet.StringSliceVar(&cmd.basePackages, "with-base", []string{}, "")
@@ -112,6 +126,12 @@ func parseArgs(args []string) (*setArgs, error) {
 
 	if err := flagSet.Parse(args); err != nil {
 		return nil, err
+	}
+
+	// If a fint params file was specified then no other arguments are required,
+	// so no need to validate them.
+	if cmd.fintParamsPath != "" {
+		return cmd, nil
 	}
 
 	if flagSet.NArg() == 0 {
