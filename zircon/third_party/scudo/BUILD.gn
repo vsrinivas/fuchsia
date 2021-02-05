@@ -7,53 +7,45 @@ variant_replaces_allocator = toolchain_variant.tags + [ "replaces-allocator" ] -
 
 assert(is_fuchsia)
 
-scudo_sources = []
-foreach(file,
-        [
-          "checksum.cpp",
-          "common.cpp",
-          "crc32_hw.cpp",
-          "flags.cpp",
-          "flags_parser.cpp",
-          "fuchsia.cpp",
-          "release.cpp",
-          "report.cpp",
-          "string_utils.cpp",
-        ]) {
-  scudo_sources += [ "src/$file" ]
-}
+scudo_sources = [
+  "src/checksum.cpp",
+  "src/common.cpp",
+  "src/crc32_hw.cpp",
+  "src/flags.cpp",
+  "src/flags_parser.cpp",
+  "src/fuchsia.cpp",
+  "src/release.cpp",
+  "src/report.cpp",
+  "src/string_utils.cpp",
+]
 
-gwp_asan_sources = []
-foreach(file,
-        [
-          "common.cpp",
-          "common.h",
-          "crash_handler.cpp",
-          "crash_handler.h",
-          "definitions.h",
-          "guarded_pool_allocator.cpp",
-          "guarded_pool_allocator.h",
-          "mutex.h",
-          "optional/backtrace.h",
-          "optional/backtrace_fuchsia.cpp",
-          "optional/segv_handler.h",
-          "optional/segv_handler_fuchsia.cpp",
-          "options.h",
-          "options.inc",
-          "platform_specific/common_fuchsia.cpp",
-          "platform_specific/guarded_pool_allocator_fuchsia.cpp",
-          "platform_specific/guarded_pool_allocator_tls.h",
-          "platform_specific/mutex_fuchsia.cpp",
-          "platform_specific/mutex_fuchsia.h",
-          "platform_specific/mutex_posix.h",
-          "platform_specific/utilities_fuchsia.cpp",
-          "stack_trace_compressor.cpp",
-          "stack_trace_compressor.h",
-          "utilities.cpp",
-          "utilities.h",
-        ]) {
-  gwp_asan_sources += [ "gwp_asan/$file" ]
-}
+gwp_asan_sources = [
+  "gwp_asan/common.cpp",
+  "gwp_asan/common.h",
+  "gwp_asan/crash_handler.cpp",
+  "gwp_asan/crash_handler.h",
+  "gwp_asan/definitions.h",
+  "gwp_asan/guarded_pool_allocator.cpp",
+  "gwp_asan/guarded_pool_allocator.h",
+  "gwp_asan/mutex.h",
+  "gwp_asan/optional/backtrace.h",
+  "gwp_asan/optional/backtrace_fuchsia.cpp",
+  "gwp_asan/optional/segv_handler.h",
+  "gwp_asan/optional/segv_handler_fuchsia.cpp",
+  "gwp_asan/options.h",
+  "gwp_asan/options.inc",
+  "gwp_asan/platform_specific/common_fuchsia.cpp",
+  "gwp_asan/platform_specific/guarded_pool_allocator_fuchsia.cpp",
+  "gwp_asan/platform_specific/guarded_pool_allocator_tls.h",
+  "gwp_asan/platform_specific/mutex_fuchsia.cpp",
+  "gwp_asan/platform_specific/mutex_fuchsia.h",
+  "gwp_asan/platform_specific/mutex_posix.h",
+  "gwp_asan/platform_specific/utilities_fuchsia.cpp",
+  "gwp_asan/stack_trace_compressor.cpp",
+  "gwp_asan/stack_trace_compressor.h",
+  "gwp_asan/utilities.cpp",
+  "gwp_asan/utilities.h",
+]
 
 # The code needs to be compiled separately for production and test use for two
 # reasons.
@@ -210,33 +202,29 @@ source_set("unittests") {
   ]
   testonly = true
 
-  scudo_test_sources = [
-    "atomic_test.cpp",
-    "bytemap_test.cpp",
-    "checksum_test.cpp",
-    "chunk_test.cpp",
-    "combined_test.cpp",
-    "flags_test.cpp",
-    "list_test.cpp",
-    "map_test.cpp",
-    "mutex_test.cpp",
-    "primary_test.cpp",
-    "quarantine_test.cpp",
-    "release_test.cpp",
-    "report_test.cpp",
-    "scudo_unit_test.h",
-    "scudo_unit_test_main.cpp",
-    "secondary_test.cpp",
-    "size_class_map_test.cpp",
-    "stats_test.cpp",
-    "strings_test.cpp",
-    "tsd_test.cpp",
-    "vector_test.cpp",
+  sources = [
+    "src/tests/atomic_test.cpp",
+    "src/tests/bytemap_test.cpp",
+    "src/tests/checksum_test.cpp",
+    "src/tests/chunk_test.cpp",
+    "src/tests/combined_test.cpp",
+    "src/tests/flags_test.cpp",
+    "src/tests/list_test.cpp",
+    "src/tests/map_test.cpp",
+    "src/tests/mutex_test.cpp",
+    "src/tests/primary_test.cpp",
+    "src/tests/quarantine_test.cpp",
+    "src/tests/release_test.cpp",
+    "src/tests/report_test.cpp",
+    "src/tests/scudo_unit_test.h",
+    "src/tests/scudo_unit_test_main.cpp",
+    "src/tests/secondary_test.cpp",
+    "src/tests/size_class_map_test.cpp",
+    "src/tests/stats_test.cpp",
+    "src/tests/strings_test.cpp",
+    "src/tests/tsd_test.cpp",
+    "src/tests/vector_test.cpp",
   ]
-  sources = []
-  foreach(file, scudo_test_sources) {
-    sources += [ "src/tests/$file" ]
-  }
 
   deps = [
     ":gwp_asan-unittests",
@@ -275,28 +263,24 @@ source_set("gwp_asan-unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  gwp_asan_test_sources = [
-    "alignment.cpp",
+  sources = [
+    "gwp_asan/tests/alignment.cpp",
 
     #"backtrace.cpp", # TODO(kostyak): enable when we have backtrace support
-    "basic.cpp",
-    "compression.cpp",
-    "crash_handler_api.cpp",
+    "gwp_asan/tests/basic.cpp",
+    "gwp_asan/tests/compression.cpp",
+    "gwp_asan/tests/crash_handler_api.cpp",
 
     #"enable_disable.cpp", # TODO(kostyak): fork() based, see if it can apply to Fuchsia
-    "harness.cpp",
-    "harness.h",
-    "iterate.cpp",
+    "gwp_asan/tests/harness.cpp",
+    "gwp_asan/tests/harness.h",
+    "gwp_asan/tests/iterate.cpp",
 
     #"late_init.cpp", # TODO(fxbug.dev/65522): flaky due to TLS pollution
-    "mutex_test.cpp",
-    "slot_reuse.cpp",
-    "thread_contention.cpp",
+    "gwp_asan/tests/mutex_test.cpp",
+    "gwp_asan/tests/slot_reuse.cpp",
+    "gwp_asan/tests/thread_contention.cpp",
   ]
-  sources = []
-  foreach(file, gwp_asan_test_sources) {
-    sources += [ "gwp_asan/tests/$file" ]
-  }
 
   deps = [ ":gwp_asan.testonly" ]
 }
