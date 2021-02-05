@@ -57,10 +57,7 @@ sdk_source_set("backend_host") {
     "logging_backend_shared.cc",
   ]
 
-  deps = [
-    ":cpp",
-    "//zircon/public/lib/fit",
-  ]
+  deps = [ ":cpp" ]
 
   public_configs = [ "//sdk/config" ]
 }
@@ -84,7 +81,6 @@ sdk_source_set("backend_legacy_fuchsia") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/syslog",
   ]
@@ -137,8 +133,8 @@ sdk_source_set("backend_fuchsia_lib") {
     "//sdk/fidl/fuchsia.diagnostics.stream",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger",
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//zircon/public/lib/fit",
   ]
 
   data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]

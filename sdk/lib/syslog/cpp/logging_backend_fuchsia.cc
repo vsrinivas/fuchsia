@@ -8,8 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fit/optional.h>
-#include <lib/fit/variant.h>
+#include <lib/stdcompat/variant.h>
 #include <lib/syslog/cpp/log_level.h>
 #include <lib/syslog/cpp/logging_backend.h>
 #include <lib/syslog/cpp/logging_backend_fuchsia_globals.h>
@@ -294,7 +293,7 @@ class LogState {
   const std::string* tags() const { return tags_; }
   size_t tag_count() const { return num_tags_; }
   // Allowed to be const because descriptor_ is mutable
-  fit::variant<zx::socket, std::ofstream>& descriptor() const { return descriptor_; }
+  cpp17::variant<zx::socket, std::ofstream>& descriptor() const { return descriptor_; }
 
  private:
   LogState(const syslog::LogSettings& settings, const std::initializer_list<std::string>& tags);
@@ -304,7 +303,7 @@ class LogState {
 
   syslog::LogSeverity min_severity_;
   zx_koid_t pid_;
-  mutable fit::variant<zx::socket, std::ofstream> descriptor_ = zx::socket();
+  mutable cpp17::variant<zx::socket, std::ofstream> descriptor_ = zx::socket();
   std::string tags_[kMaxTags];
   std::string tag_str_;
   size_t num_tags_ = 0;
@@ -400,7 +399,7 @@ bool FlushRecord(LogBuffer* buffer) {
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   auto slice = external_buffer.GetSlice();
 
-  auto& socket = fit::get<zx::socket>(GetState()->descriptor());
+  auto& socket = cpp17::get<zx::socket>(GetState()->descriptor());
   auto status = socket.write(0, slice.data(), slice.size() * sizeof(log_word_t), nullptr);
   if (status != ZX_OK) {
     AddDropped(state->dropped_count + 1);
@@ -541,14 +540,14 @@ void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, uns
     return as_str;
   };
 
-  if (fit::holds_alternative<std::ofstream>(descriptor_)) {
-    auto& file = fit::get<std::ofstream>(descriptor_);
+  if (cpp17::holds_alternative<std::ofstream>(descriptor_)) {
+    auto& file = cpp17::get<std::ofstream>(descriptor_);
     if (WriteLogToFile(&file, time, pid_, tid, severity, file_name, line, nullptr, condition,
                        msg_str())) {
       return;
     }
-  } else if (fit::holds_alternative<zx::socket>(descriptor_)) {
-    auto& socket = fit::get<zx::socket>(descriptor_);
+  } else if (cpp17::holds_alternative<zx::socket>(descriptor_)) {
+    auto& socket = cpp17::get<zx::socket>(descriptor_);
     std::string message;
     if (msg) {
       message.assign(msg);
