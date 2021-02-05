@@ -26,6 +26,7 @@ rustc_library("async-utils") {
   ]
 
   sources = [
+    "src/channel.rs",
     "src/event.rs",
     "src/fold.rs",
     "src/futures.rs",
