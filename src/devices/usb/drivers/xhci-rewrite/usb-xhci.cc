@@ -2101,7 +2101,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 // clang-format off
 ZIRCON_DRIVER_BEGIN(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1", 17)
     BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PDEV, 0),
-    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 1),
+    BI_GOTO_IF(EQ, BIND_COMPOSITE, 1, 1),
 
     // PCI binding support
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),

@@ -11,10 +11,7 @@ bind_rules("cypress_cy8cmbr3108-bind") {
   rules = "cypress_cy8cmbr3108.bind"
   output = "cypress_cy8cmbr3108-bind.h"
   tests = "tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.synaptics.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
 
 driver_module("cypress") {

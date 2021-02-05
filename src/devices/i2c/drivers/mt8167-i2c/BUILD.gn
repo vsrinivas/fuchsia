@@ -11,10 +11,7 @@ bind_rules("mt8167_i2c_bind") {
   rules = "mt8167_i2c.bind"
   output = "mt8167_i2c_bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.mediatek.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.mediatek.platform" ]
 }
 
 driver_module("mt8167-i2c") {

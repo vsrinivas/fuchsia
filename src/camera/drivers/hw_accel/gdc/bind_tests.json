@@ -8,10 +8,10 @@
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_DID.MALI_IV010",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_PID.GDC",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_VID.ARM",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_VID.ARM"
         },
         "expected": "match",
         "name": "Arm Mali"

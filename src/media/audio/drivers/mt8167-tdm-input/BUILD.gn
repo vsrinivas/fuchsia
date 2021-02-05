@@ -9,10 +9,7 @@ bind_rules("mt8167_audio_in_bind") {
   rules = "mt8167_audio_in.bind"
   output = "mt8167_audio_in_bind.h"
   tests = "tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.mediatek.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.mediatek.platform" ]
 }
 
 driver_module("mt8167-tdm-input") {

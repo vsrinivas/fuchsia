@@ -1,46 +1,46 @@
 [
     {
-        "name": "Match SDMMC A",
-        "expected": "match",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "0x06"
-        }
-    },
-    {
-        "name": "Match SDMMC B",
-        "expected": "match",
-        "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "0x07"
-        }
-    },
-    {
-        "name": "Match SDMMC C",
-        "expected": "match",
-        "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "0x08"
-        }
-    },
-    {
-        "name": "Bad protocol",
-        "expected": "abort",
-        "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "0x07"
-        }
-    },
-    {
-        "name": "No PID",
-        "expected": "abort",
-        "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x06",
             "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
-        }
+        },
+        "expected": "match",
+        "name": "Match SDMMC A"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x07",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
+        },
+        "expected": "match",
+        "name": "Match SDMMC B"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x08",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
+        },
+        "expected": "match",
+        "name": "Match SDMMC C"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x07",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Bad protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
+        },
+        "expected": "abort",
+        "name": "No PID"
     }
 ]

@@ -11,10 +11,7 @@ bind_rules("vim-display-bind") {
   rules = "vim-display.bind"
   output = "vim-display-bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/khadas.platform",
-  ]
+  deps = [ "//src/devices/bind/khadas.platform" ]
 }
 
 source_set("common") {

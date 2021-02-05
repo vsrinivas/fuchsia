@@ -10,9 +10,9 @@
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.CLK",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK"
         },
         "expected": "abort",
         "name": "WrongProtocol"

@@ -1,30 +1,30 @@
 [
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.PWM_INIT",
             "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
         },
         "expected": "match",
         "name": "SuccessS905D2"
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.PWM_INIT",
             "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.T931",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
         },
         "expected": "match",
         "name": "SuccessT931"
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.PWM_INIT",
             "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
         },
         "expected": "match",
         "name": "SuccessS905D3"

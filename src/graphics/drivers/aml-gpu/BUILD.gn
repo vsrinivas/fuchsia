@@ -18,10 +18,7 @@ bind_rules("aml_gpu_bind") {
   rules = "aml_gpu.bind"
   output = "aml_gpu-bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 source_set("sources") {

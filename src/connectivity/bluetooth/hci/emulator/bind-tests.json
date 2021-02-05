@@ -8,7 +8,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "abort",
         "name": "Bad protocol"

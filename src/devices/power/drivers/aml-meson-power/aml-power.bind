@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 using amlogic.platform;
-using fuchsia.composite;
 using fuchsia.google.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
 accept fuchsia.BIND_PLATFORM_DEV_PID {
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,

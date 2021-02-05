@@ -10,9 +10,9 @@
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_DID.CLOCK",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_VID.QUALCOMM",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_VID.QUALCOMM"
         },
         "expected": "abort",
         "name": "WrongProtocol"

@@ -11,10 +11,7 @@ bind_rules("amlogic_display_bind") {
   rules = "amlogic-display.bind"
   output = "amlogic-display-bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 source_set("common_srcs") {

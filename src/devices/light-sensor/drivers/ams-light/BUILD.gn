@@ -11,10 +11,7 @@ bind_rules("tcs3400_light_bind") {
   rules = "tcs3400_light.bind"
   output = "tcs3400_light_bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.ams.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.ams.platform" ]
 }
 
 driver_module("ams-light") {

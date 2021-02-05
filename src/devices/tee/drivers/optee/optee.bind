@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.platform;
-using fuchsia.composite;
 
-fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC;
 fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
 accept fuchsia.BIND_PLATFORM_DEV_DID {

@@ -8,10 +8,10 @@
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.AUDIO_OUT",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_PID.MEDIATEK_8167S_REF",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK"
         },
         "expected": "match",
         "name": "Match"

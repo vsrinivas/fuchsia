@@ -11,10 +11,7 @@ bind_rules("mtk-sdmmc-bind") {
   rules = "mtk-sdmmc.bind"
   output = "mtk-sdmmc-bind.h"
   tests = "mtk-sdmmc-bind-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.mediatek.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.mediatek.platform" ]
 }
 
 driver_module("mtk-sdmmc") {

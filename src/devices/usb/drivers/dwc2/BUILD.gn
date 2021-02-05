@@ -12,7 +12,6 @@ bind_rules("dwc2_bind") {
   output = "dwc2_bind.h"
   tests = "tests.json"
   deps = [
-    "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.designware.platform",
     "//src/devices/bind/fuchsia.platform",
   ]

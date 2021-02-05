@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.composite;
 using amlogic.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
 accept fuchsia.BIND_PLATFORM_DEV_DID {
   0x06,  // PDEV_DID_AMLOGIC_SDMMC_A

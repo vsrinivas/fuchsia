@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.composite;
 using test.platform;
 
-fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == test.platform.BIND_PLATFORM_DEV_VID.TEST;
 fuchsia.BIND_PLATFORM_DEV_PID == test.platform.BIND_PLATFORM_DEV_PID.PBUS_TEST;
 accept fuchsia.BIND_PLATFORM_DEV_DID {

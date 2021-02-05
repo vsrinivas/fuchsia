@@ -11,10 +11,7 @@ bind_rules("as370_power-bind") {
   rules = "as370_power.bind"
   output = "as370_power-bind.h"
   tests = "tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.synaptics.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
 
 group("tests") {

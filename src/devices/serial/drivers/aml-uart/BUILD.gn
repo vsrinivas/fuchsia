@@ -11,10 +11,7 @@ bind_rules("aml_uart_bind") {
   rules = "aml_uart.bind"
   output = "aml_uart_bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 driver_module("aml-uart") {

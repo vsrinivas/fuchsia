@@ -1,8 +1,8 @@
 [
     {
         "device": {
-            "fuchsia.BIND_POWER_DOMAIN_COMPOSITE": "fuchsia.platform.BIND_PLATFORM_DEV_DID.POWER_DOMAIN_COMPOSITE",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_POWER_DOMAIN_COMPOSITE": "fuchsia.platform.BIND_PLATFORM_DEV_DID.POWER_DOMAIN_COMPOSITE"
         },
         "expected": "match",
         "name": "Success"
@@ -17,8 +17,8 @@
     },
     {
         "device": {
-            "fuchsia.BIND_POWER_DOMAIN_COMPOSITE": "fuchsia.platform.BIND_PLATFORM_DEV_DID.HID_BUTTONS",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_POWER_DOMAIN_COMPOSITE": "fuchsia.platform.BIND_PLATFORM_DEV_DID.HID_BUTTONS"
         },
         "expected": "abort",
         "name": "WrongPowerDomainComposite"

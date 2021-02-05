@@ -1,20 +1,20 @@
 [
     {
-        "name": "Invalid VID",
-        "expected": "abort",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE"
-        }
+        },
+        "expected": "abort",
+        "name": "Invalid VID"
     },
     {
-        "name": "dw-spi",
-        "expected": "match",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x28",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "0x28"
-        }
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC"
+        },
+        "expected": "match",
+        "name": "dw-spi"
     }
 ]

@@ -25,10 +25,7 @@ bind_rules("bind") {
   rules = "ti-ina231.bind"
   output = "ti-ina231-bind.h"
   tests = "ti-ina231-bind-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.ti.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
 driver_module("ti-ina231") {

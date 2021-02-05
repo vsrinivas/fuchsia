@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 using amlogic.platform;
-using fuchsia.composite;
 
-fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
 fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.UART;

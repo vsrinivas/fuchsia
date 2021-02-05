@@ -60,7 +60,6 @@ bind_rules("ft8201-bind") {
   output = "ft8201-bind.h"
   tests = "ft8201-bind-test.json"
   deps = [
-    "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.focaltech.platform",
     "//src/devices/bind/fuchsia.platform",
   ]

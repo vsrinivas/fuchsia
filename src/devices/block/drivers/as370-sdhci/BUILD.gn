@@ -10,7 +10,6 @@ bind_rules("as370-sdhci-bind") {
   output = "as370-sdhci-bind.h"
   tests = "as370-sdhci-bind-test.json"
   deps = [
-    "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.synaptics.platform",
   ]

@@ -1,16 +1,16 @@
 [
     {
-        "name": "Invalid PROTOCOL",
-        "expected": "abort",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
-        }
+            "fuchsia.BIND_COMPOSITE": "1"
+        },
+        "expected": "abort",
+        "name": "Invalid PROTOCOL"
     },
     {
-        "name": "spi",
-        "expected": "match",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.spi.BIND_PROTOCOL.IMPL"
-        }
+        },
+        "expected": "match",
+        "name": "spi"
     }
 ]

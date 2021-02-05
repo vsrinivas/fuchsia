@@ -9,10 +9,7 @@ bind_rules("qcom_pil_bind") {
   rules = "qcom_pil.bind"
   output = "qcom_pil_bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.qualcomm.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.qualcomm.platform" ]
 }
 
 group("tests") {

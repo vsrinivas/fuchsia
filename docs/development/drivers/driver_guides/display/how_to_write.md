@@ -66,7 +66,6 @@ bind_rules("fancy-display-bind") {
   output = "fancy-display-bind.h"
   tests = "bind_tests.json"
   deps = [
-    "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/board_maker_company.platform",
   ]
 }

@@ -9,10 +9,7 @@ bind_rules("gpio_test_bind") {
   rules = "gpio_test.bind"
   output = "gpio_test_bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 group("tests") {

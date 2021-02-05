@@ -9,10 +9,7 @@ bind_rules("aml-g12-tdm-bind") {
   rules = "aml_tdm.bind"
   output = "aml_tdm-bind.h"
   tests = "tests-stream.json"
-  deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 driver_module("aml-g12-tdm") {

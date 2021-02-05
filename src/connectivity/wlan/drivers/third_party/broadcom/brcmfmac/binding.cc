@@ -73,7 +73,7 @@ static constexpr zx_driver_ops_t brcmfmac_driver_ops = {
 
 ZIRCON_DRIVER_BEGIN(brcmfmac, brcmfmac_driver_ops, "zircon", "0.1", 33)
 #if CONFIG_BRCMFMAC_SDIO
-    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 5910),
+    BI_GOTO_IF(EQ, BIND_COMPOSITE, 1, 5910),
 #endif  // CONFIG_BRCMFMAC_SDIO
 #if CONFIG_BRCMFMAC_PCIE
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),

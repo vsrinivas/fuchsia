@@ -11,10 +11,7 @@ bind_rules("aml-pwm-init-bind") {
   rules = "aml-pwm-init.bind"
   output = "aml-pwm-init-bind.h"
   tests = "bind-tests.json"
-  deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 driver_module("aml-pwm-init") {

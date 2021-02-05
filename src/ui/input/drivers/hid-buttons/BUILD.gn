@@ -11,10 +11,7 @@ bind_rules("hid-buttons-bind") {
   rules = "hid-buttons.bind"
   output = "hid-buttons-bind.h"
   tests = "bind-tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("hid-buttons") {

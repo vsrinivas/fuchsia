@@ -19,10 +19,7 @@ bind_rules("power-bind") {
   rules = "power.bind"
   output = "power-bind.h"
   tests = "bind-tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("power") {

@@ -24,7 +24,7 @@ ZIRCON_DRIVER_BEGIN(amlogic_video, amlogic_video_driver_ops, "zircon", "0.1", 4)
 // This driver will never be autobound at boot, but only when the test harness
 // specifically asks for it to be bound.
     BI_ABORT_IF_AUTOBIND,
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_ABORT_IF(NE, BIND_COMPOSITE, 1),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_VIDEO),
 ZIRCON_DRIVER_END(amlogic_video);

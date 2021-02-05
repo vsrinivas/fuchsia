@@ -13,7 +13,6 @@ bind_rules("aml_spi_bind") {
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

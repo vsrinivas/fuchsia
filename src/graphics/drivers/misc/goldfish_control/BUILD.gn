@@ -12,10 +12,7 @@ bind_rules("goldfish_control_composite-bind") {
   rules = "goldfish_control_composite.bind"
   output = "goldfish_control_composite-bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.google.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }
 
 common_deps = [

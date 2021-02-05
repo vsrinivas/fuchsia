@@ -11,10 +11,7 @@ bind_rules("gt92xx_bind") {
   rules = "gt92xx.bind"
   output = "gt92xx_bind.h"
   tests = "bind_tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.google.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }
 
 driver_module("goodix") {

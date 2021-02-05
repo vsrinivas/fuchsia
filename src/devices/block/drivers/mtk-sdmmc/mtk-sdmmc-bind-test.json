@@ -1,27 +1,27 @@
 [
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.MSDC0",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK"
         },
         "expected": "match",
         "name": "Match MSDC0"
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.MSDC1",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK"
         },
         "expected": "match",
         "name": "Match MSDC1"
     },
     {
         "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.MSDC2",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK"
         },
         "expected": "match",
         "name": "Match MSDC2"
@@ -37,8 +37,8 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK"
         },
         "expected": "abort",
         "name": "No DID"

@@ -11,10 +11,7 @@ bind_rules("aml_usb_phy_bind") {
   rules = "aml_usb_phy.bind"
   output = "aml_usb_phy_bind.h"
   tests = "test_bind.json"
-  deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 driver_module("aml-usb-phy-v2") {

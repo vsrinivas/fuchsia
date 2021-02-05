@@ -90,10 +90,7 @@ bind_rules("gt6853-bind") {
   rules = "gt6853.bind"
   output = "gt6853-bind.h"
   tests = "gt6853-bind-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/goodix.platform",
-  ]
+  deps = [ "//src/devices/bind/goodix.platform" ]
 }
 
 driver_module("gt6853-module") {

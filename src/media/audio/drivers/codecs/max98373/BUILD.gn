@@ -11,10 +11,7 @@ bind_rules("max98373-bind") {
   rules = "max98373.bind"
   output = "max98373-bind.h"
   tests = "tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.maxim.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.maxim.platform" ]
 }
 
 driver_module("max98373") {

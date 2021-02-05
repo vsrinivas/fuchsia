@@ -11,10 +11,7 @@ bind_rules("sy-buck-bind") {
   rules = "sy-buck.bind"
   output = "sy-buck-bind.h"
   tests = "bind-tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.silergy.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.silergy.platform" ]
 }
 
 driver_module("sy-buck") {

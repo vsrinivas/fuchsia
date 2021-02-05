@@ -349,10 +349,7 @@ driver_module("test-vreg") {
 bind_rules("test-composite-bind") {
   rules = "test/test-composite.bind"
   output = "test-composite-bind.h"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/test.platform",
-  ]
+  deps = [ "//src/devices/bind/test.platform" ]
 }
 
 driver_module("test-composite") {

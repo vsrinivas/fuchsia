@@ -12,10 +12,7 @@ bind_rules("mtk-thermal-bind") {
   rules = "mtk-thermal.bind"
   output = "mtk-thermal-bind.h"
   tests = "mtk-thermal-bind-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.mediatek.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.mediatek.platform" ]
 }
 
 driver_module("mtk-thermal") {

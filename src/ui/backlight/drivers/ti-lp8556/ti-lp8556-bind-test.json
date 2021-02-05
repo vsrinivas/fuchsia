@@ -1,31 +1,31 @@
 [
     {
-        "name": "Match",
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_PID.LP8556",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI"
+        },
         "expected": "match",
-        "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_PID.LP8556",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT"
-        }
+        "name": "Match"
     },
     {
-        "name": "No PID",
-        "expected": "abort",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT"
-        }
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI"
+        },
+        "expected": "abort",
+        "name": "No PID"
     },
     {
-        "name": "Bad protocol",
-        "expected": "abort",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_PID.LP8556",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT"
-        }
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Bad protocol"
     }
 ]

@@ -11,10 +11,7 @@ bind_rules("ti_tas58xx-bind") {
   rules = "ti_tas58xx.bind"
   output = "ti_tas58xx-bind.h"
   tests = "tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.ti.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
 driver_module("tas58xx") {

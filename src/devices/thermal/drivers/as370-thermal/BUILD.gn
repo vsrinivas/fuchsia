@@ -11,10 +11,7 @@ bind_rules("as370-thermal-bind") {
   rules = "as370-thermal.bind"
   output = "as370-thermal-bind.h"
   tests = "as370-thermal-bind-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.synaptics.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
 
 driver_module("as370-thermal") {

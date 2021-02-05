@@ -11,10 +11,7 @@ bind_rules("mt8167s-display-bind") {
   rules = "mt8167s-display.bind"
   output = "mt8167s-display-bind.h"
   tests = "bind-tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.mediatek.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.mediatek.platform" ]
 }
 
 driver_module("mt8167s-display") {

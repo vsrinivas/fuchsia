@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 using fuchsia.mediatek.platform;
-using fuchsia.composite;
 
-fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK;
 fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.I2C;

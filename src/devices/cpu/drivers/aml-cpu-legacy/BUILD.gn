@@ -11,10 +11,7 @@ bind_rules("aml-cpu-legacy-bind") {
   rules = "aml-cpu-legacy.bind"
   output = "aml-cpu-legacy-bind.h"
   tests = "bind-tests.json"
-  deps = [
-    "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.google.platform",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }
 
 driver_module("aml-cpu-legacy") {

@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.ti.platform;
-using fuchsia.composite;
 
-fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI;
 fuchsia.BIND_PLATFORM_DEV_DID == 5; //PDEV_DID_TI_LED
 accept fuchsia.BIND_PLATFORM_DEV_PID {

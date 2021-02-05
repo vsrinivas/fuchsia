@@ -11,10 +11,7 @@ bind_rules("aml-securemem-bind") {
   rules = "aml-securemem.bind"
   output = "aml-securemem-bind.h"
   tests = "aml-securemem-bind-test.json"
-  deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/fuchsia.composite",
-  ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 group("tests") {
