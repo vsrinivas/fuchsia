@@ -22,6 +22,13 @@ protocol DeviceWatcher {
     /// client's connection. Events will be sorted first by event type - `existing`, `added`,
     /// `removed`. Within each event type range, IDs will be provided in ascending order. Events
     /// are coalesced by the server, so a given ID will only appear once in each list of events.
+    ///
+    /// Please note that it is entirely possible for the list returned to be temporarily empty even
+    /// if the local camera hardware is hardwired (vs plug-in like USB). The empty list condition
+    /// is temporary on such a platform.
+    ///
+    /// Camera applications should tolerate an empty list returned, and attempt to retry the
+    /// `WatchDevices()` call.
     WatchDevices() -> (vector<WatchDevicesEvent>:MAX_WATCH_DEVICES_EVENTS events);
 
     /// Acquires a camera interface for the given ID. If any clients already exist for this camera,
