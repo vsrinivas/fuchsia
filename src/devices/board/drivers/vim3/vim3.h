@@ -22,6 +22,7 @@ namespace vim3 {
 
 // BTI IDs for our devices
 enum {
+  BTI_CANVAS,
   BTI_EMMC,
   BTI_ETHERNET,
   BTI_SD,
@@ -56,6 +57,7 @@ class Vim3 : public Vim3Type {
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vim3);
 
+  zx_status_t CanvasInit();
   zx_status_t ClkInit();
   zx_status_t EmmcInit();
   zx_status_t EthInit();

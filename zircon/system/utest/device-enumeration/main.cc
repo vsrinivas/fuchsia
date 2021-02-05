@@ -204,6 +204,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml-usb-phy-v2",
       "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
       "mali/aml-gpu",
+      "sys/platform/05:00:10/aml-canvas",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
