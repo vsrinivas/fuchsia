@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <iosfwd>
 #include <string>
 
 namespace uuid {
@@ -96,6 +97,9 @@ inline bool operator==(const Uuid& a, const Uuid& b) {
   return memcmp(a.bytes(), b.bytes(), kUuidSize) == 0;
 }
 inline bool operator!=(const Uuid& a, const Uuid& b) { return !(a == b); }
+
+// Writes Uuid.ToString() to the given stream.
+std::ostream& operator<<(std::ostream& out, const Uuid& uuid);
 
 // Generate a 128-bit (pseudo) random UUID in the form of version 4 as described
 // in RFC 4122, section 4.4.

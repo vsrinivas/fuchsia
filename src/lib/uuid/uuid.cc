@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+#include <ostream>
+
 #include "src/lib/fxl/strings/string_printf.h"
 
 #if defined(__Fuchsia__)
@@ -80,6 +82,8 @@ std::string Uuid::ToString() const {
                            raw_.clock_seq_low, raw_.node[0], raw_.node[1], raw_.node[2],
                            raw_.node[3], raw_.node[4], raw_.node[5]);
 }
+
+std::ostream& operator<<(std::ostream& out, const Uuid& uuid) { return out << uuid.ToString(); }
 
 std::string Generate() { return Uuid::Generate().ToString(); }
 
