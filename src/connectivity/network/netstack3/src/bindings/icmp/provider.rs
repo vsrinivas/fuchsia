@@ -165,7 +165,7 @@ mod test {
     };
 
     use net_types::ip::{AddrSubnetEither, Ipv4, Ipv4Addr};
-    use net_types::{SpecifiedAddr, Witness};
+    use net_types::SpecifiedAddr;
 
     use crate::bindings::icmp::IcmpProviderWorker;
     use crate::bindings::integration_tests::{

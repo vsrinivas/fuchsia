@@ -18,7 +18,7 @@ use fuchsia_zircon as zx;
 use futures::{TryFutureExt, TryStreamExt};
 use log::debug;
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{SpecifiedAddr, Witness};
+use net_types::SpecifiedAddr;
 use netstack3_core::{
     LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
 };

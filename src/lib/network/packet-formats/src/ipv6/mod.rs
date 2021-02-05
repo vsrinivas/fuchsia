@@ -13,7 +13,6 @@ use core::ops::Range;
 
 use log::debug;
 use net_types::ip::{Ipv6, Ipv6Addr, Ipv6SourceAddr};
-use net_types::Witness;
 use packet::records::{AlignedRecordsSerializer, Records, RecordsRaw};
 use packet::{
     BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,

@@ -23,7 +23,7 @@ use log::debug;
 use net_types::{
     ethernet::Mac,
     ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
-    SpecifiedAddr, Witness,
+    SpecifiedAddr,
 };
 use netstack3_core::{
     error::NoRouteError,

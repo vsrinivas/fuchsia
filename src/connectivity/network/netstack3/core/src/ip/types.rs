@@ -100,8 +100,6 @@ impl<D> From<Entry<Ipv6Addr, D>> for EntryEither<D> {
 
 #[cfg(test)]
 mod tests {
-    use net_types::Witness;
-
     use super::*;
 
     #[test]

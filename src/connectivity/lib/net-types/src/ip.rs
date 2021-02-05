@@ -1425,9 +1425,13 @@ impl Ipv6SourceAddr {
 
 impl crate::sealed::Sealed for Ipv6SourceAddr {}
 
-impl Witness<Ipv6Addr> for Ipv6SourceAddr {
+impl Ipv6SourceAddr {
+    /// Constructs a new `Ipv6SourceAddr`.
+    ///
+    /// `new` constructs a new `Ipv6SourceAddr`, returning `None` if `addr` is
+    /// neither unicast nor unspecified.
     #[inline]
-    fn new(addr: Ipv6Addr) -> Option<Ipv6SourceAddr> {
+    pub fn new(addr: Ipv6Addr) -> Option<Ipv6SourceAddr> {
         if let Some(addr) = UnicastAddr::new(addr) {
             Some(Ipv6SourceAddr::Unicast(addr))
         } else if !addr.is_specified() {
@@ -1436,6 +1440,13 @@ impl Witness<Ipv6Addr> for Ipv6SourceAddr {
             None
         }
     }
+}
+
+impl Witness<Ipv6Addr> for Ipv6SourceAddr {
+    #[inline]
+    fn new(addr: Ipv6Addr) -> Option<Ipv6SourceAddr> {
+        Ipv6SourceAddr::new(addr)
+    }
 
     #[inline]
     fn into_addr(self) -> Ipv6Addr {
@@ -1443,10 +1454,6 @@ impl Witness<Ipv6Addr> for Ipv6SourceAddr {
             Ipv6SourceAddr::Unicast(addr) => addr.into_addr(),
             Ipv6SourceAddr::Unspecified => Ipv6::UNSPECIFIED_ADDRESS,
         }
-    }
-
-    fn from_witness<W: Witness<Ipv6Addr>>(addr: W) -> Option<Ipv6SourceAddr> {
-        Ipv6SourceAddr::new(addr.into_addr())
     }
 }
 
@@ -1503,14 +1510,20 @@ impl From<Ipv6SourceAddr> for Option<UnicastAddr<Ipv6Addr>> {
     }
 }
 
-impl Deref for Ipv6SourceAddr {
-    type Target = Ipv6Addr;
-
-    fn deref(&self) -> &Ipv6Addr {
+impl AsRef<Ipv6Addr> for Ipv6SourceAddr {
+    fn as_ref(&self) -> &Ipv6Addr {
         match self {
             Ipv6SourceAddr::Unicast(addr) => addr,
             Ipv6SourceAddr::Unspecified => &Ipv6::UNSPECIFIED_ADDRESS,
         }
+    }
+}
+
+impl Deref for Ipv6SourceAddr {
+    type Target = Ipv6Addr;
+
+    fn deref(&self) -> &Ipv6Addr {
+        self.as_ref()
     }
 }
 
@@ -2048,7 +2061,7 @@ mod tests {
         // addresses are rejected. Note that this address was accepted above
         // when `SpecifiedAddr` was used.
         assert!(
-            AddrSubnet::<_, LinkLocalAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32)
+            AddrSubnet::<_, LinkLocalAddr<Ipv4Addr>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32)
                 == Err(AddrSubnetError::InvalidWitness)
         );
     }

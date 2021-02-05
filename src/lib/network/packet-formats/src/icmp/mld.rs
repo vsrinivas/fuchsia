@@ -243,7 +243,6 @@ mod tests {
     use std::convert::TryInto;
     use std::fmt::Debug;
 
-    use net_types::Witness;
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::*;

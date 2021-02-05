@@ -32,7 +32,7 @@ mod sealed {
 /// guarantees some property about the wrapped address. It is implemented by
 /// [`SpecifiedAddr`], [`UnicastAddr`], [`MulticastAddr`], and
 /// [`LinkLocalAddr`].
-pub trait Witness<A>: Deref<Target = A> + sealed::Sealed + Sized {
+pub trait Witness<A>: AsRef<A> + Sized + sealed::Sealed {
     /// Constructs a new witness type.
     ///
     /// `new` returns `None` if `addr` does not satisfy the property guaranteed
@@ -52,7 +52,7 @@ pub trait Witness<A>: Deref<Target = A> + sealed::Sealed + Sized {
     where
         A: Clone,
     {
-        self.deref().clone()
+        self.as_ref().clone()
     }
 
     /// Consumes this witness and returns the contained `A`.
@@ -73,6 +73,20 @@ pub trait Witness<A>: Deref<Target = A> + sealed::Sealed + Sized {
 // discussion of why this isn't possible without an explicit opt-in on the part
 // of the trait implementor, see this forum thread:
 // https://users.rust-lang.org/t/prevent-interior-mutability/29403
+
+/// Implements a trait for a witness type.
+///
+/// `impl_trait_for_witness` implements `$trait` for `$witness<A>` if `A:
+/// $trait`.
+macro_rules! impl_trait_for_witness {
+    ($trait:ident, $method:ident, $witness:ident) => {
+        impl<A: $trait> $trait for $witness<A> {
+            fn $method(&self) -> bool {
+                self.0.$method()
+            }
+        }
+    };
+}
 
 /// Addresses that can be specified.
 ///
@@ -98,6 +112,10 @@ pub trait SpecifiedAddress {
     /// code MAY rely on this property for its correctness.
     fn is_specified(&self) -> bool;
 }
+
+impl_trait_for_witness!(SpecifiedAddress, is_specified, UnicastAddr);
+impl_trait_for_witness!(SpecifiedAddress, is_specified, MulticastAddr);
+impl_trait_for_witness!(SpecifiedAddress, is_specified, LinkLocalAddr);
 
 /// Addresses that can be unicast.
 ///
@@ -128,6 +146,10 @@ pub trait UnicastAddress {
     fn is_unicast(&self) -> bool;
 }
 
+impl_trait_for_witness!(UnicastAddress, is_unicast, SpecifiedAddr);
+impl_trait_for_witness!(UnicastAddress, is_unicast, MulticastAddr);
+impl_trait_for_witness!(UnicastAddress, is_unicast, LinkLocalAddr);
+
 /// Addresses that can be multicast.
 ///
 /// `MulticastAddress` is implemented by address types for which some values are
@@ -153,6 +175,10 @@ pub trait MulticastAddress {
     fn is_multicast(&self) -> bool;
 }
 
+impl_trait_for_witness!(MulticastAddress, is_multicast, SpecifiedAddr);
+impl_trait_for_witness!(MulticastAddress, is_multicast, UnicastAddr);
+impl_trait_for_witness!(MulticastAddress, is_multicast, LinkLocalAddr);
+
 /// Addresses that can be broadcast.
 ///
 /// `BroadcastAddress` is implemented by address types for which some values are
@@ -169,6 +195,11 @@ pub trait BroadcastAddress {
     /// `a.is_broadcast()` implies `a.is_specified()`.
     fn is_broadcast(&self) -> bool;
 }
+
+impl_trait_for_witness!(BroadcastAddress, is_broadcast, SpecifiedAddr);
+impl_trait_for_witness!(BroadcastAddress, is_broadcast, UnicastAddr);
+impl_trait_for_witness!(BroadcastAddress, is_broadcast, MulticastAddr);
+impl_trait_for_witness!(BroadcastAddress, is_broadcast, LinkLocalAddr);
 
 /// Addresses that can be a link-local.
 ///
@@ -196,6 +227,10 @@ pub trait LinkLocalAddress {
     /// `a.is_linklocal()` implies `a.is_specified()`.
     fn is_linklocal(&self) -> bool;
 }
+
+impl_trait_for_witness!(LinkLocalAddress, is_linklocal, SpecifiedAddr);
+impl_trait_for_witness!(LinkLocalAddress, is_linklocal, UnicastAddr);
+impl_trait_for_witness!(LinkLocalAddress, is_linklocal, MulticastAddr);
 
 /// A scope used by [`ScopeableAddress`]. See that trait's documentation for
 /// more information.
@@ -278,6 +313,44 @@ not `unsafe`, `unsafe` code may NOT rely on this guarantee for its soundness."),
             pub struct $type<A>(A);
         }
 
+        impl<A: $trait> $type<A> {
+            // NOTE(joshlf): It may seem odd to include `new` and `from_witness`
+            // constructors here when they already exists on the `Witness`
+            // trait, which this type implements. The reason we do this is that,
+            // since many of these types implement the `Witness` trait multiple
+            // times (e.g., `Witness<A> for LinkLocalAddr<A>` and `Witness<A>
+            // for LinkLocalAddr<MulticastAddr<A>`), if we didn't provide these
+            // constructors, callers invoking `Foo::new` or `Foo::from_witness`
+            // would need to `use` the `Witness` trait, and the compiler often
+            // doesn't have enough information to figure out which `Witness`
+            // implementation is meant in a given situation. This, in turn,
+            // requires a lot of boilerplate type annotations on the part of
+            // users. Providing these constructors helps alleviate this problem.
+
+            doc_comment! {
+                concat!("Constructs a new `", stringify!($type), "`.
+
+`new` returns `None` if `!addr.", stringify!($method), "()`."),
+                #[inline]
+                pub fn new(addr: A) -> Option<$type<A>> {
+                    if !addr.$method() {
+                        return None;
+                    }
+                    Some($type(addr))
+                }
+            }
+
+            doc_comment! {
+                concat!("Constructs a new `", stringify!($type), "` from a
+witness type.
+
+`from_witness(witness)` is equivalent to `new(witness.into_addr())`."),
+                pub fn from_witness<W: Witness<A>>(addr: W) -> Option<$type<A>> {
+                    $type::new(addr.into_addr())
+                }
+            }
+        }
+
         // TODO(https://github.com/rust-lang/rust/issues/57563): Once traits
         // other than `Sized` are supported for const fns, move this into the
         // block with the `A: $trait` bound.
@@ -300,17 +373,19 @@ more details."),
 
         impl<A> sealed::Sealed for $type<A> {}
         impl<A: $trait> Witness<A> for $type<A> {
-            #[inline]
             fn new(addr: A) -> Option<$type<A>> {
-                if !addr.$method() {
-                    return None;
-                }
-                Some($type(addr))
+                $type::new(addr)
             }
 
             #[inline]
             fn into_addr(self) -> A {
                 self.0
+            }
+        }
+
+        impl<A: $trait> AsRef<A> for $type<A> {
+            fn as_ref(&self) -> &A {
+                &self.0
             }
         }
 
@@ -366,20 +441,89 @@ guaranteed to be specified, so this conversion is infallible."),
     };
 }
 
+/// Implements [`Witness`] for a nested witness type.
+///
+/// `impl_nested_witness` implements `Witness<A>` for
+/// `$outer_type<$inner_type<A>>`.
+macro_rules! impl_nested_witness {
+    ($outer_trait:ident, $outer_type:ident, $inner_trait:ident, $inner_type:ident, $constructor:ident) => {
+        impl<A: $outer_trait + $inner_trait> $outer_type<$inner_type<A>> {
+            doc_comment! {
+                concat!("Constructs a new `", stringify!($outer_type), "<", stringify!($inner_type), "<A>>`.
+
+`", stringify!($constructor), "(addr)` is equivalent to `", stringify!($inner_type),
+"::new(addr).and_then(", stringify!($outer_type), "::new))`."),
+                #[inline]
+                pub fn $constructor(addr: A) -> Option<$outer_type<$inner_type<A>>> {
+                    $inner_type::new(addr).and_then($outer_type::new)
+                }
+            }
+        }
+
+        impl<A: $outer_trait + $inner_trait> Witness<A> for $outer_type<$inner_type<A>> {
+            #[inline]
+            fn new(addr: A) -> Option<$outer_type<$inner_type<A>>> {
+                $inner_type::new(addr).and_then(Witness::<$inner_type<A>>::new)
+            }
+
+            #[inline]
+            fn into_addr(self) -> A {
+                self.0.into_addr()
+            }
+        }
+
+        impl<A: $outer_trait + $inner_trait> AsRef<A> for $outer_type<$inner_type<A>> {
+            fn as_ref(&self) -> &A {
+                &self.0 .0
+            }
+        }
+    };
+}
+
 // SpecifiedAddr
 impl_witness!(SpecifiedAddr, "specified", SpecifiedAddress, is_specified);
 
 // UnicastAddr
 impl_witness!(UnicastAddr, "unicast", UnicastAddress, is_unicast);
 impl_into_specified!(UnicastAddr, UnicastAddress, is_unicast);
+impl_nested_witness!(UnicastAddress, UnicastAddr, LinkLocalAddress, LinkLocalAddr, new_linklocal);
 
 // MulticastAddr
 impl_witness!(MulticastAddr, "multicast", MulticastAddress, is_multicast);
 impl_into_specified!(MulticastAddr, MulticastAddress, is_multicast);
+impl_nested_witness!(
+    MulticastAddress,
+    MulticastAddr,
+    LinkLocalAddress,
+    LinkLocalAddr,
+    new_linklocal
+);
 
 // LinkLocalAddr
 impl_witness!(LinkLocalAddr, "link-local", LinkLocalAddress, is_linklocal);
 impl_into_specified!(LinkLocalAddr, LinkLocalAddress, is_linklocal);
+impl_nested_witness!(LinkLocalAddress, LinkLocalAddr, UnicastAddress, UnicastAddr, new_unicast);
+impl_nested_witness!(
+    LinkLocalAddress,
+    LinkLocalAddr,
+    MulticastAddress,
+    MulticastAddr,
+    new_multicast
+);
+
+// NOTE(joshlf): We provide these type aliases both for convenience and also to
+// steer users towards these types and away from `UnicastAddr<LinkLocalAddr<A>>`
+// and `MulticastAddr<LinkLocalAddr<A>>`, which are also valid. The reason we
+// still implement `Witness<A>` for those types is that user code may contain
+// generic contexts (e.g., some code with `UnicastAddr<A>`, and other code which
+// wishes to supply `A = LinkLocalAddr<AA>`), and we want to support that use
+// case.
+
+/// A link-local unicast address.
+pub type LinkLocalUnicastAddr<A> = LinkLocalAddr<UnicastAddr<A>>;
+
+/// A link-local multicast address.
+pub type LinkLocalMulticastAddr<A> = LinkLocalAddr<MulticastAddr<A>>;
 
 /// A witness type for an address and a scope zone.
 ///
@@ -439,7 +583,7 @@ impl<A: ScopeableAddress + Display, Z: Display> Display for AddrAndZone<A, Z> {
     }
 }
 
-impl<A: ScopeableAddress, Z> sealed::Sealed for AddrAndZone<A, Z> {}
+impl<A, Z> sealed::Sealed for AddrAndZone<A, Z> {}
 
 /// An address that may have an associated scope zone.
 #[allow(missing_docs)]
@@ -482,9 +626,10 @@ mod tests {
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     enum Address {
         Unspecified,
-        Unicast,
-        Multicast,
-        LinkLocal,
+        GlobalUnicast,
+        GlobalMulticast,
+        LinkLocalUnicast,
+        LinkLocalMulticast,
     }
 
     impl SpecifiedAddress for Address {
@@ -495,19 +640,19 @@ mod tests {
 
     impl UnicastAddress for Address {
         fn is_unicast(&self) -> bool {
-            *self == Address::Unicast
+            matches!(self, Address::GlobalUnicast | Address::LinkLocalUnicast)
         }
     }
 
     impl MulticastAddress for Address {
         fn is_multicast(&self) -> bool {
-            *self == Address::Multicast
+            matches!(self, Address::GlobalMulticast | Address::LinkLocalMulticast)
         }
     }
 
     impl LinkLocalAddress for Address {
         fn is_linklocal(&self) -> bool {
-            *self == Address::LinkLocal
+            matches!(self, Address::LinkLocalUnicast | Address::LinkLocalMulticast)
         }
     }
 
@@ -536,49 +681,109 @@ mod tests {
 
     #[test]
     fn test_specified_addr() {
-        assert_eq!(SpecifiedAddr::new(Address::Unicast), Some(SpecifiedAddr(Address::Unicast)));
+        assert_eq!(
+            SpecifiedAddr::new(Address::GlobalUnicast),
+            Some(SpecifiedAddr(Address::GlobalUnicast))
+        );
         assert_eq!(SpecifiedAddr::new(Address::Unspecified), None);
     }
 
     #[test]
     fn test_unicast_addr() {
-        assert_eq!(UnicastAddr::new(Address::Unicast), Some(UnicastAddr(Address::Unicast)));
-        assert_eq!(UnicastAddr::new(Address::Multicast), None);
         assert_eq!(
-            unsafe { UnicastAddr::new_unchecked(Address::Unicast) },
-            UnicastAddr(Address::Unicast)
+            UnicastAddr::new(Address::GlobalUnicast),
+            Some(UnicastAddr(Address::GlobalUnicast))
+        );
+        assert_eq!(UnicastAddr::new(Address::GlobalMulticast), None);
+        assert_eq!(
+            unsafe { UnicastAddr::new_unchecked(Address::GlobalUnicast) },
+            UnicastAddr(Address::GlobalUnicast)
         );
     }
 
     #[test]
     fn test_multicast_addr() {
-        assert_eq!(MulticastAddr::new(Address::Multicast), Some(MulticastAddr(Address::Multicast)));
-        assert_eq!(MulticastAddr::new(Address::Unicast), None);
         assert_eq!(
-            unsafe { MulticastAddr::new_unchecked(Address::Multicast) },
-            MulticastAddr(Address::Multicast)
+            MulticastAddr::new(Address::GlobalMulticast),
+            Some(MulticastAddr(Address::GlobalMulticast))
+        );
+        assert_eq!(MulticastAddr::new(Address::GlobalUnicast), None);
+        assert_eq!(
+            unsafe { MulticastAddr::new_unchecked(Address::GlobalMulticast) },
+            MulticastAddr(Address::GlobalMulticast)
         );
     }
 
     #[test]
     fn test_linklocal_addr() {
-        assert_eq!(LinkLocalAddr::new(Address::LinkLocal), Some(LinkLocalAddr(Address::LinkLocal)));
-        assert_eq!(LinkLocalAddr::new(Address::Multicast), None);
         assert_eq!(
-            unsafe { LinkLocalAddr::new_unchecked(Address::LinkLocal) },
-            LinkLocalAddr(Address::LinkLocal)
+            LinkLocalAddr::new(Address::LinkLocalUnicast),
+            Some(LinkLocalAddr(Address::LinkLocalUnicast))
+        );
+        assert_eq!(LinkLocalAddr::new(Address::GlobalMulticast), None);
+        assert_eq!(
+            unsafe { LinkLocalAddr::new_unchecked(Address::LinkLocalUnicast) },
+            LinkLocalAddr(Address::LinkLocalUnicast)
+        );
+    }
+
+    #[test]
+    fn test_nested() {
+        // Test UnicastAddr<LinkLocalAddr>, MulticastAddr<LinkLocalAddr>,
+        // LinkLocalAddr<UnicastAddr>, and LinkLocalAddr<MulticastAddr>.
+
+        macro_rules! test_nested {
+            ($new:expr, $([$input:ident => $output:expr],)*) => {
+                $(
+                    assert_eq!($new(Address::$input), $output);
+                )*
+            };
+        }
+
+        // Unicast
+        test_nested!(UnicastAddr::new_linklocal,
+            [Unspecified => None],
+            [GlobalUnicast => None],
+            [GlobalMulticast => None],
+            [LinkLocalUnicast => Some(UnicastAddr(LinkLocalAddr(Address::LinkLocalUnicast)))],
+            [LinkLocalMulticast => None],
+        );
+
+        // Multicast
+        test_nested!(MulticastAddr::new_linklocal,
+            [Unspecified => None],
+            [GlobalUnicast => None],
+            [GlobalMulticast => None],
+            [LinkLocalUnicast => None],
+            [LinkLocalMulticast => Some(MulticastAddr(LinkLocalAddr(Address::LinkLocalMulticast)))],
+        );
+
+        // Link-local
+        test_nested!(LinkLocalAddr::new_unicast,
+            [Unspecified => None],
+            [GlobalUnicast => None],
+            [GlobalMulticast => None],
+            [LinkLocalUnicast => Some(LinkLocalAddr(UnicastAddr(Address::LinkLocalUnicast)))],
+            [LinkLocalMulticast => None],
+        );
+        test_nested!(LinkLocalAddr::new_multicast,
+            [Unspecified => None],
+            [GlobalUnicast => None],
+            [GlobalMulticast => None],
+            [LinkLocalUnicast => None],
+            [LinkLocalMulticast => Some(LinkLocalAddr(MulticastAddr(Address::LinkLocalMulticast)))],
         );
     }
 
     #[test]
     fn test_addr_and_zone() {
-        let addr_and_zone = AddrAndZone::new(Address::LinkLocal, ());
-        assert_eq!(addr_and_zone, Some(AddrAndZone(Address::LinkLocal, ())));
-        assert_eq!(addr_and_zone.unwrap().into_addr_scope_id(), (Address::LinkLocal, ()));
-        assert_eq!(AddrAndZone::new(Address::Unicast, ()), None);
+        let addr_and_zone = AddrAndZone::new(Address::LinkLocalUnicast, ());
+        assert_eq!(addr_and_zone, Some(AddrAndZone(Address::LinkLocalUnicast, ())));
+        assert_eq!(addr_and_zone.unwrap().into_addr_scope_id(), (Address::LinkLocalUnicast, ()));
+        assert_eq!(AddrAndZone::new(Address::GlobalUnicast, ()), None);
         assert_eq!(
-            unsafe { AddrAndZone::new_unchecked(Address::LinkLocal, ()) },
-            AddrAndZone(Address::LinkLocal, ())
+            unsafe { AddrAndZone::new_unchecked(Address::LinkLocalUnicast, ()) },
+            AddrAndZone(Address::LinkLocalUnicast, ())
         );
     }
 
@@ -588,28 +793,28 @@ mod tests {
         // inferred.
         type ZonedAddress = crate::ZonedAddress<Address, ()>;
         assert_eq!(
-            ZonedAddress::new(Address::Unicast, None),
-            Some(ZonedAddress::Unzoned(SpecifiedAddr(Address::Unicast)))
+            ZonedAddress::new(Address::GlobalUnicast, None),
+            Some(ZonedAddress::Unzoned(SpecifiedAddr(Address::GlobalUnicast)))
         );
         assert_eq!(ZonedAddress::new(Address::Unspecified, None), None);
         assert_eq!(
-            ZonedAddress::new(Address::LinkLocal, None),
-            Some(ZonedAddress::Unzoned(SpecifiedAddr(Address::LinkLocal)))
+            ZonedAddress::new(Address::LinkLocalUnicast, None),
+            Some(ZonedAddress::Unzoned(SpecifiedAddr(Address::LinkLocalUnicast)))
         );
-        assert_eq!(ZonedAddress::new(Address::Unicast, Some(())), None);
+        assert_eq!(ZonedAddress::new(Address::GlobalUnicast, Some(())), None);
         assert_eq!(ZonedAddress::new(Address::Unspecified, Some(())), None);
         assert_eq!(
-            ZonedAddress::new(Address::LinkLocal, Some(())),
-            Some(ZonedAddress::Zoned(AddrAndZone(Address::LinkLocal, ())))
+            ZonedAddress::new(Address::LinkLocalUnicast, Some(())),
+            Some(ZonedAddress::Zoned(AddrAndZone(Address::LinkLocalUnicast, ())))
         );
 
         assert_eq!(
-            ZonedAddress::new(Address::Unicast, None).unwrap().into_addr_zone(),
-            (SpecifiedAddr(Address::Unicast), None)
+            ZonedAddress::new(Address::GlobalUnicast, None).unwrap().into_addr_zone(),
+            (SpecifiedAddr(Address::GlobalUnicast), None)
         );
         assert_eq!(
-            ZonedAddress::new(Address::LinkLocal, Some(())).unwrap().into_addr_zone(),
-            (SpecifiedAddr(Address::LinkLocal), Some(()))
+            ZonedAddress::new(Address::LinkLocalUnicast, Some(())).unwrap().into_addr_zone(),
+            (SpecifiedAddr(Address::LinkLocalUnicast), Some(()))
         );
     }
 }
