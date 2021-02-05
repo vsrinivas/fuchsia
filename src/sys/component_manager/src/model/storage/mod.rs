@@ -554,6 +554,9 @@ mod tests {
         .await
         .expect("failed to open isolated storage");
 
+        // ensure the directory is actually open before querying its parent about it.
+        dir.describe().await.expect("failed to open directory");
+
         // check that an instance-ID based directory was created:
         assert!(test_helpers::list_directory(&test.test_dir_proxy)
             .await
@@ -801,6 +804,9 @@ mod tests {
         )
         .await
         .expect("failed to open isolated storage");
+
+        // ensure the directory is actually open before querying its parent about it.
+        dir.describe().await.expect("failed to open directory");
 
         // check that an instance-ID based directory was created:
         assert!(test_helpers::list_directory(&test.test_dir_proxy)
