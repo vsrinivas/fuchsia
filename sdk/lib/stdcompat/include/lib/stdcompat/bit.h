@@ -113,6 +113,43 @@ constexpr int popcount(T x) noexcept {
 
 #endif
 
+#if __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::bit_ceil;
+using std::bit_floor;
+using std::bit_width;
+using std::has_single_bit;
+
+#else  // Provide polyfills for power of two bit functions.
+
+template <typename T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, bool> has_single_bit(T value) {
+  return popcount(value) == static_cast<T>(1);
+}
+
+template <typename T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, T> bit_width(T value) {
+  return internal::bit_width(value);
+}
+
+template <typename T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, T> bit_ceil(T value) {
+  if (value <= 1) {
+    return T(1);
+  }
+  return internal::bit_ceil<T>(value);
+}
+
+template <typename T>
+constexpr std::enable_if_t<std::is_unsigned<T>::value, T> bit_floor(T value) {
+  if (value == 0) {
+    return 0;
+  }
+  return internal::bit_floor(value);
+}
+
+#endif  // __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
 }  // namespace cpp20
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_BIT_H_

@@ -473,4 +473,209 @@ TEST(BitOpsTest, AliasForStdWhenAvailable) {
 
 #endif
 
+template <typename T>
+constexpr bool CheckHasSingleBit() {
+  static_assert(!cpp20::has_single_bit(static_cast<T>(0u)), "has_single_bit failed.");
+  static_assert(!cpp20::has_single_bit(static_cast<T>(-1)), "has_single_bit failed.");
+  static_assert(cpp20::has_single_bit(static_cast<T>(1)), "has_single_bit failed.");
+
+  for (auto i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    const T kVal = static_cast<T>(1u) << i;
+    if (!cpp20::has_single_bit(kVal)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+TEST(IntPow2Test, HasSingleBitIsCorrect) {
+  static_assert(CheckHasSingleBit<unsigned>(), "has_single_bit failed for unsigned.");
+  static_assert(CheckHasSingleBit<unsigned char>(), "has_single_bit failed for unsigned char.");
+  static_assert(CheckHasSingleBit<unsigned long>(), "has_single_bit failed for unsigned long.");
+  static_assert(CheckHasSingleBit<unsigned long long>(),
+                "has_single_bit failed for unsigned long long.");
+
+  static_assert(CheckHasSingleBit<uint8_t>(), "has_single_bit failed for uint8_t.");
+  static_assert(CheckHasSingleBit<uint16_t>(), "has_single_bit failed for uint16_t.");
+  static_assert(CheckHasSingleBit<uint32_t>(), "has_single_bit failed for uint32_t.");
+  static_assert(CheckHasSingleBit<uint64_t>(), "has_single_bit failed for uint64_t.");
+  static_assert(CheckHasSingleBit<uint128_t>(), "has_single_bit failed for uint128_t.");
+
+  static_assert(CheckHasSingleBit<uint_least8_t>(), "has_single_bit failed for uint_least8_t.");
+  static_assert(CheckHasSingleBit<uint_least16_t>(), "has_single_bit failed for uint_least16_t.");
+  static_assert(CheckHasSingleBit<uint_least32_t>(), "has_single_bit failed for uint_least32_t.");
+  static_assert(CheckHasSingleBit<uint_least64_t>(), "has_single_bit failed for uint_least64_t.");
+
+  static_assert(CheckHasSingleBit<uint_fast8_t>(), "has_single_bit failed for uint_least8_t.");
+  static_assert(CheckHasSingleBit<uint_fast16_t>(), "has_single_bit failed for uint_least16_t.");
+  static_assert(CheckHasSingleBit<uint_fast32_t>(), "has_single_bit failed for uint_least32_t.");
+  static_assert(CheckHasSingleBit<uint_fast64_t>(), "has_single_bit failed for uint_least64_t.");
+}
+
+template <typename T>
+constexpr bool CheckBitWidth() {
+  static_assert(cpp20::bit_width(static_cast<T>(0)) == 0, "has_single_bit failed.");
+  static_assert(cpp20::bit_width(static_cast<T>(-1)) == std::numeric_limits<T>::digits,
+                "has_single_bit failed.");
+
+  for (T i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    const T kVal = static_cast<T>(1u) << i;
+    if (cpp20::bit_width(kVal) != i + 1) {
+      return false;
+    }
+
+    if (kVal > 1 && cpp20::bit_width(static_cast<T>(kVal - 1)) != i) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+TEST(Int2PowTest, BitWidthIsCorrect) {
+  static_assert(CheckBitWidth<unsigned>(), "bit_width failed for unsigned.");
+  static_assert(CheckBitWidth<unsigned char>(), "bit_width failed for unsigned char.");
+  static_assert(CheckBitWidth<unsigned long>(), "bit_width failed for unsigned long.");
+  static_assert(CheckBitWidth<unsigned long long>(), "bit_width failed for unsigned long long.");
+
+  static_assert(CheckBitWidth<uint8_t>(), "bit_width failed for uint8_t.");
+  static_assert(CheckBitWidth<uint16_t>(), "bit_width failed for uint16_t.");
+  static_assert(CheckBitWidth<uint32_t>(), "bit_width failed for uint32_t.");
+  static_assert(CheckBitWidth<uint64_t>(), "bit_width failed for uint64_t.");
+  static_assert(CheckBitWidth<uint128_t>(), "bit_width failed for uint128_t.");
+
+  static_assert(CheckBitWidth<uint_least8_t>(), "bit_width failed for uint8_t.");
+  static_assert(CheckBitWidth<uint_least16_t>(), "bit_width failed for uint16_t.");
+  static_assert(CheckBitWidth<uint_least32_t>(), "bit_width failed for uint32_t.");
+  static_assert(CheckBitWidth<uint_least64_t>(), "bit_width failed for uint64_t.");
+
+  static_assert(CheckBitWidth<uint_fast8_t>(), "bit_width failed for uint8_t.");
+  static_assert(CheckBitWidth<uint_fast16_t>(), "bit_width failed for uint16_t.");
+  static_assert(CheckBitWidth<uint_fast32_t>(), "bit_width failed for uint32_t.");
+  static_assert(CheckBitWidth<uint_fast64_t>(), "bit_width failed for uint64_t.");
+}
+
+template <typename T>
+constexpr bool CheckBitCeil() {
+  static_assert(cpp20::bit_ceil<T>(static_cast<T>(0)) == 1, "bit_ceil must be 1 for zero and one.");
+  static_assert(cpp20::bit_ceil<T>(static_cast<T>(1)) == 1, "bit_ceil must be 1 for zero and one.");
+
+  for (T i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    const T kVal = (static_cast<T>(1) << i);
+    if (cpp20::bit_ceil(kVal) != kVal) {
+      return false;
+    }
+
+    // Only for non special cases 0, 1.
+    if (kVal - 1 > 1 && cpp20::bit_ceil(static_cast<T>(kVal - 1)) != kVal) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+TEST(IntPow2Test, BitCeiIsCorrect) {
+  static_assert(CheckBitCeil<unsigned>(), "bit_ceil failed for unsigned.");
+  static_assert(CheckBitCeil<unsigned char>(), "bit_ceil failed for unsigned.");
+  static_assert(CheckBitCeil<unsigned long>(), "bit_ceil failed for unsigned long.");
+  static_assert(CheckBitCeil<unsigned long long>(), "bit_ceil failed for unsigned long long.");
+
+  static_assert(CheckBitCeil<uint8_t>(), "bit_ceil failed for uint8_t.");
+  static_assert(CheckBitCeil<uint16_t>(), "bit_ceil failed for uint16_t.");
+  static_assert(CheckBitCeil<uint32_t>(), "bit_ceil failed for uint32_t.");
+  static_assert(CheckBitCeil<uint64_t>(), "bit_ceil failed for uint64_t.");
+  static_assert(CheckBitCeil<uint128_t>(), "bit_ceil failed for uint128_t.");
+
+  static_assert(CheckBitCeil<uint_least8_t>(), "bit_ceil failed for uint_least8_t.");
+  static_assert(CheckBitCeil<uint_least16_t>(), "bit_ceil failed for uint_least16_t.");
+  static_assert(CheckBitCeil<uint_least32_t>(), "bit_ceil failed for uint_least32_t.");
+  static_assert(CheckBitCeil<uint_least64_t>(), "bit_ceil failed for uint_least64_t.");
+
+  static_assert(CheckBitCeil<uint_fast8_t>(), "bit_ceil failed for uint_least8_t.");
+  static_assert(CheckBitCeil<uint_fast16_t>(), "bit_ceil failed for uint_least16_t.");
+  static_assert(CheckBitCeil<uint_fast32_t>(), "bit_ceil failed for uint_least32_t.");
+  static_assert(CheckBitCeil<uint_fast64_t>(), "bit_ceil failed for uint_least64_t.");
+}
+
+template <typename T>
+constexpr bool CheckBitFloor() {
+  static_assert(cpp20::bit_floor<T>(static_cast<T>(0)) == 0,
+                "bit_ceil must be 1 for zero and one.");
+  static_assert(cpp20::bit_floor<T>(static_cast<T>(1)) == 1,
+                "bit_ceil must be 1 for zero and one.");
+
+  for (T i = 0; i < std::numeric_limits<T>::digits; ++i) {
+    const T kVal = (static_cast<T>(1) << i);
+    if (cpp20::bit_floor(kVal) != kVal) {
+      return false;
+    }
+
+    // Only for non special case 0.
+    if (kVal - 1 > 1 && cpp20::bit_floor(static_cast<T>(kVal - 1)) != kVal >> 1) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+TEST(IntPow2Test, BitFloorIsCorrect) {
+  static_assert(CheckBitFloor<unsigned>(), "bit_ceil failed for unsigned.");
+  static_assert(CheckBitFloor<unsigned char>(), "bit_ceil failed for unsigned.");
+  static_assert(CheckBitFloor<unsigned long>(), "bit_ceil failed for unsigned long.");
+  static_assert(CheckBitFloor<unsigned long long>(), "bit_ceil failed for unsigned long long.");
+
+  static_assert(CheckBitFloor<uint8_t>(), "bit_ceil failed for uint8_t.");
+  static_assert(CheckBitFloor<uint16_t>(), "bit_ceil failed for uint16_t.");
+  static_assert(CheckBitFloor<uint32_t>(), "bit_ceil failed for uint32_t.");
+  static_assert(CheckBitFloor<uint64_t>(), "bit_ceil failed for uint64_t.");
+  static_assert(CheckBitFloor<uint128_t>(), "bit_ceil failed for uint128_t.");
+
+  static_assert(CheckBitFloor<uint_least8_t>(), "bit_ceil failed for uint_least8_t.");
+  static_assert(CheckBitFloor<uint_least16_t>(), "bit_ceil failed for uint_least16_t.");
+  static_assert(CheckBitFloor<uint_least32_t>(), "bit_ceil failed for uint_least32_t.");
+  static_assert(CheckBitFloor<uint_least64_t>(), "bit_ceil failed for uint_least64_t.");
+
+  static_assert(CheckBitFloor<uint_fast8_t>(), "bit_ceil failed for uint_least8_t.");
+  static_assert(CheckBitFloor<uint_fast16_t>(), "bit_ceil failed for uint_least16_t.");
+  static_assert(CheckBitFloor<uint_fast32_t>(), "bit_ceil failed for uint_least32_t.");
+  static_assert(CheckBitFloor<uint_fast64_t>(), "bit_ceil failed for uint_least64_t.");
+}
+
+#if __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+template <typename T>
+constexpr void CheckIntPow2Alias() {
+  static_assert(&std::has_single_bit<T> == &cpp20::has_single_bit<T>);
+  static_assert(&std::width<T> == &cpp20::width<T>);
+  static_assert(&std::bit_ceil<T> == &cpp20::bit_ceil<T>);
+}
+
+TEST(IntPow2Test, IsAliasForStdIntPow2IfAvailable) {
+  CheckIntPow2Alias<unsigned>();
+  CheckIntPow2Alias<unsigned char>();
+  CheckIntPow2Alias<unsigned long>();
+  CheckIntPow2Alias<unsigned long long>();
+
+  CheckIntPow2Alias<uint8_t>();
+  CheckIntPow2Alias<uint16_t>();
+  CheckIntPow2Alias<uint32_t>();
+  CheckIntPow2Alias<uint64_t>();
+  CheckIntPow2Alias<uint128_t>();
+
+  CheckIntPow2Alias<uint_least8_t>();
+  CheckIntPow2Alias<uint_least16_t>();
+  CheckIntPow2Alias<uint_least32_t>();
+  CheckIntPow2Alias<uint_least64_t>();
+
+  CheckIntPow2Alias<uint_fast8_t>();
+  CheckIntPow2Alias<uint_fast16_t>();
+  CheckIntPow2Alias<uint_fast32_t>();
+  CheckIntPow2Alias<uint_fast64_t>();
+}
+
+#endif  // __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
 }  // namespace
