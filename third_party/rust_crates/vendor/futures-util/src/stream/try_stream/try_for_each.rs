@@ -1,19 +1,21 @@
 use core::fmt;
 use core::pin::Pin;
 use futures_core::future::{Future, TryFuture};
+use futures_core::ready;
 use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 
-/// Future for the [`try_for_each`](super::TryStreamExt::try_for_each) method.
-#[pin_project]
-#[must_use = "futures do nothing unless you `.await` or poll them"]
-pub struct TryForEach<St, Fut, F> {
-    #[pin]
-    stream: St,
-    f: F,
-    #[pin]
-    future: Option<Fut>,
+pin_project! {
+    /// Future for the [`try_for_each`](super::TryStreamExt::try_for_each) method.
+    #[must_use = "futures do nothing unless you `.await` or poll them"]
+    pub struct TryForEach<St, Fut, F> {
+        #[pin]
+        stream: St,
+        f: F,
+        #[pin]
+        future: Option<Fut>,
+    }
 }
 
 impl<St, Fut, F> fmt::Debug for TryForEach<St, Fut, F>
@@ -34,8 +36,8 @@ where St: TryStream,
       F: FnMut(St::Ok) -> Fut,
       Fut: TryFuture<Ok = (), Error = St::Error>,
 {
-    pub(super) fn new(stream: St, f: F) -> TryForEach<St, Fut, F> {
-        TryForEach {
+    pub(super) fn new(stream: St, f: F) -> Self {
+        Self {
             stream,
             f,
             future: None,

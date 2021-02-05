@@ -15,54 +15,38 @@
 // fn main() {}
 // ```
 
-#![allow(dead_code, unused_imports, unused_parens)]
-#![allow(clippy::no_effect)]
+#![allow(dead_code, unused_imports, unused_parens, unknown_lints, renamed_and_removed_lints)]
+#![allow(clippy::needless_lifetimes)]
 
 use pin_project::pin_project;
 
+// #[pin_project(project_replace)]
 struct Struct<T, U> {
     // #[pin]
     pinned: T,
     unpinned: U,
 }
 
-#[doc(hidden)]
-#[allow(dead_code)]
-#[allow(single_use_lifetimes)]
-#[allow(clippy::mut_mut)]
-#[allow(clippy::type_repetition_in_bounds)]
-struct __StructProjection<'pin, T, U>
-where
-    Struct<T, U>: 'pin,
-{
-    pinned: ::pin_project::__private::Pin<&'pin mut (T)>,
-    unpinned: &'pin mut (U),
-}
-#[doc(hidden)]
-#[allow(dead_code)]
-#[allow(single_use_lifetimes)]
-#[allow(clippy::type_repetition_in_bounds)]
-struct __StructProjectionRef<'pin, T, U>
-where
-    Struct<T, U>: 'pin,
-{
-    pinned: ::pin_project::__private::Pin<&'pin (T)>,
-    unpinned: &'pin (U),
-}
-#[doc(hidden)]
-#[allow(dead_code)]
-#[allow(unreachable_pub)]
-#[allow(single_use_lifetimes)]
-struct __StructProjectionOwned<T, U> {
-    pinned: ::pin_project::__private::PhantomData<T>,
-    unpinned: U,
-}
-
-#[doc(hidden)]
-#[allow(non_upper_case_globals)]
-#[allow(single_use_lifetimes)]
-#[allow(clippy::used_underscore_binding)]
 const _: () = {
+    struct __StructProjection<'pin, T, U>
+    where
+        Struct<T, U>: 'pin,
+    {
+        pinned: ::pin_project::__private::Pin<&'pin mut (T)>,
+        unpinned: &'pin mut (U),
+    }
+    struct __StructProjectionRef<'pin, T, U>
+    where
+        Struct<T, U>: 'pin,
+    {
+        pinned: ::pin_project::__private::Pin<&'pin (T)>,
+        unpinned: &'pin (U),
+    }
+    struct __StructProjectionOwned<T, U> {
+        pinned: ::pin_project::__private::PhantomData<T>,
+        unpinned: U,
+    }
+
     impl<T, U> Struct<T, U> {
         fn project<'pin>(
             self: ::pin_project::__private::Pin<&'pin mut Self>,
@@ -122,6 +106,17 @@ const _: () = {
         }
     }
 
+    // Ensure that it's impossible to use pin projections on a #[repr(packed)]
+    // struct.
+    //
+    // See ./struct-default-expanded.rs and https://github.com/taiki-e/pin-project/pull/34
+    // for details.
+    #[forbid(safe_packed_borrows)]
+    fn __assert_not_repr_packed<T, U>(this: &Struct<T, U>) {
+        let _ = &this.pinned;
+        let _ = &this.unpinned;
+    }
+
     // Automatically create the appropriate conditional `Unpin` implementation.
     //
     // See ./struct-default-expanded.rs and https://github.com/taiki-e/pin-project/pull/53.
@@ -137,28 +132,25 @@ const _: () = {
         __Struct<'pin, T, U>: ::pin_project::__private::Unpin
     {
     }
-    unsafe impl<T, U> ::pin_project::UnsafeUnpin for Struct<T, U> {}
+    // A dummy impl of `UnsafeUnpin`, to ensure that the user cannot implement it.
+    #[doc(hidden)]
+    unsafe impl<'pin, T, U> ::pin_project::UnsafeUnpin for Struct<T, U> where
+        __Struct<'pin, T, U>: ::pin_project::__private::Unpin
+    {
+    }
 
     // Ensure that struct does not implement `Drop`.
     //
     // See ./struct-default-expanded.rs for details.
     trait StructMustNotImplDrop {}
-    #[allow(clippy::drop_bounds)]
+    #[allow(clippy::drop_bounds, drop_bounds)]
     impl<T: ::pin_project::__private::Drop> StructMustNotImplDrop for T {}
     impl<T, U> StructMustNotImplDrop for Struct<T, U> {}
+    // A dummy impl of `PinnedDrop`, to ensure that users don't accidentally
+    // write a non-functional `PinnedDrop` impls.
+    #[doc(hidden)]
     impl<T, U> ::pin_project::__private::PinnedDrop for Struct<T, U> {
         unsafe fn drop(self: ::pin_project::__private::Pin<&mut Self>) {}
-    }
-
-    // Ensure that it's impossible to use pin projections on a #[repr(packed)]
-    // struct.
-    //
-    // See ./struct-default-expanded.rs and https://github.com/taiki-e/pin-project/pull/34
-    // for details.
-    #[forbid(safe_packed_borrows)]
-    fn __assert_not_repr_packed<T, U>(val: &Struct<T, U>) {
-        &val.pinned;
-        &val.unpinned;
     }
 };
 

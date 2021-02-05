@@ -252,11 +252,11 @@ fn start_free_running<T: FakeClockObserver>(
         debug!("free running mock clock {:?} {:?}", real_increment, increment);
         loop {
             if futures::select! {
-                itv = itv.next() => {
+                _ = itv.next() => {
                     mock_clock.lock().unwrap().increment(&increment);
                     false
                 },
-                signal = signal.next() => {
+                _ = signal.next() => {
                     true
                 }
             } {

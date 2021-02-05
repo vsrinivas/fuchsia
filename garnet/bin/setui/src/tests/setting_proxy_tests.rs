@@ -546,7 +546,7 @@ async fn test_request_order() {
             .queue_action(Request::Get, HandlerAction::Respond(Ok(None)));
         futures::select! {
             payload_1 = receptor_1_fuse.next() => {
-                if let Ok((HandlerPayload::Response(response), _)) =
+                if let Ok((HandlerPayload::Response(_), _)) =
                         payload_1.map_or(Err(String::from("no event")),
                         HandlerPayload::try_from_with_client) {
                     // First request finishes first.
@@ -555,7 +555,7 @@ async fn test_request_order() {
                 }
             },
             payload_2 = receptor_2_fuse.next() => {
-                if let Ok((HandlerPayload::Response(response), _)) =
+                if let Ok((HandlerPayload::Response(_), _)) =
                         payload_2.map_or(Err(String::from("no event")),
                         HandlerPayload::try_from_with_client) {
                     assert_eq!(completed_request_ids.len(), 1);
@@ -620,7 +620,7 @@ async fn test_request_order_switchboard() {
         futures::select! {
             payload_1 = receptor_1_fuse.next() => {
                 if let Some(MessageEvent::Message(
-                    Payload::Event(SettingEvent::Response(response_id, response)),
+                    Payload::Event(SettingEvent::Response(response_id, _)),
                     _,
                 )) = payload_1
                 {
@@ -632,7 +632,7 @@ async fn test_request_order_switchboard() {
             },
             payload_2 = receptor_2_fuse.next() => {
                 if let Some(MessageEvent::Message(
-                    Payload::Event(SettingEvent::Response(response_id, response)),
+                    Payload::Event(SettingEvent::Response(response_id, _)),
                     _,
                 )) = payload_2
                 {

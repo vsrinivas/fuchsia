@@ -310,11 +310,11 @@ macro_rules! document_select_macro {
 
 #[cfg(feature = "std")]
 #[doc(hidden)]
-#[proc_macro_hack(support_nested)]
+#[proc_macro_hack(support_nested, only_hack_old_rustc)]
 pub use futures_macro::select_internal;
 
 #[doc(hidden)]
-#[proc_macro_hack(support_nested)]
+#[proc_macro_hack(support_nested, only_hack_old_rustc)]
 pub use futures_macro::select_biased_internal;
 
 document_select_macro! {
@@ -322,7 +322,7 @@ document_select_macro! {
     #[macro_export]
     macro_rules! select {
         ($($tokens:tt)*) => {{
-            use $crate::__reexport as __futures_crate;
+            use $crate::__private as __futures_crate;
             $crate::select_internal! {
                 $( $tokens )*
             }
@@ -332,7 +332,7 @@ document_select_macro! {
     #[macro_export]
     macro_rules! select_biased {
         ($($tokens:tt)*) => {{
-            use $crate::__reexport as __futures_crate;
+            use $crate::__private as __futures_crate;
             $crate::select_biased_internal! {
                 $( $tokens )*
             }

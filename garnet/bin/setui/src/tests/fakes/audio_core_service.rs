@@ -98,7 +98,7 @@ impl Service for AudioCoreService {
 
             loop {
                 futures::select! {
-                    exit = fused_exit => {
+                    _ = fused_exit => {
                         return;
                     }
                     req = manager_stream.try_next() => {

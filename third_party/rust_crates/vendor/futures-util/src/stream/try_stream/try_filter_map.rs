@@ -1,22 +1,24 @@
 use core::fmt;
 use core::pin::Pin;
 use futures_core::future::{TryFuture};
+use futures_core::ready;
 use futures_core::stream::{Stream, TryStream, FusedStream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 
-/// Stream for the [`try_filter_map`](super::TryStreamExt::try_filter_map)
-/// method.
-#[pin_project]
-#[must_use = "streams do nothing unless polled"]
-pub struct TryFilterMap<St, Fut, F> {
-    #[pin]
-    stream: St,
-    f: F,
-    #[pin]
-    pending: Option<Fut>,
+pin_project! {
+    /// Stream for the [`try_filter_map`](super::TryStreamExt::try_filter_map)
+    /// method.
+    #[must_use = "streams do nothing unless polled"]
+    pub struct TryFilterMap<St, Fut, F> {
+        #[pin]
+        stream: St,
+        f: F,
+        #[pin]
+        pending: Option<Fut>,
+    }
 }
 
 impl<St, Fut, F> fmt::Debug for TryFilterMap<St, Fut, F>
@@ -34,7 +36,7 @@ where
 
 impl<St, Fut, F> TryFilterMap<St, Fut, F> {
     pub(super) fn new(stream: St, f: F) -> Self {
-        TryFilterMap { stream, f, pending: None }
+        Self { stream, f, pending: None }
     }
 
     delegate_access_inner!(stream, St, ());
@@ -66,8 +68,9 @@ impl<St, Fut, F, T> Stream for TryFilterMap<St, Fut, F>
         Poll::Ready(loop {
             if let Some(p) = this.pending.as_mut().as_pin_mut() {
                 // We have an item in progress, poll that until it's done
-                let item = ready!(p.try_poll(cx)?);
+                let res = ready!(p.try_poll(cx));
                 this.pending.set(None);
+                let item = res?;
                 if item.is_some() {
                     break item.map(Ok);
                 }

@@ -1,27 +1,29 @@
 use core::fmt;
 use core::pin::Pin;
 use futures_core::future::TryFuture;
+use futures_core::ready;
 use futures_core::stream::{FusedStream, Stream, TryStream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 
-/// Stream for the [`try_take_while`](super::TryStreamExt::try_take_while)
-/// method.
-#[pin_project]
-#[must_use = "streams do nothing unless polled"]
-pub struct TryTakeWhile<St, Fut, F>
-where
-    St: TryStream,
-{
-    #[pin]
-    stream: St,
-    f: F,
-    #[pin]
-    pending_fut: Option<Fut>,
-    pending_item: Option<St::Ok>,
-    done_taking: bool,
+pin_project! {
+    /// Stream for the [`try_take_while`](super::TryStreamExt::try_take_while)
+    /// method.
+    #[must_use = "streams do nothing unless polled"]
+    pub struct TryTakeWhile<St, Fut, F>
+    where
+        St: TryStream,
+    {
+        #[pin]
+        stream: St,
+        f: F,
+        #[pin]
+        pending_fut: Option<Fut>,
+        pending_item: Option<St::Ok>,
+        done_taking: bool,
+    }
 }
 
 impl<St, Fut, F> fmt::Debug for TryTakeWhile<St, Fut, F>
@@ -46,8 +48,8 @@ where
     F: FnMut(&St::Ok) -> Fut,
     Fut: TryFuture<Ok = bool, Error = St::Error>,
 {
-    pub(super) fn new(stream: St, f: F) -> TryTakeWhile<St, Fut, F> {
-        TryTakeWhile {
+    pub(super) fn new(stream: St, f: F) -> Self {
+        Self {
             stream,
             f,
             pending_fut: None,
@@ -76,9 +78,10 @@ where
 
         Poll::Ready(loop {
             if let Some(fut) = this.pending_fut.as_mut().as_pin_mut() {
-                let take = ready!(fut.try_poll(cx)?);
-                let item = this.pending_item.take();
+                let res = ready!(fut.try_poll(cx));
                 this.pending_fut.set(None);
+                let take = res?;
+                let item = this.pending_item.take();
                 if take {
                     break item.map(Ok);
                 } else {

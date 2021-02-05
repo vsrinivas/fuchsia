@@ -90,7 +90,7 @@ async fn main() -> Result<(), Error> {
                     Some(Err(e)) => return Err(format_err!("BR/EDR Profile service search error: {}", e)),
                     Some(Ok(request)) => request,
                 };
-                let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
+                let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol: _, attributes, responder } = result;
 
                 if let Some(service) = AvrcpService::from_attributes(attributes) {
                     info!("Service found on {:?}: {:?}", peer_id, service);

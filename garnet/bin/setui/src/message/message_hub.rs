@@ -119,7 +119,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 // take absolute priority. Message actions are ordered before
                 // messenger in case the messenger is subsequently deleted.
                 futures::select_biased! {
-                    exit_action = exit_rx.next() => {
+                    _ = exit_rx.next() => {
                         break;
                     }
                     message_action = action_rx.next() => {

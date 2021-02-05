@@ -267,10 +267,9 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
                     },
                     Err(Error::CommandNotSupported) => false,
                     Err(_) => true,
-                    _=> true,
                 }
             }
-            complete => { true }
+            complete => true
         } {
             break;
         }

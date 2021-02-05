@@ -912,7 +912,7 @@ impl Session {
                     match incoming_bytes {
                         Some(Ok(bytes)) => {
                             trace!("Received packet from peer: {:?}", bytes);
-                            if let Err(e) = data_sender.send(bytes).await {
+                            if let Err(_) = data_sender.send(bytes).await {
                                 error!("Couldn't send bytes to main run task");
                             }
                         },

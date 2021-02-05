@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    *,
+    Attribute, Result, Token, Visibility,
 };
 
 use super::PIN;
@@ -36,7 +36,7 @@ pub(super) fn parse_attribute(args: &TokenStream, input: TokenStream) -> Result<
     })
 }
 
-#[allow(dead_code)] // https://github.com/rust-lang/rust/issues/56750
+#[allow(dead_code)] // false positive that fixed in Rust 1.39
 struct Input {
     attrs: Vec<Attribute>,
     body: TokenStream,

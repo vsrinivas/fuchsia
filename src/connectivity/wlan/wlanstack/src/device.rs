@@ -237,7 +237,7 @@ where
     let sme_fut_with_shutdown = async move {
         select! {
             sme_fut = sme_fut.fuse() => sme_fut,
-            shutdown_response = shutdown_receiver.select_next_some() => Ok(()),
+            _ = shutdown_receiver.select_next_some() => Ok(()),
         }
     };
     (server, sme_fut_with_shutdown)

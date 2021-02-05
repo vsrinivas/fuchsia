@@ -644,7 +644,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
             }
             event = event_stream.select_next_some() => {
                 match event? {
-                    ControllerEvent::OnNotification { timestamp, notification } => {
+                    ControllerEvent::OnNotification { timestamp: _, notification } => {
                         if let Some(value) = notification.pos {
                             last_receieved_pos = value;
                         }

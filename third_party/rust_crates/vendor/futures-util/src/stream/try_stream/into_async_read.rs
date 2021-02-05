@@ -1,5 +1,6 @@
 use crate::stream::TryStreamExt;
 use core::pin::Pin;
+use futures_core::ready;
 use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
 use futures_io::{AsyncRead, AsyncWrite, AsyncBufRead};
@@ -39,7 +40,7 @@ where
     St::Ok: AsRef<[u8]>,
 {
     pub(super) fn new(stream: St) -> Self {
-        IntoAsyncRead {
+        Self {
             stream,
             state: ReadState::PendingChunk,
         }

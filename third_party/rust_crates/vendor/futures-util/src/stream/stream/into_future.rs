@@ -1,6 +1,7 @@
 use crate::stream::StreamExt;
 use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
+use futures_core::ready;
 use futures_core::stream::Stream;
 use futures_core::task::{Context, Poll};
 
@@ -12,8 +13,8 @@ pub struct StreamFuture<St> {
 }
 
 impl<St: Stream + Unpin> StreamFuture<St> {
-    pub(super) fn new(stream: St) -> StreamFuture<St> {
-        StreamFuture { stream: Some(stream) }
+    pub(super) fn new(stream: St) -> Self {
+        Self { stream: Some(stream) }
     }
 
     /// Acquires a reference to the underlying stream that this combinator is

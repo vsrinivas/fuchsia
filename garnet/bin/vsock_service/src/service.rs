@@ -384,7 +384,7 @@ impl Vsock {
                 + std::marker::Unpin,
         {
             select! {
-                shutdown_event = shutdown_event => {Err(shutdown_event.map_err(|e| e.into()))},
+                shutdown_event = shutdown_event => Err(shutdown_event.map_err(|e| e.into())),
                 cb = cb.fuse() => match cb {
                     Ok(_) => Ok(zx::Status::OK),
                     Err(_) => Ok(Error::ConnectionReset.into_status()),

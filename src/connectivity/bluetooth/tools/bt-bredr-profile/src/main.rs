@@ -97,7 +97,7 @@ async fn connection_receiver(
                 Ok(None) => return Err(anyhow!("{} channel closed", tag)),
                 Ok(Some(event)) => event,
             };
-            let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = event;
+            let ConnectionReceiverRequest::Connected { channel, .. } = event;
             let socket = channel.socket.ok_or(anyhow!("{}: missing socket", tag))?;
             let mode = channel.channel_mode.ok_or(anyhow!("{}: missing channel mode", tag))?;
             let max_tx_sdu_size = channel.max_tx_sdu_size.ok_or(anyhow!("{}: missing max tx sdu", tag))?;

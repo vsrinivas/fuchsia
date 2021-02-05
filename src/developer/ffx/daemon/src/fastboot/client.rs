@@ -130,9 +130,9 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
                             async move {
                                 listener
                                     .into_proxy()
-                                    .map_err(|e| FastbootError::CommunicationError)?
+                                    .map_err(|_| FastbootError::CommunicationError)?
                                     .on_reboot()
-                                    .map_err(|e| FastbootError::CommunicationError)
+                                    .map_err(|_| FastbootError::CommunicationError)
                             }
                         ) {
                             Ok(_) => {

@@ -120,7 +120,7 @@ where
                        return;
                     }
                 }
-                exit = exit_rx.next() => {
+                _ = exit_rx.next() => {
                     return;
                 }
             }

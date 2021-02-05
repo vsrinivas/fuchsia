@@ -140,7 +140,7 @@ impl PairingDispatcher {
                     Some(StreamItem::Item((host, req))) => {
                         match req {
                             Ok(req) => self.handle_host_request(req, host),
-                            Err(err) => {
+                            Err(_) => {
                                 self.hosts.remove(&host);
                                 false
                             }
@@ -199,7 +199,7 @@ impl PairingDispatcher {
             host_added = self.hosts_added.next().fuse() => {
                 match host_added {
                     Some((id, proxy)) => {
-                        if let Err(e) = self.start_handling_host(id.clone(), proxy) {
+                        if let Err(_) = self.start_handling_host(id.clone(), proxy) {
                             warn!("Failed to register pairing delegate channel for bt-host {}", id)
                         }
                         false

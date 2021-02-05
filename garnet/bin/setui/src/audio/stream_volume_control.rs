@@ -156,7 +156,7 @@ impl StreamVolumeControl {
         fasync::Task::spawn(async move {
             loop {
                 futures::select! {
-                    exit = exit_rx.next() => {
+                    _ = exit_rx.next() => {
                         if let Some(publisher) = publisher_clone {
                             publisher.send_event(Event::Closed(PUBLISHER_EVENT_NAME));
                         }

@@ -5,7 +5,7 @@ use core::fmt;
 use core::pin::Pin;
 use futures_core::future::{Future, FusedFuture};
 use futures_core::task::{Context, Poll};
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 
 use super::assert_future;
 
@@ -14,11 +14,12 @@ macro_rules! generate {
         $(#[$doc:meta])*
         ($Join:ident, <$($Fut:ident),*>),
     )*) => ($(
-        $(#[$doc])*
-        #[pin_project]
-        #[must_use = "futures do nothing unless you `.await` or poll them"]
-        pub struct $Join<$($Fut: Future),*> {
-            $(#[pin] $Fut: MaybeDone<$Fut>,)*
+        pin_project! {
+            $(#[$doc])*
+            #[must_use = "futures do nothing unless you `.await` or poll them"]
+            pub struct $Join<$($Fut: Future),*> {
+                $(#[pin] $Fut: MaybeDone<$Fut>,)*
+            }
         }
 
         impl<$($Fut),*> fmt::Debug for $Join<$($Fut),*>
@@ -36,8 +37,8 @@ macro_rules! generate {
         }
 
         impl<$($Fut: Future),*> $Join<$($Fut),*> {
-            fn new($($Fut: $Fut),*) -> $Join<$($Fut),*> {
-                $Join {
+            fn new($($Fut: $Fut),*) -> Self {
+                Self {
                     $($Fut: maybe_done($Fut)),*
                 }
             }

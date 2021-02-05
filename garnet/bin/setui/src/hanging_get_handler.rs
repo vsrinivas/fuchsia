@@ -274,7 +274,7 @@ where
                                 command_tx_clone.unbounded_send(ListenCommand::Change(setting_info)).ok();
                             }
                         }
-                        exit = exit_rx.next() => {
+                        _ = exit_rx.next() => {
                             return;
                         }
                     }

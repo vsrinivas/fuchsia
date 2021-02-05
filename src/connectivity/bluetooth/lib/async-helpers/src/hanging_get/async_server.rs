@@ -154,7 +154,7 @@ where
                 // A request for a new subscriber as been requested from a `SubscriptionRegistrar`.
                 subscriber = self.subscription_requests.next() => {
                     if let Some((_, responder)) = subscriber {
-                        let (sender, mut receiver) = responding::channel(self.channel_size);
+                        let (sender, receiver) = responding::channel(self.channel_size);
                         let key = self.subscriber_key_generator.next().unwrap();
                         if let Ok(()) = responder.respond(sender.into()) {
                             subscriptions.push(receiver.map(move |o| (key, o)).with_epitaph(key));

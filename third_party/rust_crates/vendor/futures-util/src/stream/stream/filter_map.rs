@@ -1,22 +1,24 @@
 use core::fmt;
 use core::pin::Pin;
 use futures_core::future::Future;
+use futures_core::ready;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 use crate::fns::FnMut1;
 
-/// Stream for the [`filter_map`](super::StreamExt::filter_map) method.
-#[pin_project]
-#[must_use = "streams do nothing unless polled"]
-pub struct FilterMap<St, Fut, F> {
-    #[pin]
-    stream: St,
-    f: F,
-    #[pin]
-    pending: Option<Fut>,
+pin_project! {
+    /// Stream for the [`filter_map`](super::StreamExt::filter_map) method.
+    #[must_use = "streams do nothing unless polled"]
+    pub struct FilterMap<St, Fut, F> {
+        #[pin]
+        stream: St,
+        f: F,
+        #[pin]
+        pending: Option<Fut>,
+    }
 }
 
 impl<St, Fut, F> fmt::Debug for FilterMap<St, Fut, F>
@@ -37,8 +39,8 @@ impl<St, Fut, F> FilterMap<St, Fut, F>
           F: FnMut(St::Item) -> Fut,
           Fut: Future,
 {
-    pub(super) fn new(stream: St, f: F) -> FilterMap<St, Fut, F> {
-        FilterMap { stream, f, pending: None }
+    pub(super) fn new(stream: St, f: F) -> Self {
+        Self { stream, f, pending: None }
     }
 
     delegate_access_inner!(stream, St, ());

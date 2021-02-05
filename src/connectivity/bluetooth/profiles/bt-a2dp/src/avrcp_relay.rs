@@ -171,7 +171,7 @@ impl AvrcpRelay {
                         info!("{} AVRCP relay stop: notification stream gone", peer_id);
                         break;
                     }
-                    let avrcp::ControllerEvent::OnNotification { timestamp, notification } = event.unwrap()?;
+                    let avrcp::ControllerEvent::OnNotification { timestamp: _, notification } = event.unwrap()?;
                     trace!("Got Notification from AVRCP: {:?}", notification);
 
                     let mut player_status_updated = false;

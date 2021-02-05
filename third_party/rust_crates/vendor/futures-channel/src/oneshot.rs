@@ -7,7 +7,7 @@ use core::fmt;
 use core::pin::Pin;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::SeqCst;
-use futures_core::future::Future;
+use futures_core::future::{Future, FusedFuture};
 use futures_core::task::{Context, Poll, Waker};
 
 use crate::lock::Lock;
@@ -116,8 +116,8 @@ pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
 }
 
 impl<T> Inner<T> {
-    fn new() -> Inner<T> {
-        Inner {
+    fn new() -> Self {
+        Self {
             complete: AtomicBool::new(false),
             data: Lock::new(None),
             rx_task: Lock::new(None),
@@ -366,7 +366,7 @@ impl<T> Sender<T> {
     /// [`Receiver`](Receiver) half has hung up.
     ///
     /// This is a utility wrapping [`poll_canceled`](Sender::poll_canceled)
-    /// to expose a [`Future`](core::future::Future). 
+    /// to expose a [`Future`](core::future::Future).
     pub fn cancellation(&mut self) -> Cancellation<'_, T> {
         Cancellation { inner: self }
     }
@@ -458,6 +458,21 @@ impl<T> Future for Receiver<T> {
         cx: &mut Context<'_>,
     ) -> Poll<Result<T, Canceled>> {
         self.inner.recv(cx)
+    }
+}
+
+impl<T> FusedFuture for Receiver<T> {
+    fn is_terminated(&self) -> bool {
+        if self.inner.complete.load(SeqCst) {
+            if let Some(slot) = self.inner.data.try_lock() {
+                if slot.is_some() {
+                    return false;
+                }
+            }
+            true
+        } else {
+            false
+        }
     }
 }
 

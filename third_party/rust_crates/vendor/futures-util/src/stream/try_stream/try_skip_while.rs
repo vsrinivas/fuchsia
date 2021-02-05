@@ -1,24 +1,26 @@
 use core::fmt;
 use core::pin::Pin;
 use futures_core::future::TryFuture;
+use futures_core::ready;
 use futures_core::stream::{Stream, TryStream, FusedStream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 
-/// Stream for the [`try_skip_while`](super::TryStreamExt::try_skip_while)
-/// method.
-#[pin_project]
-#[must_use = "streams do nothing unless polled"]
-pub struct TrySkipWhile<St, Fut, F> where St: TryStream {
-    #[pin]
-    stream: St,
-    f: F,
-    #[pin]
-    pending_fut: Option<Fut>,
-    pending_item: Option<St::Ok>,
-    done_skipping: bool,
+pin_project! {
+    /// Stream for the [`try_skip_while`](super::TryStreamExt::try_skip_while)
+    /// method.
+    #[must_use = "streams do nothing unless polled"]
+    pub struct TrySkipWhile<St, Fut, F> where St: TryStream {
+        #[pin]
+        stream: St,
+        f: F,
+        #[pin]
+        pending_fut: Option<Fut>,
+        pending_item: Option<St::Ok>,
+        done_skipping: bool,
+    }
 }
 
 impl<St, Fut, F> fmt::Debug for TrySkipWhile<St, Fut, F>
@@ -42,8 +44,8 @@ impl<St, Fut, F> TrySkipWhile<St, Fut, F>
           F: FnMut(&St::Ok) -> Fut,
           Fut: TryFuture<Ok = bool, Error = St::Error>,
 {
-    pub(super) fn new(stream: St, f: F) -> TrySkipWhile<St, Fut, F> {
-        TrySkipWhile {
+    pub(super) fn new(stream: St, f: F) -> Self {
+        Self {
             stream,
             f,
             pending_fut: None,
@@ -74,9 +76,10 @@ impl<St, Fut, F> Stream for TrySkipWhile<St, Fut, F>
 
         Poll::Ready(loop {
             if let Some(fut) = this.pending_fut.as_mut().as_pin_mut() {
-                let skipped = ready!(fut.try_poll(cx)?);
-                let item = this.pending_item.take();
+                let res = ready!(fut.try_poll(cx));
                 this.pending_fut.set(None);
+                let skipped = res?;
+                let item = this.pending_item.take();
                 if !skipped {
                     *this.done_skipping = true;
                     break item.map(Ok);

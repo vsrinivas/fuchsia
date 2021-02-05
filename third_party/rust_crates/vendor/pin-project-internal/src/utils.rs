@@ -1,11 +1,15 @@
 use proc_macro2::{Group, Spacing, Span, TokenStream, TokenTree};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use std::{iter::FromIterator, mem};
 use syn::{
     parse::{Parse, ParseBuffer, ParseStream},
+    parse_quote,
     punctuated::Punctuated,
+    token,
     visit_mut::{self, VisitMut},
-    *,
+    Attribute, ExprPath, ExprStruct, Generics, Ident, Item, Lifetime, LifetimeDef, Macro, PatPath,
+    PatStruct, PatTupleStruct, Path, PathArguments, PredicateType, QSelf, Result, Token, Type,
+    TypeParamBound, TypePath, Variant, Visibility, WherePredicate,
 };
 
 pub(crate) type Variants = Punctuated<Variant, Token![,]>;
@@ -23,36 +27,6 @@ macro_rules! parse_quote_spanned {
     ($span:expr => $($tt:tt)*) => {
         syn::parse2(quote::quote_spanned!($span => $($tt)*)).unwrap_or_else(|e| panic!("{}", e))
     };
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub(crate) enum ProjKind {
-    Mutable,
-    Immutable,
-    Owned,
-}
-
-impl ProjKind {
-    pub(crate) const ALL: [Self; 3] = [ProjKind::Mutable, ProjKind::Immutable, ProjKind::Owned];
-
-    /// Returns the name of the projection method.
-    pub(crate) fn method_name(self) -> &'static str {
-        match self {
-            ProjKind::Mutable => "project",
-            ProjKind::Immutable => "project_ref",
-            ProjKind::Owned => "project_replace",
-        }
-    }
-
-    /// Creates the ident of the projected type from the ident of the original
-    /// type.
-    pub(crate) fn proj_ident(self, ident: &Ident) -> Ident {
-        match self {
-            ProjKind::Mutable => format_ident!("__{}Projection", ident),
-            ProjKind::Immutable => format_ident!("__{}ProjectionRef", ident),
-            ProjKind::Owned => format_ident!("__{}ProjectionOwned", ident),
-        }
-    }
 }
 
 /// Determines the lifetime names. Ensure it doesn't overlap with any existing
@@ -106,7 +80,10 @@ pub(crate) fn insert_lifetime(generics: &mut Generics, lifetime: Lifetime) {
     generics.params.insert(0, LifetimeDef::new(lifetime).into());
 }
 
-/// Determines the visibility of the projected type and projection method.
+/// Determines the visibility of the projected types and projection methods.
+///
+/// If given visibility is `pub`, returned visibility is `pub(crate)`.
+/// Otherwise, returned visibility is the same as given visibility.
 pub(crate) fn determine_visibility(vis: &Visibility) -> Visibility {
     if let Visibility::Public(token) = vis {
         parse_quote_spanned!(token.pub_token.span => pub(crate))
@@ -115,7 +92,8 @@ pub(crate) fn determine_visibility(vis: &Visibility) -> Visibility {
     }
 }
 
-/// Check if `tokens` is an empty `TokenStream`.
+/// Checks if `tokens` is an empty `TokenStream`.
+///
 /// This is almost equivalent to `syn::parse2::<Nothing>()`, but produces
 /// a better error message and does not require ownership of `tokens`.
 pub(crate) fn parse_as_empty(tokens: &TokenStream) -> Result<()> {
@@ -149,11 +127,11 @@ pub(crate) trait SliceExt {
     fn find(&self, ident: &str) -> Option<&Attribute>;
 }
 
-pub(crate) trait VecExt {
-    fn find_remove(&mut self, ident: &str) -> Result<Option<Attribute>>;
-}
-
 impl SliceExt for [Attribute] {
+    /// # Errors
+    ///
+    /// * There are multiple specified attributes.
+    /// * The `Attribute::tokens` field of the specified attribute is not empty.
     fn position_exact(&self, ident: &str) -> Result<Option<usize>> {
         self.iter()
             .try_fold((0, None), |(i, mut prev), attr| {
@@ -169,13 +147,7 @@ impl SliceExt for [Attribute] {
     }
 
     fn find(&self, ident: &str) -> Option<&Attribute> {
-        self.iter().position(|attr| attr.path.is_ident(ident)).and_then(|i| self.get(i))
-    }
-}
-
-impl VecExt for Vec<Attribute> {
-    fn find_remove(&mut self, ident: &str) -> Result<Option<Attribute>> {
-        self.position_exact(ident).map(|pos| pos.map(|i| self.remove(i)))
+        self.iter().position(|attr| attr.path.is_ident(ident)).map(|i| &self[i])
     }
 }
 

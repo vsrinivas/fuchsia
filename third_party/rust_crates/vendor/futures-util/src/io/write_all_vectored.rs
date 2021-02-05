@@ -1,3 +1,4 @@
+use futures_core::ready;
 use futures_core::future::Future;
 use futures_core::task::{Context, Poll};
 use futures_io::AsyncWrite;
@@ -19,7 +20,7 @@ impl<W: ?Sized + Unpin> Unpin for WriteAllVectored<'_, W> {}
 
 impl<'a, W: AsyncWrite + ?Sized + Unpin> WriteAllVectored<'a, W> {
     pub(super) fn new(writer: &'a mut W, bufs: &'a mut [IoSlice<'a>]) -> Self {
-        WriteAllVectored { writer, bufs: IoSlice::advance(bufs, 0) }
+        Self { writer, bufs: IoSlice::advance(bufs, 0) }
     }
 }
 
@@ -186,7 +187,7 @@ mod tests {
             (vec![IoSlice::new(&[1, 1, 1]), IoSlice::new(&[2, 2, 2]), IoSlice::new(&[3, 3, 3])], &[1, 1, 1, 2, 2, 2, 3, 3, 3]),
         ];
 
-        for (mut input, wanted) in tests.into_iter() {
+        for (mut input, wanted) in tests {
             let mut dst = test_writer(2, 2);
             {
                 let mut future = dst.write_all_vectored(&mut *input);

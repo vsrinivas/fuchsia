@@ -152,13 +152,13 @@ impl InspectAgent {
                     },
                     switchboard_message = switchboard_event.select_next_some() => {
                         if let MessageEvent::Message(SwitchboardPayload::Action(
-                                Action::Request(setting_type, request)), client)
+                                Action::Request(setting_type, request)), _client)
                                     = switchboard_message {
                             agent.record_request(setting_type, &request);
                         }
                     },
                     agent_message = agent_event.select_next_some() => {
-                        if let MessageEvent::Message(Payload::Invocation(invocation), client)
+                        if let MessageEvent::Message(Payload::Invocation(_invocation), client)
                                 = agent_message {
                             // Since the agent runs at creation, there is no
                             // need to handle state here.

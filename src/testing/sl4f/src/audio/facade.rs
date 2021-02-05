@@ -241,7 +241,7 @@ impl OutputWorker {
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
                         },
-                        Some(OutputEvent::OnStop { stop_time, ring_position }) => {
+                        Some(OutputEvent::OnStop { stop_time: _, ring_position: _ }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
                                 fx_log_info!(
                                     "AudioFacade::OutputWorker: Extraction OnPositionNotify timestamp cleared before OnStop");
@@ -626,7 +626,7 @@ impl InputWorker {
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
                         },
-                        Some(InputEvent::OnStop { stop_time, ring_position }) => {
+                        Some(InputEvent::OnStop { stop_time: _, ring_position: _ }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
                                 fx_log_info!("AudioFacade::InputWorker: Injection OnPositionNotify timestamp cleared before OnStop");
                             }

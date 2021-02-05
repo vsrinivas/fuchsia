@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
     fuchsia_zircon as zx,
     futures::{
-        future::{AbortHandle, Abortable},
+        future::{AbortHandle, Abortable, Aborted},
         select, stream,
         stream::futures_unordered::FuturesUnordered,
         Future, FutureExt as _, StreamExt as _, TryStreamExt as _,

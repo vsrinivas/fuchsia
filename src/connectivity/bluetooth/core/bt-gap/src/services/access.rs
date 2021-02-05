@@ -47,12 +47,12 @@ pub async fn run(hd: HostDispatcher, mut stream: AccessRequestStream) -> Result<
                 }
             }
 
-            token_dropped = session.discovery_session.as_mut().unwrap_or(&mut discovery_pending).fuse() => {
+            _ = session.discovery_session.as_mut().unwrap_or(&mut discovery_pending).fuse() => {
                 // drop the boxed future, which owns the discovery session token
                 session.discovery_session = None;
             }
 
-            token_dropped = session.discoverable_session.as_mut().unwrap_or(&mut discoverable_pending).fuse() => {
+            _ = session.discoverable_session.as_mut().unwrap_or(&mut discoverable_pending).fuse() => {
                 session.discoverable_session = None;
             }
         };

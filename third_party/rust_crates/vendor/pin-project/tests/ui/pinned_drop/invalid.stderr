@@ -25,7 +25,7 @@ error: #[pinned_drop] may only be used on implementation for the `PinnedDrop` tr
 error: expected `impl`
   --> $DIR/invalid.rs:51:5
    |
-51 |     fn drop(_: Pin<&mut ()>) {} //~ ERROR expected `impl`
+51 |     fn func(_: Pin<&mut ()>) {} //~ ERROR expected `impl`
    |     ^^
 
 error: implementing the trait `PinnedDrop` is not unsafe
@@ -121,7 +121,7 @@ error: method `drop` must take an argument `self: Pin<&mut Self>`
 error: method `pinned_drop` is not a member of trait `PinnedDrop
    --> $DIR/invalid.rs:203:12
     |
-203 |         fn pinned_drop(&mut self) {} //~ ERROR method `pinned_drop` is not a member of trait `PinnedDrop
+203 |         fn pinned_drop(self: Pin<&mut Self>) {} //~ ERROR method `pinned_drop` is not a member of trait `PinnedDrop
     |            ^^^^^^^^^^^
 
 error: implementing the trait `PinnedDrop` on this type is unsupported

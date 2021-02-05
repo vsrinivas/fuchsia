@@ -331,7 +331,6 @@ mod tests {
                                 assert!(disabled);
                                 agent_received_camera_disable = true;
                             }
-                            _ => {}
                         }
                     }
                 },
@@ -339,7 +338,7 @@ mod tests {
                     if let MessageEvent::Message(
                         switchboard::Payload::Action(switchboard::Action::Request(
                             setting_type,
-                            Request::OnButton(button),
+                            Request::OnButton(_button),
                         )),
                         _,
                     ) = message

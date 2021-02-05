@@ -340,7 +340,7 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                 match res {
                     Some(token) => {
                         match transport_borrow.take_incoming(token, incoming_buffer) {
-                            IncomingPacket::Event(mut data) => {
+                            IncomingPacket::Event(data) => {
                                 trace_duration!("Worker::EventSendIncoming");
                                 incoming_buffer = data;
                                 let mut success = true;
@@ -354,7 +354,7 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                                 }
                                 worker.snoop.write(Snoop::INCOMING_EVT, &incoming_buffer);
                             }
-                            IncomingPacket::Acl(mut data) => {
+                            IncomingPacket::Acl(data) => {
                                 trace_duration!("Worker::AclSendIncoming");
 
                                 incoming_buffer = data;

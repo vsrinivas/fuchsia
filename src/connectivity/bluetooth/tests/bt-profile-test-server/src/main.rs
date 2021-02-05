@@ -228,7 +228,7 @@ impl TestProfileServer {
                     let id = peer_id.into();
                     let request_stream = match peer.into_stream() {
                         Ok(stream) => stream,
-                        Err(e) => {
+                        Err(_) => {
                             responder.control_handle().shutdown_with_epitaph(zx::Status::BAD_HANDLE);
                             continue;
                         }

@@ -49,16 +49,16 @@ derp = "0.0.13"
 difference = "2.0.0"
 fatfs = "0.4.0"
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
-futures = "=0.3.6"
-futures-core = "=0.3.6"
-futures-channel = "=0.3.6"
-futures-executor = "=0.3.6"
-futures-macro = "=0.3.6"
-futures-io = "=0.3.6"
-futures-sink = "=0.3.6"
-futures-task = "=0.3.6"
-futures-test = "=0.3.6"
-futures-util = "=0.3.6"
+futures = "=0.3.12"
+futures-core = "=0.3.12"
+futures-channel = "=0.3.12"
+futures-executor = "=0.3.12"
+futures-macro = "=0.3.12"
+futures-io = "=0.3.12"
+futures-sink = "=0.3.12"
+futures-task = "=0.3.12"
+futures-test = "=0.3.12"
+futures-util = "=0.3.12"
 glob = "0.3.0"
 heck = "0.3.1"
 hex = "0.3.2"
@@ -88,7 +88,7 @@ percent-encoding = "2.1"
 pest = "2.1"
 pest_derive = "2.1"
 pest_generator = "2.1.3"
-pin-project = "0.4.26"
+pin-project = "1.0.4"
 pin-utils = "0.1.0"
 png = "0.14" # saved for future use
 pretty_assertions = "0.5.1"
@@ -348,15 +348,15 @@ rustflags = ["--cfg=has_i128"]
 [gn.package.pin-project-internal."0.4.26"]
 rustflags = ["--cfg=underscore_consts", "--cfg=deprecated_proc_macro"]
 
-[gn.package.proc-macro-hack."0.5.19"]
-rustflags = []
-
 [gn.package.proc-macro2."0.4.27"]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 # cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
 [gn.package.proc-macro2."1.0.24"]
 rustflags = ["--cfg=span_locations", "--cfg=lexerror_display", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
+
+[gn.package.proc-macro-hack."0.5.19"]
+rustflags = []
 
 [gn.package.rand."0.6.5"]
 rustflags = ["--cfg=rustc_1_25","--cfg=rustc_1_26",  "--cfg=rustc_1_27",]

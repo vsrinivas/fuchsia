@@ -196,7 +196,7 @@ async fn run_test_for_invocations<W: Write>(
                     }
                 }
             },
-            complete => { break },
+            complete => break,
         }
     }
 
