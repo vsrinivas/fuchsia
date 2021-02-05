@@ -477,7 +477,7 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         )
         self.assertEqual(
             output_diagnostics,
-            action_tracer.OutputDiagnostics(),
+            action_tracer.StalenessDiagnostics(),
         )
 
     def test_missing_write_no_inputs(self):
@@ -489,7 +489,7 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         )
         self.assertEqual(
             output_diagnostics,
-            action_tracer.OutputDiagnostics(
+            action_tracer.StalenessDiagnostics(
                 required_writes=required_writes,
                 nonexistent_outputs={"write.me"}),
         )
@@ -506,7 +506,7 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         )
         self.assertEqual(
             output_diagnostics,
-            action_tracer.OutputDiagnostics(
+            action_tracer.StalenessDiagnostics(
                 required_writes=required_writes,
                 nonexistent_outputs={"write.me"}),
         )
@@ -523,7 +523,7 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         mock_exists.assert_called_once()
         self.assertEqual(
             output_diagnostics,
-            action_tracer.OutputDiagnostics(required_writes=required_writes),
+            action_tracer.StalenessDiagnostics(required_writes=required_writes),
         )
 
     def test_stale_output_with_used_input(self):
@@ -533,7 +533,7 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
                 return 200
             if path.startswith("write"):
                 return 100
-            return 0
+            raise ValueError(f'Unexpected path: {path}')
 
         used_input = "read.me"
         required_writes = {"write.me"}
@@ -551,7 +551,7 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         mock_ctime.assert_called()
         self.assertEqual(
             output_diagnostics,
-            action_tracer.OutputDiagnostics(
+            action_tracer.StalenessDiagnostics(
                 required_writes=required_writes,
                 newest_input=used_input,
                 stale_outputs={"write.me"}),
@@ -589,7 +589,7 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         mock_ctime.assert_called()
         self.assertEqual(
             output_diagnostics,
-            action_tracer.OutputDiagnostics(
+            action_tracer.StalenessDiagnostics(
                 required_writes=required_writes,
                 # newer input is used for comparison
                 newest_input=used_input_newer,
@@ -625,12 +625,114 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
         mock_ctime.assert_not_called()
         self.assertEqual(
             output_diagnostics,
-            action_tracer.OutputDiagnostics(
+            action_tracer.StalenessDiagnostics(
                 required_writes={written_output},
                 # newest_input is not evaluated
                 stale_outputs=set(),
             ),
         )
+
+
+class UnexpectedFreshOutputsTests(unittest.TestCase):
+
+    def test_no_inputs(self):
+        access_constraints = action_tracer.AccessConstraints(
+            allowed_reads={"input"}, required_writes={"output"})
+        with mock.patch.object(os.path, 'exists',
+                               return_value=False) as mock_exists:
+            with mock.patch.object(os.path, 'getctime',
+                                   return_value=0) as mock_ctime:
+                fresh_outputs = access_constraints.fresh_outputs()
+
+        mock_exists.assert_called()
+        mock_ctime.assert_not_called()
+        self.assertEqual(fresh_outputs, set())
+
+    def test_output_is_stale(self):
+
+        def fake_getctime(path: str):
+            if path == "input":
+                return 200
+            if path == "output":
+                return 100
+            raise ValueError(f'Unexpected path: {path}')
+
+        access_constraints = action_tracer.AccessConstraints(
+            allowed_reads={"input"}, required_writes={"output"})
+        with mock.patch.object(os.path, 'exists',
+                               return_value=True) as mock_exists:
+            with mock.patch.object(action_tracer, 'realpath_ctime',
+                                   wraps=fake_getctime) as mock_ctime:
+                fresh_outputs = access_constraints.fresh_outputs()
+
+        mock_exists.assert_called()
+        mock_ctime.assert_called()
+        self.assertEqual(fresh_outputs, set())
+
+    def test_output_is_fresh(self):
+
+        def fake_getctime(path: str):
+            if path == "input":
+                return 200
+            if path == "output":
+                return 300
+            raise ValueError(f'Unexpected path: {path}')
+
+        access_constraints = action_tracer.AccessConstraints(
+            allowed_reads={"input"}, required_writes={"output"})
+        with mock.patch.object(os.path, 'exists',
+                               return_value=True) as mock_exists:
+            with mock.patch.object(action_tracer, 'realpath_ctime',
+                                   wraps=fake_getctime) as mock_ctime:
+                fresh_outputs = access_constraints.fresh_outputs()
+
+        mock_exists.assert_called()
+        mock_ctime.assert_called()
+        self.assertEqual(fresh_outputs, {"output"})
+
+    def test_readable_output_is_fresh(self):
+
+        def fake_getctime(path: str):
+            if path == "input":
+                return 200
+            if path == "output":
+                return 300
+            raise ValueError(f'Unexpected path: {path}')
+
+        access_constraints = action_tracer.AccessConstraints(
+            allowed_reads={"input", "output"}, required_writes={"output"})
+        with mock.patch.object(os.path, 'exists',
+                               return_value=True) as mock_exists:
+            with mock.patch.object(action_tracer, 'realpath_ctime',
+                                   wraps=fake_getctime) as mock_ctime:
+                fresh_outputs = access_constraints.fresh_outputs()
+
+        mock_exists.assert_called()
+        mock_ctime.assert_called()
+        self.assertEqual(fresh_outputs, {"output"})
+
+    def test_writeable_output_is_fresh(self):
+
+        def fake_getctime(path: str):
+            if path == "input":
+                return 200
+            if path == "output":
+                return 300
+            raise ValueError(f'Unexpected path: {path}')
+
+        access_constraints = action_tracer.AccessConstraints(
+            allowed_reads={"input", "output"},
+            allowed_writes={"output"},
+            required_writes={"output"})
+        with mock.patch.object(os.path, 'exists',
+                               return_value=True) as mock_exists:
+            with mock.patch.object(action_tracer, 'realpath_ctime',
+                                   wraps=fake_getctime) as mock_ctime:
+                fresh_outputs = access_constraints.fresh_outputs()
+
+        mock_exists.assert_called()
+        mock_ctime.assert_called()
+        self.assertEqual(fresh_outputs, {"output"})
 
 
 class MainArgParserTests(unittest.TestCase):
