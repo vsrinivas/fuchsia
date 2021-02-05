@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/flatland/engine/tests/common.h"
 #include "src/ui/scenic/lib/flatland/engine/tests/mock_display_controller.h"
@@ -37,6 +38,8 @@ class EngineTest : public EngineTestBase {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                          fsl::GetCurrentProcessKoid());
 
     renderer_ = std::make_shared<flatland::NullRenderer>();
 
