@@ -534,9 +534,14 @@ impl Daemon {
                 responder.send(&hash).context("error sending response")?;
             }
             DaemonRequest::StreamDiagnostics { target, parameters, iterator, responder } => {
-                let target = match self.get_default_target(target).await {
+                let target = match self.get_default_target(target.clone()).await {
                     Ok(t) => t,
-                    Err(_e) => {
+                    Err(e) => {
+                        log::warn!(
+                            "got error fetching target with filter '{}': {:?}",
+                            target.as_ref().unwrap_or(&String::default()),
+                            e
+                        );
                         responder
                             .send(&mut Err(DiagnosticsStreamError::TargetMatchFailed))
                             .context("sending error response")?;
