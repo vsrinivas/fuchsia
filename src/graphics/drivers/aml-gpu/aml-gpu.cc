@@ -231,6 +231,7 @@ zx_status_t AmlGpu::Bind() {
       gpu_block_ = &s912_gpu_blocks;
       break;
     case PDEV_PID_AMLOGIC_S905D2:
+    case PDEV_PID_AMLOGIC_S905D3:
       gpu_block_ = &s905d2_gpu_blocks;
       break;
     // A311D and T931 have the same GPU registers.
@@ -257,7 +258,7 @@ zx_status_t AmlGpu::Bind() {
   reset_register_ =
       ::llcpp::fuchsia::hardware::registers::Device::SyncClient(std::move(register_client_end));
 
-  if (info.pid == PDEV_PID_AMLOGIC_S905D2) {
+  if (info.pid == PDEV_PID_AMLOGIC_S905D2 || info.pid == PDEV_PID_AMLOGIC_S905D3) {
     status = Gp0Init();
     if (status != ZX_OK) {
       GPU_ERROR("aml_gp0_init failed: %d\n", status);

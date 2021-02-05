@@ -9,7 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-registers.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
 
@@ -17,26 +17,26 @@ namespace nelson {
 
 static const pbus_mmio_t mali_mmios[] = {
     {
-        .base = S905D2_MALI_BASE,
-        .length = S905D2_MALI_LENGTH,
+        .base = S905D3_MALI_BASE,
+        .length = S905D3_MALI_LENGTH,
     },
     {
-        .base = S905D2_HIU_BASE,
-        .length = S905D2_HIU_LENGTH,
+        .base = S905D3_HIU_BASE,
+        .length = S905D3_HIU_LENGTH,
     },
 };
 
 static const pbus_irq_t mali_irqs[] = {
     {
-        .irq = S905D2_MALI_IRQ_PP,
+        .irq = S905D3_MALI_IRQ_PP,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
     {
-        .irq = S905D2_MALI_IRQ_GPMMU,
+        .irq = S905D3_MALI_IRQ_GPMMU,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
     {
-        .irq = S905D2_MALI_IRQ_GP,
+        .irq = S905D3_MALI_IRQ_GP,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
 };
@@ -52,7 +52,7 @@ static const pbus_dev_t mali_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "mali";
   dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  dev.pid = PDEV_PID_AMLOGIC_S905D3;
   dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
   dev.mmio_list = mali_mmios;
   dev.mmio_count = countof(mali_mmios);

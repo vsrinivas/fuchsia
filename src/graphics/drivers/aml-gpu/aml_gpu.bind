@@ -10,6 +10,7 @@ fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.MALI_INI
 accept fuchsia.BIND_PLATFORM_DEV_PID {
   amlogic.platform.BIND_PLATFORM_DEV_PID.S912,
   amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2,
+  amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3,
   amlogic.platform.BIND_PLATFORM_DEV_PID.T931,
   amlogic.platform.BIND_PLATFORM_DEV_PID.A311D,
 }
