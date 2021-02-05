@@ -44,14 +44,14 @@ in early boot state such as fastboot, shows 'FastbootDevice' with the
 
 By default, the `list` command outputs in a tabular format. To override
 the format, pass `--format` and can take the following options: 'simple'
-, 'tabular|table|tab', 'addresses|addrs|addr' or in short form 's', 't',
- 'a'."
+, 'tabular|table|tab', 'addresses|addrs|addr', 'json|JSON' or in short form 's', 't',
+ 'a', 'j'."
 )]
 pub struct ListCommand {
     #[argh(positional)]
     pub nodename: Option<String>,
 
-    #[argh(option, default = "Format::Tabular")]
+    #[argh(option, short = 'f', default = "Format::Tabular")]
     /// determines the output format for the list operation
     pub format: Format,
 }
@@ -61,6 +61,7 @@ pub enum Format {
     Tabular,
     Simple,
     Addresses,
+    Json,
 }
 
 impl std::str::FromStr for Format {
@@ -71,7 +72,8 @@ impl std::str::FromStr for Format {
             "tabular" | "table" | "tab" | "t" => Ok(Format::Tabular),
             "simple" | "s" => Ok(Format::Simple),
             "addresses" | "a" | "addr" | "addrs" => Ok(Format::Addresses),
-            _ => Err(anyhow!("expected 'tabular', 'simple', or 'addresses'")),
+            "json" | "JSON" | "j" => Ok(Format::Json),
+            _ => Err(anyhow!("expected 'tabular', 'simple', 'addresses', or 'json'")),
         }
     }
 }

@@ -8,6 +8,8 @@ use {
     ffx_daemon::target::{SshAddrFetcher, TargetAddr},
     ffx_list_args::Format,
     fidl_fuchsia_developer_bridge as bridge,
+    serde::Serialize,
+    serde_json::json,
     std::cmp::max,
     std::convert::TryFrom,
     std::fmt::{self, Display, Write},
@@ -36,6 +38,7 @@ impl TryFrom<(Format, Vec<bridge::Target>)> for Box<dyn TargetFormatter> {
             Format::Tabular => Box::new(TabularTargetFormatter::try_from(targets)?),
             Format::Simple => Box::new(SimpleTargetFormatter::try_from(targets)?),
             Format::Addresses => Box::new(AddressesTargetFormatter::try_from(targets)?),
+            Format::Json => Box::new(JsonTargetFormatter::try_from(targets)?),
         })
     }
 }
@@ -115,6 +118,30 @@ impl TryFrom<bridge::Target> for SimpleTarget {
     }
 }
 
+pub struct JsonTargetFormatter {
+    targets: Vec<JsonTarget>,
+}
+
+impl TryFrom<Vec<bridge::Target>> for JsonTargetFormatter {
+    type Error = Error;
+
+    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
+        let mut t = Vec::with_capacity(targets.len());
+        for target in targets.drain(..) {
+            if let Ok(string_target) = JsonTarget::try_from(target) {
+                t.push(string_target)
+            }
+        }
+        Ok(Self { targets: t })
+    }
+}
+
+impl TargetFormatter for JsonTargetFormatter {
+    fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
+        vec![serde_json::to_string(&self.targets).expect("should serialize")]
+    }
+}
+
 // Convenience macro to make potential addition/removal of fields less likely
 // to affect internal logic. Other functions that construct these targets will
 // fail to compile if more fields are added.
@@ -147,6 +174,13 @@ macro_rules! make_structs_and_support_functions {
         struct StringifiedTarget {
             $(
                 $field: String,
+            )*
+        }
+
+        #[derive(Serialize, Debug, PartialEq, Eq)]
+        struct JsonTarget {
+            $(
+                $field: serde_json::Value,
             )*
         }
 
@@ -253,6 +287,34 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
             target_state: StringifiedTarget::from_target_state(
                 target.target_state.ok_or(StringifyError::MissingTargetState)?,
             ),
+        })
+    }
+}
+
+impl TryFrom<bridge::Target> for JsonTarget {
+    type Error = StringifyError;
+
+    fn try_from(target: bridge::Target) -> Result<Self, Self::Error> {
+        Ok(Self {
+            nodename: json!(target.nodename.unwrap_or("<unknown>".to_string())),
+            addresses: json!(target
+                .addresses
+                .unwrap_or(vec![])
+                .drain(..)
+                .map(|a| StringifiedTarget::from_target_addr_info(a))
+                .collect::<Vec<_>>()),
+            age: json!(StringifiedTarget::from_age(
+                target.age_ms.ok_or(StringifyError::MissingAge)?
+            )),
+            rcs_state: json!(StringifiedTarget::from_rcs_state(
+                target.rcs_state.ok_or(StringifyError::MissingRcsState)?,
+            )),
+            target_type: json!(StringifiedTarget::from_target_type(
+                target.target_type.ok_or(StringifyError::MissingTargetType)?,
+            )),
+            target_state: json!(StringifiedTarget::from_target_state(
+                target.target_state.ok_or(StringifyError::MissingTargetState)?,
+            )),
         })
     }
 }
