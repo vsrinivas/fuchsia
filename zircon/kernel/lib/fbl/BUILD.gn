@@ -13,9 +13,10 @@ zx_library("fbl") {
     ":tests",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/vm:headers",
+    "//zircon/system/ulib/fbl",
   ]
   public_deps = [
-    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fbl:headers",
 
     # <include/fbl/arena.h> has #include <ktl/forward.h>.
     "//zircon/kernel/lib/ktl:headers",

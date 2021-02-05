@@ -23,8 +23,8 @@ zx_library("hwreg") {
     # TODO(mcgrathr): remove old multiboot environment
     if (toolchain.environment != "multiboot") {
       public_deps = [
-        "//zircon/kernel/lib/ktl",
-        "//zircon/kernel/lib/libc",
+        "//zircon/kernel/lib/ktl:headers",
+        "//zircon/kernel/lib/libc:headers",
       ]
     }
   } else {
