@@ -6,9 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/single_threaded_executor.h>
-#include <lib/fit/variant.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/service/cpp/service.h>
+#include <lib/stdcompat/variant.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <string>
@@ -33,12 +33,12 @@ using test::inspect::validate::ROOT_ID;
 using test::inspect::validate::TestResult;
 
 using Value =
-    fit::variant<fit::monostate, inspect::Node, inspect::IntProperty, inspect::UintProperty,
-                 inspect::DoubleProperty, inspect::StringProperty, inspect::ByteVectorProperty,
-                 inspect::BoolProperty, inspect::IntArray, inspect::UintArray, inspect::DoubleArray,
-                 inspect::LinearIntHistogram, inspect::LinearUintHistogram,
-                 inspect::LinearDoubleHistogram, inspect::ExponentialIntHistogram,
-                 inspect::ExponentialUintHistogram, inspect::ExponentialDoubleHistogram>;
+    cpp17::variant<fit::monostate, inspect::Node, inspect::IntProperty, inspect::UintProperty,
+                   inspect::DoubleProperty, inspect::StringProperty, inspect::ByteVectorProperty,
+                   inspect::BoolProperty, inspect::IntArray, inspect::UintArray,
+                   inspect::DoubleArray, inspect::LinearIntHistogram, inspect::LinearUintHistogram,
+                   inspect::LinearDoubleHistogram, inspect::ExponentialIntHistogram,
+                   inspect::ExponentialUintHistogram, inspect::ExponentialDoubleHistogram>;
 
 class Actor {
  public:
