@@ -53,18 +53,15 @@ protocol Display {
 
 /// DisplaySettings are used to determine the output state of the display.
 /// The display can be toggled between two modes, auto-brightness on and
-/// auto-brightness off. When auto-brightness is on a manual offset to the
-/// total output brightness can be applied by setting `user_brightness_offset`.
-/// When auto-brightness is off the display brightness is set manually by
-/// setting brightness_value. All values can be set at any time to persist
-/// settings for either mode.
+/// auto-brightness off. When auto-brightness is off the display brightness is set
+/// manually by setting brightness_value. The value can be set at any time to
+/// persist settings for the off auto-brightness mode.
 table DisplaySettings {
     /// Auto brightness enabled
     1: bool auto_brightness;
     /// Manually set brightness value [0.0 - 1.0]
     2: float32 brightness_value;
-    /// User defined offset to the total auto brightness output [-1.0 - 1.0]
-    3: float32 user_brightness_offset;
+    3: reserved;
     /// The low light mode state of the device.
     4: LowLightMode low_light_mode;
     /// Whether the screen is enabled.

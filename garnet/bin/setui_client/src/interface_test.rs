@@ -189,25 +189,22 @@ async fn main() -> Result<(), Error> {
 
     println!("display service tests");
     println!("  client calls display watch");
-    validate_display(None, None, None, None, None, None).await?;
+    validate_display(None, None, None, None, None).await?;
 
     println!("  client calls set brightness");
-    validate_display(Some(0.5), None, None, None, None, None).await?;
+    validate_display(Some(0.5), None, None, None, None).await?;
 
     println!("  client calls set auto brightness");
-    validate_display(None, Some(true), None, None, None, None).await?;
-
-    println!("  client calls set user brightness offset");
-    validate_display(None, None, Some(0.5), None, None, None).await?;
+    validate_display(None, Some(true), None, None, None).await?;
 
     println!("  client calls set low light mode");
-    validate_display(None, None, None, Some(LowLightMode::Enable), None, None).await?;
+    validate_display(None, None, Some(LowLightMode::Enable), None, None).await?;
 
     println!("  client calls set theme");
-    validate_display(None, None, None, None, Some(ThemeType::Dark), None).await?;
+    validate_display(None, None, None, Some(ThemeType::Dark), None).await?;
 
     println!("  client calls set screen enabled");
-    validate_display(None, None, None, None, Some(ThemeType::Dark), Some(false)).await?;
+    validate_display(None, None, None, Some(ThemeType::Dark), Some(false)).await?;
 
     println!("factory reset tests");
     println!("  client calls set local reset allowed");
@@ -465,7 +462,6 @@ async fn validate_device() -> Result<(), Error> {
 async fn validate_display(
     expected_brightness: Option<f32>,
     expected_auto_brightness: Option<bool>,
-    expected_user_brightness_offset: Option<f32>,
     expected_low_light_mode: Option<LowLightMode>,
     expected_theme_type: Option<ThemeType>,
     expected_screen_enabled: Option<bool>,
@@ -479,10 +475,6 @@ async fn validate_display(
             } else if let (Some(auto_brightness), Some(expected_auto_brightness_value)) =
               (settings.auto_brightness, expected_auto_brightness) {
                 assert_eq!(auto_brightness, expected_auto_brightness_value);
-                responder.send(&mut Ok(()))?;
-            } else if let (Some(user_brightness_offset), Some(expected_user_brightness_offset_value)) =
-              (settings.user_brightness_offset, expected_user_brightness_offset) {
-                assert_eq!(user_brightness_offset, expected_user_brightness_offset_value);
                 responder.send(&mut Ok(()))?;
             } else if let (Some(low_light_mode), Some(expected_low_light_mode_value)) =
               (settings.low_light_mode, expected_low_light_mode) {
@@ -504,7 +496,6 @@ async fn validate_display(
             responder.send(DisplaySettings {
                 auto_brightness: Some(false),
                 brightness_value: Some(0.5),
-                user_brightness_offset: Some(0.5),
                 low_light_mode: Some(LowLightMode::Disable),
                 theme: Some(Theme{theme_type: Some(ThemeType::Default), ..Theme::EMPTY}),
                 screen_enabled: Some(true),
