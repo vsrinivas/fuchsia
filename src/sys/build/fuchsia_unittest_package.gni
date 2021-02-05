@@ -46,7 +46,7 @@ import("fuchsia_unittest_component.gni")
 #     The generated manifest requests no special capabilities, which is good
 #     enough for "pure" unit tests.
 #     To view the generated manifest, see:
-#     `fx gn outputs out/default path/to/your:<target_name>_generated_manifest`
+#     `fx gn outputs out/default path/to/your:<target_name>_component_generated_manifest`
 #     Type: path
 #
 #   v2 (optional)
