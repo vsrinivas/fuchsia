@@ -714,6 +714,32 @@ pub struct zx_packet_guest_io_t {
     pub data: [u8; 4],
 }
 
+pub type zx_excp_type_t = u32;
+
+multiconst!(zx_obj_type_t, [
+    ZX_EXCP_GENERAL               = 0x008;
+    ZX_EXCP_FATAL_PAGE_FAULT      = 0x108;
+    ZX_EXCP_UNDEFINED_INSTRUCTION = 0x208;
+    ZX_EXCP_SW_BREAKPOINT         = 0x308;
+    ZX_EXCP_HW_BREAKPOINT         = 0x408;
+    ZX_EXCP_UNALIGNED_ACCESS      = 0x508;
+
+    ZX_EXCP_SYNTH                 = 0x8000;
+
+    ZX_EXCP_THREAD_STARTING       = 0x008 | ZX_EXCP_SYNTH;
+    ZX_EXCP_THREAD_EXITING        = 0x108 | ZX_EXCP_SYNTH;
+    ZX_EXCP_POLICY_ERROR          = 0x208 | ZX_EXCP_SYNTH;
+]);
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_exception_info_t {
+    pub pid: zx_koid_t,
+    pub tid: zx_koid_t,
+    pub type_: zx_excp_type_t,
+    pub padding1: [PadByte; 4],
+}
+
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
