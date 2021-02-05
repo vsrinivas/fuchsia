@@ -7,7 +7,7 @@ The library provides tools for registering a peer in the piconet, registering a 
 manipulation, and various other convenience methods to simplify writing integration tests.
 
 The library uses the [ProfileTest](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.bluetooth.bredr/profile_test.fidl)
-API. It is expected that integration tests will leverage the [Profile Test Server](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/tests/bt-profile-test-server/), which manages a fake piconet of peers.
+API. It is expected that integration tests will leverage the [Profile Test Server](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/testing/bt-profile-test-server/), which manages a fake piconet of peers.
 
 # Build Configuration
 

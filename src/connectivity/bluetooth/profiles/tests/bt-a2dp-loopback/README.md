@@ -8,7 +8,7 @@ Pass the --duration flag to specify how long it should run.
 
 ## Build Configuration
 
-Include `--with //src/connectivity/bluetooth/tests/bt-profile-test-server` in your `fx set`.
+Include `--with //src/connectivity/bluetooth/profiles/tests/bt-a2dp-loopback` in your `fx set`.
 
 To run:
 

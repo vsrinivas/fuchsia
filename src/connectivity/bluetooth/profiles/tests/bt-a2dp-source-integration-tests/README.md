@@ -2,7 +2,7 @@
 
 ## Build Configuration
 
-Include `--with //src/connectivity/bluetooth/tests/bt-profile-test-server` in your `fx set`.
+Include `--with //src/connectivity/bluetooth/profiles/tests/bt-a2dp-source-integration-tests` in your `fx set`.
 
 To run the integration tests:
 

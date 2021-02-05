@@ -11,8 +11,8 @@ register mock peers in the piconet, launch profiles to test, and drive peer beha
 
 To include the profile server in your build, add:
 
-`--with //src/connectivity/bluetooth/tests/bt-profile-test-server` and
-`--with //src/connectivity/bluetooth/tests/bt-profile-test-server:tests`
+`--with //src/connectivity/bluetooth/testing/bt-profile-test-server` and
+`--with //src/connectivity/bluetooth/testing/bt-profile-test-server:tests`
 to your `fx set`.
 
 

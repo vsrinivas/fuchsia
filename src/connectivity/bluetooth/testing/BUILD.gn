@@ -5,6 +5,7 @@
 group("testing") {
   testonly = true
   deps = [
+    "bt-profile-test-server",
     "bt-test-harness",
     "test-harness",
   ]
