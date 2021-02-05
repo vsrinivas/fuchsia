@@ -15,14 +15,17 @@
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 
+constexpr size_t kAsanShift = ASAN_MAPPING_SCALE;
+constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
+
 #ifdef __x86_64__
 
-inline constexpr size_t kAsanShift = ASAN_MAPPING_SCALE;
-inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
 static_assert(X86_KERNEL_KASAN_PDP_ENTRIES * 1024ul * 1024ul * 1024ul == kAsanShadowSize);
 
-inline constexpr size_t kAsanGranularity = (1 << kAsanShift);
-inline constexpr size_t kAsanGranularityMask = kAsanGranularity - 1;
+#endif  // __x86_64__
+
+constexpr size_t kAsanGranularity = (1 << kAsanShift);
+constexpr size_t kAsanGranularityMask = kAsanGranularity - 1;
 
 extern ktl::atomic<bool> g_asan_initialized;
 
@@ -35,16 +38,14 @@ extern ktl::atomic<bool> g_asan_initialized;
 // The kernel's implementation uses a fixed redzone plus a small variable block for alignment.
 // In LLVM (compiler-rt)'s implementation of the asan runtime, the redzone is adaptive depending
 // on the size of the allocation.
-inline constexpr size_t kHeapRightRedzoneSize = 16;
+constexpr size_t kHeapRightRedzoneSize = 16;
 
 // Any value in the shadow equal to or above this value is poisoned.
-inline constexpr uint8_t kAsanSmallestPoisonedValue = 0x08;
+constexpr uint8_t kAsanSmallestPoisonedValue = 0x08;
 
 // The current implementation of asan only checks accesses within the physmap.
-inline constexpr vaddr_t kAsanStartAddress = PHYSMAP_BASE;
-inline constexpr vaddr_t kAsanEndAddress = PHYSMAP_BASE + PHYSMAP_SIZE;
-
-static_assert(X86_KERNEL_KASAN_PDP_ENTRIES * 1024ul * 1024ul * 1024ul == kAsanShadowSize);
+constexpr vaddr_t kAsanStartAddress = PHYSMAP_BASE;
+constexpr vaddr_t kAsanEndAddress = PHYSMAP_BASE + PHYSMAP_SIZE;
 
 // Returns the address of the shadow byte corresponding to |address|.
 static inline uint8_t* addr2shadow(uintptr_t address) {
@@ -65,8 +66,6 @@ void asan_check(uintptr_t address, size_t bytes, bool is_write, void* caller);
 // [offsetb, offsetb + lenb) overlap. This function panics and prints an error message if
 // the two memory ranges overlap.
 void asan_check_memory_overlap(uintptr_t offseta, size_t lena, uintptr_t offsetb, size_t lenb);
-
-#endif  // __x86_64__
 
 // Structure shared between the compiler and ASAN runtime describing the location (in source code)
 // where a particular global is defined.
@@ -94,7 +93,10 @@ struct asan_global {
   uintptr_t odr_indicator;
 };
 
-void arch_asan_reallocate_shadow();
+// KASAN initialization after the PMM is available.
+void arch_asan_early_init();
+// KASAN initialization after the VM/kernel_aspace are available and we can update kernel mappings.
+void arch_asan_late_init();
 
 extern "C" void asan_register_globals_late();
 

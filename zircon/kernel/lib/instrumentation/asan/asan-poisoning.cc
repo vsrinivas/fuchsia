@@ -163,6 +163,9 @@ uintptr_t asan_region_is_poisoned(uintptr_t address, size_t size) {
 
 void asan_check(uintptr_t address, size_t bytes, bool is_write, void* caller) {
   // TODO(fxbug.dev/30033): Inline the fast path for constant-size checks.
+  if (!g_asan_initialized.load(ktl::memory_order_relaxed)) {
+    return;
+  }
   const uintptr_t poisoned_addr = asan_region_is_poisoned(address, bytes);
   if (!poisoned_addr) {
     return;

@@ -10,21 +10,15 @@
 #include <lk/init.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
-#include <vm/vm_aspace.h>
 
 #include "asan-internal.h"
 
 namespace {
 
-void asan_early_init(unsigned int arg) {
-  arch_asan_reallocate_shadow();
-  g_asan_initialized.store(true);
-}
+void asan_early_init(unsigned int arg) { arch_asan_early_init(); }
 
 void asan_late_init(unsigned int arg) {
-  auto status =
-      VmAspace::kernel_aspace()->ReserveSpace("kasan-shadow", kAsanShadowSize, KASAN_SHADOW_OFFSET);
-  ZX_ASSERT(status == ZX_OK);
+  arch_asan_late_init();
   pmm_asan_poison_all_free_pages();
 
   asan_register_globals_late();

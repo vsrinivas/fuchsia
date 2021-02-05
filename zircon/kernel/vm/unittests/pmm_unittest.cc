@@ -988,6 +988,8 @@ static bool physmap_for_each_gap_test() {
 #if __has_feature(address_sanitizer)
 static bool kasan_detects_use_after_free() {
   BEGIN_TEST;
+  // TODO(fxbug.dev/30033): Enable on arm64 when kasan poisoning works there.
+#if defined(__x86_64__)
   ManagedPmmNode node;
 
   vm_page_t* page;
@@ -1000,6 +1002,7 @@ static bool kasan_detects_use_after_free() {
   node.node().FreePage(page);
   EXPECT_TRUE(asan_entire_region_is_poisoned(reinterpret_cast<uintptr_t>(paddr_to_physmap(paddr)),
                                              PAGE_SIZE));
+#endif
   END_TEST;
 }
 #endif  // __has_feature(address_sanitizer)

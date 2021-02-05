@@ -21,7 +21,8 @@
 #include <vm/pmm.h>
 #include <vm/vm_address_region.h>
 
-#if __has_feature(address_sanitizer)
+// TODO(fxbug.dev/30033): Enable kasan tests for arm.
+#if __has_feature(address_sanitizer) && defined(__x86_64__)
 
 #include "../asan/asan-internal.h"
 

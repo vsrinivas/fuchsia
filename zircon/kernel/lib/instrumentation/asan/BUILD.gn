@@ -123,4 +123,12 @@ config("kasan") {
     "-mllvm",
     "-asan-globals-live-support=false",
   ]
+  if (current_cpu == "arm64") {
+    cflags += [
+      # TODO(fxbug.dev/30033): Disable inline instrumentation on arm64 until we
+      # preallocate/pre-map the ASAN shadow.
+      "-mllvm",
+      "-asan-instrumentation-with-call-threshold=0",
+    ]
+  }
 }

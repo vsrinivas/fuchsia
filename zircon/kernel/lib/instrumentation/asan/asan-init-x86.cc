@@ -132,3 +132,14 @@ void arch_asan_reallocate_shadow() {
     asan_remap_shadow(address, arena.size);
   }
 }
+
+void arch_asan_early_init() {
+  arch_asan_reallocate_shadow();
+  g_asan_initialized.store(true);
+}
+
+void arch_asan_late_init() {
+  auto status =
+      VmAspace::kernel_aspace()->ReserveSpace("kasan-shadow", kAsanShadowSize, KASAN_SHADOW_OFFSET);
+  ZX_ASSERT(status == ZX_OK);
+}
