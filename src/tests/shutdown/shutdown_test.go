@@ -35,29 +35,45 @@ func TestShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		// Ignore the error value, since it'll return an error if the other Kill()
+		// call below ran, which normally happens.
+		_ = i.Kill()
+	}()
+
+	if err = i.WaitForLogMessage("initializing platform"); err != nil {
 		t.Fatal(err)
 	}
 
-	i.WaitForLogMessage("initializing platform")
-
-	// Make sure the shell is ready to accept zcommands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	// Make sure the shell is ready to accept commands over serial.
+	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
+		t.Fatal(err)
+	}
 
 	if arch == emulator.X64 {
 		// Ensure the ACPI driver comes up before we attempt a shutdown.
-		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY")
-		i.WaitForLogMessage("ACPI_READY")
+		if err = i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY"); err != nil {
+			t.Fatal(err)
+		}
+		if err = i.WaitForLogMessage("ACPI_READY"); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Trigger a shutdown.
-	i.RunCommand("dm shutdown")
+	if err = i.RunCommand("dm shutdown"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Start a timer so we can abort the wait by explicitly killing. This will yield a nice error
 	// from the wait command that we can detect.
 	timer := time.AfterFunc(120*time.Second, func() {
-		i.Kill()
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
 	})
 
 	// Cannot check for log messages as we are racing with the shutdown, and if qemu closes first

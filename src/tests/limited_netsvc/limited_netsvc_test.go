@@ -82,25 +82,32 @@ func attemptNetruncmd(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	tokenFromNetruncmd := randomTokenAsString(t)
 	cmd := exec.CommandContext(ctx, name, defaultNodename, tokenFromNetruncmd)
 
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		t.Errorf("%s failed to run? err=%s", name, err)
 	}
 
 	time.Sleep(time.Second)
 	tokenFromSerial := randomTokenAsString(t)
-	i.RunCommand("echo '" + tokenFromSerial + "'")
+	if err := i.RunCommand("echo '" + tokenFromSerial + "'"); err != nil {
+		t.Fatal(err)
+	}
 
 	if shouldWork {
 		// If netruncmd works, we should get the token echo'd by netruncmd first,
 		// then the terminator (which is sent over serial).
-		i.WaitForLogMessage(tokenFromNetruncmd)
-		i.WaitForLogMessage(tokenFromSerial)
+		if err := i.WaitForLogMessage(tokenFromNetruncmd); err != nil {
+			t.Fatal(err)
+		}
+		if err := i.WaitForLogMessage(tokenFromSerial); err != nil {
+			t.Fatal(err)
+		}
 		t.Logf("%s succeeded as expected", name)
 	} else {
 		// If netruncmd isn't working, we must not see the netruncmd token, and
 		// should only get the serial token.
-		i.WaitForLogMessageAssertNotSeen(tokenFromSerial, tokenFromNetruncmd)
+		if err := i.WaitForLogMessageAssertNotSeen(tokenFromSerial, tokenFromNetruncmd); err != nil {
+			t.Fatal(err)
+		}
 		t.Logf("%s failed as expected", name)
 	}
 }
@@ -180,7 +187,7 @@ func attemptLoglistener(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	}
 }
 
-func setupQemu(t *testing.T, appendCmdline []string, modeString string) (*emulator.Instance, func()) {
+func setupQemu(t *testing.T, appendCmdline []string, modeString string) *emulator.Instance {
 	exDir := execDir(t)
 	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -188,6 +195,11 @@ func setupQemu(t *testing.T, appendCmdline []string, modeString string) (*emulat
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err = distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	})
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)
@@ -208,27 +220,31 @@ func setupQemu(t *testing.T, appendCmdline []string, modeString string) (*emulat
 		t.Fatal(err)
 	}
 
-	i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Make sure netsvc in expected mode.
+	if err = i.WaitForLogMessage("netsvc: running in " + modeString + " mode"); err != nil {
 		t.Fatal(err)
 	}
 
-	// Make sure netsvc in expected mode.
-	i.WaitForLogMessage("netsvc: running in " + modeString + " mode")
-
 	// Make sure netsvc is booted.
-	i.WaitForLogMessage("netsvc: start")
-
-	return i, func() {
-		i.Kill()
-		distro.Delete()
+	if err = i.WaitForLogMessage("netsvc: start"); err != nil {
+		t.Fatal(err)
 	}
+
+	return i
 }
 
 func TestNetsvcAllFeatures(t *testing.T) {
 	cmdline := []string{"netsvc.all-features=true"}
-	i, cleanup := setupQemu(t, cmdline, "full")
-	defer cleanup()
+	i := setupQemu(t, cmdline, "full")
 
 	// Setting all-features to true means netsvc will work normally, and all
 	// features should work.
@@ -242,8 +258,7 @@ func TestNetsvcAllFeatures(t *testing.T) {
 
 func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
 	cmdline := []string{"netsvc.all-features=true", "zircon.nodename=" + defaultNodename}
-	i, cleanup := setupQemu(t, cmdline, "full")
-	defer cleanup()
+	i := setupQemu(t, cmdline, "full")
 
 	// Setting all-features to true means netsvc will work normally, and all
 	// features should work.
@@ -257,8 +272,7 @@ func TestNetsvcAllFeaturesWithNodename(t *testing.T) {
 
 func TestNetsvcLimited(t *testing.T) {
 	cmdline := []string{"netsvc.all-features=false"}
-	i, cleanup := setupQemu(t, cmdline, "limited")
-	defer cleanup()
+	i := setupQemu(t, cmdline, "limited")
 
 	// Explicitly setting all-features to false should be the same as default, and
 	// most operations should fail.

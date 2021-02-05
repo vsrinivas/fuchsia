@@ -46,14 +46,19 @@ func TestFemu(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// This message indicates that FEMU has successfully come up and that the Fuchsia system is fairly functional.
-	i.WaitForLogMessage("[component_manager] INFO: Component manager is starting up...")
+	if err = i.WaitForLogMessage("[component_manager] INFO: Component manager is starting up..."); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestFemuWithDisk(t *testing.T) {
@@ -87,16 +92,25 @@ func TestFemuWithDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// This message indicates that disks have been bound.  This message comes from fshost.
-	i.WaitForLogMessage("/dev/class/block/000 ignored")
+	if err = i.WaitForLogMessage("/dev/class/block/000 ignored"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Check that the emulated disk is there.
-	i.RunCommand("lsblk")
-	i.WaitForLogMessage("/dev/sys/pci/00:03.0/virtio-block/block")
+	if err = i.RunCommand("lsblk"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("/dev/sys/pci/00:03.0/virtio-block/block"); err != nil {
+		t.Fatal(err)
+	}
 }

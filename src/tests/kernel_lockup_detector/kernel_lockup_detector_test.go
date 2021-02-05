@@ -40,14 +40,19 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 	}
 
 	// Boot.
-	d.Start()
-	if err != nil {
+	if err = d.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer d.Kill()
+	defer func() {
+		if err = d.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Wait for the system to finish booting.
-	d.WaitForLogMessage("usage: k <command>")
+	if err = d.WaitForLogMessage("usage: k <command>"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Force two lockups and see that an OOPS is emitted for each one.
 	//
@@ -55,11 +60,21 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 	// we want to verify that doing so does not mess up the lockup detector's state and prevent
 	// subsequent events from being detected.
 	for i := 0; i < 2; i++ {
-		d.RunCommand("k lockup test 1 600")
-		d.WaitForLogMessage("locking up CPU")
-		d.WaitForLogMessage("ZIRCON KERNEL OOPS")
-		d.WaitForLogMessage("CPU-1 in critical section for")
-		d.WaitForLogMessage("done")
+		if err = d.RunCommand("k lockup test 1 600"); err != nil {
+			t.Fatal(err)
+		}
+		if err = d.WaitForLogMessage("locking up CPU"); err != nil {
+			t.Fatal(err)
+		}
+		if err = d.WaitForLogMessage("ZIRCON KERNEL OOPS"); err != nil {
+			t.Fatal(err)
+		}
+		if err = d.WaitForLogMessage("CPU-1 in critical section for"); err != nil {
+			t.Fatal(err)
+		}
+		if err = d.WaitForLogMessage("done"); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -94,24 +109,41 @@ func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 	}
 
 	// Boot.
-	d.Start()
-	if err != nil {
+	if err = d.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer d.Kill()
+	defer func() {
+		if err = d.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Wait for the system to finish booting.
-	d.WaitForLogMessage("usage: k <command>")
+	if err = d.WaitForLogMessage("usage: k <command>"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Force a lockup and see that a heartbeat OOPS is emitted.
-	d.RunCommand("k lockup test 1 1000")
-	d.WaitForLogMessage("locking up CPU")
-	d.WaitForLogMessage("ZIRCON KERNEL OOPS")
-	d.WaitForLogMessage("no heartbeat from CPU-1")
+	if err = d.RunCommand("k lockup test 1 1000"); err != nil {
+		t.Fatal(err)
+	}
+	if err = d.WaitForLogMessage("locking up CPU"); err != nil {
+		t.Fatal(err)
+	}
+	if err = d.WaitForLogMessage("ZIRCON KERNEL OOPS"); err != nil {
+		t.Fatal(err)
+	}
+	if err = d.WaitForLogMessage("no heartbeat from CPU-1"); err != nil {
+		t.Fatal(err)
+	}
 	// See that the CPU's run queue is printed and contains the thread named "lockup-spin", the
 	// one responsible for the lockup.
-	d.WaitForLogMessage("lockup-spin")
-	d.WaitForLogMessage("done")
+	if err = d.WaitForLogMessage("lockup-spin"); err != nil {
+		t.Fatal(err)
+	}
+	if err = d.WaitForLogMessage("done"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func execDir(t *testing.T) string {

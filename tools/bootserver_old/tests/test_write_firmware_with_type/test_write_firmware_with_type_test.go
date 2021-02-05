@@ -29,5 +29,8 @@ func TestWriteFirmwareWithType(t *testing.T) {
 		"-1",
 		"--fail-fast")
 
-	instance.WaitForLogMessage("netsvc: Running FIRMWARE Paver (firmware type 'foo')")
+	if err := instance.WaitForLogMessage("netsvc: Running FIRMWARE Paver (firmware type 'foo')"); err != nil {
+		t.Fatal(err)
+	}
+
 }

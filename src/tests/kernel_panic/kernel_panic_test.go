@@ -41,21 +41,32 @@ func TestBasicCrash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Wait for the system to finish booting.
-	i.WaitForLogMessage("usage: k <command>")
+	if err = i.WaitForLogMessage("usage: k <command>"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Crash the kernel.
-	i.RunCommand("k crash")
+	if err = i.RunCommand("k crash"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that it panicked.
-	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
-	i.WaitForLogMessage("{{{bt:0:")
+	if err = i.WaitForLogMessage("ZIRCON KERNEL PANIC"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("{{{bt:0:"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // See that an SMAP violation is fatal.
@@ -84,22 +95,35 @@ func TestSMAPViolation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Wait for the system to finish booting.
-	i.WaitForLogMessage("usage: k <command>")
+	if err = i.WaitForLogMessage("usage: k <command>"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Crash the kernel by violating SMAP.
-	i.RunCommand("k crash_user_read")
+	if err = i.RunCommand("k crash_user_read"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that an SMAP failure was identified and that the kernel panicked.
-	i.WaitForLogMessageAssertNotSeen("SMAP failure", "cpu does not support smap; will not crash")
-	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
-	i.WaitForLogMessage("{{{bt:0:")
+	if err = i.WaitForLogMessageAssertNotSeen("SMAP failure", "cpu does not support smap; will not crash"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("ZIRCON KERNEL PANIC"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("{{{bt:0:"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // See that the pmm checker can detect pmm free list corruption.
@@ -130,17 +154,24 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Wait for the system to finish booting.
-	i.WaitForLogMessage("usage: k <command>")
+	if err = i.WaitForLogMessage("usage: k <command>"); err != nil {
+		t.Fatal(err)
+	}
 
 	// This test is incompatible with Address Sanitizer.
-	i.RunCommand("k build_instrumentation")
+	if err = i.RunCommand("k build_instrumentation"); err != nil {
+		t.Fatal(err)
+	}
 	const kasan = "build_instrumentation: address_sanitizer"
 	if match, err := i.WaitForAnyLogMessage(kasan, "build_instrumentation: done"); err != nil {
 		t.Fatalf("failed to check for address_sanitizer instrumentation: %v", err)
@@ -149,37 +180,71 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 	}
 
 	// Enable the pmm checker with action oops.
-	i.RunCommand("k pmm checker enable 4096 oops")
-	i.WaitForLogMessage("pmm checker enabled")
+	if err = i.RunCommand("k pmm checker enable 4096 oops"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("pmm checker enabled"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Corrupt the free list.
-	i.RunCommand("k crash_pmm_use_after_free")
-	i.WaitForLogMessage("crash_pmm_use_after_free done")
+	if err = i.RunCommand("k crash_pmm_use_after_free"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("crash_pmm_use_after_free done"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Force a check.
-	i.RunCommand("k pmm checker check")
+	if err = i.RunCommand("k pmm checker check"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that the corruption is detected and triggered an oops.
-	i.WaitForLogMessage("ZIRCON KERNEL OOPS")
-	i.WaitForLogMessage("pmm checker found unexpected pattern in page at")
-	i.WaitForLogMessage("dump of page follows")
-	i.WaitForLogMessage("done")
+	if err = i.WaitForLogMessage("ZIRCON KERNEL OOPS"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("pmm checker found unexpected pattern in page at"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("dump of page follows"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("done"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Re-enable with action panic.
-	i.RunCommand("k pmm checker enable 4096 panic")
-	i.WaitForLogMessage("pmm checker enabled")
+	if err = i.RunCommand("k pmm checker enable 4096 panic"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("pmm checker enabled"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Corrupt the free list a second time.
-	i.RunCommand("k crash_pmm_use_after_free")
-	i.WaitForLogMessage("crash_pmm_use_after_free done")
+	if err = i.RunCommand("k crash_pmm_use_after_free"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("crash_pmm_use_after_free done"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Force a check.
-	i.RunCommand("k pmm checker check")
+	if err = i.RunCommand("k pmm checker check"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that the corruption is detected, but this time results in a panic.
-	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
-	i.WaitForLogMessage("pmm checker found unexpected pattern in page at")
-	i.WaitForLogMessage("dump of page follows")
+	if err = i.WaitForLogMessage("ZIRCON KERNEL PANIC"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("pmm checker found unexpected pattern in page at"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("dump of page follows"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // See that `k crash_assert` crashes the kernel.
@@ -204,24 +269,37 @@ func TestCrashAssert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Wait for the system to finish booting.
-	i.WaitForLogMessage("usage: k <command>")
+	if err = i.WaitForLogMessage("usage: k <command>"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Crash the kernel.
-	i.RunCommand("k crash_assert")
+	if err = i.RunCommand("k crash_assert"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that it panicked.
-	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
+	if err = i.WaitForLogMessage("ZIRCON KERNEL PANIC"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that it was an assert failure and that the assert message was printed.
-	i.WaitForLogMessage("ASSERT FAILED")
-	i.WaitForLogMessage("value 42")
+	if err = i.WaitForLogMessage("ASSERT FAILED"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("value 42"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func execDir(t *testing.T) string {

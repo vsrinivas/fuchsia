@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -593,24 +592,14 @@ func (i *Instance) Wait() (*os.ProcessState, error) {
 // RunCommand runs the given command in the serial console for the emulator
 // instance.
 func (i *Instance) RunCommand(cmd string) error {
-	_, err := fmt.Fprintf(i.stdin, "%s\n", cmd)
-	if err != nil {
-		// TODO(maruel): remove once call sites are updated.
-		panic(err)
+	if _, err := fmt.Fprintf(i.stdin, "%s\n", cmd); err != nil {
 		return err
 	}
-	err = i.stdin.Flush()
-	if err != nil {
-		// TODO(maruel): remove once call sites are updated.
-		panic(err)
-	}
-	return err
+	return i.stdin.Flush()
 }
 
 // WaitForLogMessage reads log messages from the emulator instance until it reads a
 // message that contains the given string.
-//
-// panic()s on error (and in particular if the string is not seen until EOF).
 func (i *Instance) WaitForLogMessage(msg string) error {
 	return i.WaitForLogMessages([]string{msg})
 }
@@ -619,15 +608,8 @@ func (i *Instance) WaitForLogMessage(msg string) error {
 // message in |msgs|. The log messages can appear in *any* order. Only one
 // expected message from |msgs| is retired per matching actual message even if
 // multiple messages from |msgs| match the log line.
-//
-// panic()s on error (and in particular if the string is not seen until EOF).
 func (i *Instance) WaitForLogMessages(msgs []string) error {
-	err := i.checkForLogMessages(i.stdout, msgs)
-	if err != nil {
-		// TODO(maruel): remove once call sites are updated.
-		panic(err)
-	}
-	return err
+	return i.checkForLogMessages(i.stdout, msgs)
 }
 
 // WaitForAnyLogMessage reads log messages from the emulator instance looking for any line that contains a message from msgs.
@@ -648,24 +630,20 @@ func (i *Instance) WaitForAnyLogMessage(msgs ...string) (string, error) {
 }
 
 // WaitForLogMessageAssertNotSeen is the same as WaitForLogMessage() but with
-// the addition that it will panic if |notSeen| is contained in a retrieved
-// message.
+// the addition that it will return an error if |notSeen| is contained in a
+// retrieved message.
 func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) error {
 	for {
 		line, err := i.stdout.ReadString('\n')
 		if err != nil {
-			// TODO(maruel): remove once call sites are updated.
-			panic(err)
-			return err
+			return fmt.Errorf("failed to find: %q: %w", msg, err)
 		}
 		fmt.Print(line)
 		if strings.Contains(line, msg) {
 			return nil
 		}
 		if strings.Contains(line, notSeen) {
-			// TODO(maruel): remove once call sites are updated.
-			panic(notSeen + " was in output")
-			return errors.New(notSeen + " was in output")
+			return fmt.Errorf("found in output: %q", msg)
 		}
 	}
 }
@@ -696,8 +674,7 @@ func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout 
 	}()
 	select {
 	case <-seen:
-		panic(notSeen + " was in output")
-		return errors.New(notSeen + " was in output")
+		return fmt.Errorf("found in output: %q", notSeen)
 	case <-time.After(timeout):
 		return nil
 	}

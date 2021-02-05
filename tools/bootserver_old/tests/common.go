@@ -212,9 +212,14 @@ func StartQemu(t *testing.T, appendCmdline []string, modeString string) *emulato
 	})
 
 	// Make sure netsvc in expected mode.
-	instance.WaitForLogMessage("netsvc: running in " + modeString + " mode")
+	if err := instance.WaitForLogMessage("netsvc: running in " + modeString + " mode"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Make sure netsvc is booted.
-	instance.WaitForLogMessage("netsvc: start")
+	if err := instance.WaitForLogMessage("netsvc: start"); err != nil {
+		t.Fatal(err)
+	}
+
 	return instance
 }

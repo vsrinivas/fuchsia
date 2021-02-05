@@ -47,37 +47,56 @@ func RebootWithCommandAndZbi(t *testing.T, cmd string, kind ExpectedRebootType, 
 		t.Fatal(err)
 	}
 
-	i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
-	i.WaitForLogMessage("initializing platform")
+	if err = i.WaitForLogMessage("initializing platform"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Make sure the shell is ready to accept commands over serial, and wait for fshost to start.
-	i.WaitForLogMessages([]string{"console.shell: enabled", "fshost.cm"})
+	if err = i.WaitForLogMessages([]string{"console.shell: enabled", "fshost.cm"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if arch == emulator.X64 {
 		// Ensure the ACPI driver comes up in case our command will need to interact with the platform
 		// driver for power operations.
-		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY")
-		i.WaitForLogMessage("ACPI_READY")
+		if err = i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY"); err != nil {
+			t.Fatal(err)
+		}
+		if err = i.WaitForLogMessage("ACPI_READY"); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Trigger a reboot in one of the various ways.
-	i.RunCommand(cmd)
+	if err = i.RunCommand(cmd); err != nil {
+		t.Fatal(err)
+	}
 
 	if kind == CleanReboot {
 		// Make sure the file system is notified and unmounts.
-		i.WaitForLogMessage("fshost shutdown complete")
+		if err = i.WaitForLogMessage("fshost shutdown complete"); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Is the target rebooting?
-	i.WaitForLogMessage("Shutting down debuglog")
+	if err = i.WaitForLogMessage("Shutting down debuglog"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that the target comes back up.
-	i.WaitForLogMessage("welcome to Zircon")
+	if err = i.WaitForLogMessage("welcome to Zircon"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func execDir(t *testing.T) string {

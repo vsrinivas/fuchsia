@@ -43,42 +43,68 @@ func TestConsoleIsLaunched(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	// Wait for the system to finish booting.
-	i.WaitForLogMessage("usage: k <command>")
+	if err = i.WaitForLogMessage("usage: k <command>"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Print a string and check for the string.
-	i.RunCommand("echo MY_TEST_STRING")
-	i.WaitForLogMessage("MY_TEST_STRING")
+	if err = i.RunCommand("echo MY_TEST_STRING"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("MY_TEST_STRING"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Check that 'ls' doesn't hang by running it and then another echo.
-	i.RunCommand("ls")
-	i.RunCommand("echo MY_TEST_STRING2")
-	i.WaitForLogMessage("MY_TEST_STRING2")
+	if err = i.RunCommand("ls"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.RunCommand("echo MY_TEST_STRING2"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage("MY_TEST_STRING2"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Tell the shell to exit.
-	i.RunCommand("exit")
+	if err = i.RunCommand("exit"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Check the exit print
-	i.WaitForLogMessage("console-launcher: console shell exited (started=1 exited=1, return_code=0)")
+	if err = i.WaitForLogMessage("console-launcher: console shell exited (started=1 exited=1, return_code=0)"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Print another string to make sure the shell came back up.
-	i.RunCommand("echo MY_TEST_STRING3")
+	if err = i.RunCommand("echo MY_TEST_STRING3"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that it was printed.
-	i.WaitForLogMessage("MY_TEST_STRING3")
+	if err = i.WaitForLogMessage("MY_TEST_STRING3"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Run the permissions test.
-	i.RunCommand("runtests -n shell-permissions-test")
+	if err = i.RunCommand("runtests -n shell-permissions-test"); err != nil {
+		t.Fatal(err)
+	}
 
 	// See that it succeeded.
-	i.WaitForLogMessage("[runtests][PASSED]")
-
+	if err = i.WaitForLogMessage("[runtests][PASSED]"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func execDir(t *testing.T) string {

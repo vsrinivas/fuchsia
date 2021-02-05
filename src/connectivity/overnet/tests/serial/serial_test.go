@@ -65,13 +65,18 @@ func TestOvernetSerial(t *testing.T) {
 	}
 
 	ascendd := startAscendd(t)
-	err = i.StartPiped(ascendd)
-	if err != nil {
+	if err = i.StartPiped(ascendd); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
-	i.WaitForLogMessage("Established Client Overnet serial connection")
+	if err = i.WaitForLogMessage("Established Client Overnet serial connection"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Test that ascendd can connect to overnetstack via serial.
@@ -98,11 +103,16 @@ func TestNoSpinningIfNoSerial(t *testing.T) {
 	}
 
 	ascendd := startAscendd(t)
-	err = i.StartPiped(ascendd)
-	if err != nil {
+	if err = i.StartPiped(ascendd); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
-	i.WaitForLogMessage("SERIAL LINK Debug completed with failure")
+	if err = i.WaitForLogMessage("SERIAL LINK Debug completed with failure"); err != nil {
+		t.Fatal(err)
+	}
 }

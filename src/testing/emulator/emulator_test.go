@@ -18,35 +18,35 @@ func TestCheckForLogMessage(t *testing.T) {
 	testStr = fmt.Sprintf("%s\n", testStr)
 	fakeReader := bufio.NewReader(strings.NewReader(testStr))
 	i := Instance{}
-	if i.checkForLogMessage(fakeReader, logLines[2]) != nil {
-		t.Error("check for first log message failed")
+	if err := i.checkForLogMessage(fakeReader, logLines[2]); err != nil {
+		t.Fatal(err)
 	}
 
 	fakeReader = bufio.NewReader(strings.NewReader(testStr))
 
 	i = Instance{stdout: fakeReader}
-	if i.WaitForLogMessage(logLines[2]) != nil {
-		t.Error("Failed finding log line with `WaitForLogMessage`")
+	if err := i.WaitForLogMessage(logLines[2]); err != nil {
+		t.Fatal(err)
 	}
 
 	fakeReader = bufio.NewReader(strings.NewReader(testStr))
 
 	i = Instance{stdout: fakeReader}
-	if i.WaitForLogMessages([]string{logLines[2]}) != nil {
-		t.Error("Failed finding log line with `WaitForLogMessageS`")
+	if err := i.WaitForLogMessages([]string{logLines[2]}); err != nil {
+		t.Fatal(err)
 	}
 
 	fakeReader = bufio.NewReader(strings.NewReader(testStr))
 
 	i = Instance{stdout: fakeReader}
-	if i.WaitForLogMessages([]string{logLines[2], logLines[4]}) != nil {
-		t.Error("Failed finding IN-ORDER log lines")
+	if err := i.WaitForLogMessages([]string{logLines[2], logLines[4]}); err != nil {
+		t.Fatal(err)
 	}
 
 	fakeReader = bufio.NewReader(strings.NewReader(testStr))
 
 	i = Instance{stdout: fakeReader}
-	if i.WaitForLogMessages([]string{logLines[4], logLines[2]}) != nil {
-		t.Error("Failed finding OUT-OF-ORDER log lines")
+	if err := i.WaitForLogMessages([]string{logLines[4], logLines[2]}); err != nil {
+		t.Fatal(err)
 	}
 }
