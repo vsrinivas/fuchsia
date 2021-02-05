@@ -10,6 +10,7 @@ use {
     crate::verify::{
         collector::component_tree::V2ComponentTreeDataCollector,
         controller::build::VerifyBuildController,
+        controller::capability_routing::CapabilityRouteController,
         controller::capability_routing::TreeMappingController,
     },
     scrutiny::prelude::*,
@@ -25,6 +26,7 @@ plugin!(
         controllers! {
             "/verify/build" => VerifyBuildController::default(),
             "/verify/map_tree" => TreeMappingController::default(),
+            "/verify/capability_routes" => CapabilityRouteController::default(),
         }
     ),
     vec![PluginDescriptor::new("CorePlugin")]
@@ -34,10 +36,23 @@ plugin!(
 mod tests {
     use {
         super::*,
-        crate::core::collection::{Component, Components, Manifest, ManifestData, Manifests},
+        crate::{
+            core::collection::{Component, Components, Manifest, ManifestData, Manifests},
+            verify::collection::V2ComponentTree,
+        },
         anyhow::Result,
-        cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
+        cm_fidl_analyzer::{
+            capability_routing::{error::CapabilityRouteError, testing::build_two_node_tree},
+            component_tree::ComponentTreeError,
+        },
+        cm_rust::{
+            CapabilityDecl, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl,
+            DependencyType, DirectoryDecl, NativeIntoFidl, OfferDecl, OfferDirectoryDecl,
+            OfferProtocolDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl,
+            UseProtocolDecl, UseSource,
+        },
         fidl::encoding::encode_persistent,
+        fidl_fuchsia_io2::Operations,
         fidl_fuchsia_sys2 as fsys2,
         serde_json::json,
         tempfile::tempdir,
@@ -64,6 +79,69 @@ mod tests {
             collections: vec![],
             facets: None,
             environments: vec![],
+        }
+    }
+
+    fn new_use_directory_decl(
+        source: UseSource,
+        source_name: CapabilityName,
+        rights: Operations,
+    ) -> UseDirectoryDecl {
+        UseDirectoryDecl {
+            source,
+            source_name,
+            target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            rights,
+            subdir: None,
+        }
+    }
+
+    fn new_offer_directory_decl(
+        source: OfferSource,
+        source_name: CapabilityName,
+        target: OfferTarget,
+        target_name: CapabilityName,
+        rights: Option<Operations>,
+    ) -> OfferDirectoryDecl {
+        OfferDirectoryDecl {
+            source,
+            source_name,
+            target,
+            target_name,
+            rights,
+            subdir: None,
+            dependency_type: DependencyType::Strong,
+        }
+    }
+
+    fn new_directory_decl(name: CapabilityName, rights: Operations) -> DirectoryDecl {
+        DirectoryDecl {
+            name,
+            source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            rights,
+        }
+    }
+
+    fn new_use_protocol_decl(source: UseSource, source_name: CapabilityName) -> UseProtocolDecl {
+        UseProtocolDecl {
+            source,
+            source_name,
+            target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+        }
+    }
+
+    fn new_offer_protocol_decl(
+        source: OfferSource,
+        source_name: CapabilityName,
+        target: OfferTarget,
+        target_name: CapabilityName,
+    ) -> OfferProtocolDecl {
+        OfferProtocolDecl {
+            source,
+            source_name,
+            target,
+            target_name,
+            dependency_type: DependencyType::Strong,
         }
     }
 
@@ -129,6 +207,60 @@ mod tests {
         Ok(model)
     }
 
+    fn two_node_tree_model() -> Result<Arc<DataModel>> {
+        let model = data_model();
+        let child_name = "child".to_string();
+        let missing_child_name = "missing_child".to_string();
+
+        let good_dir_name = CapabilityName("good_dir".to_string());
+        let bad_dir_name = CapabilityName("bad_dir".to_string());
+        let offer_rights = Operations::Connect;
+
+        let protocol_name = CapabilityName("protocol".to_string());
+
+        let root_offer_good_dir = new_offer_directory_decl(
+            OfferSource::Self_,
+            good_dir_name.clone(),
+            OfferTarget::Child(child_name.clone()),
+            good_dir_name.clone(),
+            Some(offer_rights),
+        );
+        let root_offer_protocol = new_offer_protocol_decl(
+            OfferSource::Child(missing_child_name.clone()),
+            protocol_name.clone(),
+            OfferTarget::Child(child_name.clone()),
+            protocol_name.clone(),
+        );
+        let root_good_dir_decl = new_directory_decl(good_dir_name.clone(), offer_rights);
+
+        let child_use_good_dir =
+            new_use_directory_decl(UseSource::Parent, good_dir_name.clone(), offer_rights);
+        let child_use_bad_dir =
+            new_use_directory_decl(UseSource::Parent, bad_dir_name.clone(), offer_rights);
+        let child_use_protocol = new_use_protocol_decl(UseSource::Parent, protocol_name.clone());
+
+        let build_tree_result = build_two_node_tree(
+            vec![],
+            vec![
+                OfferDecl::Directory(root_offer_good_dir),
+                OfferDecl::Protocol(root_offer_protocol),
+            ],
+            vec![CapabilityDecl::Directory(root_good_dir_decl)],
+            vec![
+                UseDecl::Directory(child_use_good_dir.clone()),
+                UseDecl::Directory(child_use_bad_dir.clone()),
+                UseDecl::Protocol(child_use_protocol.clone()),
+            ],
+            vec![],
+            vec![],
+        );
+        assert!(build_tree_result.tree.is_some());
+        let tree = build_tree_result.tree.unwrap();
+
+        model.set(V2ComponentTree::new(tree, build_tree_result.errors))?;
+        Ok(model)
+    }
+
     #[test]
     fn test_map_tree_single_node() -> Result<()> {
         let model = single_v2_component_model()?;
@@ -162,6 +294,167 @@ mod tests {
                                  {"node": "/bar","url": "fuchsia-boot:///#meta/bar.cm"},
                                  {"node": "/foo", "url": "fuchsia-boot:///#meta/foo.cm"},
                                  {"node": "/foo/baz", "url": "fuchsia-boot:///#meta/baz.cm"}]}))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_capability_routing_all_results() -> Result<()> {
+        let model = two_node_tree_model()?;
+
+        let good_dir_name = CapabilityName("good_dir".to_string());
+        let bad_dir_name = CapabilityName("bad_dir".to_string());
+        let protocol_name = CapabilityName("protocol".to_string());
+
+        let controller = CapabilityRouteController::default();
+        let response = controller.query(
+            model.clone(),
+            json!({ "capability_types": "directory protocol",
+                     "response_level": "all"}),
+        )?;
+        assert_eq!(
+            response,
+            json!([{
+                "capability_type": "directory",
+                "results": {
+                    "errors": [
+                        {
+                            "capability": bad_dir_name.to_string(),
+                            "using_node": "/child",
+                            "error": CapabilityRouteError::OfferDeclNotFound("/".to_string(),
+                                                                             bad_dir_name.to_string())
+                                .to_string(),
+                        }
+                    ],
+                    "warnings": [],
+                    "ok": [
+                        {
+                            "capability": good_dir_name.to_string(),
+                            "using_node": "/child",
+                            "route": [
+                                {
+                                    "action": "use",
+                                    "as": good_dir_name.to_string(),
+                                    "by": "/child",
+                                    "from": "parent"
+                                }, {
+                                    "action": "offer",
+                                    "as": good_dir_name.to_string(),
+                                    "by": "/",
+                                    "from": "self"
+                                }, {
+                                    "action": "declare",
+                                    "as": good_dir_name.to_string(),
+                                    "by": "/"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },  {
+                "capability_type": "protocol",
+                "results": {
+                    "errors": [],
+                    "warnings": [
+                        {
+                            "capability": protocol_name.to_string(),
+                            "using_node": "/child",
+                            "warning": CapabilityRouteError::ComponentNotFound(
+                                ComponentTreeError::ComponentNodeNotFound(
+                                    "/missing_child".to_string()
+                            )).to_string(),
+                        }
+                    ],
+                    "ok": [],
+                }
+            }])
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_capability_routing_warn() -> Result<()> {
+        let model = two_node_tree_model()?;
+        let bad_dir_name = CapabilityName("bad_dir".to_string());
+        let protocol_name = CapabilityName("protocol".to_string());
+
+        let controller = CapabilityRouteController::default();
+        let response = controller.query(
+            model.clone(),
+            json!({ "capability_types": "directory protocol",
+                     "response_level": "warn"}),
+        )?;
+        assert_eq!(
+            response,
+            json!([{
+                "capability_type": "directory",
+                "results": {
+                    "errors": [
+                        {
+                            "capability": bad_dir_name.to_string(),
+                            "using_node": "/child",
+                            "error": CapabilityRouteError::OfferDeclNotFound("/".to_string(),
+                                                                             bad_dir_name.to_string())
+                                .to_string(),
+                        }
+                    ],
+                    "warnings": [],
+                }
+            },  {
+                "capability_type": "protocol",
+                "results": {
+                    "errors": [],
+                    "warnings": [
+                        {
+                            "capability": protocol_name.to_string(),
+                            "using_node": "/child",
+                            "warning": CapabilityRouteError::ComponentNotFound(
+                                ComponentTreeError::ComponentNodeNotFound(
+                                    "/missing_child".to_string()
+                            )).to_string(),
+                        }
+                    ],
+                }
+            }])
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_capability_routing_errors_only() -> Result<()> {
+        let model = two_node_tree_model()?;
+        let bad_dir_name = CapabilityName("bad_dir".to_string());
+
+        let controller = CapabilityRouteController::default();
+        let response = controller.query(
+            model.clone(),
+            json!({ "capability_types": "directory protocol",
+                     "response_level": "error"}),
+        )?;
+        assert_eq!(
+            response,
+            json!([{
+                "capability_type": "directory",
+                "results": {
+                    "errors": [
+                        {
+                            "capability": bad_dir_name.to_string(),
+                            "using_node": "/child",
+                            "error": CapabilityRouteError::OfferDeclNotFound("/".to_string(),
+                                                                             bad_dir_name.to_string())
+                                .to_string(),
+                        }
+                    ],
+                }
+            },  {
+                "capability_type": "protocol",
+                "results": {
+                    "errors": [],
+                }
+            }])
         );
 
         Ok(())
