@@ -625,6 +625,8 @@ impl FrameBuffer {
 
         // Connect to sysmem and allocate shared buffer collection.
         let sysmem = connect_to_service::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
+        sysmem::set_allocator_name(&sysmem)
+            .unwrap_or_else(|e| eprintln!("setting sysmem debug info error: {:?}", e));
 
         let (local_token, local_token_request) =
             create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
