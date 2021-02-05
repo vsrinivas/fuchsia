@@ -15,6 +15,7 @@ common_sources = [
   "src/debuglog.rs",
   "src/event.rs",
   "src/eventpair.rs",
+  "src/exception.rs",
   "src/fifo.rs",
   "src/guest.rs",
   "src/handle.rs",

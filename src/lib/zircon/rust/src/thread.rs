@@ -5,7 +5,10 @@
 //! Type-safe bindings for Zircon threads.
 
 use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Profile, Status};
+use crate::{
+    object_get_info, AsHandleRef, Handle, HandleBased, HandleRef, ObjectQuery, Profile, Status,
+    Topic,
+};
 
 use fuchsia_zircon_sys as sys;
 
@@ -16,6 +19,12 @@ use fuchsia_zircon_sys as sys;
 #[repr(transparent)]
 pub struct Thread(Handle);
 impl_handle_based!(Thread);
+
+struct ThreadExceptionReport;
+unsafe impl ObjectQuery for ThreadExceptionReport {
+    const TOPIC: Topic = Topic::THREAD_EXCEPTION_REPORT;
+    type InfoTy = sys::zx_exception_report_t;
+}
 
 impl Thread {
     /// Cause the thread to begin execution.
@@ -56,6 +65,18 @@ impl Thread {
     /// in order for safety.
     pub unsafe fn exit() {
         sys::zx_thread_exit()
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_THREAD_EXCEPTION_REPORT topic.
+    pub fn get_exception_report(&self) -> Result<sys::zx_exception_report_t, Status> {
+        let mut info: sys::zx_exception_report_t = unsafe { std::mem::zeroed() };
+        object_get_info::<ThreadExceptionReport>(
+            self.as_handle_ref(),
+            std::slice::from_mut(&mut info),
+        )
+        .map(|_| info)
     }
 }
 

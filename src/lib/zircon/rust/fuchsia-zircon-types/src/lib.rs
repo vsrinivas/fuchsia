@@ -353,6 +353,15 @@ multiconst!(u32, [
 
     // Terminate this job if the system is low on memory.
     ZX_PROP_JOB_KILL_ON_OOM           = 15;
+
+    // Exception close behavior.
+    ZX_PROP_EXCEPTION_STATE           = 16;
+
+    // The size of the content in a VMO, in bytes.
+    ZX_PROP_VMO_CONTENT_SIZE          = 17;
+
+    // How an exception should be handled.
+    ZX_PROP_EXCEPTION_STRATEGY        = 18;
 ]);
 
 multiconst!(zx_rsrc_kind_t, [
@@ -739,6 +748,66 @@ pub struct zx_exception_info_t {
     pub type_: zx_excp_type_t,
     pub padding1: [PadByte; 4],
 }
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_x86_64_exc_data_t {
+    pub vector: u64,
+    pub err_code: u64,
+    pub cr2: u64,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_arm64_exc_data_t {
+    pub esr: u32,
+    pub padding1: [PadByte; 4],
+    pub far: u64,
+    pub padding2: [PadByte; 8],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union zx_exception_header_arch_t {
+    pub x86_64: zx_x86_64_exc_data_t,
+    pub arm_64: zx_arm64_exc_data_t,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_exception_header_t {
+    pub size: u32,
+    pub type_: zx_excp_type_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct zx_exception_context_t {
+    pub arch: zx_exception_header_arch_t,
+    pub synth_code: u32,
+    pub synth_data: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct zx_exception_report_t {
+    pub header: zx_exception_header_t,
+    pub context: zx_exception_context_t,
+}
+
+pub type zx_exception_state_t = u32;
+
+multiconst!(zx_exception_state_t, [
+    ZX_EXCEPTION_STATE_TRY_NEXT   = 0;
+    ZX_EXCEPTION_STATE_HANDLED    = 1;
+]);
+
+pub type zx_exception_strategy_t = u32;
+
+multiconst!(zx_exception_state_t, [
+    ZX_EXCEPTION_STRATEGY_FIRST_CHANCE   = 0;
+    ZX_EXCEPTION_STRATEGY_SECOND_CHANCE  = 1;
+]);
 
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]
