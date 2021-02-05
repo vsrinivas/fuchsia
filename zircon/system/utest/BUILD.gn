@@ -30,7 +30,6 @@ group("tests") {
     "inspector:tests",
     "int-types:tests",
     "libc:tests",
-    "logger:tests",
     "posixio:tests",
     "psutils:tests",
     "qsort:tests",

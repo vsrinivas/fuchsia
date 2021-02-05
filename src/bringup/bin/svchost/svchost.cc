@@ -4,7 +4,6 @@
 
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
-#include <fuchsia/logger/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -15,7 +14,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/kernel-debug/kernel-debug.h>
 #include <lib/ktrace/ktrace.h>
-#include <lib/logger/provider.h>
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/job.h>
@@ -292,21 +290,6 @@ int main(int argc, char** argv) {
     status = provider_load(&service_providers[i], dispatcher, outgoing.svc_dir());
     if (status != ZX_OK) {
       fprintf(stderr, "svchost: error: Failed to load service provider %zu: %d (%s).\n", i, status,
-              zx_status_get_string(status));
-      return 1;
-    }
-  }
-
-  // TODO(dgilhooley): Remove this in followup CL since Archivist is in bootfs.
-  // if full system is not required drop simple logger service.
-  zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(),
-                                                .ctx = nullptr};
-  if (args.require_system) {
-    publish_service(outgoing.svc_dir(), llcpp::fuchsia::logger::LogSink::Name, caller.channel());
-  } else {
-    status = provider_load(&logger_service, dispatcher, outgoing.svc_dir());
-    if (status != ZX_OK) {
-      fprintf(stderr, "svchost: error: Failed to publish logger: %d (%s).\n", status,
               zx_status_get_string(status));
       return 1;
     }

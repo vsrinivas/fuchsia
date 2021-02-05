@@ -297,10 +297,7 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.scheduler.ProfileProvider",
-            ],
+            protocol: [ "fuchsia.scheduler.ProfileProvider" ],
             from: "#svchost",
             to: [ "#driver_manager" ],
 
@@ -578,6 +575,7 @@
                 "#console-launcher",
                 "#decompressor",
                 "#device_name_provider",
+                "#driver_manager",
                 "#fshost",
                 "#netsvc",
                 "#power_manager",

@@ -6,7 +6,6 @@
         {
             protocol: [
                 "fuchsia.kernel.DebugBroker",
-                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.kernel.Controller",
@@ -36,7 +35,6 @@
         {
             protocol: [
                 "fuchsia.kernel.DebugBroker",
-                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.kernel.Controller",

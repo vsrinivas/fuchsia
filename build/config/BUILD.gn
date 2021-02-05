@@ -813,7 +813,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/inspector/*",
     "//zircon/system/ulib/intel-hda/*",
     "//zircon/system/ulib/log/*",
-    "//zircon/system/ulib/logger/*",
     "//zircon/system/ulib/memfs/*",
     "//zircon/system/ulib/profile/*",
     "//zircon/system/ulib/ramdevice-client/*",
