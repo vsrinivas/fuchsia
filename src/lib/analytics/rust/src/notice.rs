@@ -21,7 +21,7 @@ Analytics are not sent on this very first run. To disable reporting, type
 
 To display the current setting and what is collected, type
 
-    ffx config analytics
+    ffx config analytics show
 
 If you opt out of analytics, an opt-out event will be sent, and then no
 further information will be sent by the core developer tools to Google.
