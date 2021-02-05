@@ -532,7 +532,7 @@ Triage provides predefined functions for use in `eval` expressions:
     logical AND of the values.
 *   `Or(value1, value2, value3...)` takes Boolean arguments and returns the
     logical OR of the values.
-*   `Not(value) takes one Boolean argument and returns the logical NOT of it.
+*   `Not(value)` takes one Boolean argument and returns the logical NOT of it.
 *   `SyslogHas(matcher)`, `KlogHas(matcher)`, `BootlogHas(matcher)` return true if the
     corresponding log file has a line matching matcher, which is a string
     containing a regex expression.
@@ -546,6 +546,9 @@ Triage provides predefined functions for use in `eval` expressions:
     and `Nanos()` calculate values for comparison with monotonic timestamps.
 *   `Now()` returns the approximate timestamp when the Diagnostic data was
     created.
+*   `StringMatches(value, regex)` applies the given regex to the given
+    value and returns true if there is a match. The regex syntax is that
+    supported by the Rust [regex crate](https://docs.rs/regex/latest/regex/).
 
 Note: Since logs are not structured, selectors can't be applied to them, so we
 supply regex matching functions instead.

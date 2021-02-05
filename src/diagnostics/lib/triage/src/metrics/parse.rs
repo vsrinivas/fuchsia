@@ -232,6 +232,7 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("Days", Days),
             function!("Now", Now),
             function!("Option", OptionF),
+            function!("StringMatches", StringMatches),
         )),
     ))(i)
 }

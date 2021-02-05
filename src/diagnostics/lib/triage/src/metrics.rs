@@ -11,6 +11,7 @@ pub(crate) mod variable;
 use {
     fetch::{Fetcher, FileDataFetcher, SelectorString, TrialDataFetcher},
     metric_value::MetricValue,
+    regex::Regex,
     serde::{Deserialize, Deserializer},
     std::{clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
     variable::VariableName,
@@ -111,6 +112,7 @@ pub enum Function {
     Days,
     Now,
     OptionF,
+    StringMatches,
 }
 
 /// Lambda stores a function; its parameters and body are evaluated lazily.
@@ -401,7 +403,38 @@ impl<'a> MetricState<'a> {
             Function::Days => self.time(namespace, operands, 1_000_000_000 * 60 * 60 * 24),
             Function::Now => self.now(operands),
             Function::OptionF => self.option(namespace, operands),
+            Function::StringMatches => self.regex(namespace, operands),
         }
+    }
+
+    fn regex(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+        if operands.len() != 2 {
+            return MetricValue::Missing(
+                "StringMatches(metric, regex) needs one string metric and one string regex"
+                    .to_string(),
+            );
+        }
+
+        let (value, regex) = match (
+            self.evaluate(namespace, &operands[0]),
+            self.evaluate(namespace, &operands[1]),
+        ) {
+            (MetricValue::String(value), MetricValue::String(regex)) => (value, regex),
+            _ => {
+                return MetricValue::Missing(
+                    "Arguments to StringMatches must be strings".to_string(),
+                );
+            }
+        };
+
+        let regex = match Regex::new(&regex) {
+            Ok(v) => v,
+            Err(_) => {
+                return MetricValue::Missing(format!("Could not parse `{}` as regex", regex));
+            }
+        };
+
+        MetricValue::Bool(regex.is_match(&value))
     }
 
     fn option(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
@@ -1053,6 +1086,29 @@ pub(crate) mod test {
         assert_eq!(
             state.eval_action_metric("root", &Metric::Eval("[0==0, 0==0]".to_string())),
             MetricValue::Vector(vec![MetricValue::Bool(true), MetricValue::Bool(true)])
+        );
+
+        // Test regex operations
+        assert_eq!(
+            state.eval_action_metric(
+                "root",
+                &Metric::Eval("StringMatches('abcd', '^a.c')".to_string())
+            ),
+            MetricValue::Bool(true)
+        );
+        assert_eq!(
+            state.eval_action_metric(
+                "root",
+                &Metric::Eval("StringMatches('abcd', 'a.c$')".to_string())
+            ),
+            MetricValue::Bool(false)
+        );
+        assert_missing!(
+            state.eval_action_metric(
+                "root",
+                &Metric::Eval("StringMatches('abcd', '[[')".to_string())
+            ),
+            "Could not parse `[[` as regex"
         );
     }
 
