@@ -8,6 +8,7 @@
 //! network protocols. Some general utilities are defined in the crate root,
 //! while protocol-specific operations are defined in their own modules.
 
+#![deny(missing_docs)]
 #![cfg_attr(not(std), no_std)]
 
 #[cfg(std)]
@@ -247,283 +248,138 @@ pub trait ScopeableAddress {
     fn scope(&self) -> Self::Scope;
 }
 
-/// An address which is guaranteed to be a specified address.
+macro_rules! doc_comment {
+    ($x:expr, $($tt:tt)*) => {
+        #[doc = $x]
+        $($tt)*
+    };
+}
+
+/// Define a witness type and implement methods and traits for it.
 ///
-/// `SpecifiedAddr` wraps an address of type `A` and guarantees that it is a
-/// specified address. Note that this guarantee is contingent on a correct
-/// implementation of the [`SpecifiedAddress`] trait. Since that trait is not
-/// `unsafe`, `unsafe` code may NOT rely on this guarantee for its soundness.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct SpecifiedAddr<A>(A);
+/// - `$type` is the type's name
+/// - `$adj` is a string literal representing the adjective used to describe
+///   addresses of this type for documentation purposes (e.g., "specified",
+///   "unicast", etc)
+/// - `$trait` is the name of the trait associated with the property to be
+///   witnessed
+/// - `$method` is the method on `$trait` which determines whether the property
+///   holds (e.g., `is_specified`)
+macro_rules! impl_witness {
+    ($type:ident, $adj:literal, $trait:ident, $method:ident) => {
+        doc_comment! {
+        concat!("An address which is guaranteed to be ", $adj, ".
 
-impl<A: SpecifiedAddress> sealed::Sealed for SpecifiedAddr<A> {}
-impl<A: SpecifiedAddress> Witness<A> for SpecifiedAddr<A> {
-    #[inline]
-    fn new(addr: A) -> Option<SpecifiedAddr<A>> {
-        if !addr.is_specified() {
-            return None;
+`", stringify!($type), "` wraps an address of type `A` and guarantees that it is
+a ", $adj, " address. Note that this guarantee is contingent on a correct
+implementation of the [`", stringify!($trait), "`] trait. Since that trait is
+not `unsafe`, `unsafe` code may NOT rely on this guarantee for its soundness."),
+            #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+            pub struct $type<A>(A);
         }
-        Some(SpecifiedAddr(addr))
-    }
 
-    #[inline]
-    fn into_addr(self) -> A {
-        self.0
-    }
+        // TODO(https://github.com/rust-lang/rust/issues/57563): Once traits
+        // other than `Sized` are supported for const fns, move this into the
+        // block with the `A: $trait` bound.
+        impl<A> $type<A> {
+            doc_comment! {
+                concat!("Constructs a new `", stringify!($type), "` without
+checking to see if `addr` is actually ", $adj, ".
+
+# Safety
+
+It is up to the caller to make sure that `addr` is ", $adj, " to avoid breaking
+the guarantees of `", stringify!($type), "`. See [`", stringify!($type), "`] for
+more details."),
+                #[inline]
+                pub const unsafe fn new_unchecked(addr: A) -> $type<A> {
+                    $type(addr)
+                }
+            }
+        }
+
+        impl<A> sealed::Sealed for $type<A> {}
+        impl<A: $trait> Witness<A> for $type<A> {
+            #[inline]
+            fn new(addr: A) -> Option<$type<A>> {
+                if !addr.$method() {
+                    return None;
+                }
+                Some($type(addr))
+            }
+
+            #[inline]
+            fn into_addr(self) -> A {
+                self.0
+            }
+        }
+
+        impl<A: $trait> Deref for $type<A> {
+            type Target = A;
+
+            #[inline]
+            fn deref(&self) -> &A {
+                &self.0
+            }
+        }
+
+        impl<A: $trait + Display> Display for $type<A> {
+            #[inline]
+            fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+    };
 }
 
-impl<A> SpecifiedAddr<A> {
-    /// Constructs a new `SpecifiedAddr` without checking to see if `addr` is
-    /// actually a specified address.
-    ///
-    /// # Safety
-    ///
-    /// It is up to the caller to make sure that `addr` is a specified address
-    /// to avoid breaking the guarantees of `SpecifiedAddr`. See
-    /// [`SpecifiedAddr`] for more details.
-    #[inline]
-    pub const unsafe fn new_unchecked(addr: A) -> SpecifiedAddr<A> {
-        SpecifiedAddr(addr)
-    }
-}
-
-impl<A: SpecifiedAddress> Deref for SpecifiedAddr<A> {
-    type Target = A;
-
-    #[inline]
-    fn deref(&self) -> &A {
-        &self.0
-    }
-}
-
-impl<A: SpecifiedAddress + Display> Display for SpecifiedAddr<A> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-/// An address which is guaranteed to be a unicast address.
+/// Implements an `into_specified` method on the witness type `$type`.
 ///
-/// `UnicastAddr` wraps an address of type `A` and guarantees that it is a
-/// unicast address. Note that this guarantee is contingent on a correct
-/// implementation of the [`UnicastAddress`] trait. Since that trait is not
-/// `unsafe`, `unsafe` code may NOT rely on this guarantee for its soundness.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct UnicastAddr<A>(A);
-
-impl<A: UnicastAddress> sealed::Sealed for UnicastAddr<A> {}
-impl<A: UnicastAddress> Witness<A> for UnicastAddr<A> {
-    #[inline]
-    fn new(addr: A) -> Option<UnicastAddr<A>> {
-        if !addr.is_unicast() {
-            return None;
-        }
-        Some(UnicastAddr(addr))
-    }
-
-    #[inline]
-    fn into_addr(self) -> A {
-        self.0
-    }
-}
-
-impl<A> UnicastAddr<A> {
-    /// Constructs a new `UnicastAddr` without checking to see if `addr` is
-    /// actually a unicast address.
-    ///
-    /// # Safety
-    ///
-    /// It is up to the caller to make sure that `addr` is a unicast address to
-    /// avoid breaking the guarantees of `UnicastAddr`. See [`UnicastAddr`] for
-    /// more details.
-    #[inline]
-    pub const unsafe fn new_unchecked(addr: A) -> UnicastAddr<A> {
-        UnicastAddr(addr)
-    }
-}
-
-impl<A: UnicastAddress + SpecifiedAddress> UnicastAddr<A> {
-    /// Converts this `UnicastAddr` into a [`SpecifiedAddr`].
-    ///
-    /// [`UnicastAddress::is_unicast`] implies
-    /// [`SpecifiedAddress::is_specified`], so all `UnicastAddr`s are guaranteed
-    /// to be specified, so this conversion is infallible.
-    #[inline]
-    pub fn into_specified(self) -> SpecifiedAddr<A> {
-        SpecifiedAddr(self.0)
-    }
-}
-
-impl<A: UnicastAddress> Deref for UnicastAddr<A> {
-    type Target = A;
-
-    #[inline]
-    fn deref(&self) -> &A {
-        &self.0
-    }
-}
-
-impl<A: UnicastAddress + Display> Display for UnicastAddr<A> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<A: UnicastAddress + SpecifiedAddress> From<UnicastAddr<A>> for SpecifiedAddr<A> {
-    fn from(addr: UnicastAddr<A>) -> SpecifiedAddr<A> {
-        addr.into_specified()
-    }
-}
-
-/// An address which is guaranteed to be a multicast address.
+/// - `$trait` is the name of the trait associated with the witnessed property
+/// - `$method` is the method on `$trait` which determines whether the property
+///   holds (e.g., `is_unicast`)
 ///
-/// `MulticastAddr` wraps an address of type `A` and guarantees that it is a
-/// multicast address. Note that this guarantee is contingent on a correct
-/// implementation of the [`MulticastAddress`] trait. Since that trait is not
-/// `unsafe`, `unsafe` code may NOT rely on this guarantee for its soundness.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct MulticastAddr<A>(A);
+/// An `into_specified` method is predicated on the witnessed property implying
+/// that the address is also specified (e.g., `UnicastAddress::is_unicast`
+/// implies `SpecifiedAddress::is_specified`).
+macro_rules! impl_into_specified {
+    ($type:ident, $trait:ident, $method:ident) => {
+        impl<A: $trait + SpecifiedAddress> $type<A> {
+            doc_comment! {
+                concat!("Converts this `", stringify!($type), "` into a
+[`SpecifiedAddr`].
 
-impl<A: MulticastAddress> sealed::Sealed for MulticastAddr<A> {}
-impl<A: MulticastAddress> Witness<A> for MulticastAddr<A> {
-    #[inline]
-    fn new(addr: A) -> Option<MulticastAddr<A>> {
-        if !addr.is_multicast() {
-            return None;
+[`", stringify!($trait), "::", stringify!($method), "`] implies
+[`SpecifiedAddress::is_specified`], so all `", stringify!($type), "`s are
+guaranteed to be specified, so this conversion is infallible."),
+                #[inline]
+                pub fn into_specified(self) -> SpecifiedAddr<A> {
+                    SpecifiedAddr(self.0)
+                }
+            }
         }
-        Some(MulticastAddr(addr))
-    }
 
-    #[inline]
-    fn into_addr(self) -> A {
-        self.0
-    }
-}
-
-impl<A> MulticastAddr<A> {
-    /// Construct a new `MulticastAddr` without checking to see if `addr` is
-    /// actually a multicast address.
-    ///
-    /// # Safety
-    ///
-    /// It is up to the caller to make sure that `addr` is a multicast address
-    /// to avoid breaking the guarantees of `MulticastAddr`. See
-    /// [`MulticastAddr`] for more details.
-    #[inline]
-    pub const unsafe fn new_unchecked(addr: A) -> MulticastAddr<A> {
-        MulticastAddr(addr)
-    }
-}
-
-impl<A: MulticastAddress + SpecifiedAddress> MulticastAddr<A> {
-    /// Converts this `MulticastAddr` into a [`SpecifiedAddr`].
-    ///
-    /// [`MulticastAddress::is_multicast`] implies
-    /// [`SpecifiedAddress::is_specified`], so all `MulticastAddr`s are
-    /// guaranteed to be specified, so this conversion is infallible.
-    #[inline]
-    pub fn into_specified(self) -> SpecifiedAddr<A> {
-        SpecifiedAddr(self.0)
-    }
-}
-
-impl<A: MulticastAddress> Deref for MulticastAddr<A> {
-    type Target = A;
-
-    #[inline]
-    fn deref(&self) -> &A {
-        &self.0
-    }
-}
-
-impl<A: MulticastAddress + Display> Display for MulticastAddr<A> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<A: MulticastAddress + SpecifiedAddress> From<MulticastAddr<A>> for SpecifiedAddr<A> {
-    fn from(addr: MulticastAddr<A>) -> SpecifiedAddr<A> {
-        addr.into_specified()
-    }
-}
-
-/// An address which is guaranteed to be a link-local address.
-///
-/// `LinkLocalAddr` wraps an address of type `A` and guarantees that it is a
-/// link-local address. Note that this guarantee is contingent on a correct
-/// implementation of the [`LinkLocalAddress`] trait. Since that trait is not
-/// `unsafe`, `unsafe` code may NOT rely on this guarantee for its soundness.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct LinkLocalAddr<A>(A);
-
-impl<A: LinkLocalAddress> sealed::Sealed for LinkLocalAddr<A> {}
-impl<A: LinkLocalAddress> Witness<A> for LinkLocalAddr<A> {
-    #[inline]
-    fn new(addr: A) -> Option<LinkLocalAddr<A>> {
-        if !addr.is_linklocal() {
-            return None;
+        impl<A: $trait + SpecifiedAddress> From<$type<A>> for SpecifiedAddr<A> {
+            fn from(addr: $type<A>) -> SpecifiedAddr<A> {
+                addr.into_specified()
+            }
         }
-        Some(LinkLocalAddr(addr))
-    }
-
-    #[inline]
-    fn into_addr(self) -> A {
-        self.0
-    }
+    };
 }
 
-impl<A> LinkLocalAddr<A> {
-    /// Construct a new `LinkLocalAddr` without checking to see if `addr` is
-    /// actually a link-local address.
-    ///
-    /// # Safety
-    ///
-    /// It is up to the caller to make sure that `addr` is a link-local address
-    /// to avoid breaking the guarantees of `LinkLocalAddr`. See
-    /// [`LinkLocalAddr`] for more details.
-    #[inline]
-    pub const unsafe fn new_unchecked(addr: A) -> LinkLocalAddr<A> {
-        LinkLocalAddr(addr)
-    }
-}
+// SpecifiedAddr
+impl_witness!(SpecifiedAddr, "specified", SpecifiedAddress, is_specified);
 
-impl<A: LinkLocalAddress + SpecifiedAddress> LinkLocalAddr<A> {
-    /// Converts this `LinkLocalAddr` into a [`SpecifiedAddr`].
-    ///
-    /// [`LinkLocalAddress::is_linklocal`] implies
-    /// [`SpecifiedAddress::is_specified`], so all `LinkLocalAddr`s are
-    /// guaranteed to be specified, so this conversion is infallible.
-    #[inline]
-    pub fn into_specified(self) -> SpecifiedAddr<A> {
-        SpecifiedAddr(self.0)
-    }
-}
+// UnicastAddr
+impl_witness!(UnicastAddr, "unicast", UnicastAddress, is_unicast);
+impl_into_specified!(UnicastAddr, UnicastAddress, is_unicast);
 
-impl<A: LinkLocalAddress> Deref for LinkLocalAddr<A> {
-    type Target = A;
+// MulticastAddr
+impl_witness!(MulticastAddr, "multicast", MulticastAddress, is_multicast);
+impl_into_specified!(MulticastAddr, MulticastAddress, is_multicast);
 
-    #[inline]
-    fn deref(&self) -> &A {
-        &self.0
-    }
-}
-
-impl<A: LinkLocalAddress + Display> Display for LinkLocalAddr<A> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<A: LinkLocalAddress + SpecifiedAddress> From<LinkLocalAddr<A>> for SpecifiedAddr<A> {
-    fn from(addr: LinkLocalAddr<A>) -> SpecifiedAddr<A> {
-        addr.into_specified()
-    }
-}
+// LinkLocalAddr
+impl_witness!(LinkLocalAddr, "link-local", LinkLocalAddress, is_linklocal);
+impl_into_specified!(LinkLocalAddr, LinkLocalAddress, is_linklocal);
 
 /// A witness type for an address and a scope zone.
 ///
@@ -586,6 +442,7 @@ impl<A: ScopeableAddress + Display, Z: Display> Display for AddrAndZone<A, Z> {
 impl<A: ScopeableAddress, Z> sealed::Sealed for AddrAndZone<A, Z> {}
 
 /// An address that may have an associated scope zone.
+#[allow(missing_docs)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ZonedAddress<A, Z> {
     Unzoned(SpecifiedAddr<A>),

@@ -606,7 +606,7 @@ pub trait IpAddress:
     // `specialization` feature.
 
     #[doc(hidden)]
-    fn into_subnet_either(subnet: Subnet<Self>) -> SubnetEither;
+    fn subnet_into_either(subnet: Subnet<Self>) -> SubnetEither;
 }
 
 /// An witness of an [`IpAddress`].
@@ -788,9 +788,7 @@ impl ScopeableAddress for Ipv4Addr {
     ///
     /// Although IPv4 defines a link local subnet, IPv4 addresses are always
     /// considered to be in the global scope.
-    fn scope(&self) -> () {
-        ()
-    }
+    fn scope(&self) {}
 }
 
 /// The list of IPv6 scopes.
@@ -996,7 +994,7 @@ impl ScopeableAddress for IpAddr {
     #[inline]
     fn scope(&self) -> IpAddr<(), Ipv6Scope> {
         match self {
-            IpAddr::V4(addr) => IpAddr::V4(addr.scope()),
+            IpAddr::V4(_) => IpAddr::V4(()),
             IpAddr::V6(addr) => IpAddr::V6(addr.scope()),
         }
     }
@@ -1092,7 +1090,7 @@ impl Ipv4Addr {
     pub fn common_prefix_length(&self, other: &Ipv4Addr) -> u8 {
         let Ipv4Addr(me) = self;
         let Ipv4Addr(other) = other;
-        common_prefix_len(me.into_iter().copied().zip(other.into_iter().copied()))
+        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
     }
 
     /// Converts the address to an IPv4-mapped IPv6 address according to
@@ -1156,7 +1154,7 @@ impl IpAddress for Ipv4Addr {
         v4(self)
     }
 
-    fn into_subnet_either(subnet: Subnet<Ipv4Addr>) -> SubnetEither {
+    fn subnet_into_either(subnet: Subnet<Ipv4Addr>) -> SubnetEither {
         SubnetEither::V4(subnet)
     }
 }
@@ -1269,7 +1267,7 @@ impl Ipv6Addr {
     pub fn common_prefix_length(&self, other: &Ipv6Addr) -> u8 {
         let Ipv6Addr(me) = self;
         let Ipv6Addr(other) = other;
-        common_prefix_len(me.into_iter().copied().zip(other.into_iter().copied()))
+        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
     }
 }
 
@@ -1320,7 +1318,7 @@ impl IpAddress for Ipv6Addr {
         v6(self)
     }
 
-    fn into_subnet_either(subnet: Subnet<Ipv6Addr>) -> SubnetEither {
+    fn subnet_into_either(subnet: Subnet<Ipv6Addr>) -> SubnetEither {
         SubnetEither::V6(subnet)
     }
 }
@@ -1406,6 +1404,7 @@ impl Debug for Ipv6Addr {
 ///
 /// An `Ipv6SourceAddr` represents the source address from an IPv6 packet, which
 /// may only be either unicast or unspecified.
+#[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Ipv6SourceAddr {
     Unicast(UnicastAddr<Ipv6Addr>),
@@ -1415,6 +1414,7 @@ pub enum Ipv6SourceAddr {
 impl Ipv6SourceAddr {
     /// Converts this `Ipv6SourceAddr` into an `Option<UnicastAddr<Ipv6Addr>>`,
     /// mapping [`Ipv6SourceAddr::Unspecified`] to `None`.
+    #[inline]
     pub fn into_option(self) -> Option<UnicastAddr<Ipv6Addr>> {
         match self {
             Ipv6SourceAddr::Unicast(addr) => Some(addr),
@@ -1426,6 +1426,7 @@ impl Ipv6SourceAddr {
 impl crate::sealed::Sealed for Ipv6SourceAddr {}
 
 impl Witness<Ipv6Addr> for Ipv6SourceAddr {
+    #[inline]
     fn new(addr: Ipv6Addr) -> Option<Ipv6SourceAddr> {
         if let Some(addr) = UnicastAddr::new(addr) {
             Some(Ipv6SourceAddr::Unicast(addr))
@@ -1436,6 +1437,7 @@ impl Witness<Ipv6Addr> for Ipv6SourceAddr {
         }
     }
 
+    #[inline]
     fn into_addr(self) -> Ipv6Addr {
         match self {
             Ipv6SourceAddr::Unicast(addr) => addr.into_addr(),
@@ -1558,6 +1560,8 @@ pub struct Subnet<A> {
 
 impl<A> Subnet<A> {
     /// Creates a new subnet without enforcing correctness.
+    ///
+    /// # Safety
     ///
     /// Unlike `new`, `new_unchecked` does not validate that `prefix` is in the
     /// proper range, and does not check that `network` has only the top
@@ -1686,7 +1690,7 @@ impl SubnetEither {
 
 impl<A: IpAddress> From<Subnet<A>> for SubnetEither {
     fn from(subnet: Subnet<A>) -> SubnetEither {
-        A::into_subnet_either(subnet)
+        A::subnet_into_either(subnet)
     }
 }
 
@@ -1803,7 +1807,16 @@ impl<S: IpAddress, A: Witness<S> + Copy> AddrSubnet<S, A> {
 /// }
 /// ```
 pub trait IpAddrWitness: Witness<IpAddr> {
+    /// The IPv4-specific version of `Self`.
+    ///
+    /// For example, `SpecifiedAddr<IpAddr>: IpAddrWitness<V4 =
+    /// SpecifiedAddr<Ipv4Addr>>`.
     type V4: Witness<Ipv4Addr> + Into<Self>;
+
+    /// The IPv6-specific version of `Self`.
+    ///
+    /// For example, `SpecifiedAddr<IpAddr>: IpAddrWitness<V6 =
+    /// SpecifiedAddr<Ipv6Addr>>`.
     type V6: Witness<Ipv6Addr> + Into<Self>;
 }
 
