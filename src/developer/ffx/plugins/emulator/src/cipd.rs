@@ -48,7 +48,7 @@ pub async fn download(url: Uri, dest: &PathBuf) -> Result<StatusCode> {
 ///
 /// * `zip_file` - path to the zip file to extract
 /// * `dest_root` - path to the root location to extract the zip_file to
-pub fn extract_zip(zip_file: &PathBuf, dest_root: &PathBuf) -> Result<()> {
+pub fn extract_zip(zip_file: &PathBuf, dest_root: &PathBuf, debug: bool) -> Result<()> {
     let file = File::open(&zip_file)?;
     let mut archive = ZipArchive::new(file)?;
 
@@ -57,10 +57,19 @@ pub fn extract_zip(zip_file: &PathBuf, dest_root: &PathBuf) -> Result<()> {
         let outpath = dest_root.join(file.sanitized_name());
 
         if file.name().ends_with('/') {
-            println!("File {} extracted to \"{}\"", i, outpath.display());
+            if debug {
+                println!("File {} extracted to \"{}\"", i, outpath.display());
+            }
             create_dir_all(&outpath)?;
         } else {
-            println!("File {} extracted to \"{}\" ({} bytes)", i, outpath.display(), file.size());
+            if debug {
+                println!(
+                    "File {} extracted to \"{}\" ({} bytes)",
+                    i,
+                    outpath.display(),
+                    file.size()
+                );
+            }
             if let Some(p) = outpath.parent() {
                 if !p.exists() {
                     create_dir_all(&p)?;

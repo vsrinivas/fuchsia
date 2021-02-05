@@ -4,7 +4,8 @@
 
 use crate::cipd;
 use ansi_term::Colour::*;
-use anyhow::{anyhow, format_err, Result};
+use anyhow::{anyhow, bail, format_err, Result};
+use ffx_config::sdk::{Sdk, SdkVersion};
 use ffx_emulator_args::StartCommand;
 use fuchsia_async::Executor;
 use home::home_dir;
@@ -25,10 +26,7 @@ pub fn read_env_path(var: &str) -> Result<PathBuf> {
 /// Returns GN SDK tools directory. This assumes that fvdl is located in
 /// <sdk_root>/tools/[x64|arm64]/fvdl, and will return path to <sdk_root>/tools/[x64|arm64]
 pub fn get_fuchsia_sdk_tools_dir() -> Result<PathBuf> {
-    Ok(env::args_os()
-        .nth(0)
-        .map(PathBuf::from)
-        .ok_or(anyhow!("Cannot get invoking binary path (location of fvdl)."))?
+    Ok(std::env::current_exe()?
         .parent()
         .ok_or(anyhow!("Cannot get parent path to 'fvdl'."))?
         .to_path_buf())
@@ -74,7 +72,7 @@ pub struct HostTools {
 }
 
 impl HostTools {
-    /// Initialize host tools for in-tree usage.
+    /// Initialize host tools for in-tree usage via fx vdl.
     ///
     /// Requires the environment variable HOST_OUT_DIR to be specified
     /// PREBUILT_AEMU_DIR, PREBUILT_GRPCWEBPROXY_DIR, PREBUILT_VDL_DIR are optional.
@@ -163,6 +161,16 @@ impl HostTools {
         return Err(format_err!("reading prebuild version file is only support with --sdk flag."));
     }
 
+    /// Reads sdk version from manifest.json.
+    pub fn get_sdk_version_from_manifest(&self) -> Result<String> {
+        let sdk = Sdk::from_sdk_dir(get_fuchsia_sdk_dir()?)?;
+        match sdk.get_version() {
+            SdkVersion::Version(v) => Ok(v.to_string()),
+            SdkVersion::InTree => bail!("This should only be used in SDK"),
+            SdkVersion::Unknown => bail!("Cannot determine SDK version"),
+        }
+    }
+
     /// Downloads & extract aemu.zip from CIPD, and returns the path containing the emulator executable.
     ///
     /// # Arguments
@@ -218,7 +226,7 @@ impl HostTools {
             };
             let status = cipd::download(url.clone(), &cipd_zip).await?;
             if status == StatusCode::OK {
-                cipd::extract_zip(&cipd_zip, &unzipped_root)?;
+                cipd::extract_zip(&cipd_zip, &unzipped_root, false /* debug */)?;
                 Ok(unzipped_root)
             } else {
                 Err(format_err!(
@@ -359,7 +367,6 @@ pub struct VDLArgs {
     pub gpu: String,
     pub pointing_device: String,
     pub gcs_bucket: String,
-    pub gcs_build_id: String,
     pub gcs_image_archive: String,
 }
 
@@ -403,7 +410,6 @@ impl From<&StartCommand> for VDLArgs {
             enable_grpcwebproxy: enable_grpcwebproxy,
             grpcwebproxy_port: grpcwebproxy_port,
             gcs_bucket: cmd.gcs_bucket.as_ref().unwrap_or(&String::from("fuchsia")).to_string(),
-            gcs_build_id: cmd.sdk_version.as_ref().unwrap_or(&String::from("")).to_string(),
             gcs_image_archive: cmd
                 .image_name
                 .as_ref()

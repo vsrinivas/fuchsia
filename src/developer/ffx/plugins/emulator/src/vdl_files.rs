@@ -86,8 +86,8 @@ impl VDLFiles {
         }
     }
 
-    fn assemble_system_images(&self, gcs_build_id: &String) -> Result<String> {
-        if gcs_build_id.is_empty() {
+    fn assemble_system_images(&self, sdk_version: &String) -> Result<String> {
+        if sdk_version.is_empty() {
             return Ok(format!(
                 "{},{},{},{},{},{},{}",
                 self.ssh_files.private_key.display(),
@@ -214,6 +214,19 @@ impl VDLFiles {
         }
     }
 
+    pub fn resolve_sdk_version(&self, start_command: &StartCommand) -> String {
+        match &start_command.sdk_version {
+            Some(version) => version.to_string(),
+            None => match self.host_tools.get_sdk_version_from_manifest() {
+                Ok(version) => version,
+                Err(e) => {
+                    println!("Reading sdk version errored: {:?}", e);
+                    String::from("")
+                }
+            },
+        }
+    }
+
     // Checks if user has specified a portmap. If portmap is specified, we'll check if ssh port is included.
     // If ssh port is not included, we'll pick a port and forward that together with the rest of portmap.
     pub fn resolve_portmap(&self, start_command: &StartCommand) -> (String, u16) {
@@ -269,6 +282,8 @@ impl VDLFiles {
             bail!("device_launcher binary cannot be found at {}", vdl.display())
         }
 
+        let sdk_version = self.resolve_sdk_version(start_command);
+
         let mut grpcwebproxy = self.host_tools.grpcwebproxy.clone();
         if vdl_args.enable_grpcwebproxy {
             grpcwebproxy = self.resolve_grpcwebproxy_path(start_command)?;
@@ -311,10 +326,7 @@ impl VDLFiles {
             .arg(&self.host_tools.zbi)
             .arg("--grpcwebproxy_tool")
             .arg(&grpcwebproxy)
-            .arg(format!(
-                "--system_images={}",
-                self.assemble_system_images(&vdl_args.gcs_build_id)?
-            ))
+            .arg(format!("--system_images={}", self.assemble_system_images(&sdk_version)?))
             .arg("--host_port_map")
             .arg(&port_map)
             .arg("--output_launched_device_proto")
@@ -323,6 +335,8 @@ impl VDLFiles {
             .arg(&emu_log)
             .arg("--proto_file_path")
             .arg(&fvd)
+            .arg("--build_id")
+            .arg(&sdk_version)
             .arg("--audio=true")
             .arg(format!("--resize_fvm={}", vdl_args.image_size))
             .arg(format!("--gpu={}", vdl_args.gpu))
@@ -334,7 +348,6 @@ impl VDLFiles {
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
             .arg(format!("--grpcwebproxy_port={}", vdl_args.grpcwebproxy_port))
             .arg(format!("--gcs_bucket={}", vdl_args.gcs_bucket))
-            .arg(format!("--build_id={}", vdl_args.gcs_build_id))
             .arg(format!("--image_archive={}", vdl_args.gcs_image_archive))
             .arg(format!("--enable_emu_controller={}", enable_emu_controller))
             .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
@@ -386,6 +399,7 @@ impl VDLFiles {
             let device_addr = Command::new(&self.host_tools.device_finder)
                 .args(&["resolve", "-ipv4=false", "step-atom-yard-juicy"])
                 .output()?;
+            // Ref to SSH flags: http://man.openbsd.org/ssh_config
             Command::new("ssh")
                 .args(&[
                     "-o",
@@ -394,6 +408,12 @@ impl VDLFiles {
                     "CheckHostIP=no",
                     "-o",
                     "UserKnownHostsFile=/dev/null",
+                    "-o",
+                    "ConnectTimeout=10",
+                    "-o",
+                    "ServerAliveInterval=1",
+                    "-o",
+                    "ServerAliveCountMax=5",
                     "-i",
                     &self.ssh_files.private_key.to_str().unwrap(),
                     str::from_utf8(&device_addr.stdout).unwrap().trim_end_matches('\n'),

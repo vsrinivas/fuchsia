@@ -2,14 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::vdl_files::VDLFiles;
 use anyhow::Result;
+use ffx_emulator::vdl_files::VDLFiles;
 use ffx_emulator_args::{Args, VDLCommand};
-
-mod cipd;
-mod portpicker;
-mod types;
-mod vdl_files;
 
 fn main() -> Result<()> {
     let Args { command, sdk } = argh::from_env();

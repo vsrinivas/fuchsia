@@ -10,6 +10,23 @@ ffx_plugin("ffx_emulator") {
   edition = "2018"
   sources = [
     "src/args.rs",
+    "src/cipd.rs",
     "src/lib.rs",
+    "src/portpicker.rs",
+    "src/types.rs",
+    "src/vdl_files.rs",
+  ]
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper:fuchsia-hyper",
+    "//third_party/rust_crates:ansi_term-v0_11_0",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:home",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serial_test",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:zip",
   ]
 }
